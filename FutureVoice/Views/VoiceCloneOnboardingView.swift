@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Reads a short script aloud to create the ElevenLabs voice clone.
-/// This is the **magic moment** of the app — first time the user hears their
-/// own voice speaking fluently in the target language.
+/// First-run screen. User reads a short script aloud so we can create the
+/// ElevenLabs voice clone. Native iOS layout: a navigation title, a quoted
+/// script in a List/Form, and a single primary action at the bottom.
 struct VoiceCloneOnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var recorder = AudioRecorder()
@@ -18,56 +18,55 @@ struct VoiceCloneOnboardingView: View {
     }
 
     private let cloneScript = """
-    Hi. My name is here, and I'm recording this so I can hear myself
-    speaking another language with confidence. I'm curious, I'm patient
-    with myself, and I want to sound like me — just a more fluent version.
+    Hi. I'm recording this so I can hear myself speak another language with confidence. I'm curious, I'm patient with myself, and I want to sound like me — just a more fluent version.
     """
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Future Voice")
-                    .font(.largeTitle).bold()
-                Text("Read this aloud, slowly. About 30 seconds.")
-                    .foregroundStyle(.secondary)
+        NavigationStack {
+            Form {
+                Section {
+                    Text(cloneScript)
+                        .font(.body)
+                        .padding(.vertical, 4)
+                } header: {
+                    Text("Read this aloud")
+                } footer: {
+                    Text("About 30 seconds. Speak naturally — pauses are fine.")
+                }
+
+                if let error = error {
+                    Section {
+                        Label(error, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.red)
+                    }
+                }
             }
-
-            ScrollView {
-                Text(cloneScript)
-                    .font(.title3)
-                    .lineSpacing(6)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(.ultraThinMaterial))
+            .navigationTitle("Future Voice")
+            .navigationBarTitleDisplayMode(.large)
+            .safeAreaInset(edge: .bottom) {
+                actionBar
             }
-
-            recordButton
-
-            if let error = error {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
-
-            Spacer(minLength: 0)
         }
-        .padding(24)
     }
 
-    private var recordButton: some View {
-        Button(action: handleTap) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title2)
-                Text(label)
-                    .font(.headline)
+    private var actionBar: some View {
+        VStack(spacing: 8) {
+            Button(action: handleTap) {
+                Label(label, systemImage: icon)
+                    .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .background(RoundedRectangle(cornerRadius: 18).fill(tint))
-            .foregroundStyle(.white)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .tint(tint)
+            .disabled(status == .uploading)
+
+            if status == .uploading {
+                ProgressView()
+            }
         }
-        .disabled(status == .uploading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.bar)
     }
 
     private var icon: String {
@@ -91,9 +90,8 @@ struct VoiceCloneOnboardingView: View {
     private var tint: Color {
         switch status {
         case .recording: return .red
-        case .uploading: return .gray
         case .done:      return .green
-        case .idle:      return .blue
+        default:         return .accentColor
         }
     }
 

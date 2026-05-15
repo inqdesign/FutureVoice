@@ -23,6 +23,19 @@ Currently in **Phase 1 — Voice + Conversation Spike**. No persistence, no auth
 - **Don't write to disk outside `FileManager.default.urls(for: .documentDirectory)`** unless using `cacheDirectory` with a clear cleanup policy.
 - **One screen at a time in Phase 1.** Adding a NavigationStack or tab bar is Phase 2 work.
 
+## UI rules (strict)
+
+**Voice is the primary modality. Design like a phone call, not a chat app.**
+
+- **iOS-native SwiftUI elements only.** No custom card materials, no custom bubble shapes, no rolled-our-own components.
+  - Use: `NavigationStack`, `.toolbar`, `Form`, `List`, `Button`, `Label`, `Image(systemName:)`, `ProgressView`, `Text` with system fonts (`.largeTitle`, `.headline`, `.body`, `.footnote`).
+  - System colors only: `.primary`, `.secondary`, `.accentColor`, `Color(.systemBackground)`, `Color(.secondarySystemBackground)`. Avoid `.blue`/`.red`/`.green` literals except when they convey semantic state (recording = red, success = green) — even then prefer `.tint`/`.foregroundStyle(.red)` over background fills.
+  - SF Symbols for every icon.
+- **Voice-first layout.** The dominant element on the conversation screen is a single big mic button. Status (speaking / listening / thinking) is shown in plain text above it. The most-recent line of dialogue is shown as a caption, not as a chat bubble.
+- **No chat-bubble metaphor.** No left/right aligned bubbles, no "blue user / gray fluent self" message list. This isn't a messenger.
+- **Sheets for non-primary content.** Topic picker, session summary, settings — present as `.sheet` so the call screen stays clean.
+- **Animation = subtle.** A breathing pulse on the mic button while recording is fine. No bouncy springs, no confetti.
+
 ## Conventions
 
 - SwiftUI views, no UIKit unless absolutely required.

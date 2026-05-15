@@ -1,12 +1,11 @@
 import SwiftUI
 
-/// Phase 1 conversation playground.
+/// Voice-first conversation screen.
 ///
-/// Loop:
-///   1. Fluent self opens with a Claude-generated prompt → ElevenLabs TTS → play.
-///   2. User taps "Hold to speak" → records → on-device STT → display transcript.
-///   3. Loop back to Claude with the running history.
-///   4. "End session" triggers the summary call and shows phrase feedback.
+/// Designed like a phone call, not a chat app: a single dominant mic button,
+/// a plain status line, and a one-line caption of the most recent dialogue.
+/// Full transcript and session summary are accessed via sheets so this screen
+/// stays focused on the act of speaking.
 struct ConversationView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var recorder = AudioRecorder()
@@ -14,122 +13,226 @@ struct ConversationView: View {
 
     @State private var topic = "Ordering coffee"
     @State private var turns: [Turn] = []
-    @State private var isThinking = false
+    @State private var phase: Phase = .idle
     @State private var error: String?
     @State private var summary: SessionSummary?
+    @State private var showTranscript = false
+    @State private var showTopicPicker = false
 
-    private let userId = UUID()  // Phase 2: real user id from Supabase
+    private let userId = UUID()
+
+    enum Phase: Equatable {
+        case idle
+        case listening      // mic open, recording user
+        case thinking       // STT + Claude in flight
+        case speaking       // fluent self is talking
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider().opacity(0.2)
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(turns) { turn in
-                            TurnBubble(turn: turn)
-                                .id(turn.id)
-                        }
-                        if isThinking {
-                            HStack(spacing: 6) {
-                                ProgressView().scaleEffect(0.7)
-                                Text("Future self is thinking…").foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                        }
-                    }
-                    .padding(.vertical, 12)
-                }
-                .onChange(of: turns.count) { _, _ in
-                    if let last = turns.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+        NavigationStack {
+            VStack(spacing: 0) {
+                statusArea
+                Spacer(minLength: 0)
+                micButton
+                Spacer(minLength: 0)
+                hintText
+                    .padding(.bottom, 32)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+            .navigationTitle(topic)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showTopicPicker = true } label: {
+                        Label("Topic", systemImage: "list.bullet")
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showTranscript = true } label: {
+                        Label("Transcript", systemImage: "text.alignleft")
+                    }
+                    .disabled(turns.isEmpty)
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button(role: .destructive) {
+                        Task { await endSession() }
+                    } label: {
+                        Text("End session")
+                    }
+                    .disabled(turns.isEmpty || phase != .idle)
+                }
             }
-            if let summary = summary {
-                SummaryCard(summary: summary)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            .sheet(isPresented: $showTopicPicker) {
+                TopicPickerSheet(topic: $topic)
             }
-            controlBar
-        }
-        .task {
-            if turns.isEmpty { await openConversation() }
-        }
-        .alert("Something went wrong", isPresented: errorBinding) {
-            Button("OK") { error = nil }
-        } message: {
-            Text(error ?? "")
+            .sheet(isPresented: $showTranscript) {
+                TranscriptSheet(turns: turns)
+            }
+            .sheet(item: summaryBinding) { s in
+                SummarySheet(summary: s)
+            }
+            .alert("Something went wrong", isPresented: errorBinding) {
+                Button("OK") { error = nil }
+            } message: {
+                Text(error ?? "")
+            }
+            .task {
+                if turns.isEmpty { await openConversation() }
+            }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Status area
 
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Topic")
-                    .font(.caption).foregroundStyle(.secondary)
-                Text(topic).font(.headline)
-            }
-            Spacer()
-            Button("End") { Task { await endSession() } }
-                .disabled(turns.isEmpty || isThinking)
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
-    }
-
-    // MARK: - Controls
-
-    private var controlBar: some View {
-        HStack(spacing: 16) {
-            Button(action: { Task { recorder.isRecording ? await stopAndSend() : await startRecording() } }) {
-                HStack(spacing: 10) {
-                    Image(systemName: recorder.isRecording ? "stop.fill" : "mic.fill")
-                    Text(recorder.isRecording ? "Send" : "Hold to speak")
-                }
+    private var statusArea: some View {
+        VStack(spacing: 12) {
+            Text(statusLabel)
                 .font(.headline)
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(RoundedRectangle(cornerRadius: 16).fill(recorder.isRecording ? Color.red : Color.blue))
-                .foregroundStyle(.white)
-            }
-            .disabled(isThinking || player.isPlaying)
+
+            Text(captionLine)
+                .font(.title3)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.primary)
+                .lineLimit(3)
+                .padding(.horizontal, 32)
+                .frame(maxWidth: .infinity, minHeight: 80, alignment: .top)
         }
-        .padding(20)
+        .padding(.top, 24)
     }
+
+    private var statusLabel: String {
+        switch phase {
+        case .idle:      return turns.isEmpty ? "Connecting" : "Your turn"
+        case .listening: return "Listening"
+        case .thinking:  return "Thinking"
+        case .speaking:  return "Future self speaking"
+        }
+    }
+
+    private var captionLine: String {
+        if let last = turns.last { return last.transcript }
+        return ""
+    }
+
+    // MARK: - Mic button
+
+    private var micButton: some View {
+        Button {
+            Task { await handleMicTap() }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.tint)
+                    .opacity(micButtonOpacity)
+                    .frame(width: 180, height: 180)
+                    .scaleEffect(phase == .listening ? 1.05 : 1.0)
+                    .animation(
+                        phase == .listening
+                            ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
+                            : .default,
+                        value: phase
+                    )
+
+                Image(systemName: micSymbol)
+                    .font(.system(size: 56, weight: .regular))
+                    .foregroundStyle(Color(.systemBackground))
+            }
+        }
+        .buttonStyle(.plain)
+        .tint(micTint)
+        .disabled(phase == .thinking || phase == .speaking)
+        .accessibilityLabel(Text(statusLabel))
+    }
+
+    private var micSymbol: String {
+        switch phase {
+        case .listening: return "stop.fill"
+        case .thinking:  return "ellipsis"
+        case .speaking:  return "waveform"
+        case .idle:      return "mic.fill"
+        }
+    }
+
+    private var micTint: Color {
+        switch phase {
+        case .listening: return .red
+        default:         return .accentColor
+        }
+    }
+
+    private var micButtonOpacity: Double {
+        (phase == .thinking || phase == .speaking) ? 0.4 : 1.0
+    }
+
+    // MARK: - Hint text
+
+    private var hintText: some View {
+        Group {
+            switch phase {
+            case .idle:
+                Text(turns.isEmpty ? " " : "Tap to speak")
+            case .listening:
+                Text("Tap to send")
+            case .thinking:
+                ProgressView()
+            case .speaking:
+                Text(" ")
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .frame(height: 20)
+    }
+
+    // MARK: - Bindings
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { error != nil }, set: { if !$0 { error = nil } })
     }
 
+    private var summaryBinding: Binding<SessionSummary?> {
+        Binding(get: { summary }, set: { summary = $0 })
+    }
+
     // MARK: - Flow
+
+    private func handleMicTap() async {
+        switch phase {
+        case .idle:      await startRecording()
+        case .listening: await stopAndSend()
+        case .thinking, .speaking: break
+        }
+    }
 
     private func openConversation() async {
         guard let voiceId = appState.voiceCloneId else { return }
-        isThinking = true
-        defer { isThinking = false }
+        phase = .thinking
         do {
             let opener = try await ClaudeClient.shared.send(
                 system: systemPrompt(),
                 messages: [.init(role: .user, content: "Open the conversation with a friendly first line, in \(appState.targetLanguage).")]
             )
             try await speakAndAppend(opener, voiceId: voiceId)
+            phase = .idle
         } catch {
             self.error = error.localizedDescription
+            phase = .idle
         }
     }
 
     private func startRecording() async {
-        let granted = await recorder.requestPermission() && (await SpeechTranscriber.requestPermission())
-        guard granted else {
+        let mic = await recorder.requestPermission()
+        let speech = await SpeechTranscriber.requestPermission()
+        guard mic, speech else {
             error = "Microphone or speech permission denied."
             return
         }
         do {
             try recorder.start()
+            phase = .listening
         } catch {
             self.error = error.localizedDescription
         }
@@ -137,46 +240,47 @@ struct ConversationView: View {
 
     private func stopAndSend() async {
         guard let url = recorder.stop() else { return }
-        isThinking = true
-        defer { isThinking = false }
-
+        phase = .thinking
         do {
             let transcript = try await SpeechTranscriber().transcribe(
                 audioURL: url,
                 languageCode: appState.targetLanguage
             )
-            let userTurn = Turn(
-                id: UUID(),
-                role: .user,
-                audioURL: url,
-                transcript: transcript,
-                durationMs: 0,
-                timestamp: Date()
-            )
-            turns.append(userTurn)
+            turns.append(Turn(
+                id: UUID(), role: .user, audioURL: url,
+                transcript: transcript, durationMs: 0, timestamp: Date()
+            ))
 
-            guard let voiceId = appState.voiceCloneId else { return }
+            guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
             let reply = try await ClaudeClient.shared.send(
                 system: systemPrompt(),
                 messages: ConversationEngine.messages(from: turns)
             )
             try await speakAndAppend(reply, voiceId: voiceId)
+            phase = .idle
         } catch {
             self.error = error.localizedDescription
+            phase = .idle
         }
     }
 
     private func speakAndAppend(_ text: String, voiceId: String) async throws {
         let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text)
-        let turn = Turn(id: UUID(), role: .fluentSelf, audioURL: nil, transcript: text, durationMs: 0, timestamp: Date())
-        turns.append(turn)
-        try player.play(audio)
+        turns.append(Turn(
+            id: UUID(), role: .fluentSelf, audioURL: nil,
+            transcript: text, durationMs: 0, timestamp: Date()
+        ))
+        phase = .speaking
+        try player.play(audio) {
+            Task { @MainActor in
+                if phase == .speaking { phase = .idle }
+            }
+        }
     }
 
     private func endSession() async {
         guard !turns.isEmpty else { return }
-        isThinking = true
-        defer { isThinking = false }
+        phase = .thinking
         do {
             let profile = appState.makeEmptyProfile(userId: userId)
             let systemP = ConversationEngine.summarySystemPrompt(
@@ -190,9 +294,11 @@ struct ConversationView: View {
                 model: .opus47,
                 maxTokens: 1024
             )
-            withAnimation { summary = payload.toDomain() }
+            summary = payload.toDomain()
+            phase = .idle
         } catch {
             self.error = error.localizedDescription
+            phase = .idle
         }
     }
 
@@ -208,70 +314,132 @@ struct ConversationView: View {
     }
 }
 
-// MARK: - Subviews
+// MARK: - Sheets
 
-private struct TurnBubble: View {
-    let turn: Turn
+private struct TopicPickerSheet: View {
+    @Binding var topic: String
+    @Environment(\.dismiss) private var dismiss
+
+    private let presets = [
+        "Ordering coffee",
+        "Small talk with a neighbor",
+        "Job interview",
+        "Asking for directions",
+        "Talking about a movie",
+        "Catching up with an old friend",
+    ]
 
     var body: some View {
-        HStack {
-            if turn.role == .user { Spacer(minLength: 40) }
-            Text(turn.transcript)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(RoundedRectangle(cornerRadius: 18).fill(bubbleColor))
-                .foregroundStyle(turn.role == .user ? Color.white : Color.primary)
-            if turn.role != .user { Spacer(minLength: 40) }
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(presets, id: \.self) { preset in
+                        Button {
+                            topic = preset
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Text(preset).foregroundStyle(.primary)
+                                Spacer()
+                                if preset == topic {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.tint)
+                                }
+                            }
+                        }
+                    }
+                }
+                Section("Custom") {
+                    TextField("Type a topic", text: $topic)
+                }
+            }
+            .navigationTitle("Topic")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
-        .padding(.horizontal, 16)
-    }
-
-    private var bubbleColor: Color {
-        turn.role == .user ? Color.blue : Color(.secondarySystemBackground)
+        .presentationDetents([.medium, .large])
     }
 }
 
-private struct SummaryCard: View {
-    let summary: SessionSummary
+private struct TranscriptSheet: View {
+    let turns: [Turn]
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Session note")
-                .font(.headline)
-            Text(summary.overallNote)
-                .foregroundStyle(.secondary)
-
-            if !summary.phrasesUsed.isEmpty {
-                Divider()
-                Text("More natural alternatives")
-                    .font(.subheadline).bold()
-                ForEach(summary.phrasesUsed) { phrase in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(phrase.userSaid)
-                            .strikethrough()
-                            .foregroundStyle(.secondary)
-                        Text(phrase.fluentAlternative)
-                            .foregroundStyle(.primary)
-                        Text(phrase.reason)
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
+        NavigationStack {
+            List(turns) { turn in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(turn.role == .user ? "You" : "Future self")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(turn.transcript)
+                        .font(.body)
                 }
+                .padding(.vertical, 4)
             }
-
-            if !summary.suggestedDrills.isEmpty {
-                Divider()
-                Text("Drill next")
-                    .font(.subheadline).bold()
-                ForEach(summary.suggestedDrills, id: \.self) { drill in
-                    Text("• \(drill)")
+            .listStyle(.plain)
+            .navigationTitle("Transcript")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
                 }
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 18).fill(.ultraThinMaterial))
-        .padding(.horizontal, 20)
-        .padding(.bottom, 12)
     }
+}
+
+private struct SummarySheet: View {
+    let summary: SessionSummary
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section("Note") {
+                    Text(summary.overallNote)
+                }
+                if !summary.phrasesUsed.isEmpty {
+                    Section("More natural alternatives") {
+                        ForEach(summary.phrasesUsed) { phrase in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(phrase.userSaid)
+                                    .foregroundStyle(.secondary)
+                                Text(phrase.fluentAlternative)
+                                    .font(.body)
+                                Text(phrase.reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
+                if !summary.suggestedDrills.isEmpty {
+                    Section("Drill next") {
+                        ForEach(summary.suggestedDrills, id: \.self) { drill in
+                            Text(drill)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Session summary")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Identifiable conformance for sheet(item:)
+
+extension SessionSummary: Identifiable {
+    public var id: String { overallNote }
 }
