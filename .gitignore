@@ -1,0 +1,40 @@
+# Secrets
+.env
+.env.local
+*.xcconfig.local
+FutureVoice/Config/Secrets.generated.swift
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Audio cache (local recordings during dev)
+Recordings/
+*.wav
+*.m4a
+*.mp3
+!FutureVoice/Resources/**/*.mp3
+!FutureVoice/Resources/**/*.wav
+
+# Misc
+*.swp
+*.bak
