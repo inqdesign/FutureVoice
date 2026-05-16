@@ -78,7 +78,13 @@ struct ConversationView: View {
                 Text(error ?? "")
             }
             .task {
-                if turns.isEmpty { await openConversation() }
+                if turns.isEmpty {
+                    if appState.previewMode {
+                        seedPreviewTurns()
+                    } else {
+                        await openConversation()
+                    }
+                }
             }
         }
     }
@@ -200,11 +206,84 @@ struct ConversationView: View {
     // MARK: - Flow
 
     private func handleMicTap() async {
+        if appState.previewMode {
+            await runPreviewCycle()
+            return
+        }
         switch phase {
         case .idle:      await startRecording()
         case .listening: await stopAndSend()
         case .thinking, .speaking: break
         }
+    }
+
+    // MARK: - Preview flow (no network)
+
+    private func seedPreviewTurns() {
+        let now = Date()
+        turns = [
+            Turn(
+                id: UUID(),
+                role: .fluentSelf,
+                audioURL: nil,
+                transcript: "Hey, what did you end up ordering this morning?",
+                durationMs: 0,
+                timestamp: now.addingTimeInterval(-60)
+            ),
+            Turn(
+                id: UUID(),
+                role: .user,
+                audioURL: nil,
+                transcript: "I get a oat latte, not too sweet.",
+                durationMs: 0,
+                timestamp: now.addingTimeInterval(-30)
+            ),
+            Turn(
+                id: UUID(),
+                role: .fluentSelf,
+                audioURL: nil,
+                transcript: "Nice. I'm a sucker for those too — did the barista get it right this time?",
+                durationMs: 0,
+                timestamp: now
+            ),
+        ]
+        phase = .idle
+    }
+
+    private func runPreviewCycle() async {
+        switch phase {
+        case .idle:
+            phase = .listening
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            if phase == .listening { await sendPreviewReply() }
+
+        case .listening:
+            await sendPreviewReply()
+
+        case .thinking, .speaking:
+            break
+        }
+    }
+
+    private func sendPreviewReply() async {
+        phase = .thinking
+        try? await Task.sleep(nanoseconds: 900_000_000)
+
+        turns.append(Turn(
+            id: UUID(), role: .user, audioURL: nil,
+            transcript: "Yeah, she remembered. She even drew a heart on the cup.",
+            durationMs: 0, timestamp: Date()
+        ))
+
+        phase = .speaking
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        turns.append(Turn(
+            id: UUID(), role: .fluentSelf, audioURL: nil,
+            transcript: "Aw, that's the kind of small thing that makes the whole morning click.",
+            durationMs: 0, timestamp: Date()
+        ))
+        try? await Task.sleep(nanoseconds: 2_500_000_000)
+        if phase == .speaking { phase = .idle }
     }
 
     private func openConversation() async {
@@ -280,6 +359,38 @@ struct ConversationView: View {
 
     private func endSession() async {
         guard !turns.isEmpty else { return }
+        if appState.previewMode {
+            summary = SessionSummary(
+                phrasesUsed: [
+                    PhraseFeedback(
+                        userSaid: "I get a oat latte",
+                        fluentAlternative: "I got an oat latte",
+                        reason: "Past tense — you were describing this morning."
+                    ),
+                    PhraseFeedback(
+                        userSaid: "not too sweet",
+                        fluentAlternative: "easy on the sugar",
+                        reason: "More casual and native-sounding in a café."
+                    ),
+                ],
+                newPatternsDetected: [
+                    LearnerPattern(
+                        mistake: "get",
+                        correction: "got",
+                        context: "describing a past action",
+                        frequency: 2,
+                        lastSeenAt: Date()
+                    )
+                ],
+                suggestedDrills: [
+                    "I got an oat latte this morning.",
+                    "She remembered my order.",
+                    "Easy on the sugar, please.",
+                ],
+                overallNote: "Warm, natural pacing. Just nudge past tenses and you'll sound a step more fluent."
+            )
+            return
+        }
         phase = .thinking
         do {
             let profile = appState.makeEmptyProfile(userId: userId)

@@ -21,6 +21,17 @@ final class AppState: ObservableObject {
     @Published var targetLanguage: String = "en"
     @Published var proficiency: CEFRLevel = .b1
 
+    /// Preview mode: bypass onboarding + skip network calls so the conversation
+    /// UI can be exercised in the simulator before API keys are wired up.
+    /// Flip to `false` once `Config/FutureVoice.xcconfig` has real keys.
+    let previewMode = true
+
+    init() {
+        if previewMode {
+            voiceCloneId = "preview-dummy-voice"
+        }
+    }
+
     /// Empty profile for the spike — Phase 2 wires this to Supabase.
     func makeEmptyProfile(userId: UUID) -> LearnerProfile {
         LearnerProfile(
