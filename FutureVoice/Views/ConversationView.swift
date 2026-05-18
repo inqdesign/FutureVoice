@@ -52,7 +52,7 @@ struct ConversationView: View {
                 HistorySheet()
             }
             .sheet(item: summaryBinding) { s in
-                SummarySheet(summary: s)
+                SummarySheet(summary: s, onStartNew: startNewSession)
             }
             .alert("Something went wrong", isPresented: errorBinding) {
                 Button("OK") { error = nil }
@@ -373,6 +373,16 @@ struct ConversationView: View {
         }
     }
 
+    private func startNewSession() {
+        summary = nil
+        sessionId = UUID()
+        sessionStartedAt = Date()
+        turns = []
+        didSaveCurrentSession = false
+        phase = .idle
+        Task { await openConversation() }
+    }
+
     private func systemPrompt() -> String {
         ConversationEngine.conversationSystemPrompt(
             targetLanguage: appState.targetLanguage,
@@ -576,6 +586,7 @@ private struct TranscriptSheet: View {
 
 private struct SummarySheet: View {
     let summary: SessionSummary
+    let onStartNew: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -614,6 +625,19 @@ private struct SummarySheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    onStartNew()
+                } label: {
+                    Label("Start a new conversation", systemImage: "arrow.uturn.left")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.bar)
             }
         }
     }
