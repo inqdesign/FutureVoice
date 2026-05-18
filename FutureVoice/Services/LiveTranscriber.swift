@@ -4,12 +4,14 @@ import Speech
 
 /// Streaming on-device STT — publishes partial transcripts as the user speaks.
 ///
-/// SFSpeechRecognizer auto-finalizes a recognition task after a brief pause
-/// (or once the underlying segment grows long enough). Naively that wipes the
-/// in-progress UI text when the user pauses and resumes. We work around it by
-/// committing the finalized text and immediately starting a fresh recognition
-/// segment that keeps consuming the same audio engine tap — the displayed
-/// transcript is `committed + currentSegment`, never overwritten.
+/// SFSpeechRecognizer on iOS 26 often does NOT fire `isFinal` when the user
+/// pauses; the next utterance silently starts fresh and the previous text
+/// disappears from `bestTranscription.formattedString`. To make the loop feel
+/// continuous, we don't depend on isFinal alone. A "quiet watcher" runs in the
+/// background and, whenever no partial-result change has come in for ~1.5s,
+/// commits the current transcript and restarts the recognition segment. The
+/// audio engine tap keeps feeding whichever request is currently active, so
+/// the user can keep talking without seeing earlier sentences vanish.
 @MainActor
 final class LiveTranscriber: ObservableObject {
     @Published private(set) var transcript = ""
@@ -18,9 +20,16 @@ final class LiveTranscriber: ObservableObject {
 
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
+    private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
     private var currentTask: SFSpeechRecognitionTask?
+    private var taskGeneration = 0
     private var committedText = ""
+    private var lastSegmentText = ""
+    private var lastChangeTime = Date()
+    private var quietWatcher: Task<Void, Never>?
     private let appender = LiveTranscriberAppender()
+
+    private static let quietCommitThreshold: TimeInterval = 1.5
 
     enum LiveError: Error, LocalizedError {
         case unavailable
@@ -85,32 +94,37 @@ final class LiveTranscriber: ObservableObject {
         self.recognizer = rec
         self.committedText = ""
         self.transcript = ""
+        self.lastSegmentText = ""
+        self.lastChangeTime = Date()
         self.level = 0
         self.isRunning = true
         startNewSegment()
+        startQuietWatcher()
     }
 
-    /// Stops streaming and returns the latest transcript.
     @discardableResult
     func stop() -> String {
         guard isRunning else { return transcript }
         isRunning = false
+        quietWatcher?.cancel()
+        quietWatcher = nil
         appender.setRequest(nil)
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
+        currentRequest?.endAudio()
         currentTask?.finish()
         engine = nil
+        currentRequest = nil
         currentTask = nil
         recognizer = nil
         level = 0
         return transcript
     }
 
-    // MARK: - Internals
+    // MARK: - Segment lifecycle
 
     private func startNewSegment() {
         guard isRunning, let recognizer = recognizer else { return }
-
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
         if recognizer.supportsOnDeviceRecognition {
@@ -120,10 +134,48 @@ final class LiveTranscriber: ObservableObject {
             req.addsPunctuation = true
         }
         appender.setRequest(req)
+        currentRequest = req
 
+        taskGeneration += 1
+        let myGen = taskGeneration
         currentTask = recognizer.recognitionTask(with: req) { [weak self] result, error in
             Task { @MainActor [weak self] in
-                self?.handleResult(result, error: error)
+                guard let self else { return }
+                // Ignore late callbacks from a previous segment.
+                guard myGen == self.taskGeneration else { return }
+                self.handleResult(result, error: error)
+            }
+        }
+    }
+
+    private func commitAndRestart() {
+        guard isRunning else { return }
+        // What the user has seen becomes a permanent prefix; the next
+        // recognition segment starts empty so further partials append.
+        committedText = transcript
+        lastSegmentText = ""
+        lastChangeTime = Date()
+        let oldTask = currentTask
+        let oldReq = currentRequest
+        currentTask = nil
+        currentRequest = nil
+        startNewSegment()
+        oldReq?.endAudio()
+        oldTask?.finish()
+    }
+
+    private func startQuietWatcher() {
+        quietWatcher?.cancel()
+        quietWatcher = Task { @MainActor [weak self] in
+            while true {
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard let self else { return }
+                guard self.isRunning else { return }
+                guard !self.lastSegmentText.isEmpty else { continue }
+                let quietFor = Date().timeIntervalSince(self.lastChangeTime)
+                if quietFor > Self.quietCommitThreshold {
+                    self.commitAndRestart()
+                }
             }
         }
     }
@@ -133,28 +185,22 @@ final class LiveTranscriber: ObservableObject {
 
         if let result = result {
             let segmentText = result.bestTranscription.formattedString
+            if segmentText != lastSegmentText {
+                lastChangeTime = Date()
+                lastSegmentText = segmentText
+            }
             transcript = committedText.isEmpty
                 ? segmentText
                 : committedText + " " + segmentText
-
             if result.isFinal {
-                // Commit what we've heard so far, then start a fresh recognition
-                // segment so subsequent partials append rather than overwrite.
-                committedText = transcript
-                let oldTask = currentTask
-                currentTask = nil
-                startNewSegment()
-                oldTask?.finish()
+                commitAndRestart()
             }
             return
         }
 
-        // Error path: just restart the segment so the user can keep speaking.
-        if error != nil, isRunning {
-            let oldTask = currentTask
-            currentTask = nil
-            startNewSegment()
-            oldTask?.finish()
+        // Error path: preserve whatever we already showed, then resume.
+        if error != nil {
+            commitAndRestart()
         }
     }
 
