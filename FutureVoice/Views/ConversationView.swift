@@ -79,8 +79,8 @@ struct ConversationView: View {
             }
             .task {
                 if turns.isEmpty {
-                    if appState.previewMode {
-                        seedPreviewTurns()
+                    if appState.useDummyLLM {
+                        await seedDummyAndSpeak()
                     } else {
                         await openConversation()
                     }
@@ -206,8 +206,8 @@ struct ConversationView: View {
     // MARK: - Flow
 
     private func handleMicTap() async {
-        if appState.previewMode {
-            await runPreviewCycle()
+        if appState.useDummyLLM {
+            await runDummyCycle()
             return
         }
         switch phase {
@@ -217,73 +217,66 @@ struct ConversationView: View {
         }
     }
 
-    // MARK: - Preview flow (no network)
+    // MARK: - Dummy LLM flow (canned text, real TTS playback)
 
-    private func seedPreviewTurns() {
-        let now = Date()
-        turns = [
-            Turn(
-                id: UUID(),
-                role: .fluentSelf,
-                audioURL: nil,
-                transcript: "Hey, what did you end up ordering this morning?",
-                durationMs: 0,
-                timestamp: now.addingTimeInterval(-60)
-            ),
-            Turn(
-                id: UUID(),
-                role: .user,
-                audioURL: nil,
-                transcript: "I get a oat latte, not too sweet.",
-                durationMs: 0,
-                timestamp: now.addingTimeInterval(-30)
-            ),
-            Turn(
-                id: UUID(),
-                role: .fluentSelf,
-                audioURL: nil,
-                transcript: "Nice. I'm a sucker for those too — did the barista get it right this time?",
-                durationMs: 0,
-                timestamp: now
-            ),
-        ]
-        phase = .idle
+    private static let dummyOpenerCandidates = [
+        "Hey, what did you end up ordering this morning?",
+        "So how did the morning treat you?",
+        "Tell me about the first thing that made you smile today.",
+    ]
+
+    private static let dummyReplyCandidates = [
+        "Nice. Did the barista get it right this time?",
+        "I love that — small wins really do set the tone.",
+        "Tell me more — what made it stand out?",
+        "That's the kind of detail you'll remember in a year.",
+    ]
+
+    private static let dummyUserUtterance = "Yeah, she remembered my order. Even drew a heart on the cup."
+
+    private func seedDummyAndSpeak() async {
+        guard let voiceId = appState.voiceCloneId else { return }
+        let opener = Self.dummyOpenerCandidates.randomElement()!
+        do {
+            try await speakAndAppend(opener, voiceId: voiceId)
+            if phase == .speaking { /* speakAndAppend's completion will reset to .idle */ }
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
-    private func runPreviewCycle() async {
+    private func runDummyCycle() async {
         switch phase {
         case .idle:
             phase = .listening
             try? await Task.sleep(nanoseconds: 1_500_000_000)
-            if phase == .listening { await sendPreviewReply() }
+            if phase == .listening { await sendDummyReply() }
 
         case .listening:
-            await sendPreviewReply()
+            await sendDummyReply()
 
         case .thinking, .speaking:
             break
         }
     }
 
-    private func sendPreviewReply() async {
+    private func sendDummyReply() async {
         phase = .thinking
-        try? await Task.sleep(nanoseconds: 900_000_000)
-
+        try? await Task.sleep(nanoseconds: 600_000_000)
         turns.append(Turn(
             id: UUID(), role: .user, audioURL: nil,
-            transcript: "Yeah, she remembered. She even drew a heart on the cup.",
+            transcript: Self.dummyUserUtterance,
             durationMs: 0, timestamp: Date()
         ))
 
-        phase = .speaking
-        try? await Task.sleep(nanoseconds: 300_000_000)
-        turns.append(Turn(
-            id: UUID(), role: .fluentSelf, audioURL: nil,
-            transcript: "Aw, that's the kind of small thing that makes the whole morning click.",
-            durationMs: 0, timestamp: Date()
-        ))
-        try? await Task.sleep(nanoseconds: 2_500_000_000)
-        if phase == .speaking { phase = .idle }
+        guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
+        let reply = Self.dummyReplyCandidates.randomElement()!
+        do {
+            try await speakAndAppend(reply, voiceId: voiceId)
+        } catch {
+            self.error = error.localizedDescription
+            phase = .idle
+        }
     }
 
     private func openConversation() async {
@@ -359,7 +352,7 @@ struct ConversationView: View {
 
     private func endSession() async {
         guard !turns.isEmpty else { return }
-        if appState.previewMode {
+        if appState.useDummyLLM {
             summary = SessionSummary(
                 phrasesUsed: [
                     PhraseFeedback(

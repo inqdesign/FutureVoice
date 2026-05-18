@@ -14,6 +14,7 @@ enum Secrets {
         case elevenLabs = "ELEVENLABS_API_KEY"
         case anthropic  = "ANTHROPIC_API_KEY"
         case openAI     = "OPENAI_API_KEY"
+        case gemini     = "GEMINI_API_KEY"
         case supabaseURL = "SUPABASE_URL"
         case supabaseAnonKey = "SUPABASE_ANON_KEY"
     }
