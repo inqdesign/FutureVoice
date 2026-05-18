@@ -3,8 +3,13 @@ import Foundation
 import Speech
 
 /// Streaming on-device STT — publishes partial transcripts as the user speaks.
-/// Used in the conversation loop so the UI can show what's being heard in real
-/// time, instead of waiting for a finished recording file.
+///
+/// SFSpeechRecognizer auto-finalizes a recognition task after a brief pause
+/// (or once the underlying segment grows long enough). Naively that wipes the
+/// in-progress UI text when the user pauses and resumes. We work around it by
+/// committing the finalized text and immediately starting a fresh recognition
+/// segment that keeps consuming the same audio engine tap — the displayed
+/// transcript is `committed + currentSegment`, never overwritten.
 @MainActor
 final class LiveTranscriber: ObservableObject {
     @Published private(set) var transcript = ""
@@ -12,8 +17,10 @@ final class LiveTranscriber: ObservableObject {
     @Published private(set) var level: Float = 0  // 0…1 RMS for waveform UI
 
     private var engine: AVAudioEngine?
-    private var request: SFSpeechAudioBufferRecognitionRequest?
-    private var task: SFSpeechRecognitionTask?
+    private var recognizer: SFSpeechRecognizer?
+    private var currentTask: SFSpeechRecognitionTask?
+    private var committedText = ""
+    private let appender = LiveTranscriberAppender()
 
     enum LiveError: Error, LocalizedError {
         case unavailable
@@ -55,17 +62,16 @@ final class LiveTranscriber: ObservableObject {
         try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth])
         try session.setActive(true, options: .notifyOthersOnDeactivation)
 
-        let req = SFSpeechAudioBufferRecognitionRequest()
-        req.shouldReportPartialResults = true
-        if rec.supportsOnDeviceRecognition { req.requiresOnDeviceRecognition = true }
-
         let engine = AVAudioEngine()
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak req, weak self] buffer, _ in
-            req?.append(buffer)
+        let localAppender = self.appender
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+            localAppender.append(buffer)
             let rms = Self.rms(of: buffer)
-            Task { @MainActor in self?.level = rms }
+            Task { @MainActor [weak self] in
+                self?.level = rms
+            }
         }
         engine.prepare()
         do {
@@ -76,35 +82,80 @@ final class LiveTranscriber: ObservableObject {
         }
 
         self.engine = engine
-        self.request = req
+        self.recognizer = rec
+        self.committedText = ""
         self.transcript = ""
         self.level = 0
         self.isRunning = true
-
-        self.task = rec.recognitionTask(with: req) { [weak self] result, _ in
-            guard let self else { return }
-            Task { @MainActor in
-                if let result {
-                    self.transcript = result.bestTranscription.formattedString
-                }
-            }
-        }
+        startNewSegment()
     }
 
     /// Stops streaming and returns the latest transcript.
     @discardableResult
     func stop() -> String {
         guard isRunning else { return transcript }
+        isRunning = false
+        appender.setRequest(nil)
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
-        request?.endAudio()
-        task?.finish()
+        currentTask?.finish()
         engine = nil
-        request = nil
-        task = nil
-        isRunning = false
+        currentTask = nil
+        recognizer = nil
         level = 0
         return transcript
+    }
+
+    // MARK: - Internals
+
+    private func startNewSegment() {
+        guard isRunning, let recognizer = recognizer else { return }
+
+        let req = SFSpeechAudioBufferRecognitionRequest()
+        req.shouldReportPartialResults = true
+        if recognizer.supportsOnDeviceRecognition {
+            req.requiresOnDeviceRecognition = true
+        }
+        if #available(iOS 16.0, *) {
+            req.addsPunctuation = true
+        }
+        appender.setRequest(req)
+
+        currentTask = recognizer.recognitionTask(with: req) { [weak self] result, error in
+            Task { @MainActor [weak self] in
+                self?.handleResult(result, error: error)
+            }
+        }
+    }
+
+    private func handleResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
+        guard isRunning else { return }
+
+        if let result = result {
+            let segmentText = result.bestTranscription.formattedString
+            transcript = committedText.isEmpty
+                ? segmentText
+                : committedText + " " + segmentText
+
+            if result.isFinal {
+                // Commit what we've heard so far, then start a fresh recognition
+                // segment so subsequent partials append rather than overwrite.
+                committedText = transcript
+                let oldTask = currentTask
+                currentTask = nil
+                startNewSegment()
+                oldTask?.finish()
+            }
+            return
+        }
+
+        // Error path: just restart the segment so the user can keep speaking.
+        if error != nil, isRunning {
+            let oldTask = currentTask
+            currentTask = nil
+            startNewSegment()
+            oldTask?.finish()
+        }
     }
 
     // MARK: - Level metering
@@ -119,9 +170,28 @@ final class LiveTranscriber: ObservableObject {
             sum += v * v
         }
         let rms = (sum / Float(count)).squareRoot()
-        // Map to 0…1 with a gentle compressor (-50dB floor)
         let db = 20 * log10(max(rms, 0.00001))
-        let normalized = max(0, min(1, (db + 50) / 50))
-        return normalized
+        return max(0, min(1, (db + 50) / 50))
+    }
+}
+
+/// Thread-safe pipe that lets the audio-thread tap append buffers into whichever
+/// `SFSpeechAudioBufferRecognitionRequest` is currently active without crossing
+/// actor boundaries on the hot path.
+private final class LiveTranscriberAppender: @unchecked Sendable {
+    private let lock = NSLock()
+    private var request: SFSpeechAudioBufferRecognitionRequest?
+
+    func setRequest(_ req: SFSpeechAudioBufferRecognitionRequest?) {
+        lock.lock()
+        request = req
+        lock.unlock()
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        lock.lock()
+        let req = request
+        lock.unlock()
+        req?.append(buffer)
     }
 }

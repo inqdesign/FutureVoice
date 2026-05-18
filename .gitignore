@@ -7,6 +7,7 @@ FutureVoice/Config/Secrets.generated.swift
 
 # Xcode
 build/
+build-device/
 DerivedData/
 *.xcuserstate
 xcuserdata/
