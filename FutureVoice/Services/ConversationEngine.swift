@@ -91,6 +91,16 @@ enum ConversationEngine {
             )
         }
     }
+
+    /// Maps prior `Turn`s into Gemini's `contents` history (user / model roles).
+    static func geminiMessages(from turns: [Turn]) -> [GeminiClient.Message] {
+        turns.map { turn in
+            GeminiClient.Message(
+                role: turn.role == .user ? .user : .model,
+                content: turn.transcript
+            )
+        }
+    }
 }
 
 /// JSON shape returned by Claude for `SessionSummary`. Kept separate from the

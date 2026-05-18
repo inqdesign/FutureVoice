@@ -60,6 +60,12 @@ struct Turn: Codable, Identifiable {
     var transcript: String
     var durationMs: Int
     let timestamp: Date
+    var suggestion: TurnSuggestion?
+}
+
+struct TurnSuggestion: Codable, Hashable {
+    var alternative: String
+    var reason: String
 }
 
 struct Session: Codable, Identifiable {

@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// Voice-first conversation screen.
-///
-/// Designed like a phone call, not a chat app: a single dominant mic button,
-/// a plain status line, and a one-line caption of the most recent dialogue.
-/// Full transcript and session summary are accessed via sheets so this screen
-/// stays focused on the act of speaking.
+/// Voice-first conversation screen, redesigned around a scrolling transcript
+/// feed. The mic is small and lives at the bottom; the dominant content is
+/// what the user and the fluent self just said — including a live partial
+/// transcript while the user speaks, and a gentle inline correction chip
+/// underneath each user turn when the LLM finds a more natural alternative.
 struct ConversationView: View {
     @EnvironmentObject private var appState: AppState
-    @StateObject private var recorder = AudioRecorder()
+    @StateObject private var live = LiveTranscriber()
     @StateObject private var player = AudioPlayer()
 
     @State private var topic = "Ordering coffee"
@@ -18,56 +17,39 @@ struct ConversationView: View {
     @State private var summary: SessionSummary?
     @State private var showTranscript = false
     @State private var showTopicPicker = false
+    @State private var showHistory = false
+    @State private var sessionId = UUID()
+    @State private var sessionStartedAt = Date()
+    @State private var didSaveCurrentSession = false
 
     private let userId = UUID()
 
     enum Phase: Equatable {
         case idle
-        case listening      // mic open, recording user
-        case thinking       // STT + Claude in flight
-        case speaking       // fluent self is talking
+        case listening      // mic open, partial STT streaming
+        case thinking       // Gemini reply in flight
+        case speaking       // ElevenLabs TTS playing
     }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                statusArea
-                Spacer(minLength: 0)
-                micButton
-                Spacer(minLength: 0)
-                hintText
-                    .padding(.bottom, 32)
+                feed
+                Divider().opacity(0.15)
+                bottomBar
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemBackground))
             .navigationTitle(topic)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button { showTopicPicker = true } label: {
-                        Label("Topic", systemImage: "list.bullet")
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showTranscript = true } label: {
-                        Label("Transcript", systemImage: "text.alignleft")
-                    }
-                    .disabled(turns.isEmpty)
-                }
-                ToolbarItem(placement: .bottomBar) {
-                    Button(role: .destructive) {
-                        Task { await endSession() }
-                    } label: {
-                        Text("End session")
-                    }
-                    .disabled(turns.isEmpty || phase != .idle)
-                }
-            }
+            .toolbar { toolbarContent }
             .sheet(isPresented: $showTopicPicker) {
                 TopicPickerSheet(topic: $topic)
             }
             .sheet(isPresented: $showTranscript) {
                 TranscriptSheet(turns: turns)
+            }
+            .sheet(isPresented: $showHistory) {
+                HistorySheet()
             }
             .sheet(item: summaryBinding) { s in
                 SummarySheet(summary: s)
@@ -78,119 +60,150 @@ struct ConversationView: View {
                 Text(error ?? "")
             }
             .task {
-                if turns.isEmpty {
-                    if appState.useDummyLLM {
-                        await seedDummyAndSpeak()
-                    } else {
-                        await openConversation()
+                if turns.isEmpty { await openConversation() }
+            }
+        }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button { showTopicPicker = true } label: {
+                Label("Topic", systemImage: "list.bullet")
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { showHistory = true } label: {
+                Label("History", systemImage: "clock.arrow.circlepath")
+            }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { showTranscript = true } label: {
+                Label("Transcript", systemImage: "text.alignleft")
+            }
+            .disabled(turns.isEmpty)
+        }
+        ToolbarItem(placement: .bottomBar) {
+            Button(role: .destructive) {
+                Task { await endSession() }
+            } label: {
+                Text("End session")
+            }
+            .disabled(turns.isEmpty || phase != .idle)
+        }
+    }
+
+    // MARK: - Feed
+
+    private var feed: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    ForEach(turns) { turn in
+                        TurnView(turn: turn).id(turn.id)
                     }
+                    if phase == .listening {
+                        PartialTurnView(text: live.transcript)
+                            .id(Self.partialId)
+                    } else if phase == .thinking && (turns.last?.role == .user) {
+                        ThinkingIndicator()
+                            .id(Self.partialId)
+                    }
+                    // Bottom spacer so the last line isn't hidden behind controls
+                    Color.clear.frame(height: 8).id(Self.bottomId)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 4)
+            }
+            .onChange(of: turns.count) { _, _ in scroll(proxy) }
+            .onChange(of: phase)       { _, _ in scroll(proxy) }
+            .onChange(of: live.transcript) { _, _ in scroll(proxy) }
+        }
+    }
+
+    private static let partialId = "partial-indicator"
+    private static let bottomId  = "feed-bottom"
+
+    private func scroll(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            proxy.scrollTo(Self.bottomId, anchor: .bottom)
+        }
+    }
+
+    // MARK: - Bottom bar (mic + level)
+
+    private var bottomBar: some View {
+        VStack(spacing: 10) {
+            if phase == .listening {
+                LevelMeter(level: live.level)
+                    .frame(height: 18)
+                    .padding(.horizontal, 32)
+                    .transition(.opacity)
+            }
+
+            Button { Task { await handleMicTap() } } label: {
+                ZStack {
+                    Circle()
+                        .fill(.tint)
+                        .frame(width: 64, height: 64)
+                        .opacity(micEnabled ? 1.0 : 0.4)
+                        .scaleEffect(phase == .listening ? 1.06 : 1.0)
+                        .animation(
+                            phase == .listening
+                                ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                                : .default,
+                            value: phase
+                        )
+                    Image(systemName: micSymbol)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(Color(.systemBackground))
                 }
             }
-        }
-    }
+            .buttonStyle(.plain)
+            .tint(micTint)
+            .disabled(!micEnabled)
+            .accessibilityLabel(Text(micA11yLabel))
 
-    // MARK: - Status area
-
-    private var statusArea: some View {
-        VStack(spacing: 12) {
-            Text(statusLabel)
-                .font(.headline)
+            Text(micHint)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-
-            Text(captionLine)
-                .font(.title3)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.primary)
-                .lineLimit(3)
-                .padding(.horizontal, 32)
-                .frame(maxWidth: .infinity, minHeight: 80, alignment: .top)
+                .frame(height: 16)
+                .animation(nil, value: phase)
         }
-        .padding(.top, 24)
+        .padding(.top, 14)
+        .padding(.bottom, 6)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
     }
 
-    private var statusLabel: String {
-        switch phase {
-        case .idle:      return turns.isEmpty ? "Connecting" : "Your turn"
-        case .listening: return "Listening"
-        case .thinking:  return "Thinking"
-        case .speaking:  return "Future self speaking"
-        }
-    }
-
-    private var captionLine: String {
-        if let last = turns.last { return last.transcript }
-        return ""
-    }
-
-    // MARK: - Mic button
-
-    private var micButton: some View {
-        Button {
-            Task { await handleMicTap() }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(.tint)
-                    .opacity(micButtonOpacity)
-                    .frame(width: 180, height: 180)
-                    .scaleEffect(phase == .listening ? 1.05 : 1.0)
-                    .animation(
-                        phase == .listening
-                            ? .easeInOut(duration: 1.1).repeatForever(autoreverses: true)
-                            : .default,
-                        value: phase
-                    )
-
-                Image(systemName: micSymbol)
-                    .font(.system(size: 56, weight: .regular))
-                    .foregroundStyle(Color(.systemBackground))
-            }
-        }
-        .buttonStyle(.plain)
-        .tint(micTint)
-        .disabled(phase == .thinking || phase == .speaking)
-        .accessibilityLabel(Text(statusLabel))
-    }
-
+    private var micEnabled: Bool { phase == .idle || phase == .listening }
     private var micSymbol: String {
         switch phase {
-        case .listening: return "stop.fill"
+        case .listening: return "checkmark"
         case .thinking:  return "ellipsis"
         case .speaking:  return "waveform"
         case .idle:      return "mic.fill"
         }
     }
-
-    private var micTint: Color {
+    private var micTint: Color { phase == .listening ? .red : .accentColor }
+    private var micA11yLabel: String {
         switch phase {
-        case .listening: return .red
-        default:         return .accentColor
+        case .idle:      return "Start speaking"
+        case .listening: return "Send what you said"
+        case .thinking:  return "Thinking"
+        case .speaking:  return "Future self speaking"
         }
     }
-
-    private var micButtonOpacity: Double {
-        (phase == .thinking || phase == .speaking) ? 0.4 : 1.0
-    }
-
-    // MARK: - Hint text
-
-    private var hintText: some View {
-        Group {
-            switch phase {
-            case .idle:
-                Text(turns.isEmpty ? " " : "Tap to speak")
-            case .listening:
-                Text("Tap to send")
-            case .thinking:
-                ProgressView()
-            case .speaking:
-                Text(" ")
-            }
+    private var micHint: String {
+        switch phase {
+        case .idle:      return turns.isEmpty ? " " : "Tap to speak"
+        case .listening: return "Tap to send"
+        case .thinking:  return "Thinking…"
+        case .speaking:  return "Listen…"
         }
-        .font(.footnote)
-        .foregroundStyle(.secondary)
-        .frame(height: 20)
     }
 
     // MARK: - Bindings
@@ -206,10 +219,6 @@ struct ConversationView: View {
     // MARK: - Flow
 
     private func handleMicTap() async {
-        if appState.useDummyLLM {
-            await runDummyCycle()
-            return
-        }
         switch phase {
         case .idle:      await startRecording()
         case .listening: await stopAndSend()
@@ -217,75 +226,16 @@ struct ConversationView: View {
         }
     }
 
-    // MARK: - Dummy LLM flow (canned text, real TTS playback)
-
-    private static let dummyOpenerCandidates = [
-        "Hey, what did you end up ordering this morning?",
-        "So how did the morning treat you?",
-        "Tell me about the first thing that made you smile today.",
-    ]
-
-    private static let dummyReplyCandidates = [
-        "Nice. Did the barista get it right this time?",
-        "I love that — small wins really do set the tone.",
-        "Tell me more — what made it stand out?",
-        "That's the kind of detail you'll remember in a year.",
-    ]
-
-    private static let dummyUserUtterance = "Yeah, she remembered my order. Even drew a heart on the cup."
-
-    private func seedDummyAndSpeak() async {
-        guard let voiceId = appState.voiceCloneId else { return }
-        let opener = Self.dummyOpenerCandidates.randomElement()!
-        do {
-            try await speakAndAppend(opener, voiceId: voiceId)
-            if phase == .speaking { /* speakAndAppend's completion will reset to .idle */ }
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func runDummyCycle() async {
-        switch phase {
-        case .idle:
-            phase = .listening
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            if phase == .listening { await sendDummyReply() }
-
-        case .listening:
-            await sendDummyReply()
-
-        case .thinking, .speaking:
-            break
-        }
-    }
-
-    private func sendDummyReply() async {
-        phase = .thinking
-        try? await Task.sleep(nanoseconds: 600_000_000)
-        turns.append(Turn(
-            id: UUID(), role: .user, audioURL: nil,
-            transcript: Self.dummyUserUtterance,
-            durationMs: 0, timestamp: Date()
-        ))
-
-        guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
-        let reply = Self.dummyReplyCandidates.randomElement()!
-        do {
-            try await speakAndAppend(reply, voiceId: voiceId)
-        } catch {
-            self.error = error.localizedDescription
-            phase = .idle
-        }
-    }
-
     private func openConversation() async {
         guard let voiceId = appState.voiceCloneId else { return }
         phase = .thinking
         do {
-            let opener = try await ClaudeClient.shared.send(
+            let opener = try await GeminiClient.shared.send(
                 system: systemPrompt(),
-                messages: [.init(role: .user, content: "Open the conversation with a friendly first line, in \(appState.targetLanguage).")]
+                messages: [GeminiClient.Message(
+                    role: .user,
+                    content: "Open the conversation with a friendly first line, in \(appState.targetLanguage). One short sentence."
+                )]
             )
             try await speakAndAppend(opener, voiceId: voiceId)
             phase = .idle
@@ -296,14 +246,13 @@ struct ConversationView: View {
     }
 
     private func startRecording() async {
-        let mic = await recorder.requestPermission()
-        let speech = await SpeechTranscriber.requestPermission()
-        guard mic, speech else {
+        let granted = await LiveTranscriber.requestPermissions()
+        guard granted else {
             error = "Microphone or speech permission denied."
             return
         }
         do {
-            try recorder.start()
+            try live.start(locale: appState.targetLanguage)
             phase = .listening
         } catch {
             self.error = error.localizedDescription
@@ -311,25 +260,28 @@ struct ConversationView: View {
     }
 
     private func stopAndSend() async {
-        guard let url = recorder.stop() else { return }
+        let finalText = live.stop()
         phase = .thinking
-        do {
-            let transcript = try await SpeechTranscriber().transcribe(
-                audioURL: url,
-                languageCode: appState.targetLanguage
-            )
-            turns.append(Turn(
-                id: UUID(), role: .user, audioURL: url,
-                transcript: transcript, durationMs: 0, timestamp: Date()
-            ))
 
-            guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
-            let reply = try await ClaudeClient.shared.send(
+        let userTurn = Turn(
+            id: UUID(), role: .user, audioURL: nil,
+            transcript: finalText, durationMs: 0, timestamp: Date(),
+            suggestion: nil
+        )
+        turns.append(userTurn)
+        didSaveCurrentSession = false
+
+        guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
+        do {
+            let reply = try await GeminiClient.shared.send(
                 system: systemPrompt(),
-                messages: ConversationEngine.messages(from: turns)
+                messages: ConversationEngine.geminiMessages(from: turns)
             )
             try await speakAndAppend(reply, voiceId: voiceId)
             phase = .idle
+
+            // Fire-and-forget: check whether the user turn has a more natural rephrase.
+            Task { await annotateUserTurn(id: userTurn.id) }
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -340,8 +292,10 @@ struct ConversationView: View {
         let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text)
         turns.append(Turn(
             id: UUID(), role: .fluentSelf, audioURL: nil,
-            transcript: text, durationMs: 0, timestamp: Date()
+            transcript: text, durationMs: 0, timestamp: Date(),
+            suggestion: nil
         ))
+        didSaveCurrentSession = false
         phase = .speaking
         try player.play(audio) {
             Task { @MainActor in
@@ -350,40 +304,39 @@ struct ConversationView: View {
         }
     }
 
+    private func annotateUserTurn(id: UUID) async {
+        guard let turn = turns.first(where: { $0.id == id }),
+              !turn.transcript.isEmpty else { return }
+        struct CorrectionPayload: Decodable {
+            let has_issue: Bool
+            let alternative: String?
+            let reason: String?
+        }
+        let system = """
+        You are a strict but warm language coach for \(appState.targetLanguage).
+        Decide if the learner's sentence has a clear grammar, idiom, or naturalness issue.
+        Reply with STRICT JSON only — no prose, no code fences:
+        { "has_issue": true|false, "alternative": "...", "reason": "..." }
+        - has_issue: false → omit "alternative" and "reason".
+        - Otherwise keep "alternative" to a single natural rephrase, and "reason" under 12 words.
+        - Be conservative — minor stylistic differences are NOT issues.
+        """
+        let payload: CorrectionPayload? = try? await GeminiClient.shared.sendJSON(
+            system: system,
+            messages: [GeminiClient.Message(role: .user, content: turn.transcript)],
+            maxTokens: 200
+        )
+        guard let payload, payload.has_issue,
+              let alt = payload.alternative, !alt.isEmpty,
+              let reason = payload.reason, !reason.isEmpty else { return }
+
+        if let idx = turns.firstIndex(where: { $0.id == id }) {
+            turns[idx].suggestion = TurnSuggestion(alternative: alt, reason: reason)
+        }
+    }
+
     private func endSession() async {
         guard !turns.isEmpty else { return }
-        if appState.useDummyLLM {
-            summary = SessionSummary(
-                phrasesUsed: [
-                    PhraseFeedback(
-                        userSaid: "I get a oat latte",
-                        fluentAlternative: "I got an oat latte",
-                        reason: "Past tense — you were describing this morning."
-                    ),
-                    PhraseFeedback(
-                        userSaid: "not too sweet",
-                        fluentAlternative: "easy on the sugar",
-                        reason: "More casual and native-sounding in a café."
-                    ),
-                ],
-                newPatternsDetected: [
-                    LearnerPattern(
-                        mistake: "get",
-                        correction: "got",
-                        context: "describing a past action",
-                        frequency: 2,
-                        lastSeenAt: Date()
-                    )
-                ],
-                suggestedDrills: [
-                    "I got an oat latte this morning.",
-                    "She remembered my order.",
-                    "Easy on the sugar, please.",
-                ],
-                overallNote: "Warm, natural pacing. Just nudge past tenses and you'll sound a step more fluent."
-            )
-            return
-        }
         phase = .thinking
         do {
             let profile = appState.makeEmptyProfile(userId: userId)
@@ -392,14 +345,28 @@ struct ConversationView: View {
                 profile: profile
             )
             let transcript = ConversationEngine.formatTranscript(turns)
-            let payload: ClaudeSummaryPayload = try await ClaudeClient.shared.sendJSON(
+            let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
                 system: systemP,
-                messages: [.init(role: .user, content: transcript)],
-                model: .opus47,
+                messages: [GeminiClient.Message(role: .user, content: transcript)],
                 maxTokens: 1024
             )
-            summary = payload.toDomain()
+            let computed = payload.toDomain()
+            summary = computed
             phase = .idle
+
+            let session = Session(
+                id: sessionId,
+                userId: userId,
+                targetLanguage: appState.targetLanguage,
+                mode: .conversation,
+                topic: topic,
+                startedAt: sessionStartedAt,
+                endedAt: Date(),
+                turns: turns,
+                summary: computed
+            )
+            SessionStore.shared.save(session)
+            didSaveCurrentSession = true
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -415,6 +382,111 @@ struct ConversationView: View {
             weakVocabAreas: [],
             topic: topic
         )
+    }
+}
+
+// MARK: - Subviews
+
+private struct TurnView: View {
+    let turn: Turn
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(turn.role == .user ? "You" : "Future self")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(turn.transcript)
+                .font(.title3)
+                .foregroundStyle(turn.role == .user ? .primary : Color.accentColor)
+            if turn.role == .user, let suggestion = turn.suggestion {
+                SuggestionChip(suggestion: suggestion)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct SuggestionChip: View {
+    let suggestion: TurnSuggestion
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.tint)
+                .font(.footnote)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(suggestion.alternative)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Text(suggestion.reason)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+}
+
+private struct PartialTurnView: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("You")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(text.isEmpty ? "Listening…" : text)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .italic(text.isEmpty)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct ThinkingIndicator: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            ProgressView().scaleEffect(0.7)
+            Text("Future self is thinking…")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct LevelMeter: View {
+    let level: Float
+
+    var body: some View {
+        GeometryReader { geo in
+            let barCount = 24
+            let spacing: CGFloat = 4
+            let barWidth = (geo.size.width - spacing * CGFloat(barCount - 1)) / CGFloat(barCount)
+            HStack(spacing: spacing) {
+                ForEach(0..<barCount, id: \.self) { i in
+                    let position = Float(i) / Float(barCount - 1)
+                    let center: Float = 0.5
+                    let distance = abs(position - center) * 2          // 0 at center, 1 at edges
+                    let envelope = max(0.15, 1 - distance * distance)  // bell-ish
+                    let height = CGFloat(max(0.08, level * envelope)) * geo.size.height
+                    Capsule()
+                        .fill(Color.accentColor)
+                        .frame(width: barWidth, height: height)
+                        .opacity(0.5 + Double(level) * 0.5)
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
+            .animation(.easeOut(duration: 0.08), value: level)
+        }
     }
 }
 
@@ -482,6 +554,11 @@ private struct TranscriptSheet: View {
                         .foregroundStyle(.secondary)
                     Text(turn.transcript)
                         .font(.body)
+                    if let s = turn.suggestion {
+                        Text("→ \(s.alternative)")
+                            .font(.footnote)
+                            .foregroundStyle(.tint)
+                    }
                 }
                 .padding(.vertical, 4)
             }
