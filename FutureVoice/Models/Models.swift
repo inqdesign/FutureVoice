@@ -93,3 +93,22 @@ struct PhraseFeedback: Codable, Identifiable, Hashable {
     var fluentAlternative: String
     var reason: String
 }
+
+// MARK: - Drill Card (SRS)
+
+/// One Leitner-style spaced-repetition card. Drill cards are derived from
+/// per-turn suggestions and post-session summaries — they represent specific
+/// "say this instead" moments the learner should revisit on a schedule.
+struct DrillCard: Codable, Identifiable {
+    var id: UUID = UUID()
+    var sourcePhrase: String          // what the user originally said (may be empty)
+    var targetPhrase: String          // the more natural / correct version
+    var reason: String                // short note explaining the swap
+    var createdAt: Date
+    var lastReviewedAt: Date?
+    var nextReviewAt: Date            // Leitner schedule — when this is due
+    var box: Int                      // 0…5 Leitner box
+    var timesSeen: Int = 0
+    var timesCorrect: Int = 0
+    var sourceSessionId: UUID?
+}

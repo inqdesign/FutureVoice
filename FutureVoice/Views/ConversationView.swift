@@ -18,6 +18,8 @@ struct ConversationView: View {
     @State private var showTranscript = false
     @State private var showTopicPicker = false
     @State private var showHistory = false
+    @State private var showDrills = false
+    @State private var dueDrillCount = 0
     @State private var sessionId = UUID()
     @State private var sessionStartedAt = Date()
     @State private var didSaveCurrentSession = false
@@ -51,6 +53,9 @@ struct ConversationView: View {
             .sheet(isPresented: $showHistory) {
                 HistorySheet()
             }
+            .sheet(isPresented: $showDrills, onDismiss: refreshDueDrillCount) {
+                DrillSheet()
+            }
             .sheet(item: summaryBinding) { s in
                 SummarySheet(summary: s, onStartNew: startNewSession)
             }
@@ -60,6 +65,7 @@ struct ConversationView: View {
                 Text(error ?? "")
             }
             .task {
+                refreshDueDrillCount()
                 if turns.isEmpty { await openConversation() }
             }
         }
@@ -73,6 +79,23 @@ struct ConversationView: View {
             Button { showTopicPicker = true } label: {
                 Label("Topic", systemImage: "list.bullet")
             }
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { showDrills = true } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "lightbulb.max")
+                    if dueDrillCount > 0 {
+                        Text("\(dueDrillCount)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color(.systemBackground))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Color.accentColor))
+                            .offset(x: 8, y: -6)
+                    }
+                }
+            }
+            .accessibilityLabel(Text(dueDrillCount > 0 ? "Drills: \(dueDrillCount) due" : "Drills"))
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button { showHistory = true } label: {
@@ -366,11 +389,17 @@ struct ConversationView: View {
                 summary: computed
             )
             SessionStore.shared.save(session)
+            DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
             didSaveCurrentSession = true
+            refreshDueDrillCount()
         } catch {
             self.error = error.localizedDescription
             phase = .idle
         }
+    }
+
+    private func refreshDueDrillCount() {
+        dueDrillCount = DrillStore.shared.dueCount()
     }
 
     private func startNewSession() {
