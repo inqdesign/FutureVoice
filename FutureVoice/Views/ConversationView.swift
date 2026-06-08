@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 /// Voice-first conversation screen, redesigned around a scrolling transcript
@@ -10,19 +11,35 @@ struct ConversationView: View {
     @StateObject private var live = LiveTranscriber()
     @StateObject private var player = AudioPlayer()
 
-    @State private var topic = "Ordering coffee"
+    @State private var topic = ""
+    @State private var topicBlurb = ""
     @State private var turns: [Turn] = []
     @State private var phase: Phase = .idle
     @State private var error: String?
     @State private var summary: SessionSummary?
-    @State private var showTranscript = false
     @State private var showTopicPicker = false
-    @State private var showHistory = false
-    @State private var showDrills = false
     @State private var dueDrillCount = 0
+    @State private var phoneCallActive = false
+    @State private var silenceTask: Task<Void, Never>?
+
+    /// Three-tier VAD threshold so brief pauses don't cut the user off mid-thought.
+    ///   • `short`   — explicit end-of-sentence punctuation. They wrapped up.
+    ///   • `default` — no clear signal either way. Conservative wait so a
+    ///     breath or a 2-second think doesn't fire.
+    ///   • `long`    — trailing filler / hanging conjunction / stub
+    ///     article/preposition. They're clearly still composing.
+    private static let vadShortSeconds: Double   = 1.5
+    private static let vadDefaultSeconds: Double = 3.0
+    private static let vadLongSeconds: Double    = 5.0
+    @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
+        streakDays: 0, totalSessions: 0, lastScorecard: nil,
+        lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
+        shadowableLineCount: 0
+    )
     @State private var sessionId = UUID()
     @State private var sessionStartedAt = Date()
     @State private var didSaveCurrentSession = false
+    @State private var userSpeechStartedAt: Date?
 
     private let userId = UUID()
 
@@ -41,32 +58,40 @@ struct ConversationView: View {
                 bottomBar
             }
             .background(Color(.systemBackground))
-            .navigationTitle(topic)
+            .navigationTitle(topic.isEmpty ? "Pick a topic" : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showTopicPicker) {
-                TopicPickerSheet(topic: $topic)
+                ScenariosListSheet(topic: $topic, topicBlurb: $topicBlurb)
+                    .environmentObject(appState)
             }
-            .sheet(isPresented: $showTranscript) {
-                TranscriptSheet(turns: turns)
-            }
-            .sheet(isPresented: $showHistory) {
-                HistorySheet()
-            }
-            .sheet(isPresented: $showDrills, onDismiss: refreshDueDrillCount) {
-                DrillSheet()
-            }
+            // Drill / Shadow / History / Watch / Profile moved to dedicated
+            // tabs in `RootTabView`. ConversationView now owns Talk only.
             .sheet(item: summaryBinding) { s in
-                SummarySheet(summary: s, onStartNew: startNewSession)
+                SummarySheet(summary: s, onDone: endAndClose, onStartNew: startNewSession)
             }
             .alert("Something went wrong", isPresented: errorBinding) {
                 Button("OK") { error = nil }
             } message: {
                 Text(error ?? "")
             }
-            .task {
-                refreshDueDrillCount()
-                if turns.isEmpty { await openConversation() }
+            .task { refreshDashboard() }
+            .onChange(of: topic) { _, newTopic in
+                // Topic just got picked → opener appears AND we auto-enter
+                // phone-call mode. Zero-tap start: the user's scenario pick
+                // IS the "I want to talk now" signal. They can hang up via
+                // the End button (or by tapping mic again) when they're done.
+                guard !newTopic.isEmpty, turns.isEmpty, phase == .idle else { return }
+                phoneCallActive = true
+                HapticEngine.phoneCallStarted()
+                Task { await openConversation() }
+            }
+            .onChange(of: live.transcript) { _, _ in
+                // Voice activity detection: every time the live transcript
+                // grows, reset the silence countdown. When it stays unchanged
+                // for `vadSilenceSeconds`, auto-send.
+                guard phoneCallActive, phase == .listening else { return }
+                resetSilenceTimer()
             }
         }
     }
@@ -77,44 +102,19 @@ struct ConversationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button { showTopicPicker = true } label: {
-                Label("Topic", systemImage: "list.bullet")
+                Label("Topic", systemImage: "list.bullet.rectangle")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button { showDrills = true } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "lightbulb.max")
-                    if dueDrillCount > 0 {
-                        Text("\(dueDrillCount)")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(Color(.systemBackground))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor))
-                            .offset(x: 8, y: -6)
-                    }
+            if !turns.isEmpty {
+                Button(role: .destructive) {
+                    Task { await endSession() }
+                } label: {
+                    Text("End")
+                        .fontWeight(.semibold)
                 }
+                .disabled(phase != .idle)
             }
-            .accessibilityLabel(Text(dueDrillCount > 0 ? "Drills: \(dueDrillCount) due" : "Drills"))
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button { showHistory = true } label: {
-                Label("History", systemImage: "clock.arrow.circlepath")
-            }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button { showTranscript = true } label: {
-                Label("Transcript", systemImage: "text.alignleft")
-            }
-            .disabled(turns.isEmpty)
-        }
-        ToolbarItem(placement: .bottomBar) {
-            Button(role: .destructive) {
-                Task { await endSession() }
-            } label: {
-                Text("End session")
-            }
-            .disabled(turns.isEmpty || phase != .idle)
         }
     }
 
@@ -124,15 +124,36 @@ struct ConversationView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
+                    if turns.isEmpty {
+                        HomeDashboard(
+                            snapshot: dashboard,
+                            currentTopic: topic,
+                            onPickTopic: { showTopicPicker = true }
+                        )
+                        .padding(.horizontal, -20)
+                    }
                     ForEach(turns) { turn in
-                        TurnView(turn: turn).id(turn.id)
+                        // No implicit morph between adjacent turns — each
+                        // bubble fades in / out cleanly. Prevents the
+                        // previous bubble's text from being visible inside
+                        // the next one during insertion animation.
+                        TurnView(turn: turn)
+                            .id(turn.id)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     if phase == .listening {
+                        // Separate id from ThinkingIndicator + explicit opacity
+                        // transition so SwiftUI doesn't morph one view's text
+                        // into another. The previous shared id caused the
+                        // user's partial transcript to briefly bleed into the
+                        // "Future self is thinking…" bubble during the swap.
                         PartialTurnView(text: live.transcript)
-                            .id(Self.partialId)
+                            .id("partial-listening")
+                            .transition(.opacity)
                     } else if phase == .thinking && (turns.last?.role == .user) {
                         ThinkingIndicator()
-                            .id(Self.partialId)
+                            .id("partial-thinking")
+                            .transition(.opacity)
                     }
                     // Bottom spacer so the last line isn't hidden behind controls
                     Color.clear.frame(height: 8).id(Self.bottomId)
@@ -197,36 +218,57 @@ struct ConversationView: View {
                 .animation(nil, value: phase)
         }
         .padding(.top, 14)
-        .padding(.bottom, 6)
+        .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
-        .background(.bar)
+        // No background — the mic floats above the feed and the tab bar gets
+        // a clean gap below it, so users don't read mic + tabs as one chunk.
     }
 
-    private var micEnabled: Bool { phase == .idle || phase == .listening }
+    /// Mic is always tappable — even mid-thinking/speaking it acts as
+    /// "hang up" for the phone call. iOS-native phone-call ergonomics.
+    private var micEnabled: Bool { true }
+
     private var micSymbol: String {
-        switch phase {
-        case .listening: return "checkmark"
-        case .thinking:  return "ellipsis"
-        case .speaking:  return "waveform"
-        case .idle:      return "mic.fill"
+        if phoneCallActive {
+            switch phase {
+            case .listening: return "stop.fill"           // tap to hang up
+            case .thinking:  return "ellipsis"
+            case .speaking:  return "waveform"
+            case .idle:      return "stop.fill"           // mid-cycle, still in call
+            }
         }
+        return "mic.fill"                                 // not in call → tap to start
     }
-    private var micTint: Color { phase == .listening ? .red : .accentColor }
+
+    private var micTint: Color {
+        if phoneCallActive {
+            return phase == .speaking ? .accentColor : .red
+        }
+        return .accentColor
+    }
+
     private var micA11yLabel: String {
-        switch phase {
-        case .idle:      return "Start speaking"
-        case .listening: return "Send what you said"
-        case .thinking:  return "Thinking"
-        case .speaking:  return "Future self speaking"
+        if phoneCallActive {
+            switch phase {
+            case .listening: return "Listening — tap to hang up"
+            case .thinking:  return "Thinking"
+            case .speaking:  return "Future self speaking — tap to hang up"
+            case .idle:      return "Hang up"
+            }
         }
+        return turns.isEmpty ? "Start phone-call mode" : "Resume phone-call mode"
     }
+
     private var micHint: String {
-        switch phase {
-        case .idle:      return turns.isEmpty ? " " : "Tap to speak"
-        case .listening: return "Tap to send"
-        case .thinking:  return "Thinking…"
-        case .speaking:  return "Listen…"
+        if phoneCallActive {
+            switch phase {
+            case .listening: return "Listening — pause to send"
+            case .thinking:  return "Thinking…"
+            case .speaking:  return "Speaking…"
+            case .idle:      return "On call"
+            }
         }
+        return turns.isEmpty ? "Tap to start a phone-call" : "Tap to continue"
     }
 
     // MARK: - Bindings
@@ -242,26 +284,126 @@ struct ConversationView: View {
     // MARK: - Flow
 
     private func handleMicTap() async {
-        switch phase {
-        case .idle:      await startRecording()
-        case .listening: await stopAndSend()
-        case .thinking, .speaking: break
+        if phoneCallActive {
+            // Tap during an active phone call = hang up.
+            await endPhoneCall()
+            return
+        }
+        // Start a phone call. Avatar's reply will auto-restart listening.
+        phoneCallActive = true
+        HapticEngine.phoneCallStarted()
+        await startRecording()
+    }
+
+    private func endPhoneCall() async {
+        phoneCallActive = false
+        cancelSilenceTimer()
+        if phase == .listening {
+            _ = live.stop()
+            userSpeechStartedAt = nil
+        }
+        if phase == .speaking {
+            player.stop()
+        }
+        phase = .idle
+        HapticEngine.phoneCallEnded()
+    }
+
+    private func resetSilenceTimer() {
+        cancelSilenceTimer()
+        let wait = currentVadWaitSeconds()
+        silenceTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            guard !Task.isCancelled,
+                  phoneCallActive,
+                  phase == .listening,
+                  !live.transcript.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+            HapticEngine.voiceSent()
+            await stopAndSend()
         }
     }
 
+    /// Inspect the latest STT transcript and pick a silence threshold:
+    ///   • 5.0s — clearly mid-thought (filler / hanging conjunction / stub).
+    ///   • 1.5s — wrapped up cleanly (terminal punctuation .!?).
+    ///   • 3.0s — anything in between. Conservative so a breath doesn't fire.
+    private func currentVadWaitSeconds() -> Double {
+        let trimmed = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if Self.isLikelyIncomplete(trimmed) {
+            return Self.vadLongSeconds
+        }
+        if let last = trimmed.last, ".!?".contains(last) {
+            return Self.vadShortSeconds
+        }
+        return Self.vadDefaultSeconds
+    }
+
+    private static let fillerWords: Set<String> = [
+        "uh", "um", "er", "ah", "hmm", "mm", "well",
+        "음", "어", "그", "그러니까", "에"
+    ]
+    private static let trailingConjunctions: Set<String> = [
+        "and", "but", "or", "so", "because", "cause",
+        "if", "when", "while", "that", "which", "though", "although"
+    ]
+    private static let trailingFunctionWords: Set<String> = [
+        "the", "a", "an", "to", "in", "on", "at", "of",
+        "for", "with", "by", "from", "into", "about"
+    ]
+
+    private static func isLikelyIncomplete(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if trimmed.isEmpty { return true }
+        let words = trimmed
+            .components(separatedBy: CharacterSet.whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+        guard let last = words.last else { return true }
+        // Very short transcripts are almost always still being formed.
+        if words.count <= 2,
+           !last.hasSuffix("?"),
+           !last.hasSuffix("."),
+           !last.hasSuffix("!") {
+            return true
+        }
+        let stripped = last.trimmingCharacters(in: CharacterSet.punctuationCharacters)
+        if fillerWords.contains(stripped)         { return true }
+        if trailingConjunctions.contains(stripped) { return true }
+        if trailingFunctionWords.contains(stripped) { return true }
+        return false
+    }
+
+    private func cancelSilenceTimer() {
+        silenceTask?.cancel()
+        silenceTask = nil
+    }
+
     private func openConversation() async {
-        guard let voiceId = appState.voiceCloneId else { return }
         phase = .thinking
         do {
             let opener = try await GeminiClient.shared.send(
                 system: systemPrompt(),
                 messages: [GeminiClient.Message(
                     role: .user,
-                    content: "Open the conversation with a friendly first line, in \(appState.targetLanguage). One short sentence."
+                    content: """
+                    Open this conversation with ONE natural opening line in \(appState.targetLanguage).
+                    Be IN the scenario — don't summarize it, don't explain it. Just say the first
+                    thing you'd say if this were really happening, in a way the user can respond to.
+                    """
                 )]
             )
-            try await speakAndAppend(opener, voiceId: voiceId)
+            // Text-only opener. No TTS — saves an ElevenLabs call per topic
+            // pick. The user reads, responds, and audio kicks in from the
+            // avatar's first reply onward.
+            turns.append(Turn(
+                id: UUID(), role: .fluentSelf, audioURL: nil,
+                transcript: opener, durationMs: 0, timestamp: Date(),
+                suggestion: nil
+            ))
+            didSaveCurrentSession = false
             phase = .idle
+            if phoneCallActive {
+                await startRecording()
+            }
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -276,6 +418,7 @@ struct ConversationView: View {
         }
         do {
             try live.start(locale: appState.targetLanguage)
+            userSpeechStartedAt = Date()
             phase = .listening
         } catch {
             self.error = error.localizedDescription
@@ -284,11 +427,13 @@ struct ConversationView: View {
 
     private func stopAndSend() async {
         let finalText = live.stop()
+        let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
+        userSpeechStartedAt = nil
         phase = .thinking
 
         let userTurn = Turn(
             id: UUID(), role: .user, audioURL: nil,
-            transcript: finalText, durationMs: 0, timestamp: Date(),
+            transcript: finalText, durationMs: max(0, elapsedMs), timestamp: Date(),
             suggestion: nil
         )
         turns.append(userTurn)
@@ -301,10 +446,16 @@ struct ConversationView: View {
                 messages: ConversationEngine.geminiMessages(from: turns)
             )
             try await speakAndAppend(reply, voiceId: voiceId)
-            phase = .idle
-
-            // Fire-and-forget: check whether the user turn has a more natural rephrase.
-            Task { await annotateUserTurn(id: userTurn.id) }
+            // DO NOT set phase = .idle here. speakAndAppend kicks off audio
+            // playback (non-blocking) and registers a completion that flips
+            // phase back to .idle AND auto-restarts listening for phone-call
+            // mode. Setting .idle here clobbers the .speaking marker, so the
+            // completion's `guard phase == .speaking else { return }` bails
+            // out and the call loop dies after one round.
+            // Per-turn correction suggestion (`annotateUserTurn`) was an
+            // extra Gemini call every user turn. Removed for cost — the
+            // post-session summary still surfaces phrase corrections and
+            // feeds them into the SRS drill queue.
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -312,54 +463,51 @@ struct ConversationView: View {
     }
 
     private func speakAndAppend(_ text: String, voiceId: String) async throws {
-        let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text)
+        // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
+        // fluent-self lines (greetings, short acknowledgements, etc.).
+        let audio: Data
+        let timings: [WordTiming]
+        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
+            audio = cached
+            timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
+        } else {
+            let (newAudio, newTimings) = try await ElevenLabsClient.shared
+                .synthesizeWithTimestamps(voiceId: voiceId, text: text)
+            audio = newAudio
+            timings = newTimings
+            PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
+        }
+        let turnId = UUID()
+        let savedURL = TurnAudioStore.shared.save(audio, turnId: turnId, timings: timings)
+        let durationMs = Self.mp3DurationMs(audio)
         turns.append(Turn(
-            id: UUID(), role: .fluentSelf, audioURL: nil,
-            transcript: text, durationMs: 0, timestamp: Date(),
+            id: turnId, role: .fluentSelf, audioURL: savedURL,
+            transcript: text, durationMs: durationMs, timestamp: Date(),
             suggestion: nil
         ))
         didSaveCurrentSession = false
         phase = .speaking
-        try player.play(audio) {
+        // configureSession: false keeps the existing .playAndRecord session
+        // (set up by LiveTranscriber) instead of switching to .playback and
+        // back. Each switch costs 200–500ms — meaningful in a phone-call
+        // loop. Speaker output still works because of .defaultToSpeaker.
+        try player.play(audio, configureSession: false) {
             Task { @MainActor in
-                if phase == .speaking { phase = .idle }
+                guard phase == .speaking else { return }
+                phase = .idle
+                // Phone call: avatar just finished talking → loop back to
+                // listening so the user can reply without tapping.
+                if phoneCallActive {
+                    await startRecording()
+                }
             }
-        }
-    }
-
-    private func annotateUserTurn(id: UUID) async {
-        guard let turn = turns.first(where: { $0.id == id }),
-              !turn.transcript.isEmpty else { return }
-        struct CorrectionPayload: Decodable {
-            let has_issue: Bool
-            let alternative: String?
-            let reason: String?
-        }
-        let system = """
-        You are a strict but warm language coach for \(appState.targetLanguage).
-        Decide if the learner's sentence has a clear grammar, idiom, or naturalness issue.
-        Reply with STRICT JSON only — no prose, no code fences:
-        { "has_issue": true|false, "alternative": "...", "reason": "..." }
-        - has_issue: false → omit "alternative" and "reason".
-        - Otherwise keep "alternative" to a single natural rephrase, and "reason" under 12 words.
-        - Be conservative — minor stylistic differences are NOT issues.
-        """
-        let payload: CorrectionPayload? = try? await GeminiClient.shared.sendJSON(
-            system: system,
-            messages: [GeminiClient.Message(role: .user, content: turn.transcript)],
-            maxTokens: 200
-        )
-        guard let payload, payload.has_issue,
-              let alt = payload.alternative, !alt.isEmpty,
-              let reason = payload.reason, !reason.isEmpty else { return }
-
-        if let idx = turns.firstIndex(where: { $0.id == id }) {
-            turns[idx].suggestion = TurnSuggestion(alternative: alt, reason: reason)
         }
     }
 
     private func endSession() async {
         guard !turns.isEmpty else { return }
+        phoneCallActive = false
+        cancelSilenceTimer()
         phase = .thinking
         do {
             let profile = appState.makeEmptyProfile(userId: userId)
@@ -368,10 +516,18 @@ struct ConversationView: View {
                 profile: profile
             )
             let transcript = ConversationEngine.formatTranscript(turns)
+            let metrics = ScorecardMetrics.compute(turns: turns)
+            let userMessage = """
+            transcript:
+            \(transcript)
+
+            metrics:
+            \(metrics.promptJSON())
+            """
             let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
                 system: systemP,
-                messages: [GeminiClient.Message(role: .user, content: transcript)],
-                maxTokens: 1024
+                messages: [GeminiClient.Message(role: .user, content: userMessage)],
+                maxTokens: 1400
             )
             let computed = payload.toDomain()
             summary = computed
@@ -391,15 +547,16 @@ struct ConversationView: View {
             SessionStore.shared.save(session)
             DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
             didSaveCurrentSession = true
-            refreshDueDrillCount()
+            refreshDashboard()
         } catch {
             self.error = error.localizedDescription
             phase = .idle
         }
     }
 
-    private func refreshDueDrillCount() {
+    private func refreshDashboard() {
         dueDrillCount = DrillStore.shared.dueCount()
+        dashboard = PracticeStats.snapshot()
     }
 
     private func startNewSession() {
@@ -409,17 +566,43 @@ struct ConversationView: View {
         turns = []
         didSaveCurrentSession = false
         phase = .idle
-        Task { await openConversation() }
+        if !topic.isEmpty {
+            phoneCallActive = true   // stay in phone-call mode for continuity
+            Task { await openConversation() }
+        }
+    }
+
+    /// Done from the summary sheet → close the session cleanly. Summary is
+    /// already saved to History; the convo on screen should go away so the
+    /// Talk tab returns to its empty/home state.
+    private func endAndClose() {
+        summary = nil
+        sessionId = UUID()
+        sessionStartedAt = Date()
+        turns = []
+        didSaveCurrentSession = false
+        phase = .idle
+        phoneCallActive = false
+        cancelSilenceTimer()
+        // Deliberately NOT triggering openConversation — Done means "stop",
+        // not "start over". Topic stays so the user can resume later.
+    }
+
+    private static func mp3DurationMs(_ data: Data) -> Int {
+        guard let player = try? AVAudioPlayer(data: data) else { return 0 }
+        return Int(player.duration * 1000)
     }
 
     private func systemPrompt() -> String {
-        ConversationEngine.conversationSystemPrompt(
+        let composedTopic = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
+        return ConversationEngine.conversationSystemPrompt(
             targetLanguage: appState.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
             level: appState.proficiency,
             topPatterns: [],
             weakVocabAreas: [],
-            topic: topic
+            topic: composedTopic,
+            persona: appState.persona
         )
     }
 }
@@ -533,94 +716,144 @@ private struct LevelMeter: View {
 
 private struct TopicPickerSheet: View {
     @Binding var topic: String
+    @Binding var topicBlurb: String
+    @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
-    private let presets = [
-        "Ordering coffee",
-        "Small talk with a neighbor",
-        "Job interview",
-        "Asking for directions",
-        "Talking about a movie",
-        "Catching up with an old friend",
-    ]
+    @State private var suggestions: [SuggestedTopic] = []
+    @State private var loading = false
+    @State private var error: String?
+    @State private var customTopic: String = ""
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    ForEach(presets, id: \.self) { preset in
-                        Button {
-                            topic = preset
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Text(preset).foregroundStyle(.primary)
-                                Spacer()
-                                if preset == topic {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(.tint)
+                    if loading && suggestions.isEmpty {
+                        HStack { ProgressView(); Text("Finding scenarios from your life…").foregroundStyle(.secondary) }
+                    } else if suggestions.isEmpty {
+                        Text("Tap Refresh to generate scenarios.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(suggestions) { item in
+                            Button {
+                                topic = item.title
+                                topicBlurb = item.blurb
+                                dismiss()
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(item.title)
+                                            .foregroundStyle(.primary)
+                                            .font(.body)
+                                        Spacer()
+                                        if item.title == topic {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.tint)
+                                        }
+                                    }
+                                    if !item.blurb.isEmpty {
+                                        Text(item.blurb)
+                                            .font(.footnote)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
+                                .padding(.vertical, 2)
                             }
                         }
                     }
+                } header: {
+                    Text("Suggested for you")
+                } footer: {
+                    if let e = error {
+                        Text(e).foregroundStyle(.red)
+                    } else {
+                        Text("Grounded in your profile — name, city, work, family, interests.")
+                    }
                 }
-                Section("Custom") {
-                    TextField("Type a topic", text: $topic)
+
+                Section("Your own") {
+                    TextField("Type a topic", text: $customTopic)
+                        .onSubmit { applyCustom() }
+                    Button("Use this topic") { applyCustom() }
+                        .disabled(customTopic.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
-            .navigationTitle("Topic")
+            .navigationTitle("What to practice")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        Task { await regenerate() }
+                    } label: {
+                        if loading {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(loading)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
+                }
+            }
+            .task {
+                // Read from cache first; only hit Gemini when truly empty
+                // (first time ever) or after an explicit Refresh tap.
+                if suggestions.isEmpty {
+                    let cached = appState.topicSuggestions
+                    if !cached.isEmpty {
+                        suggestions = cached
+                    } else {
+                        await regenerate()
+                    }
                 }
             }
         }
         .presentationDetents([.medium, .large])
     }
-}
 
-private struct TranscriptSheet: View {
-    let turns: [Turn]
-    @Environment(\.dismiss) private var dismiss
+    private func applyCustom() {
+        let trimmed = customTopic.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        topic = trimmed
+        topicBlurb = ""
+        dismiss()
+    }
 
-    var body: some View {
-        NavigationStack {
-            List(turns) { turn in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(turn.role == .user ? "You" : "Future self")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(turn.transcript)
-                        .font(.body)
-                    if let s = turn.suggestion {
-                        Text("→ \(s.alternative)")
-                            .font(.footnote)
-                            .foregroundStyle(.tint)
-                    }
-                }
-                .padding(.vertical, 4)
-            }
-            .listStyle(.plain)
-            .navigationTitle("Transcript")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
+    private func regenerate() async {
+        loading = true
+        error = nil
+        defer { loading = false }
+        do {
+            let fresh = try await TopicEngine.suggest(
+                persona: appState.persona,
+                targetLanguage: appState.targetLanguage
+            )
+            suggestions = fresh
+            appState.updateTopicSuggestions(fresh)
+        } catch {
+            self.error = "Couldn't fetch topics: \(error.localizedDescription)"
         }
     }
 }
 
 private struct SummarySheet: View {
     let summary: SessionSummary
+    let onDone: () -> Void
     let onStartNew: () -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             List {
+                if let card = summary.scorecard {
+                    Section("Today's nutrition") {
+                        ScorecardView(scorecard: card)
+                            .padding(.vertical, 6)
+                    }
+                }
                 Section("Note") {
                     Text(summary.overallNote)
                 }
@@ -652,7 +885,8 @@ private struct SummarySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button("Done") { onDone() }
+                        .fontWeight(.semibold)
                 }
             }
             .safeAreaInset(edge: .bottom) {

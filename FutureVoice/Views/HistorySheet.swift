@@ -2,51 +2,57 @@ import SwiftUI
 
 /// Sheet showing all ended sessions, newest first. Tap to drill into the
 /// full transcript and summary; swipe to delete.
-struct HistorySheet: View {
-    @Environment(\.dismiss) private var dismiss
+/// Reusable body view — parent supplies NavigationStack + title.
+struct HistoryView: View {
     @State private var sessions: [Session] = []
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if sessions.isEmpty {
-                    ContentUnavailableView(
-                        "No sessions yet",
-                        systemImage: "clock",
-                        description: Text("Tap End session after a conversation and it'll show up here.")
-                    )
-                } else {
-                    List {
-                        ForEach(sessions) { session in
-                            NavigationLink {
-                                SessionDetailView(session: session)
-                            } label: {
-                                HistoryRow(session: session)
-                            }
+        Group {
+            if sessions.isEmpty {
+                ContentUnavailableView(
+                    "No sessions yet",
+                    systemImage: "clock",
+                    description: Text("Tap End session after a conversation and it'll show up here.")
+                )
+            } else {
+                List {
+                    ForEach(sessions) { session in
+                        NavigationLink {
+                            SessionDetailView(session: session)
+                        } label: {
+                            HistoryRow(session: session)
                         }
-                        .onDelete(perform: delete)
                     }
-                    .listStyle(.plain)
+                    .onDelete(perform: delete)
                 }
+                .listStyle(.plain)
             }
-            .navigationTitle("History")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-                if !sessions.isEmpty {
-                    ToolbarItem(placement: .topBarLeading) { EditButton() }
-                }
-            }
-            .onAppear { sessions = SessionStore.shared.load() }
         }
+        .onAppear { sessions = SessionStore.shared.load() }
     }
 
     private func delete(at offsets: IndexSet) {
         let ids = offsets.map { sessions[$0].id }
         for id in ids { SessionStore.shared.delete(id: id) }
         sessions = SessionStore.shared.load()
+    }
+}
+
+/// Sheet wrapper — kept for backward compat. Main app uses `HistoryView`
+/// from `MeTab` directly.
+struct HistorySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        NavigationStack {
+            HistoryView()
+                .navigationTitle("History")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { dismiss() }
+                    }
+                }
+        }
     }
 }
 
@@ -86,6 +92,12 @@ struct SessionDetailView: View {
     var body: some View {
         List {
             if let summary = session.summary {
+                if let card = summary.scorecard {
+                    Section("Nutrition") {
+                        ScorecardView(scorecard: card)
+                            .padding(.vertical, 6)
+                    }
+                }
                 Section("Note") {
                     Text(summary.overallNote)
                 }

@@ -41,6 +41,10 @@ final class ElevenLabsClient {
         if let description {
             body.appendFormField(name: "description", value: description, boundary: boundary)
         }
+        // Ask ElevenLabs to denoise the sample before clone — handles AC hum,
+        // distant traffic, keyboard taps, etc. Improves IVC quality noticeably
+        // even when the user thinks the room is "quiet enough".
+        body.appendFormField(name: "remove_background_noise", value: "true", boundary: boundary)
         for url in sampleAudioURLs {
             let data = try Data(contentsOf: url)
             let filename = url.lastPathComponent
@@ -57,6 +61,19 @@ final class ElevenLabsClient {
         return decoded.voice_id
     }
 
+    /// Deletes a custom voice from the ElevenLabs account. Used to clean up
+    /// the previous clone after a successful re-record so the user doesn't
+    /// hit their plan's voice slot ceiling.
+    func deleteVoice(voiceId: String) async throws {
+        let url = baseURL.appendingPathComponent("/v1/voices/\(voiceId)")
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+
+        let (data, response) = try await session.data(for: request)
+        try Self.validate(response: response, data: data)
+    }
+
     // MARK: - Text-to-Speech
 
     /// Synthesizes speech in the cloned voice and returns MP3 data.
@@ -67,7 +84,7 @@ final class ElevenLabsClient {
     func synthesize(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_multilingual_v2"
+        modelId: String = "eleven_turbo_v2_5"
     ) async throws -> Data {
         let url = baseURL.appendingPathComponent("/v1/text-to-speech/\(voiceId)")
 
@@ -92,9 +109,9 @@ final class ElevenLabsClient {
             text: text,
             model_id: modelId,
             voice_settings: .init(
-                stability: 0.45,
-                similarity_boost: 0.85,
-                style: 0.30,
+                stability: 0.55,       // slightly higher = cleaner, less wobble
+                similarity_boost: 0.90, // push close to the cloned timbre
+                style: 0.15,            // low style exaggeration — natural over theatrical
                 use_speaker_boost: true
             )
         )
@@ -103,6 +120,134 @@ final class ElevenLabsClient {
         let (data, response) = try await session.data(for: request)
         try Self.validate(response: response, data: data)
         return data
+    }
+
+    /// Same TTS as `synthesize`, but uses the `with-timestamps` endpoint so we
+    /// also get character-level alignment. We group consecutive non-space
+    /// characters into words and return their [start, end] ms windows for the
+    /// karaoke highlight in shadow practice.
+    ///
+    /// If the with-timestamps endpoint fails for any reason (HTTP error,
+    /// unexpected JSON shape) we transparently fall back to plain `synthesize`
+    /// and return empty timings — keeps audio working even when karaoke is
+    /// unavailable.
+    func synthesizeWithTimestamps(
+        voiceId: String,
+        text: String,
+        modelId: String = "eleven_turbo_v2_5"
+    ) async throws -> (Data, [WordTiming]) {
+        do {
+            return try await synthesizeWithTimestampsInner(voiceId: voiceId, text: text, modelId: modelId)
+        } catch {
+            // Fallback: at least play audio without karaoke.
+            let audio = try await synthesize(voiceId: voiceId, text: text, modelId: modelId)
+            return (audio, [])
+        }
+    }
+
+    private func synthesizeWithTimestampsInner(
+        voiceId: String,
+        text: String,
+        modelId: String
+    ) async throws -> (Data, [WordTiming]) {
+        let url = baseURL.appendingPathComponent("/v1/text-to-speech/\(voiceId)/with-timestamps")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        struct VoiceSettings: Encodable {
+            let stability: Double
+            let similarity_boost: Double
+            let style: Double
+            let use_speaker_boost: Bool
+        }
+        struct Body: Encodable {
+            let text: String
+            let model_id: String
+            let voice_settings: VoiceSettings
+        }
+        let body = Body(
+            text: text,
+            model_id: modelId,
+            voice_settings: .init(
+                stability: 0.55,       // slightly higher = cleaner, less wobble
+                similarity_boost: 0.90, // push close to the cloned timbre
+                style: 0.15,            // low style exaggeration — natural over theatrical
+                use_speaker_boost: true
+            )
+        )
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+        try Self.validate(response: response, data: data)
+
+        struct Alignment: Decodable {
+            let characters: [String]
+            let character_start_times_seconds: [Double]
+            let character_end_times_seconds: [Double]
+        }
+        struct Resp: Decodable {
+            let audio_base64: String
+            let alignment: Alignment?
+            let normalized_alignment: Alignment?
+        }
+        let decoded = try JSONDecoder().decode(Resp.self, from: data)
+        guard let audio = Data(base64Encoded: decoded.audio_base64) else {
+            throw ElevenLabsError.invalidResponse
+        }
+        let align = decoded.normalized_alignment ?? decoded.alignment
+        let timings: [WordTiming]
+        if let align = align {
+            timings = Self.wordTimings(from: align.characters,
+                                       starts: align.character_start_times_seconds,
+                                       ends: align.character_end_times_seconds)
+        } else {
+            timings = []
+        }
+        return (audio, timings)
+    }
+
+    /// Group consecutive non-whitespace characters into words and collapse
+    /// per-character timings into a single [start, end] window per word.
+    private static func wordTimings(
+        from chars: [String],
+        starts: [Double],
+        ends: [Double]
+    ) -> [WordTiming] {
+        guard chars.count == starts.count, chars.count == ends.count else { return [] }
+        var out: [WordTiming] = []
+        var current: String = ""
+        var currentStart: Double = 0
+        var currentEnd: Double = 0
+        for i in 0..<chars.count {
+            let c = chars[i]
+            let isWS = c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if isWS {
+                if !current.isEmpty {
+                    out.append(WordTiming(
+                        word: current,
+                        startMs: Int((currentStart * 1000).rounded()),
+                        endMs: Int((currentEnd * 1000).rounded())
+                    ))
+                    current = ""
+                }
+            } else {
+                if current.isEmpty { currentStart = starts[i] }
+                current += c
+                currentEnd = ends[i]
+            }
+        }
+        if !current.isEmpty {
+            out.append(WordTiming(
+                word: current,
+                startMs: Int((currentStart * 1000).rounded()),
+                endMs: Int((currentEnd * 1000).rounded())
+            ))
+        }
+        return out
     }
 
     // MARK: - Helpers

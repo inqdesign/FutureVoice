@@ -3,8 +3,25 @@ import SwiftUI
 /// Spaced-repetition drill queue. Walks through the cards that are currently
 /// due — the learner hears the target phrase in their cloned voice, then
 /// self-rates Got it / Try again to advance the Leitner box.
-struct DrillSheet: View {
-    @Environment(\.dismiss) private var dismiss
+///
+/// Shadow practice lives in its own sheet (`ShadowBrowserSheet`); the two are
+/// surfaced from separate toolbar entries so the home dashboard can track each
+/// independently.
+/// Card-deck SRS practice. Swipe right = Got it, left = Try again. Tap to
+/// hear it. No bottom button bar — important under a tab bar so the controls
+/// don't visually merge with system chrome. A faint "next card" preview sits
+/// behind the active card for the deck-of-cards feel.
+struct DrillView: View {
+    /// Optional filter. `.due` (default) = the Leitner-scheduled queue.
+    /// `.session(id)` = every card whose source matches the given session,
+    /// regardless of due date. Lets the user post-mortem a specific
+    /// conversation by walking just its cards.
+    enum Source: Equatable {
+        case due
+        case session(UUID)
+    }
+    var source: Source = .due
+
     @EnvironmentObject private var appState: AppState
     @StateObject private var player = AudioPlayer()
 
@@ -12,122 +29,251 @@ struct DrillSheet: View {
     @State private var initialCount: Int = 0
     @State private var isLoadingAudio = false
     @State private var error: String?
+    @State private var dragOffset: CGSize = .zero
+    @State private var showingEnrichmentFor: DrillCard?
+
+    private static let swipeThreshold: CGFloat = 100
+
+    var body: some View {
+        Group {
+            if !queue.isEmpty {
+                cardDeck
+            } else {
+                emptyState
+            }
+        }
+        .alert("Couldn't play audio", isPresented: errorBinding) {
+            Button("OK") { error = nil }
+        } message: {
+            Text(error ?? "")
+        }
+        .sheet(item: $showingEnrichmentFor, onDismiss: refreshTopCard) { card in
+            DrillEnrichmentSheet(card: card)
+                .environmentObject(appState)
+        }
+        .onAppear(perform: loadQueue)
+    }
+
+    /// After dismissing the enrichment sheet, the top card may have had its
+    /// enrichment persisted — pull the fresh copy from disk so the in-memory
+    /// queue reflects it.
+    private func refreshTopCard() {
+        guard let top = queue.first else { return }
+        let fresh = DrillStore.shared.due().first(where: { $0.id == top.id })
+        if let fresh = fresh {
+            queue[0] = fresh
+        }
+    }
+
+    private var cardDeck: some View {
+        VStack(spacing: 12) {
+            counterRow
+            ZStack {
+                // Peek of the next card so the user feels there's a deck
+                if queue.count > 1 {
+                    cardSurface(queue[1])
+                        .scaleEffect(0.95)
+                        .opacity(0.45)
+                        .offset(y: 14)
+                }
+                cardSurface(queue[0])
+                    .overlay(swipeIndicator)
+                    .offset(dragOffset)
+                    .rotationEffect(.degrees(Double(dragOffset.width / 20)))
+                    .gesture(
+                        DragGesture()
+                            .onChanged { dragOffset = $0.translation }
+                            .onEnded { handleDragEnded($0) }
+                    )
+                    .onTapGesture {
+                        Task { await playTarget(queue[0]) }
+                    }
+            }
+            .padding(.horizontal, 16)
+            hintRow
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+    }
+
+    private var counterRow: some View {
+        Text("\(initialCount - queue.count + 1) of \(initialCount)")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+    }
+
+    @ViewBuilder
+    private var swipeIndicator: some View {
+        Group {
+            if dragOffset.width > 20 {
+                Label("Got it", systemImage: "checkmark")
+                    .font(.title2.weight(.bold))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.green))
+                    .foregroundStyle(.white)
+                    .rotationEffect(.degrees(-12))
+                    .opacity(min(1.0, Double(dragOffset.width) / 120.0))
+            } else if dragOffset.width < -20 {
+                Label("Try again", systemImage: "arrow.counterclockwise")
+                    .font(.title2.weight(.bold))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.red))
+                    .foregroundStyle(.white)
+                    .rotationEffect(.degrees(12))
+                    .opacity(min(1.0, Double(-dragOffset.width) / 120.0))
+            }
+        }
+    }
+
+    private var hintRow: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 4) {
+                Image(systemName: "arrow.left").foregroundStyle(.red)
+                Text("Try again")
+            }
+            Text("·").foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Image(systemName: "hand.tap")
+                Text("Tap to hear")
+            }
+            Text("·").foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Text("Got it")
+                Image(systemName: "arrow.right").foregroundStyle(.green)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 6)
+    }
+
+    private func handleDragEnded(_ value: DragGesture.Value) {
+        let width = value.translation.width
+        if width > Self.swipeThreshold {
+            HapticEngine.drillCorrect()
+            withAnimation(.easeOut(duration: 0.25)) {
+                dragOffset = CGSize(width: 600, height: value.translation.height)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                markCorrect()
+                dragOffset = .zero
+            }
+        } else if width < -Self.swipeThreshold {
+            HapticEngine.drillIncorrect()
+            withAnimation(.easeOut(duration: 0.25)) {
+                dragOffset = CGSize(width: -600, height: value.translation.height)
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                markIncorrect()
+                dragOffset = .zero
+            }
+        } else {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                dragOffset = .zero
+            }
+        }
+    }
+}
+
+/// Sheet wrapper — kept for backward compat; main app uses `DrillView`
+/// directly inside `PracticeTab` now.
+struct DrillSheet: View {
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            Group {
-                if let card = queue.first {
-                    cardView(card)
-                } else {
-                    emptyState
-                }
-            }
-            .navigationTitle("Drills")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if initialCount > 0 {
-                        Text("\(initialCount - queue.count + (queue.isEmpty ? 0 : 1)) of \(initialCount)")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+            DrillView()
+                .navigationTitle("Drills")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { dismiss() }
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                }
-            }
-            .alert("Couldn't play audio", isPresented: errorBinding) {
-                Button("OK") { error = nil }
-            } message: {
-                Text(error ?? "")
-            }
-            .onAppear(perform: loadQueue)
         }
     }
+}
 
-    // MARK: - Card
+private extension DrillView {
+
+    // MARK: - Card surface
 
     @ViewBuilder
-    private func cardView(_ card: DrillCard) -> some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    if !card.sourcePhrase.isEmpty {
-                        labeled("You said") {
-                            Text(card.sourcePhrase)
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                                .strikethrough()
-                        }
-                    }
-
-                    labeled("Try saying") {
-                        Text(card.targetPhrase)
-                            .font(.title2.weight(.semibold))
-                            .foregroundStyle(.primary)
-                    }
-
-                    if !card.reason.isEmpty {
-                        labeled("Why") {
-                            Text(card.reason)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+    func cardSurface(_ card: DrillCard) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if !card.sourcePhrase.isEmpty {
+                labeled("You said") {
+                    Text(card.sourcePhrase)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .strikethrough()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 20)
-                .padding(.top, 24)
-                .padding(.bottom, 12)
             }
 
-            Divider().opacity(0.15)
+            labeled("Try saying") {
+                Text(card.targetPhrase)
+                    .font(.title.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+            }
 
-            VStack(spacing: 12) {
+            if !card.reason.isEmpty {
+                labeled("Why") {
+                    Text(card.reason)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    if isLoadingAudio {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .foregroundStyle(.tint)
+                    }
+                    Text(isLoadingAudio ? "Loading…" : "Tap card to hear")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
                 Button {
-                    Task { await playTarget(card) }
+                    showingEnrichmentFor = card
                 } label: {
-                    HStack(spacing: 8) {
-                        if isLoadingAudio {
-                            ProgressView().controlSize(.small)
-                        } else {
-                            Image(systemName: "speaker.wave.2.fill")
-                        }
-                        Text(isLoadingAudio ? "Loading…" : "Hear it")
+                    HStack(spacing: 4) {
+                        Image(systemName: "books.vertical")
+                        Text(card.enrichment == nil ? "Examples" : "Examples ✓")
                     }
-                    .frame(maxWidth: .infinity)
+                    .font(.footnote.weight(.medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+                    .foregroundStyle(.tint)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .disabled(isLoadingAudio || appState.voiceCloneId == nil)
-
-                HStack(spacing: 12) {
-                    Button(role: .destructive) {
-                        markIncorrect()
-                    } label: {
-                        Label("Try again", systemImage: "arrow.counterclockwise")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-
-                    Button {
-                        markCorrect()
-                    } label: {
-                        Label("Got it", systemImage: "checkmark")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .controlSize(.large)
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.bar)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 360, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
     }
 
     @ViewBuilder
-    private func labeled<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
+    func labeled<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption)
@@ -153,7 +299,14 @@ struct DrillSheet: View {
     // MARK: - Actions
 
     private func loadQueue() {
-        queue = DrillStore.shared.due()
+        switch source {
+        case .due:
+            queue = DrillStore.shared.due()
+        case .session(let sid):
+            queue = DrillStore.shared.load()
+                .filter { $0.sourceSessionId == sid }
+                .sorted { $0.createdAt < $1.createdAt }
+        }
         initialCount = queue.count
     }
 
@@ -176,6 +329,10 @@ struct DrillSheet: View {
 
     private func playTarget(_ card: DrillCard) async {
         guard let voiceId = appState.voiceCloneId else { return }
+        if let cached = PhraseAudioStore.shared.data(text: card.targetPhrase, voiceId: voiceId) {
+            do { try player.play(cached) } catch { self.error = error.localizedDescription }
+            return
+        }
         isLoadingAudio = true
         defer { isLoadingAudio = false }
         do {
@@ -183,6 +340,7 @@ struct DrillSheet: View {
                 voiceId: voiceId,
                 text: card.targetPhrase
             )
+            PhraseAudioStore.shared.save(audio, text: card.targetPhrase, voiceId: voiceId)
             try player.play(audio)
         } catch {
             self.error = error.localizedDescription

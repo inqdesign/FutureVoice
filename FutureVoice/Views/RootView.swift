@@ -8,8 +8,10 @@ struct RootView: View {
     var body: some View {
         if appState.voiceCloneId == nil {
             VoiceCloneOnboardingView()
+        } else if appState.persona == nil {
+            PersonaOnboardingView()
         } else {
-            ConversationView()
+            RootTabView()
         }
     }
 }

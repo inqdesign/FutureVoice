@@ -18,6 +18,20 @@ final class LiveTranscriber: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var level: Float = 0  // 0…1 RMS for waveform UI
 
+    /// Word-level audio-time timings from the CURRENT recognition segment.
+    /// `startSeconds` is offset into the audio stream of this segment (NOT
+    /// wall clock) — pair with `segmentAnchorAt` for absolute time.
+    /// Replaces previous wall-clock STT-arrival stamps which were biased by
+    /// 200–500 ms of recognizer latency.
+    @Published private(set) var currentWordTimings: [WordTimingInfo] = []
+    @Published private(set) var segmentAnchorAt: Date?
+
+    struct WordTimingInfo: Equatable, Hashable {
+        var word: String
+        var startSeconds: Double   // offset into audio of current segment
+        var duration: Double
+    }
+
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -125,6 +139,10 @@ final class LiveTranscriber: ObservableObject {
 
     private func startNewSegment() {
         guard isRunning, let recognizer = recognizer else { return }
+        // Anchor wall-clock time when this recognition segment begins. All
+        // word timestamps in `currentWordTimings` will be relative to this.
+        segmentAnchorAt = Date()
+        currentWordTimings = []
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
         if recognizer.supportsOnDeviceRecognition {
@@ -192,6 +210,15 @@ final class LiveTranscriber: ObservableObject {
             transcript = committedText.isEmpty
                 ? segmentText
                 : committedText + " " + segmentText
+            // Extract per-word audio-time timings — what the user really wants
+            // to grade shadow timing against, not the wall-clock STT arrival.
+            currentWordTimings = result.bestTranscription.segments.map {
+                WordTimingInfo(
+                    word: $0.substring,
+                    startSeconds: $0.timestamp,
+                    duration: $0.duration
+                )
+            }
             if result.isFinal {
                 commitAndRestart()
             }
