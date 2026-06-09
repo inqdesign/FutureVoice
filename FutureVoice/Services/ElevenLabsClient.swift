@@ -1,23 +1,41 @@
 import Foundation
+import Supabase
 
-/// Minimal ElevenLabs client for Phase 1.
+/// ElevenLabs client. As of TestFlight prep, this no longer talks to
+/// ElevenLabs directly — every call goes through Supabase Edge Functions
+/// (`elevenlabs-tts`, `elevenlabs-voice-clone`, `elevenlabs-voice-delete`).
+/// The server-side proxy injects the real `xi-api-key`. The iOS bundle no
+/// longer ships any ElevenLabs credentials.
 ///
-/// Endpoints used:
-///   POST /v1/voices/add                          — clone a voice from sample audio
-///   POST /v1/text-to-speech/{voice_id}           — non-streaming TTS (returns MP3)
-///
-/// Phase 2 should switch TTS to the streaming endpoint for < 1.5s end-to-end latency.
+/// Auth: each request carries the current Supabase user's access token in
+/// the `Authorization` header. The Edge Function verifies it before
+/// forwarding, so unauthenticated callers can't drain the account.
 final class ElevenLabsClient {
     static let shared = ElevenLabsClient()
 
-    private let baseURL = URL(string: "https://api.elevenlabs.io")!
     private let session: URLSession
 
     init(session: URLSession = .shared) {
         self.session = session
     }
 
-    private var apiKey: String { Secrets.require(.elevenLabs) }
+    /// Edge Function base URL = `<SUPABASE_URL>/functions/v1`. Built once
+    /// from the same xcconfig values used by `SupabaseProvider`.
+    private var functionsBaseURL: URL {
+        guard
+            let urlString = Secrets.string(for: .supabaseURL),
+            let url = URL(string: urlString)
+        else { fatalError("SUPABASE_URL missing") }
+        return url.appendingPathComponent("/functions/v1")
+    }
+
+    /// Fetches the caller's current Supabase access token. Throws if there
+    /// is no session — RootView gates the app behind sign-in so in practice
+    /// this only happens if the user signs out mid-flight.
+    private func accessToken() async throws -> String {
+        let session = try await SupabaseProvider.shared.auth.session
+        return session.accessToken
+    }
 
     // MARK: - Voice cloning
 
@@ -28,12 +46,12 @@ final class ElevenLabsClient {
     ///   - description: optional human description
     /// - Returns: ElevenLabs `voice_id`.
     func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil) async throws -> String {
-        let url = baseURL.appendingPathComponent("/v1/voices/add")
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-clone")
         let boundary = "Boundary-\(UUID().uuidString)"
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         var body = Data()
@@ -65,10 +83,12 @@ final class ElevenLabsClient {
     /// the previous clone after a successful re-record so the user doesn't
     /// hit their plan's voice slot ceiling.
     func deleteVoice(voiceId: String) async throws {
-        let url = baseURL.appendingPathComponent("/v1/voices/\(voiceId)")
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-delete")
         var request = URLRequest(url: url)
-        request.httpMethod = "DELETE"
-        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["voice_id": voiceId])
 
         let (data, response) = try await session.data(for: request)
         try Self.validate(response: response, data: data)
@@ -86,36 +106,24 @@ final class ElevenLabsClient {
         text: String,
         modelId: String = "eleven_turbo_v2_5"
     ) async throws -> Data {
-        let url = baseURL.appendingPathComponent("/v1/text-to-speech/\(voiceId)")
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
 
-        struct VoiceSettings: Encodable {
-            let stability: Double
-            let similarity_boost: Double
-            let style: Double
-            let use_speaker_boost: Bool
-        }
-        struct Body: Encodable {
-            let text: String
-            let model_id: String
-            let voice_settings: VoiceSettings
-        }
-        let body = Body(
-            text: text,
-            model_id: modelId,
-            voice_settings: .init(
-                stability: 0.55,       // slightly higher = cleaner, less wobble
-                similarity_boost: 0.90, // push close to the cloned timbre
-                style: 0.15,            // low style exaggeration — natural over theatrical
-                use_speaker_boost: true
-            )
-        )
-        request.httpBody = try JSONEncoder().encode(body)
+        // Voice settings are now fixed inside the Edge Function — keeping
+        // them server-side means we can tune stability/similarity without
+        // shipping a new app version.
+        let body: [String: Any] = [
+            "voice_id": voiceId,
+            "text": text,
+            "model_id": modelId,
+            "with_timestamps": false,
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.data(for: request)
         try Self.validate(response: response, data: data)
@@ -150,36 +158,21 @@ final class ElevenLabsClient {
         text: String,
         modelId: String
     ) async throws -> (Data, [WordTiming]) {
-        let url = baseURL.appendingPathComponent("/v1/text-to-speech/\(voiceId)/with-timestamps")
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue(apiKey, forHTTPHeaderField: "xi-api-key")
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        struct VoiceSettings: Encodable {
-            let stability: Double
-            let similarity_boost: Double
-            let style: Double
-            let use_speaker_boost: Bool
-        }
-        struct Body: Encodable {
-            let text: String
-            let model_id: String
-            let voice_settings: VoiceSettings
-        }
-        let body = Body(
-            text: text,
-            model_id: modelId,
-            voice_settings: .init(
-                stability: 0.55,       // slightly higher = cleaner, less wobble
-                similarity_boost: 0.90, // push close to the cloned timbre
-                style: 0.15,            // low style exaggeration — natural over theatrical
-                use_speaker_boost: true
-            )
-        )
-        request.httpBody = try JSONEncoder().encode(body)
+        let body: [String: Any] = [
+            "voice_id": voiceId,
+            "text": text,
+            "model_id": modelId,
+            "with_timestamps": true,
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.data(for: request)
         try Self.validate(response: response, data: data)

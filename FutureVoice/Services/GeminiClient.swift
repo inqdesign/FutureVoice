@@ -1,11 +1,13 @@
 import Foundation
+import Supabase
 
 /// Google Gemini client used for conversation turns + post-session summary.
 ///
-/// Mirrors `ClaudeClient`'s surface (`send`, `sendJSON`) so callers can swap.
-/// Defaults to `gemini-2.5-flash` with thinking disabled — matches the
-/// DearRoRo production pattern (see CLAUDE.md). Key comes from
-/// `Secrets.require(.gemini)`.
+/// As of TestFlight prep, all requests route through the `gemini` Supabase
+/// Edge Function so the real Google API key stays server-side. The iOS
+/// bundle no longer carries `GEMINI_API_KEY`. Each call carries the
+/// caller's Supabase access token; the Edge Function verifies it before
+/// forwarding to Google.
 final class GeminiClient {
     static let shared = GeminiClient()
 
@@ -14,7 +16,18 @@ final class GeminiClient {
         self.session = session
     }
 
-    private var apiKey: String { Secrets.require(.gemini) }
+    private var functionsBaseURL: URL {
+        guard
+            let urlString = Secrets.string(for: .supabaseURL),
+            let url = URL(string: urlString)
+        else { fatalError("SUPABASE_URL missing") }
+        return url.appendingPathComponent("/functions/v1")
+    }
+
+    private func accessToken() async throws -> String {
+        let session = try await SupabaseProvider.shared.auth.session
+        return session.accessToken
+    }
 
     enum Model: String {
         case flash25 = "gemini-2.5-flash"
@@ -36,7 +49,7 @@ final class GeminiClient {
         maxTokens: Int = 512,
         temperature: Double = 0.7
     ) async throws -> String {
-        let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model.rawValue):generateContent?key=\(apiKey)")!
+        let url = functionsBaseURL.appendingPathComponent("gemini")
 
         struct Part: Encodable { let text: String }
         struct Content: Encodable { let role: String; let parts: [Part] }
@@ -48,11 +61,13 @@ final class GeminiClient {
             let thinkingConfig: ThinkingConfig
         }
         struct Body: Encodable {
+            let model: String
             let system_instruction: SystemInstruction
             let contents: [Content]
             let generationConfig: GenerationConfig
         }
         let body = Body(
+            model: model.rawValue,
             system_instruction: .init(parts: [.init(text: system)]),
             contents: messages.map { Content(role: $0.role.rawValue, parts: [.init(text: $0.content)]) },
             generationConfig: .init(
@@ -64,6 +79,7 @@ final class GeminiClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 

@@ -1,13 +1,16 @@
+import Supabase
 import SwiftUI
 
 @main
 struct FutureVoiceApp: App {
     @StateObject private var appState = AppState()
+    @StateObject private var auth = AuthService()
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(appState)
+                .environmentObject(auth)
                 .preferredColorScheme(.dark)
         }
     }
@@ -40,6 +43,43 @@ final class AppState: ObservableObject {
         watchDialogues = WatchDialogueStore.shared.load()
         scenarios = ScenarioStore.shared.load()
         shadowAttempts = ShadowAttemptStore.shared.load()
+
+        Task { await self.observeAuth() }
+    }
+
+    /// Watches Supabase auth state. When a session appears (either restored
+    /// on app launch or fresh sign-in), pull the latest cloud state down.
+    /// Only thing we sync today is the active voice_clone_id — that's the
+    /// one piece of data that's expensive to lose on reinstall.
+    private func observeAuth() async {
+        for await change in SupabaseProvider.shared.auth.authStateChanges {
+            guard change.session != nil else { continue }
+            await self.restoreVoiceCloneFromCloud()
+        }
+    }
+
+    private func restoreVoiceCloneFromCloud() async {
+        // If we already have a voice locally, trust local — the user just
+        // signed in on the device that originally cloned it.
+        guard voiceCloneId == nil else { return }
+
+        struct Row: Decodable { let elevenlabs_voice_id: String }
+        do {
+            let rows: [Row] = try await SupabaseProvider.shared
+                .from("voice_clones")
+                .select("elevenlabs_voice_id")
+                .eq("is_active", value: true)
+                .limit(1)
+                .execute()
+                .value
+            if let restored = rows.first?.elevenlabs_voice_id {
+                self.voiceCloneId = restored
+            }
+        } catch {
+            // Don't surface — onboarding will just have the user re-record,
+            // which is the same outcome as a fresh install.
+            print("voice clone restore failed:", error)
+        }
     }
 
     func saveShadowAttempt(_ a: ShadowAttempt) {
