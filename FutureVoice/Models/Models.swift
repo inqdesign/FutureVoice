@@ -32,6 +32,56 @@ enum CEFRLevel: String, Codable, CaseIterable {
     case a1, a2, b1, b2, c1, c2
 }
 
+extension LearnerProfile {
+
+    /// How many recurring mistakes the profile keeps. Spec §7.3: older
+    /// history compresses into the top-N patterns by frequency.
+    static let maxRecurringMistakes = 10
+
+    /// Fold one finished session into the profile — this is the "each
+    /// session feeds the next" loop from spec §3. New patterns merge into
+    /// `recurringMistakes` (matching on normalized mistake+correction text,
+    /// bumping frequency), then the list is re-ranked and capped.
+    mutating func absorb(summary: SessionSummary, speakingSeconds: Double, now: Date = Date()) {
+        for incoming in summary.newPatternsDetected {
+            let key = Self.patternKey(incoming)
+            if let idx = recurringMistakes.firstIndex(where: { Self.patternKey($0) == key }) {
+                recurringMistakes[idx].frequency += incoming.frequency
+                recurringMistakes[idx].lastSeenAt = now
+                // Keep the freshest phrasing of the correction/context —
+                // later sessions tend to capture the cleaner version.
+                recurringMistakes[idx].correction = incoming.correction
+                if !incoming.context.isEmpty {
+                    recurringMistakes[idx].context = incoming.context
+                }
+            } else {
+                var p = incoming
+                p.lastSeenAt = now
+                recurringMistakes.append(p)
+            }
+        }
+        recurringMistakes.sort {
+            $0.frequency != $1.frequency
+                ? $0.frequency > $1.frequency
+                : $0.lastSeenAt > $1.lastSeenAt
+        }
+        if recurringMistakes.count > Self.maxRecurringMistakes {
+            recurringMistakes.removeLast(recurringMistakes.count - Self.maxRecurringMistakes)
+        }
+
+        totalSessions += 1
+        totalSpeakingSeconds += Int(speakingSeconds.rounded())
+        lastSessionAt = now
+    }
+
+    private static func patternKey(_ p: LearnerPattern) -> String {
+        let norm = { (s: String) in
+            s.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return norm(p.mistake) + "→" + norm(p.correction)
+    }
+}
+
 struct LearnerPattern: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var mistake: String
@@ -115,6 +165,66 @@ struct SessionScorecard: Codable, Hashable {
 struct AxisScore: Codable, Hashable {
     var score: Int       // 0–100
     var note: String     // one short sentence
+}
+
+// MARK: - Weekly Report
+//
+// The per-session 4-axis scorecard above is statistically noisy at small N
+// (one 5-minute conversation is a poor sample for grading vocabulary, and
+// the grammar score is the LLM grading its own suggestion count — circular).
+// Instead of pretending each session deserves a grade, we now defer
+// analysis until we have enough sessions to say something true, then
+// produce a *trend* report comparing this week vs. last.
+
+/// One periodic learning report. Generated when (a) lifetime sessions ≥ 5
+/// for the first one, then (b) ≥7 days + ≥3 new sessions thereafter. Cached
+/// to disk by `WeeklyReportStore`. Surfaced from the Practice tab.
+struct WeeklyReport: Codable, Identifiable {
+    let id: UUID
+    let periodStart: Date            // first session in the window
+    let periodEnd: Date              // last session in the window
+    let sessionCount: Int
+    let targetLanguage: String
+
+    /// Phrases / chunks the user produced for the first time in this window,
+    /// judged against the corpus of every prior session's transcript. Single
+    /// words don't qualify — only 2+ word collocations.
+    var newExpressions: [LearnedExpression]
+
+    /// Same fluent-alternative came up multiple times this window. These are
+    /// the patterns to actively drill — the user is still defaulting to a
+    /// less native phrasing.
+    var repeatedMistakes: [RepeatedMistake]
+
+    /// Phrases the user *didn't* produce but would have fit naturally given
+    /// the topics they discussed. Forward-looking vocabulary to add.
+    var suggestedExpressions: [SuggestedExpression]
+
+    /// 1–2 sentence trend vs. the previous report (nil on the very first one).
+    var summary: String
+
+    var generatedAt: Date
+}
+
+struct LearnedExpression: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var phrase: String         // "let me get back to you"
+    var sampleSentence: String // the user's actual utterance containing it
+}
+
+struct RepeatedMistake: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var userSaid: String
+    var fluentAlternative: String
+    var count: Int             // occurrences this window
+    var note: String           // one sentence on what to focus on
+}
+
+struct SuggestedExpression: Codable, Hashable, Identifiable {
+    var id: UUID = UUID()
+    var phrase: String
+    var whenToUse: String      // short context cue
+    var example: String        // example sentence using it
 }
 
 struct PhraseFeedback: Codable, Identifiable, Hashable {

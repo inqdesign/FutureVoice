@@ -28,9 +28,13 @@ struct ConversationView: View {
     ///     breath or a 2-second think doesn't fire.
     ///   • `long`    — trailing filler / hanging conjunction / stub
     ///     article/preposition. They're clearly still composing.
+    // SFSpeechRecognizer rarely inserts terminal punctuation in real time,
+    // so the default branch fires far more often than the short one. Bumped
+    // default 3.0→5.0 and long 5.0→7.0 in 2026-06 after users reported the
+    // avatar cutting in during natural mid-thought breaths.
     private static let vadShortSeconds: Double   = 1.5
-    private static let vadDefaultSeconds: Double = 3.0
-    private static let vadLongSeconds: Double    = 5.0
+    private static let vadDefaultSeconds: Double = 5.0
+    private static let vadLongSeconds: Double    = 7.0
     @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -41,7 +45,7 @@ struct ConversationView: View {
     @State private var didSaveCurrentSession = false
     @State private var userSpeechStartedAt: Date?
 
-    private let userId = UUID()
+    private let userId = ProfileStore.localUserId
 
     enum Phase: Equatable {
         case idle
@@ -441,21 +445,42 @@ struct ConversationView: View {
 
         guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
         do {
-            let reply = try await GeminiClient.shared.send(
-                system: systemPrompt(),
-                messages: ConversationEngine.geminiMessages(from: turns)
-            )
-            try await speakAndAppend(reply, voiceId: voiceId)
+            // One structured call returns reply + optional inline correction
+            // — same cost as the old plain-text turn, but it repopulates
+            // Turn.suggestion (chip UI, SRS ingest, weekly-report pairs,
+            // suggestion_rate metric) that died when the separate
+            // `annotateUserTurn` call was removed.
+            let payload: ConversationTurnPayload
+            do {
+                payload = try await GeminiClient.shared.sendJSON(
+                    system: systemPrompt()
+                        + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
+                    messages: ConversationEngine.geminiMessages(from: turns),
+                    maxTokens: 512,
+                    temperature: 0.7
+                )
+            } catch GeminiError.jsonNotFound(let raw) {
+                // Model slipped out of JSON mode — treat the raw text as the
+                // spoken reply rather than failing the whole turn.
+                payload = ConversationTurnPayload(reply: raw, suggestion: nil)
+            }
+            let replyText = payload.reply.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !replyText.isEmpty else {
+                self.error = "The avatar didn't reply — try again."
+                phase = .idle
+                return
+            }
+            if let s = payload.turnSuggestion(),
+               let idx = turns.firstIndex(where: { $0.id == userTurn.id }) {
+                turns[idx].suggestion = s
+            }
+            try await speakAndAppend(replyText, voiceId: voiceId)
             // DO NOT set phase = .idle here. speakAndAppend kicks off audio
             // playback (non-blocking) and registers a completion that flips
             // phase back to .idle AND auto-restarts listening for phone-call
             // mode. Setting .idle here clobbers the .speaking marker, so the
             // completion's `guard phase == .speaking else { return }` bails
             // out and the call loop dies after one round.
-            // Per-turn correction suggestion (`annotateUserTurn`) was an
-            // extra Gemini call every user turn. Removed for cost — the
-            // post-session summary still surfaces phrase corrections and
-            // feeds them into the SRS drill queue.
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -510,10 +535,9 @@ struct ConversationView: View {
         cancelSilenceTimer()
         phase = .thinking
         do {
-            let profile = appState.makeEmptyProfile(userId: userId)
             let systemP = ConversationEngine.summarySystemPrompt(
                 targetLanguage: appState.targetLanguage,
-                profile: profile
+                profile: appState.learnerProfile
             )
             let transcript = ConversationEngine.formatTranscript(turns)
             let metrics = ScorecardMetrics.compute(turns: turns)
@@ -546,8 +570,18 @@ struct ConversationView: View {
             )
             SessionStore.shared.save(session)
             DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
+            // Grow the long-term learner profile — the next conversation's
+            // system prompt picks these patterns up.
+            appState.recordSessionOutcome(summary: computed, turns: turns)
             didSaveCurrentSession = true
             refreshDashboard()
+            // Kick off async weekly-report generation if unlock conditions
+            // are met. Fires-and-forgets — UI doesn't block on Gemini.
+            appState.maybeGenerateWeeklyReport()
+            // Fresh cards just landed in the queue — (re)schedule the due
+            // reminder. This is the one contextual moment where asking for
+            // notification permission makes sense.
+            Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
         } catch {
             self.error = error.localizedDescription
             phase = .idle
@@ -599,8 +633,8 @@ struct ConversationView: View {
             targetLanguage: appState.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
             level: appState.proficiency,
-            topPatterns: [],
-            weakVocabAreas: [],
+            topPatterns: appState.learnerProfile.recurringMistakes,
+            weakVocabAreas: appState.learnerProfile.weakVocabAreas,
             topic: composedTopic,
             persona: appState.persona
         )

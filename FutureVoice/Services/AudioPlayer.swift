@@ -48,7 +48,12 @@ final class AudioPlayer: NSObject, ObservableObject {
             try? session.overrideOutputAudioPort(.speaker)
         }
 
-        let p = try AVAudioPlayer(data: data)
+        // Equalize loudness across voices: IVC clones come back much quieter
+        // than premade preset voices (see AudioLoudness). Falls back to the
+        // raw data when decoding fails or the level is already on target.
+        let playData = AudioLoudness.normalized(data) ?? data
+
+        let p = try AVAudioPlayer(data: playData)
         p.volume = 1.0
         p.delegate = self
         p.prepareToPlay()

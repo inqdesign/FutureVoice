@@ -31,7 +31,11 @@ final class DrillStore {
               let cards = try? decoder.decode([DrillCard].self, from: data) else {
             return []
         }
-        return cards
+        // Filter out historical meta-rule cards generated before the
+        // tighter summary prompt + ingestion safety net landed. Read-time
+        // filter only — we don't rewrite the JSON, so this is a no-op once
+        // the bad rows roll off naturally.
+        return cards.filter { !Self.looksLikeMetaRule($0.targetPhrase) }
     }
 
     func save(_ card: DrillCard) {
@@ -58,11 +62,14 @@ final class DrillStore {
 
     // MARK: - Scheduling
 
-    /// Cards whose `nextReviewAt` is in the past or present, ordered by oldest first.
+    /// Cards whose `nextReviewAt` is in the past or present, **newest first**.
+    /// Recently captured patterns feel fresher and more relevant to the user
+    /// than 3-week-old ones from a forgotten session — surfacing those first
+    /// keeps the drill connected to whatever they just practiced.
     func due(now: Date = Date()) -> [DrillCard] {
         load()
             .filter { $0.nextReviewAt <= now }
-            .sorted { $0.nextReviewAt < $1.nextReviewAt }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     func dueCount(now: Date = Date()) -> Int {
@@ -107,6 +114,10 @@ final class DrillStore {
         func add(source: String, target: String, reason: String) {
             let key = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
+            // Safety net: even with the tightened summary prompt, Gemini
+            // occasionally produces meta-rule "phrases" like "using articles
+            // correctly". Those tank the drill UX — TTS on a rule is gibberish.
+            guard !Self.looksLikeMetaRule(target) else { return }
             seenTargets.insert(key)
             newCards.append(DrillCard(
                 sourcePhrase: source,
@@ -160,5 +171,50 @@ final class DrillStore {
     private func write(_ cards: [DrillCard]) {
         guard let data = try? encoder.encode(cards) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+    }
+
+    /// Heuristic for "this is a rule, not an utterance". Matches the kinds
+    /// of meta-rule strings Gemini occasionally produces despite the prompt
+    /// telling it not to. Conservative — false-positives just mean a few
+    /// missed drill cards, which is fine. False-negatives are what hurt
+    /// (TTS reading "using articles correctly" out loud).
+    private static func looksLikeMetaRule(_ phrase: String) -> Bool {
+        let lower = phrase.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if lower.isEmpty { return true }
+
+        // Sentence-fragments that point at grammar concepts rather than
+        // anything you'd actually say in a conversation.
+        let bannedSubstrings = [
+            "correctly",            // "using X correctly"
+            "properly",
+            "appropriately",
+            "subject-verb",
+            "agreement",
+            "tense",
+            "article",              // "missing article", "use the article"
+            "preposition",          // "missing preposition"
+            "vocabulary",
+            "register",
+            "grammar",
+            "pronunciation",
+            "fluency",
+            "expand your",
+            "instead of using",
+            "remember to",
+            "make sure to",
+            "try to use",
+            "you should use",
+        ]
+        for needle in bannedSubstrings where lower.contains(needle) {
+            return true
+        }
+
+        // Anything that's mostly quoted single-letter / single-word items
+        // strung with commas is a rule listing examples, not an utterance.
+        // E.g. "using 'a', 'the', 'in', 'on'".
+        let quotedItems = lower.components(separatedBy: "'").count - 1
+        if quotedItems >= 4 { return true }
+
+        return false
     }
 }

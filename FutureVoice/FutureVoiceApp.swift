@@ -5,6 +5,7 @@ import SwiftUI
 struct FutureVoiceApp: App {
     @StateObject private var appState = AppState()
     @StateObject private var auth = AuthService()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -12,6 +13,13 @@ struct FutureVoiceApp: App {
                 .environmentObject(appState)
                 .environmentObject(auth)
                 .preferredColorScheme(.dark)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // Drill grading may have moved due dates — leave with an accurate
+            // reminder. Background path never prompts for permission.
+            if phase == .background {
+                Task { await DrillReminder.reschedule() }
+            }
         }
     }
 }
@@ -23,19 +31,52 @@ final class AppState: ObservableObject {
     @Published var voiceCloneId: String? {
         didSet { UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey) }
     }
-    @Published var nativeLanguage: String = "ko"
-    @Published var targetLanguage: String = "en"
-    @Published var proficiency: CEFRLevel = .b1
+    @Published var nativeLanguage: String = "ko" {
+        didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
+    }
+    @Published var targetLanguage: String = "en" {
+        didSet { UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey) }
+    }
+    @Published var proficiency: CEFRLevel = .b1 {
+        didSet {
+            UserDefaults.standard.set(proficiency.rawValue, forKey: Self.proficiencyKey)
+            // Keep the persisted profile's level in sync — it drives prompt
+            // calibration in conversations and summaries.
+            if learnerProfile.proficiencyLevel != proficiency {
+                learnerProfile.proficiencyLevel = proficiency
+                ProfileStore.shared.save(learnerProfile)
+            }
+        }
+    }
+    /// Long-term learner memory for the current target language. Grows after
+    /// every ended session via `recordSessionOutcome` and feeds the next
+    /// conversation's system prompt — the spec §3 loop.
+    @Published var learnerProfile: LearnerProfile
     @Published var persona: UserPersona?       // nil until first save
     @Published var topicSuggestions: [SuggestedTopic] = []
     @Published var counterparts: [Counterpart] = []
     @Published var watchDialogues: [WatchDialogue] = []
     @Published var scenarios: [Scenario] = []
     @Published var shadowAttempts: [ShadowAttempt] = []
+    @Published var weeklyReports: [WeeklyReport] = []
+    /// True while WeeklyReportEngine is generating a report. UI uses this
+    /// to show a "Analyzing your week…" spinner instead of an empty state.
+    @Published var weeklyReportGenerating: Bool = false
 
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
+    private static let nativeLanguageKey = "futurevoice.nativeLanguage"
+    private static let targetLanguageKey = "futurevoice.targetLanguage"
+    private static let proficiencyKey = "futurevoice.proficiency"
 
     init() {
+        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
+        let storedTarget = UserDefaults.standard.string(forKey: Self.targetLanguageKey) ?? "en"
+        let storedLevel = UserDefaults.standard.string(forKey: Self.proficiencyKey)
+            .flatMap(CEFRLevel.init(rawValue:)) ?? .b1
+        learnerProfile = ProfileStore.shared.load(targetLanguage: storedTarget, proficiency: storedLevel)
+        nativeLanguage = storedNative
+        targetLanguage = storedTarget
+        proficiency = storedLevel
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         persona = PersonaStore.shared.load()
         topicSuggestions = TopicStore.shared.load()
@@ -43,8 +84,40 @@ final class AppState: ObservableObject {
         watchDialogues = WatchDialogueStore.shared.load()
         scenarios = ScenarioStore.shared.load()
         shadowAttempts = ShadowAttemptStore.shared.load()
+        weeklyReports = WeeklyReportStore.shared.load()
 
         Task { await self.observeAuth() }
+    }
+
+    /// Called from ConversationView after `endSession` finishes saving the
+    /// session. Checks unlock state and, if ready, fires the engine in the
+    /// background — UI never blocks on the Gemini call.
+    func maybeGenerateWeeklyReport() {
+        let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
+        let last = weeklyReports.first
+        guard case .ready = WeeklyReportEngine.unlockState(
+            endedSessions: sessions,
+            lastReport: last
+        ) else { return }
+        guard !weeklyReportGenerating else { return }
+        weeklyReportGenerating = true
+
+        Task {
+            defer { Task { @MainActor in self.weeklyReportGenerating = false } }
+            do {
+                let report = try await WeeklyReportEngine.generate(
+                    endedSessions: sessions,
+                    lastReport: last,
+                    targetLanguage: self.targetLanguage
+                )
+                await MainActor.run {
+                    WeeklyReportStore.shared.save(report)
+                    self.weeklyReports = WeeklyReportStore.shared.load()
+                }
+            } catch {
+                print("weekly report generation failed:", error)
+            }
+        }
     }
 
     /// Watches Supabase auth state. When a session appears (either restored
@@ -165,20 +238,14 @@ final class AppState: ObservableObject {
         try? await ElevenLabsClient.shared.deleteVoice(voiceId: oldId)
     }
 
-    /// Empty profile for the spike — Phase 2 wires this to Supabase.
-    func makeEmptyProfile(userId: UUID) -> LearnerProfile {
-        LearnerProfile(
-            id: UUID(),
-            userId: userId,
-            targetLanguage: targetLanguage,
-            proficiencyLevel: proficiency,
-            recurringMistakes: [],
-            weakVocabAreas: [],
-            strongPatterns: [],
-            totalSessions: 0,
-            totalSpeakingSeconds: 0,
-            lastSessionAt: nil,
-            summaryEmbedding: nil
-        )
+    /// Fold a finished session into the learner profile and persist. Called
+    /// from ConversationView.endSession right after the summary is computed —
+    /// this is what makes the next conversation aware of recurring mistakes.
+    func recordSessionOutcome(summary: SessionSummary, turns: [Turn]) {
+        let speakingSeconds = turns
+            .filter { $0.role == .user }
+            .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
+        learnerProfile.absorb(summary: summary, speakingSeconds: speakingSeconds)
+        ProfileStore.shared.save(learnerProfile)
     }
 }

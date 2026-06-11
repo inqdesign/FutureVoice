@@ -203,6 +203,32 @@ final class LiveTranscriber: ObservableObject {
 
         if let result = result {
             let segmentText = result.bestTranscription.formattedString
+
+            // SFSpeechRecognizer (especially on iOS 26) occasionally resets
+            // its internal segment mid-utterance: bestTranscription suddenly
+            // becomes empty or much shorter than the previous partial. Naive
+            // assignment then wipes everything the user already saw. Detect
+            // the shrink and treat it as a forced commit — freeze the longer
+            // version into committedText, then accept the new short text as
+            // the start of a fresh segment.
+            let prev = lastSegmentText
+            let shrank = segmentText.count + 4 < prev.count
+            if shrank && !prev.isEmpty {
+                committedText = committedText.isEmpty ? prev : committedText + " " + prev
+                lastSegmentText = segmentText
+                lastChangeTime = Date()
+                transcript = committedText.isEmpty
+                    ? segmentText
+                    : committedText + (segmentText.isEmpty ? "" : " " + segmentText)
+                currentWordTimings = result.bestTranscription.segments.map {
+                    WordTimingInfo(word: $0.substring,
+                                   startSeconds: $0.timestamp,
+                                   duration: $0.duration)
+                }
+                if result.isFinal { commitAndRestart() }
+                return
+            }
+
             if segmentText != lastSegmentText {
                 lastChangeTime = Date()
                 lastSegmentText = segmentText
@@ -210,8 +236,6 @@ final class LiveTranscriber: ObservableObject {
             transcript = committedText.isEmpty
                 ? segmentText
                 : committedText + " " + segmentText
-            // Extract per-word audio-time timings — what the user really wants
-            // to grade shadow timing against, not the wall-clock STT arrival.
             currentWordTimings = result.bestTranscription.segments.map {
                 WordTimingInfo(
                     word: $0.substring,

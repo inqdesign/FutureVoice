@@ -183,6 +183,35 @@ enum ConversationEngine {
         - Max 5 phrases_used. Pick the most teachable ones.
         - Max 3 suggested_drills.
         - Tone: warm, never condescending.
+
+        HARD RULE for phrases_used / new_patterns_detected / suggested_drills
+        (this is the most-violated rule — read carefully):
+
+        Every "fluent_alternative", "correction", "suggested_drills" entry,
+        and every "mistake" / "user_said" field MUST be a CONCRETE UTTERANCE
+        the learner could literally say out loud in this language, NOT a
+        rule, category, or instruction about how to speak.
+
+        FORBIDDEN — do NOT emit cards like:
+          - "missing articles or prepositions"
+          - "using 'a', 'the', 'in', 'on', 'from' correctly"
+          - "use the past tense"
+          - "subject-verb agreement"
+          - "expand your vocabulary"
+        These are pedagogical labels. They cannot be spoken back to the
+        learner as a model line, and TTS on them produces nonsense audio.
+
+        GOOD — emit cards like:
+          - user_said: "I go to bank yesterday"
+            fluent_alternative: "I went to the bank yesterday"
+            reason: "past tense + article"
+          - user_said: "It's depend on weather"
+            fluent_alternative: "It depends on the weather"
+            reason: "third-person s, article on weather"
+
+        If you cannot point to a specific utterance from the transcript,
+        do NOT invent a generic rule — leave the array shorter. An empty
+        phrases_used is better than a meta-rule entry.
         - Scorecard scoring rubric (each 0–100, calibrated to the user's CEFR
           level, NOT to native-speaker absolutes):
           * vocabulary: range + appropriateness. Reference type_token_ratio and
@@ -196,6 +225,33 @@ enum ConversationEngine {
             -1 and note "no timing data".
         - Each axis note ≤ 18 words, concrete (cite a metric or a phrase).
         - top_line: one warm sentence that ties the highest + lowest axis together.
+        """
+    }
+
+    /// Output-format block appended to the conversation system prompt for
+    /// in-call turns. One structured call returns both the spoken reply and
+    /// an optional "say it more naturally" suggestion for the user's last
+    /// line — restoring per-turn corrections WITHOUT a second Gemini call.
+    /// The suggestion feeds the inline chip, the SRS drill queue, and the
+    /// weekly report's repeated-mistake detection.
+    static func turnOutputInstruction(targetLanguage: String) -> String {
+        """
+
+        OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
+        Return STRICT JSON only — no prose, no code fences:
+        { "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
+
+        - "reply": your spoken conversational turn in \(targetLanguage), following
+          every speaking rule above. This is the ONLY part the user hears.
+        - "suggestion": include ONLY when the user's most recent line had a
+          clearly more natural or correct phrasing a fluent speaker would use.
+          Otherwise set it to null. Most turns should be null — flag real
+          teaching moments, not nitpicks.
+        - "alternative" must be a CONCRETE full utterance the user could say
+          out loud (their corrected sentence), never a rule or category.
+        - "reason": ≤ 12 words on why it's better.
+        - The suggestion is shown silently as text — never mention it in "reply",
+          never correct the user out loud.
         """
     }
 
@@ -229,6 +285,27 @@ enum ConversationEngine {
                 content: turn.transcript
             )
         }
+    }
+}
+
+/// JSON shape returned by Gemini for one in-call conversation turn —
+/// the spoken reply plus an optional inline correction for the user's
+/// last utterance. See `ConversationEngine.turnOutputInstruction`.
+struct ConversationTurnPayload: Decodable {
+    struct Suggestion: Decodable {
+        let alternative: String
+        let reason: String
+    }
+    let reply: String
+    let suggestion: Suggestion?
+
+    /// Maps to the domain type, dropping junk (empty / rule-like suggestions).
+    func turnSuggestion() -> TurnSuggestion? {
+        guard let s = suggestion,
+              !s.alternative.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return TurnSuggestion(alternative: s.alternative, reason: s.reason)
     }
 }
 

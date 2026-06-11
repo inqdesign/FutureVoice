@@ -33,6 +33,44 @@ enum PracticeStats {
         )
     }
 
+    // MARK: - Shadow / pronunciation trend
+
+    /// Deterministic pronunciation signal from saved shadow attempts —
+    /// average match score this week vs. the week before. No LLM involved;
+    /// `ShadowEngine` scores are token-Levenshtein, so the trend is honest.
+    struct ShadowTrend {
+        var attemptsThisWeek: Int
+        var avgThisWeek: Int        // 0 when no attempts
+        var avgPrevWeek: Int        // 0 when no attempts
+        /// Delta vs. previous week; nil when either window is empty.
+        var delta: Int? {
+            (attemptsThisWeek > 0 && avgPrevWeek > 0) ? avgThisWeek - avgPrevWeek : nil
+        }
+    }
+
+    static func shadowTrend(
+        attempts: [ShadowAttempt],
+        now: Date = Date(),
+        calendar: Calendar = .current
+    ) -> ShadowTrend {
+        let weekAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+        let twoWeeksAgo = calendar.date(byAdding: .day, value: -14, to: now) ?? now
+
+        let thisWeek = attempts.filter { $0.createdAt > weekAgo }
+        let prevWeek = attempts.filter { $0.createdAt > twoWeeksAgo && $0.createdAt <= weekAgo }
+
+        func avg(_ list: [ShadowAttempt]) -> Int {
+            guard !list.isEmpty else { return 0 }
+            return Int((Double(list.reduce(0) { $0 + $1.matchScore }) / Double(list.count)).rounded())
+        }
+
+        return ShadowTrend(
+            attemptsThisWeek: thisWeek.count,
+            avgThisWeek: avg(thisWeek),
+            avgPrevWeek: avg(prevWeek)
+        )
+    }
+
     // MARK: - Helpers
 
     private static func computeStreak(sessions: [Session], now: Date, calendar: Calendar) -> Int {

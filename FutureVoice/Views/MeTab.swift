@@ -23,6 +23,7 @@ struct MeTab: View {
                     if let card = dashboard.lastScorecard {
                         lastSessionCard(card)
                     }
+                    shadowTrendRow
                 } header: {
                     Text("This week")
                 }
@@ -37,6 +38,22 @@ struct MeTab: View {
                                 : "Edit profile",
                             subtitle: "Persona used in every conversation")
                     }
+                }
+
+                Section {
+                    Picker(selection: $appState.proficiency) {
+                        ForEach(CEFRLevel.allCases, id: \.self) { level in
+                            Text(level.rawValue.uppercased()).tag(level)
+                        }
+                    } label: {
+                        row(icon: "chart.bar",
+                            title: "Level",
+                            subtitle: "Calibrates conversations and feedback")
+                    }
+                } header: {
+                    Text("Learning")
+                } footer: {
+                    Text("CEFR scale — A1 beginner to C2 near-native. The avatar stays at your level and grades against it.")
                 }
 
                 Section("Voice") {
@@ -121,6 +138,42 @@ struct MeTab: View {
             .frame(height: 50, alignment: .bottom)
         }
         .padding(.vertical, 4)
+    }
+
+    /// Deterministic pronunciation read from shadow-practice scores — the
+    /// one axis the LLM scorecard can't grade. Hidden until the user has
+    /// shadowed at least once this week.
+    @ViewBuilder
+    private var shadowTrendRow: some View {
+        let trend = PracticeStats.shadowTrend(attempts: appState.shadowAttempts)
+        if trend.attemptsThisWeek > 0 {
+            HStack(spacing: 10) {
+                Image(systemName: "waveform.badge.mic")
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pronunciation (shadow)")
+                        .font(.subheadline.weight(.medium))
+                    Text("\(trend.attemptsThisWeek) attempt\(trend.attemptsThisWeek == 1 ? "" : "s") this week")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                HStack(spacing: 6) {
+                    Text("\(trend.avgThisWeek)")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(color(for: Double(trend.avgThisWeek)))
+                        .monospacedDigit()
+                    if let delta = trend.delta, delta != 0 {
+                        Text(delta > 0 ? "+\(delta)" : "\(delta)")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(delta > 0 ? .green : .orange)
+                            .monospacedDigit()
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
     }
 
     @ViewBuilder
