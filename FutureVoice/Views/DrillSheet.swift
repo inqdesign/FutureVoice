@@ -16,9 +16,12 @@ struct DrillView: View {
     /// `.session(id)` = every card whose source matches the given session,
     /// regardless of due date. Lets the user post-mortem a specific
     /// conversation by walking just its cards.
+    /// `.ahead(n)` = the n soonest-due cards regardless of schedule — for
+    /// "practice ahead" when nothing is due but the user wants reps anyway.
     enum Source: Equatable {
         case due
         case session(UUID)
+        case ahead(Int)
     }
     var source: Source = .due
 
@@ -544,6 +547,12 @@ private extension DrillView {
             queue = DrillStore.shared.load()
                 .filter { $0.sourceSessionId == sid }
                 .sorted { $0.createdAt < $1.createdAt }
+        case .ahead(let limit):
+            queue = Array(
+                DrillStore.shared.load()
+                    .sorted { $0.nextReviewAt < $1.nextReviewAt }
+                    .prefix(limit)
+            )
         }
         initialCount = queue.count
     }

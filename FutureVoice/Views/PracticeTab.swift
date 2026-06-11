@@ -1,45 +1,258 @@
 import SwiftUI
 
-/// Tab home for reinforcement modes — Drill (SRS) and Shadow. A segmented
-/// control switches between them so users can flip mid-session without
-/// hopping back to a hub.
+/// Practice home, organized around ONE question — "what should I practice
+/// right now?" — instead of the old mechanism-based segments (Due / Sessions
+/// / Shadow, which all showed the same data sliced differently).
+///
+///   1. Review due — the SRS deck, the single primary action.
+///   2. Shadow picks — a curated handful (fresh lines from the latest
+///      conversation + low-score retries), not the full archive.
+///   3. From your conversations — per-session post-mortem entry points.
+///
+/// The full archives still exist one push away (Browse all lines / All
+/// sessions) for users who want to dig.
 struct PracticeTab: View {
-    @State private var mode: Mode = .drill
+    @EnvironmentObject private var appState: AppState
 
-    enum Mode: String, CaseIterable, Identifiable {
-        case drill, sessions, shadow
-        var id: String { rawValue }
-        var label: String {
-            switch self {
-            case .drill:    return "Due"
-            case .sessions: return "Sessions"
-            case .shadow:   return "Shadow"
+    @State private var dueCount = 0
+    @State private var totalCards = 0
+    @State private var nextDueAt: Date?
+    @State private var picks: [PracticeStats.ShadowPick] = []
+    @State private var recentSessions: [SessionRow] = []
+    @State private var moreSessionsExist = false
+    @State private var shadowPick: PracticeStats.ShadowPick?
+
+    struct SessionRow: Identifiable {
+        let session: Session
+        let cardCount: Int
+        let dueCount: Int
+        var id: UUID { session.id }
+    }
+
+    private static let recentSessionLimit = 3
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if totalCards == 0 && picks.isEmpty {
+                    emptyState
+                } else {
+                    content
+                }
+            }
+            .navigationTitle("Practice")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear(perform: reload)
+            .sheet(item: $shadowPick, onDismiss: reload) { pick in
+                ShadowDrillView(turn: pick.turn, targetLanguage: appState.targetLanguage)
+                    .environmentObject(appState)
             }
         }
     }
 
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("Mode", selection: $mode) {
-                    ForEach(Mode.allCases) { Text($0.label).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .padding(.bottom, 8)
+    // MARK: - Sections
 
-                Group {
-                    switch mode {
-                    case .drill:    DrillView()
-                    case .sessions: DrillsBySessionView()
-                    case .shadow:   ShadowBrowserView()
+    private var content: some View {
+        List {
+            reviewSection
+            shadowSection
+            sessionsSection
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    @ViewBuilder
+    private var reviewSection: some View {
+        Section {
+            if dueCount > 0 {
+                NavigationLink {
+                    DrillView()
+                        .navigationTitle("Review")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    HStack(spacing: 14) {
+                        Image(systemName: "rectangle.stack.fill")
+                            .font(.title2)
+                            .foregroundStyle(.tint)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Review due")
+                                .font(.headline)
+                            Text(dueCount == 1 ? "1 card waiting" : "\(dueCount) cards waiting")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+            } else {
+                HStack(spacing: 14) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("All caught up")
+                            .font(.headline)
+                        Text(nextDueText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.vertical, 6)
+                if totalCards > 0 {
+                    NavigationLink {
+                        DrillView(source: .ahead(10))
+                            .navigationTitle("Practice ahead")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        Label("Practice ahead anyway", systemImage: "forward.end")
+                            .font(.subheadline)
+                    }
+                }
             }
-            .navigationTitle("Practice")
-            .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private var nextDueText: String {
+        guard let next = nextDueAt else { return "New cards appear after conversations." }
+        let fmt = RelativeDateTimeFormatter()
+        fmt.unitsStyle = .full
+        return "Next review \(fmt.localizedString(for: next, relativeTo: Date()))."
+    }
+
+    @ViewBuilder
+    private var shadowSection: some View {
+        if !picks.isEmpty {
+            Section {
+                ForEach(picks) { pick in
+                    Button {
+                        shadowPick = pick
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "waveform.badge.mic")
+                                .font(.subheadline)
+                                .foregroundStyle(.tint)
+                                .frame(width: 22)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(pick.turn.transcript)
+                                    .font(.body)
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(2)
+                                Text(pick.reason)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 2)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                NavigationLink {
+                    ShadowBrowserView()
+                        .navigationTitle("All lines")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    Text("Browse all lines")
+                        .font(.subheadline)
+                        .foregroundStyle(.tint)
+                }
+            } header: {
+                Text("Shadow picks")
+            } footer: {
+                Text("Fresh lines from your latest conversations, plus ones worth another try.")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sessionsSection: some View {
+        if !recentSessions.isEmpty {
+            Section {
+                ForEach(recentSessions) { row in
+                    NavigationLink {
+                        DrillView(source: .session(row.session.id))
+                            .navigationTitle(row.session.topic ?? "Conversation")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(row.session.topic?.isEmpty == false ? row.session.topic! : "Conversation")
+                                .font(.body)
+                                .lineLimit(1)
+                            HStack(spacing: 6) {
+                                Text(row.session.endedAt ?? row.session.startedAt, style: .relative)
+                                Text("·")
+                                Text(row.cardCount == 1 ? "1 card" : "\(row.cardCount) cards")
+                                if row.dueCount > 0 {
+                                    Text("·")
+                                    Text("\(row.dueCount) due")
+                                        .foregroundStyle(.orange)
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                if moreSessionsExist {
+                    NavigationLink {
+                        DrillsBySessionView()
+                            .navigationTitle("All sessions")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        Text("All sessions")
+                            .font(.subheadline)
+                            .foregroundStyle(.tint)
+                    }
+                }
+            } header: {
+                Text("From your conversations")
+            } footer: {
+                Text("Walk back through what one conversation taught you.")
+            }
+        }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("Nothing to practice yet", systemImage: "lightbulb")
+        } description: {
+            Text("Have a conversation in Talk first — its corrections become review cards, and every line your fluent self says becomes shadow material.")
+        }
+    }
+
+    // MARK: - Data
+
+    private func reload() {
+        let now = Date()
+        let cards = DrillStore.shared.load()
+        totalCards = cards.count
+        dueCount = cards.filter { $0.nextReviewAt <= now }.count
+        nextDueAt = cards.map(\.nextReviewAt).filter { $0 > now }.min()
+
+        let sessions = SessionStore.shared.load()
+        picks = PracticeStats.shadowPicks(sessions: sessions, attempts: appState.shadowAttempts)
+
+        var cardsBySession: [UUID: [DrillCard]] = [:]
+        for card in cards {
+            guard let sid = card.sourceSessionId else { continue }
+            cardsBySession[sid, default: []].append(card)
+        }
+        let withCards = sessions
+            .filter { cardsBySession[$0.id] != nil }
+            .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+        recentSessions = withCards.prefix(Self.recentSessionLimit).map { s in
+            let own = cardsBySession[s.id] ?? []
+            return SessionRow(
+                session: s,
+                cardCount: own.count,
+                dueCount: own.filter { $0.nextReviewAt <= now }.count
+            )
+        }
+        moreSessionsExist = withCards.count > Self.recentSessionLimit
     }
 }

@@ -149,6 +149,88 @@ final class DrillStoreTests: XCTestCase {
     }
 }
 
+// MARK: - PracticeStats.shadowPicks curation
+
+final class ShadowPicksTests: XCTestCase {
+
+    private func turn(_ text: String, role: TurnRole = .fluentSelf,
+                      id: UUID = UUID()) -> Turn {
+        Turn(id: id, role: role, audioURL: nil, transcript: text,
+             durationMs: 0, timestamp: Date(), suggestion: nil)
+    }
+
+    private func session(_ turns: [Turn], topic: String = "Coffee chat",
+                         endedAt: Date = Date()) -> Session {
+        Session(id: UUID(), userId: UUID(), targetLanguage: "en",
+                mode: .conversation, topic: topic,
+                startedAt: endedAt.addingTimeInterval(-300),
+                endedAt: endedAt, turns: turns, summary: nil)
+    }
+
+    private func attempt(turnId: UUID, score: Int, target: String = "x",
+                         at date: Date = Date()) -> ShadowAttempt {
+        ShadowAttempt(turnId: turnId, targetText: target, learnerTranscript: "",
+                      recordingFilename: nil, matchScore: score,
+                      pronunciation: "", pacing: "", fix: "", createdAt: date)
+    }
+
+    func testFreshLinesComeFromSessionsAndSkipShortOnes() {
+        let s = session([
+            turn("Really?"),                                  // too short
+            turn("Honestly the weather has been rough lately."),
+            turn("I should say this", role: .user),           // wrong role
+        ])
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [])
+        XCTAssertEqual(picks.count, 1)
+        XCTAssertTrue(picks[0].reason.hasPrefix("From: Coffee chat"))
+    }
+
+    func testAttemptedLinesAreNotFreshButLowScoresRetry() {
+        let goodId = UUID(), badId = UUID()
+        let s = session([
+            turn("This line was already shadowed well.", id: goodId),
+            turn("This line went badly and deserves a retry.", id: badId),
+        ])
+        let attempts = [
+            attempt(turnId: goodId, score: 92),
+            attempt(turnId: badId, score: 60),
+        ]
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts)
+        XCTAssertEqual(picks.count, 1)
+        XCTAssertTrue(picks[0].reason.contains("Retry — last score 60"))
+        XCTAssertEqual(picks[0].turn.id, badId)
+    }
+
+    func testNewerGoodAttemptSupersedesOldBadOne() {
+        let id = UUID()
+        let s = session([turn("Practice makes the line much better.", id: id)])
+        let attempts = [
+            attempt(turnId: id, score: 50, at: Date().addingTimeInterval(-3600)),
+            attempt(turnId: id, score: 88, at: Date()),
+        ]
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts)
+        XCTAssertTrue(picks.isEmpty)
+    }
+
+    func testLimitAndFreshFirstMix() {
+        let badId = UUID()
+        let s = session([
+            turn("First fresh line with enough words here."),
+            turn("Second fresh line with enough words too."),
+            turn("Third fresh line that also qualifies fine."),
+            turn("The one that scored low last time around.", id: badId),
+        ])
+        let picks = PracticeStats.shadowPicks(
+            sessions: [s],
+            attempts: [attempt(turnId: badId, score: 40)],
+            limit: 3
+        )
+        XCTAssertEqual(picks.count, 3)
+        XCTAssertEqual(picks.filter { $0.reason.hasPrefix("From:") }.count, 2)
+        XCTAssertEqual(picks.filter { $0.reason.hasPrefix("Retry") }.count, 1)
+    }
+}
+
 // MARK: - DrillReminder fire-time policy
 
 @MainActor

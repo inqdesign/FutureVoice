@@ -71,6 +71,85 @@ enum PracticeStats {
         )
     }
 
+    // MARK: - Shadow picks (curated "what to shadow today")
+
+    /// One suggested shadow line with a human reason. The Practice home shows
+    /// a handful of these instead of dumping the full line archive.
+    struct ShadowPick: Identifiable {
+        let turn: Turn
+        let reason: String
+        var id: UUID { turn.id }
+    }
+
+    /// Minimum substance for a fresh pick — one-word reactions ("Really?")
+    /// aren't worth a prosody rep.
+    private static let minPickWords = 4
+
+    /// Score under which a past attempt earns a retry suggestion.
+    static let retryThreshold = 75
+
+    /// Curate up to `limit` lines: fresh lines from the newest sessions the
+    /// user hasn't shadowed yet, then low-score retries (latest attempt per
+    /// line < `retryThreshold`). Fresh-first keeps picks tied to whatever
+    /// the user just talked about.
+    static func shadowPicks(
+        sessions: [Session],
+        attempts: [ShadowAttempt],
+        limit: Int = 3
+    ) -> [ShadowPick] {
+        // Latest attempt per target line.
+        var latestByTurn: [UUID: ShadowAttempt] = [:]
+        for a in attempts {
+            if let existing = latestByTurn[a.turnId], existing.createdAt >= a.createdAt { continue }
+            latestByTurn[a.turnId] = a
+        }
+
+        // Fresh: never-attempted fluent-self lines, newest session first.
+        var fresh: [ShadowPick] = []
+        var seenTexts = Set<String>()
+        let newestFirst = sessions.sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+        for session in newestFirst {
+            for turn in session.turns where turn.role == .fluentSelf {
+                let text = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+                let key = text.lowercased()
+                guard !text.isEmpty,
+                      text.split(separator: " ").count >= minPickWords,
+                      latestByTurn[turn.id] == nil,
+                      !seenTexts.contains(key) else { continue }
+                seenTexts.insert(key)
+                fresh.append(ShadowPick(
+                    turn: turn,
+                    reason: "From: \(session.topic?.isEmpty == false ? session.topic! : "recent conversation")"
+                ))
+            }
+        }
+
+        // Retries: latest attempt scored low. Reuse the original turn when it
+        // still exists so past attempts stay attached; otherwise rebuild from
+        // the attempt's captured target text.
+        let turnById: [UUID: Turn] = sessions
+            .flatMap { $0.turns }
+            .reduce(into: [:]) { $0[$1.id] = $1 }
+        let retries: [ShadowPick] = latestByTurn.values
+            .filter { $0.matchScore < retryThreshold }
+            .sorted { $0.createdAt > $1.createdAt }
+            .map { a in
+                let turn = turnById[a.turnId] ?? Turn(
+                    id: a.turnId, role: .fluentSelf, audioURL: nil,
+                    transcript: a.targetText, durationMs: 0,
+                    timestamp: a.createdAt, suggestion: nil
+                )
+                return ShadowPick(turn: turn, reason: "Retry — last score \(a.matchScore)")
+            }
+
+        var out = Array(fresh.prefix(max(0, limit - min(1, retries.count))))
+        for r in retries where out.count < limit { out.append(r) }
+        for f in fresh.dropFirst(out.filter { !$0.reason.hasPrefix("Retry") }.count) where out.count < limit {
+            out.append(f)
+        }
+        return out
+    }
+
     // MARK: - Helpers
 
     private static func computeStreak(sessions: [Session], now: Date, calendar: Calendar) -> Int {
