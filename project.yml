@@ -45,3 +45,24 @@ targets:
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig
+
+  FutureVoiceTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: FutureVoiceTests
+    dependencies:
+      - target: FutureVoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  FutureVoice:
+    build:
+      targets:
+        FutureVoice: all
+    test:
+      targets:
+        - FutureVoiceTests
