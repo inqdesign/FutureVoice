@@ -1,53 +1,62 @@
 import Foundation
+import Supabase
 
-/// Turns the user's onboarding interests into conversation topics grounded
-/// in CURRENT news, via Gemini's Google Search tool. The blurb is fed
-/// straight into the conversation system prompt as starting context, so it
-/// must stay factual — facts from the search results only, no embellishment.
+/// Reads conversation topics from the platform-wide news pool (the
+/// `news-topics` Edge Function). Story generation happens SERVER-side at
+/// most once per (category, day) for the whole platform — this client just
+/// sends the user's interests and mixes what comes back. No credit charge.
 enum NewsTopicEngine {
 
-    private struct Payload: Decodable {
-        struct Item: Decodable {
-            let title: String
-            let blurb: String
-        }
-        let topics: [Item]
+    struct ServerTopic: Decodable {
+        let category: String
+        let title: String
+        let blurb: String
+    }
+    private struct RequestPayload: Encodable {
+        let categories: [String]
+        let language: String
+    }
+    private struct ResponsePayload: Decodable {
+        let topics: [ServerTopic]
     }
 
-    static func suggest(
-        interests: [String],
-        targetLanguage: String,
-        now: Date = Date()
-    ) async throws -> [SuggestedTopic] {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        let payload: Payload = try await GeminiClient.shared.sendJSON(
-            system: systemPrompt(targetLanguage: targetLanguage),
-            messages: [GeminiClient.Message(
-                role: .user,
-                content: "Today is \(fmt.string(from: now)). Interests: \(interests.joined(separator: ", "))"
-            )],
-            maxTokens: 1200,
-            searchGrounding: true
+    /// How many mixed topics the picker shows.
+    static let maxShown = 6
+
+    static func fetch(interests: [String], targetLanguage: String) async throws -> [SuggestedTopic] {
+        let response: ResponsePayload = try await SupabaseProvider.shared.functions.invoke(
+            "news-topics",
+            options: FunctionInvokeOptions(
+                body: RequestPayload(categories: interests, language: targetLanguage)
+            )
         )
-        return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
+        return interleaved(response.topics, cap: maxShown)
     }
 
-    private static func systemPrompt(targetLanguage: String) -> String {
-        """
-        Use Google Search to find 4 recent news stories (published within the
-        last 7 days, each from a different story) matching the user's
-        interests. The user is a \(targetLanguage) learner who will discuss
-        one of them in conversation practice.
+    /// Round-robin across categories so the shown handful has variety —
+    /// one story per interest first, then seconds, instead of three rocket
+    /// stories before parenting ever appears.
+    static func interleaved(_ items: [ServerTopic], cap: Int) -> [SuggestedTopic] {
+        var byCategory: [String: [ServerTopic]] = [:]
+        var order: [String] = []
+        for item in items {
+            if byCategory[item.category] == nil { order.append(item.category) }
+            byCategory[item.category, default: []].append(item)
+        }
 
-        Return STRICT JSON only — no prose, no code fences:
-        { "topics": [ { "title": "...", "blurb": "..." } ] }
-
-        - title: how a friend would bring the story up in \(targetLanguage),
-          ≤ 10 words ("Did you see the news about …?" energy, not a headline).
-        - blurb: 1–2 sentences of plain facts from the search results — what
-          happened, who, when. Nothing that isn't in the sources: no
-          speculation, no color, no invented details.
-        """
+        var out: [SuggestedTopic] = []
+        var round = 0
+        while out.count < cap {
+            var added = false
+            for category in order {
+                guard let list = byCategory[category], round < list.count else { continue }
+                out.append(SuggestedTopic(title: list[round].title, blurb: list[round].blurb))
+                added = true
+                if out.count >= cap { break }
+            }
+            if !added { break }
+            round += 1
+        }
+        return out
     }
 }

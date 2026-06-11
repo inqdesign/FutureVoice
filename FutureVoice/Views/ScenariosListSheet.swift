@@ -72,10 +72,14 @@ struct ScenariosListSheet: View {
         }
         .listStyle(.insetGrouped)
         .task {
-            // Show today's cached batch instantly; fetching is an explicit
-            // tap because search-grounded calls cost more than plain ones.
-            if newsTopics.isEmpty, let cached = NewsTopicStore.shared.valid(for: interests) {
+            // Stories come from the shared platform pool (cheap read), so
+            // auto-load on open; the local cache skips even the network hop
+            // within the same day.
+            guard newsTopics.isEmpty, !interests.isEmpty else { return }
+            if let cached = NewsTopicStore.shared.valid(for: interests) {
                 newsTopics = cached
+            } else {
+                await fetchNews()
             }
         }
     }
@@ -124,10 +128,12 @@ struct ScenariosListSheet: View {
                         Text("Finding stories…").foregroundStyle(.secondary)
                     }
                 } else {
+                    // Auto-load happens on open; this row is the retry path
+                    // when that failed or returned nothing.
                     Button {
                         Task { await fetchNews() }
                     } label: {
-                        Label("Get today's stories", systemImage: "newspaper")
+                        Label("Load stories", systemImage: "newspaper")
                             .font(.subheadline)
                     }
                 }
@@ -201,12 +207,14 @@ struct ScenariosListSheet: View {
         newsError = nil
         defer { loadingNews = false }
         do {
-            let fresh = try await NewsTopicEngine.suggest(
+            let fresh = try await NewsTopicEngine.fetch(
                 interests: interests,
                 targetLanguage: appState.targetLanguage
             )
             newsTopics = fresh
-            NewsTopicStore.shared.save(fresh, interests: interests)
+            if !fresh.isEmpty {
+                NewsTopicStore.shared.save(fresh, interests: interests)
+            }
         } catch {
             newsError = error.localizedDescription
         }

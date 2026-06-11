@@ -252,6 +252,30 @@ final class ShadowPicksTests: XCTestCase {
     }
 }
 
+// MARK: - NewsTopicEngine category interleave
+
+final class NewsInterleaveTests: XCTestCase {
+
+    private func item(_ cat: String, _ title: String) -> NewsTopicEngine.ServerTopic {
+        NewsTopicEngine.ServerTopic(category: cat, title: title, blurb: "")
+    }
+
+    func testRoundRobinAcrossCategories() {
+        let mixed = NewsTopicEngine.interleaved([
+            item("ai", "a1"), item("ai", "a2"), item("ai", "a3"),
+            item("music", "m1"), item("music", "m2"),
+            item("travel", "t1"),
+        ], cap: 4)
+        XCTAssertEqual(mixed.map(\.title), ["a1", "m1", "t1", "a2"])
+    }
+
+    func testCapAndExhaustion() {
+        let mixed = NewsTopicEngine.interleaved([item("ai", "a1"), item("ai", "a2")], cap: 6)
+        XCTAssertEqual(mixed.count, 2)
+        XCTAssertTrue(NewsTopicEngine.interleaved([], cap: 6).isEmpty)
+    }
+}
+
 // MARK: - NewsTopicStore daily cache
 
 final class NewsTopicStoreTests: XCTestCase {
