@@ -1,14 +1,14 @@
-// ElevenLabs voice-clone proxy.
+// ElevenLabs voice-clone proxy + credit gate.
 //
-// Accepts the same multipart/form-data body the iOS app would send to
-// ElevenLabs directly (name, description, remove_background_noise, files…)
-// and forwards it upstream with the server-side `xi-api-key`.
-//
-// On success, also records the new voice_id in `public.voice_clones` so
-// the user can recover it on reinstall.
+// Multipart pass-through, then mirrors the new voice_id into voice_clones.
+// Charges 5 credits (priceFor("voice_clone")) — voice slot management is
+// expensive enough that we don't want users churning clones.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { priceFor, charge, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+
+const SOURCE_FN = "elevenlabs-voice-clone"
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -19,6 +19,9 @@ Deno.serve(async (req) => {
   if (authed instanceof Response) return authed
   const { user, supabase } = authed
 
+  const idemKey = req.headers.get("X-Idempotency-Key")
+  if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
+
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
@@ -27,9 +30,19 @@ Deno.serve(async (req) => {
     return errorResponse(400, "expected multipart/form-data")
   }
 
-  // Read incoming form data, then re-serialize it for the upstream call.
-  // We can't pass `req.body` through directly because Deno's fetch
-  // requires a fresh boundary on the outgoing multipart frame.
+  const action = "voice_clone" as const
+  const amount = priceFor(action)
+  const ch = await charge({
+    supabase, userId: user.id, action, amount,
+    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+  })
+  if (!ch.ok) {
+    if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
+      return insufficientCreditsResponse(cors())
+    }
+    return errorResponse(500, "charge failed", ch.detail)
+  }
+
   const incoming = await req.formData()
   const outgoing = new FormData()
   for (const [key, value] of incoming.entries()) {
@@ -44,14 +57,18 @@ Deno.serve(async (req) => {
   })
 
   if (!upstream.ok) {
+    await refund({
+      supabase, userId: user.id, amount, action,
+      sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+      metadata: { reason: "upstream_error", status: upstream.status },
+    })
     const detail = await upstream.text()
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
 
   const json = await upstream.json() as { voice_id: string }
 
-  // Mirror to voice_clones — deactivate prior active row(s) for this user
-  // first so the partial unique index voice_clones_user_active_idx accepts
+  // Deactivate prior active clones so the partial unique index accepts
   // the new row.
   await supabase
     .from("voice_clones")
@@ -66,14 +83,14 @@ Deno.serve(async (req) => {
       elevenlabs_voice_id: json.voice_id,
       is_active: true,
     })
-  if (insErr) {
-    // Don't fail the request — the voice exists in ElevenLabs already and
-    // the user can still use it; we just lose cloud recovery for this one.
-    console.error("voice_clones insert failed", insErr)
-  }
+  if (insErr) console.error("voice_clones insert failed", insErr)
 
   return new Response(JSON.stringify(json), {
     status: 200,
-    headers: { "Content-Type": "application/json", ...cors() },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Credits-Balance": String(ch.balanceAfter),
+      ...cors(),
+    },
   })
 })

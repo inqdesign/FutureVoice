@@ -23,31 +23,17 @@ struct SignInView: View {
 
             Spacer()
 
+            // Drive the whole flow from these two closures. We used to wrap
+            // the button in our own Button overlay + custom controller, but
+            // the controller went out of scope before Apple's callback fired,
+            // so completion never reached us.
             SignInWithAppleButton(
-                onRequest: { _ in
-                    // No-op: AuthService configures the request when it
-                    // creates the ASAuthorizationController itself. We use
-                    // this SwiftUI button only for its native styling +
-                    // accessibility — the actual nonce/scope setup lives
-                    // in AuthService so the same code path works from any
-                    // entry point (e.g. re-auth after sign-out).
-                },
-                onCompletion: { _ in }
+                onRequest: { request in auth.configure(request) },
+                onCompletion: { result in auth.handle(result: result) }
             )
             .signInWithAppleButtonStyle(.white)
             .frame(height: 50)
             .padding(.horizontal, 32)
-            .overlay {
-                // Swallow taps and re-route through AuthService so the
-                // nonce flow stays centralized. SignInWithAppleButton's
-                // built-in handler doesn't give us the nonce we need.
-                Button("Sign in with Apple") {
-                    auth.startSignInWithApple()
-                }
-                .opacity(0.001) // invisible but tappable
-                .frame(height: 50)
-                .padding(.horizontal, 32)
-            }
 
             if auth.isWorking {
                 ProgressView().tint(.white).padding(.top, 8)

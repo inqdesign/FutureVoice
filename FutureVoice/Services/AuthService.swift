@@ -9,13 +9,20 @@ import Supabase
 /// We use Supabase's `signInWithIdToken` rather than OAuth web flow because
 /// Apple Sign-In on iOS already gives us a verified ID token natively, so
 /// there's no reason to round-trip through a browser.
+///
+/// Implementation note: this used to manage its own ASAuthorizationController
+/// + delegate, but the controller went out of scope before Apple's callback
+/// could fire, so the sign-in sheet completed but nothing happened. The
+/// SwiftUI `SignInWithAppleButton` view retains the underlying controller
+/// for us, so we drive the flow from its `onRequest` / `onCompletion`
+/// closures and this class just becomes a session store + nonce holder.
 @MainActor
 final class AuthService: NSObject, ObservableObject {
     @Published private(set) var session: Auth.Session?
     @Published private(set) var isWorking = false
     @Published var lastError: String?
 
-    private var currentNonce: String?
+    private(set) var currentRawNonce: String?
 
     override init() {
         super.init()
@@ -33,22 +40,52 @@ final class AuthService: NSObject, ObservableObject {
         }
     }
 
-    /// Call from a SwiftUI button. Builds an `ASAuthorizationAppleIDRequest`
-    /// with a hashed nonce — the raw nonce is then passed to Supabase along
-    /// with the identityToken so Supabase can verify replay protection.
-    func startSignInWithApple() {
+    /// Called by `SignInWithAppleButton`'s `onRequest` closure. Generates a
+    /// fresh nonce, hashes it into the request, and stashes the raw nonce
+    /// so we can hand it to Supabase together with Apple's ID token.
+    func configure(_ request: ASAuthorizationAppleIDRequest) {
         let nonce = Self.randomNonceString()
-        currentNonce = nonce
-
-        let provider = ASAuthorizationAppleIDProvider()
-        let request = provider.createRequest()
+        currentRawNonce = nonce
         request.requestedScopes = [.fullName, .email]
         request.nonce = Self.sha256(nonce)
+    }
 
-        let controller = ASAuthorizationController(authorizationRequests: [request])
-        controller.delegate = self
-        controller.presentationContextProvider = self
-        controller.performRequests()
+    /// Called by `SignInWithAppleButton`'s `onCompletion`. Validates the
+    /// credential shape and exchanges the ID token for a Supabase session.
+    func handle(result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .failure(let error):
+            // User-canceled is also delivered as an error — swallow it so
+            // backing out of the sheet doesn't scare anyone.
+            if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
+            lastError = error.localizedDescription
+
+        case .success(let authorization):
+            guard
+                let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                let tokenData = credential.identityToken,
+                let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                lastError = "Apple did not return an ID token"
+                return
+            }
+
+            let nonce = currentRawNonce
+            currentRawNonce = nil
+
+            Task {
+                self.isWorking = true
+                defer { self.isWorking = false }
+                do {
+                    let session = try await SupabaseProvider.shared.auth.signInWithIdToken(
+                        credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
+                    )
+                    self.session = session
+                } catch {
+                    self.lastError = "Supabase exchange failed: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     func signOut() async {
@@ -84,57 +121,3 @@ final class AuthService: NSObject, ObservableObject {
         return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
-
-extension AuthService: ASAuthorizationControllerDelegate {
-    nonisolated func authorizationController(controller: ASAuthorizationController,
-                                             didCompleteWithAuthorization authorization: ASAuthorization) {
-        guard
-            let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
-            let tokenData = credential.identityToken,
-            let idToken = String(data: tokenData, encoding: .utf8)
-        else {
-            Task { @MainActor in self.lastError = "Apple did not return an ID token" }
-            return
-        }
-
-        Task { @MainActor in
-            self.isWorking = true
-            defer { self.isWorking = false }
-            do {
-                let nonce = self.currentNonce
-                self.currentNonce = nil
-                let session = try await SupabaseProvider.shared.auth.signInWithIdToken(
-                    credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
-                )
-                self.session = session
-            } catch {
-                self.lastError = error.localizedDescription
-            }
-        }
-    }
-
-    nonisolated func authorizationController(controller: ASAuthorizationController,
-                                             didCompleteWithError error: Error) {
-        // User cancel is also an error here — swallow it quietly so the UI
-        // doesn't show a scary message every time they back out.
-        if (error as NSError).code == ASAuthorizationError.canceled.rawValue { return }
-        Task { @MainActor in self.lastError = error.localizedDescription }
-    }
-}
-
-extension AuthService: ASAuthorizationControllerPresentationContextProviding {
-    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        // Find the active foreground window. Using `.first` on UIApplication's
-        // windows is unsafe in multi-scene apps, but FutureVoice is single-scene.
-        MainActor.assumeIsolated {
-            UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first(where: { $0.isKeyWindow }) ?? ASPresentationAnchor()
-        }
-    }
-}
-
-#if canImport(UIKit)
-import UIKit
-#endif

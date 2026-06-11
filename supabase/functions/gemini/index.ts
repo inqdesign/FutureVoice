@@ -1,18 +1,16 @@
-// Gemini generateContent proxy.
+// Gemini generateContent proxy + credit gate.
 //
-// Body: {
-//   model: string                    // e.g. "gemini-2.5-flash"
-//   system_instruction?: { parts: [{ text }] }
-//   contents: Array<{ role: "user" | "model", parts: [{ text }] }>
-//   generationConfig?: object
-// }
-//
-// Forwards exactly as Gemini's `models/{model}:generateContent` expects.
-// The iOS app sends the same shape it'd send to Gemini directly — we just
-// strip the `?key=` query param and inject the server-side key.
+// Body: { model, system_instruction?, contents, generationConfig?, purpose? }
+// `purpose` (optional) lets the client tag the call as one of:
+//   "summary" | "weekly" | "enrichment" | undefined (= generic)
+// so usage_ledger groups by intent and pricing can differ per intent.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { priceFor, charge, refund, insufficientCreditsResponse,
+         type ChargeableAction } from "../_shared/credits.ts"
+
+const SOURCE_FN = "gemini"
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -21,19 +19,38 @@ Deno.serve(async (req) => {
 
   const authed = await requireUser(req)
   if (authed instanceof Response) return authed
+  const { user, supabase } = authed
+
+  const idemKey = req.headers.get("X-Idempotency-Key")
+  if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
 
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing GEMINI_API_KEY")
 
-  let body: { model?: string; [k: string]: unknown }
-  try {
-    body = await req.json()
-  } catch {
-    return errorResponse(400, "invalid json body")
-  }
+  let body: { model?: string; purpose?: string; [k: string]: unknown }
+  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const model = body.model ?? "gemini-2.5-flash"
-  // Strip our own field — Gemini doesn't recognize `model` in the body.
-  const { model: _strip, ...geminiBody } = body
+  const purpose = body.purpose
+  const { model: _m, purpose: _p, ...geminiBody } = body
+
+  const action: ChargeableAction =
+    purpose === "summary"    ? "gemini_summary" :
+    purpose === "weekly"     ? "gemini_weekly"  :
+    purpose === "enrichment" ? "gemini_enrichment" :
+    "gemini"
+  const amount = priceFor(action)
+
+  const ch = await charge({
+    supabase, userId: user.id, action, amount,
+    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+    metadata: { model, purpose: purpose ?? null },
+  })
+  if (!ch.ok) {
+    if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
+      return insufficientCreditsResponse(cors())
+    }
+    return errorResponse(500, "charge failed", ch.detail)
+  }
 
   const upstream = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -45,6 +62,11 @@ Deno.serve(async (req) => {
   )
 
   if (!upstream.ok) {
+    await refund({
+      supabase, userId: user.id, amount, action,
+      sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+      metadata: { reason: "upstream_error", status: upstream.status },
+    })
     const detail = await upstream.text()
     return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
@@ -52,6 +74,10 @@ Deno.serve(async (req) => {
   const text = await upstream.text()
   return new Response(text, {
     status: 200,
-    headers: { "Content-Type": "application/json", ...cors() },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Credits-Balance": String(ch.balanceAfter),
+      ...cors(),
+    },
   })
 })

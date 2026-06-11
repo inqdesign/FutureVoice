@@ -80,6 +80,7 @@ final class GeminiClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -102,18 +103,21 @@ final class GeminiClient {
     }
 
     /// One-shot JSON request. Caller specifies the expected `Decodable` shape.
+    /// Default temperature is low for analysis-style calls; conversation
+    /// turns pass a higher one so the structured wrapper doesn't flatten tone.
     func sendJSON<T: Decodable>(
         system: String,
         messages: [Message],
         model: Model = .flash25,
-        maxTokens: Int = 1024
+        maxTokens: Int = 1024,
+        temperature: Double = 0.4
     ) async throws -> T {
         let raw = try await send(
             system: system,
             messages: messages,
             model: model,
             maxTokens: maxTokens,
-            temperature: 0.4
+            temperature: temperature
         )
         guard let jsonData = Self.extractJSON(from: raw) else {
             throw GeminiError.jsonNotFound(raw: raw)

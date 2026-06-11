@@ -1,17 +1,17 @@
-// ElevenLabs TTS proxy.
+// ElevenLabs TTS proxy + credit gate.
 //
 // Body: { voice_id: string, text: string, model_id?: string, with_timestamps?: boolean }
+// Required header: X-Idempotency-Key (unique per attempt; resent on retry)
 //
-// Responses:
-//   - with_timestamps=false (default): audio/mpeg binary
-//   - with_timestamps=true: ElevenLabs JSON ({ audio_base64, alignment, ... })
-//
-// We replace the iOS-side `xi-api-key` header with the server-side one read
-// from Deno env (set via `supabase secrets set ELEVENLABS_API_KEY=...`).
-// The iOS app never sees the real key.
+// Charges credits before forwarding upstream. If ElevenLabs returns an
+// error AFTER the charge, refunds with the same idempotency key so a
+// client retry doesn't double-charge.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { priceFor, charge, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+
+const SOURCE_FN = "elevenlabs-tts"
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -20,6 +20,10 @@ Deno.serve(async (req) => {
 
   const authed = await requireUser(req)
   if (authed instanceof Response) return authed
+  const { user, supabase } = authed
+
+  const idemKey = req.headers.get("X-Idempotency-Key")
+  if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
 
   let body: {
     voice_id?: string
@@ -27,11 +31,7 @@ Deno.serve(async (req) => {
     model_id?: string
     with_timestamps?: boolean
   }
-  try {
-    body = await req.json()
-  } catch {
-    return errorResponse(400, "invalid json body")
-  }
+  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
   if (!body.voice_id || !body.text) {
     return errorResponse(400, "voice_id and text required")
@@ -39,6 +39,21 @@ Deno.serve(async (req) => {
 
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
+
+  const action = body.with_timestamps ? "tts_timestamps" : "tts"
+  const amount = priceFor(action, { chars: body.text.length })
+
+  const ch = await charge({
+    supabase, userId: user.id, action, amount,
+    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+    metadata: { chars: body.text.length, voice_id: body.voice_id },
+  })
+  if (!ch.ok) {
+    if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
+      return insufficientCreditsResponse(cors())
+    }
+    return errorResponse(500, "charge failed", ch.detail)
+  }
 
   const modelId = body.model_id ?? "eleven_turbo_v2_5"
   const path = body.with_timestamps
@@ -65,16 +80,20 @@ Deno.serve(async (req) => {
   })
 
   if (!upstream.ok) {
+    // Roll back the charge — user didn't actually get audio.
+    await refund({
+      supabase, userId: user.id, amount,
+      action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+      metadata: { reason: "upstream_error", status: upstream.status },
+    })
     const detail = await upstream.text()
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
 
-  // Stream the response body straight through. For audio/mpeg this avoids
-  // buffering 100KB+ of MP3 in function memory; for JSON it's just normal
-  // forwarding.
   const headers = new Headers(cors())
   const contentType = upstream.headers.get("Content-Type") ?? "application/octet-stream"
   headers.set("Content-Type", contentType)
+  headers.set("X-Credits-Balance", String(ch.balanceAfter))
 
   return new Response(upstream.body, { status: 200, headers })
 })

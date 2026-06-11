@@ -1,13 +1,14 @@
 // ElevenLabs voice-delete proxy.
 //
 // Body: { voice_id: string }
-//
-// Deletes the voice on ElevenLabs and marks the matching row in
-// public.voice_clones as inactive (we don't hard-delete the row so we
-// keep an audit trail of past voices for analytics).
+// Charges 0 credits — delete is free, but we still write a ledger row for
+// audit trail (handy when troubleshooting "where did my voice go").
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
+import { priceFor, charge } from "../_shared/credits.ts"
+
+const SOURCE_FN = "elevenlabs-voice-delete"
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -18,20 +19,16 @@ Deno.serve(async (req) => {
   if (authed instanceof Response) return authed
   const { user, supabase } = authed
 
+  const idemKey = req.headers.get("X-Idempotency-Key")
+  if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
+
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
   let body: { voice_id?: string }
-  try {
-    body = await req.json()
-  } catch {
-    return errorResponse(400, "invalid json body")
-  }
+  try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   if (!body.voice_id) return errorResponse(400, "voice_id required")
 
-  // Confirm this user actually owns the voice before deleting upstream —
-  // RLS would block their voice_clones row update anyway, but checking up
-  // front means we don't burn an ElevenLabs delete on someone else's voice.
   const { data: owned } = await supabase
     .from("voice_clones")
     .select("id")
@@ -39,6 +36,16 @@ Deno.serve(async (req) => {
     .eq("elevenlabs_voice_id", body.voice_id)
     .maybeSingle()
   if (!owned) return errorResponse(403, "voice not owned by caller")
+
+  // Free, but creates an audit row.
+  await charge({
+    supabase, userId: user.id,
+    action: "voice_delete",
+    amount: priceFor("voice_delete"),
+    sourceFn: SOURCE_FN,
+    idempotencyKey: idemKey,
+    metadata: { voice_id: body.voice_id },
+  })
 
   const upstream = await fetch(`https://api.elevenlabs.io/v1/voices/${body.voice_id}`, {
     method: "DELETE",

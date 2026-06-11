@@ -52,6 +52,7 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         var body = Data()
@@ -87,6 +88,7 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["voice_id": voiceId])
 
@@ -111,6 +113,7 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
 
@@ -163,6 +166,7 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
