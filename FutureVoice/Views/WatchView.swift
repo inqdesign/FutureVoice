@@ -182,6 +182,7 @@ struct WatchView: View {
     @StateObject private var player = AudioPlayer()
 
     @State private var turns: [DialogueEngine.Turn] = []
+    @State private var generatedTitle: String?
     @State private var currentIndex: Int? = nil
     @State private var isPlaying = false
     @State private var loading = true
@@ -269,8 +270,12 @@ struct WatchView: View {
 
     private var header: some View {
         // Saved-dialogue replays carry their own title/blurb — without this
-        // fallback the header rendered blank on the replay path.
-        let title = topic?.title ?? savedDialogue?.scenarioTitle ?? customScenario
+        // fallback the header rendered blank on the replay path. Prefer the
+        // dialogue-specific title over the generic scenario name.
+        let title = generatedTitle
+            ?? savedDialogue?.displayTitle
+            ?? topic?.title
+            ?? customScenario
         let blurb = topic?.blurb ?? savedDialogue?.scenarioBlurb ?? ""
         return VStack(alignment: .leading, spacing: 4) {
             Text(counterpart.name + " · " + counterpart.relationship)
@@ -441,7 +446,7 @@ struct WatchView: View {
         error = nil
         defer { loading = false }
         do {
-            turns = try await DialogueEngine.generate(
+            let generated = try await DialogueEngine.generate(
                 persona: appState.persona,
                 counterpart: counterpart,
                 topic: topic,
@@ -449,6 +454,8 @@ struct WatchView: View {
                 topicBlurb: nil,
                 targetLanguage: appState.targetLanguage
             )
+            turns = generated.turns
+            generatedTitle = generated.title?.trimmingCharacters(in: .whitespacesAndNewlines)
             // Persist so the user can replay later without burning another
             // Gemini call. Audio is cached separately via PhraseAudioStore
             // so replay is genuinely free.
@@ -467,6 +474,7 @@ struct WatchView: View {
             counterpartId: counterpart.id,
             scenarioTitle: title,
             scenarioBlurb: blurb,
+            title: generatedTitle,
             turns: turns.map { DialogueEngineTurn(speaker: $0.speaker.rawValue, text: $0.text) }
         )
         appState.saveWatchDialogue(stored)

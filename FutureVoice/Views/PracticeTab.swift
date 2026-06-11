@@ -193,11 +193,11 @@ struct PracticeTab: View {
                 ForEach(recentSessions) { row in
                     NavigationLink {
                         DrillView(source: .session(row.session.id))
-                            .navigationTitle(row.session.topic ?? "Conversation")
+                            .navigationTitle(row.session.displayTitle)
                             .navigationBarTitleDisplayMode(.inline)
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(row.session.topic?.isEmpty == false ? row.session.topic! : "Conversation")
+                            Text(row.session.displayTitle)
                                 .font(.body)
                                 .lineLimit(1)
                             HStack(spacing: 6) {

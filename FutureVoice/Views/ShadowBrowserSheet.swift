@@ -90,7 +90,7 @@ private extension ShadowBrowserView {
 
     private func sectionHeader(for session: Session) -> some View {
         HStack {
-            Text(session.topic ?? "Conversation")
+            Text(session.displayTitle)
             Spacer()
             Text(relativeDate(session.endedAt ?? session.startedAt))
                 .foregroundStyle(.secondary)

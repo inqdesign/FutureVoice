@@ -20,7 +20,7 @@ struct DrillsBySessionView: View {
                     ForEach(sessionsWithCards) { s in
                         NavigationLink {
                             DrillView(source: .session(s.id))
-                                .navigationTitle(s.topic ?? "Conversation")
+                                .navigationTitle(s.displayTitle)
                                 .navigationBarTitleDisplayMode(.inline)
                         } label: {
                             row(for: s)
@@ -35,7 +35,7 @@ struct DrillsBySessionView: View {
 
     private func row(for session: Session) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(session.topic ?? "Conversation")
+            Text(session.displayTitle)
                 .font(.body)
             HStack(spacing: 6) {
                 Text(session.endedAt ?? session.startedAt, style: .relative)

@@ -139,6 +139,25 @@ struct Session: Codable, Identifiable {
     var summary: SessionSummary?
 }
 
+extension Session {
+    /// What this session is called in lists. The picked topic when there is
+    /// one; otherwise the title the summary call generated into `topic`;
+    /// for legacy/empty sessions, the user's own first words — anything but
+    /// rows of identical "Conversation".
+    var displayTitle: String {
+        if let t = topic?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty {
+            return t
+        }
+        if let first = turns.first(where: { $0.role == .user })?.transcript
+            .trimmingCharacters(in: .whitespacesAndNewlines), !first.isEmpty {
+            let words = first.split(separator: " ")
+            let snippet = words.prefix(6).joined(separator: " ")
+            return "\u{201C}\(snippet)\(words.count > 6 ? "…" : "")\u{201D}"
+        }
+        return "Conversation"
+    }
+}
+
 struct SessionSummary: Codable {
     var phrasesUsed: [PhraseFeedback]
     var newPatternsDetected: [LearnerPattern]
@@ -291,8 +310,17 @@ struct WatchDialogue: Codable, Identifiable, Hashable {
     var counterpartId: UUID
     var scenarioTitle: String
     var scenarioBlurb: String
+    /// Dialogue-specific title from the engine ("Boram's moving news") so
+    /// repeated runs of the same scenario stay tellable apart in lists.
+    /// Optional for rows persisted before this existed.
+    var title: String?
     var turns: [DialogueEngineTurn]
     var createdAt: Date = Date()
+
+    var displayTitle: String {
+        if let t = title?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty { return t }
+        return scenarioTitle
+    }
 }
 
 /// Storable mirror of `DialogueEngine.Turn` so we don't have to expose the

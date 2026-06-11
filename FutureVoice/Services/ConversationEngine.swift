@@ -162,6 +162,7 @@ enum ConversationEngine {
 
         Return STRICT JSON only — no prose, no code fences:
         {
+          "title": "...",
           "phrases_used": [
             { "user_said": "...", "fluent_alternative": "...", "reason": "..." }
           ],
@@ -180,6 +181,10 @@ enum ConversationEngine {
         }
 
         Rules:
+        - title: 2-5 words in \(targetLanguage) naming what the conversation
+          was actually about — "Weekend plans with Boram", "Arguing about
+          coffee prices". Concrete and specific, never generic ("Conversation",
+          "Practice session" are failures).
         - Max 5 phrases_used. Pick the most teachable ones.
         - Max 3 suggested_drills.
         - Tone: warm, never condescending.
@@ -334,6 +339,7 @@ struct ClaudeSummaryPayload: Decodable {
         let fluency: Axis
         let top_line: String
     }
+    let title: String?
     let phrases_used: [Phrase]
     let new_patterns_detected: [Pattern]
     let suggested_drills: [String]

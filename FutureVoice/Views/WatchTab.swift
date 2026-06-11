@@ -98,7 +98,7 @@ struct WatchTab: View {
 
     private func dialogueRow(_ d: WatchDialogue, counterpart: Counterpart) -> some View {
         VStack(alignment: .leading, spacing: 3) {
-            Text(d.scenarioTitle)
+            Text(d.displayTitle)
                 .font(.body)
                 .lineLimit(2)
             HStack(spacing: 6) {

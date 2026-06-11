@@ -62,7 +62,7 @@ struct ConversationView: View {
                 bottomBar
             }
             .background(Color(.systemBackground))
-            .navigationTitle(topic.isEmpty ? "Pick a topic" : topic)
+            .navigationTitle(topic.isEmpty ? (turns.isEmpty ? "Pick a topic" : "Free talk") : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showTopicPicker) {
@@ -557,12 +557,17 @@ struct ConversationView: View {
             summary = computed
             phase = .idle
 
+            // Free-talk sessions (no picked topic) take the summary's
+            // generated title so History/Practice lists don't fill with
+            // identical "Conversation" rows.
+            let generatedTitle = payload.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolvedTopic = topic.isEmpty ? (generatedTitle ?? "") : topic
             let session = Session(
                 id: sessionId,
                 userId: userId,
                 targetLanguage: appState.targetLanguage,
                 mode: .conversation,
-                topic: topic,
+                topic: resolvedTopic.isEmpty ? nil : resolvedTopic,
                 startedAt: sessionStartedAt,
                 endedAt: Date(),
                 turns: turns,

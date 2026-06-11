@@ -252,6 +252,50 @@ final class ShadowPicksTests: XCTestCase {
     }
 }
 
+// MARK: - Session.displayTitle fallbacks
+
+final class DisplayTitleTests: XCTestCase {
+
+    private func session(topic: String?, firstUserLine: String?) -> Session {
+        var turns: [Turn] = [
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "Hey, how's it going?", durationMs: 0,
+                 timestamp: Date(), suggestion: nil),
+        ]
+        if let line = firstUserLine {
+            turns.append(Turn(id: UUID(), role: .user, audioURL: nil,
+                              transcript: line, durationMs: 0,
+                              timestamp: Date(), suggestion: nil))
+        }
+        return Session(id: UUID(), userId: UUID(), targetLanguage: "en",
+                       mode: .conversation, topic: topic,
+                       startedAt: Date(), endedAt: Date(), turns: turns, summary: nil)
+    }
+
+    func testTopicWins() {
+        XCTAssertEqual(session(topic: "Kita pickup", firstUserLine: "hello there").displayTitle,
+                       "Kita pickup")
+    }
+
+    func testLegacySessionUsesFirstUserWords() {
+        let s = session(topic: nil,
+                        firstUserLine: "I wanted to talk about my trip to Lisbon last month")
+        XCTAssertEqual(s.displayTitle, "\u{201C}I wanted to talk about my…\u{201D}")
+    }
+
+    func testNoUserTurnsFallsBackToGeneric() {
+        XCTAssertEqual(session(topic: "  ", firstUserLine: nil).displayTitle, "Conversation")
+    }
+
+    func testWatchDialoguePrefersOwnTitle() {
+        var d = WatchDialogue(counterpartId: UUID(), scenarioTitle: "Catch-up call",
+                              scenarioBlurb: "", title: "Boram's moving news", turns: [])
+        XCTAssertEqual(d.displayTitle, "Boram's moving news")
+        d.title = nil
+        XCTAssertEqual(d.displayTitle, "Catch-up call")
+    }
+}
+
 // MARK: - NewsTopicEngine category interleave
 
 final class NewsInterleaveTests: XCTestCase {

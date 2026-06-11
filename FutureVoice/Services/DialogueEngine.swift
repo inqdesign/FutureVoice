@@ -22,7 +22,13 @@ enum DialogueEngine {
             let speaker: String
             let text: String
         }
+        let title: String?
         let turns: [Item]
+    }
+
+    struct GeneratedDialogue {
+        let title: String?
+        let turns: [Turn]
     }
 
     static func generate(
@@ -32,7 +38,7 @@ enum DialogueEngine {
         topicTitle: String?,
         topicBlurb: String?,
         targetLanguage: String
-    ) async throws -> [Turn] {
+    ) async throws -> GeneratedDialogue {
         let title = topic?.title ?? topicTitle ?? "a casual catch-up"
         let blurb = topic?.blurb ?? topicBlurb ?? ""
 
@@ -49,10 +55,11 @@ enum DialogueEngine {
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
             maxTokens: 1500
         )
-        return payload.turns.compactMap { item in
+        let turns = payload.turns.compactMap { item -> Turn? in
             guard let speaker = Speaker(rawValue: item.speaker.lowercased()) else { return nil }
             return Turn(speaker: speaker, text: item.text)
         }
+        return GeneratedDialogue(title: payload.title, turns: turns)
     }
 
     private static func systemPrompt(targetLanguage: String) -> String {
@@ -67,9 +74,12 @@ enum DialogueEngine {
         - Scenario: the situation.
 
         Return STRICT JSON only — no prose, no code fences:
-        { "turns": [ { "speaker": "user" | "counterpart", "text": "..." }, ... ] }
+        { "title": "...", "turns": [ { "speaker": "user" | "counterpart", "text": "..." }, ... ] }
 
         Rules:
+        - title: 2-5 words in \(targetLanguage) naming what specifically
+          happens in THIS dialogue — distinct enough that two dialogues about
+          the same scenario read differently in a list.
         - 6 to 10 turns total.
         - Alternate speakers naturally. Either can open — pick whoever opens this \
           situation more naturally.

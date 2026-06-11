@@ -66,7 +66,7 @@ private struct HistoryRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(session.topic ?? "Conversation")
+            Text(session.displayTitle)
                 .font(.headline)
             Text(Self.relative.localizedString(
                 for: session.endedAt ?? session.startedAt,
@@ -134,7 +134,7 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .navigationTitle(session.topic ?? "Conversation")
+        .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
     }
 }
