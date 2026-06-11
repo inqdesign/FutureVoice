@@ -1,6 +1,22 @@
 import Supabase
 import SwiftUI
 
+/// User-selectable appearance. `.system` follows iOS; the app was dark-only
+/// before this existed, so every screen must stay system-color clean.
+enum AppAppearance: String, CaseIterable {
+    case system, light, dark
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light:  return .light
+        case .dark:   return .dark
+        }
+    }
+
+    var label: String { rawValue.capitalized }
+}
+
 @main
 struct FutureVoiceApp: App {
     @StateObject private var appState = AppState()
@@ -12,7 +28,7 @@ struct FutureVoiceApp: App {
             RootView()
                 .environmentObject(appState)
                 .environmentObject(auth)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(appState.appearance.colorScheme)
         }
         .onChange(of: scenePhase) { _, phase in
             // Drill grading may have moved due dates — leave with an accurate
@@ -48,6 +64,9 @@ final class AppState: ObservableObject {
             }
         }
     }
+    @Published var appearance: AppAppearance = .system {
+        didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Self.appearanceKey) }
+    }
     /// Long-term learner memory for the current target language. Grows after
     /// every ended session via `recordSessionOutcome` and feeds the next
     /// conversation's system prompt — the spec §3 loop.
@@ -68,6 +87,7 @@ final class AppState: ObservableObject {
     private static let nativeLanguageKey = "futurevoice.nativeLanguage"
     private static let targetLanguageKey = "futurevoice.targetLanguage"
     private static let proficiencyKey = "futurevoice.proficiency"
+    private static let appearanceKey = "futurevoice.appearance"
 
     init() {
         let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
@@ -78,6 +98,8 @@ final class AppState: ObservableObject {
         nativeLanguage = storedNative
         targetLanguage = storedTarget
         proficiency = storedLevel
+        appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
+            .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         persona = PersonaStore.shared.load()
         topicSuggestions = TopicStore.shared.load()

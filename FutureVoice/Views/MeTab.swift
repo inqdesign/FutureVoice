@@ -59,6 +59,15 @@ struct MeTab: View {
                     Text("CEFR scale — A1 beginner to C2 near-native. The avatar stays at your level and grades against it.")
                 }
 
+                Section("Appearance") {
+                    Picker("Theme", selection: $appState.appearance) {
+                        ForEach(AppAppearance.allCases, id: \.self) { mode in
+                            Text(mode.label).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+
                 Section("Voice") {
                     Button(role: .destructive) {
                         confirmingVoiceReset = true

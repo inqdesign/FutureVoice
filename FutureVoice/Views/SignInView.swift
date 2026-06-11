@@ -6,6 +6,7 @@ import SwiftUI
 /// satisfies App Store §4.8 trivially since no other login is offered.
 struct SignInView: View {
     @EnvironmentObject private var auth: AuthService
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(spacing: 24) {
@@ -31,12 +32,12 @@ struct SignInView: View {
                 onRequest: { request in auth.configure(request) },
                 onCompletion: { result in auth.handle(result: result) }
             )
-            .signInWithAppleButtonStyle(.white)
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
             .frame(height: 50)
             .padding(.horizontal, 32)
 
             if auth.isWorking {
-                ProgressView().tint(.white).padding(.top, 8)
+                ProgressView().padding(.top, 8)
             }
             if let err = auth.lastError {
                 Text(err)
@@ -49,7 +50,6 @@ struct SignInView: View {
             Spacer().frame(height: 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black.ignoresSafeArea())
-        .preferredColorScheme(.dark)
+        .background(Color(.systemBackground).ignoresSafeArea())
     }
 }
