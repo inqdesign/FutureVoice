@@ -252,6 +252,51 @@ final class ShadowPicksTests: XCTestCase {
     }
 }
 
+// MARK: - NewsTopicStore daily cache
+
+final class NewsTopicStoreTests: XCTestCase {
+
+    private var store: NewsTopicStore!
+    private var filename: String!
+
+    override func setUp() {
+        super.setUp()
+        filename = "test-news-\(UUID().uuidString).json"
+        store = NewsTopicStore(filename: filename)
+    }
+
+    override func tearDown() {
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent(filename)
+        try? FileManager.default.removeItem(at: url)
+        super.tearDown()
+    }
+
+    private let topics = [SuggestedTopic(title: "Did you see the launch?", blurb: "A rocket launched.")]
+
+    func testFreshCacheHitsForSameInterests() {
+        store.save(topics, interests: ["AI", "music"])
+        let cached = store.valid(for: ["AI", "music"])
+        XCTAssertEqual(cached?.first?.title, "Did you see the launch?")
+    }
+
+    func testInterestOrderAndCaseDoNotInvalidate() {
+        store.save(topics, interests: ["AI", "Music"])
+        XCTAssertNotNil(store.valid(for: ["music", "ai"]))
+    }
+
+    func testChangedInterestsInvalidate() {
+        store.save(topics, interests: ["AI"])
+        XCTAssertNil(store.valid(for: ["cooking"]))
+    }
+
+    func testStaleCacheInvalidates() {
+        let yesterday = Date().addingTimeInterval(-NewsTopicStore.maxAge - 60)
+        store.save(topics, interests: ["AI"], now: yesterday)
+        XCTAssertNil(store.valid(for: ["AI"]))
+    }
+}
+
 // MARK: - DrillReminder fire-time policy
 
 @MainActor

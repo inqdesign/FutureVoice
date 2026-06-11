@@ -47,7 +47,8 @@ final class GeminiClient {
         messages: [Message],
         model: Model = .flash25,
         maxTokens: Int = 512,
-        temperature: Double = 0.7
+        temperature: Double = 0.7,
+        searchGrounding: Bool = false
     ) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -60,11 +61,14 @@ final class GeminiClient {
             let maxOutputTokens: Int
             let thinkingConfig: ThinkingConfig
         }
+        struct EmptyObject: Encodable {}
+        struct Tool: Encodable { let google_search: EmptyObject }
         struct Body: Encodable {
             let model: String
             let system_instruction: SystemInstruction
             let contents: [Content]
             let generationConfig: GenerationConfig
+            let tools: [Tool]?   // nil = omitted; edge function passes through
         }
         let body = Body(
             model: model.rawValue,
@@ -74,7 +78,8 @@ final class GeminiClient {
                 temperature: temperature,
                 maxOutputTokens: maxTokens,
                 thinkingConfig: .init(thinkingBudget: 0)
-            )
+            ),
+            tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil
         )
 
         var request = URLRequest(url: url)
@@ -110,14 +115,16 @@ final class GeminiClient {
         messages: [Message],
         model: Model = .flash25,
         maxTokens: Int = 1024,
-        temperature: Double = 0.4
+        temperature: Double = 0.4,
+        searchGrounding: Bool = false
     ) async throws -> T {
         let raw = try await send(
             system: system,
             messages: messages,
             model: model,
             maxTokens: maxTokens,
-            temperature: temperature
+            temperature: temperature,
+            searchGrounding: searchGrounding
         )
         guard let jsonData = Self.extractJSON(from: raw) else {
             throw GeminiError.jsonNotFound(raw: raw)
