@@ -139,6 +139,7 @@ final class GeminiClient {
             throw GeminiError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
+            if http.statusCode == 402 { throw GeminiError.insufficientCredits }
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
             throw GeminiError.httpError(status: http.statusCode, body: snippet)
         }
@@ -149,12 +150,14 @@ enum GeminiError: Error, LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
     case jsonNotFound(raw: String)
+    case insufficientCredits
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse:               return "Gemini: invalid response"
         case .httpError(let status, let body): return "Gemini HTTP \(status): \(body)"
         case .jsonNotFound(let raw):         return "Gemini: no JSON found in reply: \(raw.prefix(200))"
+        case .insufficientCredits:           return "You're out of credits. Check your plan under Me → Account."
         }
     }
 }

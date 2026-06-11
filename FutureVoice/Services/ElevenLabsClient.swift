@@ -254,6 +254,7 @@ final class ElevenLabsClient {
             throw ElevenLabsError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
+            if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
@@ -263,11 +264,13 @@ final class ElevenLabsClient {
 enum ElevenLabsError: Error, LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
+    case insufficientCredits
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse: return "ElevenLabs: invalid response"
         case .httpError(let status, let body): return "ElevenLabs HTTP \(status): \(body)"
+        case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
         }
     }
 }

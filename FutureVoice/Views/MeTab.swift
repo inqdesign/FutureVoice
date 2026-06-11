@@ -4,13 +4,16 @@ import SwiftUI
 /// practice trends. The "Reflect" surface of the four-tab structure.
 struct MeTab: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var auth: AuthService
     @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
         shadowableLineCount: 0
     )
+    @State private var account: AccountStatus = .empty
     @State private var showingPersonaEdit = false
     @State private var confirmingVoiceReset = false
+    @State private var confirmingSignOut = false
 
     var body: some View {
         NavigationStack {
@@ -77,6 +80,34 @@ struct MeTab: View {
                             subtitle: "\(dashboard.totalSessions) total")
                     }
                 }
+
+                Section {
+                    row(icon: "person.crop.circle",
+                        title: account.email ?? "Signed in with Apple",
+                        subtitle: "Apple ID")
+                    HStack {
+                        row(icon: "creditcard",
+                            title: account.planLabel,
+                            subtitle: "Plan")
+                        Spacer()
+                        Text("\(account.creditBalance) credits")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(account.creditBalance > 0 ? Color.primary : Color.orange)
+                            .monospacedDigit()
+                    }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    Text("Credits are spent on voice synthesis and AI calls. They refill with your plan cycle.")
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        confirmingSignOut = true
+                    } label: {
+                        Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                }
             }
             .navigationTitle("Me")
             .navigationBarTitleDisplayMode(.inline)
@@ -92,7 +123,16 @@ struct MeTab: View {
             } message: {
                 Text("Your current clone will be deleted on ElevenLabs after the new one is created.")
             }
+            .alert("Sign out?", isPresented: $confirmingSignOut) {
+                Button("Cancel", role: .cancel) {}
+                Button("Sign out", role: .destructive) {
+                    Task { await auth.signOut() }
+                }
+            } message: {
+                Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
+            }
             .onAppear { dashboard = PracticeStats.snapshot() }
+            .task { account = await AccountStatus.fetch() }
         }
     }
 
