@@ -3,10 +3,16 @@
 > Learn a language by speaking with a fluent version of yourself.
 > 자신의 유창한 미래 버전과 대화하며 언어를 배우는 앱.
 
-**Owner:** Eunggyu / RoRo Company
-**Status:** Concept → Prototype
+**Owner:** Eunggyu / Dear RoRo
+**Status:** Concept → Prototype → **shipped well past this doc** (see note)
 **Platform:** iOS-first (SwiftUI)
 **Date:** 2026-05
+
+> **Status note (2026-06-11):** This is the original concept document, kept
+> for the vision and pricing hypotheses. The build has moved past Phase 3's
+> scope — four tabs, SRS drills, shadow practice, learner profile loop,
+> weekly reports, Supabase auth + edge-function key proxy. For current
+> architecture read `CLAUDE.md` at the repo root; for current code, the code.
 
 ---
 

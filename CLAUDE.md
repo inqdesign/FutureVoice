@@ -1,57 +1,79 @@
 # Future Voice — Claude Code Context
 
-> Read this before making changes. Spec lives in `docs/SPEC.md`.
+> Read this before making changes. `docs/SPEC.md` has the original concept but is STALE (still says Phase 1) — this file and the code are the truth.
 
 ## What this app is
 
-iOS SwiftUI app. A user clones their own voice once (ElevenLabs), then practices a target language by talking with a "fluent self" — same voice, fluent output. Claude is the conversation brain and the post-session summarizer.
+iOS SwiftUI app. A user clones their own voice once (ElevenLabs), then practices a target language by talking with a "fluent self" — same voice, fluent output. Gemini is the conversation brain and analyzer; ElevenLabs synthesizes every fluent-self line in the user's cloned voice.
 
-Currently in **Phase 1 — Voice + Conversation Spike**. No persistence, no auth, single-screen flow.
+**Current state (2026-06): four-tab app in TestFlight prep, NOT a Phase-1 spike.**
+
+- **Talk** (`ConversationView`) — phone-call-mode conversation: live STT → Gemini structured turn `{reply, suggestion}` → cloned-voice TTS, auto VAD turn-taking. Per-turn "say it more naturally" suggestions render as inline chips.
+- **Practice** (`PracticeTab`) — Leitner SRS drill deck (`DrillStore`, boxes 0–5, active-recall reveal), per-session drill review, shadow practice (`ShadowDrillView`, karaoke timing + deterministic token-Levenshtein score from `ShadowEngine`).
+- **Watch** (`WatchTab`) — generated dialogues between the user's clone and a "counterpart" from their real life (ElevenLabs preset voices).
+- **Me** (`MeTab`) — persona, CEFR level picker, voice re-record, session history.
+
+## The learning loop (keep it closed)
+
+```
+conversation → summary (+ scorecard metrics) → DrillStore.ingest (SRS cards)
+            ↘ LearnerProfile.absorb via ProfileStore  → next conversation's system prompt
+            ↘ WeeklyReportEngine (unlocks on accumulated speaking time)
+```
+
+Every feature should feed this loop. Per-turn suggestions come back in the SAME Gemini call as the reply (structured JSON) — do not add a second per-turn LLM call, and do not remove the suggestion field: `ScorecardMetrics.suggestionRate`, drill ingestion, and the weekly report's repeated-mistake detection all depend on `Turn.suggestion`.
 
 ## Source of truth
 
-- **Domain types** → `FutureVoice/Models/Models.swift`. Update there first; spec doc references it.
-- **Prompt templates** → `FutureVoice/Services/ConversationEngine.swift`.
-- **HTTP** → only `ElevenLabsClient.swift` and `ClaudeClient.swift`. Don't add ad-hoc URLSession calls elsewhere.
-- **Secrets** → `Secrets.swift` only. Reads from Info.plist (xcconfig-injected). Never paste keys into other files.
+- **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
+- **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`.
+- **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
+- **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
+- **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
+
+## Build / run
+
+Project is **xcodegen-driven** — `.xcodeproj` is generated, don't hand-edit it.
+
+```bash
+cd /Users/eunggyuelee/FutureVoice
+xcodegen generate          # REQUIRED after adding/removing Swift files
+xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice \
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath build build
+# install+launch: xcrun simctl install <UDID> <path>.app && xcrun simctl launch <UDID> com.roro.futurevoice
+```
+
+SourceKit diagnostics commonly show ghost errors ("Cannot find type …") for new files until xcodegen + a build run. **xcodebuild is the truth — don't chase SourceKit ghosts.**
 
 ## Hard rules
 
-- **No secrets in committed code.** Use `Config/FutureVoice.xcconfig` (gitignored). `Secrets.devOverride` is a temporary local hatch.
-- **Don't change `FutureVoice.xcconfig.example`** to include real values — it's the public template.
-- **iOS-first.** macOS support is out of scope; AVAudioSession etc. only need to work on iOS.
-- **Don't write to disk outside `FileManager.default.urls(for: .documentDirectory)`** unless using `cacheDirectory` with a clear cleanup policy.
-- **One screen at a time in Phase 1.** Adding a NavigationStack or tab bar is Phase 2 work.
+- **No secrets in committed code.** `Config/FutureVoice.xcconfig` is gitignored; never put real values in `FutureVoice.xcconfig.example`.
+- **iOS-first.** macOS support is out of scope.
+- **Don't write to disk outside `documentDirectory`** unless using `cacheDirectory` with a clear cleanup policy.
+- **Deterministic scores stay deterministic.** Shadow match scores and scorecard metrics are computed in code; the LLM only writes qualitative notes anchored to those numbers. Don't let an LLM invent a number the code can compute.
+- **Drill cards must be speakable utterances**, never meta-rules ("use articles correctly"). `DrillStore.looksLikeMetaRule` is the safety net; keep prompts emitting concrete sentences.
 
 ## UI rules (strict)
 
 **Voice is the primary modality. Design like a phone call, not a chat app.**
 
-- **iOS-native SwiftUI elements only.** No custom card materials, no custom bubble shapes, no rolled-our-own components.
-  - Use: `NavigationStack`, `.toolbar`, `Form`, `List`, `Button`, `Label`, `Image(systemName:)`, `ProgressView`, `Text` with system fonts (`.largeTitle`, `.headline`, `.body`, `.footnote`).
-  - System colors only: `.primary`, `.secondary`, `.accentColor`, `Color(.systemBackground)`, `Color(.secondarySystemBackground)`. Avoid `.blue`/`.red`/`.green` literals except when they convey semantic state (recording = red, success = green) — even then prefer `.tint`/`.foregroundStyle(.red)` over background fills.
-  - SF Symbols for every icon.
-- **Voice-first layout.** The dominant element on the conversation screen is a single big mic button. Status (speaking / listening / thinking) is shown in plain text above it. The most-recent line of dialogue is shown as a caption, not as a chat bubble.
-- **No chat-bubble metaphor.** No left/right aligned bubbles, no "blue user / gray fluent self" message list. This isn't a messenger.
-- **Sheets for non-primary content.** Topic picker, session summary, settings — present as `.sheet` so the call screen stays clean.
-- **Animation = subtle.** A breathing pulse on the mic button while recording is fine. No bouncy springs, no confetti.
+- **iOS-native SwiftUI elements only.** No custom card materials, no chat bubbles, no rolled-our-own components. `NavigationStack`, `.toolbar`, `Form`, `List`, `Button`, `Label`, SF Symbols, system fonts.
+- System colors only: `.primary`, `.secondary`, `.accentColor`, `Color(.systemBackground)`, `Color(.secondarySystemBackground)`. Semantic literals (recording = red, success = green) via `.tint`/`.foregroundStyle` only.
+- **No chat-bubble metaphor.** The transcript is a plain left-aligned feed, not messenger bubbles.
+- **Sheets for non-primary content.** Topic picker, summaries, settings.
+- **Animation = subtle.** Breathing pulse on the mic is fine; no bouncy springs, no confetti.
 
 ## Conventions
 
 - SwiftUI views, no UIKit unless absolutely required.
-- `@MainActor` on anything touching `URLSession` callbacks → published state, audio recorder/player.
+- `@MainActor` on anything touching URLSession callbacks → published state, audio recorder/player.
 - `async/await` over completion handlers everywhere.
-- No third-party Swift packages in Phase 1. Add SPM deps only when there's a concrete need (RevenueCat, Supabase-swift, etc. — all Phase 2+).
-
-## Phase 1 success criterion
-
-Hear yourself say a fluent sentence in your target language, end-to-end, on a real device. Everything else is scaffolding.
+- SPM deps: `supabase-swift` only. Add more only with a concrete need.
 
 ## Model defaults
 
-- Conversation turns: `claude-sonnet-4-6` (fast, cheap, good enough).
-- Session summary: `claude-opus-4-7` (higher-stakes single call, JSON output).
-- Both via `ClaudeClient.Model` enum.
+- All LLM calls: Gemini `gemini-2.5-flash` with `thinkingBudget: 0`, via the `gemini` Edge Function (`GeminiClient.Model`).
+- Conversation turns: structured JSON `{reply, suggestion}` at temperature 0.7; analysis calls (summary, shadow bullets, weekly report) at 0.4 via `sendJSON`.
 
 ## Audio format
 

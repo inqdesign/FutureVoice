@@ -3,9 +3,22 @@
 > Learn a language by speaking with a fluent version of yourself.
 > 자신의 유창한 미래 버전과 대화하며 언어를 배우는 앱.
 
-iOS-first SwiftUI app. ElevenLabs for voice clone + TTS, Anthropic Claude for the conversation brain, on-device STT for transcription.
+iOS SwiftUI app. ElevenLabs for voice clone + TTS, Gemini for the conversation brain and analysis, on-device STT for transcription. All provider calls route through Supabase Edge Functions — the app never holds raw API keys.
 
-Full design: [`docs/SPEC.md`](docs/SPEC.md). We are currently in **Phase 1 — Voice + Conversation Spike**.
+Original concept: [`docs/SPEC.md`](docs/SPEC.md). Working context for AI assistants: [`CLAUDE.md`](CLAUDE.md) (kept current — read that one first).
+
+---
+
+## What's in the app
+
+Four tabs:
+
+- **Talk** — phone-call-mode conversation with your fluent self. Live on-device STT, VAD turn-taking, replies synthesized in your cloned voice. Each turn can carry an inline "say it more naturally" suggestion.
+- **Practice** — Leitner spaced-repetition drills built from your own corrections (active recall: answer hidden until you produce it; "Say it" speaks-and-scores against the target deterministically), plus karaoke-style shadow practice with word timings.
+- **Watch** — listen to generated dialogues between your clone and people from your real life (counterparts with preset voices).
+- **Me** — persona, CEFR level, voice re-record, session history, weekly pronunciation trend.
+
+The learning loop: every ended session produces a summary → drill cards (SRS) → updates your `LearnerProfile` (recurring mistakes feed the next conversation's prompt) → accumulates toward a weekly trend report. A local notification fires when drill cards come due.
 
 ---
 
@@ -13,100 +26,52 @@ Full design: [`docs/SPEC.md`](docs/SPEC.md). We are currently in **Phase 1 — V
 
 ```
 FutureVoice/
-├── FutureVoiceApp.swift              # @main entry
-├── Models/
-│   └── Models.swift                  # User, LearnerProfile, Session, Turn, ...
-├── Services/
-│   ├── ElevenLabsClient.swift        # /v1/voices/add, /v1/text-to-speech
-│   ├── ClaudeClient.swift            # Anthropic Messages API
-│   ├── ConversationEngine.swift      # Prompt templates + summary decoding
-│   ├── AudioRecorder.swift           # 16kHz mono WAV via AVAudioRecorder
-│   ├── AudioPlayer.swift             # MP3 playback via AVAudioPlayer
-│   └── SpeechTranscriber.swift       # On-device SFSpeechRecognizer
-├── Views/
-│   ├── RootView.swift                # Onboarding gate
-│   ├── VoiceCloneOnboardingView.swift
-│   └── ConversationView.swift        # The whole Phase 1 loop
-├── Config/
-│   └── Secrets.swift                 # Reads from Info.plist (xcconfig-injected)
-└── Resources/
-    └── Info.plist                    # Permissions + $(KEY) injections
+├── FutureVoiceApp.swift          # @main + AppState
+├── Models/Models.swift           # All domain types (source of truth)
+├── Services/                     # Engines (prompts/scoring), stores (JSON-on-disk), HTTP clients
+├── Views/                        # SwiftUI screens, one file per surface
+├── Config/Secrets.swift          # Reads Info.plist (xcconfig-injected)
+└── Resources/Info.plist
 
-Config/
-└── FutureVoice.xcconfig.example      # Copy → FutureVoice.xcconfig and fill keys
-
-docs/
-└── SPEC.md
+FutureVoiceTests/                 # Unit tests for the learning-loop logic
+Config/FutureVoice.xcconfig       # gitignored — copy from .example and fill
+supabase/
+├── functions/                    # gemini / elevenlabs-* edge functions (key proxy)
+└── migrations/                   # auth, voice_clones, subscriptions
+docs/SPEC.md                      # original concept (historical)
 ```
 
 ---
 
-## First-time setup
+## Setup & build
 
-### 1. Secrets
-
-```bash
-cp .env.example .env                                  # fill in keys
-cp Config/FutureVoice.xcconfig.example Config/FutureVoice.xcconfig
-# edit Config/FutureVoice.xcconfig — paste real keys
-```
-
-Both `.env` and `FutureVoice.xcconfig` are gitignored.
-
-### 2. Create the Xcode project (one-time)
-
-These Swift files are already written, but the `.xcodeproj` is intentionally not committed — Xcode generates a cleaner project than hand-rolling one. Steps:
-
-1. Open Xcode → **File → New → Project…**
-2. Choose **iOS → App**.
-3. Settings:
-   - Product Name: **FutureVoice**
-   - Interface: **SwiftUI**
-   - Language: **Swift**
-   - Storage: **None** (Phase 1 — no persistence yet)
-   - Bundle Identifier: `com.roro.futurevoice` (or your own)
-   - Minimum Deployment: **iOS 17.0** (bump to 26.0 when ready to use `SpeechAnalyzer`)
-4. Save the project **inside this repo's `FutureVoice/` folder, replacing the default scaffold** (don't create a nested second `FutureVoice` folder). When Xcode offers to create files, let it; then remove its generated `ContentView.swift` and the default app file — keep the ones already in this repo.
-5. In the Project navigator, right-click the `FutureVoice` group → **Add Files to "FutureVoice"…** → select the `Models/`, `Services/`, `Views/`, `Config/`, and `Resources/` folders → **Create groups** (not folder refs) → **Add**.
-6. Project settings → **Build Settings** → **Configurations** → set both Debug and Release to use `Config/FutureVoice.xcconfig`.
-7. Project settings → **Info** → confirm the keys from `Info.plist` are picked up (or set the **Info.plist File** path to `FutureVoice/Resources/Info.plist`).
-8. **Signing & Capabilities** → pick your team.
-9. Build and run on a real device (the simulator can't access the microphone the same way).
-
-### 3. Voice cloning hint
-
-The first record-clone round-trip is the single most important thing to validate in Phase 1. If the cloned voice sounds like *you* speaking the target language, the rest of the product is downstream.
-
----
-
-## Running
+The `.xcodeproj` is **generated by xcodegen** — don't hand-edit it.
 
 ```bash
-open FutureVoice.xcworkspace   # if you create one
-# or
-open FutureVoice.xcodeproj
+cp Config/FutureVoice.xcconfig.example Config/FutureVoice.xcconfig   # fill keys
+xcodegen generate
+xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice \
+  -destination 'generic/platform=iOS Simulator' -derivedDataPath build build
 ```
 
-Cmd-R. Hit "Start recording" → read the prompt → wait for the clone → start a conversation.
+Run tests:
+
+```bash
+xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice \
+  -destination 'platform=iOS Simulator,name=iPhone 15 Pro' test
+```
+
+Voice features (mic, STT, the clone round-trip) need a real device.
 
 ---
 
 ## Conventions
 
-- **No secrets in code.** `Secrets.devOverride` is a temporary local hatch only.
-- **Domain types are the source of truth.** Spec doc points at `Models.swift`; don't duplicate.
-- **Prompts live in code.** `ConversationEngine.swift`, not in Markdown.
-- **One transport per provider.** Keep `ElevenLabsClient` and `ClaudeClient` as the only HTTP entry points.
-
----
-
-## What's next (Phase 2 sketch)
-
-- Supabase auth + tables for `users`, `learner_profiles`, `sessions`.
-- Move API keys behind a Supabase Edge Function so the iOS app never holds raw provider keys (matches the DearMyChild pattern).
-- SwiftData cache for offline session replay.
-- Switch ElevenLabs to the streaming TTS endpoint for sub-1.5s latency.
-- Wire `SpeechAnalyzer` (iOS 26) when min-deployment is bumped.
+- **No secrets in code.** `Config/FutureVoice.xcconfig` is gitignored.
+- **Domain types are the source of truth** — `Models.swift`, spec references it.
+- **Prompts live in code** — `ConversationEngine.swift` and the other engines.
+- **One transport per provider** — `GeminiClient` / `ElevenLabsClient`, both via edge functions.
+- **Deterministic scores stay deterministic** — LLM writes notes, never the numbers.
 
 ---
 
