@@ -403,14 +403,21 @@ struct ShadowDrillView: View {
     }
 
     private var playbackRow: some View {
+        // lineLimit(1) + scale-down keeps both labels single-line so the two
+        // bordered buttons render the same height ("Hear my attempt" used to
+        // wrap to two lines and grow taller than its sibling).
         HStack(spacing: 10) {
             Button { Task { await previewTarget() } } label: {
                 Label("Hear target", systemImage: "play.circle")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             Button { Task { await playMyAttempt() } } label: {
                 Label("Hear my attempt", systemImage: "person.wave.2")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
