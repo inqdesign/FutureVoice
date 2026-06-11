@@ -255,6 +255,12 @@ struct WatchView: View {
             }
         }
         .onDisappear {
+            // Flip the loop gate BEFORE stopping the player: player.stop()
+            // fires the current turn's completion, which resumes the
+            // sequential playback loop — with isPlaying still true it would
+            // synthesize and play the NEXT turn after the view is gone
+            // (audio kept narrating after navigating away).
+            isPlaying = false
             player.stop()
         }
     }
@@ -314,6 +320,9 @@ struct WatchView: View {
                     )
                 HStack(spacing: 16) {
                     Button {
+                        // Shadow practice records the mic — stop dialogue
+                        // playback so it doesn't bleed under the sheet.
+                        pause()
                         bridge = ShadowBridge(turn: asTurn(turn))
                     } label: {
                         Label("Shadow this", systemImage: "waveform.badge.mic")
@@ -464,8 +473,9 @@ struct WatchView: View {
     }
 
     private func pause() {
-        player.stop()
+        // Gate first, then stop — same reasoning as onDisappear.
         isPlaying = false
+        player.stop()
     }
 
     /// Plays turns sequentially starting at `index`. Each turn synthesizes
