@@ -197,6 +197,10 @@ struct WatchView: View {
     }
     @State private var bridge: ShadowBridge?
 
+    /// Lowercased drill targets already in the queue — drives the per-line
+    /// "Save phrase" button state so the same line can't be saved twice.
+    @State private var savedPhraseKeys: Set<String> = []
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -232,6 +236,7 @@ struct WatchView: View {
                 .environmentObject(appState)
         }
         .task {
+            savedPhraseKeys = Set(DrillStore.shared.load().map { $0.targetPhrase.lowercased() })
             if turns.isEmpty {
                 if let saved = savedDialogue {
                     // Replay a saved dialogue — skip Gemini, just hydrate
@@ -257,13 +262,17 @@ struct WatchView: View {
     // MARK: - Pieces
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        // Saved-dialogue replays carry their own title/blurb — without this
+        // fallback the header rendered blank on the replay path.
+        let title = topic?.title ?? savedDialogue?.scenarioTitle ?? customScenario
+        let blurb = topic?.blurb ?? savedDialogue?.scenarioBlurb ?? ""
+        return VStack(alignment: .leading, spacing: 4) {
             Text(counterpart.name + " · " + counterpart.relationship)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(topic?.title ?? customScenario)
+            Text(title)
                 .font(.title3.weight(.semibold))
-            if let blurb = topic?.blurb, !blurb.isEmpty {
+            if !blurb.isEmpty {
                 Text(blurb)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -303,17 +312,56 @@ struct WatchView: View {
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
                             .stroke(isCurrent ? Color.accentColor : .clear, lineWidth: 2)
                     )
-                Button {
-                    bridge = ShadowBridge(turn: asTurn(turn))
-                } label: {
-                    Label("Shadow this", systemImage: "waveform.badge.mic")
-                        .font(.caption)
+                HStack(spacing: 16) {
+                    Button {
+                        bridge = ShadowBridge(turn: asTurn(turn))
+                    } label: {
+                        Label("Shadow this", systemImage: "waveform.badge.mic")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
+
+                    // Same learning loop as Talk: a line worth keeping goes
+                    // into the SRS drill queue and resurfaces on schedule.
+                    if isPhraseSaved(turn.text) {
+                        Label("Saved", systemImage: "checkmark")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Button {
+                            savePhrase(turn.text)
+                        } label: {
+                            Label("Save phrase", systemImage: "plus.circle")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                    }
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.tint)
             }
             if !isUser { Spacer(minLength: 40) }
         }
+    }
+
+    private func isPhraseSaved(_ text: String) -> Bool {
+        savedPhraseKeys.contains(text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
+
+    private func savePhrase(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !isPhraseSaved(trimmed) else { return }
+        let card = DrillCard(
+            sourcePhrase: "",
+            targetPhrase: trimmed,
+            reason: "From your dialogue with \(counterpart.name) — \(topic?.title ?? savedDialogue?.scenarioTitle ?? customScenario)",
+            createdAt: Date(),
+            nextReviewAt: Date(),
+            box: 0
+        )
+        DrillStore.shared.save(card)
+        savedPhraseKeys.insert(trimmed.lowercased())
+        HapticEngine.drillCorrect()
     }
 
     private var controls: some View {
