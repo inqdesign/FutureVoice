@@ -445,6 +445,18 @@ struct SuggestedTopic: Codable, Identifiable, Hashable {
     var blurb: String
 }
 
+// MARK: - Saved Line (user's personal shadow archive)
+
+/// A line the user explicitly bookmarked for repeated shadow practice.
+/// `id` is the source `Turn.id`, so saved attempts (`ShadowAttempt.turnId`)
+/// stay attached when the line is reopened later.
+struct SavedLine: Codable, Identifiable, Hashable {
+    var id: UUID                  // = source Turn.id
+    var text: String
+    var source: String            // topic / counterpart name; may be empty
+    var savedAt: Date = Date()
+}
+
 // MARK: - Shadow Attempt (persisted shadow-practice attempt)
 
 /// One saved shadow-practice attempt — score, your transcript, the

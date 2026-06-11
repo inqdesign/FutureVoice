@@ -58,6 +58,7 @@ final class AppState: ObservableObject {
     @Published var watchDialogues: [WatchDialogue] = []
     @Published var scenarios: [Scenario] = []
     @Published var shadowAttempts: [ShadowAttempt] = []
+    @Published var savedLines: [SavedLine] = []
     @Published var weeklyReports: [WeeklyReport] = []
     /// True while WeeklyReportEngine is generating a report. UI uses this
     /// to show a "Analyzing your week…" spinner instead of an empty state.
@@ -84,6 +85,7 @@ final class AppState: ObservableObject {
         watchDialogues = WatchDialogueStore.shared.load()
         scenarios = ScenarioStore.shared.load()
         shadowAttempts = ShadowAttemptStore.shared.load()
+        savedLines = SavedLineStore.shared.load()
         weeklyReports = WeeklyReportStore.shared.load()
 
         Task { await self.observeAuth() }
@@ -153,6 +155,29 @@ final class AppState: ObservableObject {
             // which is the same outcome as a fresh install.
             print("voice clone restore failed:", error)
         }
+    }
+
+    func isLineSaved(_ id: UUID) -> Bool {
+        savedLines.contains { $0.id == id }
+    }
+
+    /// Bookmark / un-bookmark a line for the personal shadow archive.
+    func toggleSavedLine(turn: Turn, source: String = "") {
+        if isLineSaved(turn.id) {
+            SavedLineStore.shared.delete(id: turn.id)
+        } else {
+            SavedLineStore.shared.save(SavedLine(
+                id: turn.id,
+                text: turn.transcript,
+                source: source
+            ))
+        }
+        savedLines = SavedLineStore.shared.load()
+    }
+
+    func removeSavedLine(id: UUID) {
+        SavedLineStore.shared.delete(id: id)
+        savedLines = SavedLineStore.shared.load()
     }
 
     func saveShadowAttempt(_ a: ShadowAttempt) {

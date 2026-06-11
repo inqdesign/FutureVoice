@@ -34,7 +34,7 @@ struct PracticeTab: View {
     var body: some View {
         NavigationStack {
             Group {
-                if totalCards == 0 && picks.isEmpty {
+                if totalCards == 0 && picks.isEmpty && appState.savedLines.isEmpty {
                     emptyState
                 } else {
                     content
@@ -121,7 +121,7 @@ struct PracticeTab: View {
 
     @ViewBuilder
     private var shadowSection: some View {
-        if !picks.isEmpty {
+        if !picks.isEmpty || !appState.savedLines.isEmpty {
             Section {
                 ForEach(picks) { pick in
                     Button {
@@ -151,6 +151,24 @@ struct PracticeTab: View {
                     }
                     .buttonStyle(.plain)
                 }
+                if !appState.savedLines.isEmpty {
+                    NavigationLink {
+                        SavedLinesView()
+                            .navigationTitle("Saved lines")
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        HStack {
+                            Label("Saved lines", systemImage: "bookmark")
+                                .font(.subheadline)
+                                .foregroundStyle(.tint)
+                            Spacer()
+                            Text("\(appState.savedLines.count)")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
+                }
                 NavigationLink {
                     ShadowBrowserView()
                         .navigationTitle("All lines")
@@ -163,7 +181,7 @@ struct PracticeTab: View {
             } header: {
                 Text("Shadow picks")
             } footer: {
-                Text("Fresh lines from your latest conversations, plus ones worth another try.")
+                Text("Sized to your \(appState.proficiency.rawValue.uppercased()) level — fresh lines from your latest conversations, plus ones worth another try.")
             }
         }
     }
@@ -235,7 +253,11 @@ struct PracticeTab: View {
         nextDueAt = cards.map(\.nextReviewAt).filter { $0 > now }.min()
 
         let sessions = SessionStore.shared.load()
-        picks = PracticeStats.shadowPicks(sessions: sessions, attempts: appState.shadowAttempts)
+        picks = PracticeStats.shadowPicks(
+            sessions: sessions,
+            attempts: appState.shadowAttempts,
+            level: appState.proficiency
+        )
 
         var cardsBySession: [UUID: [DrillCard]] = [:]
         for card in cards {

@@ -70,6 +70,16 @@ struct ShadowDrillView: View {
             .navigationTitle("Shadow")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    // Archive this line for repeat practice — saved lines
+                    // live under Practice → Saved lines.
+                    Button {
+                        appState.toggleSavedLine(turn: turn)
+                    } label: {
+                        Image(systemName: appState.isLineSaved(turn.id) ? "bookmark.fill" : "bookmark")
+                    }
+                    .accessibilityLabel(appState.isLineSaved(turn.id) ? "Remove from saved lines" : "Save line")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .disabled(phase == .syncing || phase == .countdown)

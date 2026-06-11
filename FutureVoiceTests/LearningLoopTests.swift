@@ -180,7 +180,7 @@ final class ShadowPicksTests: XCTestCase {
             turn("Honestly the weather has been rough lately."),
             turn("I should say this", role: .user),           // wrong role
         ])
-        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [])
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [], level: .b1)
         XCTAssertEqual(picks.count, 1)
         XCTAssertTrue(picks[0].reason.hasPrefix("From: Coffee chat"))
     }
@@ -195,10 +195,30 @@ final class ShadowPicksTests: XCTestCase {
             attempt(turnId: goodId, score: 92),
             attempt(turnId: badId, score: 60),
         ]
-        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts)
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts, level: .b1)
         XCTAssertEqual(picks.count, 1)
         XCTAssertTrue(picks[0].reason.contains("Retry — last score 60"))
         XCTAssertEqual(picks[0].turn.id, badId)
+    }
+
+    func testLevelBandPrefersLinesSizedToLearner() {
+        // A1 band = 4...8 words: the 16-word line must lose to the 6-word one.
+        let s = session([
+            turn("This particular sentence keeps going on and on with far more words than any beginner needs."),
+            turn("Shall we grab a coffee soon?"),
+        ])
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [], level: .a1)
+        XCTAssertEqual(picks.count, 1)
+        XCTAssertEqual(picks[0].turn.transcript, "Shall we grab a coffee soon?")
+    }
+
+    func testLevelBandFallsBackWhenNothingFits() {
+        // Only an out-of-band line exists — better to suggest it than nothing.
+        let long = "This particular sentence keeps going on and on with far more words than any beginner needs."
+        let picks = PracticeStats.shadowPicks(sessions: [session([turn(long)])],
+                                              attempts: [], level: .a1)
+        XCTAssertEqual(picks.count, 1)
+        XCTAssertEqual(picks[0].turn.transcript, long)
     }
 
     func testNewerGoodAttemptSupersedesOldBadOne() {
@@ -208,7 +228,7 @@ final class ShadowPicksTests: XCTestCase {
             attempt(turnId: id, score: 50, at: Date().addingTimeInterval(-3600)),
             attempt(turnId: id, score: 88, at: Date()),
         ]
-        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts)
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: attempts, level: .b1)
         XCTAssertTrue(picks.isEmpty)
     }
 
@@ -223,6 +243,7 @@ final class ShadowPicksTests: XCTestCase {
         let picks = PracticeStats.shadowPicks(
             sessions: [s],
             attempts: [attempt(turnId: badId, score: 40)],
+            level: .b1,
             limit: 3
         )
         XCTAssertEqual(picks.count, 3)

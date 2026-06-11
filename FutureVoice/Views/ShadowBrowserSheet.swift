@@ -67,9 +67,18 @@ private extension ShadowBrowserView {
                                 Button {
                                     shadowTarget = ShadowTarget(turn: turn)
                                 } label: {
-                                    ShadowRow(turn: turn)
+                                    ShadowRow(turn: turn, isSaved: appState.isLineSaved(turn.id))
                                 }
                                 .buttonStyle(.plain)
+                                .swipeActions(edge: .trailing) {
+                                    Button {
+                                        appState.toggleSavedLine(turn: turn, source: session.topic ?? "")
+                                    } label: {
+                                        Label(appState.isLineSaved(turn.id) ? "Unsave" : "Save",
+                                              systemImage: appState.isLineSaved(turn.id) ? "bookmark.slash" : "bookmark")
+                                    }
+                                    .tint(.accentColor)
+                                }
                             }
                         }
                     }
@@ -101,6 +110,7 @@ private extension ShadowBrowserView {
 
 private struct ShadowRow: View {
     let turn: Turn
+    var isSaved: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -113,6 +123,11 @@ private struct ShadowRow: View {
                 .foregroundStyle(.primary)
                 .lineLimit(3)
             Spacer(minLength: 8)
+            if isSaved {
+                Image(systemName: "bookmark.fill")
+                    .font(.caption)
+                    .foregroundStyle(.tint)
+            }
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.tertiary)

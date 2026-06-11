@@ -88,13 +88,29 @@ enum PracticeStats {
     /// Score under which a past attempt earns a retry suggestion.
     static let retryThreshold = 75
 
+    /// Word-count band per CEFR level. A beginner shadowing a 20-word
+    /// sentence drowns; a C1 learner repeating 4-word lines learns nothing.
+    /// Length is a crude but deterministic difficulty proxy — the lines all
+    /// come from level-calibrated conversations anyway, so length is the
+    /// main residual variance.
+    static func wordBand(for level: CEFRLevel) -> ClosedRange<Int> {
+        switch level {
+        case .a1: return 4...8
+        case .a2: return 4...10
+        case .b1: return 5...14
+        case .b2: return 6...18
+        case .c1, .c2: return 8...40
+        }
+    }
+
     /// Curate up to `limit` lines: fresh lines from the newest sessions the
-    /// user hasn't shadowed yet, then low-score retries (latest attempt per
-    /// line < `retryThreshold`). Fresh-first keeps picks tied to whatever
-    /// the user just talked about.
+    /// user hasn't shadowed yet (sized to the learner's level), then
+    /// low-score retries (latest attempt per line < `retryThreshold`).
+    /// Fresh-first keeps picks tied to whatever the user just talked about.
     static func shadowPicks(
         sessions: [Session],
         attempts: [ShadowAttempt],
+        level: CEFRLevel,
         limit: Int = 3
     ) -> [ShadowPick] {
         // Latest attempt per target line.
@@ -105,24 +121,36 @@ enum PracticeStats {
         }
 
         // Fresh: never-attempted fluent-self lines, newest session first.
-        var fresh: [ShadowPick] = []
+        // Preferred = fits the learner's level band; if nothing does (e.g.
+        // an A1 learner whose avatar spoke long lines), fall back to any
+        // substantive line rather than showing nothing.
+        let band = wordBand(for: level)
+        var banded: [ShadowPick] = []
+        var fallback: [ShadowPick] = []
         var seenTexts = Set<String>()
         let newestFirst = sessions.sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
         for session in newestFirst {
             for turn in session.turns where turn.role == .fluentSelf {
                 let text = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 let key = text.lowercased()
+                let wordCount = text.split(separator: " ").count
                 guard !text.isEmpty,
-                      text.split(separator: " ").count >= minPickWords,
+                      wordCount >= minPickWords,
                       latestByTurn[turn.id] == nil,
                       !seenTexts.contains(key) else { continue }
                 seenTexts.insert(key)
-                fresh.append(ShadowPick(
+                let pick = ShadowPick(
                     turn: turn,
                     reason: "From: \(session.topic?.isEmpty == false ? session.topic! : "recent conversation")"
-                ))
+                )
+                if band.contains(wordCount) {
+                    banded.append(pick)
+                } else {
+                    fallback.append(pick)
+                }
             }
         }
+        let fresh = banded.isEmpty ? fallback : banded
 
         // Retries: latest attempt scored low. Reuse the original turn when it
         // still exists so past attempts stay attached; otherwise rebuild from
