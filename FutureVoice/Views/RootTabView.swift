@@ -7,6 +7,10 @@ import SwiftUI
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selection: Tab = .talk
+    /// Trial-first paywall shows ONCE, right after onboarding completes —
+    /// the Speak placement. Skippable; lives on in Settings → View plans.
+    @AppStorage("futurevoice.paywallSeen") private var paywallSeen = false
+    @State private var showingPaywall = false
 
     enum Tab: Hashable {
         case talk, practice, watch, progress, settings
@@ -33,6 +37,12 @@ struct RootTabView: View {
             MeTab()
                 .tabItem { Label("Settings", systemImage: "gearshape") }
                 .tag(Tab.settings)
+        }
+        .onAppear {
+            if !paywallSeen { showingPaywall = true }
+        }
+        .fullScreenCover(isPresented: $showingPaywall, onDismiss: { paywallSeen = true }) {
+            PaywallView()
         }
     }
 }

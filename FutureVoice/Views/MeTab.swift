@@ -9,6 +9,7 @@ struct MeTab: View {
     @EnvironmentObject private var auth: AuthService
     @State private var account: AccountStatus = .empty
     @State private var showingPersonaEdit = false
+    @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
 
@@ -28,6 +29,13 @@ struct MeTab: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(account.creditBalance > 0 ? Color.primary : Color.orange)
                             .monospacedDigit()
+                    }
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        row(icon: "crown",
+                            title: account.planLabel == "Free" ? "Upgrade" : "View plans",
+                            subtitle: "Free trial, then credits every cycle")
                     }
                 } header: {
                     Text("Account")
@@ -95,6 +103,9 @@ struct MeTab: View {
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingPaywall) {
+                PaywallView()
             }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}
