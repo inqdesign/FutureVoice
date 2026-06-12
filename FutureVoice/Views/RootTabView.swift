@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// Phase 2 entry surface — replaces the single-screen ConversationView root
-/// with a four-tab structure: Talk / Practice / Watch / Me. Each tab owns its
-/// own NavigationStack so toolbars and titles don't collide.
+/// Five-tab structure: the three practice modes (Talk / Practice / Watch),
+/// then Progress (every language-development signal in one hub) and
+/// Settings (account + configuration, nothing else). Growth and settings
+/// used to share one "Me" tab, which buried both.
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selection: Tab = .talk
 
     enum Tab: Hashable {
-        case talk, practice, watch, me
+        case talk, practice, watch, progress, settings
     }
 
     var body: some View {
@@ -25,9 +26,13 @@ struct RootTabView: View {
                 .tabItem { Label("Watch", systemImage: "person.2.wave.2") }
                 .tag(Tab.watch)
 
+            ProgressTab()
+                .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                .tag(Tab.progress)
+
             MeTab()
-                .tabItem { Label("Me", systemImage: "person.crop.circle") }
-                .tag(Tab.me)
+                .tabItem { Label("Settings", systemImage: "gearshape") }
+                .tag(Tab.settings)
         }
     }
 }

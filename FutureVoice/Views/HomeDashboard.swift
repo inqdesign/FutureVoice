@@ -17,10 +17,8 @@ struct HomeDashboard: View {
         VStack(alignment: .leading, spacing: 18) {
             streakRow
             topicCard
-            // Replaced the per-session "you scored X" lines with a
-            // multi-session weekly report. Single-session scoring was too
-            // noisy to be honest; the engine now waits for enough data.
-            WeeklyReportView()
+            // The weekly report moved to the Progress tab — Talk home stays
+            // a launch surface (streak + scenario), not a stats page.
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
