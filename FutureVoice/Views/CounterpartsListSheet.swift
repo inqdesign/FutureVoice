@@ -77,7 +77,7 @@ struct CounterpartFormView: View {
                         .lineLimit(2...6)
                 }
             }
-            .navigationTitle(initial == nil ? "New person" : "Edit person")
+            .navigationTitle(initial == nil ? "New persona" : "Edit persona")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
