@@ -45,4 +45,10 @@ final class PersonaStore {
     func exists() -> Bool {
         FileManager.default.fileExists(atPath: fileURL.path)
     }
+
+    /// Delete the persona file so `load()` returns nil again. Used by the
+    /// debug "replay onboarding" reset.
+    func clear() {
+        try? FileManager.default.removeItem(at: fileURL)
+    }
 }

@@ -52,14 +52,20 @@ final class AudioRecorder: ObservableObject {
         // exactly what it hears, so a Bluetooth-captured sample produces a
         // clone that doesn't sound like the speaker at all. Built-in iPhone
         // mic only.
+        // Both qualities capture through the iPhone's own mic. Clone: AirPods'
+        // 8 kHz HFP mic ruins fidelity. STT (shadowing): the same HFP mic makes
+        // recognition flaky. `.sttOptimal` keeps `.allowBluetoothA2DP` so a
+        // connected AirPods still gets hi-fi playback; clone forces the speaker
+        // since it never plays back during capture.
         let options: AVAudioSession.CategoryOptions = (quality == .voiceCloneHigh)
             ? [.defaultToSpeaker]
-            : [.defaultToSpeaker, .allowBluetooth]
+            : AudioSessionRouting.builtInMicCaptureOptions
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true)
+        if quality == .sttOptimal { AudioSessionRouting.applyOutputRoute(session) }
 
-        if quality == .voiceCloneHigh,
-           let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+        // Force the built-in mic for BOTH: clone fidelity and reliable STT.
+        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
             try? session.setPreferredInput(builtIn)
         }
 

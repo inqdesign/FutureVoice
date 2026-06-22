@@ -6,12 +6,17 @@ import SwiftUI
 struct VoiceCloneOnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var recorder = AudioRecorder()
+    @StateObject private var preview = AudioPlayer()
 
     @State private var status: Status = .idle
     @State private var error: String?
     @State private var startedAt: Date?
     @State private var elapsedSeconds: Double = 0
     @State private var ticker: Timer?
+    /// Recording captured this session, awaiting the user's review (listen +
+    /// quality check) before we commit to cloning.
+    @State private var recordedSampleURL: URL?
+    @State private var quality: AudioSampleQuality?
 
     /// ElevenLabs IVC quality climbs steeply up to ~60-90 seconds of speech.
     /// Under ~45s the clone sounds noticeably flatter, so that's our hard
@@ -22,6 +27,7 @@ struct VoiceCloneOnboardingView: View {
     enum Status: Equatable {
         case idle
         case recording
+        case reviewing   // recorded; user can listen + see quality before cloning
         case uploading
         case done
     }
@@ -56,13 +62,31 @@ struct VoiceCloneOnboardingView: View {
                 }
 
                 Section {
+                    Label {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Use your iPhone's built-in mic — a closet is ideal")
+                                .font(.callout.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text("Take your AirPods (or any Bluetooth earbuds) OUT first. Their mics record at low 8 kHz \u{201C}phone-call\u{201D} quality, so the clone ends up sounding nothing like you. For the cleanest result, step inside a clothes closet and record there — the clothes soak up echo like a real vocal booth. You only do this once, so make it count.")
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "iphone")
+                            .foregroundStyle(.orange)
+                    }
+                } header: {
+                    Text("Before you start")
+                }
+
+                Section {
                     Text(cloneScript)
                         .font(.body)
                         .padding(.vertical, 4)
                 } header: {
                     Text("Read this aloud, naturally")
                 } footer: {
-                    Text("Aim for 60–90 seconds in a quiet room. Vary your pitch a little — flat reading makes a flat clone.")
+                    Text("Aim for 60–90 seconds somewhere quiet — a clothes closet is best. Vary your pitch a little — flat reading makes a flat clone.")
                 }
 
                 if status == .recording || elapsedSeconds > 0 {
@@ -97,6 +121,10 @@ struct VoiceCloneOnboardingView: View {
                     }
                 }
 
+                if status == .reviewing {
+                    reviewSection
+                }
+
                 if let error = error {
                     Section {
                         Label(error, systemImage: "exclamationmark.triangle")
@@ -113,40 +141,123 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
-    // MARK: - Action bar
+    // MARK: - Review (listen + quality)
 
-    private var actionBar: some View {
-        VStack(spacing: 8) {
-            Button(action: handleTap) {
-                Label(label, systemImage: icon)
-                    .frame(maxWidth: .infinity)
+    @ViewBuilder
+    private var reviewSection: some View {
+        Section {
+            Button {
+                togglePreview()
+            } label: {
+                Label(preview.isPlaying ? "Stop" : "Listen to your recording",
+                      systemImage: preview.isPlaying ? "stop.circle.fill" : "play.circle.fill")
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .tint(tint)
-            .disabled(status == .uploading || (status == .recording && elapsedSeconds < 1))
+        } header: {
+            Text("Review")
+        } footer: {
+            Text("Hear how you sound before cloning. We boost the level on upload, so a quiet take is fine — clarity matters more than loudness.")
+        }
 
-            if status == .recording {
-                if elapsedSeconds < Self.minSeconds {
-                    Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more for a usable clone")
+        if let q = quality {
+            Section {
+                HStack(spacing: 10) {
+                    Image(systemName: q.rating.symbol)
+                        .foregroundStyle(ratingTint(q.rating))
+                    Text(q.rating.label)
+                        .font(.callout.weight(.semibold))
+                    Spacer()
+                    Text("\(Int(q.durationSeconds))s")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(q.issues, id: \.self) { issue in
+                    Label(issue, systemImage: "circle.fill")
+                        .labelStyle(BulletLabelStyle())
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                } else if elapsedSeconds < Self.recommendedSeconds {
-                    Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the cleanest clone")
-                        .font(.footnote)
-                        .foregroundStyle(.green)
-                } else {
-                    Text("Plenty for a great clone — stop whenever you're ready")
-                        .font(.footnote)
-                        .foregroundStyle(.green)
                 }
-            } else if status == .uploading {
-                ProgressView()
+            } header: {
+                Text("Quality")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.bar)
+    }
+
+    private func ratingTint(_ r: AudioSampleQuality.Rating) -> Color {
+        switch r {
+        case .good: return .green
+        case .okay: return .orange
+        case .poor: return .red
+        }
+    }
+
+    private func togglePreview() {
+        if preview.isPlaying {
+            preview.stop()
+            return
+        }
+        guard let url = recordedSampleURL, let data = try? Data(contentsOf: url) else { return }
+        try? preview.play(data)
+    }
+
+    // MARK: - Action bar
+
+    @ViewBuilder
+    private var actionBar: some View {
+        if status == .reviewing {
+            HStack(spacing: 12) {
+                Button {
+                    reRecord()
+                } label: {
+                    Label("Re-record", systemImage: "arrow.counterclockwise")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                Button {
+                    useThisVoice()
+                } label: {
+                    Label("Use this voice", systemImage: "checkmark")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
+        } else {
+            VStack(spacing: 8) {
+                Button(action: handleTap) {
+                    Label(label, systemImage: icon)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(tint)
+                .disabled(status == .uploading || (status == .recording && elapsedSeconds < 1))
+
+                if status == .recording {
+                    if elapsedSeconds < Self.minSeconds {
+                        Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more for a usable clone")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else if elapsedSeconds < Self.recommendedSeconds {
+                        Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the cleanest clone")
+                            .font(.footnote)
+                            .foregroundStyle(.green)
+                    } else {
+                        Text("Plenty for a great clone — stop whenever you're ready")
+                            .font(.footnote)
+                            .foregroundStyle(.green)
+                    }
+                } else if status == .uploading {
+                    ProgressView()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
+        }
     }
 
     private var levelMeter: some View {
@@ -174,6 +285,7 @@ struct VoiceCloneOnboardingView: View {
         switch status {
         case .idle:      return "mic.fill"
         case .recording: return "stop.fill"
+        case .reviewing: return "waveform"
         case .uploading: return "arrow.up.circle"
         case .done:      return "checkmark.circle.fill"
         }
@@ -182,7 +294,8 @@ struct VoiceCloneOnboardingView: View {
     private var label: String {
         switch status {
         case .idle:      return "Start recording"
-        case .recording: return elapsedSeconds >= Self.minSeconds ? "Stop & clone" : "Stop (early)"
+        case .recording: return elapsedSeconds >= Self.minSeconds ? "Stop & review" : "Stop (early)"
+        case .reviewing: return "Review"
         case .uploading: return "Cloning your voice…"
         case .done:      return "Done"
         }
@@ -230,20 +343,14 @@ struct VoiceCloneOnboardingView: View {
 
                 case .recording:
                     stopTicker()
-                    guard let url = recorder.stop() else { return }
-                    status = .uploading
-                    let voiceId = try await ElevenLabsClient.shared.cloneVoice(
-                        name: "Future Self — \(appState.targetLanguage.uppercased())",
-                        sampleAudioURLs: [url]
-                    )
-                    appState.voiceCloneId = voiceId   // didSet persists to UserDefaults
-                    // Best-effort cleanup of the previous clone (if this is a
-                    // re-record). Fire and forget — user shouldn't wait on
-                    // ElevenLabs housekeeping to see "Done".
-                    Task { await appState.cleanupPreviousVoiceClone() }
-                    status = .done
+                    guard let rawURL = recorder.stop() else { return }
+                    // Don't clone yet — let the user listen and see the quality
+                    // check first, then confirm with "Use this voice".
+                    recordedSampleURL = rawURL
+                    quality = AudioSampleQuality.analyze(url: rawURL)
+                    status = .reviewing
 
-                case .uploading, .done:
+                case .reviewing, .uploading, .done:
                     break
                 }
             } catch {
@@ -252,6 +359,35 @@ struct VoiceCloneOnboardingView: View {
                 stopTicker()
             }
         }
+    }
+
+    /// Confirm the reviewed recording: persist the raw sample for later
+    /// re-generation, then normalize + upload to ElevenLabs.
+    private func useThisVoice() {
+        guard let url = recordedSampleURL else { return }
+        preview.stop()
+        status = .uploading
+        // Keep the original so the clone can be regenerated later without
+        // recording again (Settings → Voice).
+        VoiceSampleStore.shared.save(from: url)
+        Task {
+            do {
+                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                status = .done   // RootView swaps away once voiceCloneId is set
+            } catch {
+                self.error = error.localizedDescription
+                status = .reviewing
+            }
+        }
+    }
+
+    private func reRecord() {
+        preview.stop()
+        recordedSampleURL = nil
+        quality = nil
+        elapsedSeconds = 0
+        error = nil
+        status = .idle
     }
 
     private func startTicker() {
@@ -267,5 +403,15 @@ struct VoiceCloneOnboardingView: View {
     private func stopTicker() {
         ticker?.invalidate()
         ticker = nil
+    }
+}
+
+/// Indented bullet for the per-issue list in the quality section.
+private struct BulletLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "circle.fill").font(.system(size: 4))
+            configuration.title
+        }
     }
 }

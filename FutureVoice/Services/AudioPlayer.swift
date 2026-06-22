@@ -34,18 +34,16 @@ final class AudioPlayer: NSObject, ObservableObject {
             if forceSessionReset {
                 try? session.setActive(false, options: .notifyOthersOnDeactivation)
             }
-            // Use `.playAndRecord + .defaultToSpeaker` even for pure playback
-            // because `.playback` doesn't accept `.defaultToSpeaker` and a
-            // prior `.playAndRecord` session can leave the audio route on
-            // the quiet earpiece speaker. With `.playAndRecord`, the
-            // `overrideOutputAudioPort(.speaker)` below reliably snaps the
-            // output to the loud bottom speaker. We don't activate the mic
-            // (no AVAudioRecorder running), so this is a free routing fix.
+            // `.playAndRecord` (not `.playback`) so a prior recording session's
+            // route doesn't strand us on the quiet earpiece. No mic runs here,
+            // so `.allowBluetoothA2DP` lets Bluetooth headphones get hi-fi
+            // stereo. We then route AFTER activation: headphones win, and we
+            // only force the loud bottom speaker when nothing is plugged in.
             try session.setCategory(.playAndRecord,
                                     mode: .default,
-                                    options: [.defaultToSpeaker, .duckOthers])
+                                    options: AudioSessionRouting.playbackOptions)
             try session.setActive(true)
-            try? session.overrideOutputAudioPort(.speaker)
+            AudioSessionRouting.applyOutputRoute(session)
         }
 
         // Equalize loudness across voices: IVC clones come back much quieter

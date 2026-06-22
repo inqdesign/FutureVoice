@@ -167,15 +167,22 @@ struct WatchView: View {
     let customScenario: String
     /// When set, skip Gemini generation and just replay this saved dialogue.
     let savedDialogue: WatchDialogue?
+    /// Whether a freshly generated dialogue is archived to the Watch tab.
+    /// False for scenario-watch (the counterpart is synthetic and would
+    /// orphan a row in the persona list) — those are one-shot, audio still
+    /// caches for in-session replay.
+    let persist: Bool
 
     init(counterpart: Counterpart,
          topic: SuggestedTopic? = nil,
          customScenario: String = "",
-         savedDialogue: WatchDialogue? = nil) {
+         savedDialogue: WatchDialogue? = nil,
+         persist: Bool = true) {
         self.counterpart = counterpart
         self.topic = topic
         self.customScenario = customScenario
         self.savedDialogue = savedDialogue
+        self.persist = persist
     }
 
     @EnvironmentObject private var appState: AppState
@@ -468,6 +475,7 @@ struct WatchView: View {
     }
 
     private func persistGeneratedDialogue() {
+        guard persist else { return }
         let title  = topic?.title ?? customScenario
         let blurb  = topic?.blurb ?? ""
         let stored = WatchDialogue(

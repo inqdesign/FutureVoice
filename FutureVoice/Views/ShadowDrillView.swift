@@ -682,7 +682,7 @@ struct ShadowDrillView: View {
         // and falsely advances the karaoke highlight. The visual cursor still
         // sweeps based on syncStartedAt so the user has a tempo reference.
         do {
-            try live.start(locale: targetLanguage)
+            try live.start(locale: targetLanguage, preferBuiltInMic: true)
         } catch {
             self.error = "STT failed: \(error.localizedDescription)"
             phase = .idle

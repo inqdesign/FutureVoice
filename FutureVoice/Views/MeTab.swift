@@ -12,6 +12,10 @@ struct MeTab: View {
     @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
+    @State private var regeneratingVoice = false
+    #if DEBUG
+    @State private var confirmingOnboardingReset = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -88,6 +92,22 @@ struct MeTab: View {
                             title: "Re-record voice",
                             subtitle: "Replace your current clone with a new one")
                     }
+                    if VoiceSampleStore.shared.exists {
+                        Button {
+                            regenerateFromSavedSample()
+                        } label: {
+                            HStack {
+                                row(icon: "arrow.triangle.2.circlepath",
+                                    title: "Regenerate from saved recording",
+                                    subtitle: "Rebuild the clone from your last recording")
+                                if regeneratingVoice {
+                                    Spacer()
+                                    ProgressView()
+                                }
+                            }
+                        }
+                        .disabled(regeneratingVoice)
+                    }
                 }
 
                 Section {
@@ -97,6 +117,22 @@ struct MeTab: View {
                         Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
+
+                #if DEBUG
+                Section {
+                    Button {
+                        confirmingOnboardingReset = true
+                    } label: {
+                        row(icon: "arrow.counterclockwise",
+                            title: "Replay onboarding",
+                            subtitle: "Reset setup, voice & persona — stays signed in")
+                    }
+                } header: {
+                    Text("Developer")
+                } footer: {
+                    Text("Debug builds only. Routes back through the first-run setup flow.")
+                }
+                #endif
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
@@ -123,7 +159,26 @@ struct MeTab: View {
             } message: {
                 Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
             }
+            #if DEBUG
+            .alert("Replay onboarding?", isPresented: $confirmingOnboardingReset) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) {
+                    appState.resetOnboarding()   // RootView swaps to SetupFlowView
+                }
+            } message: {
+                Text("Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.")
+            }
+            #endif
             .task { account = await AccountStatus.fetch() }
+        }
+    }
+
+    private func regenerateFromSavedSample() {
+        guard let url = VoiceSampleStore.shared.url, !regeneratingVoice else { return }
+        regeneratingVoice = true
+        Task {
+            defer { regeneratingVoice = false }
+            try? await appState.regenerateVoiceClone(fromSampleAt: url)
         }
     }
 

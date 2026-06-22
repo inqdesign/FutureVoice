@@ -16,6 +16,9 @@ struct ScenariosListSheet: View {
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
     @State private var newsError: String?
+    /// Set when the user taps a scenario's "Watch" — pushes WatchView with a
+    /// synthetic counterpart built from the scenario's role.
+    @State private var watchScenario: Scenario?
 
     private var interests: [String] { appState.persona?.interests ?? [] }
 
@@ -48,8 +51,34 @@ struct ScenariosListSheet: View {
                     applyAndDismiss(newScenario)
                 }
             }
+            .navigationDestination(item: $watchScenario) { s in
+                WatchView(counterpart: Self.watchCounterpart(for: s),
+                          customScenario: Self.watchScenarioText(s),
+                          persist: false)
+                    .environmentObject(appState)
+            }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Scenario → Watch (synthetic counterpart)
+
+    /// Builds a throwaway counterpart from the scenario's role so DialogueEngine
+    /// can stage a clone-vs-role dialogue. Not saved — see `WatchView.persist`.
+    private static func watchCounterpart(for s: Scenario) -> Counterpart {
+        var c = Counterpart.empty
+        c.name = s.role.trimmingCharacters(in: .whitespaces).isEmpty ? "the other person" : s.role
+        c.location = s.environment
+        c.background = s.notes
+        c.voicePresetId = VoicePreset.catalog.first!.id
+        return c
+    }
+
+    /// One-line scenario description handed to DialogueEngine as the topic.
+    private static func watchScenarioText(_ s: Scenario) -> String {
+        let notes = s.notes.trimmingCharacters(in: .whitespaces)
+        let base = "At \(s.environment), a conversation with the \(s.role)"
+        return notes.isEmpty ? base : "\(base). \(notes)"
     }
 
     // MARK: - States
@@ -94,12 +123,26 @@ struct ScenariosListSheet: View {
                 }
             } else {
                 ForEach(appState.scenarios) { scenario in
-                    Button {
-                        applyAndDismiss(scenario)
-                    } label: {
-                        row(scenario)
+                    HStack(spacing: 10) {
+                        // Tap the row body → Talk (speak it yourself), the
+                        // existing primary action.
+                        Button {
+                            applyAndDismiss(scenario)
+                        } label: {
+                            row(scenario)
+                        }
+                        .buttonStyle(.plain)
+                        // Trailing pill → Watch (listen to your clone vs the
+                        // role play it out).
+                        Button {
+                            watchScenario = scenario
+                        } label: {
+                            Label("Watch", systemImage: "play.fill")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             appState.deleteScenario(id: scenario.id)
@@ -248,9 +291,6 @@ struct ScenariosListSheet: View {
                 }
             }
             Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
         .contentShape(Rectangle())

@@ -75,15 +75,35 @@ final class LiveTranscriber: ObservableObject {
         return speech && mic
     }
 
-    func start(locale: String) throws {
+    /// - Parameter preferBuiltInMic: force the iPhone's own mic regardless of a
+    ///   connected AirPods. Use for scoring tasks (shadowing, "say it") where
+    ///   the AirPods' 8 kHz HFP mic makes recognition unreliable. Conversation
+    ///   leaves it false so hands-free (phone in pocket) still works.
+    func start(locale: String, preferBuiltInMic: Bool = false) throws {
         guard !isRunning else { return }
         let rec = SFSpeechRecognizer(locale: Locale(identifier: locale))
         guard let rec = rec, rec.isAvailable else { throw LiveError.unavailable }
         rec.defaultTaskHint = .dictation
 
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetooth])
+        // The avatar's reply (played via AudioPlayer with configureSession=false)
+        // inherits THIS session, so route choice here governs conversation
+        // output too. Respect headphones instead of force-routing to the
+        // speaker. Conversation allows the BT (HFP) mic for hands-free use;
+        // scoring tasks pass `preferBuiltInMic` to keep input on the reliable
+        // built-in mic while output stays hi-fi A2DP.
+        let options = preferBuiltInMic
+            ? AudioSessionRouting.builtInMicCaptureOptions
+            : AudioSessionRouting.recordOptions
+        // `.measurement` disables iOS output sound processing/gain — great for
+        // clean scoring input, but it makes the avatar's reply noticeably QUIET
+        // in conversation. So only scoring tasks use it; conversation uses
+        // `.default` so playback stays at full loudness.
+        let mode: AVAudioSession.Mode = preferBuiltInMic ? .measurement : .default
+        try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
+        AudioSessionRouting.applyOutputRoute(session)
+        if preferBuiltInMic { AudioSessionRouting.preferBuiltInMic(session) }
 
         let engine = AVAudioEngine()
         let input = engine.inputNode

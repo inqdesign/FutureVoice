@@ -484,7 +484,7 @@ private extension DrillView {
             return
         }
         do {
-            try live.start(locale: appState.targetLanguage)
+            try live.start(locale: appState.targetLanguage, preferBuiltInMic: true)
             sayIt = .listening
             // Backstop if the user never speaks; silence watcher takes over
             // once the first words arrive.

@@ -67,6 +67,13 @@ final class AppState: ObservableObject {
     @Published var appearance: AppAppearance = .system {
         didSet { UserDefaults.standard.set(appearance.rawValue, forKey: Self.appearanceKey) }
     }
+    /// First-run setup gate. SetupFlowView (target language → level → persona)
+    /// flips this once the user finishes; RootView routes to it until then.
+    /// Distinct from `voiceCloneId`/`persona` so we can ask the quick-answer
+    /// questions up front, before the heavier voice-clone recording.
+    @Published var setupComplete: Bool = false {
+        didSet { UserDefaults.standard.set(setupComplete, forKey: Self.setupCompleteKey) }
+    }
     /// Long-term learner memory for the current target language. Grows after
     /// every ended session via `recordSessionOutcome` and feeds the next
     /// conversation's system prompt — the spec §3 loop.
@@ -88,6 +95,7 @@ final class AppState: ObservableObject {
     private static let targetLanguageKey = "futurevoice.targetLanguage"
     private static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
+    private static let setupCompleteKey = "futurevoice.setupComplete"
 
     init() {
         let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
@@ -101,6 +109,7 @@ final class AppState: ObservableObject {
         appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
+        setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         persona = PersonaStore.shared.load()
         topicSuggestions = TopicStore.shared.load()
         counterparts = CounterpartStore.shared.load()
@@ -178,6 +187,20 @@ final class AppState: ObservableObject {
             print("voice clone restore failed:", error)
         }
     }
+
+    #if DEBUG
+    /// Debug-only: replay the whole first-run flow without uninstalling.
+    /// Wipes the setup gate, voice clone, and persona so RootView routes back
+    /// through SetupFlowView → voice clone → persona. Keeps the auth session
+    /// so there's no re-login. The ElevenLabs clone is stashed for cleanup
+    /// (same as a normal re-record), not orphaned.
+    func resetOnboarding() {
+        resetVoiceClone()              // stashes voiceCloneId for later delete, sets nil
+        PersonaStore.shared.clear()
+        persona = nil
+        setupComplete = false
+    }
+    #endif
 
     func isLineSaved(_ id: UUID) -> Bool {
         savedLines.contains { $0.id == id }
@@ -274,6 +297,21 @@ final class AppState: ObservableObject {
     func resetVoiceClone() {
         pendingDeleteVoiceId = voiceCloneId
         voiceCloneId = nil
+    }
+
+    /// Clone (or re-clone) the voice from a recorded sample WAV. Normalizes the
+    /// sample loudness, uploads to ElevenLabs, swaps in the new voice id, and
+    /// cleans up the previous clone. Shared by first-run onboarding and the
+    /// Settings "regenerate from saved recording" action.
+    func regenerateVoiceClone(fromSampleAt sampleURL: URL) async throws {
+        let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
+        let newId = try await ElevenLabsClient.shared.cloneVoice(
+            name: "Future Self — \(targetLanguage.uppercased())",
+            sampleAudioURLs: [normalized]
+        )
+        if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
+        voiceCloneId = newId
+        await cleanupPreviousVoiceClone()
     }
 
     /// Called by VoiceCloneOnboardingView after a new clone succeeds.

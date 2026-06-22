@@ -21,6 +21,11 @@ struct ConversationView: View {
     @State private var dueDrillCount = 0
     @State private var phoneCallActive = false
     @State private var silenceTask: Task<Void, Never>?
+    /// True only while `endSession` is wrapping up (summary generation in
+    /// flight). Distinct from `phase == .thinking`, which also fires per-turn
+    /// mid-conversation — this drives the full-screen "wrapping up" overlay so
+    /// the End tap gives immediate feedback instead of a silent wait.
+    @State private var isEnding = false
 
     /// Three-tier VAD threshold so brief pauses don't cut the user off mid-thought.
     ///   • `short`   — explicit end-of-sentence punctuation. They wrapped up.
@@ -62,6 +67,7 @@ struct ConversationView: View {
                 bottomBar
             }
             .background(Color(.systemBackground))
+            .overlay { endingOverlay }
             .navigationTitle(topic.isEmpty ? (turns.isEmpty ? "Pick a topic" : "Free talk") : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
@@ -72,7 +78,9 @@ struct ConversationView: View {
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
             .sheet(item: summaryBinding) { s in
-                SummarySheet(summary: s, onDone: endAndClose, onStartNew: startNewSession)
+                SummarySheet(summary: s, sessionId: sessionId,
+                             onDone: endAndClose, onStartNew: startNewSession)
+                    .environmentObject(appState)
             }
             .alert("Something went wrong", isPresented: errorBinding) {
                 Button("OK") { error = nil }
@@ -119,6 +127,27 @@ struct ConversationView: View {
                 }
                 .disabled(phase != .idle)
             }
+        }
+    }
+
+    // MARK: - Ending overlay
+
+    /// Shown while `endSession` generates the summary. Covers the screen with
+    /// a translucent veil + spinner so tapping End reads as "working on it",
+    /// not a frozen, silent pause before the summary sheet appears.
+    @ViewBuilder
+    private var endingOverlay: some View {
+        if isEnding {
+            ZStack {
+                Color(.systemBackground).opacity(0.9).ignoresSafeArea()
+                VStack(spacing: 14) {
+                    ProgressView().controlSize(.large)
+                    Text("Wrapping up your session…")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .transition(.opacity)
         }
     }
 
@@ -533,7 +562,13 @@ struct ConversationView: View {
         guard !turns.isEmpty else { return }
         phoneCallActive = false
         cancelSilenceTimer()
+        // If a call is still live, stop the mic/playback so the overlay isn't
+        // fighting an open recording while the summary generates.
+        if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+        if phase == .speaking { player.stop() }
         phase = .thinking
+        withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
+        defer { withAnimation(.easeInOut(duration: 0.2)) { isEnding = false } }
         do {
             let systemP = ConversationEngine.summarySystemPrompt(
                 targetLanguage: appState.targetLanguage,
@@ -880,9 +915,13 @@ private struct TopicPickerSheet: View {
 
 private struct SummarySheet: View {
     let summary: SessionSummary
+    let sessionId: UUID
     let onDone: () -> Void
     let onStartNew: () -> Void
     @Environment(\.dismiss) private var dismiss
+    /// Cards this session just produced, loaded once on appear so the bottom
+    /// action can route straight into reviewing them.
+    @State private var practiceCardCount = 0
 
     var body: some View {
         NavigationStack {
@@ -928,20 +967,57 @@ private struct SummarySheet: View {
                         .fontWeight(.semibold)
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                Button {
-                    onStartNew()
+            .onAppear {
+                practiceCardCount = DrillStore.shared.load()
+                    .filter { $0.sourceSessionId == sessionId }.count
+            }
+            .safeAreaInset(edge: .bottom) { bottomActions }
+        }
+    }
+
+    /// Practice-first close-out. The cards from this conversation already
+    /// exist in the SRS deck (ingested in `endSession`); the primary action
+    /// drops the user straight into reviewing just them, closing the
+    /// talk → summary → practice loop without a tab hunt.
+    @ViewBuilder
+    private var bottomActions: some View {
+        VStack(spacing: 10) {
+            if practiceCardCount > 0 {
+                NavigationLink {
+                    DrillView(source: .session(sessionId))
+                        .navigationTitle("Practice")
+                        .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    Label("Start a new conversation", systemImage: "arrow.uturn.left")
+                    Label(practiceCardCount == 1
+                          ? "Practice this card"
+                          : "Practice these \(practiceCardCount) cards",
+                          systemImage: "rectangle.stack.fill")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.bar)
+            }
+            // Secondary once there are cards to practice (so Practice stays
+            // the clear primary); the sole prominent action otherwise.
+            if practiceCardCount > 0 {
+                startNewButton.buttonStyle(.bordered)
+            } else {
+                startNewButton.buttonStyle(.borderedProminent)
             }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.bar)
+    }
+
+    private var startNewButton: some View {
+        Button {
+            onStartNew()
+        } label: {
+            Label("Start a new conversation", systemImage: "arrow.uturn.left")
+                .frame(maxWidth: .infinity)
+        }
+        .controlSize(.large)
     }
 }
 
