@@ -322,10 +322,8 @@ private extension DrillView {
                         shadowingCard = card
                     }
 
-                    Spacer()
-
-                    pillButton(systemImage: "books.vertical",
-                               text: card.enrichment == nil ? "Examples" : "Examples ✓") {
+                    pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
+                               text: "Examples") {
                         cancelSayIt()
                         showingEnrichmentFor = card
                     }
@@ -357,17 +355,19 @@ private extension DrillView {
     @ViewBuilder
     func pillButton(systemImage: String?, text: String, showSpinner: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: 5) {
                 if showSpinner {
-                    ProgressView().controlSize(.small)
+                    ProgressView().controlSize(.mini)
                 } else if let systemImage {
                     Image(systemName: systemImage)
                 }
                 Text(text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            .font(.footnote.weight(.medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .font(.footnote.weight(.semibold))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
             .background(Capsule().fill(Color.accentColor.opacity(0.12)))
             .foregroundStyle(.tint)
         }
@@ -407,7 +407,6 @@ private extension DrillView {
                     Image(systemName: "waveform")
                         .symbolEffect(.variableColor.iterative, options: .repeating)
                     Text(live.transcript.isEmpty ? "Listening…" : live.transcript)
-                        .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     Spacer()
                     Image(systemName: "stop.fill")

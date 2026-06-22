@@ -26,6 +26,16 @@ struct ConversationView: View {
     /// mid-conversation — this drives the full-screen "wrapping up" overlay so
     /// the End tap gives immediate feedback instead of a silent wait.
     @State private var isEnding = false
+    @State private var didAutoStart = false
+    @Environment(\.dismiss) private var dismiss
+
+    /// Presented as the immersive "talk seat" from ConversationHome. An initial
+    /// topic launches a scenario; empty = free talk. The call auto-starts on
+    /// appear so it feels like placing a phone call.
+    init(initialTopic: String = "", initialBlurb: String = "") {
+        _topic = State(initialValue: initialTopic)
+        _topicBlurb = State(initialValue: initialBlurb)
+    }
 
     /// Three-tier VAD threshold so brief pauses don't cut the user off mid-thought.
     ///   • `short`   — explicit end-of-sentence punctuation. They wrapped up.
@@ -68,12 +78,16 @@ struct ConversationView: View {
             }
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
-            .navigationTitle(topic.isEmpty ? (turns.isEmpty ? "Pick a topic" : "Free talk") : topic)
+            .navigationTitle(topic.isEmpty ? "Free talk" : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .sheet(isPresented: $showTopicPicker) {
-                ScenariosListSheet(topic: $topic, topicBlurb: $topicBlurb)
-                    .environmentObject(appState)
+            .onAppear {
+                // Place the "call" once when the seat opens.
+                guard !didAutoStart else { return }
+                didAutoStart = true
+                phoneCallActive = true
+                HapticEngine.phoneCallStarted()
+                Task { await openConversation() }
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
@@ -113,8 +127,11 @@ struct ConversationView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button { showTopicPicker = true } label: {
-                Label("Topic", systemImage: "list.bullet.rectangle")
+            Button {
+                Task { await endPhoneCall() }
+                dismiss()
+            } label: {
+                Label("Close", systemImage: "xmark")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
@@ -158,19 +175,21 @@ struct ConversationView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 18) {
                     if turns.isEmpty {
-                        HomeDashboard(
-                            snapshot: dashboard,
-                            currentTopic: topic,
-                            onPickTopic: { showTopicPicker = true }
-                        )
-                        .padding(.horizontal, -20)
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text(topic.isEmpty ? "Starting your conversation…" : "Setting the scene…")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 40)
                     }
                     ForEach(turns) { turn in
                         // No implicit morph between adjacent turns — each
                         // bubble fades in / out cleanly. Prevents the
                         // previous bubble's text from being visible inside
                         // the next one during insertion animation.
-                        TurnView(turn: turn)
+                        TurnView(turn: turn, nativeLanguage: appState.nativeLanguage)
                             .id(turn.id)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
@@ -646,20 +665,13 @@ struct ConversationView: View {
         }
     }
 
-    /// Done from the summary sheet → close the session cleanly. Summary is
-    /// already saved to History; the convo on screen should go away so the
-    /// Talk tab returns to its empty/home state.
+    /// Done from the summary sheet → leave the talk seat entirely, back to the
+    /// Talk home. Summary is already saved to History.
     private func endAndClose() {
         summary = nil
-        sessionId = UUID()
-        sessionStartedAt = Date()
-        turns = []
-        didSaveCurrentSession = false
-        phase = .idle
         phoneCallActive = false
         cancelSilenceTimer()
-        // Deliberately NOT triggering openConversation — Done means "stop",
-        // not "start over". Topic stays so the user can resume later.
+        dismiss()
     }
 
     private static func mp3DurationMs(_ data: Data) -> Int {
@@ -685,6 +697,11 @@ struct ConversationView: View {
 
 private struct TurnView: View {
     let turn: Turn
+    let nativeLanguage: String
+
+    @State private var translation: String?
+    @State private var showing = false
+    @State private var loading = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -694,11 +711,50 @@ private struct TurnView: View {
             Text(turn.transcript)
                 .font(.title3)
                 .foregroundStyle(turn.role == .user ? .primary : Color.accentColor)
+
+            Button(action: toggleMeaning) {
+                HStack(spacing: 4) {
+                    if loading {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "character.bubble")
+                    }
+                    Text(showing ? "Hide meaning" : "Meaning")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+
+            if showing, let t = translation {
+                Text(t)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             if turn.role == .user, let suggestion = turn.suggestion {
                 SuggestionChip(suggestion: suggestion)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func toggleMeaning() {
+        if showing { showing = false; return }
+        showing = true
+        guard translation == nil else { return }
+        if let c = Translator.cached(turn.transcript, to: nativeLanguage) {
+            translation = c
+            return
+        }
+        loading = true
+        Task {
+            let t = await Translator.translate(turn.transcript, to: nativeLanguage)
+            translation = t
+            loading = false
+            if t == nil { showing = false }
+        }
     }
 }
 

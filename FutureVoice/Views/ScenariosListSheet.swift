@@ -13,6 +13,7 @@ struct ScenariosListSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var showingBuilder = false
+    @State private var showingInterests = false
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
     @State private var newsError: String?
@@ -51,10 +52,13 @@ struct ScenariosListSheet: View {
                     applyAndDismiss(newScenario)
                 }
             }
+            .sheet(isPresented: $showingInterests, onDismiss: reloadNewsForInterests) {
+                InterestsEditorSheet()
+                    .environmentObject(appState)
+            }
             .navigationDestination(item: $watchScenario) { s in
                 WatchView(counterpart: Self.watchCounterpart(for: s),
-                          customScenario: Self.watchScenarioText(s),
-                          persist: false)
+                          customScenario: Self.watchScenarioText(s))
                     .environmentObject(appState)
             }
         }
@@ -161,9 +165,10 @@ struct ScenariosListSheet: View {
     private var newsSection: some View {
         Section {
             if interests.isEmpty {
-                Text("Add interests in Me → Profile and current stories you'd actually talk about show up here.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                Button { showingInterests = true } label: {
+                    Label("Add interests", systemImage: "plus.circle")
+                        .font(.subheadline)
+                }
             } else if newsTopics.isEmpty {
                 if loadingNews {
                     HStack(spacing: 10) {
@@ -194,9 +199,13 @@ struct ScenariosListSheet: View {
                 Text(e).font(.caption).foregroundStyle(.red)
             }
         } header: {
-            HStack {
+            HStack(spacing: 16) {
                 Text("In the news")
                 Spacer()
+                Button { showingInterests = true } label: {
+                    Label("Edit interests", systemImage: "slider.horizontal.3")
+                        .labelStyle(.iconOnly)
+                }
                 if !newsTopics.isEmpty {
                     Button {
                         Task { await fetchNews() }
@@ -260,6 +269,17 @@ struct ScenariosListSheet: View {
             }
         } catch {
             newsError = error.localizedDescription
+        }
+    }
+
+    /// After editing interests, refresh the news list against the new set.
+    private func reloadNewsForInterests() {
+        guard !interests.isEmpty else { newsTopics = []; return }
+        if let cached = NewsTopicStore.shared.valid(for: interests) {
+            newsTopics = cached
+        } else {
+            newsTopics = []
+            Task { await fetchNews() }
         }
     }
 

@@ -316,6 +316,14 @@ struct WatchDialogue: Codable, Identifiable, Hashable {
     var title: String?
     var turns: [DialogueEngineTurn]
     var createdAt: Date = Date()
+    /// Who the user talked WITH — a counterpart name, or a scenario role like
+    /// "the Doctor". Lets the Watch list show + replay the dialogue even when
+    /// there's no saved Counterpart (scenario watches), and survives counterpart
+    /// deletion. Optional for rows persisted before this existed.
+    var speakerName: String?
+    /// ElevenLabs voice for the non-user turns, stored so replay works without
+    /// the Counterpart object.
+    var voicePresetId: String?
 
     var displayTitle: String {
         if let t = title?.trimmingCharacters(in: .whitespacesAndNewlines), !t.isEmpty { return t }

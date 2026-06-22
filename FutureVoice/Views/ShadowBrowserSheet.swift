@@ -121,7 +121,7 @@ private struct ShadowRow: View {
             Text(turn.transcript)
                 .font(.body)
                 .foregroundStyle(.primary)
-                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 8)
             if isSaved {
                 Image(systemName: "bookmark.fill")

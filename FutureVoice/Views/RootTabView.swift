@@ -18,7 +18,7 @@ struct RootTabView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            ConversationView()
+            ConversationHome()
                 .tabItem { Label("Talk", systemImage: "bubble.left.and.bubble.right.fill") }
                 .tag(Tab.talk)
 

@@ -13,7 +13,7 @@ struct WatchTab: View {
     var body: some View {
         NavigationStack {
             Group {
-                if appState.counterparts.isEmpty {
+                if appState.counterparts.isEmpty && appState.watchDialogues.isEmpty {
                     emptyState
                 } else {
                     content
@@ -53,13 +53,15 @@ struct WatchTab: View {
             if !recent.isEmpty {
                 Section {
                     ForEach(recent) { d in
-                        if let c = counterpart(for: d) {
-                            NavigationLink {
-                                WatchView(counterpart: c, savedDialogue: d)
-                                    .environmentObject(appState)
-                            } label: {
-                                dialogueRow(d, counterpart: c)
-                            }
+                        // Real counterpart when one exists; otherwise a
+                        // reconstructed scenario partner (role + saved voice) so
+                        // scenario watches still show up and replay here.
+                        let c = counterpart(for: d) ?? scenarioCounterpart(for: d)
+                        NavigationLink {
+                            WatchView(counterpart: c, savedDialogue: d)
+                                .environmentObject(appState)
+                        } label: {
+                            dialogueRow(d, counterpart: c)
                         }
                     }
                     .onDelete { indexSet in
@@ -162,6 +164,15 @@ struct WatchTab: View {
 
     private func counterpart(for d: WatchDialogue) -> Counterpart? {
         appState.counterparts.first { $0.id == d.counterpartId }
+    }
+
+    /// Rebuild a throwaway partner for a scenario watch (no saved Counterpart)
+    /// from the name + voice stored on the dialogue, so it lists and replays.
+    private func scenarioCounterpart(for d: WatchDialogue) -> Counterpart {
+        var c = Counterpart.empty
+        c.name = d.speakerName ?? d.scenarioTitle
+        c.voicePresetId = d.voicePresetId ?? VoicePreset.catalog.first!.id
+        return c
     }
 
     // MARK: - Rows

@@ -9,12 +9,15 @@ struct FlowLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let maxWidth = proposal.width ?? .infinity
+        // Never let an item ask for more than the available width — otherwise a
+        // long chip/word overflows horizontally and the page scrolls sideways.
+        let itemProposal = ProposedViewSize(width: maxWidth.isFinite ? maxWidth : nil, height: nil)
         var x: CGFloat = 0
         var y: CGFloat = 0
         var lineHeight: CGFloat = 0
         var widestLine: CGFloat = 0
         for v in subviews {
-            let s = v.sizeThatFits(.unspecified)
+            let s = v.sizeThatFits(itemProposal)
             if x > 0, x + s.width > maxWidth {
                 widestLine = max(widestLine, x - spacing)
                 x = 0
@@ -30,11 +33,12 @@ struct FlowLayout: Layout {
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let itemProposal = ProposedViewSize(width: bounds.width, height: nil)
         var x = bounds.minX
         var y = bounds.minY
         var lineHeight: CGFloat = 0
         for v in subviews {
-            let s = v.sizeThatFits(.unspecified)
+            let s = v.sizeThatFits(itemProposal)
             if x > bounds.minX, x + s.width > bounds.maxX {
                 x = bounds.minX
                 y += lineHeight + lineSpacing

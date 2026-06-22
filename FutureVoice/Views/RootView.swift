@@ -10,7 +10,7 @@ struct RootView: View {
 
     var body: some View {
         if auth.session == nil {
-            SignInView()
+            WelcomeView()
         } else if !appState.setupComplete {
             SetupFlowView()
         } else if appState.voiceCloneId == nil {

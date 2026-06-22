@@ -136,7 +136,7 @@ struct PracticeTab: View {
                                 Text(pick.turn.transcript)
                                     .font(.body)
                                     .foregroundStyle(.primary)
-                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Text(pick.reason)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)

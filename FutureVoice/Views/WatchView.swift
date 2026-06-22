@@ -483,7 +483,9 @@ struct WatchView: View {
             scenarioTitle: title,
             scenarioBlurb: blurb,
             title: generatedTitle,
-            turns: turns.map { DialogueEngineTurn(speaker: $0.speaker.rawValue, text: $0.text) }
+            turns: turns.map { DialogueEngineTurn(speaker: $0.speaker.rawValue, text: $0.text) },
+            speakerName: counterpart.name,
+            voicePresetId: counterpart.voicePresetId
         )
         appState.saveWatchDialogue(stored)
     }

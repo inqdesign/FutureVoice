@@ -52,7 +52,7 @@ struct SavedLinesView: View {
                 Text(line.text)
                     .font(.body)
                     .foregroundStyle(.primary)
-                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 6) {
                     if !line.source.isEmpty {
                         Text(line.source)
