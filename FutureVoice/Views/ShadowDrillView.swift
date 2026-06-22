@@ -35,6 +35,11 @@ struct ShadowDrillView: View {
     @State private var cachedAudioURL: URL?
     @State private var timings: [WordTiming] = []
     @State private var autoStopTask: Task<Void, Never>?
+    /// Word-index range selected for loop practice, shared between the target
+    /// line text and the timeline player (both read/write it).
+    @State private var selectedWordRange: ClosedRange<Int>?
+    /// First tapped word when building a range on the target line.
+    @State private var selectionAnchor: Int?
 
     struct UserWordHit: Hashable {
         let word: String
@@ -64,7 +69,7 @@ struct ShadowDrillView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
-                .padding(.bottom, 200)
+                .padding(.bottom, 24)
             }
             .background(Color(.systemBackground))
             .navigationTitle("Shadow")
@@ -105,9 +110,26 @@ struct ShadowDrillView: View {
         HStack(spacing: 8) {
             Image(systemName: "play.circle")
                 .foregroundStyle(.secondary)
-            Text("Listen with “Hear it”, then tap the mic. Sync recording is silent so the mic only picks up your voice.")
+            Text("Play & loop the line below, tap words to focus a phrase, then tap the mic to shadow it. Recording is silent so the mic only hears you.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// Scrub / select-a-phrase / loop player. Lives in the unified bottom bar
+    /// next to the speak button; hidden while recording so it can't fight the
+    /// sync session.
+    @ViewBuilder
+    private var timelinePlayer: some View {
+        if (phase == .idle || phase == .result),
+           let url = cachedAudioURL,
+           FileManager.default.fileExists(atPath: url.path) {
+            ShadowTimelinePlayer(
+                audioURL: url,
+                timings: timings,
+                selectedWordRange: $selectedWordRange,
+                player: player
+            )
         }
     }
 
@@ -124,11 +146,51 @@ struct ShadowDrillView: View {
             }
             // Re-render at 30 Hz whenever a time-driven highlight is needed:
             // live sync (clock running) OR preview playback.
-            TimelineView(.animation(minimumInterval: 1.0 / 30.0,
-                                    paused: !karaokeAnimating)) { _ in
-                karaokeText
+            if timings.isEmpty {
+                Text(turn.transcript)
                     .font(.title2.weight(.semibold))
+                    .foregroundStyle(.primary)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0,
+                                        paused: !karaokeAnimating)) { _ in
+                    karaokeWords
+                }
             }
+        }
+    }
+
+    /// Tappable target words: karaoke color from `wordColor`, plus a selection
+    /// background for the loop range (shared with the timeline player).
+    private var karaokeWords: some View {
+        let alignment = positionAlignment()
+        return FlowLayout(spacing: 1, lineSpacing: 6) {
+            ForEach(Array(timings.enumerated()), id: \.offset) { i, wt in
+                let selected = selectedWordRange?.contains(i) ?? false
+                Text(wt.word)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(wordColor(at: i, wt: wt, alignment: alignment, offset: 0))
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture { tapWord(i) }
+            }
+        }
+    }
+
+    /// Tap a target word to build the loop range: first tap sets an anchor
+    /// (single word); the next tap extends to a phrase; a third starts over.
+    private func tapWord(_ i: Int) {
+        if selectedWordRange == nil { selectionAnchor = nil }
+        if let anchor = selectionAnchor {
+            selectedWordRange = min(anchor, i)...max(anchor, i)
+            selectionAnchor = nil
+        } else {
+            selectionAnchor = i
+            selectedWordRange = i...i
         }
     }
 
@@ -495,17 +557,12 @@ struct ShadowDrillView: View {
 
     // MARK: - Bottom bar
 
+    /// Unified practice panel: listen + loop (timeline) and speak (mic) in one
+    /// place. Listening IS the timeline's play button, so there's no separate
+    /// "Hear it" — select a phrase, loop it, then tap the mic to shadow it.
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            Button {
-                Task { await previewTarget() }
-            } label: {
-                Label("Hear it (preview)", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .disabled(previewDisabled)
+            timelinePlayer
 
             Button {
                 Task { await handleSyncTap() }
@@ -537,7 +594,8 @@ struct ShadowDrillView: View {
                 .frame(height: 16)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
         .background(.bar)
     }
@@ -565,7 +623,9 @@ struct ShadowDrillView: View {
 
     private var syncEnabled: Bool {
         switch phase {
-        case .idle, .result, .syncing: return !player.isPlaying || phase == .syncing
+        // Allowed even while the loop is playing — tapping the mic stops
+        // playback and starts recording (see startSync).
+        case .idle, .result, .syncing: return true
         case .loadingAudio, .countdown, .analyzing: return false
         }
     }
@@ -648,6 +708,9 @@ struct ShadowDrillView: View {
     }
 
     private func startSync() async {
+        // Stop any loop/preview playback before recording so the speaker audio
+        // doesn't bleed into the mic.
+        player.stop()
         // Ensure we have target timings loaded (used for the visual reference)
         if cachedAudioURL == nil {
             await prepareAudio()
