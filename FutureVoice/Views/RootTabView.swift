@@ -1,19 +1,21 @@
 import SwiftUI
 
-/// Five-tab structure: the three practice modes (Talk / Practice / Watch),
-/// then Progress (every language-development signal in one hub) and
-/// Settings (account + configuration, nothing else). Growth and settings
-/// used to share one "Me" tab, which buried both.
+/// Four-tab structure built around the one engine that feeds everything —
+/// Talk. You speak (Talk), study what it produced (Practice: review + shadow +
+/// vocabulary), immerse by watching your fluent self (Watch), and manage
+/// yourself (You: progress dashboard + account + settings). Progress used to
+/// be its own tab but it's low-frequency analytics, so it folds under You;
+/// vocabulary moved into Practice where it belongs as a study activity.
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
     @State private var selection: Tab = .talk
-    /// Trial-first paywall shows ONCE, right after onboarding completes —
-    /// the Speak placement. Skippable; lives on in Settings → View plans.
-    @AppStorage("futurevoice.paywallSeen") private var paywallSeen = false
-    @State private var showingPaywall = false
+    /// Beta intro shows ONCE, right after onboarding — in place of a paywall
+    /// (no subscription during the beta). Explains the free quota + invites.
+    @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
+    @State private var showingBetaWelcome = false
 
     enum Tab: Hashable {
-        case talk, practice, watch, progress, settings
+        case talk, practice, watch, you
     }
 
     var body: some View {
@@ -30,19 +32,15 @@ struct RootTabView: View {
                 .tabItem { Label("Watch", systemImage: "person.2.wave.2") }
                 .tag(Tab.watch)
 
-            ProgressTab()
-                .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
-                .tag(Tab.progress)
-
             MeTab()
-                .tabItem { Label("Settings", systemImage: "gearshape") }
-                .tag(Tab.settings)
+                .tabItem { Label("You", systemImage: "person.crop.circle") }
+                .tag(Tab.you)
         }
         .onAppear {
-            if !paywallSeen { showingPaywall = true }
+            if !betaWelcomeSeen { showingBetaWelcome = true }
         }
-        .fullScreenCover(isPresented: $showingPaywall, onDismiss: { paywallSeen = true }) {
-            PaywallView()
+        .fullScreenCover(isPresented: $showingBetaWelcome, onDismiss: { betaWelcomeSeen = true }) {
+            BetaWelcomeView()
         }
     }
 }

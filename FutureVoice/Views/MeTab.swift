@@ -1,13 +1,15 @@
 import SwiftUI
 
-/// Pure settings — account, persona, level, appearance, voice. All growth /
-/// progress signals live in `ProgressTab` now; mixing them in here buried
-/// both. Account sits FIRST so plan + credit balance are one tab-tap away
-/// instead of hidden under practice stats.
+/// The "You" tab — who you are + how you're doing + your settings, in one
+/// place. Account/credits first, then a link into the progress dashboard
+/// (which used to be its own tab but is low-frequency), then profile, level,
+/// appearance and voice.
 struct MeTab: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @State private var account: AccountStatus = .empty
+    @State private var streakDays = 0
+    @State private var totalSessions = 0
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
@@ -45,6 +47,32 @@ struct MeTab: View {
                     Text("Account")
                 } footer: {
                     Text("Credits are spent on voice synthesis and AI calls. They refill with your plan cycle.")
+                }
+
+                Section {
+                    NavigationLink {
+                        ProgressTab()
+                    } label: {
+                        row(icon: "chart.line.uptrend.xyaxis",
+                            title: "Your progress",
+                            subtitle: progressSubtitle)
+                    }
+                } header: {
+                    Text("Progress")
+                }
+
+                Section {
+                    NavigationLink {
+                        InviteView()
+                    } label: {
+                        row(icon: "gift",
+                            title: "Invite & earn credits",
+                            subtitle: "You both get 500 credits per friend")
+                    }
+                } header: {
+                    Text("Invite")
+                } footer: {
+                    Text("No subscription during the beta — invite friends to extend your usage.")
                 }
 
                 Section("Profile") {
@@ -134,7 +162,7 @@ struct MeTab: View {
                 }
                 #endif
             }
-            .navigationTitle("Settings")
+            .navigationTitle("You")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
@@ -170,7 +198,18 @@ struct MeTab: View {
             }
             #endif
             .task { account = await AccountStatus.fetch() }
+            .onAppear {
+                let snap = PracticeStats.snapshot()
+                streakDays = snap.streakDays
+                totalSessions = snap.totalSessions
+            }
         }
+    }
+
+    private var progressSubtitle: String {
+        let streak = streakDays > 0 ? "\(streakDays)-day streak" : "No streak yet"
+        let sessions = totalSessions == 1 ? "1 talk" : "\(totalSessions) talks"
+        return "\(streak) · \(sessions)"
     }
 
     private func regenerateFromSavedSample() {

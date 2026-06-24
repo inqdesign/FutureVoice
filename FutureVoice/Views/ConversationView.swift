@@ -27,14 +27,27 @@ struct ConversationView: View {
     /// the End tap gives immediate feedback instead of a silent wait.
     @State private var isEnding = false
     @State private var didAutoStart = false
+    @State private var isResuming = false
     @Environment(\.dismiss) private var dismiss
 
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
-    /// topic launches a scenario; empty = free talk. The call auto-starts on
-    /// appear so it feels like placing a phone call.
-    init(initialTopic: String = "", initialBlurb: String = "") {
-        _topic = State(initialValue: initialTopic)
-        _topicBlurb = State(initialValue: initialBlurb)
+    /// topic launches a scenario; empty = free talk. Pass `resumeSession` to
+    /// pick up a past conversation where it left off (same session id, prior
+    /// turns preloaded as context). The call auto-starts on appear so it feels
+    /// like placing a phone call.
+    init(initialTopic: String = "", initialBlurb: String = "", resumeSession: Session? = nil) {
+        if let s = resumeSession {
+            _topic = State(initialValue: s.topic ?? "")
+            _topicBlurb = State(initialValue: "")
+            _turns = State(initialValue: s.turns)
+            _sessionId = State(initialValue: s.id)
+            _sessionStartedAt = State(initialValue: s.startedAt)
+            _didSaveCurrentSession = State(initialValue: true)
+            _isResuming = State(initialValue: true)
+        } else {
+            _topic = State(initialValue: initialTopic)
+            _topicBlurb = State(initialValue: initialBlurb)
+        }
     }
 
     /// Three-tier VAD threshold so brief pauses don't cut the user off mid-thought.
@@ -87,7 +100,14 @@ struct ConversationView: View {
                 didAutoStart = true
                 phoneCallActive = true
                 HapticEngine.phoneCallStarted()
-                Task { await openConversation() }
+                if isResuming {
+                    // Continue from the loaded transcript — open the mic so the
+                    // user picks up where they left off (Gemini already has the
+                    // prior turns as context).
+                    Task { await startRecording() }
+                } else {
+                    Task { await openConversation() }
+                }
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
@@ -628,10 +648,18 @@ struct ConversationView: View {
                 summary: computed
             )
             SessionStore.shared.save(session)
+            // Clear any cards from a previous end of THIS session (resume
+            // re-summarizes the whole thing) so they don't pile up.
+            DrillStore.shared.deleteForSession(sessionId)
             DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
             // Grow the long-term learner profile — the next conversation's
             // system prompt picks these patterns up.
             appState.recordSessionOutcome(summary: computed, turns: turns)
+            // Fold the user's spoken words into their vocabulary pool.
+            VocabStore.shared.ingest(
+                sessionId: sessionId,
+                userTexts: turns.filter { $0.role == .user }.map { $0.transcript }
+            )
             didSaveCurrentSession = true
             refreshDashboard()
             // Kick off async weekly-report generation if unlock conditions
@@ -734,7 +762,7 @@ private struct TurnView: View {
             }
 
             if turn.role == .user, let suggestion = turn.suggestion {
-                SuggestionChip(suggestion: suggestion)
+                SuggestionChip(suggestion: suggestion, nativeLanguage: nativeLanguage)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -760,6 +788,11 @@ private struct TurnView: View {
 
 private struct SuggestionChip: View {
     let suggestion: TurnSuggestion
+    let nativeLanguage: String
+
+    @State private var reasonNative: String?
+    @State private var showing = false
+    @State private var loading = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -767,13 +800,31 @@ private struct SuggestionChip: View {
                 .foregroundStyle(.tint)
                 .font(.footnote)
                 .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(suggestion.alternative)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                 Text(suggestion.reason)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(action: toggle) {
+                    HStack(spacing: 4) {
+                        if loading { ProgressView().controlSize(.mini) }
+                        else { Image(systemName: "character.bubble") }
+                        Text(showing ? "Hide" : "Explain in my language")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+                if showing, let r = reasonNative {
+                    Text(r)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(.horizontal, 12)
@@ -783,6 +834,20 @@ private struct SuggestionChip: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
+    }
+
+    private func toggle() {
+        if showing { showing = false; return }
+        showing = true
+        guard reasonNative == nil else { return }
+        if let c = Translator.cached(suggestion.reason, to: nativeLanguage) { reasonNative = c; return }
+        loading = true
+        Task {
+            let t = await Translator.translate(suggestion.reason, to: nativeLanguage)
+            reasonNative = t
+            loading = false
+            if t == nil { showing = false }
+        }
     }
 }
 

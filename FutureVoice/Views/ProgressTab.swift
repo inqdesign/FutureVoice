@@ -14,17 +14,17 @@ struct ProgressTab: View {
     )
 
     var body: some View {
-        NavigationStack {
-            List {
-                thisWeekSection
-                reportSection
-                patternsSection
-                historySection
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle("Progress")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear { dashboard = PracticeStats.snapshot() }
+        List {
+            thisWeekSection
+            reportSection
+            patternsSection
+            historySection
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Your progress")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            dashboard = PracticeStats.snapshot()
         }
     }
 

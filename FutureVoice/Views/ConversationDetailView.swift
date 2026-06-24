@@ -8,6 +8,7 @@ struct ConversationDetailView: View {
     @EnvironmentObject private var appState: AppState
     let session: Session
     @StateObject private var player = AudioPlayer()
+    @State private var showingContinue = false
 
     var body: some View {
         ScrollView {
@@ -26,8 +27,12 @@ struct ConversationDetailView: View {
         }
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom) { reviewBar }
+        .safeAreaInset(edge: .bottom) { bottomBar }
         .onDisappear { player.stop() }
+        .fullScreenCover(isPresented: $showingContinue) {
+            ConversationView(resumeSession: session)
+                .environmentObject(appState)
+        }
     }
 
     private var header: some View {
@@ -80,17 +85,28 @@ struct ConversationDetailView: View {
             .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
-    private var reviewBar: some View {
-        NavigationLink {
-            DrillView(source: .session(session.id))
-                .navigationTitle("Review")
-                .navigationBarTitleDisplayMode(.inline)
-        } label: {
-            Label("Review cards from this talk", systemImage: "rectangle.stack.fill")
-                .frame(maxWidth: .infinity)
+    private var bottomBar: some View {
+        VStack(spacing: 10) {
+            Button {
+                showingContinue = true
+            } label: {
+                Label("Continue this conversation", systemImage: "phone.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+
+            NavigationLink {
+                DrillView(source: .session(session.id))
+                    .navigationTitle("Review")
+                    .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                Label("Review cards from this talk", systemImage: "rectangle.stack.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)
@@ -146,6 +162,9 @@ private struct TranscriptRow: View {
     @State private var translation: String?
     @State private var showing = false
     @State private var loading = false
+    @State private var reasonNative: String?
+    @State private var reasonShowing = false
+    @State private var reasonLoading = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -180,10 +199,23 @@ private struct TranscriptRow: View {
             }
 
             if turn.role == .user, let s = turn.suggestion {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(s.alternative).font(.subheadline).foregroundStyle(.primary)
                     Text(s.reason).font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                    Button { toggleReason(s.reason) } label: {
+                        HStack(spacing: 4) {
+                            if reasonLoading { ProgressView().controlSize(.mini) }
+                            else { Image(systemName: "character.bubble") }
+                            Text(reasonShowing ? "Hide" : "Explain in my language")
+                        }
+                        .font(.caption2).foregroundStyle(.tint)
+                    }
+                    .buttonStyle(.plain)
+                    if reasonShowing, let r = reasonNative {
+                        Text(r).font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 .padding(10)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -210,6 +242,20 @@ private struct TranscriptRow: View {
             translation = t
             loading = false
             if t == nil { showing = false }
+        }
+    }
+
+    private func toggleReason(_ reason: String) {
+        if reasonShowing { reasonShowing = false; return }
+        reasonShowing = true
+        guard reasonNative == nil else { return }
+        if let c = Translator.cached(reason, to: nativeLanguage) { reasonNative = c; return }
+        reasonLoading = true
+        Task {
+            let t = await Translator.translate(reason, to: nativeLanguage)
+            reasonNative = t
+            reasonLoading = false
+            if t == nil { reasonShowing = false }
         }
     }
 }

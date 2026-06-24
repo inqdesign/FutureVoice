@@ -1,0 +1,201 @@
+import Foundation
+import NaturalLanguage
+
+/// The user's active vocabulary pool. Tracks, against `CoreVocabulary`, which
+/// words they've actually USED (auto-detected from their spoken turns) or
+/// self-marked as KNOWN. Grows over time → the word-book page.
+@MainActor
+final class VocabStore: ObservableObject {
+    static let shared = VocabStore()
+
+    enum State: String, Codable { case used, known }
+
+    struct Record: Codable {
+        var state: State
+        var firstAt: Date
+        var lastAt: Date
+        var count: Int
+    }
+
+    /// lemma → record. Absent = not yet used/known.
+    @Published private(set) var records: [String: Record] = [:]
+    /// Words the user collected into their notebook to keep studying.
+    @Published private(set) var studying: [String] = []
+    /// Session ids already folded in, so re-ingest is cheap/idempotent.
+    private var ingestedSessions: Set<UUID> = []
+
+    private let fileURL: URL
+    private let metaURL: URL
+    private let studyingURL: URL
+
+    init() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        fileURL = dir.appendingPathComponent("vocab_pool.json")
+        metaURL = dir.appendingPathComponent("vocab_ingested.json")
+        studyingURL = dir.appendingPathComponent("vocab_studying.json")
+        load()
+    }
+
+    // MARK: - Notebook (study collection)
+
+    func isStudying(_ word: String) -> Bool { studying.contains(word) }
+
+    func addStudying(_ word: String) {
+        guard !studying.contains(word) else { return }
+        studying.insert(word, at: 0)   // newest first
+        saveStudying()
+    }
+
+    func removeStudying(_ word: String) {
+        studying.removeAll { $0 == word }
+        saveStudying()
+    }
+
+    // MARK: - Stats
+
+    var usedCount: Int { records.values.filter { $0.state == .used }.count }
+    var knownCount: Int { records.count }   // used + self-marked known
+    var total: Int { CoreVocabulary.total }
+
+    /// Words active in the last `days` — the real "speaking vocabulary".
+    func activeCount(days: Int = 30) -> Int {
+        let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
+        return records.values.filter { $0.state == .used && $0.lastAt >= cutoff }.count
+    }
+
+    func state(of lemma: String) -> State? { records[lemma]?.state }
+
+    /// Words the user actually uses, most-recent first.
+    func usedWords() -> [String] {
+        records.filter { $0.value.state == .used }
+            .sorted { $0.value.lastAt > $1.value.lastAt }
+            .map { $0.key }
+    }
+
+    // MARK: - Mutation
+
+    /// Fold a finished session's USER turns into the pool. No-op if already done.
+    @discardableResult
+    func ingest(sessionId: UUID, userTexts: [String], at date: Date = Date()) -> Int {
+        guard !ingestedSessions.contains(sessionId) else { return 0 }
+        ingestedSessions.insert(sessionId)
+        var added = 0
+        for lemma in lemmas(in: userTexts) where CoreVocabulary.set.contains(lemma) {
+            if var r = records[lemma] {
+                r.count += 1
+                r.lastAt = date
+                records[lemma] = r          // keep .known if self-marked earlier
+            } else {
+                records[lemma] = Record(state: .used, firstAt: date, lastAt: date, count: 1)
+                added += 1
+            }
+        }
+        save()
+        return added
+    }
+
+    /// Fold every ended session into the pool (idempotent) — used to seed the
+    /// page from history the first time, and to catch anything missed.
+    func backfillFromSessions() {
+        for s in SessionStore.shared.load() where s.endedAt != nil {
+            let userTexts = s.turns.filter { $0.role == .user }.map { $0.transcript }
+            ingest(sessionId: s.id, userTexts: userTexts, at: s.endedAt ?? s.startedAt)
+        }
+    }
+
+    /// User self-marks a word as known — it also leaves the study notebook.
+    func markKnown(_ lemma: String) {
+        if records[lemma] == nil {
+            records[lemma] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0)
+            save()
+        }
+        removeStudying(lemma)
+    }
+
+    func unmark(_ lemma: String) {
+        records[lemma] = nil
+        save()
+    }
+
+    // MARK: - Sentences the fluent self said using a word
+
+    struct SourceSentence: Identifiable {
+        let id = UUID()
+        let text: String
+        let audioURL: URL?
+        let source: String   // "Talk" / "Watch"
+    }
+
+    /// Lines where the fluent self (your clone) used this word — from past
+    /// conversations (with replayable audio) and Watch dialogues.
+    func sentences(using word: String) -> [SourceSentence] {
+        var out: [SourceSentence] = []
+        for s in SessionStore.shared.load() {
+            for t in s.turns where t.role == .fluentSelf {
+                if lemmas(in: [t.transcript]).contains(word) {
+                    out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: "Talk"))
+                }
+            }
+        }
+        for d in WatchDialogueStore.shared.load() {
+            for turn in d.turns where turn.speaker == "user" {
+                if lemmas(in: [turn.text]).contains(word) {
+                    out.append(SourceSentence(text: turn.text, audioURL: nil, source: "Watch"))
+                }
+            }
+        }
+        return out
+    }
+
+    // MARK: - Lemmatization
+
+    private func lemmas(in texts: [String]) -> Set<String> {
+        var out = Set<String>()
+        let tagger = NLTagger(tagSchemes: [.lemma])
+        for text in texts {
+            let lower = text.lowercased()
+            tagger.string = lower
+            tagger.setLanguage(.english, range: lower.startIndex..<lower.endIndex)
+            tagger.enumerateTags(in: lower.startIndex..<lower.endIndex,
+                                 unit: .word, scheme: .lemma,
+                                 options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
+                let lemma = (tag?.rawValue ?? String(lower[range])).lowercased()
+                if lemma.count > 1 { out.insert(lemma) }
+                return true
+            }
+        }
+        return out
+    }
+
+    // MARK: - Persistence
+
+    private func load() {
+        if let data = try? Data(contentsOf: fileURL),
+           let dict = try? JSONDecoder().decode([String: Record].self, from: data) {
+            records = dict
+        }
+        if let data = try? Data(contentsOf: metaURL),
+           let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
+            ingestedSessions = ids
+        }
+        if let data = try? Data(contentsOf: studyingURL),
+           let list = try? JSONDecoder().decode([String].self, from: data) {
+            studying = list
+        }
+    }
+
+    private func save() {
+        if let data = try? JSONEncoder().encode(records) {
+            try? data.write(to: fileURL, options: [.atomic])
+        }
+        if let data = try? JSONEncoder().encode(ingestedSessions) {
+            try? data.write(to: metaURL, options: [.atomic])
+        }
+    }
+
+    private func saveStudying() {
+        if let data = try? JSONEncoder().encode(studying) {
+            try? data.write(to: studyingURL, options: [.atomic])
+        }
+    }
+}

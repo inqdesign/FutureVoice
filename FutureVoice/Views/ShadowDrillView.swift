@@ -59,7 +59,6 @@ struct ShadowDrillView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    headphoneHint
                     targetSection
                     durationCard
                     if let fb = feedback {
@@ -105,16 +104,6 @@ struct ShadowDrillView: View {
     }
 
     // MARK: - Sections
-
-    private var headphoneHint: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "play.circle")
-                .foregroundStyle(.secondary)
-            Text("Play & loop the line below, tap words to focus a phrase, then tap the mic to shadow it. Recording is silent so the mic only hears you.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-    }
 
     /// Scrub / select-a-phrase / loop player. Lives in the unified bottom bar
     /// next to the speak button; hidden while recording so it can't fight the

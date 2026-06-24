@@ -60,6 +60,14 @@ final class DrillStore {
         write(all)
     }
 
+    /// Remove every card sourced from a session — used before re-ingesting a
+    /// resumed conversation so its cards don't duplicate.
+    func deleteForSession(_ sessionId: UUID) {
+        var all = load()
+        all.removeAll { $0.sourceSessionId == sessionId }
+        write(all)
+    }
+
     // MARK: - Scheduling
 
     /// Cards whose `nextReviewAt` is in the past or present, **newest first**.

@@ -13,6 +13,7 @@ import SwiftUI
 /// sessions) for users who want to dig.
 struct PracticeTab: View {
     @EnvironmentObject private var appState: AppState
+    @ObservedObject private var vocab = VocabStore.shared
 
     @State private var dueCount = 0
     @State private var totalCards = 0
@@ -33,13 +34,7 @@ struct PracticeTab: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if totalCards == 0 && picks.isEmpty && appState.savedLines.isEmpty {
-                    emptyState
-                } else {
-                    content
-                }
-            }
+            content
             .navigationTitle("Practice")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: reload)
@@ -55,10 +50,38 @@ struct PracticeTab: View {
     private var content: some View {
         List {
             reviewSection
+            vocabularySection
             shadowSection
             sessionsSection
         }
         .listStyle(.insetGrouped)
+    }
+
+    private var vocabularySection: some View {
+        Section {
+            NavigationLink {
+                VocabularyView()
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "character.book.closed.fill")
+                        .font(.title2)
+                        .foregroundStyle(.tint)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Vocabulary")
+                            .font(.headline)
+                        Text("\(vocab.knownCount) of \(vocab.total) words · \(vocab.activeCount()) active")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+        } header: {
+            Text("Build vocabulary")
+        } footer: {
+            Text("Explore the words you don't use yet, collect them, and hear your fluent self say them.")
+        }
     }
 
     @ViewBuilder
@@ -246,6 +269,7 @@ struct PracticeTab: View {
     // MARK: - Data
 
     private func reload() {
+        vocab.backfillFromSessions()
         let now = Date()
         let cards = DrillStore.shared.load()
         totalCards = cards.count

@@ -31,9 +31,8 @@ struct ConversationHome: View {
                             VStack(spacing: 16) {
                                 momentumStrip
                                 if let s = lastSession { lastTalkCard(s) }
+                                startersCard
                                 focusCard
-                                weeklyTrendCard
-                                historyLink
                             }
                             .padding(.horizontal, 20)
                             .padding(.top, 12)
@@ -53,6 +52,17 @@ struct ConversationHome: View {
                         launchTopic = ""; launchBlurb = ""; showingTopics = true
                     } label: {
                         Label("Topic", systemImage: "list.bullet.rectangle")
+                    }
+                }
+                if sessionCount > 0 {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        NavigationLink {
+                            ConversationsListView()
+                                .navigationTitle("All conversations")
+                                .navigationBarTitleDisplayMode(.inline)
+                        } label: {
+                            Label("History", systemImage: "clock.arrow.circlepath")
+                        }
                     }
                 }
             }
@@ -143,87 +153,84 @@ struct ConversationHome: View {
             .background(Capsule().fill(scoreColor(score).opacity(0.15)))
     }
 
-    // MARK: - Focus (analysis across conversations)
+    // MARK: - Conversation starters (one tap → straight into a talk)
 
-    @ViewBuilder
-    private var focusCard: some View {
-        let mistakes = Array(appState.learnerProfile.recurringMistakes.prefix(3))
-        let weak = appState.learnerProfile.weakVocabAreas
-        if !mistakes.isEmpty || !weak.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("What to work on").font(.headline)
-                ForEach(mistakes) { p in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "arrow.right.circle.fill")
-                            .font(.footnote).foregroundStyle(.orange).padding(.top, 2)
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text(p.mistake).strikethrough().foregroundStyle(.secondary)
-                                Text(p.correction).foregroundStyle(.primary)
-                            }
-                            .font(.subheadline)
-                            .fixedSize(horizontal: false, vertical: true)
-                            if p.frequency > 1 {
-                                Text("came up \(p.frequency)×").font(.caption2).foregroundStyle(.tertiary)
-                            }
-                        }
-                    }
-                }
-                if !weak.isEmpty {
-                    Text("Weak spots").font(.caption).foregroundStyle(.secondary).padding(.top, 2)
-                    FlowLayout(spacing: 6, lineSpacing: 6) {
-                        ForEach(weak, id: \.self) { w in
-                            Text(w)
-                                .font(.caption)
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(Capsule().fill(Color(.tertiarySystemFill)))
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-        }
+    private var starters: [(title: String, blurb: String)] {
+        [
+            ("How was your day?", "A relaxed daily check-in with your fluent self."),
+            ("A small win this week", "Tell the story of something that went right."),
+            ("Something on your mind", "Think out loud and get gentle pushback."),
+            ("Plans for the weekend", "Talk through what's coming up.")
+        ]
     }
 
-    // MARK: - Weekly trend
-
-    private var weeklyTrendCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("This week").font(.headline)
-            HStack(alignment: .bottom, spacing: 8) {
-                ForEach(Array(snapshot.lastSevenDayScores.enumerated()), id: \.offset) { _, score in
-                    let h = max(0.06, score / 100.0)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(score > 0 ? Color.accentColor : Color(.tertiarySystemFill))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56 * h + 4)
+    private var startersCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Start a conversation").font(.headline)
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+                ForEach(starters, id: \.title) { s in
+                    Button {
+                        launchTopic = s.title; launchBlurb = s.blurb; showingCall = true
+                    } label: {
+                        Text(s.title)
+                            .font(.subheadline.weight(.medium))
+                            .padding(.horizontal, 14).padding(.vertical, 9)
+                            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
-            .frame(height: 60, alignment: .bottom)
-            Text("Daily conversation score").font(.caption2).foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
     }
 
-    private var historyLink: some View {
-        NavigationLink {
-            ConversationsListView()
-                .navigationTitle("All conversations")
-                .navigationBarTitleDisplayMode(.inline)
-        } label: {
-            HStack {
-                Text("All conversations").font(.subheadline)
-                Spacer()
-                Text("\(sessionCount)").font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
-                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+    // MARK: - Focus (analysis across conversations → tap to practice it in a talk)
+
+    @ViewBuilder
+    private var focusCard: some View {
+        let mistakes = Array(appState.learnerProfile.recurringMistakes.prefix(3))
+            .filter { !$0.correction.isEmpty && $0.mistake != $0.correction }
+        if !mistakes.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("What to work on").font(.headline)
+                Text("Tap one to practice it in a quick talk.")
+                    .font(.caption).foregroundStyle(.secondary)
+                ForEach(mistakes) { p in
+                    Button {
+                        launchTopic = "Practice: say \u{201C}\(p.correction)\u{201D}"
+                        launchBlurb = "Steer the chat so I naturally use \u{201C}\(p.correction)\u{201D} instead of \u{201C}\(p.mistake)\u{201D}, and nudge me when I slip."
+                        showingCall = true
+                    } label: {
+                        HStack(spacing: 10) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(p.mistake).strikethrough().foregroundStyle(.secondary)
+                                    Text(p.correction).foregroundStyle(.primary)
+                                }
+                                .font(.subheadline)
+                                .fixedSize(horizontal: false, vertical: true)
+                                if p.frequency > 1 {
+                                    Text("came up \(p.frequency)×").font(.caption2).foregroundStyle(.tertiary)
+                                }
+                            }
+                            Spacer(minLength: 4)
+                            Image(systemName: "phone.fill")
+                                .font(.caption).foregroundStyle(.tint)
+                        }
+                        .padding(.vertical, 8).padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemFill)))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Start bar
