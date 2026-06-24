@@ -20,6 +20,7 @@ struct ConversationDetailView: View {
                 ForEach(session.turns) { turn in
                     TranscriptRow(turn: turn,
                                   nativeLanguage: appState.nativeLanguage,
+                                  targetLanguage: appState.targetLanguage,
                                   player: player)
                 }
             }
@@ -27,6 +28,18 @@ struct ConversationDetailView: View {
         }
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    DrillView(source: .session(session.id))
+                        .navigationTitle("Review")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    Label("Review", systemImage: "rectangle.stack")
+                }
+            }
+        }
         .safeAreaInset(edge: .bottom) { bottomBar }
         .onDisappear { player.stop() }
         .fullScreenCover(isPresented: $showingContinue) {
@@ -86,29 +99,16 @@ struct ConversationDetailView: View {
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 10) {
-            Button {
-                showingContinue = true
-            } label: {
-                Label("Continue this conversation", systemImage: "phone.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-
-            NavigationLink {
-                DrillView(source: .session(session.id))
-                    .navigationTitle("Review")
-                    .navigationBarTitleDisplayMode(.inline)
-            } label: {
-                Label("Review cards from this talk", systemImage: "rectangle.stack.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
+        Button {
+            showingContinue = true
+        } label: {
+            Label("Continue this conversation", systemImage: "phone.fill")
+                .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
         .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(.bar)
     }
 
@@ -155,8 +155,10 @@ struct ConversationsListView: View {
 /// One transcript line — role, text, optional audio replay, "meaning" toggle,
 /// and (for the user's lines) the more-natural suggestion.
 private struct TranscriptRow: View {
+    @EnvironmentObject private var appState: AppState
     let turn: Turn
     let nativeLanguage: String
+    let targetLanguage: String
     @ObservedObject var player: AudioPlayer
 
     @State private var translation: String?
@@ -165,24 +167,32 @@ private struct TranscriptRow: View {
     @State private var reasonNative: String?
     @State private var reasonShowing = false
     @State private var reasonLoading = false
+    @State private var showingShadow = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(turn.role == .user ? "You" : "Future self")
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                if turn.role == .fluentSelf, turn.audioURL != nil {
-                    Button { playTurn() } label: {
-                        Image(systemName: "play.circle").font(.body).foregroundStyle(.tint)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(turn.role == .user ? "You" : "Future self")
+                .font(.caption).foregroundStyle(.secondary)
+
             Text(turn.transcript)
                 .font(.body)
                 .foregroundStyle(turn.role == .user ? .primary : Color.accentColor)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if turn.role == .fluentSelf, hasAudio {
+                HStack(spacing: 8) {
+                    Button { playTurn() } label: {
+                        Label("Listen", systemImage: "play.circle")
+                    }
+                    Button { showingShadow = true } label: {
+                        Label("Shadow", systemImage: "waveform.badge.mic")
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .tint(.accentColor)
+            }
 
             Button(action: toggleMeaning) {
                 HStack(spacing: 4) {
@@ -224,10 +234,23 @@ private struct TranscriptRow: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
+        .sheet(isPresented: $showingShadow) {
+            ShadowDrillView(turn: turn, targetLanguage: targetLanguage)
+                .environmentObject(appState)
+        }
+    }
+
+    /// Audio exists if TurnAudioStore still has it (resolved from the CURRENT
+    /// Documents path by turnId — survives the app-container path changing on
+    /// reinstall/update, which would have invalidated the stored absolute URL).
+    private var hasAudio: Bool {
+        TurnAudioStore.shared.url(for: turn.id) != nil || turn.audioURL != nil
     }
 
     private func playTurn() {
-        guard let url = turn.audioURL, let data = try? Data(contentsOf: url) else { return }
+        let data = TurnAudioStore.shared.data(for: turn.id)
+            ?? turn.audioURL.flatMap { try? Data(contentsOf: $0) }
+        guard let data else { return }
         try? player.play(data, forceSessionReset: true)
     }
 
