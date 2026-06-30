@@ -42,6 +42,11 @@ final class LiveTranscriber: ObservableObject {
     private var lastChangeTime = Date()
     private var quietWatcher: Task<Void, Never>?
     private let appender = LiveTranscriberAppender()
+    private let fluency = FluencyMeter()
+
+    /// Measured delivery stats (voiced time, pauses, hesitations) for the turn
+    /// just recorded — call right after `stop()`.
+    func fluencyStats() -> FluencyStats { fluency.snapshot() }
 
     private static let quietCommitThreshold: TimeInterval = 1.5
 
@@ -109,9 +114,13 @@ final class LiveTranscriber: ObservableObject {
         let input = engine.inputNode
         let format = input.outputFormat(forBus: 0)
         let localAppender = self.appender
+        let localFluency = self.fluency
+        let sampleRate = format.sampleRate
+        fluency.reset()
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             localAppender.append(buffer)
             let rms = Self.rms(of: buffer)
+            localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
             Task { @MainActor [weak self] in
                 self?.level = rms
             }
@@ -295,6 +304,55 @@ final class LiveTranscriber: ObservableObject {
 /// Thread-safe pipe that lets the audio-thread tap append buffers into whichever
 /// `SFSpeechAudioBufferRecognitionRequest` is currently active without crossing
 /// actor boundaries on the hot path.
+/// Measures delivery from the mic energy stream on the audio thread: voiced
+/// time, and mid-utterance silences ≥ `minPause` counted as pauses/hesitations.
+/// Real fluency evidence (pace + pausing) without any external API.
+private final class FluencyMeter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var total = 0.0
+    private var voiced = 0.0
+    private var started = false
+    private var silenceRun = 0.0
+    private var pauseCount = 0
+    private var pauseSeconds = 0.0
+    private var longestPause = 0.0
+
+    private let voicedThreshold: Float = 0.35   // normalized 0…1 level from rms()
+    private let minPause = 0.35                  // seconds of silence = one pause
+
+    func reset() {
+        lock.lock(); defer { lock.unlock() }
+        total = 0; voiced = 0; started = false; silenceRun = 0
+        pauseCount = 0; pauseSeconds = 0; longestPause = 0
+    }
+
+    func feed(level: Float, seconds: Double) {
+        guard seconds > 0 else { return }
+        lock.lock(); defer { lock.unlock() }
+        total += seconds
+        if level >= voicedThreshold {
+            // Voiced again — close any qualifying mid-speech silence.
+            if started, silenceRun >= minPause {
+                pauseCount += 1
+                pauseSeconds += silenceRun
+                longestPause = max(longestPause, silenceRun)
+            }
+            silenceRun = 0
+            voiced += seconds
+            started = true
+        } else if started {
+            silenceRun += seconds   // ignore leading/trailing silence
+        }
+    }
+
+    func snapshot() -> FluencyStats {
+        lock.lock(); defer { lock.unlock() }
+        return FluencyStats(speakingSeconds: voiced, totalSeconds: total,
+                            pauseCount: pauseCount, pauseSeconds: pauseSeconds,
+                            longestPauseSeconds: longestPause)
+    }
+}
+
 private final class LiveTranscriberAppender: @unchecked Sendable {
     private let lock = NSLock()
     private var request: SFSpeechAudioBufferRecognitionRequest?

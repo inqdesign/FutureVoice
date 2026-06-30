@@ -1,17 +1,15 @@
 import SwiftUI
 
-/// The "You" tab — who you are + how you're doing + your settings, in one
-/// place. Account/credits first, then a link into the progress dashboard
-/// (which used to be its own tab but is low-frequency), then profile, level,
-/// appearance and voice.
+/// Settings drawer — opened from the Home profile avatar. Everything about
+/// "you the account": profile/persona, level, credits + invite, voice,
+/// appearance, sign out. Progress lives in its own tab now, not here.
 struct MeTab: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     @State private var account: AccountStatus = .empty
-    @State private var streakDays = 0
-    @State private var totalSessions = 0
     @State private var showingPersonaEdit = false
-    @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
     @State private var regeneratingVoice = false
@@ -27,55 +25,25 @@ struct MeTab: View {
                         title: account.email ?? "Signed in with Apple",
                         subtitle: "Apple ID")
                     HStack {
-                        row(icon: "creditcard",
-                            title: account.planLabel,
-                            subtitle: "Plan")
+                        row(icon: "bolt.fill",
+                            title: "\(account.creditBalance) credits",
+                            subtitle: "Beta — no subscription")
                         Spacer()
-                        Text("\(account.creditBalance) credits")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(account.creditBalance > 0 ? Color.primary : Color.orange)
-                            .monospacedDigit()
                     }
-                    Button {
-                        showingPaywall = true
-                    } label: {
-                        row(icon: "crown",
-                            title: account.planLabel == "Free" ? "Upgrade" : "View plans",
-                            subtitle: "Free trial, then credits every cycle")
-                    }
-                } header: {
-                    Text("Account")
-                } footer: {
-                    Text("Credits are spent on voice synthesis and AI calls. They refill with your plan cycle.")
-                }
-
-                Section {
-                    NavigationLink {
-                        ProgressTab()
-                    } label: {
-                        row(icon: "chart.line.uptrend.xyaxis",
-                            title: "Your progress",
-                            subtitle: progressSubtitle)
-                    }
-                } header: {
-                    Text("Progress")
-                }
-
-                Section {
                     NavigationLink {
                         InviteView()
                     } label: {
                         row(icon: "gift",
                             title: "Invite & earn credits",
-                            subtitle: "You both get 500 credits per friend")
+                            subtitle: "You both get 500 per friend")
                     }
                 } header: {
-                    Text("Invite")
+                    Text("Account")
                 } footer: {
-                    Text("No subscription during the beta — invite friends to extend your usage.")
+                    Text("Credits power voice synthesis and AI replies. Invite friends to earn more.")
                 }
 
-                Section("Profile") {
+                Section {
                     Button {
                         showingPersonaEdit = true
                     } label: {
@@ -85,9 +53,6 @@ struct MeTab: View {
                                 : "Edit profile",
                             subtitle: "Persona used in every conversation")
                     }
-                }
-
-                Section {
                     Picker(selection: $appState.proficiency) {
                         ForEach(CEFRLevel.allCases, id: \.self) { level in
                             Text(level.rawValue.uppercased()).tag(level)
@@ -97,10 +62,19 @@ struct MeTab: View {
                             title: "Level",
                             subtitle: "Calibrates conversations and feedback")
                     }
+                    Picker(selection: $dailyGoalMinutes) {
+                        ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
+                            Text("\(m) min").tag(m)
+                        }
+                    } label: {
+                        row(icon: "target",
+                            title: "Daily goal",
+                            subtitle: "Minutes of speaking per day")
+                    }
                 } header: {
                     Text("Learning")
                 } footer: {
-                    Text("CEFR scale — A1 beginner to C2 near-native. The avatar stays at your level and grades against it.")
+                    Text("Your persona and CEFR level shape each conversation. The daily goal drives the ring on Home.")
                 }
 
                 Section("Appearance") {
@@ -162,14 +136,16 @@ struct MeTab: View {
                 }
                 #endif
             }
-            .navigationTitle("You")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
-            }
-            .fullScreenCover(isPresented: $showingPaywall) {
-                PaywallView()
             }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}
@@ -198,18 +174,7 @@ struct MeTab: View {
             }
             #endif
             .task { account = await AccountStatus.fetch() }
-            .onAppear {
-                let snap = PracticeStats.snapshot()
-                streakDays = snap.streakDays
-                totalSessions = snap.totalSessions
-            }
         }
-    }
-
-    private var progressSubtitle: String {
-        let streak = streakDays > 0 ? "\(streakDays)-day streak" : "No streak yet"
-        let sessions = totalSessions == 1 ? "1 talk" : "\(totalSessions) talks"
-        return "\(streak) · \(sessions)"
     }
 
     private func regenerateFromSavedSample() {

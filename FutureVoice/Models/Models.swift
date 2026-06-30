@@ -111,6 +111,16 @@ struct Turn: Codable, Identifiable {
     var durationMs: Int
     let timestamp: Date
     var suggestion: TurnSuggestion?
+    var fluency: FluencyStats? = nil   // measured delivery for user turns
+}
+
+/// Measured speaking delivery for one user turn — from the live mic energy.
+struct FluencyStats: Codable, Hashable {
+    var speakingSeconds: Double        // voiced time
+    var totalSeconds: Double           // voiced + mid-speech silence
+    var pauseCount: Int                // mid-utterance silences ≥ ~0.35s
+    var pauseSeconds: Double           // total mid-speech silence
+    var longestPauseSeconds: Double
 }
 
 /// Word-level alignment from ElevenLabs `with-timestamps` synthesis. Drives
@@ -164,6 +174,35 @@ struct SessionSummary: Codable {
     var suggestedDrills: [String]
     var overallNote: String
     var scorecard: SessionScorecard?
+    /// Words from the core list the user used for the FIRST time this session
+    /// (filled in deterministically from VocabStore — no LLM). Default keeps
+    /// old saved sessions decodable.
+    var newWordsUsed: [String] = []
+    /// Multi-word expressions the LLM flagged AND we verified appear verbatim
+    /// in the user's own turns (hallucination-guarded).
+    var expressionsUsed: [String] = []
+}
+
+extension SessionSummary {
+    enum CodingKeys: String, CodingKey {
+        case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
+        case scorecard, newWordsUsed, expressionsUsed
+    }
+
+    // Custom decode so sessions saved BEFORE newWordsUsed/expressionsUsed
+    // existed still load — Swift's synthesized Decodable ignores default
+    // values and throws keyNotFound on any missing key. decodeIfPresent keeps
+    // old data readable; encode(to:) is still synthesized from these keys.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        phrasesUsed = try c.decodeIfPresent([PhraseFeedback].self, forKey: .phrasesUsed) ?? []
+        newPatternsDetected = try c.decodeIfPresent([LearnerPattern].self, forKey: .newPatternsDetected) ?? []
+        suggestedDrills = try c.decodeIfPresent([String].self, forKey: .suggestedDrills) ?? []
+        overallNote = try c.decodeIfPresent(String.self, forKey: .overallNote) ?? ""
+        scorecard = try c.decodeIfPresent(SessionScorecard.self, forKey: .scorecard)
+        newWordsUsed = try c.decodeIfPresent([String].self, forKey: .newWordsUsed) ?? []
+        expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
+    }
 }
 
 // MARK: - Session Scorecard ("nutrition label")
@@ -179,6 +218,7 @@ struct SessionScorecard: Codable, Hashable {
     var fluency: AxisScore
     var pronunciation: AxisScore?     // nil until shadow drills exist
     var topLine: String               // 1-sentence holistic note
+    var cefrLevel: String?            // AI's holistic CEFR read of the whole talk (a1…c2)
 }
 
 struct AxisScore: Codable, Hashable {

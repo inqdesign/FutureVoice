@@ -184,11 +184,21 @@ enum AudioLoudness {
 
             let outURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent("clonesample-\(UUID().uuidString).wav")
+            // Write 16-bit PCM (NOT the buffer's 32-bit float processingFormat).
+            // AVAudioFile's processingFormat is always float, so writing with
+            // `buffer.format.settings` produced a 32-bit float WAV — ~2x the
+            // bytes, which pushed ~1 min takes past ElevenLabs' 11 MB limit.
+            // 16-bit/44.1k mono is plenty for IVC and stays well under the cap.
+            let outSettings: [String: Any] = [
+                AVFormatIDKey: Int(kAudioFormatLinearPCM),
+                AVSampleRateKey: buffer.format.sampleRate,
+                AVNumberOfChannelsKey: buffer.format.channelCount,
+                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsBigEndianKey: false,
+                AVLinearPCMIsFloatKey: false,
+            ]
             try autoreleasepool {
-                let outFile = try AVAudioFile(forWriting: outURL,
-                                              settings: buffer.format.settings,
-                                              commonFormat: buffer.format.commonFormat,
-                                              interleaved: buffer.format.isInterleaved)
+                let outFile = try AVAudioFile(forWriting: outURL, settings: outSettings)
                 try outFile.write(from: buffer)
             }
             return outURL

@@ -1,201 +1,539 @@
 import SwiftUI
 
-/// The language-development hub — every growth signal in one place instead
-/// of scattered across Talk home and the old Me tab:
-///   streak + weekly score chart, the weekly trend report, the deterministic
-///   pronunciation (shadow) trend, the recurring-mistake patterns the
-///   learner profile is tracking, and the full session history.
+/// Progress — expressed in CEFR (A1–C2) so it actually means something, not an
+/// arbitrary 0–100. Your level is ESTIMATED from the words you actually use
+/// (each word is CEFR-graded), which is a real measurement, not an LLM opinion.
+/// The other skills lean on measured numbers (WPM, shadow accuracy, error rate)
+/// plus the analyzer's qualitative "what to work on" notes.
 struct ProgressTab: View {
     @EnvironmentObject private var appState: AppState
-    @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
-        streakDays: 0, totalSessions: 0, lastScorecard: nil,
-        lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
-        shadowableLineCount: 0
-    )
+    @ObservedObject private var vocab = VocabStore.shared
+
+    @State private var selected: Dim = .overall
+    @State private var dashboard = PracticeStats.snapshot()
+    @State private var dueCount = 0
+
+    // AI holistic CEFR read of the whole conversation (vocab + grammar + fluency + expression)
+    @State private var aiLevel: CEFRLevel?
+    // Vocabulary (objective CEFR)
+    @State private var vocabLevel: CEFRLevel?
+    @State private var perLevel: [CEFRLevel: Int] = [:]
+    @State private var usedTotal = 0
+    // Measured signals
+    @State private var wpm = 0
+    @State private var pausesPerMin = 0.0
+    @State private var talkMinutes = 0
+    @State private var wordsPerTurn = 0
+    @State private var corrPer10 = 0.0
+    @State private var shadowAccuracy = 0
+    @State private var shadowAttempts = 0
+    // Qualitative coaching notes (LLM), per dimension
+    @State private var notesByDim: [Dim: [String]] = [:]
+    @State private var scoredCount = 0
+    /// Total user speaking time accumulated across all analyzed sessions.
+    /// The holistic level estimate stays provisional until this clears the bar.
+    @State private var totalSpeakingMinutes = 0
+    /// Minutes of conversation needed before we commit to a level estimate —
+    /// one short talk is too noisy a sample to grade a CEFR level from.
+    private static let levelMinMinutes = 10
+
+    enum Dim: String, CaseIterable, Hashable {
+        case overall, vocabulary, grammar, fluency, expressiveness, pronunciation
+        var title: String { self == .overall ? "Your English" : rawValue.capitalized }
+        var short: String { self == .overall ? "Overall" : rawValue.capitalized }
+    }
 
     var body: some View {
-        List {
-            thisWeekSection
-            reportSection
-            patternsSection
-            historySection
-        }
-        .listStyle(.insetGrouped)
-        .navigationTitle("Your progress")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            dashboard = PracticeStats.snapshot()
-        }
-    }
-
-    // MARK: - This week
-
-    private var thisWeekSection: some View {
-        Section("This week") {
-            HStack(spacing: 10) {
-                Image(systemName: "flame.fill")
-                    .font(.subheadline)
-                    .foregroundStyle(dashboard.streakDays > 0 ? .orange : .secondary)
-                Text(streakText)
-                    .font(.subheadline.weight(.medium))
-                Spacer()
-                Text(dashboard.totalSessions == 1 ? "1 session" : "\(dashboard.totalSessions) sessions")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-            }
-            if !dashboard.lastSevenDayScores.allSatisfy({ $0 == 0 }) {
-                weeklyChart
-            }
-            shadowTrendRow
-            if let card = dashboard.lastScorecard {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Last session")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Text(card.topLine)
-                        .font(.callout)
-                        .lineLimit(3)
-                }
-                .padding(.vertical, 4)
-            }
-        }
-    }
-
-    private var streakText: String {
-        switch dashboard.streakDays {
-        case 0:  return "No streak yet"
-        case 1:  return "1-day streak"
-        default: return "\(dashboard.streakDays)-day streak"
-        }
-    }
-
-    private var weeklyChart: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Last 7 days")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            HStack(alignment: .bottom, spacing: 6) {
-                ForEach(Array(dashboard.lastSevenDayScores.enumerated()), id: \.offset) { _, score in
-                    Capsule()
-                        .fill(color(for: score))
-                        .frame(width: 14, height: max(4, CGFloat(score) * 0.5))
-                        .opacity(score == 0 ? 0.25 : 1.0)
-                }
-                Spacer()
-            }
-            .frame(height: 50, alignment: .bottom)
-        }
-        .padding(.vertical, 4)
-    }
-
-    @ViewBuilder
-    private var shadowTrendRow: some View {
-        let trend = PracticeStats.shadowTrend(attempts: appState.shadowAttempts)
-        if trend.attemptsThisWeek > 0 {
-            HStack(spacing: 10) {
-                Image(systemName: "waveform.badge.mic")
-                    .font(.subheadline)
-                    .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Pronunciation (shadow)")
-                        .font(.subheadline.weight(.medium))
-                    Text("\(trend.attemptsThisWeek) attempt\(trend.attemptsThisWeek == 1 ? "" : "s") this week")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                HStack(spacing: 6) {
-                    Text("\(trend.avgThisWeek)")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(color(for: Double(trend.avgThisWeek)))
-                        .monospacedDigit()
-                    if let delta = trend.delta, delta != 0 {
-                        Text(delta > 0 ? "+\(delta)" : "\(delta)")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(delta > 0 ? .green : .orange)
-                            .monospacedDigit()
+        NavigationStack {
+            Group {
+                if scoredCount == 0 {
+                    ScrollView {
+                        emptyState
+                            .padding(.top, 4)
+                            .padding(.bottom, 28)
                     }
-                }
-            }
-            .padding(.vertical, 2)
-        }
-    }
-
-    // MARK: - Weekly report
-
-    private var reportSection: some View {
-        Section {
-            WeeklyReportView()
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-        }
-    }
-
-    // MARK: - Patterns (the learner profile, made visible)
-
-    @ViewBuilder
-    private var patternsSection: some View {
-        let patterns = appState.learnerProfile.recurringMistakes.prefix(5)
-        if !patterns.isEmpty {
-            Section {
-                ForEach(Array(patterns)) { p in
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(p.mistake)
-                                .strikethrough()
-                                .foregroundStyle(.secondary)
-                            if p.frequency > 1 {
-                                Text("×\(p.frequency)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                } else {
+                    VStack(spacing: 0) {
+                        tabBar
+                            .padding(.top, 4)
+                        // Paged content: swipe left/right between dimensions,
+                        // synced both ways with the tab bar. Each page scrolls
+                        // vertically on its own.
+                        TabView(selection: $selected) {
+                            ForEach(availableDims, id: \.self) { dim in
+                                ScrollView {
+                                    content(for: dim)
+                                        .padding(.horizontal, 18)
+                                        .padding(.top, 8)
+                                        .padding(.bottom, 28)
+                                }
+                                .tag(dim)
                             }
                         }
-                        Text("\u{2192} \(p.correction)")
-                            .fontWeight(.medium)
+                        .tabViewStyle(.page(indexDisplayMode: .never))
                     }
-                    .font(.subheadline)
-                    .padding(.vertical, 2)
                 }
-            } header: {
-                Text("Patterns you're working on")
-            } footer: {
-                Text("Carried across sessions — the avatar stays aware of these and your drills target them.")
+            }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("Progress")
+            .navigationBarTitleDisplayMode(.large)
+            .onAppear(perform: reload)
+        }
+    }
+
+    /// Content for one dimension page — same views the tab bar selected before,
+    /// now also reachable by swiping the paged TabView.
+    @ViewBuilder
+    private func content(for dim: Dim) -> some View {
+        switch dim {
+        case .overall:        overallContent
+        case .vocabulary:     vocabularyContent
+        case .fluency:        fluencyContent
+        case .pronunciation:  pronunciationContent
+        case .grammar:        grammarContent
+        case .expressiveness: expressivenessContent
+        }
+    }
+
+    // MARK: - Sub-tab bar
+
+    private var tabBar: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(availableDims, id: \.self) { dim in
+                        Button { withAnimation { selected = dim } } label: {
+                            Text(dim.short)
+                                .font(.subheadline.weight(.medium))
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(Capsule().fill(selected == dim ? Color.accentColor : Color(.secondarySystemGroupedBackground)))
+                                .foregroundStyle(selected == dim ? Color.white : Color.primary)
+                        }
+                        .buttonStyle(.plain)
+                        .id(dim)
+                    }
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 4)
+            }
+            // Keep the active chip in view as you swipe pages or tap.
+            .onChange(of: selected) { _, new in
+                withAnimation { proxy.scrollTo(new, anchor: .center) }
             }
         }
     }
 
-    // MARK: - History
+    private var availableDims: [Dim] {
+        var out: [Dim] = [.overall, .vocabulary, .grammar, .fluency, .expressiveness]
+        if shadowAttempts > 0 { out.append(.pronunciation) }
+        return out
+    }
 
-    private var historySection: some View {
-        Section {
-            NavigationLink {
-                HistoryView()
-                    .navigationTitle("History")
-                    .navigationBarTitleDisplayMode(.inline)
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.subheadline)
+    // MARK: - Overall ("Your English")
+
+    private var overallContent: some View {
+        VStack(spacing: 16) {
+            panel {
+                Text("Estimated level").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                if let lv = aiLevel, totalSpeakingMinutes >= Self.levelMinMinutes {
+                    Text(lv.rawValue.uppercased())
+                        .font(.system(size: 52, weight: .bold))
                         .foregroundStyle(.tint)
-                        .frame(width: 22)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Past sessions").font(.body)
-                        Text("\(dashboard.totalSessions) total")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Text(canDo(lv)).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    Text("Assessed from \(totalSpeakingMinutes) min of conversation — vocabulary, grammar, fluency and expression together.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Building your level").font(.title.bold())
+                    Text(levelProgressText)
+                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    ProgressView(value: Double(min(totalSpeakingMinutes, Self.levelMinMinutes)),
+                                 total: Double(Self.levelMinMinutes))
+                        .tint(.accentColor)
+                    if let lv = aiLevel {
+                        Text("Early read: ~\(lv.rawValue.uppercased()) — keep talking to confirm.")
+                            .font(.caption).foregroundStyle(.tertiary)
                     }
+                }
+            }
+
+            panel {
+                Text("Across skills").font(.headline)
+                skillRow(.vocabulary, value: vocabLevel.map { $0.rawValue.uppercased() } ?? "—")
+                skillRow(.fluency, value: fluencyBand)
+                if shadowAttempts > 0 { skillRow(.pronunciation, value: accuracyBand) }
+                skillRow(.grammar, value: corrPer10 > 0 ? String(format: "%.1f/10 turns", corrPer10) : "—")
+            }
+
+            if totalSpeakingMinutes >= Self.levelMinMinutes, let lv = aiLevel, let next = nextLevel(lv) {
+                panel {
+                    Text("To reach \(next.rawValue.uppercased())").font(.headline)
+                    Text(canDo(next)).font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Start using more \(next.rawValue.uppercased())-level words in your talks.")
+                        .font(.callout).fixedSize(horizontal: false, vertical: true)
+                    NavigationLink { VocabularyView() } label: {
+                        Label("Explore \(next.rawValue.uppercased()) words", systemImage: "character.book.closed.fill")
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent).controlSize(.large)
+                }
+            }
+
+            consistencyPanel
+
+            panel {
+                Text("This week's read").font(.headline)
+                WeeklyReportView()
+            }
+        }
+    }
+
+    /// Copy for the pre-estimate state, framed as accumulating conversation.
+    private var levelProgressText: String {
+        let remaining = max(0, Self.levelMinMinutes - totalSpeakingMinutes)
+        if totalSpeakingMinutes <= 0 {
+            return "Have about \(Self.levelMinMinutes) minutes of conversation and I'll assess your overall level — short samples are too noisy to grade."
+        }
+        return "\(totalSpeakingMinutes) of \(Self.levelMinMinutes) min of talk so far — about \(remaining) more for an accurate level estimate."
+    }
+
+    private func skillRow(_ dim: Dim, value: String) -> some View {
+        Button { selected = dim } label: {
+            HStack {
+                Text(dim.short).font(.subheadline).foregroundStyle(.primary)
+                Spacer()
+                Text(value).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 7).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var consistencyPanel: some View {
+        panel {
+            NavigationLink { ActivityView() } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "flame.fill").font(.title3)
+                        .foregroundStyle(dashboard.streakDays > 0 ? .orange : .secondary).frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(dashboard.streakDays == 0 ? "No streak yet" : "\(dashboard.streakDays)-day streak")
+                            .font(.subheadline.weight(.medium)).foregroundStyle(.primary)
+                        Text("\(dashboard.totalSessions) talks · tap for calendar")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Vocabulary (objective CEFR breakdown)
+
+    private var vocabularyContent: some View {
+        VStack(spacing: 16) {
+            panel {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(vocabLevel?.rawValue.uppercased() ?? "—")
+                        .font(.system(size: 44, weight: .bold)).foregroundStyle(.tint)
+                    Text("vocabulary level").font(.subheadline).foregroundStyle(.secondary)
+                }
+                Text("Estimated from \(usedTotal) distinct words you've actually used, each graded by CEFR level.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            panel {
+                Text("Words you use, by level").font(.headline)
+                ForEach(CEFRLevel.allCases, id: \.self) { lv in
+                    levelBar(lv)
+                }
+            }
+            panel {
+                Text("How to level up").font(.headline)
+                Text("Discover and use words you don't reach for yet — the cloud highlights the ones at and above your level.")
+                    .font(.callout).fixedSize(horizontal: false, vertical: true)
+                NavigationLink { VocabularyView() } label: {
+                    Label("Build vocabulary", systemImage: "character.book.closed.fill")
+                        .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent).controlSize(.large)
+            }
+            panel {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Expressions you've used").font(.headline)
+                    Spacer()
+                    Text("\(vocab.expressionCount)")
+                        .font(.headline).foregroundStyle(.tint).monospacedDigit()
+                }
+                Text("Multi-word phrases you actually said in your talks, collected automatically.")
+                    .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                NavigationLink { ExpressionsView() } label: {
+                    Label("See expressions", systemImage: "quote.bubble")
+                        .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
+                }
+                .buttonStyle(.bordered).controlSize(.large)
+            }
+        }
+    }
+
+    private func levelBar(_ lv: CEFRLevel) -> some View {
+        let count = perLevel[lv] ?? 0
+        let maxC = max(1, perLevel.values.max() ?? 1)
+        return HStack(spacing: 10) {
+            Text(lv.rawValue.uppercased())
+                .font(.caption.weight(.semibold).monospaced())
+                .frame(width: 30, alignment: .leading)
+                .foregroundStyle(lv == vocabLevel ? Color.accentColor : .secondary)
+            GeometryReader { g in
+                Capsule()
+                    .fill(lv == vocabLevel ? Color.accentColor : Color(.tertiarySystemFill))
+                    .frame(width: max(count == 0 ? 0 : 6, g.size.width * CGFloat(count) / CGFloat(maxC)))
+            }
+            .frame(height: 12)
+            Text("\(count)").font(.caption).monospacedDigit()
+                .foregroundStyle(.secondary).frame(width: 38, alignment: .trailing)
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Fluency / Pronunciation / Grammar / Expressiveness (measured + coaching)
+
+    private var fluencyContent: some View {
+        measuredContent(
+            dim: .fluency,
+            big: wpm > 0 ? "\(wpm)" : "—",
+            bigUnit: "words / min",
+            band: fluencyBand,
+            measuredLine: wpm > 0
+                ? String(format: "%.1f pauses/min · ", pausesPerMin) + "\(talkMinutes)m per talk · \(wordsPerTurn) words/turn"
+                : nil,
+            measures: "Measured from your speech: pace, how often you pause, and how much you keep going.",
+            improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
+            action: DimAction(title: "See your activity", icon: "flame.fill", destination: AnyView(ActivityView()))
+        )
+    }
+
+    private var pronunciationContent: some View {
+        measuredContent(
+            dim: .pronunciation,
+            big: "\(shadowAccuracy)",
+            bigUnit: "shadow accuracy",
+            band: accuracyBand,
+            measuredLine: "\(shadowAttempts) shadow attempt\(shadowAttempts == 1 ? "" : "s") — measured against your fluent self",
+            measures: "How closely your sounds match the target, measured from shadow practice.",
+            improve: "Shadow your fluent self's lines — listen, then match the rhythm and sounds.",
+            action: DimAction(title: "Shadow practice", icon: "waveform.badge.mic",
+                              destination: AnyView(ShadowBrowserView().navigationTitle("Shadow").navigationBarTitleDisplayMode(.inline)))
+        )
+    }
+
+    private var grammarContent: some View {
+        measuredContent(
+            dim: .grammar,
+            big: corrPer10 > 0 ? String(format: "%.1f", corrPer10) : "—",
+            bigUnit: "corrections / 10 turns",
+            band: nil,
+            measuredLine: "How often a more natural rephrase was suggested — lower is better.",
+            measures: "How correctly you build sentences — tenses, articles, agreement.",
+            improve: "Run your review cards — they're built from your own slips and target exactly these.",
+            action: dueCount > 0
+                ? DimAction(title: "Review \(dueCount) cards", icon: "rectangle.stack.fill",
+                            destination: AnyView(DrillView().navigationTitle("Review").navigationBarTitleDisplayMode(.inline)))
+                : nil
+        )
+    }
+
+    private var expressivenessContent: some View {
+        measuredContent(
+            dim: .expressiveness,
+            big: wordsPerTurn > 0 ? "\(wordsPerTurn)" : "—",
+            bigUnit: "words per turn",
+            band: nil,
+            measuredLine: "Longer, richer turns usually mean you're elaborating more.",
+            measures: "How vividly and naturally you get your meaning across.",
+            improve: "Tell stories, react, and add detail — describe how things felt, not just what happened.",
+            action: nil
+        )
+    }
+
+    private struct DimAction { let title: String; let icon: String; let destination: AnyView }
+
+    private func measuredContent(dim: Dim, big: String, bigUnit: String, band: String?,
+                                 measuredLine: String?, measures: String, improve: String,
+                                 action: DimAction?) -> some View {
+        VStack(spacing: 16) {
+            panel {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(big).font(.system(size: 44, weight: .bold)).monospacedDigit().foregroundStyle(.tint)
+                    Text(bigUnit).font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                    if let band { Text(band).font(.subheadline.weight(.semibold)) }
+                }
+                if let measuredLine {
+                    Text(measuredLine).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+                Text(measures).font(.footnote).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let notes = notesByDim[dim], !notes.isEmpty {
+                panel {
+                    Text("What I noticed lately").font(.headline)
+                    Text("From your recent sessions").font(.caption).foregroundStyle(.secondary)
+                    Text(notes[0]).font(.callout).fixedSize(horizontal: false, vertical: true)
+                    ForEach(Array(notes.dropFirst().prefix(2)), id: \.self) { note in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•").foregroundStyle(.tertiary)
+                            Text(note).font(.subheadline).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+
+            panel {
+                Text("How to improve").font(.headline)
+                Text(improve).font(.callout).fixedSize(horizontal: false, vertical: true)
+                if let action {
+                    NavigationLink(destination: action.destination) {
+                        Label(action.title, systemImage: action.icon)
+                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent).controlSize(.large).padding(.top, 2)
                 }
             }
         }
     }
 
-    private func color(for score: Double) -> Color {
-        switch score {
-        case 80...: return .green
-        case 50..<80: return .accentColor
-        case 1..<50: return .orange
-        default: return .secondary
+    // MARK: - CEFR copy
+
+    private func canDo(_ l: CEFRLevel) -> String {
+        switch l {
+        case .a1: return "Simple words and phrases about immediate, familiar things."
+        case .a2: return "Everyday topics in simple terms — routines, plans, basic needs."
+        case .b1: return "Familiar topics fluently enough to get by, and tell a simple story."
+        case .b2: return "Clear, detailed talk on many topics, including some abstract ones."
+        case .c1: return "Fluent, flexible, and precise — even on complex topics."
+        case .c2: return "Effortless and nuanced, close to native."
         }
+    }
+
+    private func nextLevel(_ l: CEFRLevel) -> CEFRLevel? {
+        let all = CEFRLevel.allCases
+        guard let i = all.firstIndex(of: l), i + 1 < all.count else { return nil }
+        return all[i + 1]
+    }
+
+    private var fluencyBand: String {
+        switch wpm {
+        case ..<1:     return "—"
+        case 1..<70:   return "Finding your flow"
+        case 70..<110: return "Conversational"
+        case 110..<150: return "Fluent"
+        default:       return "Very fluent"
+        }
+    }
+
+    private var accuracyBand: String {
+        switch shadowAccuracy {
+        case ..<1:    return "—"
+        case 1..<60:  return "Developing"
+        case 60..<80: return "Solid"
+        default:      return "Strong"
+        }
+    }
+
+    // MARK: - Building blocks
+
+    private func panel<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 12) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No progress yet", systemImage: "chart.line.uptrend.xyaxis")
+        } description: {
+            Text("Have a few conversations and I'll estimate your level and break down how your English is developing.")
+        }
+    }
+
+    // MARK: - Data
+
+    private func reload() {
+        dashboard = PracticeStats.snapshot()
+        dueCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
+        vocab.backfillFromSessions()
+
+        // --- Objective vocabulary CEFR estimate (from words actually used) ---
+        var counts: [CEFRLevel: Int] = [:]
+        var total = 0
+        for word in vocab.usedWords() {
+            if let lv = CoreVocabulary.level(of: word) {
+                counts[lv, default: 0] += 1
+                total += 1
+            }
+        }
+        perLevel = counts
+        usedTotal = total
+        // Estimated level = highest band where the user productively uses ≥6
+        // distinct words. Needs a baseline of words before we claim a level.
+        let threshold = 6
+        if total >= 15 {
+            var est: CEFRLevel?
+            for lv in CEFRLevel.allCases where (counts[lv] ?? 0) >= threshold { est = lv }
+            vocabLevel = est ?? .a1
+        } else {
+            vocabLevel = nil
+        }
+
+        // --- Measured signals from recent sessions' turns ---
+        let scoredSessions = SessionStore.shared.load()
+            .filter { $0.endedAt != nil && $0.summary?.scorecard != nil }
+            .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+        scoredCount = scoredSessions.count
+
+        // Accumulated speaking time across every analyzed session — gates the
+        // overall level so it's grounded in ~10 min of talk, not one session.
+        let totalSpeakSecs = scoredSessions.reduce(0.0) { acc, sess in
+            acc + sess.turns.filter { $0.role == .user }
+                .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
+        }
+        totalSpeakingMinutes = Int(totalSpeakSecs / 60.0)
+
+        let recent = Array(scoredSessions.prefix(5))
+        let mets = recent.map { ScorecardMetrics.compute(turns: $0.turns) }
+        func mean(_ xs: [Double]) -> Double { xs.isEmpty ? 0 : xs.reduce(0, +) / Double(xs.count) }
+        wpm = Int(mean(mets.map(\.wordsPerMinute).filter { $0 > 0 }).rounded())
+        pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
+        talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
+        wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
+        corrPer10 = mean(mets.map(\.suggestionRate)) * 10
+
+        // --- Pronunciation from measured shadow accuracy ---
+        let attempts = appState.shadowAttempts
+        shadowAttempts = attempts.count
+        let recentAtt = attempts.sorted { $0.createdAt > $1.createdAt }.prefix(10).map { $0.matchScore }
+        shadowAccuracy = recentAtt.isEmpty ? 0 : recentAtt.reduce(0, +) / recentAtt.count
+
+        let cards = scoredSessions.compactMap { $0.summary?.scorecard }
+
+        // --- Overall level: AI's holistic CEFR read of recent conversations ---
+        let recentLevels = cards.prefix(3).compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
+        var freq: [CEFRLevel: Int] = [:]
+        for l in recentLevels { freq[l, default: 0] += 1 }
+        aiLevel = freq.max(by: { $0.value < $1.value })?.key ?? recentLevels.first
+
+        // --- Qualitative coaching notes (LLM) per dimension ---
+        func dimNotes(_ get: (SessionScorecard) -> String) -> [String] {
+            Array(cards.prefix(3).map(get).filter { !$0.isEmpty })
+        }
+        notesByDim = [
+            .grammar:        dimNotes { $0.grammar.note },
+            .fluency:        dimNotes { $0.fluency.note },
+            .expressiveness: dimNotes { $0.expressiveness.note }
+        ]
     }
 }

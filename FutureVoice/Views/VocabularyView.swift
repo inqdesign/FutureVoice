@@ -5,6 +5,7 @@ import NaturalLanguage
 /// often you've used the word; tap one for its card (part of speech, meaning,
 /// example). Words enter the cloud automatically as you use them in talks.
 struct VocabularyView: View {
+    var initialWord: String? = nil
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = VocabStore.shared
@@ -15,7 +16,7 @@ struct VocabularyView: View {
     @State private var panAnchor: CGSize = .zero
     @State private var nodes: [CloudLayout.Node] = []
     @State private var viewport: CGSize = .zero
-    @State private var hideKnown = false
+    @AppStorage("futurevoice.vocab.hideKnown") private var hideKnown = true
     @State private var level: LevelFilter = .all
     @State private var inited = false
 
@@ -36,7 +37,8 @@ struct VocabularyView: View {
                         inited = true
                         store.backfillFromSessions()
                         level = LevelFilter(appState.proficiency)   // start at the user's level
-                        currentWord = store.studying.first         // open on a study word
+                        currentWord = initialWord ?? store.studying.first
+                        if initialWord != nil { detent = .medium }  // opened for a specific word → show its card
                     }
                     if nodes.isEmpty { rebuild(center: true) }      // don't recompute on every re-appear
                 }
@@ -90,15 +92,21 @@ struct VocabularyView: View {
                 // cloud has real depth as you drag.
                 let sx = node.pos.x + pan.width * node.depth
                 let sy = node.pos.y + pan.height * node.depth
-                let used = store.records[node.word] != nil
-                if (!hideKnown || !used),
+                let inPool = store.records[node.word] != nil   // used in a talk OR self-marked known
+                if (!hideKnown || !inPool),
                    sx > -margin, sx < size.width + margin, sy > -margin, sy < size.height + margin {
                     let dist = hypot(sx - center.x, sy - center.y)
                     let opacity = max(0, min(1, 1.15 - dist / fade))
                     Text(node.word)
-                        .font(.system(size: node.size, weight: used ? .regular : .semibold, design: .rounded))
-                        .foregroundStyle(used ? Color.secondary : Color.primary)
-                        .opacity(used ? opacity * 0.4 : opacity)
+                        // Words you already know — spoken in a talk OR
+                        // self-marked — recede (grey, dimmed). The focus is the
+                        // words you haven't reached for yet: those stay bold and
+                        // full-strength so the cloud highlights what's left to learn.
+                        .font(.system(size: node.size,
+                                      weight: inPool ? .regular : .semibold,
+                                      design: .rounded))
+                        .foregroundStyle(inPool ? Color.secondary : Color.primary)
+                        .opacity(inPool ? opacity * 0.4 : opacity)
                         .fixedSize()
                         .position(x: sx, y: sy)
                         .onTapGesture {
@@ -170,9 +178,10 @@ struct VocabularyView: View {
     }
 }
 
-/// Packs a set of words into a jittered grid on a large canvas. Position is
-/// hash-scattered (so sizes mix → depth), size + parallax depth come from word
-/// frequency rank.
+/// Lays words on a large pannable canvas. Position is SEMANTIC — Apple's
+/// on-device word embeddings projected to 2D (PCA) so related words cluster —
+/// snapped to a grid so labels don't overlap. Size encodes CEFR difficulty;
+/// per-word parallax depth gives the cloud 3D feel. Falls back to a hash grid.
 enum CloudLayout {
     struct Node: Identifiable {
         let word: String
@@ -185,19 +194,143 @@ enum CloudLayout {
     private static let cell: CGFloat = 116
 
     static func layout(_ items: [(word: String, size: CGFloat)]) -> [Node] {
+        semanticLayout(items) ?? gridLayout(items)
+    }
+
+    private static func node(_ word: String, col: Int, row: Int, size: CGFloat) -> Node {
+        let pos = CGPoint(x: CGFloat(col) * cell + cell / 2 + jitter(word, 0x9E3779B1),
+                          y: CGFloat(row) * cell + cell / 2 + jitter(word, 0x85EBCA77))
+        let layer = CGFloat(hash(word) % 1000) / 1000.0   // 0…1 parallax depth
+        return Node(word: word, pos: pos, size: size, depth: 0.65 + layer * 0.7)
+    }
+
+    /// Fallback when embeddings are unavailable: hash-scattered jittered grid
+    /// (no semantic meaning — just spreads words out).
+    private static func gridLayout(_ items: [(word: String, size: CGFloat)]) -> [Node] {
         let order = items.sorted { hash($0.word) < hash($1.word) }
         let cols = max(1, Int(ceil(sqrt(Double(order.count)))))
         return order.enumerated().map { slot, e in
-            let col = slot % cols
-            let row = slot / cols
-            let pos = CGPoint(x: CGFloat(col) * cell + cell / 2 + jitter(e.word, 0x9E3779B1),
-                              y: CGFloat(row) * cell + cell / 2 + jitter(e.word, 0x85EBCA77))
-            // Per-word depth layer (hash-based) so parallax is visible even when
-            // every word on screen is the same size (a single CEFR level).
-            let layer = CGFloat(hash(e.word) % 1000) / 1000.0   // 0…1
-            let depth = 0.65 + layer * 0.7                       // 0.65 (far) … 1.35 (near)
-            return Node(word: e.word, pos: pos, size: e.size, depth: depth)
+            node(e.word, col: slot % cols, row: slot / cols, size: e.size)
         }
+    }
+
+    /// Semantic map: project Apple's on-device word embeddings to 2D (top-2
+    /// PCA via power iteration) so related words land near each other, then
+    /// snap each to the nearest free grid cell so labels never overlap.
+    /// Returns nil → caller falls back to `gridLayout`.
+    private static func semanticLayout(_ items: [(word: String, size: CGFloat)]) -> [Node]? {
+        guard let emb = NLEmbedding.wordEmbedding(for: .english) else { return nil }
+        let dim = emb.dimension
+        guard dim > 0 else { return nil }
+
+        var withVec: [(word: String, size: CGFloat, v: [Double])] = []
+        var noVec: [(word: String, size: CGFloat)] = []
+        for it in items {
+            if let v = emb.vector(for: it.word), v.count == dim {
+                withVec.append((it.word, it.size, v))
+            } else {
+                noVec.append((it.word, it.size))
+            }
+        }
+        let n = withVec.count
+        guard n >= 8 else { return nil }
+
+        // Mean-center into a flat row-major buffer.
+        var mean = [Double](repeating: 0, count: dim)
+        for w in withVec { for j in 0..<dim { mean[j] += w.v[j] } }
+        for j in 0..<dim { mean[j] /= Double(n) }
+        var X = [Double](repeating: 0, count: n * dim)
+        for i in 0..<n {
+            let base = i * dim, v = withVec[i].v
+            for j in 0..<dim { X[base + j] = v[j] - mean[j] }
+        }
+
+        // Matrix-free covariance multiply: Xᵀ(Xv) — never forms dim×dim.
+        func covMul(_ v: [Double]) -> [Double] {
+            var u = [Double](repeating: 0, count: n)
+            for i in 0..<n {
+                let base = i * dim
+                var sdot = 0.0
+                for j in 0..<dim { sdot += X[base + j] * v[j] }
+                u[i] = sdot
+            }
+            var r = [Double](repeating: 0, count: dim)
+            for i in 0..<n {
+                let base = i * dim, ui = u[i]
+                for j in 0..<dim { r[j] += X[base + j] * ui }
+            }
+            return r
+        }
+        func norm(_ v: inout [Double]) {
+            var m = 0.0; for x in v { m += x * x }; m = m.squareRoot()
+            if m > 1e-12 { for k in 0..<v.count { v[k] /= m } }
+        }
+        func principal(deflating prev: [[Double]]) -> [Double] {
+            var v = (0..<dim).map { Double(($0 &* 2654435761) % 997) / 997.0 - 0.5 }
+            norm(&v)
+            for _ in 0..<30 {
+                var w = covMul(v)
+                for pcomp in prev {
+                    var dot = 0.0; for k in 0..<dim { dot += w[k] * pcomp[k] }
+                    for k in 0..<dim { w[k] -= dot * pcomp[k] }
+                }
+                norm(&w)
+                v = w
+            }
+            return v
+        }
+        let pc1 = principal(deflating: [])
+        let pc2 = principal(deflating: [pc1])
+
+        func project(_ i: Int, _ pc: [Double]) -> Double {
+            let base = i * dim
+            var sdot = 0.0
+            for j in 0..<dim { sdot += X[base + j] * pc[j] }
+            return sdot
+        }
+        var xs = (0..<n).map { project($0, pc1) }
+        var ys = (0..<n).map { project($0, pc2) }
+        func normalize01(_ a: inout [Double]) {
+            guard let lo = a.min(), let hi = a.max(), hi > lo else { return }
+            for k in 0..<a.count { a[k] = (a[k] - lo) / (hi - lo) }
+        }
+        normalize01(&xs); normalize01(&ys)
+
+        // Snap to a sparse grid; nearby-in-meaning → nearby cell, no overlap.
+        let total = n + noVec.count
+        let cols = max(1, Int(ceil(sqrt(Double(total) * 1.6))))
+        let rows = max(1, Int(ceil(Double(total) / Double(cols))))
+        var occupied = Set<Int>()
+        func claim(_ col0: Int, _ row0: Int) -> (Int, Int) {
+            let c0 = min(max(col0, 0), cols - 1), r0 = min(max(row0, 0), rows - 1)
+            if occupied.insert(r0 * cols + c0).inserted { return (c0, r0) }
+            for radius in 1..<(cols + rows) {
+                for dc in -radius...radius {
+                    for dr in -radius...radius where abs(dc) == radius || abs(dr) == radius {
+                        let c = c0 + dc, r = r0 + dr
+                        guard c >= 0, c < cols, r >= 0, r < rows else { continue }
+                        if occupied.insert(r * cols + c).inserted { return (c, r) }
+                    }
+                }
+            }
+            return (c0, r0)
+        }
+
+        var nodes: [Node] = []
+        nodes.reserveCapacity(total)
+        for i in 0..<n {
+            let (c, r) = claim(Int((xs[i] * Double(cols - 1)).rounded()),
+                               Int((ys[i] * Double(rows - 1)).rounded()))
+            nodes.append(node(withVec[i].word, col: c, row: r, size: withVec[i].size))
+        }
+        var scan = 0
+        for w in noVec {
+            while scan < cols * rows && occupied.contains(scan) { scan += 1 }
+            let cell = scan < cols * rows ? scan : 0
+            occupied.insert(cell)
+            nodes.append(node(w.word, col: cell % cols, row: cell / cols, size: w.size))
+        }
+        return nodes
     }
 
     private static func hash(_ s: String) -> UInt64 {
@@ -501,7 +634,13 @@ struct WordCard: View {
                 store.markKnown(word)
                 advanceAfterRemoval()
             } label: {
-                Label("I know it", systemImage: "checkmark.circle").frame(maxWidth: .infinity)
+                Label("I know it", systemImage: "checkmark.circle")
+                    .frame(maxWidth: .infinity)
+                    // Opaque fill UNDER the label so scrolling content doesn't
+                    // bleed through the translucent .bordered material.
+                    .padding(.vertical, 8)
+                    .background(Color(.secondarySystemBackground),
+                                in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .buttonStyle(.bordered).controlSize(.large)
         }

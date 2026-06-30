@@ -82,11 +82,14 @@ final class AudioRecorder: ObservableObject {
                 AVLinearPCMIsFloatKey: false,
             ]
         case .voiceCloneHigh:
+            // 16-bit (not 24-bit): the upload is peak-normalized to 16-bit PCM
+            // anyway, and 24-bit pushed ~1 min takes near ElevenLabs' 11 MB
+            // limit on the fallback path. 44.1k/16-bit mono is ideal for IVC.
             settings = [
                 AVFormatIDKey: Int(kAudioFormatLinearPCM),
                 AVSampleRateKey: 44_100,
                 AVNumberOfChannelsKey: 1,
-                AVLinearPCMBitDepthKey: 24,
+                AVLinearPCMBitDepthKey: 16,
                 AVLinearPCMIsBigEndianKey: false,
                 AVLinearPCMIsFloatKey: false,
             ]

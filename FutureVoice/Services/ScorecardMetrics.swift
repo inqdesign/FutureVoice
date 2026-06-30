@@ -14,6 +14,10 @@ struct ScorecardMetrics: Codable {
     var suggestionCount: Int              // user turns the LLM flagged with a rephrase
     var suggestionRate: Double            // suggestions / userTurnCount, 0…1
     var selfCorrectionHits: Int           // crude regex count for "I mean", "uh", etc.
+    // Measured delivery (from the live mic energy) — real fluency evidence.
+    var pausesPerMinute: Double           // mid-speech pauses per minute of speech
+    var pauseRatio: Double                // share of spoken span spent paused, 0…1
+    var articulationRate: Double          // words per minute of VOICED speech (pace, pauses removed)
 
     static func compute(turns: [Turn]) -> ScorecardMetrics {
         let userTurns = turns.filter { $0.role == .user }
@@ -40,6 +44,16 @@ struct ScorecardMetrics: Codable {
             acc + selfCorrectionMatches(in: turn.transcript)
         }
 
+        // Measured delivery from per-turn FluencyStats (voiced time + pauses).
+        let fl = userTurns.compactMap { $0.fluency }
+        let voiced = fl.reduce(0.0) { $0 + $1.speakingSeconds }
+        let span = fl.reduce(0.0) { $0 + $1.totalSeconds }
+        let pauses = fl.reduce(0) { $0 + $1.pauseCount }
+        let pauseSecs = fl.reduce(0.0) { $0 + $1.pauseSeconds }
+        let pausesPerMin = voiced > 0 ? Double(pauses) / (voiced / 60.0) : 0
+        let pauseRatio = span > 0 ? pauseSecs / span : 0
+        let articulation = voiced > 0 ? Double(userWordCount) / (voiced / 60.0) : 0
+
         return ScorecardMetrics(
             userTurnCount: userTurns.count,
             userWordCount: userWordCount,
@@ -50,7 +64,10 @@ struct ScorecardMetrics: Codable {
             wordsPerMinute: wpm,
             suggestionCount: suggestionCount,
             suggestionRate: suggestionRate,
-            selfCorrectionHits: selfCorrections
+            selfCorrectionHits: selfCorrections,
+            pausesPerMinute: pausesPerMin,
+            pauseRatio: pauseRatio,
+            articulationRate: articulation
         )
     }
 
@@ -67,7 +84,10 @@ struct ScorecardMetrics: Codable {
             "words_per_minute": Int(wordsPerMinute.rounded()),
             "suggestion_count": suggestionCount,
             "suggestion_rate": String(format: "%.2f", suggestionRate),
-            "self_correction_hits": selfCorrectionHits
+            "self_correction_hits": selfCorrectionHits,
+            "articulation_rate_wpm": Int(articulationRate.rounded()),
+            "pauses_per_minute": String(format: "%.1f", pausesPerMinute),
+            "pause_ratio": String(format: "%.2f", pauseRatio)
         ]
         let data = (try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])) ?? Data()
         return String(data: data, encoding: .utf8) ?? "{}"

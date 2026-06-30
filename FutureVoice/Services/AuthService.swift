@@ -19,6 +19,11 @@ import Supabase
 @MainActor
 final class AuthService: NSObject, ObservableObject {
     @Published private(set) var session: Auth.Session?
+    /// False until the very first session restore attempt finishes. RootView
+    /// shows a blank launch background until this flips, so a returning user
+    /// goes straight to Home instead of flashing the Welcome screen while the
+    /// stored session is still being restored.
+    @Published private(set) var didResolveInitialSession = false
     @Published private(set) var isWorking = false
     @Published var lastError: String?
 
@@ -32,6 +37,7 @@ final class AuthService: NSObject, ObservableObject {
 
     private func loadInitialSession() async {
         session = try? await SupabaseProvider.shared.auth.session
+        didResolveInitialSession = true
     }
 
     private func observeSession() async {

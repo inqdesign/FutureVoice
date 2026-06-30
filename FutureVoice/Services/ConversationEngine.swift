@@ -170,23 +170,35 @@ enum ConversationEngine {
             { "mistake": "...", "correction": "...", "context": "...", "frequency_hint": "rare|sometimes|often" }
           ],
           "suggested_drills": ["phrase 1", "phrase 2", "phrase 3"],
+          "expressions_used": ["...", "..."],
           "overall_note": "1-2 sentence encouraging note",
           "scorecard": {
             "vocabulary":     { "score": 0, "note": "..." },
             "grammar":        { "score": 0, "note": "..." },
             "expressiveness": { "score": 0, "note": "..." },
             "fluency":        { "score": 0, "note": "..." },
-            "top_line":       "one-sentence holistic read of the session"
+            "top_line":       "one-sentence holistic read of the session",
+            "cefr_level":     "a1|a2|b1|b2|c1|c2"
           }
         }
 
         Rules:
+        - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
+          this whole conversation, weighing vocabulary range, grammatical
+          control, fluency, and how well they express ideas together. Anchor to
+          the standard CEFR can-do descriptors. Be honest — most learners are
+          A2–B2. Lowercase a1…c2.
         - title: 2-5 words in \(targetLanguage) naming what the conversation
           was actually about — "Weekend plans with Boram", "Arguing about
           coffee prices". Concrete and specific, never generic ("Conversation",
           "Practice session" are failures).
         - Max 5 phrases_used. Pick the most teachable ones.
         - Max 3 suggested_drills.
+        - expressions_used: 0-4 noteworthy words or multi-word
+          expressions the user ACTUALLY said this session that show their
+          range (idioms, phrasal verbs, good word choices). Quote them
+          VERBATIM from the user's turns — never invent or paraphrase.
+          Leave empty if nothing stands out.
         - Tone: warm, never condescending.
 
         HARD RULE for phrases_used / new_patterns_detected / suggested_drills
@@ -338,11 +350,13 @@ struct ClaudeSummaryPayload: Decodable {
         let expressiveness: Axis
         let fluency: Axis
         let top_line: String
+        let cefr_level: String?
     }
     let title: String?
     let phrases_used: [Phrase]
     let new_patterns_detected: [Pattern]
     let suggested_drills: [String]
+    let expressions_used: [String]?
     let overall_note: String
     let scorecard: Scorecard?
 
@@ -366,7 +380,8 @@ struct ClaudeSummaryPayload: Decodable {
                 expressiveness: axis(sc.expressiveness),
                 fluency: fluencyAxis,
                 pronunciation: nil,
-                topLine: sc.top_line
+                topLine: sc.top_line,
+                cefrLevel: sc.cefr_level?.lowercased()
             )
         }
         return SessionSummary(
@@ -390,7 +405,8 @@ struct ClaudeSummaryPayload: Decodable {
             },
             suggestedDrills: suggested_drills,
             overallNote: overall_note,
-            scorecard: card
+            scorecard: card,
+            expressionsUsed: expressions_used ?? []
         )
     }
 }

@@ -8,8 +8,20 @@ struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
 
+    init() { Self.applyRoundedNavBar() }
+
     var body: some View {
-        if auth.session == nil {
+        content.fontDesign(.rounded)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if !auth.didResolveInitialSession {
+            // Match the (blank) launch screen until we know whether there's a
+            // stored session — a returning user then lands straight on Home
+            // with no Welcome-screen flash.
+            Color(.systemBackground).ignoresSafeArea()
+        } else if auth.session == nil {
             WelcomeView()
         } else if !appState.setupComplete {
             SetupFlowView()
@@ -20,5 +32,31 @@ struct RootView: View {
         } else {
             RootTabView()
         }
+    }
+
+    /// Make navigation-bar titles (which UIKit renders, so `.fontDesign` can't
+    /// reach them) use SF Pro Rounded too.
+    private static func applyRoundedNavBar() {
+        func rounded(_ size: CGFloat, _ weight: UIFont.Weight) -> UIFont {
+            let base = UIFont.systemFont(ofSize: size, weight: weight)
+            guard let d = base.fontDescriptor.withDesign(.rounded) else { return base }
+            return UIFont(descriptor: d, size: size)
+        }
+        let large: [NSAttributedString.Key: Any] = [.font: rounded(34, .bold)]
+        let inline: [NSAttributedString.Key: Any] = [.font: rounded(17, .semibold)]
+
+        let standard = UINavigationBarAppearance()
+        standard.configureWithDefaultBackground()
+        standard.largeTitleTextAttributes = large
+        standard.titleTextAttributes = inline
+
+        let transparent = UINavigationBarAppearance()
+        transparent.configureWithTransparentBackground()
+        transparent.largeTitleTextAttributes = large
+        transparent.titleTextAttributes = inline
+
+        UINavigationBar.appearance().standardAppearance = standard
+        UINavigationBar.appearance().compactAppearance = standard
+        UINavigationBar.appearance().scrollEdgeAppearance = transparent
     }
 }

@@ -1,28 +1,26 @@
 import SwiftUI
 
-/// Four-tab structure built around the one engine that feeds everything —
-/// Talk. You speak (Talk), study what it produced (Practice: review + shadow +
-/// vocabulary), immerse by watching your fluent self (Watch), and manage
-/// yourself (You: progress dashboard + account + settings). Progress used to
-/// be its own tab but it's low-frequency analytics, so it folds under You;
-/// vocabulary moved into Practice where it belongs as a study activity.
+/// Native four-tab structure: Home (a cross-cutting dashboard + where you start
+/// a conversation), Practice (review + shadow + vocabulary), Watch (personas),
+/// and You (progress + account + settings). Starting a talk lives on Home — the
+/// native tab bar can't host a custom action button, so it's a screen action.
 struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var selection: Tab = .talk
+    @State private var selection: Tab = .home
     /// Beta intro shows ONCE, right after onboarding — in place of a paywall
     /// (no subscription during the beta). Explains the free quota + invites.
     @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
     @State private var showingBetaWelcome = false
 
     enum Tab: Hashable {
-        case talk, practice, watch, you
+        case home, practice, watch, progress
     }
 
     var body: some View {
         TabView(selection: $selection) {
             ConversationHome()
-                .tabItem { Label("Talk", systemImage: "bubble.left.and.bubble.right.fill") }
-                .tag(Tab.talk)
+                .tabItem { Label("Home", systemImage: "house.fill") }
+                .tag(Tab.home)
 
             PracticeTab()
                 .tabItem { Label("Practice", systemImage: "lightbulb.max") }
@@ -32,9 +30,9 @@ struct RootTabView: View {
                 .tabItem { Label("Watch", systemImage: "person.2.wave.2") }
                 .tag(Tab.watch)
 
-            MeTab()
-                .tabItem { Label("You", systemImage: "person.crop.circle") }
-                .tag(Tab.you)
+            ProgressTab()
+                .tabItem { Label("Progress", systemImage: "chart.line.uptrend.xyaxis") }
+                .tag(Tab.progress)
         }
         .onAppear {
             if !betaWelcomeSeen { showingBetaWelcome = true }

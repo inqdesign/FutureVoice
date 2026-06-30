@@ -20,7 +20,7 @@ struct WatchTab: View {
                 }
             }
             .navigationTitle("Watch")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showingNewVoice = true } label: {

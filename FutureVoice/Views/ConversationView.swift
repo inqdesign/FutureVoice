@@ -28,6 +28,9 @@ struct ConversationView: View {
     @State private var isEnding = false
     @State private var didAutoStart = false
     @State private var isResuming = false
+    /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
+    /// an inline Retry button so a network blip doesn't lose what they said.
+    @State private var failedTurnId: UUID?
     @Environment(\.dismiss) private var dismiss
 
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
@@ -225,6 +228,10 @@ struct ConversationView: View {
                     } else if phase == .thinking && (turns.last?.role == .user) {
                         ThinkingIndicator()
                             .id("partial-thinking")
+                            .transition(.opacity)
+                    } else if let fid = failedTurnId, turns.last?.id == fid {
+                        RetryReplyRow(onRetry: retryReply)
+                            .id("retry-row")
                             .transition(.opacity)
                     }
                     // Bottom spacer so the last line isn't hidden behind controls
@@ -499,6 +506,7 @@ struct ConversationView: View {
 
     private func stopAndSend() async {
         let finalText = live.stop()
+        let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
         phase = .thinking
@@ -506,18 +514,27 @@ struct ConversationView: View {
         let userTurn = Turn(
             id: UUID(), role: .user, audioURL: nil,
             transcript: finalText, durationMs: max(0, elapsedMs), timestamp: Date(),
-            suggestion: nil
+            suggestion: nil,
+            fluency: fluency
         )
         turns.append(userTurn)
         didSaveCurrentSession = false
 
+        await requestReply(forUserTurn: userTurn.id)
+    }
+
+    /// Generate the fluent-self reply for `turnId` (the latest user turn).
+    /// Extracted from `stopAndSend` so a failed turn — usually a transient
+    /// network error — can be retried from an inline button WITHOUT making
+    /// the user speak again. The user turn stays in `turns` either way.
+    private func requestReply(forUserTurn turnId: UUID) async {
+        failedTurnId = nil
+        phase = .thinking
         guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
         do {
             // One structured call returns reply + optional inline correction
-            // — same cost as the old plain-text turn, but it repopulates
-            // Turn.suggestion (chip UI, SRS ingest, weekly-report pairs,
-            // suggestion_rate metric) that died when the separate
-            // `annotateUserTurn` call was removed.
+            // (repopulates Turn.suggestion: chip UI, SRS ingest, weekly-report
+            // pairs, suggestion_rate metric).
             let payload: ConversationTurnPayload
             do {
                 payload = try await GeminiClient.shared.sendJSON(
@@ -534,25 +551,29 @@ struct ConversationView: View {
             }
             let replyText = payload.reply.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !replyText.isEmpty else {
-                self.error = "The avatar didn't reply — try again."
+                failedTurnId = turnId
                 phase = .idle
                 return
             }
             if let s = payload.turnSuggestion(),
-               let idx = turns.firstIndex(where: { $0.id == userTurn.id }) {
+               let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
             }
             try await speakAndAppend(replyText, voiceId: voiceId)
             // DO NOT set phase = .idle here. speakAndAppend kicks off audio
-            // playback (non-blocking) and registers a completion that flips
-            // phase back to .idle AND auto-restarts listening for phone-call
-            // mode. Setting .idle here clobbers the .speaking marker, so the
-            // completion's `guard phase == .speaking else { return }` bails
-            // out and the call loop dies after one round.
+            // playback (non-blocking) whose completion flips phase back to
+            // .idle AND auto-restarts listening for phone-call mode.
         } catch {
-            self.error = error.localizedDescription
+            // Keep the user's turn and offer an inline Retry instead of a
+            // dead-end alert, so a network blip doesn't lose what they said.
+            failedTurnId = turnId
             phase = .idle
         }
+    }
+
+    private func retryReply() {
+        guard let id = failedTurnId else { return }
+        Task { await requestReply(forUserTurn: id) }
     }
 
     private func speakAndAppend(_ text: String, voiceId: String) async throws {
@@ -627,7 +648,27 @@ struct ConversationView: View {
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
                 maxTokens: 1400
             )
-            let computed = payload.toDomain()
+            var computed = payload.toDomain()
+
+            // Fold the user's spoken words into the long-term vocab pool; the
+            // freshly-used words ride along on the summary so the wrap-up can
+            // celebrate concrete progress.
+            let userTexts = turns.filter { $0.role == .user }.map { $0.transcript }
+            computed.newWordsUsed = VocabStore.shared.ingest(
+                sessionId: sessionId, userTexts: userTexts)
+
+            // Keep only expressions that literally appear in the user's own
+            // turns — the LLM occasionally paraphrases, and we never show or
+            // store an expression they didn't actually say.
+            let haystack = userTexts.joined(separator: " ").lowercased()
+            let verifiedExpressions = computed.expressionsUsed.filter { phrase in
+                let needle = phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                return !needle.isEmpty && haystack.contains(needle)
+            }
+            computed.expressionsUsed = verifiedExpressions
+            VocabStore.shared.ingestExpressions(
+                sessionId: sessionId, phrases: verifiedExpressions)
+
             summary = computed
             phase = .idle
 
@@ -655,11 +696,6 @@ struct ConversationView: View {
             // Grow the long-term learner profile — the next conversation's
             // system prompt picks these patterns up.
             appState.recordSessionOutcome(summary: computed, turns: turns)
-            // Fold the user's spoken words into their vocabulary pool.
-            VocabStore.shared.ingest(
-                sessionId: sessionId,
-                userTexts: turns.filter { $0.role == .user }.map { $0.transcript }
-            )
             didSaveCurrentSession = true
             refreshDashboard()
             // Kick off async weekly-report generation if unlock conditions
@@ -681,6 +717,7 @@ struct ConversationView: View {
     }
 
     private func startNewSession() {
+        failedTurnId = nil
         summary = nil
         sessionId = UUID()
         sessionStartedAt = Date()
@@ -1034,6 +1071,27 @@ private struct TopicPickerSheet: View {
     }
 }
 
+/// Inline recovery row shown under the last user turn when the reply failed
+/// (network/Gemini/TTS). Plain feed row (no card) per the transcript style.
+private struct RetryReplyRow: View {
+    let onRetry: () -> Void
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.exclamationmark")
+                .foregroundStyle(.secondary)
+            Text("Couldn\'t get a response.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button("Retry", action: onRetry)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 private struct SummarySheet: View {
     let summary: SessionSummary
     let sessionId: UUID
@@ -1051,6 +1109,32 @@ private struct SummarySheet: View {
                     Section("Today's nutrition") {
                         ScorecardView(scorecard: card)
                             .padding(.vertical, 6)
+                    }
+                }
+                if !summary.newWordsUsed.isEmpty || !summary.expressionsUsed.isEmpty {
+                    Section("Words & expressions you used") {
+                        if !summary.newWordsUsed.isEmpty {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("New words")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                FlowLayout {
+                                    ForEach(summary.newWordsUsed, id: \.self) { word in
+                                        Text(word)
+                                            .font(.subheadline)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 5)
+                                            .background(Color(.secondarySystemBackground), in: Capsule())
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        ForEach(summary.expressionsUsed, id: \.self) { expr in
+                            Label(expr, systemImage: "quote.bubble")
+                                .font(.subheadline)
+                                .padding(.vertical, 2)
+                        }
                     }
                 }
                 Section("Note") {

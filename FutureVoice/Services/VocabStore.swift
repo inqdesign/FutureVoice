@@ -21,18 +21,25 @@ final class VocabStore: ObservableObject {
     @Published private(set) var records: [String: Record] = [:]
     /// Words the user collected into their notebook to keep studying.
     @Published private(set) var studying: [String] = []
+    /// Multi-word expressions the user has used (lowercased key -> record).
+    @Published private(set) var expressionRecords: [String: Record] = [:]
     /// Session ids already folded in, so re-ingest is cheap/idempotent.
     private var ingestedSessions: Set<UUID> = []
+    private var ingestedExpressionSessions: Set<UUID> = []
 
     private let fileURL: URL
     private let metaURL: URL
     private let studyingURL: URL
+    private let expressionsURL: URL
+    private let expressionsMetaURL: URL
 
     init() {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         fileURL = dir.appendingPathComponent("vocab_pool.json")
         metaURL = dir.appendingPathComponent("vocab_ingested.json")
         studyingURL = dir.appendingPathComponent("vocab_studying.json")
+        expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
+        expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         load()
     }
 
@@ -76,10 +83,10 @@ final class VocabStore: ObservableObject {
 
     /// Fold a finished session's USER turns into the pool. No-op if already done.
     @discardableResult
-    func ingest(sessionId: UUID, userTexts: [String], at date: Date = Date()) -> Int {
-        guard !ingestedSessions.contains(sessionId) else { return 0 }
+    func ingest(sessionId: UUID, userTexts: [String], at date: Date = Date()) -> [String] {
+        guard !ingestedSessions.contains(sessionId) else { return [] }
         ingestedSessions.insert(sessionId)
-        var added = 0
+        var newWords: [String] = []
         for lemma in lemmas(in: userTexts) where CoreVocabulary.set.contains(lemma) {
             if var r = records[lemma] {
                 r.count += 1
@@ -87,11 +94,76 @@ final class VocabStore: ObservableObject {
                 records[lemma] = r          // keep .known if self-marked earlier
             } else {
                 records[lemma] = Record(state: .used, firstAt: date, lastAt: date, count: 1)
-                added += 1
+                newWords.append(lemma)
             }
         }
         save()
+        return newWords
+    }
+
+    // MARK: - Expressions (multi-word phrases the user actually used)
+
+    /// Fold this session\'s verified expressions into the long-term pool.
+    /// Idempotent per session. Returns the ones seen for the FIRST time.
+    @discardableResult
+    func ingestExpressions(sessionId: UUID, phrases: [String], at date: Date = Date()) -> [String] {
+        guard !ingestedExpressionSessions.contains(sessionId) else { return [] }
+        ingestedExpressionSessions.insert(sessionId)
+        var added: [String] = []
+        for raw in phrases {
+            let display = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !display.isEmpty else { continue }
+            let key = display.lowercased()
+            if var r = expressionRecords[key] {
+                r.count += 1
+                r.lastAt = date
+                expressionRecords[key] = r
+            } else {
+                expressionRecords[key] = Record(state: .used, firstAt: date, lastAt: date, count: 1)
+                added.append(display)
+            }
+        }
+        saveExpressions()
         return added
+    }
+
+    /// Expressions the user has used, most-recent first (lowercased keys).
+    func usedExpressions() -> [String] {
+        expressionRecords.sorted { $0.value.lastAt > $1.value.lastAt }.map { $0.key }
+    }
+
+    var expressionCount: Int { expressionRecords.count }
+
+    struct ExpressionEntry: Identifiable {
+        var id: String { text }
+        let text: String       // lowercased key
+        let count: Int
+        let firstAt: Date
+        let lastAt: Date
+    }
+
+    /// All accumulated expressions as display rows, most-recent first.
+    func expressionEntries() -> [ExpressionEntry] {
+        expressionRecords
+            .map { ExpressionEntry(text: $0.key, count: $0.value.count,
+                                   firstAt: $0.value.firstAt, lastAt: $0.value.lastAt) }
+            .sorted { $0.lastAt > $1.lastAt }
+    }
+
+    /// The user's own turns where they used this expression — for the
+    /// expression detail (text + replayable audio when we have it).
+    func sentences(containing phrase: String) -> [SourceSentence] {
+        let needle = phrase.lowercased()
+        guard !needle.isEmpty else { return [] }
+        var out: [SourceSentence] = []
+        for sess in SessionStore.shared.load() {
+            for t in sess.turns where t.role == .user {
+                if t.transcript.lowercased().contains(needle) {
+                    out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: "Talk"))
+                }
+            }
+        }
+        return out
     }
 
     /// Fold every ended session into the pool (idempotent) — used to seed the
@@ -182,6 +254,14 @@ final class VocabStore: ObservableObject {
            let list = try? JSONDecoder().decode([String].self, from: data) {
             studying = list
         }
+        if let data = try? Data(contentsOf: expressionsURL),
+           let dict = try? JSONDecoder().decode([String: Record].self, from: data) {
+            expressionRecords = dict
+        }
+        if let data = try? Data(contentsOf: expressionsMetaURL),
+           let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
+            ingestedExpressionSessions = ids
+        }
     }
 
     private func save() {
@@ -196,6 +276,15 @@ final class VocabStore: ObservableObject {
     private func saveStudying() {
         if let data = try? JSONEncoder().encode(studying) {
             try? data.write(to: studyingURL, options: [.atomic])
+        }
+    }
+
+    private func saveExpressions() {
+        if let data = try? JSONEncoder().encode(expressionRecords) {
+            try? data.write(to: expressionsURL, options: [.atomic])
+        }
+        if let data = try? JSONEncoder().encode(ingestedExpressionSessions) {
+            try? data.write(to: expressionsMetaURL, options: [.atomic])
         }
     }
 }

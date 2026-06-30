@@ -23,6 +23,9 @@ struct VoiceCloneOnboardingView: View {
     /// minimum; we still surface a "great clone unlocked" cue at 60s+.
     private static let minSeconds: Double = 45
     private static let recommendedSeconds: Double = 75
+    /// Hard cap — auto-stop here. Well past the 75s sweet spot and far under
+    /// ElevenLabs' 11 MB upload limit (~130s at 16-bit/44.1k mono).
+    private static let maxSeconds: Double = 90
 
     enum Status: Equatable {
         case idle
@@ -303,7 +306,7 @@ struct VoiceCloneOnboardingView: View {
 
     private var tint: Color {
         switch status {
-        case .recording: return .red
+        case .recording: return elapsedSeconds >= Self.recommendedSeconds ? .green : .red
         case .done:      return .green
         default:         return .accentColor
         }
@@ -342,13 +345,7 @@ struct VoiceCloneOnboardingView: View {
                     status = .recording
 
                 case .recording:
-                    stopTicker()
-                    guard let rawURL = recorder.stop() else { return }
-                    // Don't clone yet — let the user listen and see the quality
-                    // check first, then confirm with "Use this voice".
-                    recordedSampleURL = rawURL
-                    quality = AudioSampleQuality.analyze(url: rawURL)
-                    status = .reviewing
+                    stopAndReview()
 
                 case .reviewing, .uploading, .done:
                     break
@@ -390,12 +387,28 @@ struct VoiceCloneOnboardingView: View {
         status = .idle
     }
 
+    /// Stop recording and move to the review step. Shared by the manual
+    /// Stop tap and the automatic stop at `maxSeconds`.
+    private func stopAndReview() {
+        stopTicker()
+        guard let rawURL = recorder.stop() else { status = .idle; return }
+        // Don't clone yet — let the user listen and see the quality check
+        // first, then confirm with "Use this voice".
+        recordedSampleURL = rawURL
+        quality = AudioSampleQuality.analyze(url: rawURL)
+        status = .reviewing
+    }
+
     private func startTicker() {
         stopTicker()
         ticker = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             Task { @MainActor in
                 guard let started = startedAt else { return }
                 elapsedSeconds = Date().timeIntervalSince(started)
+                if status == .recording, elapsedSeconds >= Self.maxSeconds {
+                    HapticEngine.success()   // cue that recording auto-stopped at the cap
+                    stopAndReview()
+                }
             }
         }
     }
