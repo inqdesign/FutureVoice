@@ -235,6 +235,7 @@ struct WatchView: View {
         .background(Color(.systemBackground))
         .navigationTitle("Watching")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
         .alert("Something went wrong", isPresented: errorBinding) {
             Button("OK") { error = nil }

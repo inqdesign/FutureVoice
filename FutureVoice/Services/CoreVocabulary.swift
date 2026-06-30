@@ -17,6 +17,11 @@ enum CoreVocabulary {
 
     static func level(of word: String) -> CEFRLevel? { levelByWord[word] }
 
+    /// Words per CEFR level, computed once — for filter-scoped counts in the UI.
+    static let countByLevel: [CEFRLevel: Int] =
+        Dictionary(entries.map { ($0.level, 1) }, uniquingKeysWith: +)
+    static func total(at level: CEFRLevel) -> Int { countByLevel[level] ?? 0 }
+
     static func levelRank(_ l: CEFRLevel) -> Int {
         CEFRLevel.allCases.firstIndex(of: l) ?? 0
     }

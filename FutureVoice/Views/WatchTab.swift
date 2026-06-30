@@ -105,8 +105,6 @@ struct WatchTab: View {
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
-        } header: {
-            Text("Your personas")
         }
     }
 
@@ -194,7 +192,7 @@ struct WatchTab: View {
                 HStack(spacing: 6) {
                     Text(counterpart.name)
                     Text("·")
-                    Text(d.createdAt, style: .relative)
+                    Text(d.createdAt, format: .dateTime.month(.abbreviated).day().hour().minute())
                     Text("·")
                     Text("\(d.turns.count) turns")
                 }

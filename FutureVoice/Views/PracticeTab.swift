@@ -70,7 +70,7 @@ struct PracticeTab: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Vocabulary")
                             .font(.headline)
-                        Text("\(vocab.knownCount) of \(vocab.total) words · \(vocab.activeCount()) active")
+                        Text("\(vocab.knownCount) of \(vocab.total) words used or known")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
