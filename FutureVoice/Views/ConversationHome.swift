@@ -43,15 +43,9 @@ struct ConversationHome: View {
             }
             .background(Color(.systemBackground))
             .navigationTitle(greetingText)
-            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingProfile = true } label: {
-                        Image(systemName: "person.crop.circle.fill")
-                            .font(.title2).foregroundStyle(.secondary)
-                    }
-                    .accessibilityLabel("Profile & settings")
-                }
+                ToolbarItemGroup { profileButton }
             }
             .onAppear(perform: reload)
             .sheet(isPresented: $showingProfile) {
@@ -66,6 +60,14 @@ struct ConversationHome: View {
                     .environmentObject(appState)
             }
         }
+    }
+
+    private var profileButton: some View {
+        Button { showingProfile = true } label: {
+            Image(systemName: "person.crop.circle.fill")
+                .font(.title2).foregroundStyle(.secondary)
+        }
+        .accessibilityLabel("Profile & settings")
     }
 
     private var greetingText: String {

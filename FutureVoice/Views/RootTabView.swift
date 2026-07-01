@@ -27,7 +27,7 @@ struct RootTabView: View {
                 .tag(Tab.practice)
 
             WatchTab()
-                .tabItem { Label("Watch", systemImage: "person.2.wave.2") }
+                .tabItem { Label("Scenarios", systemImage: "bubble.left.and.bubble.right.fill") }
                 .tag(Tab.watch)
 
             ProgressTab()

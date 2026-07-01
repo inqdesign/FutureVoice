@@ -7,32 +7,53 @@ import SwiftUI
 struct WatchTab: View {
     @EnvironmentObject private var appState: AppState
     @State private var showingNewVoice = false
+    @State private var showingNewScenario = false
+    @State private var talkScenario: Scenario?
+    @State private var watchScenarioTarget: Scenario?
 
     private static let recentLimit = 5
 
     var body: some View {
         NavigationStack {
             Group {
-                if appState.counterparts.isEmpty && appState.watchDialogues.isEmpty {
+                if appState.counterparts.isEmpty && appState.watchDialogues.isEmpty && appState.scenarios.isEmpty {
                     emptyState
                 } else {
                     content
                 }
             }
-            .navigationTitle("Watch")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("Scenarios")
+            .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingNewVoice = true } label: {
-                        Label("New persona", systemImage: "plus")
-                    }
-                }
+                ToolbarItemGroup { plusButton }
             }
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView()
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showingNewScenario) {
+                ScenarioBuilderSheet { newScenario in appState.saveScenario(newScenario) }
+                    .environmentObject(appState)
+            }
+            .fullScreenCover(item: $talkScenario) { s in
+                ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
+                    .environmentObject(appState)
+            }
+            .navigationDestination(item: $watchScenarioTarget) { s in
+                WatchView(counterpart: ScenariosListSheet.watchCounterpart(for: s),
+                          customScenario: ScenariosListSheet.watchScenarioText(s))
+                    .environmentObject(appState)
+            }
         }
+    }
+
+    /// Plain toolbar button — the nav bar supplies the circular Liquid Glass
+    /// chrome itself (iOS 26); adding our own frame/glass style double-stacked it.
+    private var plusButton: some View {
+        Button { showingNewVoice = true } label: {
+            Image(systemName: "plus")
+        }
+        .accessibilityLabel("New persona")
     }
 
     // MARK: - Content
@@ -49,6 +70,7 @@ struct WatchTab: View {
         let recent = recentDialogues
         return List {
             personasSection
+            situationsSection
 
             if !recent.isEmpty {
                 Section {
@@ -105,6 +127,44 @@ struct WatchTab: View {
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
+        }
+    }
+
+    // MARK: - Situations (scenario library)
+
+    private var situationsSection: some View {
+        Section {
+            ForEach(appState.scenarios) { s in
+                HStack(spacing: 10) {
+                    Button { talkScenario = s } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(s.displayTitle).font(.body).foregroundStyle(.primary)
+                            if !s.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                                Text(s.notes).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    Button { watchScenarioTarget = s } label: {
+                        Label("Watch", systemImage: "play.fill").font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.bordered).controlSize(.small)
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) { appState.deleteScenario(id: s.id) } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+            Button { showingNewScenario = true } label: {
+                Label("New situation", systemImage: "plus.circle")
+            }
+        } header: {
+            Text("Situations")
+        } footer: {
+            Text("Tap to talk it yourself, or Watch your fluent self play it out.")
         }
     }
 
@@ -207,12 +267,14 @@ struct WatchTab: View {
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Create your first persona", systemImage: "person.crop.circle.badge.plus")
+            Label("Practice a conversation", systemImage: "bubble.left.and.bubble.right")
         } description: {
-            Text("Bring someone from your real life into the app — your best friend, a Kita parent, your manager. Then watch yourself hold fluent conversations with them.")
+            Text("Set up a situation and start right away — no persona needed. Or add someone from your real life for conversations that feel personal.")
         } actions: {
-            Button("Create persona") { showingNewVoice = true }
+            Button("New situation") { showingNewScenario = true }
                 .buttonStyle(.borderedProminent)
+            Button("Create persona") { showingNewVoice = true }
+                .buttonStyle(.bordered)
         }
     }
 }

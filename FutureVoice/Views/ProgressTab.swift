@@ -56,9 +56,6 @@ struct ProgressTab: View {
                     VStack(spacing: 0) {
                         tabBar
                             .padding(.top, 4)
-                        // Paged content: swipe left/right between dimensions,
-                        // synced both ways with the tab bar. Each page scrolls
-                        // vertically on its own.
                         TabView(selection: $selected) {
                             ForEach(availableDims, id: \.self) { dim in
                                 ScrollView {
@@ -76,7 +73,7 @@ struct ProgressTab: View {
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Progress")
-            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleDisplayMode(.inlineLarge)
             .onAppear(perform: reload)
         }
     }

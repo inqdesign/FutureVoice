@@ -193,7 +193,14 @@ enum ConversationEngine {
           coffee prices". Concrete and specific, never generic ("Conversation",
           "Practice session" are failures).
         - Max 5 phrases_used. Pick the most teachable ones.
-        - Max 3 suggested_drills.
+        - suggested_drills: 3-4 phrases the learner should PRACTICE NEXT to
+          GROW — not more corrections of what they already said. Aim slightly
+          ABOVE their current level (see proficiencyLevel in the profile):
+          higher-value, natural expressions a fluent speaker would use for THIS
+          topic that the learner did NOT reach for — idioms, phrasal verbs,
+          collocations, connectors, more precise word choices. Skip trivial
+          phrases they obviously already command. Each is a full, speakable
+          sentence, and the 3-4 should be varied (not near-duplicates).
         - expressions_used: 0-4 noteworthy words or multi-word
           expressions the user ACTUALLY said this session that show their
           range (idioms, phrasal verbs, good word choices). Quote them

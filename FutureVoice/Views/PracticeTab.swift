@@ -36,7 +36,7 @@ struct PracticeTab: View {
         NavigationStack {
             content
             .navigationTitle("Practice")
-            .navigationBarTitleDisplayMode(.large)
+            .toolbarTitleDisplayMode(.inlineLarge)
             .onAppear(perform: reload)
             .sheet(item: $shadowPick, onDismiss: reload) { pick in
                 ShadowDrillView(turn: pick.turn, targetLanguage: appState.targetLanguage)

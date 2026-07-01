@@ -1,5 +1,6 @@
 import AVFoundation
 import SwiftUI
+import UIKit
 
 /// Voice-first conversation screen, redesigned around a scrolling transcript
 /// feed. The mic is small and lives at the bottom; the dominant content is
@@ -31,6 +32,7 @@ struct ConversationView: View {
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
+    @State private var showMicPermissionAlert = false
     @Environment(\.dismiss) private var dismiss
 
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
@@ -123,6 +125,16 @@ struct ConversationView: View {
                 Button("OK") { error = nil }
             } message: {
                 Text(error ?? "")
+            }
+            .alert("Microphone access needed", isPresented: $showMicPermissionAlert) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                Button("Not now", role: .cancel) { }
+            } message: {
+                Text("Future Voice needs the microphone and speech recognition to hear you speak. Turn them on in Settings → Future Voice.")
             }
             .task { refreshDashboard() }
             .onChange(of: topic) { _, newTopic in
@@ -492,7 +504,11 @@ struct ConversationView: View {
     private func startRecording() async {
         let granted = await LiveTranscriber.requestPermissions()
         guard granted else {
-            error = "Microphone or speech permission denied."
+            // iOS won't re-prompt once denied — guide the user to Settings
+            // instead of dead-ending on a generic error.
+            phoneCallActive = false
+            phase = .idle
+            showMicPermissionAlert = true
             return
         }
         do {
@@ -1114,18 +1130,20 @@ private struct SummarySheet: View {
                 if !summary.newWordsUsed.isEmpty || !summary.expressionsUsed.isEmpty {
                     Section("Words & expressions you used") {
                         if !summary.newWordsUsed.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
+                            let grouped = Dictionary(grouping: summary.newWordsUsed) {
+                                CoreVocabulary.level(of: $0)
+                            }
+                            VStack(alignment: .leading, spacing: 12) {
                                 Text("New words")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                FlowLayout {
-                                    ForEach(summary.newWordsUsed, id: \.self) { word in
-                                        Text(word)
-                                            .font(.subheadline)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 5)
-                                            .background(Color(.secondarySystemBackground), in: Capsule())
+                                ForEach(CEFRLevel.allCases, id: \.self) { lv in
+                                    if let words = grouped[lv], !words.isEmpty {
+                                        newWordGroup(lv.rawValue.uppercased(), words)
                                     }
+                                }
+                                if let other = grouped[nil], !other.isEmpty {
+                                    newWordGroup("Other", other)
                                 }
                             }
                             .padding(.vertical, 4)
@@ -1177,6 +1195,25 @@ private struct SummarySheet: View {
                     .filter { $0.sourceSessionId == sessionId }.count
             }
             .safeAreaInset(edge: .bottom) { bottomActions }
+        }
+    }
+
+    /// One CEFR level's freshly-used words as a labeled chip row.
+    @ViewBuilder
+    private func newWordGroup(_ label: String, _ words: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.tint)
+            FlowLayout {
+                ForEach(words, id: \.self) { word in
+                    Text(word)
+                        .font(.subheadline)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(Color(.secondarySystemBackground), in: Capsule())
+                }
+            }
         }
     }
 

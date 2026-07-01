@@ -69,7 +69,7 @@ struct ScenariosListSheet: View {
 
     /// Builds a throwaway counterpart from the scenario's role so DialogueEngine
     /// can stage a clone-vs-role dialogue. Not saved — see `WatchView.persist`.
-    private static func watchCounterpart(for s: Scenario) -> Counterpart {
+    static func watchCounterpart(for s: Scenario) -> Counterpart {
         var c = Counterpart.empty
         c.name = s.role.trimmingCharacters(in: .whitespaces).isEmpty ? "the other person" : s.role
         c.location = s.environment
@@ -79,7 +79,7 @@ struct ScenariosListSheet: View {
     }
 
     /// One-line scenario description handed to DialogueEngine as the topic.
-    private static func watchScenarioText(_ s: Scenario) -> String {
+    static func watchScenarioText(_ s: Scenario) -> String {
         let notes = s.notes.trimmingCharacters(in: .whitespaces)
         let base = "At \(s.environment), a conversation with the \(s.role)"
         return notes.isEmpty ? base : "\(base). \(notes)"
