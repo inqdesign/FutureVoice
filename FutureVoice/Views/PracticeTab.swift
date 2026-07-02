@@ -77,12 +77,41 @@ struct PracticeTab: View {
                 }
                 .padding(.vertical, 6)
             }
+            // Expressions are the same "things you actually said" pool as
+            // vocabulary — they belong in the practice hub, not buried in
+            // the Progress tab.
+            NavigationLink {
+                ExpressionsView()
+                    .navigationTitle("Expressions")
+                    .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: "quote.bubble.fill")
+                        .font(.title2)
+                        .foregroundStyle(.tint)
+                        .frame(width: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Expressions")
+                            .font(.headline)
+                        Text(expressionCount == 0
+                             ? "Phrases you use in talks collect here"
+                             : (expressionCount == 1
+                                ? "1 expression from your talks"
+                                : "\(expressionCount) expressions from your talks"))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
         } header: {
-            Text("Build vocabulary")
+            Text("Your words")
         } footer: {
-            Text("Explore the words you don't use yet, collect them, and hear your fluent self say them.")
+            Text("Words and expressions collected from what you actually say — explore, bookmark, and hear your fluent self say them.")
         }
     }
+
+    private var expressionCount: Int { vocab.expressionEntries().count }
 
     @ViewBuilder
     private var reviewSection: some View {
@@ -174,32 +203,25 @@ struct PracticeTab: View {
                     }
                     .buttonStyle(.plain)
                 }
-                if !appState.savedLines.isEmpty {
-                    NavigationLink {
-                        SavedLinesView()
-                            .navigationTitle("Saved lines")
-                            .navigationBarTitleDisplayMode(.inline)
-                    } label: {
-                        HStack {
-                            Label("Saved lines", systemImage: "bookmark")
-                                .font(.subheadline)
-                                .foregroundStyle(.tint)
-                            Spacer()
-                            Text("\(appState.savedLines.count)")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                        }
-                    }
-                }
+                // One archive entry instead of two ("Saved lines" + "Browse
+                // all") — saved lines are a filter inside the browser now.
                 NavigationLink {
                     ShadowBrowserView()
                         .navigationTitle("All lines")
                         .navigationBarTitleDisplayMode(.inline)
                 } label: {
-                    Text("Browse all lines")
-                        .font(.subheadline)
-                        .foregroundStyle(.tint)
+                    HStack {
+                        Text("All lines")
+                            .font(.subheadline)
+                            .foregroundStyle(.tint)
+                        Spacer()
+                        if !appState.savedLines.isEmpty {
+                            Label("\(appState.savedLines.count)", systemImage: "bookmark.fill")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+                    }
                 }
             } header: {
                 Text("Shadow picks")
@@ -214,10 +236,11 @@ struct PracticeTab: View {
         if !recentSessions.isEmpty {
             Section {
                 ForEach(recentSessions) { row in
+                    // Full session post-mortem (transcript + per-line shadow +
+                    // corrections + Review toolbar), not just the card deck —
+                    // one destination that holds everything the talk taught.
                     NavigationLink {
-                        DrillView(source: .session(row.session.id))
-                            .navigationTitle(row.session.displayTitle)
-                            .navigationBarTitleDisplayMode(.inline)
+                        ConversationDetailView(session: row.session)
                     } label: {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(row.session.displayTitle)

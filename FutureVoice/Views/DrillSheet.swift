@@ -18,10 +18,14 @@ struct DrillView: View {
     /// conversation by walking just its cards.
     /// `.ahead(n)` = the n soonest-due cards regardless of schedule — for
     /// "practice ahead" when nothing is due but the user wants reps anyway.
+    /// `.scenario` = cards saved from Watch dialogues ("Save phrase") — they
+    /// have no source session, so without this filter they'd be reachable
+    /// only through the generic due queue.
     enum Source: Equatable {
         case due
         case session(UUID)
         case ahead(Int)
+        case scenario
     }
     var source: Source = .due
 
@@ -552,6 +556,10 @@ private extension DrillView {
                     .sorted { $0.nextReviewAt < $1.nextReviewAt }
                     .prefix(limit)
             )
+        case .scenario:
+            queue = DrillStore.shared.load()
+                .filter { $0.sourceSessionId == nil }
+                .sorted { $0.createdAt < $1.createdAt }
         }
         initialCount = queue.count
     }

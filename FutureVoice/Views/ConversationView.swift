@@ -596,7 +596,8 @@ struct ConversationView: View {
             // 16 kHz mSBC, which server ASR handles fine (it's what Siri
             // uses through AirPods too).
             try live.start(locale: appState.targetLanguage,
-                           contextualStrings: recognitionHints())
+                           contextualStrings: recognitionHints(),
+                           captureToFile: true)   // keep the user's own audio for listen-back
             userSpeechStartedAt = Date()
             lastTranscriptChangeAt = nil
             phase = .listening
@@ -641,12 +642,18 @@ struct ConversationView: View {
         userSpeechStartedAt = nil
         phase = .thinking
 
-        let userTurn = Turn(
+        var userTurn = Turn(
             id: UUID(), role: .user, audioURL: nil,
             transcript: finalText, durationMs: max(0, elapsedMs), timestamp: Date(),
             suggestion: nil,
             fluency: fluency
         )
+        // Keep the user's own audio so they can listen back to how they
+        // actually sounded (temp AAC from the mic tap → TurnAudioStore).
+        if let rec = live.lastRecordingURL, let data = try? Data(contentsOf: rec) {
+            userTurn.audioURL = TurnAudioStore.shared.save(data, turnId: userTurn.id)
+            try? FileManager.default.removeItem(at: rec)
+        }
         turns.append(userTurn)
         didSaveCurrentSession = false
 
@@ -1049,7 +1056,8 @@ private struct TurnView: View {
             }
 
             if turn.role == .user, let suggestion = turn.suggestion {
-                SuggestionChip(suggestion: suggestion, nativeLanguage: nativeLanguage)
+                SuggestionChip(suggestion: suggestion, original: turn.transcript,
+                               nativeLanguage: nativeLanguage)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1075,6 +1083,7 @@ private struct TurnView: View {
 
 private struct SuggestionChip: View {
     let suggestion: TurnSuggestion
+    let original: String
     let nativeLanguage: String
 
     @State private var reasonNative: String?
@@ -1088,7 +1097,7 @@ private struct SuggestionChip: View {
                 .font(.footnote)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
-                Text(suggestion.alternative)
+                Text(highlightedCorrection(suggestion.alternative, original: original, baseFont: .subheadline))
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                 Text(suggestion.reason)
@@ -1127,10 +1136,15 @@ private struct SuggestionChip: View {
         if showing { showing = false; return }
         showing = true
         guard reasonNative == nil else { return }
-        if let c = Translator.cached(suggestion.reason, to: nativeLanguage) { reasonNative = c; return }
+        if let c = Translator.cachedExplanation(original: original, alternative: suggestion.alternative,
+                                                to: nativeLanguage) {
+            reasonNative = c
+            return
+        }
         loading = true
         Task {
-            let t = await Translator.translate(suggestion.reason, to: nativeLanguage)
+            let t = await Translator.explainCorrection(original: original, alternative: suggestion.alternative,
+                                                       to: nativeLanguage)
             reasonNative = t
             loading = false
             if t == nil { showing = false }
@@ -1347,10 +1361,16 @@ private struct SummarySheet: View {
     let sessionId: UUID
     let onDone: () -> Void
     let onStartNew: () -> Void
+    @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     /// Cards this session just produced, loaded once on appear so the bottom
     /// action can route straight into reviewing them.
     @State private var practiceCardCount = 0
+    /// Fluent-self lines from THIS session — the freshest shadow material
+    /// there is. Loaded from the just-saved session so the summary can offer
+    /// shadowing right here instead of sending the user tab-hunting.
+    @State private var shadowLines: [Turn] = []
+    @State private var shadowTurn: Turn?
 
     var body: some View {
         NavigationStack {
@@ -1359,6 +1379,36 @@ private struct SummarySheet: View {
                     Section("Today's nutrition") {
                         ScorecardView(scorecard: card)
                             .padding(.vertical, 6)
+                    }
+                }
+                if !shadowLines.isEmpty {
+                    Section {
+                        ForEach(shadowLines) { turn in
+                            Button {
+                                shadowTurn = turn
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: "waveform.badge.mic")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.tint)
+                                        .frame(width: 22)
+                                    Text(turn.transcript)
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Spacer(minLength: 8)
+                                    Image(systemName: "chevron.right")
+                                        .font(.footnote.weight(.semibold))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } header: {
+                        Text("Shadow this conversation")
+                    } footer: {
+                        Text("Repeat your fluent self while the lines are still fresh.")
                     }
                 }
                 if !summary.newWordsUsed.isEmpty || !summary.expressionsUsed.isEmpty {
@@ -1381,11 +1431,29 @@ private struct SummarySheet: View {
                                 }
                             }
                             .padding(.vertical, 4)
+                            NavigationLink {
+                                VocabularyView()
+                            } label: {
+                                Text("Open your notebook")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.tint)
+                            }
                         }
                         ForEach(summary.expressionsUsed, id: \.self) { expr in
                             Label(expr, systemImage: "quote.bubble")
                                 .font(.subheadline)
                                 .padding(.vertical, 2)
+                        }
+                        if !summary.expressionsUsed.isEmpty {
+                            NavigationLink {
+                                ExpressionsView()
+                                    .navigationTitle("Expressions")
+                                    .navigationBarTitleDisplayMode(.inline)
+                            } label: {
+                                Text("All your expressions")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.tint)
+                            }
                         }
                     }
                 }
@@ -1393,25 +1461,40 @@ private struct SummarySheet: View {
                     Text(summary.overallNote)
                 }
                 if !summary.phrasesUsed.isEmpty {
-                    Section("More natural alternatives") {
+                    // Each of these is already a review card (DrillStore
+                    // ingested them in endSession) — tapping any row drops
+                    // into this session's deck instead of dead-ending.
+                    Section {
                         ForEach(summary.phrasesUsed) { phrase in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(phrase.userSaid)
-                                    .foregroundStyle(.secondary)
-                                Text(phrase.fluentAlternative)
-                                    .font(.body)
-                                Text(phrase.reason)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
+                            NavigationLink {
+                                sessionDeck
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(phrase.userSaid)
+                                        .foregroundStyle(.secondary)
+                                    Text(phrase.fluentAlternative)
+                                        .font(.body)
+                                    Text(phrase.reason)
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .padding(.vertical, 4)
                             }
-                            .padding(.vertical, 4)
                         }
+                    } header: {
+                        Text("More natural alternatives")
+                    } footer: {
+                        Text("Tap any line to practice it — these are already in your review deck.")
                     }
                 }
                 if !summary.suggestedDrills.isEmpty {
                     Section("Drill next") {
                         ForEach(summary.suggestedDrills, id: \.self) { drill in
-                            Text(drill)
+                            NavigationLink {
+                                sessionDeck
+                            } label: {
+                                Text(drill)
+                            }
                         }
                     }
                 }
@@ -1427,9 +1510,31 @@ private struct SummarySheet: View {
             .onAppear {
                 practiceCardCount = DrillStore.shared.load()
                     .filter { $0.sourceSessionId == sessionId }.count
+                // The session was saved before this sheet appeared — pull its
+                // fluent-self lines as immediate shadow material (substantial
+                // ones only; "yeah?" isn't worth a karaoke rep).
+                let turns = SessionStore.shared.load()
+                    .first { $0.id == sessionId }?.turns ?? []
+                shadowLines = Array(
+                    turns.filter { $0.role == .fluentSelf
+                        && $0.transcript.split(separator: " ").count >= 4 }
+                    .suffix(4)
+                )
+            }
+            .sheet(item: $shadowTurn) { turn in
+                ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
+                    .environmentObject(appState)
             }
             .safeAreaInset(edge: .bottom) { bottomActions }
         }
+    }
+
+    /// This session's cards as a swipe deck — shared destination for the
+    /// bottom CTA and every alternatives/drill row above.
+    private var sessionDeck: some View {
+        DrillView(source: .session(sessionId))
+            .navigationTitle("Practice")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     /// One CEFR level's freshly-used words as a labeled chip row.
@@ -1460,9 +1565,7 @@ private struct SummarySheet: View {
         VStack(spacing: 10) {
             if practiceCardCount > 0 {
                 NavigationLink {
-                    DrillView(source: .session(sessionId))
-                        .navigationTitle("Practice")
-                        .navigationBarTitleDisplayMode(.inline)
+                    sessionDeck
                 } label: {
                     Label(practiceCardCount == 1
                           ? "Practice this card"

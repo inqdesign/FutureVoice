@@ -9,7 +9,7 @@ struct DrillsBySessionView: View {
 
     var body: some View {
         Group {
-            if sessionsWithCards.isEmpty {
+            if sessionsWithCards.isEmpty && scenarioCardCount == 0 {
                 ContentUnavailableView(
                     "No session cards yet",
                     systemImage: "tray",
@@ -24,6 +24,26 @@ struct DrillsBySessionView: View {
                                 .navigationBarTitleDisplayMode(.inline)
                         } label: {
                             row(for: s)
+                        }
+                    }
+                    // "Save phrase" cards from Watch dialogues have no source
+                    // session — without this row they'd be invisible here.
+                    if scenarioCardCount > 0 {
+                        NavigationLink {
+                            DrillView(source: .scenario)
+                                .navigationTitle("From scenarios")
+                                .navigationBarTitleDisplayMode(.inline)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("From scenarios")
+                                    .font(.body)
+                                Text(scenarioCardCount == 1
+                                     ? "1 phrase saved while watching"
+                                     : "\(scenarioCardCount) phrases saved while watching")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 2)
                         }
                     }
                 }
@@ -56,6 +76,10 @@ struct DrillsBySessionView: View {
 
     private func cardCount(for id: UUID) -> Int {
         allCards.filter { $0.sourceSessionId == id }.count
+    }
+
+    private var scenarioCardCount: Int {
+        allCards.filter { $0.sourceSessionId == nil }.count
     }
 
     private func reload() {

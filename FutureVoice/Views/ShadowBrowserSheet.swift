@@ -10,6 +10,9 @@ struct ShadowBrowserView: View {
 
     @State private var sessions: [Session] = []
     @State private var shadowTarget: ShadowTarget?
+    /// All vs bookmarked-only — replaces the separate SavedLinesView entry
+    /// in the practice hub, so the archive has ONE door with a filter.
+    @State private var showSavedOnly = false
 
     struct ShadowTarget: Identifiable {
         let turn: Turn
@@ -18,6 +21,18 @@ struct ShadowBrowserView: View {
 
     var body: some View {
         content
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if !appState.savedLines.isEmpty {
+                    Picker("Filter", selection: $showSavedOnly) {
+                        Text("All").tag(false)
+                        Text("Saved").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(.bar)
+                }
+            }
             .sheet(item: $shadowTarget) { target in
                 ShadowDrillView(
                     turn: target.turn,
@@ -60,7 +75,10 @@ private extension ShadowBrowserView {
         } else {
             List {
                 ForEach(sessions) { session in
-                    let lines = session.turns.filter { $0.role == .fluentSelf }
+                    let lines = session.turns.filter {
+                        $0.role == .fluentSelf
+                            && (!showSavedOnly || appState.isLineSaved($0.id))
+                    }
                     if !lines.isEmpty {
                         Section(header: sectionHeader(for: session)) {
                             ForEach(lines) { turn in
