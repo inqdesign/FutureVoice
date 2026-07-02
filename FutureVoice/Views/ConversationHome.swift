@@ -23,6 +23,10 @@ struct ConversationHome: View {
     @State private var launchTopic = ""
     @State private var launchBlurb = ""
     @State private var launchIsNews = false
+    /// "Up next" feed: today's most useful follow-ups after talking.
+    @State private var topShadowPick: PracticeStats.ShadowPick?
+    @State private var lastSession: Session?
+    @State private var shadowingPick: PracticeStats.ShadowPick?
 
     var body: some View {
         NavigationStack {
@@ -30,19 +34,23 @@ struct ConversationHome: View {
                 if sessionCount == 0 {
                     emptyState
                 } else {
+                    // Card layout, same idiom as ProgressTab's panels: grouped
+                    // background, one rounded card per content block.
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 28) {
-                            todaySection
-                            Divider()
-                            practiceSection
+                        VStack(alignment: .leading, spacing: 16) {
+                            card { todaySection }
+                            if hasUpNext {
+                                card { upNextSection }
+                            }
+                            card { practiceSection }
                         }
-                        .padding(.horizontal, 22)
+                        .padding(.horizontal, 18)
                         .padding(.top, 4)
                         .padding(.bottom, 36)
                     }
                 }
             }
-            .background(Color(.systemBackground))
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle(greetingText)
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
@@ -62,6 +70,10 @@ struct ConversationHome: View {
                                  initialIsNews: launchIsNews)
                     .environmentObject(appState)
             }
+            .sheet(item: $shadowingPick, onDismiss: reload) { pick in
+                ShadowDrillView(turn: pick.turn, targetLanguage: appState.targetLanguage)
+                    .environmentObject(appState)
+            }
         }
     }
 
@@ -71,6 +83,15 @@ struct ConversationHome: View {
                 .font(.title2).foregroundStyle(.secondary)
         }
         .accessibilityLabel("Profile & settings")
+    }
+
+    /// One home card — mirrors ProgressTab's `panel` so both dashboards read
+    /// as the same design system.
+    private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 12) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
     }
 
     private var greetingText: String {
@@ -154,6 +175,98 @@ struct ConversationHome: View {
         }
     }
 
+    // MARK: - Up next
+
+    private var hasUpNext: Bool {
+        dueCount > 0 || topShadowPick != nil || lastSession != nil
+    }
+
+    /// The day's follow-ups after talking — due review cards, one curated
+    /// shadow line, and the last conversation's post-mortem. Each is a single
+    /// quiet row; the heavy lifting stays in the Practice tab.
+    private var upNextSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Up next")
+                .font(.title3.weight(.semibold))
+                .padding(.bottom, 10)
+
+            if dueCount > 0 {
+                NavigationLink {
+                    DrillView()
+                        .navigationTitle("Review")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    upNextRow(icon: "rectangle.stack.fill",
+                              title: "Review due",
+                              subtitle: dueCount == 1 ? "1 card waiting" : "\(dueCount) cards waiting")
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let pick = topShadowPick {
+                Button {
+                    shadowingPick = pick
+                } label: {
+                    upNextRow(icon: "waveform.badge.mic",
+                              title: "Shadow a line",
+                              subtitle: pick.turn.transcript)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if let last = lastSession {
+                NavigationLink {
+                    ConversationDetailView(session: last)
+                } label: {
+                    upNextRow(icon: "text.bubble",
+                              title: last.displayTitle,
+                              subtitle: lastSessionSubtitle(last))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func upNextRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundStyle(.tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+    }
+
+    private func lastSessionSubtitle(_ session: Session) -> String {
+        let when = Self.relativeFormatter.localizedString(
+            for: session.endedAt ?? session.startedAt, relativeTo: Date())
+        if let top = session.summary?.scorecard?.topLine, !top.isEmpty {
+            return "\(when) · \(top)"
+        }
+        return "\(when) · read it back, shadow any line"
+    }
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f
+    }()
+
     // MARK: - Practice
 
     private var practiceSection: some View {
@@ -209,6 +322,12 @@ struct ConversationHome: View {
         let now = Date()
         dueCount = DrillStore.shared.load().filter { $0.nextReviewAt <= now }.count
         vocab.backfillFromSessions()
+        lastSession = sessions.first
+        topShadowPick = PracticeStats.shadowPicks(
+            sessions: sessions,
+            attempts: appState.shadowAttempts,
+            level: appState.proficiency
+        ).first
 
         let todayStart = Calendar.current.startOfDay(for: now)
         var todayMs = 0
@@ -239,7 +358,10 @@ private struct StudyWordCard: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 58)
                 .padding(.horizontal, 10)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.secondarySystemBackground)))
+                // tertiarySystemFill stays visible on the card's
+                // secondarySystemGroupedBackground in BOTH light and dark —
+                // secondarySystemBackground matched the card color in dark.
+                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.tertiarySystemFill)))
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(Color(.separator).opacity(0.6), lineWidth: 0.5)
