@@ -1,7 +1,15 @@
 // ElevenLabs TTS proxy + credit gate.
 //
-// Body: { voice_id: string, text: string, model_id?: string, with_timestamps?: boolean }
+// Body: { voice_id: string, text: string, model_id?: string,
+//         with_timestamps?: boolean, stream?: boolean }
 // Required header: X-Idempotency-Key (unique per attempt; resent on retry)
+//
+// stream=true hits the /stream endpoint with output_format=pcm_22050 and
+// pipes raw 16-bit LE mono PCM chunks straight through, so the app can start
+// playback on the first chunk instead of waiting for the full file. The
+// response carries `X-Audio-Format: pcm_22050` — the client REQUIRES that
+// header before treating bytes as PCM, so an older deployment of this
+// function (which ignores `stream`) degrades safely to the buffered MP3 path.
 //
 // Charges credits before forwarding upstream. If ElevenLabs returns an
 // error AFTER the charge, refunds with the same idempotency key so a
@@ -30,6 +38,7 @@ Deno.serve(async (req) => {
     text?: string
     model_id?: string
     with_timestamps?: boolean
+    stream?: boolean
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -56,8 +65,11 @@ Deno.serve(async (req) => {
   }
 
   const modelId = body.model_id ?? "eleven_turbo_v2_5"
+  const streaming = body.stream === true && !body.with_timestamps
   const path = body.with_timestamps
     ? `/v1/text-to-speech/${body.voice_id}/with-timestamps`
+    : streaming
+    ? `/v1/text-to-speech/${body.voice_id}/stream?output_format=pcm_22050`
     : `/v1/text-to-speech/${body.voice_id}`
 
   const upstream = await fetch(`https://api.elevenlabs.io${path}`, {
@@ -65,7 +77,9 @@ Deno.serve(async (req) => {
     headers: {
       "xi-api-key": apiKey,
       "Content-Type": "application/json",
-      Accept: body.with_timestamps ? "application/json" : "audio/mpeg",
+      Accept: body.with_timestamps ? "application/json"
+        : streaming ? "application/octet-stream"
+        : "audio/mpeg",
     },
     body: JSON.stringify({
       text: body.text,
@@ -94,6 +108,7 @@ Deno.serve(async (req) => {
   const contentType = upstream.headers.get("Content-Type") ?? "application/octet-stream"
   headers.set("Content-Type", contentType)
   headers.set("X-Credits-Balance", String(ch.balanceAfter))
+  if (streaming) headers.set("X-Audio-Format", "pcm_22050")
 
   return new Response(upstream.body, { status: 200, headers })
 })

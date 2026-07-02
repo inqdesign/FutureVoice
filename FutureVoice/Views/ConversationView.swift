@@ -40,7 +40,8 @@ struct ConversationView: View {
     /// pick up a past conversation where it left off (same session id, prior
     /// turns preloaded as context). The call auto-starts on appear so it feels
     /// like placing a phone call.
-    init(initialTopic: String = "", initialBlurb: String = "", resumeSession: Session? = nil) {
+    init(initialTopic: String = "", initialBlurb: String = "",
+         initialIsNews: Bool = false, resumeSession: Session? = nil) {
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
             _topicBlurb = State(initialValue: "")
@@ -52,22 +53,39 @@ struct ConversationView: View {
         } else {
             _topic = State(initialValue: initialTopic)
             _topicBlurb = State(initialValue: initialBlurb)
+            _topicIsNews = State(initialValue: initialIsNews)
         }
     }
 
-    /// Three-tier VAD threshold so brief pauses don't cut the user off mid-thought.
+    /// Three-tier end-of-turn threshold, measured against TRUE AUDIO SILENCE
+    /// (`LiveTranscriber.lastVoicedAt` from the mic energy meter) — the same
+    /// hybrid used by modern realtime voice stacks: acoustic VAD picks the
+    /// endpoint, text completeness modulates how long to wait.
     ///   • `short`   — explicit end-of-sentence punctuation. They wrapped up.
-    ///   • `default` — no clear signal either way. Conservative wait so a
-    ///     breath or a 2-second think doesn't fire.
+    ///   • `default` — no clear signal either way.
     ///   • `long`    — trailing filler / hanging conjunction / stub
     ///     article/preposition. They're clearly still composing.
-    // SFSpeechRecognizer rarely inserts terminal punctuation in real time,
-    // so the default branch fires far more often than the short one. Bumped
-    // default 3.0→5.0 and long 5.0→7.0 in 2026-06 after users reported the
-    // avatar cutting in during natural mid-thought breaths.
+    // History: 2026-06 users reported the avatar cutting in during natural
+    // mid-thought breaths. That was under TRANSCRIPT-quiet timing — STT
+    // partials stall unpredictably while the user is still talking, so the
+    // timer measured the recognizer, not the speaker, and the only fix was a
+    // padded 5s default. Energy-based silence can't misfire on a breath
+    // (breaths are ~0.5–1.5s and unvoiced), so the default drops back to 3s
+    // without recreating that bug. `sttSettleSeconds` additionally holds fire
+    // while the partial transcript is still moving, so a lagging recognizer
+    // never gets its tail truncated.
     private static let vadShortSeconds: Double   = 1.5
-    private static let vadDefaultSeconds: Double = 5.0
-    private static let vadLongSeconds: Double    = 7.0
+    private static let vadDefaultSeconds: Double = 3.0
+    private static let vadLongSeconds: Double    = 5.0
+    /// Don't send while the STT partial is still changing — recognition lag
+    /// after the last spoken word is typically 0.3–0.5s.
+    private static let sttSettleSeconds: Double  = 0.7
+    /// Endpoint monitor tick. 0.2s keeps worst-case added latency ≤ one tick.
+    private static let endpointTickSeconds: Double = 0.2
+    /// Noisy-room fallback: constant background noise can keep the energy
+    /// meter reading "voiced" forever. If the TRANSCRIPT has been still this
+    /// long (the old conservative signal), send regardless of energy.
+    private static let noisyRoomFallbackSeconds: Double = 6.0
     @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -77,6 +95,15 @@ struct ConversationView: View {
     @State private var sessionStartedAt = Date()
     @State private var didSaveCurrentSession = false
     @State private var userSpeechStartedAt: Date?
+    /// Last time the live STT partial changed — the endpoint monitor waits
+    /// for BOTH audio silence and a settled transcript before sending.
+    @State private var lastTranscriptChangeAt: Date?
+    /// True when the topic is a news story ("In the news" picker). The opener
+    /// call then runs search-grounded and collects `newsFacts`.
+    @State private var topicIsNews = false
+    /// Real facts from the grounded news lookup — injected into every turn's
+    /// system prompt so the future self actually knows the story.
+    @State private var newsFacts: [String] = []
 
     private let userId = ProfileStore.localUserId
 
@@ -148,11 +175,11 @@ struct ConversationView: View {
                 Task { await openConversation() }
             }
             .onChange(of: live.transcript) { _, _ in
-                // Voice activity detection: every time the live transcript
-                // grows, reset the silence countdown. When it stays unchanged
-                // for `vadSilenceSeconds`, auto-send.
+                // The endpoint monitor measures silence from mic ENERGY, not
+                // from this — but it refuses to fire while the partial is
+                // still moving (STT settle), so track the last change here.
                 guard phoneCallActive, phase == .listening else { return }
-                resetSilenceTimer()
+                lastTranscriptChangeAt = Date()
             }
         }
     }
@@ -400,24 +427,44 @@ struct ConversationView: View {
         HapticEngine.phoneCallEnded()
     }
 
-    private func resetSilenceTimer() {
+    /// Energy-based endpointing loop, started with the mic. Every tick it
+    /// checks how long the mic has ACTUALLY been silent (last voiced audio,
+    /// not last transcript change) against the text-completeness tier, and
+    /// auto-sends when both the audio and the STT partial have settled.
+    private func startEndpointMonitor() {
         cancelSilenceTimer()
-        let wait = currentVadWaitSeconds()
         silenceTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
-            guard !Task.isCancelled,
-                  phoneCallActive,
-                  phase == .listening,
-                  !live.transcript.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-            HapticEngine.voiceSent()
-            await stopAndSend()
+            while !Task.isCancelled, phoneCallActive, phase == .listening {
+                try? await Task.sleep(nanoseconds: UInt64(Self.endpointTickSeconds * 1_000_000_000))
+                guard !Task.isCancelled, phoneCallActive, phase == .listening else { return }
+                // Nothing transcribed yet → the user hasn't said anything
+                // (or STT hasn't caught up). Never send an empty turn.
+                guard !live.transcript.trimmingCharacters(in: .whitespaces).isEmpty,
+                      let lastVoiced = live.lastVoicedAt else { continue }
+                let audioSilence = Date().timeIntervalSince(lastVoiced)
+                let sinceTextChange = lastTranscriptChangeAt.map { Date().timeIntervalSince($0) }
+                    ?? .greatestFiniteMagnitude
+                // Primary: real audio silence for the tier duration, AND the
+                // recognizer's partial has settled (its lag would otherwise
+                // truncate the turn's tail).
+                let audioSettled = audioSilence >= currentVadWaitSeconds()
+                    && sinceTextChange >= Self.sttSettleSeconds
+                // Fallback: steady background noise never reads as silent —
+                // fire on the old transcript-quiet signal as an upper bound.
+                let transcriptSettled = sinceTextChange >= Self.noisyRoomFallbackSeconds
+                guard audioSettled || transcriptSettled else { continue }
+                HapticEngine.voiceSent()
+                await stopAndSend()
+                return
+            }
         }
     }
 
-    /// Inspect the latest STT transcript and pick a silence threshold:
+    /// Inspect the latest STT transcript and pick a REQUIRED TRUE-SILENCE
+    /// duration (seconds since the mic last heard voiced audio):
     ///   • 5.0s — clearly mid-thought (filler / hanging conjunction / stub).
     ///   • 1.5s — wrapped up cleanly (terminal punctuation .!?).
-    ///   • 3.0s — anything in between. Conservative so a breath doesn't fire.
+    ///   • 3.0s — anything in between.
     private func currentVadWaitSeconds() -> Double {
         let trimmed = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         if Self.isLikelyIncomplete(trimmed) {
@@ -471,17 +518,23 @@ struct ConversationView: View {
     private func openConversation() async {
         phase = .thinking
         do {
-            let opener = try await GeminiClient.shared.send(
-                system: systemPrompt(),
-                messages: [GeminiClient.Message(
-                    role: .user,
-                    content: """
-                    Open this conversation with ONE natural opening line in \(appState.targetLanguage).
-                    Be IN the scenario — don't summarize it, don't explain it. Just say the first
-                    thing you'd say if this were really happening, in a way the user can respond to.
-                    """
-                )]
-            )
+            let opener: String
+            if topicIsNews, let grounded = await openNewsConversation() {
+                opener = grounded
+            } else {
+                opener = try await GeminiClient.shared.send(
+                    system: systemPrompt(),
+                    messages: [GeminiClient.Message(
+                        role: .user,
+                        content: """
+                        Open this conversation with ONE natural opening line in \(appState.targetLanguage).
+                        Be IN the scenario — don't summarize it, don't explain it. Just say the first
+                        thing you'd say if this were really happening, in a way the user can respond to.
+                        """
+                    )],
+                    idempotencyKey: "opener:\(sessionId.uuidString)"
+                )
+            }
             // Text-only opener. No TTS — saves an ElevenLabs call per topic
             // pick. The user reads, responds, and audio kicks in from the
             // avatar's first reply onward.
@@ -501,6 +554,30 @@ struct ConversationView: View {
         }
     }
 
+    /// News topic: one search-grounded call reads the ACTUAL coverage and
+    /// returns real facts + the opening line. The facts persist in
+    /// `newsFacts` → every later turn's system prompt, so the future self
+    /// discusses what happened instead of vamping around a one-line blurb.
+    /// Returns nil on any failure — caller falls back to the plain opener.
+    private func openNewsConversation() async -> String? {
+        do {
+            let payload: NewsOpenerPayload = try await GeminiClient.shared.sendJSON(
+                system: systemPrompt()
+                    + "\n\n" + ConversationEngine.newsOpenerInstruction(targetLanguage: appState.targetLanguage),
+                messages: [GeminiClient.Message(role: .user, content: "Start the conversation.")],
+                maxTokens: 900,
+                searchGrounding: true,
+                idempotencyKey: "opener:\(sessionId.uuidString)"
+            )
+            let opener = payload.opener.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !opener.isEmpty else { return nil }
+            newsFacts = payload.facts.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+            return opener
+        } catch {
+            return nil
+        }
+    }
+
     private func startRecording() async {
         let granted = await LiveTranscriber.requestPermissions()
         guard granted else {
@@ -512,14 +589,51 @@ struct ConversationView: View {
             return
         }
         do {
-            try live.start(locale: appState.targetLanguage)
+            // Conversation keeps the Bluetooth (HFP) mic allowed: the whole
+            // point of earphones is phone-in-pocket, where the built-in mic
+            // hears nothing. Accuracy comes from the server recognition
+            // model + the contextual hints below — modern earphones negotiate
+            // 16 kHz mSBC, which server ASR handles fine (it's what Siri
+            // uses through AirPods too).
+            try live.start(locale: appState.targetLanguage,
+                           contextualStrings: recognitionHints())
             userSpeechStartedAt = Date()
+            lastTranscriptChangeAt = nil
             phase = .listening
+            startEndpointMonitor()
         } catch {
             self.error = error.localizedDescription
         }
     }
 
+    /// Vocabulary the user is LIKELY to say this turn — biases STT toward
+    /// the conversation's domain (topic words, names, news terms, and the
+    /// fluent self's last line, which learners often echo). Rebuilt every
+    /// turn since the mic restarts per turn.
+    private func recognitionHints() -> [String] {
+        var hints: [String] = []
+        if !topic.isEmpty { hints.append(topic) }
+        if let name = appState.persona?.displayName, !name.isEmpty { hints.append(name) }
+        hints.append(contentsOf: appState.persona?.interests ?? [])
+        for fact in newsFacts { hints.append(contentsOf: Self.significantWords(fact)) }
+        if let lastReply = turns.last(where: { $0.role == .fluentSelf })?.transcript {
+            hints.append(contentsOf: Self.significantWords(lastReply))
+        }
+        var seen = Set<String>()
+        return hints.filter { seen.insert($0.lowercased()).inserted }
+    }
+
+    /// Content-word extraction for recognition hints: keeps tokens ≥ 4 chars
+    /// (drops articles/particles that would only add noise to the bias list).
+    private static func significantWords(_ text: String) -> [String] {
+        text.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 4 }
+    }
+
+    // NOTE: called from INSIDE the endpoint-monitor task — do not
+    // cancelSilenceTimer() here, that would self-cancel and abort the
+    // Gemini/TTS awaits below. Setting phase = .thinking is what makes the
+    // monitor loop exit on its next tick.
     private func stopAndSend() async {
         let finalText = live.stop()
         let fluency = live.fluencyStats()
@@ -558,7 +672,10 @@ struct ConversationView: View {
                         + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
                     messages: ConversationEngine.geminiMessages(from: turns),
                     maxTokens: 512,
-                    temperature: 0.7
+                    temperature: 0.7,
+                    // Keyed to the user turn: the inline Retry button re-runs
+                    // this same logical request without a second charge.
+                    idempotencyKey: "turn:\(turnId.uuidString)"
                 )
             } catch GeminiError.jsonNotFound(let raw) {
                 // Model slipped out of JSON mode — treat the raw text as the
@@ -575,7 +692,8 @@ struct ConversationView: View {
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
             }
-            try await speakAndAppend(replyText, voiceId: voiceId)
+            try await speakAndAppend(replyText, voiceId: voiceId,
+                                     idempotencyKey: "tts-turn:\(turnId.uuidString)")
             // DO NOT set phase = .idle here. speakAndAppend kicks off audio
             // playback (non-blocking) whose completion flips phase back to
             // .idle AND auto-restarts listening for phone-call mode.
@@ -592,21 +710,116 @@ struct ConversationView: View {
         Task { await requestReply(forUserTurn: id) }
     }
 
-    private func speakAndAppend(_ text: String, voiceId: String) async throws {
+    private func speakAndAppend(_ text: String, voiceId: String,
+                                idempotencyKey: String? = nil) async throws {
         // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
         // fluent-self lines (greetings, short acknowledgements, etc.).
-        let audio: Data
-        let timings: [WordTiming]
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
-            audio = cached
-            timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
-        } else {
-            let (newAudio, newTimings) = try await ElevenLabsClient.shared
-                .synthesizeWithTimestamps(voiceId: voiceId, text: text)
-            audio = newAudio
-            timings = newTimings
-            PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
+            let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
+            try appendTurnAndPlay(cached, timings: timings, transcript: text)
+            return
         }
+
+        // Streaming-first: the fluent self starts talking on the FIRST PCM
+        // chunk (~0.2s of audio) instead of after the whole file downloads.
+        // Any failure BEFORE audio starts falls back silently to the classic
+        // buffered call below; a failure mid-playback surfaces as a retry.
+        var streamTurnId: UUID?         // set once playback actually started
+        var receivedAnyChunk = false
+        do {
+            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+                voiceId: voiceId, text: text, idempotencyKey: idempotencyKey
+            ) { chunk in
+                if !receivedAnyChunk {
+                    receivedAnyChunk = true
+                    do {
+                        try player.startPCMStream(sampleRate: ElevenLabsClient.streamSampleRate) {
+                            Task { @MainActor in
+                                guard phase == .speaking else { return }
+                                phase = .idle
+                                // Phone call: avatar just finished talking →
+                                // loop back to listening without a tap.
+                                if phoneCallActive {
+                                    await startRecording()
+                                }
+                            }
+                        }
+                        let id = UUID()
+                        streamTurnId = id
+                        turns.append(Turn(
+                            id: id, role: .fluentSelf, audioURL: nil,
+                            transcript: text, durationMs: 0, timestamp: Date(),
+                            suggestion: nil
+                        ))
+                        didSaveCurrentSession = false
+                        phase = .speaking
+                    } catch {
+                        // Engine refused to start — keep collecting the PCM;
+                        // we'll play the accumulated audio the buffered way.
+                        streamTurnId = nil
+                    }
+                }
+                if streamTurnId != nil { player.feedPCMStream(chunk) }
+            }
+
+            switch result {
+            case .pcm22050(let fullPCM) where streamTurnId != nil && !fullPCM.isEmpty:
+                player.finishPCMStream()
+                // Persist as WAV so replay, the phrase cache, and shadow all
+                // keep working (AVAudioPlayer sniffs the container). No word
+                // timings on this path — shadow re-synthesizes them on demand.
+                let wav = AudioLoudness.wavData(
+                    fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
+                let durationMs = Int(Double(fullPCM.count / 2)
+                    / ElevenLabsClient.streamSampleRate * 1000)
+                PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
+                let savedURL = TurnAudioStore.shared.save(wav, turnId: streamTurnId!)
+                if let idx = turns.firstIndex(where: { $0.id == streamTurnId }) {
+                    turns[idx].audioURL = savedURL
+                    turns[idx].durationMs = durationMs
+                }
+                return
+            case .pcm22050(let fullPCM) where !fullPCM.isEmpty:
+                // Stream arrived but the local engine couldn't start —
+                // play the accumulated PCM the classic way. Already paid for.
+                let wav = AudioLoudness.wavData(
+                    fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
+                PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
+                try appendTurnAndPlay(wav, timings: [], transcript: text)
+                return
+            case .mp3(let data) where !data.isEmpty:
+                // Older edge deploy (no streaming support) — identical to the
+                // pre-streaming behavior.
+                PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
+                try appendTurnAndPlay(data, timings: [], transcript: text)
+                return
+            default:
+                break   // empty payload → buffered fallback below
+            }
+        } catch {
+            if let id = streamTurnId {
+                // Audio already started, then the stream broke mid-sentence:
+                // stop cleanly, drop the half-spoken turn, surface Retry
+                // (same idempotency key → the retry isn't charged again).
+                player.stop()
+                turns.removeAll { $0.id == id }
+                throw error
+            }
+            // No audio reached the speaker → silent fallback.
+        }
+
+        let (newAudio, newTimings) = try await ElevenLabsClient.shared
+            .synthesizeWithTimestamps(voiceId: voiceId, text: text,
+                                      idempotencyKey: idempotencyKey)
+        PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
+        try appendTurnAndPlay(newAudio, timings: newTimings, transcript: text)
+    }
+
+    /// Buffered playback path: append the fluent-self turn and play the full
+    /// audio file (MP3 or WAV). Used for cache hits, the non-streaming
+    /// fallback, and older edge deployments.
+    private func appendTurnAndPlay(_ audio: Data, timings: [WordTiming],
+                                   transcript text: String) throws {
         let turnId = UUID()
         let savedURL = TurnAudioStore.shared.save(audio, turnId: turnId, timings: timings)
         let durationMs = Self.mp3DurationMs(audio)
@@ -645,6 +858,22 @@ struct ConversationView: View {
         phase = .thinking
         withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
         defer { withAnimation(.easeInOut(duration: 0.2)) { isEnding = false } }
+        // Persist the raw conversation FIRST. The summary call below can fail
+        // (network, credits, malformed JSON) and turns live only in memory —
+        // without this draft save a failed summary used to lose the whole
+        // session. The full save further down overwrites this row (same id).
+        SessionStore.shared.save(Session(
+            id: sessionId,
+            userId: userId,
+            targetLanguage: appState.targetLanguage,
+            mode: .conversation,
+            topic: topic.isEmpty ? nil : topic,
+            startedAt: sessionStartedAt,
+            endedAt: Date(),
+            turns: turns,
+            summary: nil
+        ))
+        didSaveCurrentSession = true
         do {
             let systemP = ConversationEngine.summarySystemPrompt(
                 targetLanguage: appState.targetLanguage,
@@ -659,10 +888,14 @@ struct ConversationView: View {
             metrics:
             \(metrics.promptJSON())
             """
+            // Stable idempotency key: re-tapping End after a failure with the
+            // same turn count retries the summary without a second charge.
             let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
                 system: systemP,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
-                maxTokens: 1400
+                maxTokens: 1400,
+                purpose: "summary",
+                idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
             )
             var computed = payload.toDomain()
 
@@ -769,7 +1002,8 @@ struct ConversationView: View {
             topPatterns: appState.learnerProfile.recurringMistakes,
             weakVocabAreas: appState.learnerProfile.weakVocabAreas,
             topic: composedTopic,
-            persona: appState.persona
+            persona: appState.persona,
+            newsFacts: newsFacts
         )
     }
 }

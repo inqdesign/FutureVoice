@@ -22,6 +22,7 @@ struct ConversationHome: View {
     @State private var showingProfile = false
     @State private var launchTopic = ""
     @State private var launchBlurb = ""
+    @State private var launchIsNews = false
 
     var body: some View {
         NavigationStack {
@@ -52,11 +53,13 @@ struct ConversationHome: View {
                 MeTab().environmentObject(appState).environmentObject(auth)
             }
             .sheet(isPresented: $showingTopics, onDismiss: launchIfTopicPicked) {
-                ScenariosListSheet(topic: $launchTopic, topicBlurb: $launchBlurb)
+                ScenariosListSheet(topic: $launchTopic, topicBlurb: $launchBlurb,
+                                   topicIsNews: $launchIsNews)
                     .environmentObject(appState)
             }
             .fullScreenCover(isPresented: $showingCall, onDismiss: reload) {
-                ConversationView(initialTopic: launchTopic, initialBlurb: launchBlurb)
+                ConversationView(initialTopic: launchTopic, initialBlurb: launchBlurb,
+                                 initialIsNews: launchIsNews)
                     .environmentObject(appState)
             }
         }
@@ -134,7 +137,7 @@ struct ConversationHome: View {
     private var talkStarter: some View {
         HStack(spacing: 10) {
             Button {
-                launchTopic = ""; launchBlurb = ""; showingCall = true
+                launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingCall = true
             } label: {
                 Text("Free talk").font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity).padding(.vertical, 11)
@@ -142,7 +145,7 @@ struct ConversationHome: View {
             .buttonStyle(.borderedProminent)
 
             Button {
-                launchTopic = ""; launchBlurb = ""; showingTopics = true
+                launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingTopics = true
             } label: {
                 Text("Topics").font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity).padding(.vertical, 11)
@@ -186,7 +189,7 @@ struct ConversationHome: View {
         } description: {
             Text("Start a conversation and it shows up here.")
         } actions: {
-            Button("Free talk") { launchTopic = ""; launchBlurb = ""; showingCall = true }
+            Button("Free talk") { launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingCall = true }
                 .buttonStyle(.borderedProminent)
         }
     }

@@ -43,10 +43,21 @@ final class LiveTranscriber: ObservableObject {
     private var quietWatcher: Task<Void, Never>?
     private let appender = LiveTranscriberAppender()
     private let fluency = FluencyMeter()
+    /// Domain vocabulary hints applied to every recognition segment —
+    /// topic words, names, news terms the user is likely to say. Biases the
+    /// recognizer toward them (SFSpeechRecognizer contextualStrings).
+    private var contextualStrings: [String] = []
 
     /// Measured delivery stats (voiced time, pauses, hesitations) for the turn
     /// just recorded — call right after `stop()`.
     func fluencyStats() -> FluencyStats { fluency.snapshot() }
+
+    /// Wall-clock moment the mic last heard VOICED audio (energy above the
+    /// fluency meter's voiced threshold). nil until the user first speaks.
+    /// This is the endpointing signal for turn-taking: "how long has the user
+    /// actually been silent" — as opposed to "how long since the STT partial
+    /// last changed", which lags real speech by an unpredictable amount.
+    var lastVoicedAt: Date? { fluency.lastVoicedTime() }
 
     private static let quietCommitThreshold: TimeInterval = 1.5
 
@@ -81,11 +92,21 @@ final class LiveTranscriber: ObservableObject {
     }
 
     /// - Parameter preferBuiltInMic: force the iPhone's own mic regardless of a
-    ///   connected AirPods. Use for scoring tasks (shadowing, "say it") where
-    ///   the AirPods' 8 kHz HFP mic makes recognition unreliable. Conversation
-    ///   leaves it false so hands-free (phone in pocket) still works.
-    func start(locale: String, preferBuiltInMic: Bool = false) throws {
+    ///   connected AirPods. The AirPods' 8 kHz HFP mic makes recognition
+    ///   unreliable AND drags the earphone OUTPUT down to telephone quality,
+    ///   so scoring (shadowing, "say it") and conversation both use the
+    ///   built-in mic; a connected earphone keeps hi-fi A2DP for output.
+    /// - Parameter measurementMode: `.measurement` disables output processing
+    ///   — clean for scoring capture, but playback gets noticeably quiet, so
+    ///   conversation passes false to keep replies loud. Defaults to
+    ///   `preferBuiltInMic` (scoring behavior unchanged).
+    /// - Parameter contextualStrings: words/phrases the user is likely to say
+    ///   (topic, names, news terms). Passed to every recognition segment.
+    func start(locale: String, preferBuiltInMic: Bool = false,
+               measurementMode: Bool? = nil,
+               contextualStrings: [String] = []) throws {
         guard !isRunning else { return }
+        self.contextualStrings = Array(contextualStrings.prefix(50))
         let rec = SFSpeechRecognizer(locale: Locale(identifier: locale))
         guard let rec = rec, rec.isAvailable else { throw LiveError.unavailable }
         rec.defaultTaskHint = .dictation
@@ -94,17 +115,17 @@ final class LiveTranscriber: ObservableObject {
         // The avatar's reply (played via AudioPlayer with configureSession=false)
         // inherits THIS session, so route choice here governs conversation
         // output too. Respect headphones instead of force-routing to the
-        // speaker. Conversation allows the BT (HFP) mic for hands-free use;
-        // scoring tasks pass `preferBuiltInMic` to keep input on the reliable
-        // built-in mic while output stays hi-fi A2DP.
+        // speaker. `preferBuiltInMic` keeps input on the reliable built-in
+        // mic while a connected earphone stays on hi-fi A2DP for output.
         let options = preferBuiltInMic
             ? AudioSessionRouting.builtInMicCaptureOptions
             : AudioSessionRouting.recordOptions
         // `.measurement` disables iOS output sound processing/gain — great for
-        // clean scoring input, but it makes the avatar's reply noticeably QUIET
-        // in conversation. So only scoring tasks use it; conversation uses
-        // `.default` so playback stays at full loudness.
-        let mode: AVAudioSession.Mode = preferBuiltInMic ? .measurement : .default
+        // clean scoring input, but it makes the avatar's reply noticeably
+        // QUIET. Scoring keeps it (default); conversation opts out to keep
+        // replies at full loudness.
+        let useMeasurement = measurementMode ?? preferBuiltInMic
+        let mode: AVAudioSession.Mode = useMeasurement ? .measurement : .default
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         AudioSessionRouting.applyOutputRoute(session)
@@ -174,11 +195,19 @@ final class LiveTranscriber: ObservableObject {
         currentWordTimings = []
         let req = SFSpeechAudioBufferRecognitionRequest()
         req.shouldReportPartialResults = true
-        if recognizer.supportsOnDeviceRecognition {
-            req.requiresOnDeviceRecognition = true
-        }
+        // Do NOT force on-device recognition. Apple's server model is
+        // markedly more accurate than the on-device one — especially for
+        // accented, non-native speech, which is this app's entire audience.
+        // Leaving the flag off lets the framework use the server when it can
+        // and fall back on-device otherwise. Segment restarts (quiet-commit /
+        // isFinal) keep each request well under the server's ~1-minute cap,
+        // and every feature that records also needs the network for
+        // Gemini/TTS anyway, so there is no offline scenario to protect.
         if #available(iOS 16.0, *) {
             req.addsPunctuation = true
+        }
+        if !contextualStrings.isEmpty {
+            req.contextualStrings = contextualStrings
         }
         appender.setRequest(req)
         currentRequest = req
@@ -316,6 +345,7 @@ private final class FluencyMeter: @unchecked Sendable {
     private var pauseCount = 0
     private var pauseSeconds = 0.0
     private var longestPause = 0.0
+    private var lastVoicedAt: Date?
 
     private let voicedThreshold: Float = 0.35   // normalized 0…1 level from rms()
     private let minPause = 0.35                  // seconds of silence = one pause
@@ -324,6 +354,12 @@ private final class FluencyMeter: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         total = 0; voiced = 0; started = false; silenceRun = 0
         pauseCount = 0; pauseSeconds = 0; longestPause = 0
+        lastVoicedAt = nil
+    }
+
+    func lastVoicedTime() -> Date? {
+        lock.lock(); defer { lock.unlock() }
+        return lastVoicedAt
     }
 
     func feed(level: Float, seconds: Double) {
@@ -340,6 +376,7 @@ private final class FluencyMeter: @unchecked Sendable {
             silenceRun = 0
             voiced += seconds
             started = true
+            lastVoicedAt = Date()
         } else if started {
             silenceRun += seconds   // ignore leading/trailing silence
         }

@@ -141,6 +141,33 @@ enum AudioLoudness {
         }
     }
 
+    /// Wraps raw 16-bit LE mono PCM (streaming TTS output) in a standard WAV
+    /// container so the existing MP3-oriented plumbing (AVAudioPlayer replay,
+    /// PhraseAudioStore / TurnAudioStore caches) can consume it unchanged —
+    /// AVAudioPlayer sniffs the container, file extension doesn't matter.
+    static func wavData(fromPCM16 pcm: Data, sampleRate: Int, channels: Int = 1) -> Data {
+        let bitsPerSample = 16
+        let byteRate = sampleRate * channels * bitsPerSample / 8
+        let blockAlign = channels * bitsPerSample / 8
+
+        var header = Data()
+        func append(_ s: String) { header.append(contentsOf: Array(s.utf8)) }
+        func appendU32(_ v: UInt32) { withUnsafeBytes(of: v.littleEndian) { header.append(contentsOf: $0) } }
+        func appendU16(_ v: UInt16) { withUnsafeBytes(of: v.littleEndian) { header.append(contentsOf: $0) } }
+
+        append("RIFF"); appendU32(UInt32(36 + pcm.count)); append("WAVE")
+        append("fmt "); appendU32(16)
+        appendU16(1)                              // PCM
+        appendU16(UInt16(channels))
+        appendU32(UInt32(sampleRate))
+        appendU32(UInt32(byteRate))
+        appendU16(UInt16(blockAlign))
+        appendU16(UInt16(bitsPerSample))
+        append("data"); appendU32(UInt32(pcm.count))
+
+        return header + pcm
+    }
+
     /// Peak-normalizes a recorded voice-clone WAV to near full scale BEFORE it
     /// is uploaded to ElevenLabs. IVC reproduces the loudness of its sample, so
     /// a quiet phone-mic take (often -26 to -34 dBFS) yields a quiet clone that

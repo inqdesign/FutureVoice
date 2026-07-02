@@ -13,11 +13,26 @@ enum ConversationEngine {
         topPatterns: [LearnerPattern],
         weakVocabAreas: [String],
         topic: String,
-        persona: UserPersona? = nil
+        persona: UserPersona? = nil,
+        newsFacts: [String] = []
     ) -> String {
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
             .joined(separator: "\n")
         let weak = weakVocabAreas.isEmpty ? "—" : weakVocabAreas.joined(separator: ", ")
+
+        // News conversations: the model can't know this week's stories, so a
+        // grounded lookup at conversation open collected real facts. They are
+        // the ONLY ground truth — engage from them, never invent beyond them.
+        let newsBlock = newsFacts.isEmpty ? "" : """
+
+
+        NEWS FACTS — you looked this story up, this is what the coverage says:
+        \(newsFacts.map { "- \($0)" }.joined(separator: "\n"))
+        Anchor the conversation on these facts and your opinions about them. \
+        Do NOT invent specifics (names, numbers, quotes, outcomes) beyond \
+        them — if the user asks something outside these facts, react honestly \
+        ("I only caught the headlines — but…") and steer to takes and opinions.
+        """
 
         return """
         You're in a real-feeling SPOKEN \(targetLanguage) conversation with the user. \
@@ -33,7 +48,7 @@ enum ConversationEngine {
         \(patterns.isEmpty ? "  (none yet — this is an early session)" : patterns)
         - Weak vocab areas: \(weak)
 
-        Starting context: \(topic.isEmpty ? "open / casual catch-up" : topic)
+        Starting context: \(topic.isEmpty ? "open / casual catch-up" : topic)\(newsBlock)
 
         HOW TO TALK — read this carefully, this is the whole game:
 
@@ -171,6 +186,7 @@ enum ConversationEngine {
           ],
           "suggested_drills": ["phrase 1", "phrase 2", "phrase 3"],
           "expressions_used": ["...", "..."],
+          "weak_vocab_areas": ["...", "..."],
           "overall_note": "1-2 sentence encouraging note",
           "scorecard": {
             "vocabulary":     { "score": 0, "note": "..." },
@@ -206,6 +222,11 @@ enum ConversationEngine {
           range (idioms, phrasal verbs, good word choices). Quote them
           VERBATIM from the user's turns — never invent or paraphrase.
           Leave empty if nothing stands out.
+        - weak_vocab_areas: 0-3 SHORT topic labels (2-4 words each, e.g.
+          "cooking verbs", "phone-call phrases") where the user visibly
+          lacked words this session — reached for vague fillers, circumlocuted,
+          or switched to their native language. These feed the next
+          conversation's system prompt. Empty if nothing stood out.
         - Tone: warm, never condescending.
 
         HARD RULE for phrases_used / new_patterns_detected / suggested_drills
@@ -249,6 +270,28 @@ enum ConversationEngine {
             -1 and note "no timing data".
         - Each axis note ≤ 18 words, concrete (cite a metric or a phrase).
         - top_line: one warm sentence that ties the highest + lowest axis together.
+        """
+    }
+
+    /// Grounded opener for a news-topic conversation. One search-grounded
+    /// call collects real facts (kept for every later turn's system prompt)
+    /// AND produces the opening line, so the future self actually knows the
+    /// story instead of vamping around a one-line blurb.
+    static func newsOpenerInstruction(targetLanguage: String) -> String {
+        """
+        The starting context is a REAL recent news story. Use web search to \
+        read the actual coverage before answering.
+
+        Return STRICT JSON only — no prose, no code fences:
+        { "facts": ["...", "..."], "opener": "..." }
+
+        - facts: 5-8 short plain-language facts from the coverage — what \
+          happened, who, when, key numbers, notable reactions. Facts only, \
+          nothing invented. Each ≤ 20 words, in \(targetLanguage).
+        - opener: ONE natural spoken line in \(targetLanguage) bringing the \
+          story up the way a friend would — mention ONE concrete detail from \
+          the facts, then make it easy for the user to react. Follow every \
+          speaking rule above.
         """
     }
 
@@ -312,6 +355,13 @@ enum ConversationEngine {
     }
 }
 
+/// JSON shape returned by the grounded news opener call — see
+/// `ConversationEngine.newsOpenerInstruction`.
+struct NewsOpenerPayload: Decodable {
+    let facts: [String]
+    let opener: String
+}
+
 /// JSON shape returned by Gemini for one in-call conversation turn —
 /// the spoken reply plus an optional inline correction for the user's
 /// last utterance. See `ConversationEngine.turnOutputInstruction`.
@@ -364,6 +414,7 @@ struct ClaudeSummaryPayload: Decodable {
     let new_patterns_detected: [Pattern]
     let suggested_drills: [String]
     let expressions_used: [String]?
+    let weak_vocab_areas: [String]?
     let overall_note: String
     let scorecard: Scorecard?
 
@@ -413,7 +464,8 @@ struct ClaudeSummaryPayload: Decodable {
             suggestedDrills: suggested_drills,
             overallNote: overall_note,
             scorecard: card,
-            expressionsUsed: expressions_used ?? []
+            expressionsUsed: expressions_used ?? [],
+            weakVocabAreas: weak_vocab_areas ?? []
         )
     }
 }

@@ -22,10 +22,12 @@ enum AudioSessionRouting {
     /// Includes `.allowBluetooth` (HFP) on purpose: conversation is where
     /// hands-free happens — phone in a pocket, talking through AirPods while
     /// walking. The built-in mic is useless there, so the AirPods mic must
-    /// work even though HFP caps the round trip at 8 kHz. The deep-listening
-    /// surfaces (Watch/drills) have no mic and stay hi-fi via `playbackOptions`,
-    /// so this 8 kHz only touches live back-and-forth, not study playback.
-    /// (iOS can't do hi-fi A2DP output AND a Bluetooth mic simultaneously.)
+    /// work even though HFP narrows the round trip to telephone bandwidth
+    /// (~16 kHz mSBC on modern earphones — fine for server ASR, it's Siri's
+    /// path too). The deep-listening surfaces (Watch/drills) have no mic and
+    /// stay hi-fi via `playbackOptions`; scoring forces the built-in mic via
+    /// `builtInMicCaptureOptions` because match scoring needs the cleanest
+    /// possible input.
     static let recordOptions: AVAudioSession.CategoryOptions =
         [.allowBluetooth, .allowBluetoothA2DP, .duckOthers]
 

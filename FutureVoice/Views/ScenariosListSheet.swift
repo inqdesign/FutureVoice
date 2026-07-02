@@ -9,6 +9,9 @@ import SwiftUI
 struct ScenariosListSheet: View {
     @Binding var topic: String
     @Binding var topicBlurb: String
+    /// True when the pick came from "In the news" — the conversation then
+    /// opens with a search-grounded fact lookup so the avatar knows the story.
+    @Binding var topicIsNews: Bool
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
@@ -110,7 +113,7 @@ struct ScenariosListSheet: View {
             // within the same day.
             guard newsTopics.isEmpty, !interests.isEmpty else { return }
             if let cached = NewsTopicStore.shared.valid(for: interests) {
-                newsTopics = cached
+                newsTopics = displaySelection(from: cached)
             } else {
                 await fetchNews()
             }
@@ -208,7 +211,7 @@ struct ScenariosListSheet: View {
                 }
                 if !newsTopics.isEmpty {
                     Button {
-                        Task { await fetchNews() }
+                        Task { await fetchNews(refresh: true) }
                     } label: {
                         if loadingNews {
                             ProgressView().controlSize(.mini)
@@ -254,29 +257,47 @@ struct ScenariosListSheet: View {
         .contentShape(Rectangle())
     }
 
-    private func fetchNews() async {
+    private func fetchNews(refresh: Bool = false) async {
         loadingNews = true
         newsError = nil
         defer { loadingNews = false }
+        if refresh {
+            // What's on screen right now has been seen — rotate it back so
+            // the refreshed list actually looks different.
+            NewsTopicStore.shared.markSeen(newsTopics.map(\.title), interests: interests)
+        }
         do {
-            let fresh = try await NewsTopicEngine.fetch(
+            let pool = try await NewsTopicEngine.fetch(
                 interests: interests,
-                targetLanguage: appState.targetLanguage
+                targetLanguage: appState.targetLanguage,
+                refresh: refresh
             )
-            newsTopics = fresh
-            if !fresh.isEmpty {
-                NewsTopicStore.shared.save(fresh, interests: interests)
+            if !pool.isEmpty {
+                NewsTopicStore.shared.save(pool, interests: interests)
             }
+            newsTopics = displaySelection(from: pool)
         } catch {
             newsError = error.localizedDescription
         }
+    }
+
+    /// Pick what to show from the (possibly larger) pool: unseen stories
+    /// first, then seen ones that are NOT currently on screen, then the
+    /// current list — refresh always changes the screen when the pool allows.
+    private func displaySelection(from pool: [SuggestedTopic]) -> [SuggestedTopic] {
+        let seen = Set(NewsTopicStore.shared.seenTitles(for: interests))
+        let current = Set(newsTopics.map(\.title))
+        let unseen = pool.filter { !seen.contains($0.title) }
+        let seenOffscreen = pool.filter { seen.contains($0.title) && !current.contains($0.title) }
+        let onscreen = pool.filter { seen.contains($0.title) && current.contains($0.title) }
+        return Array((unseen + seenOffscreen + onscreen).prefix(NewsTopicEngine.maxShown))
     }
 
     /// After editing interests, refresh the news list against the new set.
     private func reloadNewsForInterests() {
         guard !interests.isEmpty else { newsTopics = []; return }
         if let cached = NewsTopicStore.shared.valid(for: interests) {
-            newsTopics = cached
+            newsTopics = displaySelection(from: cached)
         } else {
             newsTopics = []
             Task { await fetchNews() }
@@ -289,6 +310,7 @@ struct ScenariosListSheet: View {
         // the avatar as starting context so the conversation sticks to what
         // actually happened.
         topicBlurb = "Recent news to discuss (facts from coverage): \(item.blurb)"
+        topicIsNews = true
         dismiss()
     }
 
@@ -319,6 +341,7 @@ struct ScenariosListSheet: View {
     private func applyAndDismiss(_ s: Scenario) {
         topic = s.displayTitle
         topicBlurb = s.promptBlurb
+        topicIsNews = false
         appState.markScenarioUsed(id: s.id)
         dismiss()
     }

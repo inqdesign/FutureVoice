@@ -106,14 +106,17 @@ final class ElevenLabsClient {
     func synthesize(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_turbo_v2_5"
+        modelId: String = "eleven_turbo_v2_5",
+        idempotencyKey: String? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        // Caller-supplied key = retries of the same logical synthesis are
+        // charge-deduped by the edge function's usage ledger.
+        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
 
@@ -133,6 +136,100 @@ final class ElevenLabsClient {
         return data
     }
 
+    /// Result of a streaming synthesis. `.pcm22050` means the server streamed
+    /// raw 16-bit LE mono PCM at 22.05 kHz and `onPCMChunk` already delivered
+    /// it incrementally; the payload is the FULL accumulated PCM for caching.
+    /// `.mp3` means the server doesn't support streaming yet (older edge
+    /// deploy) — the payload is the fully-buffered MP3, exactly like
+    /// `synthesize` returns, and `onPCMChunk` was never called.
+    enum StreamedAudio {
+        case pcm22050(Data)
+        case mp3(Data)
+    }
+
+    static let streamSampleRate: Double = 22_050
+
+    /// Streaming TTS: playback can start on the first chunk instead of after
+    /// the full file. Chunks are delivered in order via `onPCMChunk` (16-bit
+    /// LE mono PCM, 22.05 kHz), sized ~8 KB (~0.18s of audio).
+    ///
+    /// No word timings on this path — the shadow screen already re-synthesizes
+    /// via `with-timestamps` when a line has no cached timings.
+    func synthesizeStreaming(
+        voiceId: String,
+        text: String,
+        modelId: String = "eleven_turbo_v2_5",
+        idempotencyKey: String? = nil,
+        onPCMChunk: @MainActor @escaping (Data) -> Void
+    ) async throws -> StreamedAudio {
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "voice_id": voiceId,
+            "text": text,
+            "model_id": modelId,
+            "with_timestamps": false,
+            "stream": true,
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw ElevenLabsError.invalidResponse
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            var errBody = Data()
+            for try await b in bytes.prefix(512) { errBody.append(b) }
+            if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
+            let snippet = String(data: errBody, encoding: .utf8) ?? "<binary>"
+            throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
+        }
+
+        // The PCM header is the protocol handshake: without it we're talking
+        // to an edge deploy that ignored `stream` and returned a whole MP3 —
+        // buffer it and let the caller take the classic path.
+        let isPCM = http.value(forHTTPHeaderField: "X-Audio-Format") == "pcm_22050"
+
+        if !isPCM {
+            var all = Data()
+            for try await b in bytes { all.append(b) }
+            return .mp3(all)
+        }
+
+        var full = Data()
+        var chunk = Data()
+        // ~8 KB = ~0.18s at 22.05 kHz s16 mono: small enough for a fast
+        // start, big enough to keep scheduling overhead trivial.
+        let flushSize = 8 * 1024
+        for try await b in bytes {
+            chunk.append(b)
+            if chunk.count >= flushSize {
+                // Keep sample alignment: never split an Int16 across flushes.
+                let even = chunk.count - (chunk.count % 2)
+                let out = chunk.prefix(even)
+                chunk.removeFirst(even)
+                full.append(contentsOf: out)
+                let send = Data(out)
+                await MainActor.run { onPCMChunk(send) }
+            }
+        }
+        if !chunk.isEmpty {
+            let even = chunk.count - (chunk.count % 2)
+            if even > 0 {
+                let out = Data(chunk.prefix(even))
+                full.append(out)
+                await MainActor.run { onPCMChunk(out) }
+            }
+        }
+        return .pcm22050(full)
+    }
+
     /// Same TTS as `synthesize`, but uses the `with-timestamps` endpoint so we
     /// also get character-level alignment. We group consecutive non-space
     /// characters into words and return their [start, end] ms windows for the
@@ -145,13 +242,17 @@ final class ElevenLabsClient {
     func synthesizeWithTimestamps(
         voiceId: String,
         text: String,
-        modelId: String = "eleven_turbo_v2_5"
+        modelId: String = "eleven_turbo_v2_5",
+        idempotencyKey: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         do {
-            return try await synthesizeWithTimestampsInner(voiceId: voiceId, text: text, modelId: modelId)
+            return try await synthesizeWithTimestampsInner(
+                voiceId: voiceId, text: text, modelId: modelId, idempotencyKey: idempotencyKey)
         } catch {
-            // Fallback: at least play audio without karaoke.
-            let audio = try await synthesize(voiceId: voiceId, text: text, modelId: modelId)
+            // Fallback: at least play audio without karaoke. Reuses the same
+            // idempotency key — one logical synthesis, one charge.
+            let audio = try await synthesize(
+                voiceId: voiceId, text: text, modelId: modelId, idempotencyKey: idempotencyKey)
             return (audio, [])
         }
     }
@@ -159,14 +260,15 @@ final class ElevenLabsClient {
     private func synthesizeWithTimestampsInner(
         voiceId: String,
         text: String,
-        modelId: String
+        modelId: String,
+        idempotencyKey: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
