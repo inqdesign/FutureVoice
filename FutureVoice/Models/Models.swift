@@ -38,6 +38,11 @@ extension LearnerProfile {
     /// history compresses into the top-N patterns by frequency.
     static let maxRecurringMistakes = 10
 
+    /// How many weak vocab areas the profile keeps (newest-first). They are
+    /// injected verbatim into the conversation system prompt, so a short list
+    /// beats an exhaustive one.
+    static let maxWeakVocabAreas = 5
+
     /// Fold one finished session into the profile — this is the "each
     /// session feeds the next" loop from spec §3. New patterns merge into
     /// `recurringMistakes` (matching on normalized mistake+correction text,
@@ -67,6 +72,18 @@ extension LearnerProfile {
         }
         if recurringMistakes.count > Self.maxRecurringMistakes {
             recurringMistakes.removeLast(recurringMistakes.count - Self.maxRecurringMistakes)
+        }
+
+        // Newest-first merge of weak vocab areas (case-insensitive dedup,
+        // capped) — closes the loop into the next conversation's prompt.
+        for area in summary.weakVocabAreas {
+            let trimmed = area.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { continue }
+            weakVocabAreas.removeAll { $0.lowercased() == trimmed.lowercased() }
+            weakVocabAreas.insert(trimmed, at: 0)
+        }
+        if weakVocabAreas.count > Self.maxWeakVocabAreas {
+            weakVocabAreas.removeLast(weakVocabAreas.count - Self.maxWeakVocabAreas)
         }
 
         totalSessions += 1
@@ -181,12 +198,16 @@ struct SessionSummary: Codable {
     /// Multi-word expressions the LLM flagged AND we verified appear verbatim
     /// in the user's own turns (hallucination-guarded).
     var expressionsUsed: [String] = []
+    /// Short topic labels where the user visibly lacked words this session
+    /// ("cooking verbs", "phone-call phrases"). Absorbed into
+    /// `LearnerProfile.weakVocabAreas` → next conversation's system prompt.
+    var weakVocabAreas: [String] = []
 }
 
 extension SessionSummary {
     enum CodingKeys: String, CodingKey {
         case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
-        case scorecard, newWordsUsed, expressionsUsed
+        case scorecard, newWordsUsed, expressionsUsed, weakVocabAreas
     }
 
     // Custom decode so sessions saved BEFORE newWordsUsed/expressionsUsed
@@ -202,6 +223,7 @@ extension SessionSummary {
         scorecard = try c.decodeIfPresent(SessionScorecard.self, forKey: .scorecard)
         newWordsUsed = try c.decodeIfPresent([String].self, forKey: .newWordsUsed) ?? []
         expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
+        weakVocabAreas = try c.decodeIfPresent([String].self, forKey: .weakVocabAreas) ?? []
     }
 }
 

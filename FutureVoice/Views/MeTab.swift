@@ -9,6 +9,10 @@ struct MeTab: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     @State private var account: AccountStatus = .empty
+    /// AI's holistic CEFR read of the last few conversations (mode of the
+    /// last 3 scored sessions — same read as ProgressTab). Level changes stay
+    /// user-confirmed: this only powers a suggestion row under the picker.
+    @State private var aiLevel: CEFRLevel?
     @State private var showingPersonaEdit = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
@@ -61,6 +65,15 @@ struct MeTab: View {
                         row(icon: "chart.bar",
                             title: "Level",
                             subtitle: "Calibrates conversations and feedback")
+                    }
+                    if let ai = aiLevel, ai != appState.proficiency {
+                        Button {
+                            appState.proficiency = ai
+                        } label: {
+                            row(icon: "sparkles",
+                                title: "AI read: \(ai.rawValue.uppercased()) — tap to apply",
+                                subtitle: "From your recent conversations")
+                        }
                     }
                     Picker(selection: $dailyGoalMinutes) {
                         ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
@@ -174,7 +187,20 @@ struct MeTab: View {
             }
             #endif
             .task { account = await AccountStatus.fetch() }
+            .task { aiLevel = Self.recentAILevel() }
         }
+    }
+
+    /// Mode of the AI's CEFR reads over the last 3 scored sessions —
+    /// mirrors ProgressTab's "aiLevel". nil until enough scored sessions.
+    private static func recentAILevel() -> CEFRLevel? {
+        let cards = SessionStore.shared.load()
+            .compactMap { $0.summary?.scorecard }
+        let recentLevels = cards.prefix(3).compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
+        guard !recentLevels.isEmpty else { return nil }
+        var freq: [CEFRLevel: Int] = [:]
+        for l in recentLevels { freq[l, default: 0] += 1 }
+        return freq.max(by: { $0.value < $1.value })?.key ?? recentLevels.first
     }
 
     private func regenerateFromSavedSample() {
