@@ -9,7 +9,8 @@ struct ProgressTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var vocab = VocabStore.shared
 
-    @State private var selected: Dim = .overall
+    // Optional because it doubles as the pager's scrollPosition binding.
+    @State private var selected: Dim? = .overall
     @State private var dashboard = PracticeStats.snapshot()
     @State private var dueCount = 0
 
@@ -53,10 +54,15 @@ struct ProgressTab: View {
                             .padding(.bottom, 28)
                     }
                 } else {
-                    VStack(spacing: 0) {
-                        tabBar
-                            .padding(.top, 4)
-                        TabView(selection: $selected) {
+                    // A native horizontal-paging ScrollView instead of
+                    // TabView(.page): the UIPageViewController behind the paged
+                    // TabView clips its pages to the safe area, so content
+                    // could never slide under the header or the tab bar. Real
+                    // SwiftUI scroll views underlap the bars natively — pages
+                    // show through the chip bar's material, the nav bar blurs
+                    // on scroll, and content flows under the tab bar.
+                    ScrollView(.horizontal) {
+                        LazyHStack(spacing: 0) {
                             ForEach(availableDims, id: \.self) { dim in
                                 ScrollView {
                                     content(for: dim)
@@ -64,11 +70,38 @@ struct ProgressTab: View {
                                         .padding(.top, 8)
                                         .padding(.bottom, 28)
                                 }
-                                .tag(dim)
+                                .containerRelativeFrame(.horizontal)
+                                .id(dim)
                             }
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .never))
+                        .scrollTargetLayout()
                     }
+                    .scrollTargetBehavior(.paging)
+                    .scrollPosition(id: $selected)
+                    .scrollIndicators(.hidden)
+                    .safeAreaInset(edge: .top, spacing: 0) {
+                        tabBar
+                            .padding(.top, 4)
+                            .padding(.bottom, 6)
+                            // One continuous translucent panel from the status
+                            // bar down to the chips (the nav bar's own opaque
+                            // background is suppressed below), so scrolled
+                            // content genuinely shows through the header. Its
+                            // bottom edge is feathered with a gradient mask —
+                            // a hard material edge reads as a visible seam
+                            // against the background.
+                            .background {
+                                Rectangle().fill(.ultraThinMaterial)
+                                    .mask {
+                                        LinearGradient(stops: [.init(color: .black, location: 0),
+                                                               .init(color: .black, location: 0.82),
+                                                               .init(color: .clear, location: 1)],
+                                                       startPoint: .top, endPoint: .bottom)
+                                    }
+                                    .ignoresSafeArea(edges: .top)
+                            }
+                    }
+                    .toolbarBackground(.hidden, for: .navigationBar)
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
@@ -100,11 +133,14 @@ struct ProgressTab: View {
                 HStack(spacing: 8) {
                     ForEach(availableDims, id: \.self) { dim in
                         Button { withAnimation { selected = dim } } label: {
+                            // Fitness+-style pills: monochrome selection — the
+                            // active chip fills with the label color and inverts
+                            // its text, instead of tinting with the accent.
                             Text(dim.short)
-                                .font(.subheadline.weight(.medium))
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(Capsule().fill(selected == dim ? Color.accentColor : Color(.secondarySystemGroupedBackground)))
-                                .foregroundStyle(selected == dim ? Color.white : Color.primary)
+                                .font(.body.weight(.medium))
+                                .padding(.horizontal, 16).padding(.vertical, 9)
+                                .background(Capsule().fill(selected == dim ? Color(.label) : Color(.secondarySystemGroupedBackground)))
+                                .foregroundStyle(selected == dim ? Color(.systemBackground) : Color.primary)
                         }
                         .buttonStyle(.plain)
                         .id(dim)
@@ -115,7 +151,9 @@ struct ProgressTab: View {
             }
             // Keep the active chip in view as you swipe pages or tap.
             .onChange(of: selected) { _, new in
-                withAnimation { proxy.scrollTo(new, anchor: .center) }
+                if let new {
+                    withAnimation { proxy.scrollTo(new, anchor: .center) }
+                }
             }
         }
     }
@@ -166,13 +204,10 @@ struct ProgressTab: View {
                     Text("To reach \(next.rawValue.uppercased())").font(.headline)
                     Text(canDo(next)).font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Start using more \(next.rawValue.uppercased())-level words in your talks.")
+                    // Measurement tab stays measurement-only: the doing
+                    // (vocabulary, drills, shadowing) lives in Practice.
+                    Text("Start using more \(next.rawValue.uppercased())-level words in your talks — Practice → Vocabulary highlights them.")
                         .font(.callout).fixedSize(horizontal: false, vertical: true)
-                    NavigationLink { VocabularyView() } label: {
-                        Label("Explore \(next.rawValue.uppercased()) words", systemImage: "character.book.closed.fill")
-                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
-                    }
-                    .buttonStyle(.borderedProminent).controlSize(.large)
                 }
             }
 
@@ -248,13 +283,8 @@ struct ProgressTab: View {
             }
             panel {
                 Text("How to level up").font(.headline)
-                Text("Discover and use words you don't reach for yet — the cloud highlights the ones at and above your level.")
+                Text("Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level.")
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
-                NavigationLink { VocabularyView() } label: {
-                    Label("Build vocabulary", systemImage: "character.book.closed.fill")
-                        .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.borderedProminent).controlSize(.large)
             }
             panel {
                 HStack(alignment: .firstTextBaseline) {
@@ -263,13 +293,8 @@ struct ProgressTab: View {
                     Text("\(vocab.expressionCount)")
                         .font(.headline).foregroundStyle(.tint).monospacedDigit()
                 }
-                Text("Multi-word phrases you actually said in your talks, collected automatically.")
+                Text("Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                NavigationLink { ExpressionsView() } label: {
-                    Label("See expressions", systemImage: "quote.bubble")
-                        .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
-                }
-                .buttonStyle(.bordered).controlSize(.large)
             }
         }
     }
@@ -307,7 +332,7 @@ struct ProgressTab: View {
                 : nil,
             measures: "Measured from your speech: pace, how often you pause, and how much you keep going.",
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
-            action: DimAction(title: "See your activity", icon: "flame.fill", destination: AnyView(ActivityView()))
+            action: nil
         )
     }
 
@@ -319,9 +344,8 @@ struct ProgressTab: View {
             band: accuracyBand,
             measuredLine: "\(shadowAttempts) shadow attempt\(shadowAttempts == 1 ? "" : "s") — measured against your fluent self",
             measures: "How closely your sounds match the target, measured from shadow practice.",
-            improve: "Shadow your fluent self's lines — listen, then match the rhythm and sounds.",
-            action: DimAction(title: "Shadow practice", icon: "waveform.badge.mic",
-                              destination: AnyView(ShadowBrowserView().navigationTitle("Shadow").navigationBarTitleDisplayMode(.inline)))
+            improve: "Shadow your fluent self's lines under Practice — listen, then match the rhythm and sounds.",
+            action: nil
         )
     }
 
@@ -333,11 +357,8 @@ struct ProgressTab: View {
             band: nil,
             measuredLine: "How often a more natural rephrase was suggested — lower is better.",
             measures: "How correctly you build sentences — tenses, articles, agreement.",
-            improve: "Run your review cards — they're built from your own slips and target exactly these.",
-            action: dueCount > 0
-                ? DimAction(title: "Review \(dueCount) cards", icon: "rectangle.stack.fill",
-                            destination: AnyView(DrillView().navigationTitle("Review").navigationBarTitleDisplayMode(.inline)))
-                : nil
+            improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
+            action: nil
         )
     }
 
