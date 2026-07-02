@@ -373,7 +373,10 @@ struct WordCard: View {
     @State private var shadowing: Turn?
 
     private var studyIndex: Int? { store.studying.firstIndex(of: word) }
-    private var isKnown: Bool { store.records[word]?.state == .known }
+    /// Words the user has USED count as known too — using a word in a real
+    /// conversation is stronger evidence than a self-check, and every other
+    /// surface (chips, cloud, counts) already treats them that way.
+    private var isKnown: Bool { store.records[word] != nil }
 
     var body: some View {
         ScrollView {

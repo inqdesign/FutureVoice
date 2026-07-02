@@ -18,6 +18,11 @@ final class LiveTranscriber: ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var level: Float = 0  // 0…1 RMS for waveform UI
 
+    /// Where the capture of the run that just ended was written — the user's
+    /// own audio, for listen-back. Set by `stop()` when the run was started
+    /// with `captureToFile: true`; the caller owns (moves/deletes) the file.
+    private(set) var lastRecordingURL: URL?
+
     /// Word-level audio-time timings from the CURRENT recognition segment.
     /// `startSeconds` is offset into the audio stream of this segment (NOT
     /// wall clock) — pair with `segmentAnchorAt` for absolute time.
@@ -43,6 +48,7 @@ final class LiveTranscriber: ObservableObject {
     private var quietWatcher: Task<Void, Never>?
     private let appender = LiveTranscriberAppender()
     private let fluency = FluencyMeter()
+    private let recorder = TurnAudioFileWriter()
     /// Domain vocabulary hints applied to every recognition segment —
     /// topic words, names, news terms the user is likely to say. Biases the
     /// recognizer toward them (SFSpeechRecognizer contextualStrings).
@@ -102,9 +108,13 @@ final class LiveTranscriber: ObservableObject {
     ///   `preferBuiltInMic` (scoring behavior unchanged).
     /// - Parameter contextualStrings: words/phrases the user is likely to say
     ///   (topic, names, news terms). Passed to every recognition segment.
+    /// - Parameter captureToFile: also write the mic audio to a compact AAC
+    ///   file (`lastRecordingURL` after `stop()`) so the user can listen back
+    ///   to their own turn.
     func start(locale: String, preferBuiltInMic: Bool = false,
                measurementMode: Bool? = nil,
-               contextualStrings: [String] = []) throws {
+               contextualStrings: [String] = [],
+               captureToFile: Bool = false) throws {
         guard !isRunning else { return }
         self.contextualStrings = Array(contextualStrings.prefix(50))
         let rec = SFSpeechRecognizer(locale: Locale(identifier: locale))
@@ -136,10 +146,14 @@ final class LiveTranscriber: ObservableObject {
         let format = input.outputFormat(forBus: 0)
         let localAppender = self.appender
         let localFluency = self.fluency
+        let localRecorder = self.recorder
         let sampleRate = format.sampleRate
         fluency.reset()
+        lastRecordingURL = nil
+        if captureToFile { recorder.begin(format: format) }
         input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             localAppender.append(buffer)
+            localRecorder.append(buffer)
             let rms = Self.rms(of: buffer)
             localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
             Task { @MainActor [weak self] in
@@ -175,6 +189,7 @@ final class LiveTranscriber: ObservableObject {
         appender.setRequest(nil)
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
+        lastRecordingURL = recorder.finish()
         currentRequest?.endAudio()
         currentTask?.finish()
         engine = nil
@@ -387,6 +402,44 @@ private final class FluencyMeter: @unchecked Sendable {
         return FluencyStats(speakingSeconds: voiced, totalSeconds: total,
                             pauseCount: pauseCount, pauseSeconds: pauseSeconds,
                             longestPauseSeconds: longestPause)
+    }
+}
+
+/// Writes the mic tap's buffers to a compact AAC file so the user can listen
+/// back to their own turn later. Lock-guarded like the appender — `append`
+/// runs on the audio thread; a nil file (capture not requested, or the file
+/// failed to open) makes it a cheap no-op.
+private final class TurnAudioFileWriter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var file: AVAudioFile?
+    private var url: URL?
+
+    func begin(format: AVAudioFormat) {
+        let dest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("user-turn-\(UUID().uuidString).m4a")
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVSampleRateKey: format.sampleRate,
+            AVNumberOfChannelsKey: Int(format.channelCount),
+            AVEncoderBitRateKey: 32_000
+        ]
+        lock.lock(); defer { lock.unlock() }
+        file = try? AVAudioFile(forWriting: dest, settings: settings)
+        url = file == nil ? nil : dest
+    }
+
+    func append(_ buffer: AVAudioPCMBuffer) {
+        lock.lock(); let f = file; lock.unlock()
+        guard let f else { return }
+        try? f.write(from: buffer)
+    }
+
+    func finish() -> URL? {
+        lock.lock(); defer { lock.unlock() }
+        let u = url
+        file = nil    // AVAudioFile closes when released
+        url = nil
+        return u
     }
 }
 

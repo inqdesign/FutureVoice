@@ -219,6 +219,38 @@ final class VocabStore: ObservableObject {
         return out
     }
 
+    /// Core-list lemmas the fluent self spoke that the user has never used or
+    /// marked known — natural "words to pick up" from a conversation. Filtered
+    /// to the user's level and up: easier words they merely haven't happened
+    /// to say would flood the list with noise.
+    func pickupWords(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?) -> [String] {
+        let minRank = minLevel.map(CoreVocabulary.levelRank)
+        return lemmas(in: texts)
+            .filter { records[$0] == nil }
+            .compactMap { w -> (word: String, rank: Int)? in
+                guard let lv = CoreVocabulary.level(of: w) else { return nil }
+                let rank = CoreVocabulary.levelRank(lv)
+                if let minRank, rank < minRank { return nil }
+                return (w, rank)
+            }
+            .sorted { $0.rank == $1.rank ? $0.word < $1.word : $0.rank < $1.rank }
+            .map(\.word)
+    }
+
+    /// Best notebook key for a word the user tapped in a transcript: its lemma
+    /// when the lemma is in the core list ("revitalizing" → "revitalize"),
+    /// otherwise the cleaned word itself.
+    nonisolated static func lookupKey(for raw: String) -> String {
+        let w = raw.lowercased().trimmingCharacters(in: .punctuationCharacters)
+        guard !w.isEmpty else { return w }
+        let tagger = NLTagger(tagSchemes: [.lemma])
+        tagger.string = w
+        tagger.setLanguage(.english, range: w.startIndex..<w.endIndex)
+        let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
+        if let lemma, CoreVocabulary.set.contains(lemma) { return lemma }
+        return w
+    }
+
     // MARK: - Lemmatization
 
     private func lemmas(in texts: [String]) -> Set<String> {

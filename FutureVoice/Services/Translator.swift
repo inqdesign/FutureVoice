@@ -45,6 +45,51 @@ enum Translator {
         }
     }
 
+    // MARK: - Correction explanations
+
+    private static func explainKey(_ original: String, _ alternative: String, _ lang: String) -> String {
+        "EXPLAIN\u{1}" + lang + "\u{1}" + original + "\u{1}" + alternative
+    }
+
+    /// Cached explanation if we already have one (no network).
+    static func cachedExplanation(original: String, alternative: String, to lang: String) -> String? {
+        memory[explainKey(original, alternative, lang)]
+    }
+
+    /// Native-language coaching note for one correction: what actually changed
+    /// between what the learner said and the more natural version, and why.
+    /// (Just translating the English reason string says nothing — the
+    /// explanation has to reference the specific words.) Cached like
+    /// translations so the same correction is never re-billed.
+    static func explainCorrection(original: String, alternative: String, to lang: String) async -> String? {
+        let k = explainKey(original, alternative, lang)
+        if let c = memory[k] { return c }
+
+        let languageName = Locale(identifier: "en").localizedString(forLanguageCode: lang) ?? lang
+        do {
+            let out = try await GeminiClient.shared.send(
+                system: """
+                You are an English coach. The learner said something; a more natural \
+                version follows. Explain in \(languageName), in 2–3 short sentences, \
+                what was changed and why the natural version is better — quote the \
+                specific English words that changed. Output only the explanation.
+                """,
+                messages: [GeminiClient.Message(
+                    role: .user,
+                    content: "Learner said: \(original)\nMore natural: \(alternative)")],
+                maxTokens: 500,
+                temperature: 0.3
+            )
+            let t = out.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !t.isEmpty else { return nil }
+            memory[k] = t
+            saveDisk()
+            return t
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - Disk cache
 
     private static func loadDisk() -> [String: String] {
