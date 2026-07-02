@@ -352,9 +352,17 @@ struct ShadowDrillView: View {
             if recordingFileURL != nil {
                 playbackRow
             }
-            bullet(icon: "waveform.badge.mic", label: "Pronunciation", text: fb.pronunciation)
-            bullet(icon: "metronome", label: "Pacing", text: fb.pacing)
-            bullet(icon: "sparkles", label: "Try this", text: fb.fix)
+            // Empty bullets happen when the coach call failed — the score,
+            // diff and recording above are still shown/saved.
+            if !fb.pronunciation.isEmpty {
+                bullet(icon: "waveform.badge.mic", label: "Pronunciation", text: fb.pronunciation)
+            }
+            if !fb.pacing.isEmpty {
+                bullet(icon: "metronome", label: "Pacing", text: fb.pacing)
+            }
+            if !fb.fix.isEmpty {
+                bullet(icon: "sparkles", label: "Try this", text: fb.fix)
+            }
         }
     }
 
@@ -777,11 +785,23 @@ struct ShadowDrillView: View {
     private func analyze(finalText: String) async {
         let analysis = ShadowEngine.analyze(target: turn.transcript, learner: finalText)
         diffSteps = analysis.steps
-        let learnerDurMs = Int((syncStartedAt.map { Date().timeIntervalSince($0) } ?? 0) * 1000)
+        // Learner duration = measured utterance span (first voice → last
+        // voice, incl. mid-speech pauses) from the mic energy meter — NOT the
+        // wall clock, which includes lead-in silence and the auto-stop tail
+        // and systematically inflated the pace ratio. Wall clock stays as the
+        // fallback when the meter heard nothing.
+        let stats = live.fluencyStats()
+        let spokenMs = Int((stats.speakingSeconds + stats.pauseSeconds) * 1000)
+        let wallMs = Int((syncStartedAt.map { Date().timeIntervalSince($0) } ?? 0) * 1000)
+        let learnerDurMs = spokenMs > 0 ? min(spokenMs, wallMs) : wallMs
         lastAttemptDurationMs = learnerDurMs   // surfaces in durationCard
 
+        // The deterministic score + diff are already computed. The Gemini
+        // bullets are garnish — a network failure must not throw away the
+        // attempt (score, diff, recording) with it.
+        var payload: ShadowEngine.Payload?
         do {
-            let payload: ShadowEngine.Payload = try await GeminiClient.shared.sendJSON(
+            payload = try await GeminiClient.shared.sendJSON(
                 system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage),
                 messages: [GeminiClient.Message(
                     role: .user,
@@ -795,31 +815,33 @@ struct ShadowDrillView: View {
                 )],
                 maxTokens: 300
             )
-            feedback = ShadowFeedback(
-                pronunciation: payload.pronunciation,
-                pacing: payload.pacing,
-                fix: payload.fix,
-                matchScore: analysis.score
-            )
-            phase = .result
-            HapticEngine.shadowComplete(score: analysis.score)
-
-            // Persist this attempt so the user can revisit / hear it later.
-            let attempt = ShadowAttempt(
-                turnId: turn.id,
-                targetText: turn.transcript,
-                learnerTranscript: finalText,
-                recordingFilename: recordingFileURL?.lastPathComponent,
-                matchScore: analysis.score,
-                pronunciation: payload.pronunciation,
-                pacing: payload.pacing,
-                fix: payload.fix
-            )
-            appState.saveShadowAttempt(attempt)
         } catch {
-            self.error = error.localizedDescription
-            phase = .idle
+            payload = nil
         }
+
+        feedback = ShadowFeedback(
+            pronunciation: payload?.pronunciation
+                ?? "Coach comments couldn't load — the score and highlighted words above are still accurate.",
+            pacing: payload?.pacing ?? "",
+            fix: payload?.fix ?? "",
+            matchScore: analysis.score
+        )
+        phase = .result
+        HapticEngine.shadowComplete(score: analysis.score)
+
+        // Persist this attempt so the user can revisit / hear it later —
+        // even when the coach bullets failed to generate.
+        let attempt = ShadowAttempt(
+            turnId: turn.id,
+            targetText: turn.transcript,
+            learnerTranscript: finalText,
+            recordingFilename: recordingFileURL?.lastPathComponent,
+            matchScore: analysis.score,
+            pronunciation: payload?.pronunciation ?? "",
+            pacing: payload?.pacing ?? "",
+            fix: payload?.fix ?? ""
+        )
+        appState.saveShadowAttempt(attempt)
     }
 
     /// Replace `userWordTimings` from the LATEST segment-level word timings
