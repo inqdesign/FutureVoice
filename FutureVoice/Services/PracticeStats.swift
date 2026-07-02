@@ -103,10 +103,34 @@ enum PracticeStats {
         }
     }
 
+    /// How much a line teaches at the learner's level: the count of words
+    /// graded AT or ABOVE their CEFR level in the core word list. Greetings
+    /// and small talk ("Good to catch up! How was your day?") score ~0 and
+    /// sink; lines carrying real vocabulary rise. Deterministic — pure
+    /// word-list lookup, no LLM.
+    static func lexicalValue(of text: String, level: CEFRLevel) -> Int {
+        let learnerRank = CoreVocabulary.levelRank(level)
+        return text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics
+                .union(CharacterSet(charactersIn: "'-")).inverted)
+            .filter { !$0.isEmpty }
+            .reduce(0) { acc, word in
+                guard let lv = CoreVocabulary.level(of: word) else { return acc }
+                return acc + (CoreVocabulary.levelRank(lv) >= learnerRank ? 1 : 0)
+            }
+    }
+
     /// Curate up to `limit` lines: fresh lines from the newest sessions the
     /// user hasn't shadowed yet (sized to the learner's level), then
     /// low-score retries (latest attempt per line < `retryThreshold`).
     /// Fresh-first keeps picks tied to whatever the user just talked about.
+    ///
+    /// Two guards against "why is it suggesting the greeting?":
+    ///   • each session's OPENER (its first fluent-self line) is excluded —
+    ///     it's the scripted ice-breaker, not conversation substance — unless
+    ///     literally nothing else qualifies;
+    ///   • within a session, candidates rank by `lexicalValue` so the lines
+    ///     that teach the most vocabulary come first, not the earliest ones.
     static func shadowPicks(
         sessions: [Session],
         attempts: [ShadowAttempt],
@@ -123,13 +147,20 @@ enum PracticeStats {
         // Fresh: never-attempted fluent-self lines, newest session first.
         // Preferred = fits the learner's level band; if nothing does (e.g.
         // an A1 learner whose avatar spoke long lines), fall back to any
-        // substantive line rather than showing nothing.
+        // substantive line; openers are the tier of last resort.
+        struct Candidate {
+            let pick: ShadowPick
+            let sessionIndex: Int
+            let value: Int
+        }
         let band = wordBand(for: level)
-        var banded: [ShadowPick] = []
-        var fallback: [ShadowPick] = []
+        var banded: [Candidate] = []
+        var fallback: [Candidate] = []
+        var openers: [Candidate] = []
         var seenTexts = Set<String>()
         let newestFirst = sessions.sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
-        for session in newestFirst {
+        for (sessionIndex, session) in newestFirst.enumerated() {
+            let openerId = session.turns.first { $0.role == .fluentSelf }?.id
             for turn in session.turns where turn.role == .fluentSelf {
                 let text = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 let key = text.lowercased()
@@ -139,18 +170,34 @@ enum PracticeStats {
                       latestByTurn[turn.id] == nil,
                       !seenTexts.contains(key) else { continue }
                 seenTexts.insert(key)
-                let pick = ShadowPick(
-                    turn: turn,
-                    reason: "From: \(session.topic?.isEmpty == false ? session.topic! : "recent conversation")"
+                let candidate = Candidate(
+                    pick: ShadowPick(
+                        turn: turn,
+                        reason: "From: \(session.topic?.isEmpty == false ? session.topic! : "recent conversation")"
+                    ),
+                    sessionIndex: sessionIndex,
+                    value: lexicalValue(of: text, level: level)
                 )
-                if band.contains(wordCount) {
-                    banded.append(pick)
+                if turn.id == openerId {
+                    openers.append(candidate)
+                } else if band.contains(wordCount) {
+                    banded.append(candidate)
                 } else {
-                    fallback.append(pick)
+                    fallback.append(candidate)
                 }
             }
         }
-        let fresh = banded.isEmpty ? fallback : banded
+        // Newest session first, then the most teachable line within it.
+        func ranked(_ list: [Candidate]) -> [ShadowPick] {
+            list.sorted {
+                $0.sessionIndex != $1.sessionIndex
+                    ? $0.sessionIndex < $1.sessionIndex
+                    : $0.value > $1.value
+            }.map(\.pick)
+        }
+        let fresh = !banded.isEmpty ? ranked(banded)
+            : !fallback.isEmpty ? ranked(fallback)
+            : ranked(openers)
 
         // Retries: latest attempt scored low. Reuse the original turn when it
         // still exists so past attempts stay attached; otherwise rebuild from

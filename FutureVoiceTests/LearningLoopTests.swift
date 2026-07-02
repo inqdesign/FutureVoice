@@ -232,6 +232,25 @@ final class ShadowPicksTests: XCTestCase {
         XCTAssertTrue(picks.isEmpty)
     }
 
+    func testOpenerIsSkippedWhenOtherLinesQualify() {
+        // The session's first fluent-self line is the scripted ice-breaker —
+        // it must NOT be the suggested shadow line when substance exists.
+        let s = session([
+            turn("Hey good to catch up again today!"),          // opener, in-band
+            turn("Honestly the negotiation dragged on forever."),
+        ])
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [], level: .b1)
+        XCTAssertEqual(picks.count, 1)
+        XCTAssertEqual(picks[0].turn.transcript, "Honestly the negotiation dragged on forever.")
+    }
+
+    func testOpenerIsLastResortWhenAlone() {
+        // A session where the opener is the ONLY line — better it than nothing.
+        let s = session([turn("Hey good to catch up again today!")])
+        let picks = PracticeStats.shadowPicks(sessions: [s], attempts: [], level: .b1)
+        XCTAssertEqual(picks.count, 1)
+    }
+
     func testLimitAndFreshFirstMix() {
         let badId = UUID()
         let s = session([
