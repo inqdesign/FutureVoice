@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import NaturalLanguage
 
 /// The word cloud — the words "in your head", floating in space. Size = how
@@ -14,6 +15,7 @@ struct VocabularyView: View {
     @State private var pan: CGSize = .zero
     @State private var panAnchor: CGSize = .zero
     @State private var nodes: [CloudLayout.Node] = []
+    @State private var canvas: CGSize = .zero
     @State private var viewport: CGSize = .zero
     @AppStorage("futurevoice.vocab.hideKnown") private var hideKnown = true
     @State private var level: LevelFilter = .all
@@ -91,25 +93,29 @@ struct VocabularyView: View {
         return "\(store.knownCount) / \(store.total) words"
     }
 
-    // MARK: - Explorable cloud (parallax pan + radial fade + cull)
+    // MARK: - Explorable cloud (parallax pan + edge vignette + cull)
 
     private func cloud(in size: CGSize) -> some View {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let fade = min(size.width, size.height) * 0.62
         let margin: CGFloat = 70
 
         return ZStack {
             Color(.systemBackground)
             ForEach(nodes) { node in
-                // Parallax: bigger (common) words ride the pan faster, so the
-                // cloud has real depth as you drag.
-                let sx = node.pos.x + pan.width * node.depth
-                let sy = node.pos.y + pan.height * node.depth
+                // Parallax: each word's offset from the viewport centre is scaled
+                // by its depth, so near words sweep faster than far ones as you
+                // drag — but the drift stays bounded by the screen, so the
+                // collision-free packing survives panning.
+                let sx = center.x + (node.pos.x + pan.width - center.x) * node.depth
+                let sy = center.y + (node.pos.y + pan.height - center.y) * node.depth
                 let used = store.records[node.word] != nil
                 if (!hideKnown || !used),
                    sx > -margin, sx < size.width + margin, sy > -margin, sy < size.height + margin {
-                    let dist = hypot(sx - center.x, sy - center.y)
-                    let opacity = max(0, min(1, 1.15 - dist / fade))
+                    // Elliptical vignette: full strength in the middle, gently
+                    // fading toward the screen edges — not a min-dimension circle
+                    // that leaves the top/bottom of tall screens empty.
+                    let nd = hypot((sx - center.x) / center.x, (sy - center.y) / center.y)
+                    let opacity = max(0, min(1, 1.25 - nd))
                     Text(node.word)
                         .font(.system(size: node.size, weight: used ? .regular : .semibold, design: .rounded))
                         .foregroundStyle(used ? Color.secondary : Color.primary)
@@ -129,28 +135,72 @@ struct VocabularyView: View {
         .gesture(
             DragGesture(minimumDistance: 3)
                 .onChanged { value in
-                    pan = CGSize(width: panAnchor.width + value.translation.width,
-                                 height: panAnchor.height + value.translation.height)
+                    let raw = CGSize(width: panAnchor.width + value.translation.width,
+                                     height: panAnchor.height + value.translation.height)
+                    pan = rubberBanded(raw, in: size)
                 }
                 .onEnded { value in
                     // Carry a fraction of the flick's momentum so the cloud keeps
-                    // drifting briefly after the finger lifts, then eases to rest.
+                    // drifting briefly after the finger lifts, then eases to rest
+                    // inside the canvas bounds.
                     let extraX = value.predictedEndTranslation.width - value.translation.width
                     let extraY = value.predictedEndTranslation.height - value.translation.height
-                    let target = CGSize(width: pan.width + extraX * 0.4,
-                                        height: pan.height + extraY * 0.4)
+                    let target = clamped(CGSize(width: pan.width + extraX * 0.4,
+                                                height: pan.height + extraY * 0.4), in: size)
                     withAnimation(.easeOut(duration: 0.6)) { pan = target }
                     panAnchor = target
                 }
         )
     }
 
+    // MARK: - Pan bounds (the canvas is finite — never show blank space past its edge)
+
+    private func panBounds(in size: CGSize) -> (x: ClosedRange<CGFloat>, y: ClosedRange<CGFloat>) {
+        guard canvas.width > 0, canvas.height > 0 else { return (0...0, 0...0) }
+        // Overscroll head-room: the canvas edge can travel ~a third of the way
+        // into the screen, so words in the outermost rows/columns are readable —
+        // not stuck clipped at the viewport edge, faded by the vignette, or
+        // hidden under the notebook sheet — without ever exposing more than a
+        // sliver of empty space past the cloud.
+        let padX = size.width * 0.35
+        let padY = size.height * 0.35
+        let spanX = size.width - canvas.width
+        let spanY = size.height - canvas.height
+        // Canvas smaller than the viewport (a tiny level filter) → pin it centered.
+        let x: ClosedRange<CGFloat> = spanX < 0 ? (spanX - padX)...padX : (spanX / 2)...(spanX / 2)
+        let y: ClosedRange<CGFloat> = spanY < 0 ? (spanY - padY)...padY : (spanY / 2)...(spanY / 2)
+        return (x, y)
+    }
+
+    private func clamped(_ p: CGSize, in size: CGSize) -> CGSize {
+        let b = panBounds(in: size)
+        return CGSize(width: min(max(p.width, b.x.lowerBound), b.x.upperBound),
+                      height: min(max(p.height, b.y.lowerBound), b.y.upperBound))
+    }
+
+    /// During a drag, movement past the edge is allowed but resisted; the release
+    /// clamp then settles it back inside — the familiar iOS rubber-band feel.
+    private func rubberBanded(_ p: CGSize, in size: CGSize) -> CGSize {
+        let b = panBounds(in: size)
+        func soft(_ v: CGFloat, _ r: ClosedRange<CGFloat>) -> CGFloat {
+            if v < r.lowerBound { return r.lowerBound + (v - r.lowerBound) * 0.25 }
+            if v > r.upperBound { return r.upperBound + (v - r.upperBound) * 0.25 }
+            return v
+        }
+        return CGSize(width: soft(p.width, b.x), height: soft(p.height, b.y))
+    }
+
     /// Pure + thread-safe (CoreVocabulary is a static let) so the heavy layout
     /// can run off the main thread without blocking the open animation.
     private static func items(for lvl: CEFRLevel?) -> [(word: String, size: CGFloat)] {
-        let entries = lvl == nil ? CoreVocabulary.entries
-                                 : CoreVocabulary.entries.filter { $0.level == lvl }
-        return entries.map { (word: $0.word, size: size(for: $0.level)) }
+        guard let lvl else {
+            return CoreVocabulary.entries.map { (word: $0.word, size: size(for: $0.level)) }
+        }
+        // Within a single level every word is the same difficulty, so grading
+        // the font by level would just make the whole cloud uniformly huge (A1)
+        // or tiny (C2) — use one comfortable reading size instead.
+        return CoreVocabulary.entries.filter { $0.level == lvl }
+            .map { (word: $0.word, size: 21) }
     }
 
     /// Easier (A1) words bigger, harder (C2) smaller — size encodes difficulty,
@@ -168,26 +218,28 @@ struct VocabularyView: View {
 
     private func rebuild(center: Bool) {
         let lvl = level.cefr
-        let vp = viewport
         Task { @MainActor in
             // Compute the packing off the main thread so opening the page (and
             // changing filters) doesn't stutter.
-            let newNodes = await Task.detached(priority: .userInitiated) {
+            let cloud = await Task.detached(priority: .userInitiated) {
                 CloudLayout.layout(VocabularyView.items(for: lvl))
             }.value
-            nodes = newNodes
-            if center, !newNodes.isEmpty, vp != .zero {
-                let mid = newNodes[newNodes.count / 2].pos
-                pan = CGSize(width: vp.width / 2 - mid.x, height: vp.height / 2 - mid.y)
+            nodes = cloud.nodes
+            canvas = cloud.canvas
+            if center, !cloud.nodes.isEmpty, viewport != .zero {
+                pan = clamped(CGSize(width: viewport.width / 2 - cloud.canvas.width / 2,
+                                     height: viewport.height / 2 - cloud.canvas.height / 2),
+                              in: viewport)
                 panAnchor = pan
             }
         }
     }
 }
 
-/// Packs a set of words into a jittered grid on a large canvas. Position is
-/// hash-scattered (so sizes mix → depth), size + parallax depth come from word
-/// frequency rank.
+/// Packs a set of words into wobbling rows on a large, roughly square canvas,
+/// spacing neighbours by each word's real rendered width — so words never
+/// collide. Order is hash-scattered (so sizes mix → depth), parallax depth
+/// comes from a per-word hash layer.
 enum CloudLayout {
     struct Node: Identifiable {
         let word: String
@@ -197,22 +249,63 @@ enum CloudLayout {
         var id: String { word }
     }
 
-    private static let cell: CGFloat = 116
+    struct Cloud {
+        var nodes: [Node] = []
+        var canvas: CGSize = .zero
+    }
 
-    static func layout(_ items: [(word: String, size: CGFloat)]) -> [Node] {
+    /// Gaps sized so the wobble below can never close them: horizontal wobble
+    /// (±8) stays under hGap, and row pitch leaves head-room for the tallest
+    /// (A1, 28pt) words plus vertical wobble (±12).
+    private static let hGap: CGFloat = 34
+    private static let rowPitch: CGFloat = 72
+
+    static func layout(_ items: [(word: String, size: CGFloat)]) -> Cloud {
+        guard !items.isEmpty else { return Cloud() }
         let order = items.sorted { hash($0.word) < hash($1.word) }
-        let cols = max(1, Int(ceil(sqrt(Double(order.count)))))
-        return order.enumerated().map { slot, e in
-            let col = slot % cols
-            let row = slot / cols
-            let pos = CGPoint(x: CGFloat(col) * cell + cell / 2 + jitter(e.word, 0x9E3779B1),
-                              y: CGFloat(row) * cell + cell / 2 + jitter(e.word, 0x85EBCA77))
+
+        var fonts: [CGFloat: UIFont] = [:]
+        func width(_ word: String, _ size: CGFloat) -> CGFloat {
+            let font: UIFont
+            if let f = fonts[size] {
+                font = f
+            } else {
+                let base = UIFont.systemFont(ofSize: size, weight: .semibold)
+                font = base.fontDescriptor.withDesign(.rounded)
+                    .map { UIFont(descriptor: $0, size: size) } ?? base
+                fonts[size] = font
+            }
+            return (word as NSString).size(withAttributes: [.font: font]).width
+        }
+
+        let widths = order.map { width($0.word, $0.size) }
+        // Row width that makes the canvas roughly square, so panning feels the
+        // same in every direction.
+        let totalRun = widths.reduce(0, +) + CGFloat(widths.count) * hGap
+        let rowWidth = max(800, sqrt(totalRun * rowPitch))
+
+        var nodes: [Node] = []
+        nodes.reserveCapacity(order.count)
+        var x: CGFloat = 0
+        var row = 0
+        for (i, e) in order.enumerated() {
+            let w = widths[i]
+            if x > 0, x + w > rowWidth { row += 1; x = 0 }
+            // Small per-word wobble hides the row structure without being able
+            // to close the gaps above.
+            let pos = CGPoint(x: x + w / 2 + jitter(e.word, 0x9E3779B1, span: 16),
+                              y: CGFloat(row) * rowPitch + rowPitch / 2 + jitter(e.word, 0x85EBCA77, span: 24))
+            x += w + hGap
             // Per-word depth layer (hash-based) so parallax is visible even when
             // every word on screen is the same size (a single CEFR level).
+            // Narrow band: enough for visible parallax, small enough that the
+            // depth drift near the screen edges can't cross a row gap.
             let layer = CGFloat(hash(e.word) % 1000) / 1000.0   // 0…1
-            let depth = 0.65 + layer * 0.7                       // 0.65 (far) … 1.35 (near)
-            return Node(word: e.word, pos: pos, size: e.size, depth: depth)
+            let depth = 0.9 + layer * 0.2                        // 0.9 (far) … 1.1 (near)
+            nodes.append(Node(word: e.word, pos: pos, size: e.size, depth: depth))
         }
+        return Cloud(nodes: nodes,
+                     canvas: CGSize(width: rowWidth, height: CGFloat(row + 1) * rowPitch))
     }
 
     private static func hash(_ s: String) -> UInt64 {
@@ -221,9 +314,9 @@ enum CloudLayout {
         return h
     }
 
-    private static func jitter(_ s: String, _ salt: UInt64) -> CGFloat {
+    private static func jitter(_ s: String, _ salt: UInt64, span: CGFloat) -> CGFloat {
         let h = hash(s) ^ salt
-        return CGFloat(Double(h % 680) / 10.0 - 34.0)
+        return (CGFloat(h % 1000) / 1000.0 - 0.5) * span
     }
 }
 
