@@ -10,6 +10,9 @@ final class NewsTopicStore {
         var interestsKey: String
         var fetchedAt: Date
         var topics: [SuggestedTopic]
+        /// Titles the user has already been SHOWN (refresh rotates them to
+        /// the back). Optional so pre-existing cache files still decode.
+        var seenTitles: [String]?
     }
 
     static let maxAge: TimeInterval = 24 * 60 * 60
@@ -54,8 +57,38 @@ final class NewsTopicStore {
     }
 
     func save(_ topics: [SuggestedTopic], interests: [String], now: Date = Date()) {
-        let cached = Cached(interestsKey: Self.key(for: interests), fetchedAt: now, topics: topics)
+        // Keep seen-rotation state across saves of the same interest set —
+        // a refresh save must not make everything look "unseen" again.
+        let carriedSeen = load().flatMap {
+            $0.interestsKey == Self.key(for: interests) ? $0.seenTitles : nil
+        }
+        let cached = Cached(interestsKey: Self.key(for: interests), fetchedAt: now,
+                            topics: topics, seenTitles: carriedSeen)
         guard let data = try? encoder.encode(cached) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+    }
+
+    /// Titles already shown to the user for this interest set.
+    func seenTitles(for interests: [String]) -> [String] {
+        guard let cached = load(), cached.interestsKey == Self.key(for: interests) else { return [] }
+        return cached.seenTitles ?? []
+    }
+
+    /// Mark titles as shown (refresh pushes them behind unseen ones). Does
+    /// NOT touch `fetchedAt` — seen-state is display rotation, not freshness.
+    func markSeen(_ titles: [String], interests: [String]) {
+        guard var cached = load(), cached.interestsKey == Self.key(for: interests) else { return }
+        var seen = cached.seenTitles ?? []
+        for t in titles where !seen.contains(t) { seen.append(t) }
+        // Bounded — it only needs to cover one day's pool.
+        if seen.count > 100 { seen.removeFirst(seen.count - 100) }
+        cached.seenTitles = seen
+        guard let data = try? encoder.encode(cached) else { return }
+        try? data.write(to: fileURL, options: [.atomic])
+    }
+
+    private func load() -> Cached? {
+        guard let data = try? Data(contentsOf: fileURL) else { return nil }
+        return try? decoder.decode(Cached.self, from: data)
     }
 }

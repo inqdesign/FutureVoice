@@ -15,22 +15,32 @@ enum NewsTopicEngine {
     private struct RequestPayload: Encodable {
         let categories: [String]
         let language: String
+        let refresh: Bool
     }
     private struct ResponsePayload: Decodable {
         let topics: [ServerTopic]
     }
 
-    /// How many mixed topics the picker shows.
+    /// How many mixed topics the picker shows at once. The fetched POOL can
+    /// be larger (server grows it on refresh) — the sheet rotates through it.
     static let maxShown = 6
 
-    static func fetch(interests: [String], targetLanguage: String) async throws -> [SuggestedTopic] {
+    /// Fetch the day's topic pool. `refresh: true` asks the server to grow
+    /// each category's pool by one more batch (capped server-side), so the
+    /// refresh button actually surfaces NEW stories instead of re-reading
+    /// the same daily cache.
+    static func fetch(interests: [String], targetLanguage: String,
+                      refresh: Bool = false) async throws -> [SuggestedTopic] {
         let response: ResponsePayload = try await SupabaseProvider.shared.functions.invoke(
             "news-topics",
             options: FunctionInvokeOptions(
-                body: RequestPayload(categories: interests, language: targetLanguage)
+                body: RequestPayload(categories: interests, language: targetLanguage,
+                                     refresh: refresh)
             )
         )
-        return interleaved(response.topics, cap: maxShown)
+        // No cap here — return the full interleaved pool; display selection
+        // (unseen-first, maxShown) happens in the sheet.
+        return interleaved(response.topics, cap: .max)
     }
 
     /// Round-robin across categories so the shown handful has variety —
