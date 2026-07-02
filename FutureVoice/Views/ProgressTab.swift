@@ -22,6 +22,11 @@ struct ProgressTab: View {
     @State private var usedTotal = 0
     // Measured signals
     @State private var wpm = 0
+    /// Words per minute of VOICED speech (pauses removed) — the honest pace
+    /// signal. Wall-clock `wpm` includes think-time and the VAD wait, so it
+    /// both underestimates AND shifts whenever VAD tuning changes; this one
+    /// doesn't. Old sessions without mic-energy stats fall back to `wpm`.
+    @State private var articulationWpm = 0
     @State private var pausesPerMin = 0.0
     @State private var talkMinutes = 0
     @State private var wordsPerTurn = 0
@@ -34,14 +39,29 @@ struct ProgressTab: View {
     /// Total user speaking time accumulated across all analyzed sessions.
     /// The holistic level estimate stays provisional until this clears the bar.
     @State private var totalSpeakingMinutes = 0
-    /// Minutes of conversation needed before we commit to a level estimate —
-    /// one short talk is too noisy a sample to grade a CEFR level from.
-    private static let levelMinMinutes = 10
+    /// Minutes of conversation before the first weekly read (and with it the
+    /// level estimate) unlocks — mirrors WeeklyReportEngine so the progress
+    /// bar here and the report unlock never disagree.
+    private static let levelMinMinutes = Int(WeeklyReportEngine.firstReportMinSeconds / 60)
+    /// The REAL unlock state of the next weekly read — drives the building
+    /// panel so it shows the actual conditions (days + new talk), never a
+    /// full progress bar with nothing happening behind it.
+    @State private var reportUnlock: WeeklyReportEngine.UnlockState =
+        .lockedFirst(secondsAccumulated: 0,
+                     secondsRequired: WeeklyReportEngine.firstReportMinSeconds)
 
     enum Dim: String, CaseIterable, Hashable {
         case overall, vocabulary, grammar, fluency, expressiveness, pronunciation
-        var title: String { self == .overall ? "Your English" : rawValue.capitalized }
-        var short: String { self == .overall ? "Overall" : rawValue.capitalized }
+        // "Pronunciation" oversold what's measured (STT text match from
+        // shadow reps) — label it what it is.
+        var title: String {
+            switch self {
+            case .overall:       return "Your English"
+            case .pronunciation: return "Shadowing"
+            default:             return rawValue.capitalized
+            }
+        }
+        var short: String { self == .overall ? "Overall" : title }
     }
 
     var body: some View {
@@ -108,6 +128,11 @@ struct ProgressTab: View {
             .navigationTitle("Progress")
             .toolbarTitleDisplayMode(.inlineLarge)
             .onAppear(perform: reload)
+            // When a weekly read finishes generating, pull in its pooled
+            // level immediately — no tab-hop needed.
+            .onChange(of: appState.weeklyReportGenerating) { _, generating in
+                if !generating { reload() }
+            }
         }
     }
 
@@ -158,9 +183,13 @@ struct ProgressTab: View {
         }
     }
 
+    /// Minimum shadow attempts before the Shadowing page/row shows a number —
+    /// an average of one or two reps isn't a statistic, it's an anecdote.
+    private static let minShadowAttempts = 5
+
     private var availableDims: [Dim] {
         var out: [Dim] = [.overall, .vocabulary, .grammar, .fluency, .expressiveness]
-        if shadowAttempts > 0 { out.append(.pronunciation) }
+        if shadowAttempts >= Self.minShadowAttempts { out.append(.pronunciation) }
         return out
     }
 
@@ -170,24 +199,28 @@ struct ProgressTab: View {
         VStack(spacing: 16) {
             panel {
                 Text("Estimated level").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                if let lv = aiLevel, totalSpeakingMinutes >= Self.levelMinMinutes {
+                // A level shows ONLY once a pooled weekly read exists. No
+                // early guesses from single sessions — if the sample isn't
+                // big enough, the honest display is "still collecting".
+                if let lv = aiLevel {
                     Text(lv.rawValue.uppercased())
                         .font(.system(size: 52, weight: .bold))
                         .foregroundStyle(.tint)
                     Text(canDo(lv)).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    Text("Assessed from \(totalSpeakingMinutes) min of conversation — vocabulary, grammar, fluency and expression together.")
+                    Text("Assessed from \(totalSpeakingMinutes) min of conversation, pooled in your weekly read — vocabulary, grammar, fluency and expression together.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 } else {
                     Text("Building your level").font(.title.bold())
-                    Text(levelProgressText)
-                        .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    ProgressView(value: Double(min(totalSpeakingMinutes, Self.levelMinMinutes)),
-                                 total: Double(Self.levelMinMinutes))
-                        .tint(.accentColor)
-                    if let lv = aiLevel {
-                        Text("Early read: ~\(lv.rawValue.uppercased()) — keep talking to confirm.")
-                            .font(.caption).foregroundStyle(.tertiary)
-                    }
+                    // The recipe made visible, equalizer-style: one bar per
+                    // measured ingredient, lit LED blocks = that axis's CEFR
+                    // band. A weak axis is a visibly shorter column.
+                    LevelEqualizer(bars: equalizerBars)
+                        .padding(.top, 8)
+                    Text("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, corrections and turn length.")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Divider()
+                    buildingStatus
                 }
             }
 
@@ -195,11 +228,13 @@ struct ProgressTab: View {
                 Text("Across skills").font(.headline)
                 skillRow(.vocabulary, value: vocabLevel.map { $0.rawValue.uppercased() } ?? "—")
                 skillRow(.fluency, value: fluencyBand)
-                if shadowAttempts > 0 { skillRow(.pronunciation, value: accuracyBand) }
+                if shadowAttempts >= Self.minShadowAttempts {
+                    skillRow(.pronunciation, value: accuracyBand)
+                }
                 skillRow(.grammar, value: corrPer10 > 0 ? String(format: "%.1f/10 turns", corrPer10) : "—")
             }
 
-            if totalSpeakingMinutes >= Self.levelMinMinutes, let lv = aiLevel, let next = nextLevel(lv) {
+            if let lv = aiLevel, let next = nextLevel(lv) {
                 panel {
                     Text("To reach \(next.rawValue.uppercased())").font(.headline)
                     Text(canDo(next)).font(.subheadline).foregroundStyle(.secondary)
@@ -220,13 +255,133 @@ struct ProgressTab: View {
         }
     }
 
-    /// Copy for the pre-estimate state, framed as accumulating conversation.
-    private var levelProgressText: String {
-        let remaining = max(0, Self.levelMinMinutes - totalSpeakingMinutes)
-        if totalSpeakingMinutes <= 0 {
-            return "Have about \(Self.levelMinMinutes) minutes of conversation and I'll assess your overall level — short samples are too noisy to grade."
+    // MARK: - Per-axis CEFR estimates for the ring
+    //
+    // ONE rule for every arc: fill = the axis's CEFR position, full = C2.
+    // Vocabulary is graded directly (word-list lookup). The other three are
+    // deterministic proxies mapped to CEFR bands — real measurements, but
+    // heuristic mappings, so the UI marks them "≈".
+
+    /// Articulation pace → CEFR band. Speech-rate bands are a recognized
+    /// (if rough) proficiency proxy; boundaries follow typical learner
+    /// articulation rates (natives ~150+).
+    private var fluencyCEFR: CEFRLevel? {
+        guard effectivePace > 0 else { return nil }
+        switch effectivePace {
+        case ..<60:    return .a1
+        case 60..<85:  return .a2
+        case 85..<105: return .b1
+        case 105..<125: return .b2
+        case 125..<145: return .c1
+        default:        return .c2
         }
-        return "\(totalSpeakingMinutes) of \(Self.levelMinMinutes) min of talk so far — about \(remaining) more for an accurate level estimate."
+    }
+
+    /// Correction rate → CEFR band (fewer flagged rephrasings = higher).
+    private var grammarCEFR: CEFRLevel? {
+        guard scoredCount > 0 else { return nil }
+        switch corrPer10 {
+        case 4...:      return .a1
+        case 3..<4:     return .a2
+        case 2..<3:     return .b1
+        case 1..<2:     return .b2
+        case 0.5..<1:   return .c1
+        default:        return .c2
+        }
+    }
+
+    /// Words per turn → CEFR band (how far ideas get developed per turn).
+    private var expressionCEFR: CEFRLevel? {
+        guard wordsPerTurn > 0 else { return nil }
+        switch wordsPerTurn {
+        case ..<5:    return .a1
+        case 5..<8:   return .a2
+        case 8..<12:  return .b1
+        case 12..<16: return .b2
+        case 16..<20: return .c1
+        default:      return .c2
+        }
+    }
+
+    private var equalizerBars: [LevelEqualizer.Bar] {
+        func lit(_ lv: CEFRLevel?) -> Int {
+            lv.map { CoreVocabulary.levelRank($0) + 1 } ?? 0
+        }
+        func label(_ lv: CEFRLevel?, approx: Bool) -> String {
+            lv.map { (approx ? "≈" : "") + $0.rawValue.uppercased() } ?? "—"
+        }
+        return [
+            .init(name: "Vocab", level: label(vocabLevel, approx: false),
+                  lit: lit(vocabLevel), color: Color(.systemBlue)),
+            .init(name: "Fluency", level: label(fluencyCEFR, approx: true),
+                  lit: lit(fluencyCEFR), color: Color(.systemGreen)),
+            .init(name: "Grammar", level: label(grammarCEFR, approx: true),
+                  lit: lit(grammarCEFR), color: Color(.systemOrange)),
+            .init(name: "Express", level: label(expressionCEFR, approx: true),
+                  lit: lit(expressionCEFR), color: Color(.systemPurple)),
+        ]
+    }
+
+    /// When and how the level actually gets assessed — mirrors the weekly
+    /// read's REAL unlock rules instead of a vague progress bar.
+    @ViewBuilder
+    private var buildingStatus: some View {
+        if appState.weeklyReportGenerating {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Assessing your level from everything you've said…")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+        } else {
+            switch reportUnlock {
+            case .lockedFirst(let acc, let req):
+                Text("Your level is graded by your first weekly read — one pooled assessment over ALL your talk, not a guess from one session.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 10) {
+                    ProgressView(value: min(acc, req), total: req)
+                        .tint(.accentColor)
+                    Text("\(Int(acc / 60))/\(Int(req / 60)) min")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
+            case .lockedNext(let daysRemaining, let secondsRemaining):
+                Text("Your level is re-assessed with each weekly read. The next one needs both:")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                unlockConditionRow(
+                    icon: "calendar",
+                    met: daysRemaining == 0,
+                    text: daysRemaining == 0
+                        ? "A week since the last read"
+                        : (daysRemaining == 1 ? "1 more day" : "\(daysRemaining) more days"))
+                unlockConditionRow(
+                    icon: "mic.fill",
+                    met: secondsRemaining == 0,
+                    text: secondsRemaining == 0
+                        ? "Enough new conversation"
+                        : "\(max(1, Int((secondsRemaining / 60).rounded(.up)))) more min of new talk")
+            case .ready:
+                // reload() already kicked off generation — this shows only in
+                // the brief gap before `weeklyReportGenerating` flips true.
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Ready — assessing your level now…")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private func unlockConditionRow(icon: String, met: Bool, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: met ? "checkmark.circle.fill" : icon)
+                .font(.subheadline)
+                .foregroundStyle(met ? Color.green : Color.secondary)
+                .frame(width: 22)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(met ? .secondary : .primary)
+        }
     }
 
     private func skillRow(_ dim: Dim, value: String) -> some View {
@@ -324,13 +479,13 @@ struct ProgressTab: View {
     private var fluencyContent: some View {
         measuredContent(
             dim: .fluency,
-            big: wpm > 0 ? "\(wpm)" : "—",
-            bigUnit: "words / min",
+            big: effectivePace > 0 ? "\(effectivePace)" : "—",
+            bigUnit: articulationWpm > 0 ? "words / min speaking" : "words / min",
             band: fluencyBand,
-            measuredLine: wpm > 0
+            measuredLine: effectivePace > 0
                 ? String(format: "%.1f pauses/min · ", pausesPerMin) + "\(talkMinutes)m per talk · \(wordsPerTurn) words/turn"
                 : nil,
-            measures: "Measured from your speech: pace, how often you pause, and how much you keep going.",
+            measures: "Pace measured from voiced speech only — pauses and think-time don't drag it down.",
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
             action: nil
         )
@@ -442,13 +597,20 @@ struct ProgressTab: View {
         return all[i + 1]
     }
 
+    /// Preferred pace signal: articulation rate (voiced speech only); falls
+    /// back to wall-clock wpm for old sessions without mic-energy stats.
+    private var effectivePace: Int { articulationWpm > 0 ? articulationWpm : wpm }
+
     private var fluencyBand: String {
-        switch wpm {
-        case ..<1:     return "—"
-        case 1..<70:   return "Finding your flow"
-        case 70..<110: return "Conversational"
-        case 110..<150: return "Fluent"
-        default:       return "Very fluent"
+        guard effectivePace > 0 else { return "—" }
+        // Articulation rate runs ~20-40% higher than wall-clock wpm (pauses
+        // removed), so the bands shift up when it's available.
+        let (low, mid, high) = articulationWpm > 0 ? (90, 130, 170) : (70, 110, 150)
+        switch effectivePace {
+        case ..<low:      return "Finding your flow"
+        case low..<mid:   return "Conversational"
+        case mid..<high:  return "Fluent"
+        default:          return "Very fluent"
         }
     }
 
@@ -496,12 +658,22 @@ struct ProgressTab: View {
         }
         perLevel = counts
         usedTotal = total
-        // Estimated level = highest band where the user productively uses ≥6
-        // distinct words. Needs a baseline of words before we claim a level.
-        let threshold = 6
+        // Estimated level = highest band where the user productively uses
+        // enough distinct words. The bar RISES with the level — six A2 words
+        // are decent evidence, but six lucky C1 words (song lyrics, one topic)
+        // shouldn't mint a C1 vocabulary. Needs a baseline of words first.
+        func threshold(for lv: CEFRLevel) -> Int {
+            switch lv {
+            case .a1, .a2: return 6
+            case .b1:      return 8
+            case .b2:      return 10
+            case .c1:      return 12
+            case .c2:      return 15
+            }
+        }
         if total >= 15 {
             var est: CEFRLevel?
-            for lv in CEFRLevel.allCases where (counts[lv] ?? 0) >= threshold { est = lv }
+            for lv in CEFRLevel.allCases where (counts[lv] ?? 0) >= threshold(for: lv) { est = lv }
             vocabLevel = est ?? .a1
         } else {
             vocabLevel = nil
@@ -525,6 +697,7 @@ struct ProgressTab: View {
         let mets = recent.map { ScorecardMetrics.compute(turns: $0.turns) }
         func mean(_ xs: [Double]) -> Double { xs.isEmpty ? 0 : xs.reduce(0, +) / Double(xs.count) }
         wpm = Int(mean(mets.map(\.wordsPerMinute).filter { $0 > 0 }).rounded())
+        articulationWpm = Int(mean(mets.map(\.articulationRate).filter { $0 > 0 }).rounded())
         pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
         talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
         wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
@@ -538,11 +711,27 @@ struct ProgressTab: View {
 
         let cards = scoredSessions.compactMap { $0.summary?.scorecard }
 
-        // --- Overall level: AI's holistic CEFR read of recent conversations ---
-        let recentLevels = cards.prefix(3).compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
-        var freq: [CEFRLevel: Int] = [:]
-        for l in recentLevels { freq[l, default: 0] += 1 }
-        aiLevel = freq.max(by: { $0.value < $1.value })?.key ?? recentLevels.first
+        // --- Overall level ---
+        // ONLY the weekly report's pooled read (one judgment over a whole
+        // window's speech). Per-session reads are too noisy to publish — if
+        // the sample isn't big enough yet, we show "building", not a number.
+        aiLevel = appState.weeklyReports
+            .sorted { $0.generatedAt > $1.generatedAt }
+            .compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
+            .first
+
+        // Real unlock state for the building panel — and if the next read is
+        // already unlocked, kick it off RIGHT HERE. Waiting for the next
+        // conversation to end (the only other trigger) would leave the user
+        // staring at a full progress bar with nothing happening.
+        let endedSessions = SessionStore.shared.load().filter { $0.endedAt != nil }
+        reportUnlock = WeeklyReportEngine.unlockState(
+            endedSessions: endedSessions,
+            lastReport: appState.weeklyReports.first
+        )
+        if aiLevel == nil, case .ready = reportUnlock {
+            appState.maybeGenerateWeeklyReport()
+        }
 
         // --- Qualitative coaching notes (LLM) per dimension ---
         func dimNotes(_ get: (SessionScorecard) -> String) -> [String] {

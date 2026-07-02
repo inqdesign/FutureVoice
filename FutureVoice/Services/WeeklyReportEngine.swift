@@ -165,6 +165,7 @@ enum WeeklyReportEngine {
                                     example: $0.example)
             },
             summary: response.summary,
+            cefrLevel: CEFRLevel(rawValue: response.cefr_level?.lowercased() ?? "")?.rawValue,
             generatedAt: now
         )
     }
@@ -179,6 +180,7 @@ enum WeeklyReportEngine {
         Output strict JSON matching this shape:
         {
           "summary": "1-2 sentences on the trend vs. last report (or this period in general if no prior).",
+          "cefr_level": "a1|a2|b1|b2|c1|c2",
           "newExpressions": [
             { "phrase": "...", "sampleSentence": "the user's own sentence containing the phrase" }
           ],
@@ -191,6 +193,16 @@ enum WeeklyReportEngine {
         }
 
         Hard rules:
+        - cefr_level: ONE holistic CEFR estimate of the user's SPEAKING from
+          ALL of this window's utterances pooled together — a much larger
+          sample than one conversation, so commit to your best read. Anchor
+          on the standard CEFR speaking can-do descriptors — range and
+          precision of vocabulary, grammatical control across the errors you
+          see, how far ideas get developed — AND on the objective vocab
+          profile you receive (words they actually produced, graded against
+          the CEFR word list). Judge ONLY from this evidence: no prior about
+          what learners "usually" are, no anchoring on any self-reported
+          level. Lowercase.
         - newExpressions: ONLY include 2+ word collocations / idioms / phrasal verbs the user used in THIS window's transcripts that do NOT appear in the prior corpus. Skip single words. Skip filler.
         - repeatedMistakes: ONLY include patterns where the same fluent alternative shows up 2+ times in this window's suggestion pairs (you'll receive the pairs). Don't invent mistakes.
         - suggestedExpressions: Phrases the user did NOT produce but would fit topics they discussed. Each must be naturally usable; no textbook phrases like "the early bird catches the worm" unless the topic genuinely called for it.
@@ -221,9 +233,32 @@ enum WeeklyReportEngine {
         # THIS WINDOW (user utterances during the period being analyzed)
         \(window)
 
+        # OBJECTIVE VOCAB PROFILE (distinct words in this window, graded against the CEFR word list — measured, not opinion)
+        \(vocabProfileLine(windowTranscripts))
+
         # SUGGESTION PAIRS THIS WINDOW (the avatar's fluent rephrasings)
         \(pairs)
         """
+    }
+
+    /// Deterministic CEFR distribution of the window's distinct words —
+    /// hard evidence for the pooled cefr_level judgment.
+    static func vocabProfileLine(_ utterances: [String]) -> String {
+        var counts: [CEFRLevel: Int] = [:]
+        var seen = Set<String>()
+        for line in utterances {
+            for token in line.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                where !token.isEmpty && !seen.contains(token) {
+                seen.insert(token)
+                if let lv = CoreVocabulary.level(of: token) {
+                    counts[lv, default: 0] += 1
+                }
+            }
+        }
+        return CEFRLevel.allCases
+            .map { "\($0.rawValue.uppercased()): \(counts[$0] ?? 0)" }
+            .joined(separator: ", ")
     }
 
     // MARK: - Internal decode shapes
@@ -233,6 +268,7 @@ enum WeeklyReportEngine {
         struct Mistake: Decodable { let userSaid: String; let fluentAlternative: String; let count: Int; let note: String }
         struct Suggested: Decodable { let phrase: String; let whenToUse: String; let example: String }
         let summary: String
+        let cefr_level: String?
         let newExpressions: [NewExpr]
         let repeatedMistakes: [Mistake]
         let suggestedExpressions: [Suggested]

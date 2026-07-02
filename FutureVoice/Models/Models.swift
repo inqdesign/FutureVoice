@@ -284,6 +284,12 @@ struct WeeklyReport: Codable, Identifiable {
     /// 1–2 sentence trend vs. the previous report (nil on the very first one).
     var summary: String
 
+    /// Pooled CEFR estimate over the whole window's user speech — a far
+    /// larger sample than any single session, so this (when present) is the
+    /// preferred source for the Progress tab's "Estimated level". Optional so
+    /// reports generated before this field decode unchanged.
+    var cefrLevel: String?
+
     var generatedAt: Date
 }
 

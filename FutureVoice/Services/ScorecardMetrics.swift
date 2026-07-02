@@ -18,6 +18,11 @@ struct ScorecardMetrics: Codable {
     var pausesPerMinute: Double           // mid-speech pauses per minute of speech
     var pauseRatio: Double                // share of spoken span spent paused, 0…1
     var articulationRate: Double          // words per minute of VOICED speech (pace, pauses removed)
+    /// Distinct words the user produced, bucketed by CEFR level via the core
+    /// word list ("b2": 7 = seven distinct B2 words). HARD evidence for the
+    /// LLM's cefr_level judgment — without it the model anchors on the
+    /// user's self-set level instead of what they actually said.
+    var vocabLevelCounts: [String: Int]
 
     static func compute(turns: [Turn]) -> ScorecardMetrics {
         let userTurns = turns.filter { $0.role == .user }
@@ -44,6 +49,13 @@ struct ScorecardMetrics: Codable {
             acc + selfCorrectionMatches(in: turn.transcript)
         }
 
+        var levelCounts: [String: Int] = [:]
+        for word in uniqueWords {
+            if let lv = CoreVocabulary.level(of: word) {
+                levelCounts[lv.rawValue, default: 0] += 1
+            }
+        }
+
         // Measured delivery from per-turn FluencyStats (voiced time + pauses).
         let fl = userTurns.compactMap { $0.fluency }
         let voiced = fl.reduce(0.0) { $0 + $1.speakingSeconds }
@@ -67,7 +79,8 @@ struct ScorecardMetrics: Codable {
             selfCorrectionHits: selfCorrections,
             pausesPerMinute: pausesPerMin,
             pauseRatio: pauseRatio,
-            articulationRate: articulation
+            articulationRate: articulation,
+            vocabLevelCounts: levelCounts
         )
     }
 
@@ -87,7 +100,8 @@ struct ScorecardMetrics: Codable {
             "self_correction_hits": selfCorrectionHits,
             "articulation_rate_wpm": Int(articulationRate.rounded()),
             "pauses_per_minute": String(format: "%.1f", pausesPerMinute),
-            "pause_ratio": String(format: "%.2f", pauseRatio)
+            "pause_ratio": String(format: "%.2f", pauseRatio),
+            "distinct_words_by_cefr_level": vocabLevelCounts
         ]
         let data = (try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])) ?? Data()
         return String(data: data, encoding: .utf8) ?? "{}"

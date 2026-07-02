@@ -130,7 +130,9 @@ enum ConversationEngine {
         STRICT:
         - Reply in \(targetLanguage) only.
         - Never correct the user mid-conversation. Corrections happen elsewhere.
-        - Don't go above their proficiency (\(level.rawValue.uppercased())).
+        - Speak mostly AT their level (\(level.rawValue.uppercased())), but let a
+          slightly-above-level word or turn of phrase slip in naturally now and
+          then — that small stretch is where they grow. Never two levels up.
         """
     }
 
@@ -202,8 +204,14 @@ enum ConversationEngine {
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
-          the standard CEFR can-do descriptors. Be honest — most learners are
-          A2–B2. Lowercase a1…c2.
+          the standard CEFR can-do descriptors and to the EVIDENCE in metrics:
+          `distinct_words_by_cefr_level` (words they actually produced, graded
+          objectively) and `articulation_rate_wpm`. A user producing many
+          B2/C1 words at a fluent pace with few corrections IS above B1 — say
+          so. CRITICAL: the profile's `proficiencyLevel` is the user's own
+          SETTING, not evidence — do NOT anchor your estimate on it in either
+          direction. Judge only from the transcript and metrics. Lowercase
+          a1…c2.
         - title: 2-5 words in \(targetLanguage) naming what the conversation
           was actually about — "Weekend plans with Boram", "Arguing about
           coffee prices". Concrete and specific, never generic ("Conversation",
@@ -265,9 +273,13 @@ enum ConversationEngine {
             severity of remaining errors.
           * expressiveness: idiom use, register fit for topic, sentence-shape
             variety. Pure judgment call.
-          * fluency: anchor on words_per_minute (60–120 wpm = healthy for B1-B2)
-            and self_correction_hits. If words_per_minute is 0, set fluency to
-            -1 and note "no timing data".
+          * fluency: anchor on articulation_rate_wpm — words per minute of
+            VOICED speech, pauses removed (80–140 = healthy for B1-B2). Use
+            pauses_per_minute and pause_ratio as secondary evidence. Ignore
+            words_per_minute (wall-clock; polluted by think-time). If
+            articulation_rate_wpm is 0 fall back to words_per_minute (60–120
+            healthy); if both are 0, set fluency to -1 and note "no timing
+            data".
         - Each axis note ≤ 18 words, concrete (cite a metric or a phrase).
         - top_line: one warm sentence that ties the highest + lowest axis together.
         """
@@ -310,10 +322,10 @@ enum ConversationEngine {
 
         - "reply": your spoken conversational turn in \(targetLanguage), following
           every speaking rule above. This is the ONLY part the user hears.
-        - "suggestion": include ONLY when the user's most recent line had a
-          clearly more natural or correct phrasing a fluent speaker would use.
-          Otherwise set it to null. Most turns should be null — flag real
-          teaching moments, not nitpicks.
+        - "suggestion": include whenever the user's most recent line has a
+          grammar slip or wording a fluent speaker wouldn't choose — give the
+          natural version. Set it to null only when the line was already
+          natural as spoken. Don't invent a change for a line that was fine.
         - "alternative" must be a CONCRETE full utterance the user could say
           out loud (their corrected sentence), never a rule or category.
         - "reason": ≤ 12 words on why it's better.

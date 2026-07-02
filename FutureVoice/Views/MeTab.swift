@@ -187,20 +187,18 @@ struct MeTab: View {
             }
             #endif
             .task { account = await AccountStatus.fetch() }
-            .task { aiLevel = Self.recentAILevel() }
+            .task { aiLevel = recentAILevel() }
         }
     }
 
-    /// Mode of the AI's CEFR reads over the last 3 scored sessions —
-    /// mirrors ProgressTab's "aiLevel". nil until enough scored sessions.
-    private static func recentAILevel() -> CEFRLevel? {
-        let cards = SessionStore.shared.load()
-            .compactMap { $0.summary?.scorecard }
-        let recentLevels = cards.prefix(3).compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
-        guard !recentLevels.isEmpty else { return nil }
-        var freq: [CEFRLevel: Int] = [:]
-        for l in recentLevels { freq[l, default: 0] += 1 }
-        return freq.max(by: { $0.value < $1.value })?.key ?? recentLevels.first
+    /// Same source as ProgressTab's "Estimated level": ONLY the weekly
+    /// report's pooled CEFR read. Single-session reads are too noisy to
+    /// publish anywhere — no report yet means no suggestion, not a guess.
+    private func recentAILevel() -> CEFRLevel? {
+        appState.weeklyReports
+            .sorted(by: { $0.generatedAt > $1.generatedAt })
+            .compactMap({ $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } })
+            .first
     }
 
     private func regenerateFromSavedSample() {
