@@ -48,7 +48,9 @@ final class GeminiClient {
         model: Model = .flash25,
         maxTokens: Int = 512,
         temperature: Double = 0.7,
-        searchGrounding: Bool = false
+        searchGrounding: Bool = false,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil
     ) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -69,6 +71,7 @@ final class GeminiClient {
             let contents: [Content]
             let generationConfig: GenerationConfig
             let tools: [Tool]?   // nil = omitted; edge function passes through
+            let purpose: String? // nil = omitted; edge function bills per intent
         }
         let body = Body(
             model: model.rawValue,
@@ -79,13 +82,17 @@ final class GeminiClient {
                 maxOutputTokens: maxTokens,
                 thinkingConfig: .init(thinkingBudget: 0)
             ),
-            tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil
+            tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil,
+            purpose: purpose
         )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        // A caller-supplied key makes retries of the SAME logical request
+        // (e.g. the inline turn Retry button) free — the edge function's
+        // usage ledger dedupes charges on this key. Default stays one-shot.
+        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
@@ -116,7 +123,9 @@ final class GeminiClient {
         model: Model = .flash25,
         maxTokens: Int = 1024,
         temperature: Double = 0.4,
-        searchGrounding: Bool = false
+        searchGrounding: Bool = false,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil
     ) async throws -> T {
         let raw = try await send(
             system: system,
@@ -124,7 +133,9 @@ final class GeminiClient {
             model: model,
             maxTokens: maxTokens,
             temperature: temperature,
-            searchGrounding: searchGrounding
+            searchGrounding: searchGrounding,
+            purpose: purpose,
+            idempotencyKey: idempotencyKey
         )
         guard let jsonData = Self.extractJSON(from: raw) else {
             throw GeminiError.jsonNotFound(raw: raw)

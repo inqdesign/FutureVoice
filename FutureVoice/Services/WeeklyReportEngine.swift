@@ -135,7 +135,8 @@ enum WeeklyReportEngine {
                 windowTranscripts: windowUserUtterances,
                 suggestionPairs: suggestionPairs
             ))],
-            maxTokens: 2048
+            maxTokens: 2048,
+            purpose: "weekly"
         )
 
         // First-session date in window = periodStart

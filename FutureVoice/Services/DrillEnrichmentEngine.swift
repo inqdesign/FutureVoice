@@ -31,7 +31,9 @@ enum DrillEnrichmentEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 1000
+            maxTokens: 1000,
+            purpose: "enrichment",
+            idempotencyKey: "enrichment:\(card.id.uuidString)"
         )
 
         return DrillCardEnrichment(
