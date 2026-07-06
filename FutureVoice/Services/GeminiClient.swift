@@ -50,7 +50,8 @@ final class GeminiClient {
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
         purpose: String? = nil,
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        jsonResponse: Bool = false
     ) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -62,6 +63,7 @@ final class GeminiClient {
             let temperature: Double
             let maxOutputTokens: Int
             let thinkingConfig: ThinkingConfig
+            let responseMimeType: String?   // nil = omitted
         }
         struct EmptyObject: Encodable {}
         struct Tool: Encodable { let google_search: EmptyObject }
@@ -80,7 +82,13 @@ final class GeminiClient {
             generationConfig: .init(
                 temperature: temperature,
                 maxOutputTokens: maxTokens,
-                thinkingConfig: .init(thinkingBudget: 0)
+                thinkingConfig: .init(thinkingBudget: 0),
+                // Force JSON output at the API level — prompt-only JSON drifts
+                // back to prose in long conversations because the model
+                // imitates its own (plain-text) turns in the history.
+                // Incompatible with the google_search tool, so grounded calls
+                // keep relying on the prompt + extractJSON.
+                responseMimeType: (jsonResponse && !searchGrounding) ? "application/json" : nil
             ),
             tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil,
             purpose: purpose
@@ -135,7 +143,8 @@ final class GeminiClient {
             temperature: temperature,
             searchGrounding: searchGrounding,
             purpose: purpose,
-            idempotencyKey: idempotencyKey
+            idempotencyKey: idempotencyKey,
+            jsonResponse: true
         )
         guard let jsonData = Self.extractJSON(from: raw) else {
             throw GeminiError.jsonNotFound(raw: raw)

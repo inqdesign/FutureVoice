@@ -225,11 +225,14 @@ enum ConversationEngine {
           collocations, connectors, more precise word choices. Skip trivial
           phrases they obviously already command. Each is a full, speakable
           sentence, and the 3-4 should be varied (not near-duplicates).
-        - expressions_used: 0-4 noteworthy words or multi-word
-          expressions the user ACTUALLY said this session that show their
-          range (idioms, phrasal verbs, good word choices). Quote them
-          VERBATIM from the user's turns — never invent or paraphrase.
-          Leave empty if nothing stands out.
+        - expressions_used: 0-4 REUSABLE multi-word expressions the user
+          ACTUALLY said this session — idioms, phrasal verbs, or set phrases
+          a fluent speaker would reach for in completely unrelated
+          conversations (e.g. "push back", "at the end of the day", "flag it
+          early"). The test: would this exact phrase be useful next week on
+          a different topic? Quote them VERBATIM from the user's turns —
+          never invent or paraphrase. Most sessions have none — empty is a
+          normal answer.
         - weak_vocab_areas: 0-3 SHORT topic labels (2-4 words each, e.g.
           "cooking verbs", "phone-call phrases") where the user visibly
           lacked words this session — reached for vague fillers, circumlocuted,
@@ -356,13 +359,21 @@ enum ConversationEngine {
     /// `tail` caps the number of turns sent to Gemini — long conversations
     /// otherwise balloon input tokens (and bills) without adding much fidelity.
     /// 12 turns ≈ ~6 back-and-forth exchanges, plenty of context.
+    ///
+    /// Model turns are re-wrapped in the SAME JSON envelope the turn call must
+    /// produce. With plain-text model turns in the history, the model imitates
+    /// its own past formatting and drifts out of JSON mode a few exchanges in —
+    /// which silently killed every suggestion after the first turn.
     static func geminiMessages(from turns: [Turn], tail: Int = 12) -> [GeminiClient.Message] {
         let recent = turns.suffix(tail)
         return recent.map { turn in
-            GeminiClient.Message(
-                role: turn.role == .user ? .user : .model,
-                content: turn.transcript
-            )
+            if turn.role == .user {
+                return GeminiClient.Message(role: .user, content: turn.transcript)
+            }
+            let payload: [String: Any] = ["reply": turn.transcript, "suggestion": NSNull()]
+            let json = (try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]))
+                .flatMap { String(data: $0, encoding: .utf8) }
+            return GeminiClient.Message(role: .model, content: json ?? turn.transcript)
         }
     }
 }
