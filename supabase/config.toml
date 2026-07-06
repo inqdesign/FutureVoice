@@ -426,3 +426,28 @@ entrypoint = "./functions/gemini/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/gemini/*.html" ]
+
+[functions.word-entry]
+enabled = true
+verify_jwt = true
+import_map = "./functions/word-entry/deno.json"
+entrypoint = "./functions/word-entry/index.ts"
+
+[functions.stripe-checkout]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/stripe-checkout/index.ts"
+
+[functions.stripe-webhook]
+enabled = true
+# Stripe can't send a Supabase JWT — authenticity is the Stripe-Signature HMAC
+# verified inside the function.
+verify_jwt = false
+entrypoint = "./functions/stripe-webhook/index.ts"
+
+[functions.apple-webhook]
+enabled = true
+# Apple can't send a Supabase JWT — authenticity is the signedPayload JWS,
+# verified against Apple's pinned root CAs inside the function.
+verify_jwt = false
+entrypoint = "./functions/apple-webhook/index.ts"

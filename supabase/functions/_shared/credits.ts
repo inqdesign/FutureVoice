@@ -104,6 +104,7 @@ export async function charge(opts: {
   })
   if (error) {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {
+      await recordDepletion(userId, sourceFn)
       return { ok: false, reason: "insufficient_credits", detail: error.message }
     }
     if (error.message?.includes("NO_CREDIT_ROW")) {
@@ -140,6 +141,40 @@ export async function refund(opts: {
     p_idempotency_key: refundKey,
     p_metadata: metadata ?? null,
   })
+}
+
+/**
+ * Best-effort owner alert the FIRST time a user hits the credit wall.
+ * Writes one row to credit_depletion_alerts (dedup by user_id) and, when
+ * TELEGRAM_BOT_TOKEN + TELEGRAM_ADMIN_CHAT_ID are configured, pings the
+ * owner. Never throws — the 402 to the client must not depend on this.
+ */
+async function recordDepletion(userId: string, sourceFn: string): Promise<void> {
+  try {
+    const svc = serviceRoleClient()
+    const { data } = await svc
+      .from("credit_depletion_alerts")
+      .upsert({ user_id: userId, source_fn: sourceFn },
+              { onConflict: "user_id", ignoreDuplicates: true })
+      .select("user_id")
+    const firstTime = (data?.length ?? 0) > 0
+    if (!firstTime) return
+
+    const token = Deno.env.get("TELEGRAM_BOT_TOKEN")
+    const chatId = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID")
+    if (token && chatId) {
+      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: chatId,
+          text: `[FutureVoice] beta user out of credits\nuser: ${userId}\nvia: ${sourceFn}`,
+        }),
+      })
+    }
+  } catch (e) {
+    console.error("recordDepletion failed (non-fatal)", e)
+  }
 }
 
 export function insufficientCreditsResponse(corsHeaders: HeadersInit): Response {
