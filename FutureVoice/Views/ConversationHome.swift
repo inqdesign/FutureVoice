@@ -32,9 +32,6 @@ struct ConversationHome: View {
     /// subscription page. nil until the first fetch lands.
     @State private var account: AccountStatus?
     @State private var showingPaywall = false
-    /// Which of the last 7 days had at least one talk (offset 0 = today) —
-    /// the dot strip preview of the calendar.
-    @State private var talkDayOffsets: Set<Int> = []
 
     var body: some View {
         NavigationStack {
@@ -105,46 +102,6 @@ struct ConversationHome: View {
         Task { account = await AccountStatus.fetch() }
     }
 
-    /// Plan + credits as a compact row at the TOP of the Today card. Credits
-    /// are meaningless without the plan that grants them, so they sit together
-    /// and tap through to the subscription page. Orange nudge when low, "∞"
-    /// for admin. Hidden until the first fetch so it never flashes "0".
-    @ViewBuilder
-    private var planRow: some View {
-        if let account {
-            Button { showingPaywall = true } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: account.unlimited ? "infinity" : "bolt.fill")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(account.isLowBalance ? Color.orange : Color.accentColor)
-                    Text(account.balanceLabel)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(account.isLowBalance ? Color.orange : .primary)
-                        .monospacedDigit()
-                    if !account.unlimited {
-                        Text("credits · \(account.planLabel)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 8)
-                    if !account.unlimited {
-                        HStack(spacing: 3) {
-                            Text(account.isEntitled ? "Manage" : "Get Pro")
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.semibold))
-                        }
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(account.isLowBalance ? Color.orange : Color.accentColor)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(account.balanceLabel) credits, \(account.planLabel) plan")
-            Divider()
-        }
-    }
-
     /// One home card — mirrors ProgressTab's `panel` so both dashboards read
     /// as the same design system.
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
@@ -165,37 +122,33 @@ struct ConversationHome: View {
 
     // MARK: - Today
 
-    /// Today = TODAY's speaking, nothing else. Lifetime stats live in the
-    /// calendar; credits live with the subscription (plan card below). The
-    /// whole progress block is the door to the calendar — the 7-day strip
-    /// makes today read as the newest square of that history.
     private var todaySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            planRow
+        VStack(alignment: .leading, spacing: 14) {
+            // Title + credit chip on one line.
             HStack {
                 Text("Today").font(.title3.weight(.semibold)).foregroundStyle(.primary)
                 Spacer()
-                if snapshot.streakDays > 0 {
-                    Label("\(snapshot.streakDays)", systemImage: "flame.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.orange)
-                        .accessibilityLabel("\(snapshot.streakDays)-day streak")
-                }
+                creditChip
             }
 
+            VStack(alignment: .leading, spacing: 8) {
+                Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
+                    .font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
+                progressBar
+            }
+
+            // Streak + talks are the door to the calendar.
             NavigationLink {
                 ActivityView()
             } label: {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
-                            .font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.footnote).foregroundStyle(.tertiary)
-                    }
-                    progressBar
-                    weekStrip
+                HStack(spacing: 16) {
+                    stat(icon: "flame.fill", text: "\(snapshot.streakDays) streak",
+                         tint: snapshot.streakDays > 0 ? .orange : .secondary)
+                    stat(icon: "bubble.left.and.bubble.right.fill",
+                         text: "\(appState.learnerProfile.totalSessions) talks", tint: .secondary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote).foregroundStyle(.tertiary)
                 }
                 .contentShape(Rectangle())
             }
@@ -205,29 +158,36 @@ struct ConversationHome: View {
         }
     }
 
-    /// The last 7 days as dots (today rightmost, outlined) — a preview of the
-    /// calendar this block opens into.
-    private var weekStrip: some View {
-        HStack(spacing: 6) {
-            ForEach((0..<7).reversed(), id: \.self) { offset in
-                Circle()
-                    .fill(talkDayOffsets.contains(offset)
-                          ? Color.accentColor
-                          : Color(.tertiarySystemFill))
-                    .frame(width: 8, height: 8)
-                    .overlay {
-                        if offset == 0 {
-                            Circle().stroke(Color.accentColor, lineWidth: 1.5)
-                                .frame(width: 12, height: 12)
-                        }
-                    }
+    /// Credit balance as a compact chip on the Today line. Opens the right
+    /// billing surface: settings (which manages the plan) for paid/admin —
+    /// NEVER the trial paywall — and the upgrade pitch for free users.
+    @ViewBuilder
+    private var creditChip: some View {
+        if let account {
+            let tint: Color = account.isLowBalance ? .orange : .accentColor
+            Button { openBilling(account) } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: account.unlimited ? "infinity" : "bolt.fill")
+                        .font(.caption2.weight(.bold))
+                    Text(account.balanceLabel)
+                        .font(.footnote.weight(.semibold))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(tint)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(tint.opacity(0.14)))
             }
-            Text("last 7 days")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding(.leading, 4)
-            Spacer()
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(account.balanceLabel) credits, \(account.planLabel) plan")
         }
+    }
+
+    private func openBilling(_ a: AccountStatus) {
+        // Admin/subscribers manage in settings; only free users see the
+        // upgrade pitch. An unlimited account must never hit the trial paywall.
+        if a.unlimited || a.isEntitled { showingProfile = true }
+        else { showingPaywall = true }
     }
 
     private var progressBar: some View {
@@ -434,17 +394,6 @@ struct ConversationHome: View {
             }
         }
         todaySpokenSeconds = todayMs / 1000
-
-        // Which of the last 7 days had a talk — the Today card's dot strip.
-        var offsets: Set<Int> = []
-        for session in sessions {
-            let day = cal.startOfDay(for: session.endedAt ?? session.startedAt)
-            if let diff = cal.dateComponents([.day], from: day, to: todayStart).day,
-               diff >= 0, diff < 7 {
-                offsets.insert(diff)
-            }
-        }
-        talkDayOffsets = offsets
     }
 }
 
