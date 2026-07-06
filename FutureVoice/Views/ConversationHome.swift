@@ -44,10 +44,7 @@ struct ConversationHome: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             card { todaySection }
-                            if hasUpNext {
-                                card { upNextSection }
-                            }
-                            card { practiceSection }
+                            card { upNextSection }
                         }
                         .padding(.horizontal, 18)
                         .padding(.top, 4)
@@ -230,20 +227,20 @@ struct ConversationHome: View {
         }
     }
 
-    // MARK: - Up next
+    // MARK: - Up next (review + words in ONE card)
 
-    private var hasUpNext: Bool {
+    private var hasReviewRows: Bool {
         dueCount > 0 || topShadowPick != nil || lastSession != nil
     }
 
-    /// The day's follow-ups after talking — due review cards, one curated
-    /// shadow line, and the last conversation's post-mortem. Each is a single
-    /// quiet row; the heavy lifting stays in the Practice tab.
+    /// Everything to review after talking, in one card: the actionable
+    /// follow-ups (due cards, a shadow line, the last conversation), then the
+    /// words you're collecting. The full hub still lives in the Practice tab.
     private var upNextSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Up next")
                 .font(.title3.weight(.semibold))
-                .padding(.bottom, 10)
+                .padding(.bottom, 6)
 
             if dueCount > 0 {
                 NavigationLink {
@@ -278,6 +275,39 @@ struct ConversationHome: View {
                               subtitle: lastSessionSubtitle(last))
                 }
                 .buttonStyle(.plain)
+            }
+
+            if hasReviewRows { Divider().padding(.vertical, 6) }
+            wordsBlock
+        }
+    }
+
+    /// Bookmarked words to review — the tail of the Up next card, with a link
+    /// into the full notebook.
+    private var wordsBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Words").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+                Spacer()
+                NavigationLink { VocabularyView() } label: {
+                    HStack(spacing: 3) {
+                        Text("Notebook")
+                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                    }
+                    .font(.subheadline).foregroundStyle(.tint)
+                }
+            }
+            if vocab.studying.isEmpty {
+                Text("Bookmark words while you study and they'll show up here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
+                                    GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    ForEach(Array(vocab.studying.prefix(6)), id: \.self) { word in
+                        StudyWordCard(word: word, native: appState.nativeLanguage)
+                    }
+                }
             }
         }
     }
@@ -321,33 +351,6 @@ struct ConversationHome: View {
         f.unitsStyle = .abbreviated
         return f
     }()
-
-    // MARK: - Practice
-
-    private var practiceSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text("Practice").font(.title3.weight(.semibold))
-                Spacer()
-                NavigationLink { VocabularyView() } label: {
-                    Text("Notebook").font(.subheadline).foregroundStyle(.tint)
-                }
-            }
-
-            if vocab.studying.isEmpty {
-                Text("Bookmark words while you study and they'll show up here.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    ForEach(Array(vocab.studying.prefix(6)), id: \.self) { word in
-                        StudyWordCard(word: word, native: appState.nativeLanguage)
-                    }
-                }
-            }
-        }
-    }
 
     // MARK: - Empty
 
