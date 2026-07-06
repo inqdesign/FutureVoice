@@ -159,11 +159,31 @@ final class VocabStore: ObservableObject {
         for sess in SessionStore.shared.load() {
             for t in sess.turns where t.role == .user {
                 if t.transcript.lowercased().contains(needle) {
-                    out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: "Talk"))
+                    out.append(SourceSentence(
+                        text: Self.snippet(around: needle, in: t.transcript),
+                        audioURL: t.audioURL, source: "Talk"))
                 }
             }
         }
         return out
+    }
+
+    /// A readable window around the phrase instead of the WHOLE turn — STT
+    /// turns can be minutes of unpunctuated speech, which buried the phrase
+    /// in a wall of text on the expression detail page.
+    static func snippet(around needle: String, in transcript: String,
+                        window: Int = 90) -> String {
+        guard let range = transcript.range(of: needle, options: [.caseInsensitive]) else {
+            return transcript
+        }
+        let start = transcript.index(range.lowerBound, offsetBy: -window,
+                                     limitedBy: transcript.startIndex) ?? transcript.startIndex
+        let end = transcript.index(range.upperBound, offsetBy: window,
+                                   limitedBy: transcript.endIndex) ?? transcript.endIndex
+        var text = String(transcript[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if start > transcript.startIndex { text = "… " + text }
+        if end < transcript.endIndex { text += " …" }
+        return text
     }
 
     /// Fold every ended session into the pool (idempotent) — used to seed the

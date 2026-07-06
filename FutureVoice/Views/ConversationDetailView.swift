@@ -19,6 +19,10 @@ struct ConversationDetailView: View {
 
     private struct WordSheetItem: Identifiable {
         let word: String
+        /// The chip list the word was tapped from, in display order — the
+        /// sheet's chevrons walk this so sibling words open without a
+        /// close-and-reopen round trip. Empty for transcript word taps.
+        var words: [String] = []
         var id: String { word }
     }
 
@@ -74,10 +78,8 @@ struct ConversationDetailView: View {
                 .environmentObject(appState)
         }
         .sheet(item: $wordSheet) { item in
-            NavigationStack {
-                WordCard(word: item.word, currentWord: .constant(item.word))
-            }
-            .environmentObject(appState)
+            SessionWordSheet(initialWord: item.word, words: item.words)
+                .environmentObject(appState)
         }
     }
 
@@ -158,25 +160,28 @@ struct ConversationDetailView: View {
     /// summary sheet) — each chip opens the word's dictionary card.
     private func levelGroupedChips(_ words: [String]) -> some View {
         let grouped = Dictionary(grouping: words) { CoreVocabulary.level(of: $0) }
+        // Flattened display order — the word sheet's chevrons walk this same
+        // order, so "next" in the sheet matches "next chip" on screen.
+        let ordered = CEFRLevel.allCases.flatMap { grouped[$0] ?? [] } + (grouped[nil] ?? [])
         return VStack(alignment: .leading, spacing: 10) {
             ForEach(CEFRLevel.allCases, id: \.self) { lv in
                 if let ws = grouped[lv], !ws.isEmpty {
-                    levelChipRow(lv.rawValue.uppercased(), ws)
+                    levelChipRow(lv.rawValue.uppercased(), ws, ordered: ordered)
                 }
             }
             if let other = grouped[nil], !other.isEmpty {
-                levelChipRow("Other", other)
+                levelChipRow("Other", other, ordered: ordered)
             }
         }
     }
 
-    private func levelChipRow(_ label: String, _ words: [String]) -> some View {
+    private func levelChipRow(_ label: String, _ words: [String], ordered: [String]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption2.weight(.bold).monospaced())
                 .foregroundStyle(.secondary)
             FlowLayout(spacing: 8, lineSpacing: 8) {
-                ForEach(words, id: \.self) { w in wordChip(w) }
+                ForEach(words, id: \.self) { w in wordChip(w, siblings: ordered) }
             }
         }
     }
@@ -188,10 +193,10 @@ struct ConversationDetailView: View {
     /// green ✓ = known/used · accent bookmark = studying · outline = untouched.
     /// Tapping opens the word card, whose "I know it" / "Keep studying"
     /// actions restyle the chip live.
-    private func wordChip(_ w: String) -> some View {
+    private func wordChip(_ w: String, siblings: [String]) -> some View {
         let studying = vocab.isStudying(w)
         let known = !studying && vocab.state(of: w) != nil
-        return Button { wordSheet = WordSheetItem(word: w) } label: {
+        return Button { wordSheet = WordSheetItem(word: w, words: siblings) } label: {
             HStack(spacing: 5) {
                 if studying {
                     Image(systemName: "bookmark.fill")
@@ -302,6 +307,30 @@ struct ConversationDetailView: View {
         case 80...: return .green
         case 50..<80: return .accentColor
         default: return .orange
+        }
+    }
+}
+
+/// Hosts the word card inside the detail page's sheet with its OWN
+/// current-word state: the chevrons swap the word in place, and the sheet
+/// item (the originally tapped word) never changes identity — changing it
+/// would dismiss and re-present the sheet, exactly the close-and-reopen
+/// this exists to avoid.
+private struct SessionWordSheet: View {
+    let initialWord: String
+    /// Sibling words in display order; empty → the card falls back to
+    /// notebook navigation (transcript word taps).
+    let words: [String]
+    @State private var current: String?
+
+    var body: some View {
+        NavigationStack {
+            WordCard(word: current ?? initialWord,
+                     currentWord: Binding(
+                        get: { current ?? initialWord },
+                        set: { if let w = $0 { current = w } }
+                     ),
+                     navigationWords: words.isEmpty ? nil : words)
         }
     }
 }

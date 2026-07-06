@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import NaturalLanguage
+import Supabase   // FunctionInvokeOptions for the free word-entry lookup
 
 /// The word cloud — the words "in your head", floating in space. Size = how
 /// often you've used the word; tap one for its card (part of speech, meaning,
@@ -361,6 +362,11 @@ struct WordCard: View {
     let word: String
     @Binding var currentWord: String?
     var isExpanded: Bool = true
+    /// Optional override for the header chevrons: walk THIS list instead of
+    /// the notebook (`store.studying`). ConversationDetailView passes the
+    /// tapped chip's sibling words so the user can browse a session's new
+    /// words without closing and reopening the sheet per word.
+    var navigationWords: [String]? = nil
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @StateObject private var player = AudioPlayer()
@@ -373,6 +379,9 @@ struct WordCard: View {
     @State private var shadowing: Turn?
 
     private var studyIndex: Int? { store.studying.firstIndex(of: word) }
+    /// The list the chevrons navigate — a caller-supplied list, or the notebook.
+    private var navList: [String] { navigationWords ?? store.studying }
+    private var navIndex: Int? { navList.firstIndex(of: word) }
     /// Words the user has USED count as known too — using a word in a real
     /// conversation is stronger evidence than a self-check, and every other
     /// surface (chips, cloud, counts) already treats them that way.
@@ -455,20 +464,19 @@ struct WordCard: View {
 
                     Button {
                         store.markKnown(word)
-                        advanceAfterRemoval()
                     } label: {
                         Image(systemName: isKnown ? "checkmark.circle.fill" : "checkmark.circle")
                     }
                     .tint(isKnown ? .green : .secondary)
                 }
             }
-            // Navigate the notebook from a fixed spot in the header.
-            if let i = studyIndex {
+            // Navigate the word list from a fixed spot in the header.
+            if let i = navIndex {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button { currentWord = store.studying[i - 1] } label: { Image(systemName: "chevron.up") }
+                    Button { currentWord = navList[i - 1] } label: { Image(systemName: "chevron.up") }
                         .disabled(i == 0)
-                    Button { currentWord = store.studying[i + 1] } label: { Image(systemName: "chevron.down") }
-                        .disabled(i + 1 >= store.studying.count)
+                    Button { currentWord = navList[i + 1] } label: { Image(systemName: "chevron.down") }
+                        .disabled(i + 1 >= navList.count)
                 }
             }
         }
@@ -606,8 +614,11 @@ struct WordCard: View {
             blurButton("I know it",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
+                // Stay on the word so it visibly flips to the green "known"
+                // state — confirmation the tap worked. Deliberately NO jump to
+                // the next study word: that made the toggle read "Studying"
+                // right after the tap, as if "I know it" had started studying.
                 store.markKnown(word)
-                advanceAfterRemoval()
             }
         }
         .padding(.horizontal, 16)
@@ -635,11 +646,6 @@ struct WordCard: View {
     }
 
     // MARK: - Logic
-
-    private func advanceAfterRemoval() {
-        // markKnown removed it from the notebook; move to a neighbour.
-        currentWord = store.studying.first
-    }
 
     private func makeTurn(_ s: VocabStore.SourceSentence) -> Turn {
         Turn(id: UUID(), role: .fluentSelf, audioURL: s.audioURL,
@@ -715,61 +721,35 @@ enum WordLore {
     }
 
     private struct EntryRow: Decodable { let data: WordEntry }
-    private struct EntryInsert: Encodable { let word: String; let native_lang: String; let data: WordEntry }
+    private struct LookupBody: Encodable { let word: String; let native_lang: String }
+    private struct LookupResponse: Decodable { let data: WordEntry }
 
     static func entry(for word: String, native: String) async -> WordEntry? {
         let key = native + "|" + word
         if let c = cache[key] { return c }
-        // 1. Shared store
+        // 1. Shared cache — a direct read is free and skips a function cold
+        //    start for the common (already-generated) case.
         if let rows = try? await SupabaseProvider.shared.from("word_entry")
             .select("data").eq("word", value: word).eq("native_lang", value: native)
             .limit(1).execute().value as [EntryRow], let row = rows.first {
             cache[key] = row.data
             return row.data
         }
-        // 2. Generate once, then publish for everyone.
-        guard let entry = await generate(word, native: native) else { return nil }
-        cache[key] = entry
-        let insert = EntryInsert(word: word, native_lang: native, data: entry)
-        Task { try? await SupabaseProvider.shared.from("word_entry")
-            .upsert(insert, onConflict: "word,native_lang").execute() }
-        return entry
-    }
-
-    private static func generate(_ word: String, native: String) async -> WordEntry? {
-        let lang = Locale(identifier: "en").localizedString(forLanguageCode: native) ?? native
-        let system = """
-        You are a bilingual learner's dictionary. For the English word the user sends, \
-        return a JSON object explaining it for a native \(lang) speaker. Write every \
-        meaning, note and phrase-meaning in \(lang) — never transliterate the English \
-        word (e.g. "slack" must be explained, NOT written "슬랙").
-
-        JSON shape (no markdown, JSON only):
-        {
-          "pos": "<short part-of-speech summary in \(lang), e.g. 형용사·명사·동사>",
-          "senses": [
-            { "pos": "<part of speech in \(lang)>", "meaning": "<gloss in \(lang)>", "note": "<short usage nuance in \(lang), or null>" }
-          ],
-          "examples": [
-            { "text": "<short, natural SPOKEN English sentence using the word>", "meaning": "<that sentence translated into \(lang)>" }
-          ],
-          "phrases": [
-            { "phrase": "<common English idiom/collocation with the word>", "meaning": "<its meaning in \(lang)>" }
-          ],
-          "properNoun": "<one line in \(lang) if the capitalized word is also a well-known name/brand, else null>"
-        }
-
-        Cover the distinct common senses. Give as many examples as the word genuinely \
-        warrants — a simple one-sense word may need a single example, a word with \
-        several senses may want one example per sense. Don't pad; don't force a count. \
-        Include only genuinely common phrases (none is fine). Keep everything concise.
-        """
+        // 2. Cache miss → the `word-entry` function generates + publishes it
+        //    server-side, FREE. Dictionary entries are a global shared cache,
+        //    so they're never credit-gated (see the function for why the
+        //    generation prompt lives server-side rather than a free `gemini`
+        //    purpose). Returns the same word from the cache if another user
+        //    generated it in the meantime.
         do {
-            return try await GeminiClient.shared.sendJSON(
-                system: system,
-                messages: [GeminiClient.Message(role: .user, content: word)],
-                maxTokens: 700, temperature: 0.3
+            let res: LookupResponse = try await SupabaseProvider.shared.functions.invoke(
+                "word-entry",
+                options: FunctionInvokeOptions(body: LookupBody(word: word, native_lang: native))
             )
-        } catch { return nil }
+            cache[key] = res.data
+            return res.data
+        } catch {
+            return nil
+        }
     }
 }
