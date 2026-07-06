@@ -119,7 +119,18 @@ final class DrillStore {
         var seenTargets = Set(existing.map { $0.targetPhrase.lowercased() })
         var newCards: [DrillCard] = []
 
-        func add(source: String, target: String, reason: String) {
+        // Summary-derived cards quote the user loosely — trace the quote back
+        // to the turn it came from so the card can play the user's own audio.
+        // Normalized containment (not equality): Gemini's `userSaid` is usually
+        // a fragment of the full turn transcript.
+        let userTurns = turns.filter { $0.role == .user }
+        func sourceTurnId(for phrase: String) -> UUID? {
+            let needle = Self.normalizedForMatch(phrase)
+            guard !needle.isEmpty else { return nil }
+            return userTurns.first { Self.normalizedForMatch($0.transcript).contains(needle) }?.id
+        }
+
+        func add(source: String, target: String, reason: String, turnId: UUID? = nil) {
             let key = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
             // Safety net: even with the tightened summary prompt, Gemini
@@ -134,20 +145,23 @@ final class DrillStore {
                 createdAt: now,
                 nextReviewAt: now,
                 box: 0,
-                sourceSessionId: sessionId
+                sourceSessionId: sessionId,
+                sourceTurnId: turnId
             ))
         }
 
         for turn in turns where turn.role == .user {
             if let s = turn.suggestion {
-                add(source: turn.transcript, target: s.alternative, reason: s.reason)
+                add(source: turn.transcript, target: s.alternative, reason: s.reason, turnId: turn.id)
             }
         }
         for p in summary.phrasesUsed {
-            add(source: p.userSaid, target: p.fluentAlternative, reason: p.reason)
+            add(source: p.userSaid, target: p.fluentAlternative, reason: p.reason,
+                turnId: sourceTurnId(for: p.userSaid))
         }
         for p in summary.newPatternsDetected {
-            add(source: p.mistake, target: p.correction, reason: p.context)
+            add(source: p.mistake, target: p.correction, reason: p.context,
+                turnId: sourceTurnId(for: p.mistake))
         }
         for d in summary.suggestedDrills {
             add(source: "", target: d, reason: "Suggested for you to practice.")
@@ -179,6 +193,19 @@ final class DrillStore {
     private func write(_ cards: [DrillCard]) {
         guard let data = try? encoder.encode(cards) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+    }
+
+    /// Lowercased, punctuation stripped, whitespace collapsed — so a summary
+    /// quote like "I go to store yesterday." still matches the raw transcript
+    /// "i go to store yesterday" despite casing/punctuation drift.
+    private static func normalizedForMatch(_ text: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(.whitespaces)
+        let stripped = String(text.unicodeScalars.filter { allowed.contains($0) })
+        return stripped
+            .lowercased()
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     /// Heuristic for "this is a rule, not an utterance". Matches the kinds

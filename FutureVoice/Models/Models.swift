@@ -609,6 +609,12 @@ struct DrillCard: Codable, Identifiable {
     var timesSeen: Int = 0
     var timesCorrect: Int = 0
     var sourceSessionId: UUID?
+    /// User turn this card was minted from. Lets the drill card play back the
+    /// user's OWN recording (TurnAudioStore) next to the transcript — the
+    /// transcript is STT output and sometimes wrong, so hearing what they
+    /// actually said is the ground truth. nil for cards without a source
+    /// utterance (suggested drills, Watch "Save phrase", pre-existing cards).
+    var sourceTurnId: UUID?
     var enrichment: DrillCardEnrichment?  // on-demand, persisted once fetched
 }
 

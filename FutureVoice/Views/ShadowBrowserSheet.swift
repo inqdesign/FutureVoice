@@ -10,9 +10,34 @@ struct ShadowBrowserView: View {
 
     @State private var sessions: [Session] = []
     @State private var shadowTarget: ShadowTarget?
-    /// All vs bookmarked-only — replaces the separate SavedLinesView entry
-    /// in the practice hub, so the archive has ONE door with a filter.
-    @State private var showSavedOnly = false
+    /// One archive, three doors: everything / bookmarked / lines you've
+    /// actually shadow-practiced (≥1 recorded attempt).
+    @State private var filter: ArchiveFilter = .all
+
+    enum ArchiveFilter: String, CaseIterable, Identifiable {
+        case all, saved, practiced
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .all: return "All"
+            case .saved: return "Saved"
+            case .practiced: return "Practiced"
+            }
+        }
+    }
+
+    /// Turn ids with at least one shadow attempt — "what have I practiced".
+    private var practicedIds: Set<UUID> {
+        Set(appState.shadowAttempts.map(\.turnId))
+    }
+
+    private func passes(_ turn: Turn) -> Bool {
+        switch filter {
+        case .all: return true
+        case .saved: return appState.isLineSaved(turn.id)
+        case .practiced: return practicedIds.contains(turn.id)
+        }
+    }
 
     struct ShadowTarget: Identifiable {
         let turn: Turn
@@ -22,10 +47,11 @@ struct ShadowBrowserView: View {
     var body: some View {
         content
             .safeAreaInset(edge: .top, spacing: 0) {
-                if !appState.savedLines.isEmpty {
-                    Picker("Filter", selection: $showSavedOnly) {
-                        Text("All").tag(false)
-                        Text("Saved").tag(true)
+                if !appState.savedLines.isEmpty || !appState.shadowAttempts.isEmpty {
+                    Picker("Filter", selection: $filter) {
+                        ForEach(ArchiveFilter.allCases) { f in
+                            Text(f.label).tag(f)
+                        }
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal, 16)
@@ -76,8 +102,7 @@ private extension ShadowBrowserView {
             List {
                 ForEach(sessions) { session in
                     let lines = session.turns.filter {
-                        $0.role == .fluentSelf
-                            && (!showSavedOnly || appState.isLineSaved($0.id))
+                        $0.role == .fluentSelf && passes($0)
                     }
                     if !lines.isEmpty {
                         Section(header: sectionHeader(for: session)) {

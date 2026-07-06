@@ -28,6 +28,10 @@ struct DrillView: View {
         case scenario
     }
     var source: Source = .due
+    /// Fired the moment the last card is graded. Lets `PracticeSessionView`
+    /// chain the deck into the shadow stage; nil (standalone use) keeps the
+    /// classic "All caught up" empty state.
+    var onDeckCompleted: (() -> Void)? = nil
 
     @EnvironmentObject private var appState: AppState
     @StateObject private var player = AudioPlayer()
@@ -255,6 +259,19 @@ struct DrillView: View {
     }
 }
 
+extension DrillView {
+    /// Bigger phrases get smaller type so the full sentence always shows —
+    /// truncating a line the user has to read OUT LOUD is fatal. Shared with
+    /// `PracticeSessionView`'s shadow stage.
+    static func targetFont(for text: String) -> Font {
+        switch text.count {
+        case ..<60:    return .title.weight(.semibold)
+        case 60..<120: return .title2.weight(.semibold)
+        default:       return .title3.weight(.semibold)
+        }
+    }
+}
+
 /// Sheet wrapper — kept for backward compat; main app uses `DrillView`
 /// directly inside `PracticeTab` now.
 struct DrillSheet: View {
@@ -281,28 +298,53 @@ private extension DrillView {
     @ViewBuilder
     func cardSurface(_ card: DrillCard, revealed: Bool = true, isTop: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 18) {
+            // Every text below is `fixedSize(vertical:)` — when the card runs
+            // out of room SwiftUI otherwise compresses the texts and elides
+            // them with "…", which is fatal for a phrase the user must READ
+            // OUT LOUD. The target font also steps down for long phrases so
+            // the whole card still fits on screen.
             if !card.sourcePhrase.isEmpty {
                 labeled("You said") {
-                    Text(card.sourcePhrase)
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                        .strikethrough(revealed)
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(card.sourcePhrase)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .strikethrough(revealed)
+                            .fixedSize(horizontal: false, vertical: true)
+                        // The transcript is STT output and occasionally wrong —
+                        // when the user's actual recording survives on disk,
+                        // let them replay what they REALLY said.
+                        if let turnId = card.sourceTurnId,
+                           TurnAudioStore.shared.url(for: turnId) != nil {
+                            Button {
+                                playUserRecording(turnId)
+                            } label: {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.tint)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Play your recording")
+                        }
+                    }
                 }
             }
 
             labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
                 Text(card.targetPhrase)
-                    .font(.title.weight(.semibold))
+                    .font(Self.targetFont(for: card.targetPhrase))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .redacted(reason: revealed ? [] : .placeholder)
             }
 
             if revealed, !card.reason.isEmpty {
                 labeled("Why") {
                     Text(card.reason)
-                        .font(.body)
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -404,22 +446,33 @@ private extension DrillView {
             .buttonStyle(.bordered)
 
         case .listening:
+            // Neutral container, not a red-tinted capsule: red text on a pink
+            // blob read as an error state. Red stays reserved for the one
+            // thing that IS red — the stop control.
             Button {
                 finishSayIt()
             } label: {
-                HStack(spacing: 8) {
+                HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "waveform")
                         .symbolEffect(.variableColor.iterative, options: .repeating)
+                        .foregroundStyle(.tint)
+                        .padding(.top, 2)
                     Text(live.transcript.isEmpty ? "Listening…" : live.transcript)
+                        .font(.subheadline)
+                        .foregroundStyle(live.transcript.isEmpty ? Color.secondary : Color.primary)
                         .multilineTextAlignment(.leading)
-                    Spacer()
-                    Image(systemName: "stop.fill")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    Image(systemName: "stop.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.red)
                 }
-                .font(.subheadline)
+                .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemFill)))
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
+            .buttonStyle(.plain)
 
         case .result(let score, let steps):
             VStack(alignment: .leading, spacing: 8) {
@@ -567,12 +620,14 @@ private extension DrillView {
     private func markCorrect() {
         guard let card = queue.first else { return }
         DrillStore.shared.markCorrect(card)
+        PracticeLog.shared.record(.drill)
         advance()
     }
 
     private func markIncorrect() {
         guard let card = queue.first else { return }
         DrillStore.shared.markIncorrect(card)
+        PracticeLog.shared.record(.drill)
         advance()
     }
 
@@ -581,6 +636,19 @@ private extension DrillView {
         queue.removeFirst()
         topCardRevealed = false
         cancelSayIt()
+        if queue.isEmpty { onDeckCompleted?() }
+    }
+
+    /// Replay the user's own mic recording for the turn this card came from.
+    /// Local file only — no credits, no network.
+    private func playUserRecording(_ turnId: UUID) {
+        guard let data = TurnAudioStore.shared.data(for: turnId) else { return }
+        cancelSayIt()
+        do {
+            try player.play(data, forceSessionReset: true)
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     private func playTarget(_ card: DrillCard) async {
@@ -603,7 +671,12 @@ private extension DrillView {
             PhraseAudioStore.shared.save(audio, text: card.targetPhrase, voiceId: voiceId)
             try player.play(audio, forceSessionReset: true)
         } catch {
-            self.error = error.localizedDescription
+            // Out of credits: only HEARING a never-synthesized line is
+            // blocked — grading itself is on-device and stays free. Say so,
+            // instead of surfacing the raw 402.
+            self.error = error.isOutOfCredits
+                ? "Hearing this line for the first time needs credits — Say-it grading is still free."
+                : error.localizedDescription
         }
     }
 }
