@@ -57,6 +57,11 @@ final class StoreKitService: ObservableObject {
     @Published private(set) var options: [PlanOption] = []
     @Published private(set) var loading = false
     @Published var purchaseState: PurchaseState = .idle
+    /// Whether Apple says this account can still redeem an intro offer. A
+    /// user who already burned their free trial (or their free credits) must
+    /// not be pitched "Try for free" again — the paywall skips straight to
+    /// plans when this is false.
+    @Published private(set) var trialEligible = true
 
     /// Longest free trial across loaded products — drives the timeline copy.
     /// Falls back to 7 while products aren't configured yet.
@@ -92,6 +97,21 @@ final class StoreKitService: ObservableObject {
         }
         let byId = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
         options = plans.map { PlanOption(plan: $0, product: byId[$0.apple_product_id]) }
+
+        // Trial eligibility, straight from StoreKit: eligible if ANY loaded
+        // product's subscription still offers this account an intro offer.
+        // With no products loaded there's nothing purchasable anyway — leave
+        // the default (true) rather than guessing.
+        if !products.isEmpty {
+            var eligible = false
+            for p in products {
+                if let sub = p.subscription, await sub.isEligibleForIntroOffer {
+                    eligible = true
+                    break
+                }
+            }
+            trialEligible = eligible
+        }
     }
 
     func purchase(_ option: PlanOption) async {
@@ -101,7 +121,16 @@ final class StoreKitService: ObservableObject {
         }
         purchaseState = .purchasing
         do {
-            let result = try await product.purchase()
+            // appAccountToken ties the Apple transaction to our Supabase user,
+            // so the apple-webhook Edge Function can attribute every server
+            // notification without receipt-to-account guesswork. Purchasing
+            // without a session would create an unmappable transaction — bail
+            // out loudly instead.
+            guard let session = try? await SupabaseProvider.shared.auth.session else {
+                purchaseState = .failed("You need to be signed in to subscribe.")
+                return
+            }
+            let result = try await product.purchase(options: [.appAccountToken(session.user.id)])
             switch result {
             case .success(let verification):
                 switch verification {

@@ -32,6 +32,14 @@ struct ConversationView: View {
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
+    /// The last failure was a 402 — the user is out of credits. Retry is
+    /// pointless until they top up, so the recovery UI leads with the paywall.
+    @State private var outOfCredits = false
+    @State private var showingPaywall = false
+    /// Unified beta feedback modal — set to a milestone to present it.
+    @State private var feedbackContext: BetaFeedbackSheet.Context?
+    /// endAndClose defers its dismiss until the first-talk feedback closes.
+    @State private var dismissAfterFeedback = false
     @State private var showMicPermissionAlert = false
     @Environment(\.dismiss) private var dismiss
 
@@ -149,9 +157,29 @@ struct ConversationView: View {
                     .environmentObject(appState)
             }
             .alert("Something went wrong", isPresented: errorBinding) {
+                if outOfCredits {
+                    Button("See plans") { error = nil; showingPaywall = true }
+                }
                 Button("OK") { error = nil }
             } message: {
                 Text(error ?? "")
+            }
+            .sheet(isPresented: $showingPaywall) {
+                // Reached here from an out-of-credits failure → no trial pitch.
+                PaywallView(offerTrial: false)
+            }
+            .sheet(item: $feedbackContext, onDismiss: {
+                if dismissAfterFeedback { dismissAfterFeedback = false; dismiss() }
+            }) { ctx in
+                BetaFeedbackSheet(context: ctx)
+            }
+            .onChange(of: outOfCredits) { _, hit in
+                // First time a tester hits the credit wall → ask for beta
+                // feedback right at the moment of maximum signal.
+                if hit && BetaFeedback.shouldShow(.creditsDepleted) {
+                    BetaFeedback.markShown(.creditsDepleted)
+                    feedbackContext = .creditsDepleted
+                }
             }
             .alert("Microphone access needed", isPresented: $showMicPermissionAlert) {
                 Button("Open Settings") {
@@ -269,7 +297,9 @@ struct ConversationView: View {
                             .id("partial-thinking")
                             .transition(.opacity)
                     } else if let fid = failedTurnId, turns.last?.id == fid {
-                        RetryReplyRow(onRetry: retryReply)
+                        RetryReplyRow(outOfCredits: outOfCredits,
+                                      onRetry: retryReply,
+                                      onGetCredits: { showingPaywall = true })
                             .id("retry-row")
                             .transition(.opacity)
                     }
@@ -549,6 +579,7 @@ struct ConversationView: View {
                 await startRecording()
             }
         } catch {
+            outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
             phase = .idle
         }
@@ -666,6 +697,7 @@ struct ConversationView: View {
     /// the user speak again. The user turn stays in `turns` either way.
     private func requestReply(forUserTurn turnId: UUID) async {
         failedTurnId = nil
+        outOfCredits = false
         phase = .thinking
         guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
         do {
@@ -707,6 +739,9 @@ struct ConversationView: View {
         } catch {
             // Keep the user's turn and offer an inline Retry instead of a
             // dead-end alert, so a network blip doesn't lose what they said.
+            // Out-of-credits is NOT retryable — flag it so the row shows the
+            // paywall instead of a retry loop that can never succeed.
+            outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
             phase = .idle
         }
@@ -962,6 +997,7 @@ struct ConversationView: View {
             // notification permission makes sense.
             Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
         } catch {
+            outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
             phase = .idle
         }
@@ -992,7 +1028,15 @@ struct ConversationView: View {
         summary = nil
         phoneCallActive = false
         cancelSilenceTimer()
-        dismiss()
+        // First-ever finished conversation → ask for feedback before leaving;
+        // the sheet's onDismiss completes the exit.
+        if BetaFeedback.shouldShow(.firstTalk) {
+            BetaFeedback.markShown(.firstTalk)
+            dismissAfterFeedback = true
+            feedbackContext = .firstTalk
+        } else {
+            dismiss()
+        }
     }
 
     private static func mp3DurationMs(_ data: Data) -> Int {
@@ -1335,24 +1379,52 @@ private struct TopicPickerSheet: View {
     }
 }
 
-/// Inline recovery row shown under the last user turn when the reply failed
-/// (network/Gemini/TTS). Plain feed row (no card) per the transcript style.
+/// Inline recovery row shown under the last user turn when the reply failed.
+/// Two personalities: a network/Gemini/TTS blip gets a Retry; running out of
+/// credits gets the paywall — retrying a 402 can never succeed, so offering
+/// only Retry there reads as "the app is broken".
 private struct RetryReplyRow: View {
+    var outOfCredits: Bool = false
     let onRetry: () -> Void
+    var onGetCredits: () -> Void = {}
+
     var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "wifi.exclamationmark")
-                .foregroundStyle(.secondary)
-            Text("Couldn\'t get a response.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Button("Retry", action: onRetry)
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+        if outOfCredits {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 10) {
+                    Image(systemName: "bolt.slash.fill")
+                        .foregroundStyle(.secondary)
+                    Text("You're out of credits, so your future self can't reply.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 8) {
+                    Button("See plans", action: onGetCredits)
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    Button("Retry", action: onRetry)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: 10) {
+                Image(systemName: "wifi.exclamationmark")
+                    .foregroundStyle(.secondary)
+                Text("Couldn\'t get a response.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button("Retry", action: onRetry)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

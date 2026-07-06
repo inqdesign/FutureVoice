@@ -27,6 +27,10 @@ struct ConversationHome: View {
     @State private var topShadowPick: PracticeStats.ShadowPick?
     @State private var lastSession: Session?
     @State private var shadowingPick: PracticeStats.ShadowPick?
+    /// Server-side credit balance — shown in the header so running low is
+    /// never a surprise mid-conversation. nil until the first fetch lands.
+    @State private var account: AccountStatus?
+    @State private var showingPaywall = false
 
     var body: some View {
         NavigationStack {
@@ -54,9 +58,18 @@ struct ConversationHome: View {
             .navigationTitle(greetingText)
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                ToolbarItemGroup { profileButton }
+                // Credits moved into the Today card — the chip up here was
+                // squeezing the large title into "Good mor…".
+                ToolbarItemGroup {
+                    profileButton
+                }
             }
             .onAppear(perform: reload)
+            .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
+                // Only pitch the trial to someone who still has free credits;
+                // a spent balance means they've already used the free tier.
+                PaywallView(offerTrial: (account?.creditBalance ?? 0) > 0)
+            }
             .sheet(isPresented: $showingProfile) {
                 MeTab().environmentObject(appState).environmentObject(auth)
             }
@@ -79,10 +92,13 @@ struct ConversationHome: View {
 
     private var profileButton: some View {
         Button { showingProfile = true } label: {
-            Image(systemName: "person.crop.circle.fill")
-                .font(.title2).foregroundStyle(.secondary)
+            ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
         }
         .accessibilityLabel("Profile & settings")
+    }
+
+    private func refreshAccount() {
+        Task { account = await AccountStatus.fetch() }
     }
 
     /// One home card — mirrors ProgressTab's `panel` so both dashboards read
@@ -129,6 +145,19 @@ struct ConversationHome: View {
                      tint: snapshot.streakDays > 0 ? .orange : .secondary)
                 stat(icon: "bubble.left.and.bubble.right.fill",
                      text: "\(appState.learnerProfile.totalSessions) talks", tint: .secondary)
+                // Balance lives here now (not the nav bar — it was squeezing
+                // the greeting title). Quiet while healthy, orange when low;
+                // tap opens the plans. Hidden until the first fetch so it
+                // never flashes a wrong "0".
+                if let account {
+                    Button { showingPaywall = true } label: {
+                        stat(icon: "bolt.fill",
+                             text: "\(account.creditBalance)",
+                             tint: account.creditBalance <= 10 ? .orange : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(account.creditBalance) credits")
+                }
             }
 
             talkStarter
@@ -314,6 +343,7 @@ struct ConversationHome: View {
     }
 
     private func reload() {
+        refreshAccount()   // talks spend credits — keep the header honest
         let sessions = SessionStore.shared.load()
             .filter { $0.endedAt != nil }
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }

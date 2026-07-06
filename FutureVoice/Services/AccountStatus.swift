@@ -4,6 +4,17 @@ import Supabase
 /// Server-side account/billing snapshot for the Me tab. The edge functions
 /// charge against `user_credits` / `user_subscriptions`; the client only
 /// READS them for display — entitlement is never computed on-device.
+extension Error {
+    /// True when this failure is the server's 402 credit gate (from either
+    /// provider client). Screens use it to show the paywall instead of a
+    /// retry that can never succeed.
+    var isOutOfCredits: Bool {
+        if let g = self as? GeminiError, case .insufficientCredits = g { return true }
+        if let e = self as? ElevenLabsError, case .insufficientCredits = e { return true }
+        return false
+    }
+}
+
 struct AccountStatus {
     var email: String?
     var creditBalance: Int

@@ -12,6 +12,8 @@ struct WatchSetupSheet: View {
     @State private var loading = false
     @State private var suggestions: [SuggestedTopic] = []
     @State private var error: String?
+    @State private var outOfCredits = false
+    @State private var showingPaywall = false
     @State private var showingWatch = false
 
     var body: some View {
@@ -92,8 +94,14 @@ struct WatchSetupSheet: View {
                     Section {
                         Label(e, systemImage: "exclamationmark.triangle")
                             .foregroundStyle(.red)
+                        if outOfCredits {
+                            Button("See plans") { showingPaywall = true }
+                        }
                     }
                 }
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(offerTrial: false)   // out-of-credits entry
             }
             .navigationTitle("Watch")
             .navigationBarTitleDisplayMode(.inline)
@@ -151,7 +159,10 @@ struct WatchSetupSheet: View {
             appState.saveCounterpart(updated)
             return
         } catch {
-            self.error = error.localizedDescription
+            outOfCredits = error.isOutOfCredits
+            self.error = outOfCredits
+                ? "You're out of credits — fresh scenarios need a top-up."
+                : error.localizedDescription
         }
     }
 }
@@ -192,8 +203,12 @@ struct WatchView: View {
     @State private var generatedTitle: String?
     @State private var currentIndex: Int? = nil
     @State private var isPlaying = false
+    /// Unified beta feedback modal — presented after the first full listen-through.
+    @State private var feedbackContext: BetaFeedbackSheet.Context?
     @State private var loading = true
     @State private var error: String?
+    @State private var outOfCredits = false
+    @State private var showingPaywall = false
     @State private var shadowTarget: Turn?
 
     /// We wrap a DialogueEngine.Turn into a Turn (the Models.swift one) for
@@ -237,9 +252,18 @@ struct WatchView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
+        .sheet(item: $feedbackContext) { ctx in
+            BetaFeedbackSheet(context: ctx)
+        }
         .alert("Something went wrong", isPresented: errorBinding) {
+            if outOfCredits {
+                Button("See plans") { error = nil; showingPaywall = true }
+            }
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(offerTrial: false)   // out-of-credits entry
+        }
         .sheet(item: $bridge) { b in
             ShadowDrillView(turn: b.turn, targetLanguage: appState.targetLanguage)
                 .environmentObject(appState)
@@ -471,7 +495,10 @@ struct WatchView: View {
             // Auto-play once generation finishes.
             await playFrom(index: 0)
         } catch {
-            self.error = error.localizedDescription
+            outOfCredits = error.isOutOfCredits
+            self.error = outOfCredits
+                ? "You're out of credits — generating this dialogue needs a top-up."
+                : error.localizedDescription
         }
     }
 
@@ -523,6 +550,11 @@ struct WatchView: View {
         }
         isPlaying = false
         currentIndex = nil
+        // Completed the whole dialogue for the first time → ask for feedback.
+        if i >= turns.count && BetaFeedback.shouldShow(.firstWatch) {
+            BetaFeedback.markShown(.firstWatch)
+            feedbackContext = .firstWatch
+        }
     }
 
     private func loadOrSynthesize(text: String, voiceId: String) async throws -> Data {

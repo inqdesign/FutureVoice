@@ -14,6 +14,7 @@ struct MeTab: View {
     /// user-confirmed: this only powers a suggestion row under the picker.
     @State private var aiLevel: CEFRLevel?
     @State private var showingPersonaEdit = false
+    @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
     @State private var regeneratingVoice = false
@@ -24,15 +25,38 @@ struct MeTab: View {
     var body: some View {
         NavigationStack {
             List {
+                // Profile at the very top — avatar + name, with the signed-in
+                // identity as the subtitle. Tapping it edits the profile
+                // (the old "Apple ID" row here did nothing, and the editor was
+                // buried under "Learning").
                 Section {
-                    row(icon: "person.crop.circle",
-                        title: account.email ?? "Signed in with Apple",
-                        subtitle: "Apple ID")
+                    Button {
+                        showingPersonaEdit = true
+                    } label: {
+                        profileHeader
+                    }
+                }
+
+                Section {
                     HStack {
                         row(icon: "bolt.fill",
                             title: "\(account.creditBalance) credits",
-                            subtitle: "Beta — no subscription")
+                            subtitle: account.planLabel)
                         Spacer()
+                    }
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        row(icon: "sparkles",
+                            title: account.planLabel == "Free" ? "See plans" : "Manage plan",
+                            subtitle: "Credits land automatically every cycle")
+                    }
+                    NavigationLink {
+                        CreditGuideView()
+                    } label: {
+                        row(icon: "questionmark.circle",
+                            title: "What uses credits?",
+                            subtitle: "And what's always free")
                     }
                     NavigationLink {
                         InviteView()
@@ -48,15 +72,6 @@ struct MeTab: View {
                 }
 
                 Section {
-                    Button {
-                        showingPersonaEdit = true
-                    } label: {
-                        row(icon: "person.text.rectangle",
-                            title: appState.persona?.displayName.isEmpty == false
-                                ? appState.persona!.displayName
-                                : "Edit profile",
-                            subtitle: "Persona used in every conversation")
-                    }
                     Picker(selection: $appState.proficiency) {
                         ForEach(CEFRLevel.allCases, id: \.self) { level in
                             Text(level.rawValue.uppercased()).tag(level)
@@ -87,7 +102,7 @@ struct MeTab: View {
                 } header: {
                     Text("Learning")
                 } footer: {
-                    Text("Your persona and CEFR level shape each conversation. The daily goal drives the ring on Home.")
+                    Text("Your CEFR level shapes each conversation. The daily goal drives the ring on Home.")
                 }
 
                 Section("Appearance") {
@@ -156,6 +171,12 @@ struct MeTab: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .sheet(isPresented: $showingPaywall, onDismiss: {
+                Task { account = await AccountStatus.fetch() }
+            }) {
+                // Trial pitch only while the free credits last.
+                PaywallView(offerTrial: account.creditBalance > 0)
+            }
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
@@ -221,5 +242,37 @@ struct MeTab: View {
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// The top-of-settings identity block: avatar + name, with the signed-in
+    /// account as the subtitle. Tapping the whole row edits the profile.
+    private var profileHeader: some View {
+        HStack(spacing: 14) {
+            ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 56)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(appState.persona?.displayName.isEmpty == false
+                     ? appState.persona!.displayName
+                     : "Set up your profile")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                // Apple often returns no email (private relay, or the email
+                // scope only arrives on first sign-in), so account.email can
+                // be nil OR an empty string — coalesce both to a label instead
+                // of rendering a blank line.
+                Text(accountSubtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var accountSubtitle: String {
+        let email = account.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return email.isEmpty ? "Signed in with Apple" : email
     }
 }

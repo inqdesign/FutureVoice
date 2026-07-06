@@ -29,6 +29,15 @@ final class AuthService: NSObject, ObservableObject {
 
     private(set) var currentRawNonce: String?
 
+    /// Where the Apple-provided given name is stashed at first sign-in, for
+    /// persona setup to prefill. Read once, then it's just a fallback.
+    static let appleNameKey = "futurevoice.appleName"
+
+    /// An invite code the user typed on the Welcome screen BEFORE signing in.
+    /// Redeeming needs an authenticated session, so we hold the code here and
+    /// apply it the moment sign-in succeeds.
+    static let pendingInviteKey = "futurevoice.pendingInviteCode"
+
     override init() {
         super.init()
         Task { await loadInitialSession() }
@@ -76,6 +85,20 @@ final class AuthService: NSObject, ObservableObject {
                 return
             }
 
+            // Apple returns the user's name ONLY on the first authorization,
+            // and only on the credential (never from the ID token / Supabase).
+            // Capture it now so persona setup can prefill the name field —
+            // there's no second chance to read it.
+            if let name = credential.fullName {
+                let full = PersonNameComponentsFormatter().string(from: name)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let given = name.givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let chosen = (given?.isEmpty == false ? given! : full)
+                if !chosen.isEmpty {
+                    UserDefaults.standard.set(chosen, forKey: Self.appleNameKey)
+                }
+            }
+
             let nonce = currentRawNonce
             currentRawNonce = nil
 
@@ -87,12 +110,38 @@ final class AuthService: NSObject, ObservableObject {
                         credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
                     )
                     self.session = session
+                    await self.redeemPendingInviteIfAny()
                 } catch {
                     self.lastError = "Supabase exchange failed: \(error.localizedDescription)"
                 }
             }
         }
     }
+
+    /// Redeem a Welcome-screen invite code once we have a session. Server-side
+    /// guards handle self-referral / already-redeemed / invalid; we just clear
+    /// the pending code on any permanent outcome and publish a note the app can
+    /// surface. A transient failure keeps the code so a later sign-in retries.
+    private func redeemPendingInviteIfAny() async {
+        let key = Self.pendingInviteKey
+        let code = UserDefaults.standard.string(forKey: key)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !code.isEmpty else { return }
+        do {
+            let balance = try await ReferralService.redeem(code: code)
+            UserDefaults.standard.removeObject(forKey: key)
+            redeemedInviteBalance = balance
+        } catch ReferralService.RedeemError.unknown {
+            // Could be a network blip — keep the code for a future attempt.
+        } catch {
+            // Permanent (invalid / self / already redeemed): stop retrying.
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
+    /// Set once when a Welcome invite code redeems successfully — the new
+    /// balance, so the app can confirm "invite applied" after onboarding.
+    @Published var redeemedInviteBalance: Int?
 
     func signOut() async {
         try? await SupabaseProvider.shared.auth.signOut()

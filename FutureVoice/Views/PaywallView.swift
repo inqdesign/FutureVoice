@@ -6,6 +6,13 @@ import UserNotifications
 /// prices last. Pure SwiftUI + system colors; prices and trial length come
 /// live from StoreKit, credits-per-cycle from the server plan catalog.
 struct PaywallView: View {
+    /// Whether to pitch the free trial at all. Callers pass `false` when the
+    /// user has already used their free credits (out-of-credits blocks, or a
+    /// zero balance) — "Try for free" makes no sense to someone who's already
+    /// spent the free tier, regardless of what Apple's intro-offer flag says
+    /// (that only tracks subscription history, not credit usage).
+    var offerTrial: Bool = true
+
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = StoreKitService()
 
@@ -28,6 +35,11 @@ struct PaywallView: View {
         }
     }
 
+    /// Show the trial funnel only when the caller allows it AND Apple still
+    /// offers this account an intro offer. Either being false means: skip the
+    /// pitch, open on plans, and say "Subscribe" instead of "Try for free".
+    private var showsTrial: Bool { offerTrial && store.trialEligible }
+
     var body: some View {
         VStack(spacing: 0) {
             topBar
@@ -46,9 +58,14 @@ struct PaywallView: View {
             bottomBar
         }
         .background(Color(.systemBackground))
-        .task { await store.load() }
+        .task {
+            await store.load()
+            // No trial to pitch (out of credits, zero balance, or Apple says
+            // the intro offer is spent): skip the pitch and open on plans.
+            if !showsTrial { step = .plans }
+        }
         .onChange(of: store.purchaseState) { _, state in
-            if state == .purchased {
+            if state == .purchased, showsTrial {
                 scheduleTrialEndingReminder(trialDays: store.trialDays)
             }
         }
@@ -72,10 +89,13 @@ struct PaywallView: View {
                 switch step {
                 case .pitch:    dismiss()
                 case .timeline: step = .pitch
-                case .plans:    step = .timeline
+                // Without a trial funnel there are no earlier steps — back
+                // from plans just closes.
+                case .plans:    showsTrial ? (step = .timeline) : dismiss()
                 }
             } label: {
-                Image(systemName: step == .pitch ? "xmark" : "chevron.left")
+                Image(systemName: step == .pitch || (step == .plans && !showsTrial)
+                      ? "xmark" : "chevron.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
@@ -134,7 +154,7 @@ struct PaywallView: View {
         case .pitch:    return "Try for free"
         case .timeline: return "See plans"
         case .plans:
-            return selectedOption?.trialDays != nil
+            return showsTrial && selectedOption?.trialDays != nil
                 ? "Start my free \(store.trialDays)-day trial"
                 : "Subscribe"
         }
@@ -278,7 +298,44 @@ struct PaywallView: View {
             Text("Credits power voice synthesis and AI calls, and refill every cycle. Unused practice data never expires.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Always free")
+                    .font(.footnote.weight(.semibold))
+                freeRow("repeat", "Replay shadow lines", "Loop and slow down cached audio.")
+                freeRow("rectangle.stack.fill", "Review drills", "Spaced repetition, graded on device.")
+                freeRow("play.rectangle.on.rectangle", "Re-watch dialogues", "Generated once, then cached.")
+            }
+            .padding(.top, 4)
         }
+    }
+
+    private func freeRow(_ icon: String, _ title: String, _ caption: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.subheadline)
+                .foregroundStyle(.green)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.subheadline.weight(.medium))
+                Text(caption).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Rough conversation time per day this plan buys. A 10-minute talk costs
+    /// ~45 credits (the CreditGuideView numbers, which mirror the server's
+    /// priceFor) → ~4.5 credits per spoken minute.
+    private func dailyTalkMinutes(credits: Int) -> Int {
+        let days: Double
+        switch period {
+        case .weekly:  days = 7
+        case .monthly: days = 30
+        case .annual:  days = 365
+        }
+        return max(1, Int((Double(credits) / days / 4.5).rounded()))
     }
 
     private func option(tier: String) -> StoreKitService.PlanOption? {
@@ -315,8 +372,15 @@ struct PaywallView: View {
                 Text(blurb).font(.subheadline).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline) {
                     if let credits = opt?.plan.credits_per_cycle {
-                        Text("\(credits.formatted()) credits / \(period.cycleNoun)")
-                            .font(.footnote.weight(.medium))
+                        // Lead with what the credits MEAN — minutes of talking
+                        // per day — and keep the raw number as the detail.
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("≈ \(dailyTalkMinutes(credits: credits)) min of conversation a day")
+                                .font(.footnote.weight(.semibold))
+                            Text("\(credits.formatted()) credits / \(period.cycleNoun)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Text(opt?.localizedPrice.map { "\($0) / \(period.cycleNoun)" } ?? "—")

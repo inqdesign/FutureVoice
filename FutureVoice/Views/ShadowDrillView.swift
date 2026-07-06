@@ -30,6 +30,13 @@ struct ShadowDrillView: View {
     @State private var feedback: ShadowFeedback?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
     @State private var error: String?
+    /// The last failure was the 402 credit gate — the error alert then leads
+    /// with the paywall instead of a dead-end OK.
+    @State private var outOfCredits = false
+    /// Non-blocking notice when karaoke timings couldn't be synthesized but
+    /// cached audio still lets practice continue (e.g. out of credits).
+    @State private var timingNote: String?
+    @State private var showingPaywall = false
     @State private var targetDurationMs: Int = 0
     @State private var lastAttemptDurationMs: Int = 0
     @State private var cachedAudioURL: URL?
@@ -92,9 +99,15 @@ struct ShadowDrillView: View {
             .safeAreaInset(edge: .bottom) { bottomBar }
             .overlay { countdownOverlay }
             .alert("Something went wrong", isPresented: errorBinding) {
+                if outOfCredits {
+                    Button("See plans") { error = nil; showingPaywall = true }
+                }
                 Button("OK") { error = nil }
             } message: {
                 Text(error ?? "")
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(offerTrial: false)   // out-of-credits entry
             }
             .onChange(of: live.currentWordTimings) { _, new in
                 applyWordTimings(new)
@@ -144,6 +157,11 @@ struct ShadowDrillView: View {
                                         paused: !karaokeAnimating)) { _ in
                     karaokeWords
                 }
+            }
+            if let note = timingNote {
+                Label(note, systemImage: "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -842,6 +860,7 @@ struct ShadowDrillView: View {
             fix: payload?.fix ?? ""
         )
         appState.saveShadowAttempt(attempt)
+        PracticeLog.shared.record(.shadow)
     }
 
     /// Replace `userWordTimings` from the LATEST segment-level word timings
@@ -895,6 +914,24 @@ struct ShadowDrillView: View {
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
             ?? []
 
+        // Free path first: the audio is already on disk but has no word map
+        // (every conversation turn — streaming TTS returns no timestamps).
+        // Recover timings locally with on-device speech recognition before
+        // ever considering the paid re-synthesis.
+        if let existing = url, loadedTimings.isEmpty {
+            phase = .loadingAudio
+            let local = await LocalAlignment.wordTimings(
+                audioURL: existing,
+                languageCode: targetLanguage,
+                expectedText: turn.transcript
+            )
+            phase = .idle
+            if !local.isEmpty {
+                loadedTimings = local
+                TurnAudioStore.shared.saveTimings(local, for: turn.id)
+            }
+        }
+
         if url == nil || loadedTimings.isEmpty {
             phase = .loadingAudio
             do {
@@ -907,9 +944,19 @@ struct ShadowDrillView: View {
                 if !newTimings.isEmpty { loadedTimings = newTimings }
                 phase = .idle
             } catch {
-                self.error = "Karaoke timings unavailable: \(error.localizedDescription)"
+                outOfCredits = error.isOutOfCredits
                 phase = .idle
-                if url == nil { return }
+                if url != nil && outOfCredits {
+                    // The audio is already cached — practice continues fine,
+                    // just without karaoke timings. This is the "replaying is
+                    // free" promise: a quiet inline note, never a scary alert.
+                    timingNote = "Word timings need credits — karaoke highlighting is off, but you can still loop any part by dragging on the timeline."
+                } else {
+                    self.error = outOfCredits
+                        ? "You're out of credits — synthesizing this line needs a top-up."
+                        : "Karaoke timings unavailable: \(error.localizedDescription)"
+                    if url == nil { return }
+                }
             }
         }
 

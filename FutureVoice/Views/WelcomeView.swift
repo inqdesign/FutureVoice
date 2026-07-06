@@ -9,6 +9,8 @@ struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var page = 0
     @State private var autoplay = true
+    @State private var showInvite = false
+    @State private var inviteCode = ""
 
     private struct Feature: Identifiable {
         let id = UUID()
@@ -254,13 +256,20 @@ struct WelcomeView: View {
     private var signInArea: some View {
         VStack(spacing: 8) {
             SignInWithAppleButton(
-                onRequest: { request in auth.configure(request) },
+                onRequest: { request in
+                    // Capture the invite code at the sign-in moment so it's
+                    // redeemed as soon as the session lands.
+                    savePendingInvite()
+                    auth.configure(request)
+                },
                 onCompletion: { result in auth.handle(result: result) }
             )
             .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
             .frame(height: 52)
             .clipShape(Capsule())
             .padding(.horizontal, 32)
+
+            inviteArea
 
             if auth.isWorking { ProgressView().padding(.top, 4) }
             if let err = auth.lastError {
@@ -270,6 +279,41 @@ struct WelcomeView: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 28)
+    }
+
+    @ViewBuilder
+    private var inviteArea: some View {
+        if showInvite {
+            VStack(spacing: 6) {
+                TextField("Invite code", text: $inviteCode)
+                    .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
+                    .multilineTextAlignment(.center)
+                    .font(.body.weight(.semibold))
+                    .padding(.vertical, 11)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+                    .padding(.horizontal, 32)
+                    .onChange(of: inviteCode) { _, _ in savePendingInvite() }
+                Text("You'll both get 500 credits when you sign in.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            .padding(.top, 4)
+        } else {
+            Button("Have an invite code?") {
+                withAnimation { showInvite = true }
+            }
+            .font(.footnote).foregroundStyle(.tint)
+            .padding(.top, 2)
+        }
+    }
+
+    private func savePendingInvite() {
+        let clean = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        if clean.isEmpty {
+            UserDefaults.standard.removeObject(forKey: AuthService.pendingInviteKey)
+        } else {
+            UserDefaults.standard.set(clean, forKey: AuthService.pendingInviteKey)
+        }
     }
 }
 

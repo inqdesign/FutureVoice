@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 /// First-run persona collection. Three lightweight screens — name, life
 /// context, English world — that the fluent-self avatar uses as ground truth
@@ -14,9 +15,17 @@ struct PersonaOnboardingView: View {
     @State private var isEditing: Bool
     @State private var interestsDraft: String = ""
     @State private var situationsDraft: String = ""
+    @State private var avatarPick: PhotosPickerItem?
 
     init(initialPersona: UserPersona? = nil) {
-        _persona = State(initialValue: initialPersona ?? .empty)
+        var p = initialPersona ?? .empty
+        // First-run only: seed the name from what Apple gave us at sign-in, so
+        // the user isn't retyping something we already know. They can edit it.
+        if initialPersona == nil, p.displayName.isEmpty,
+           let appleName = UserDefaults.standard.string(forKey: AuthService.appleNameKey) {
+            p.displayName = appleName
+        }
+        _persona = State(initialValue: p)
         _isEditing = State(initialValue: initialPersona != nil)
     }
 
@@ -66,12 +75,38 @@ struct PersonaOnboardingView: View {
 
     private var nameStep: some View {
         Section {
+            HStack {
+                Spacer()
+                PhotosPicker(selection: $avatarPick, matching: .images) {
+                    ZStack(alignment: .bottomTrailing) {
+                        ProfileAvatar(initials: persona.displayName, size: 88)
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.title2)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.accentColor)
+                    }
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+            .padding(.vertical, 4)
+
             TextField("What should I call you?", text: $persona.displayName)
                 .textInputAutocapitalization(.words)
         } header: {
             Text("Your fluent self wants to know you")
         } footer: {
             Text("The more you share, the more I'll sound like a version of you — not a textbook.")
+        }
+        .onChange(of: avatarPick) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = UIImage(data: data) {
+                    AvatarStore.shared.save(img)
+                }
+            }
         }
     }
 

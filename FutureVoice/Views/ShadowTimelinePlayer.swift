@@ -16,6 +16,10 @@ struct ShadowTimelinePlayer: View {
     @State private var playbackRate: Float = 1.0
     @State private var dragMode: DragMode?
     @State private var scrubStartX: CGFloat = 0
+    /// Time-based loop selection (seconds) — the fallback when this line has
+    /// no word timings (e.g. they'd cost credits the user doesn't have).
+    /// Playback is pure time-based either way; words only add snapping.
+    @State private var timeSelection: ClosedRange<Double>?
 
     private enum DragMode { case start, end, scrub }
     private static let speeds: [Float] = [0.5, 0.75, 1.0, 1.25]
@@ -27,10 +31,15 @@ struct ShadowTimelinePlayer: View {
     private var markerTimes: [Double] { timings.map { Double($0.startMs) / 1000.0 } }
 
     private var selectionTimes: (start: Double, end: Double)? {
-        guard let r = selectedWordRange,
-              r.lowerBound >= 0, r.upperBound < timings.count else { return nil }
-        return (Double(timings[r.lowerBound].startMs) / 1000.0,
-                Double(timings[r.upperBound].endMs) / 1000.0)
+        if let r = selectedWordRange,
+           r.lowerBound >= 0, r.upperBound < timings.count {
+            return (Double(timings[r.lowerBound].startMs) / 1000.0,
+                    Double(timings[r.upperBound].endMs) / 1000.0)
+        }
+        if timings.isEmpty, let t = timeSelection {
+            return (t.lowerBound, t.upperBound)
+        }
+        return nil
     }
 
     var body: some View {
@@ -47,9 +56,24 @@ struct ShadowTimelinePlayer: View {
         .onAppear {
             guard !player.isPlaying, let data = try? Data(contentsOf: audioURL) else { return }
             player.prepare(data, forceSessionReset: true)
+            // Default to the whole line selected: visible handles teach at a
+            // glance that the loop region is adjustable, and "loop the full
+            // line" is the most common starting point anyway.
+            if selectedWordRange == nil && timeSelection == nil {
+                if timings.isEmpty {
+                    timeSelection = 0...max(player.duration, Self.minTimeSelection)
+                } else {
+                    selectedWordRange = 0...(timings.count - 1)
+                }
+            }
         }
         .onDisappear { player.stop() }
         .onChange(of: selectedWordRange) { _, _ in
+            if player.isPlaying, let s = selectionTimes {
+                player.updateSegment(from: s.start, to: s.end)
+            }
+        }
+        .onChange(of: timeSelection) { _, _ in
             if player.isPlaying, let s = selectionTimes {
                 player.updateSegment(from: s.start, to: s.end)
             }
@@ -183,10 +207,10 @@ struct ShadowTimelinePlayer: View {
 
             speedMenu
 
-            Button { selectedWordRange = nil } label: {
+            Button { selectedWordRange = nil; timeSelection = nil } label: {
                 Image(systemName: "xmark.circle")
                     .font(.system(size: 44))
-                    .foregroundStyle(selectedWordRange == nil ? Color(.tertiaryLabel) : Color.secondary)
+                    .foregroundStyle(selectionTimes == nil ? Color(.tertiaryLabel) : Color.secondary)
             }
             .buttonStyle(.plain)
             .disabled(selectedWordRange == nil)
@@ -235,6 +259,13 @@ struct ShadowTimelinePlayer: View {
 
     private func moveHandle(isStart: Bool, x: CGFloat, w: CGFloat, dur: Double) {
         let t = time(at: x, w: w, dur: dur)
+        if timings.isEmpty {
+            let r = timeSelection ?? t...t
+            timeSelection = isStart
+                ? min(t, r.upperBound - Self.minTimeSelection)...r.upperBound
+                : r.lowerBound...max(t, r.lowerBound + Self.minTimeSelection)
+            return
+        }
         guard let i = wordIndex(at: t) else { return }
         let r = selectedWordRange ?? i...i
         if isStart {
@@ -244,9 +275,18 @@ struct ShadowTimelinePlayer: View {
         }
     }
 
+    /// Smallest useful time-based loop — avoids zero-width selections that
+    /// would stutter the player.
+    private static let minTimeSelection: Double = 0.2
+
     private func selectRange(from x0: CGFloat, to x1: CGFloat, w: CGFloat, dur: Double) {
         let a = time(at: x0, w: w, dur: dur)
         let b = time(at: x1, w: w, dur: dur)
+        if timings.isEmpty {
+            let lo = min(a, b), hi = max(a, b)
+            if hi - lo >= Self.minTimeSelection { timeSelection = lo...hi }
+            return
+        }
         guard let i = wordIndex(at: min(a, b)), let j = wordIndex(at: max(a, b)) else { return }
         selectedWordRange = min(i, j)...max(i, j)
     }
