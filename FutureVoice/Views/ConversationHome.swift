@@ -51,7 +51,6 @@ struct ConversationHome: View {
                                 card { upNextSection }
                             }
                             card { practiceSection }
-                            planCard
                         }
                         .padding(.horizontal, 18)
                         .padding(.top, 4)
@@ -106,36 +105,27 @@ struct ConversationHome: View {
         Task { account = await AccountStatus.fetch() }
     }
 
-    /// Plan + credits in ONE surface that opens the subscription page —
-    /// credits are meaningless without the plan that grants them, so they
-    /// live together here, not as a bare number. Quiet while healthy; orange
-    /// nudge when low. Hidden until the first fetch so it never flashes "0".
+    /// Plan + credits as a compact row at the TOP of the Today card. Credits
+    /// are meaningless without the plan that grants them, so they sit together
+    /// and tap through to the subscription page. Orange nudge when low, "∞"
+    /// for admin. Hidden until the first fetch so it never flashes "0".
     @ViewBuilder
-    private var planCard: some View {
+    private var planRow: some View {
         if let account {
             Button { showingPaywall = true } label: {
-                HStack(spacing: 14) {
+                HStack(spacing: 8) {
                     Image(systemName: account.unlimited ? "infinity" : "bolt.fill")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(account.isLowBalance ? Color.orange : Color.accentColor)
+                    Text(account.balanceLabel)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(planTint(account))
-                        .frame(width: 34, height: 34)
-                        .background(RoundedRectangle(cornerRadius: 9)
-                            .fill(planTint(account).opacity(0.14)))
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            Text(account.balanceLabel)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                                .monospacedDigit()
-                            if !account.unlimited {
-                                Text("credits")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Text(planSubtitle(account))
-                            .font(.caption)
+                        .foregroundStyle(account.isLowBalance ? Color.orange : .primary)
+                        .monospacedDigit()
+                    if !account.unlimited {
+                        Text("credits · \(account.planLabel)")
+                            .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
                     }
                     Spacer(minLength: 8)
                     if !account.unlimited {
@@ -148,26 +138,11 @@ struct ConversationHome: View {
                         .foregroundStyle(account.isLowBalance ? Color.orange : Color.accentColor)
                     }
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.secondarySystemGroupedBackground)))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("\(account.balanceLabel) credits, \(account.planLabel) plan")
+            Divider()
         }
-    }
-
-    private func planTint(_ a: AccountStatus) -> Color {
-        if a.unlimited { return .accentColor }
-        return a.isLowBalance ? .orange : .accentColor
-    }
-
-    private func planSubtitle(_ a: AccountStatus) -> String {
-        if a.unlimited { return "Admin — credits never run out" }
-        if a.isLowBalance { return "Running low — top up to keep talking" }
-        if a.isEntitled { return "\(a.planLabel) · renews each cycle" }
-        return "Free plan · powers talks & audio"
     }
 
     /// One home card — mirrors ProgressTab's `panel` so both dashboards read
@@ -196,6 +171,7 @@ struct ConversationHome: View {
     /// makes today read as the newest square of that history.
     private var todaySection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            planRow
             HStack {
                 Text("Today").font(.title3.weight(.semibold)).foregroundStyle(.primary)
                 Spacer()
