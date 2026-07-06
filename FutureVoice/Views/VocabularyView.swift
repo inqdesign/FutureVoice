@@ -568,6 +568,8 @@ struct WordCard: View {
             Spacer(minLength: 0)
         }
         .fixedSize(horizontal: false, vertical: true)
+        .contentShape(Rectangle())
+        .contextMenu { saveActions(for: e.text) }
     }
 
     private func phraseRow(_ p: WordEntry.Phrase) -> some View {
@@ -582,6 +584,31 @@ struct WordCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+        .contentShape(Rectangle())
+        .contextMenu { saveActions(for: p.phrase) }
+    }
+
+    /// Long-press actions shared by examples and common phrases — save the
+    /// text to study later, or shadow-practice it right now.
+    @ViewBuilder
+    private func saveActions(for text: String) -> some View {
+        if store.hasExpression(text) {
+            Label("Saved to expressions", systemImage: "checkmark")
+        } else {
+            Button {
+                store.addExpression(text)
+                HapticEngine.drillCorrect()
+            } label: {
+                Label("Save to expressions", systemImage: "bookmark")
+            }
+        }
+        Button {
+            shadowing = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                             transcript: text, durationMs: 0, timestamp: Date(),
+                             suggestion: nil)
+        } label: {
+            Label("Shadow this", systemImage: "waveform.badge.mic")
+        }
     }
 
     private func sentenceRow(_ s: VocabStore.SourceSentence) -> some View {

@@ -127,6 +127,30 @@ final class VocabStore: ObservableObject {
         return added
     }
 
+    /// Manually save an expression/phrase the user picked to study later
+    /// (e.g. a "common phrase" or example from a word card). Unlike
+    /// `ingestExpressions`, there's no session — this is a deliberate save.
+    /// Returns false if it was already in the pool.
+    @discardableResult
+    func addExpression(_ phrase: String, at date: Date = Date()) -> Bool {
+        let display = phrase.trimmingCharacters(in: .whitespacesAndNewlines)
+        let key = display.lowercased()
+        guard !key.isEmpty else { return false }
+        if var r = expressionRecords[key] {
+            r.lastAt = date
+            expressionRecords[key] = r
+            saveExpressions()
+            return false
+        }
+        expressionRecords[key] = Record(state: .known, firstAt: date, lastAt: date, count: 0)
+        saveExpressions()
+        return true
+    }
+
+    func hasExpression(_ phrase: String) -> Bool {
+        expressionRecords[phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] != nil
+    }
+
     /// Expressions the user has used, most-recent first (lowercased keys).
     func usedExpressions() -> [String] {
         expressionRecords.sorted { $0.value.lastAt > $1.value.lastAt }.map { $0.key }
