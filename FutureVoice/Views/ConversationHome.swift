@@ -279,8 +279,10 @@ struct ConversationHome: View {
                 NavigationLink {
                     ConversationDetailView(session: last)
                 } label: {
+                    // Consistent with the rows above: fixed title, the topic
+                    // in the subtitle (not the long topic as the title).
                     upNextRow(icon: "text.bubble",
-                              title: last.displayTitle,
+                              title: "Last conversation",
                               subtitle: lastSessionSubtitle(last))
                 }
                 .buttonStyle(.plain)
@@ -300,7 +302,7 @@ struct ConversationHome: View {
                 Spacer()
                 NavigationLink { VocabularyView() } label: {
                     HStack(spacing: 3) {
-                        Text("Notebook")
+                        Text("See all")
                         Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
                     }
                     .font(.subheadline).foregroundStyle(.tint)
@@ -349,13 +351,12 @@ struct ConversationHome: View {
         .contentShape(Rectangle())
     }
 
+    /// Subtitle = the conversation's topic + when, matching the other rows'
+    /// "detail under a fixed title" pattern.
     private func lastSessionSubtitle(_ session: Session) -> String {
         let when = Self.relativeFormatter.localizedString(
             for: session.endedAt ?? session.startedAt, relativeTo: Date())
-        if let top = session.summary?.scorecard?.topLine, !top.isEmpty {
-            return "\(when) · \(top)"
-        }
-        return "\(when) · read it back, shadow any line"
+        return "\(when) · \(session.displayTitle)"
     }
 
     private static let relativeFormatter: RelativeDateTimeFormatter = {
