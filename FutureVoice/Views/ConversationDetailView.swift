@@ -384,6 +384,9 @@ private struct TranscriptRow: View {
     @State private var reasonLoading = false
     @State private var showingShadow = false
     @State private var showingSuggestionShadow = false
+    /// The word index the user just tapped — briefly highlighted so the tap
+    /// reads as "I selected THIS word" before its card opens.
+    @State private var tappedWordIndex: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -393,15 +396,30 @@ private struct TranscriptRow: View {
             if turn.role == .fluentSelf {
                 // Word-by-word so any word is tappable → its dictionary card.
                 // Same look as the plain line; FlowLayout wraps like text.
-                FlowLayout(spacing: 4, lineSpacing: 5) {
+                FlowLayout(spacing: 2, lineSpacing: 5) {
                     ForEach(Array(turn.transcript.split(separator: " ").enumerated()),
-                            id: \.offset) { _, token in
+                            id: \.offset) { index, token in
                         Text(token)
                             .font(.body)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(tappedWordIndex == index ? Color.white : Color.accentColor)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(tappedWordIndex == index ? Color.accentColor : .clear)
+                            )
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 let key = VocabStore.lookupKey(for: String(token))
-                                if !key.isEmpty { onWordTap(key) }
+                                guard !key.isEmpty else { return }
+                                HapticEngine.light()
+                                withAnimation(.easeOut(duration: 0.12)) { tappedWordIndex = index }
+                                onWordTap(key)
+                                // Clear the highlight after the card has taken
+                                // over, so returning to the transcript is clean.
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                                    withAnimation(.easeOut(duration: 0.2)) { tappedWordIndex = nil }
+                                }
                             }
                     }
                 }
