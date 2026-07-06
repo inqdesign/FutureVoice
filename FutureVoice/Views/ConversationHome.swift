@@ -32,6 +32,11 @@ struct ConversationHome: View {
     /// subscription page. nil until the first fetch lands.
     @State private var account: AccountStatus?
     @State private var showingPaywall = false
+    /// Tapped notebook word → opens the full detail sheet (not an inline flip,
+    /// which was a dead end — you saw the meaning but couldn't act on it).
+    @State private var wordSheet: WordRef?
+
+    struct WordRef: Identifiable { let value: String; var id: String { value } }
 
     var body: some View {
         NavigationStack {
@@ -83,6 +88,10 @@ struct ConversationHome: View {
             }
             .sheet(item: $shadowingPick, onDismiss: reload) { pick in
                 ShadowDrillView(turn: pick.turn, targetLanguage: appState.targetLanguage)
+                    .environmentObject(appState)
+            }
+            .sheet(item: $wordSheet, onDismiss: reload) { ref in
+                WordSheet(initialWord: ref.value, words: Array(vocab.studying))
                     .environmentObject(appState)
             }
         }
@@ -305,7 +314,10 @@ struct ConversationHome: View {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
                                     GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(Array(vocab.studying.prefix(6)), id: \.self) { word in
-                        StudyWordCard(word: word, native: appState.nativeLanguage)
+                        Button { wordSheet = WordRef(value: word) } label: {
+                            StudyWordChip(word: word)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -400,45 +412,28 @@ struct ConversationHome: View {
     }
 }
 
-/// A bookmarked word — minimal block; tap to swap the word for its meaning.
-private struct StudyWordCard: View {
+/// A bookmarked word chip — tapping OPENS the full word sheet (definition,
+/// pronunciation, examples, mark-known), instead of the old inline flip that
+/// only showed the meaning with nowhere to go next.
+private struct StudyWordChip: View {
     let word: String
-    let native: String
-    @State private var flipped = false
-    @State private var meaning: String?
-    @State private var loading = false
 
     var body: some View {
-        Button { toggle() } label: {
-            Text(flipped ? (meaning ?? (loading ? "…" : "—")) : word)
-                .font(flipped ? .footnote : .callout.weight(.medium))
-                .foregroundStyle(flipped ? Color.secondary : Color.primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2).minimumScaleFactor(0.8)
-                .frame(maxWidth: .infinity)
-                .frame(height: 58)
-                .padding(.horizontal, 10)
-                // tertiarySystemFill stays visible on the card's
-                // secondarySystemGroupedBackground in BOTH light and dark —
-                // secondarySystemBackground matched the card color in dark.
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(.tertiarySystemFill)))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(.separator).opacity(0.6), lineWidth: 0.5)
-                )
-        }
-        .buttonStyle(.plain)
-        .animation(.easeInOut(duration: 0.2), value: flipped)
-    }
-
-    private func toggle() {
-        flipped.toggle()
-        guard flipped, meaning == nil, !loading else { return }
-        loading = true
-        Task {
-            let entry = await WordLore.entry(for: word, native: native)
-            meaning = entry?.senses.first?.meaning ?? "—"
-            loading = false
-        }
+        Text(word)
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.center)
+            .lineLimit(2).minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+            .frame(height: 58)
+            .padding(.horizontal, 10)
+            // tertiarySystemFill stays visible on the card's
+            // secondarySystemGroupedBackground in BOTH light and dark.
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color(.tertiarySystemFill)))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(.separator).opacity(0.6), lineWidth: 0.5)
+            )
+            .contentShape(Rectangle())
     }
 }

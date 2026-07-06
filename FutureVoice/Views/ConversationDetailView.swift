@@ -78,7 +78,7 @@ struct ConversationDetailView: View {
                 .environmentObject(appState)
         }
         .sheet(item: $wordSheet) { item in
-            SessionWordSheet(initialWord: item.word, words: item.words)
+            WordSheet(initialWord: item.word, words: item.words)
                 .environmentObject(appState)
         }
     }
@@ -316,7 +316,11 @@ struct ConversationDetailView: View {
 /// item (the originally tapped word) never changes identity — changing it
 /// would dismiss and re-present the sheet, exactly the close-and-reopen
 /// this exists to avoid.
-private struct SessionWordSheet: View {
+/// Word-detail sheet — the full `WordCard` (definition, pronunciation,
+/// examples, shadow, mark-known) with header chevrons to walk siblings.
+/// Reused wherever a word chip should "open and check out" rather than just
+/// flip to its meaning (session words, home notebook grid).
+struct WordSheet: View {
     let initialWord: String
     /// Sibling words in display order; empty → the card falls back to
     /// notebook navigation (transcript word taps).
