@@ -27,10 +27,14 @@ struct ConversationHome: View {
     @State private var topShadowPick: PracticeStats.ShadowPick?
     @State private var lastSession: Session?
     @State private var shadowingPick: PracticeStats.ShadowPick?
-    /// Server-side credit balance — shown in the header so running low is
-    /// never a surprise mid-conversation. nil until the first fetch lands.
+    /// Server-side account/billing snapshot — drives the plan card. Credits
+    /// live WITH the plan (not as a bare stat) so tapping goes to the
+    /// subscription page. nil until the first fetch lands.
     @State private var account: AccountStatus?
     @State private var showingPaywall = false
+    /// Which of the last 7 days had at least one talk (offset 0 = today) —
+    /// the dot strip preview of the calendar.
+    @State private var talkDayOffsets: Set<Int> = []
 
     var body: some View {
         NavigationStack {
@@ -47,6 +51,7 @@ struct ConversationHome: View {
                                 card { upNextSection }
                             }
                             card { practiceSection }
+                            planCard
                         }
                         .padding(.horizontal, 18)
                         .padding(.top, 4)
@@ -101,6 +106,70 @@ struct ConversationHome: View {
         Task { account = await AccountStatus.fetch() }
     }
 
+    /// Plan + credits in ONE surface that opens the subscription page —
+    /// credits are meaningless without the plan that grants them, so they
+    /// live together here, not as a bare number. Quiet while healthy; orange
+    /// nudge when low. Hidden until the first fetch so it never flashes "0".
+    @ViewBuilder
+    private var planCard: some View {
+        if let account {
+            Button { showingPaywall = true } label: {
+                HStack(spacing: 14) {
+                    Image(systemName: account.unlimited ? "infinity" : "bolt.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(planTint(account))
+                        .frame(width: 34, height: 34)
+                        .background(RoundedRectangle(cornerRadius: 9)
+                            .fill(planTint(account).opacity(0.14)))
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(account.balanceLabel)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                                .monospacedDigit()
+                            if !account.unlimited {
+                                Text("credits")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Text(planSubtitle(account))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 8)
+                    if !account.unlimited {
+                        HStack(spacing: 3) {
+                            Text(account.isEntitled ? "Manage" : "Get Pro")
+                            Image(systemName: "chevron.right")
+                                .font(.caption2.weight(.semibold))
+                        }
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(account.isLowBalance ? Color.orange : Color.accentColor)
+                    }
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.secondarySystemGroupedBackground)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(account.balanceLabel) credits, \(account.planLabel) plan")
+        }
+    }
+
+    private func planTint(_ a: AccountStatus) -> Color {
+        if a.unlimited { return .accentColor }
+        return a.isLowBalance ? .orange : .accentColor
+    }
+
+    private func planSubtitle(_ a: AccountStatus) -> String {
+        if a.unlimited { return "Admin — credits never run out" }
+        if a.isLowBalance { return "Running low — top up to keep talking" }
+        if a.isEntitled { return "\(a.planLabel) · renews each cycle" }
+        return "Free plan · powers talks & audio"
+    }
+
     /// One home card — mirrors ProgressTab's `panel` so both dashboards read
     /// as the same design system.
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
@@ -121,46 +190,67 @@ struct ConversationHome: View {
 
     // MARK: - Today
 
+    /// Today = TODAY's speaking, nothing else. Lifetime stats live in the
+    /// calendar; credits live with the subscription (plan card below). The
+    /// whole progress block is the door to the calendar — the 7-day strip
+    /// makes today read as the newest square of that history.
     private var todaySection: some View {
         VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Today").font(.title3.weight(.semibold)).foregroundStyle(.primary)
+                Spacer()
+                if snapshot.streakDays > 0 {
+                    Label("\(snapshot.streakDays)", systemImage: "flame.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                        .accessibilityLabel("\(snapshot.streakDays)-day streak")
+                }
+            }
+
             NavigationLink {
                 ActivityView()
             } label: {
-                HStack {
-                    Text("Today").font(.title3.weight(.semibold)).foregroundStyle(.primary)
-                    Spacer()
-                    Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.tertiary)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
+                            .font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.footnote).foregroundStyle(.tertiary)
+                    }
+                    progressBar
+                    weekStrip
                 }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
-                    .font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
-                progressBar
-            }
-
-            HStack(spacing: 18) {
-                stat(icon: "flame.fill", text: "\(snapshot.streakDays) streak",
-                     tint: snapshot.streakDays > 0 ? .orange : .secondary)
-                stat(icon: "bubble.left.and.bubble.right.fill",
-                     text: "\(appState.learnerProfile.totalSessions) talks", tint: .secondary)
-                // Balance lives here now (not the nav bar — it was squeezing
-                // the greeting title). Quiet while healthy, orange when low;
-                // tap opens the plans. Hidden until the first fetch so it
-                // never flashes a wrong "0".
-                if let account {
-                    Button { showingPaywall = true } label: {
-                        stat(icon: "bolt.fill",
-                             text: "\(account.creditBalance)",
-                             tint: account.creditBalance <= 10 ? .orange : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(account.creditBalance) credits")
-                }
-            }
-
             talkStarter
+        }
+    }
+
+    /// The last 7 days as dots (today rightmost, outlined) — a preview of the
+    /// calendar this block opens into.
+    private var weekStrip: some View {
+        HStack(spacing: 6) {
+            ForEach((0..<7).reversed(), id: \.self) { offset in
+                Circle()
+                    .fill(talkDayOffsets.contains(offset)
+                          ? Color.accentColor
+                          : Color(.tertiarySystemFill))
+                    .frame(width: 8, height: 8)
+                    .overlay {
+                        if offset == 0 {
+                            Circle().stroke(Color.accentColor, lineWidth: 1.5)
+                                .frame(width: 12, height: 12)
+                        }
+                    }
+            }
+            Text("last 7 days")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .padding(.leading, 4)
+            Spacer()
         }
     }
 
@@ -359,7 +449,8 @@ struct ConversationHome: View {
             level: appState.proficiency
         ).first
 
-        let todayStart = Calendar.current.startOfDay(for: now)
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: now)
         var todayMs = 0
         for session in sessions where (session.endedAt ?? session.startedAt) >= todayStart {
             for turn in session.turns where turn.role == .user {
@@ -367,6 +458,17 @@ struct ConversationHome: View {
             }
         }
         todaySpokenSeconds = todayMs / 1000
+
+        // Which of the last 7 days had a talk — the Today card's dot strip.
+        var offsets: Set<Int> = []
+        for session in sessions {
+            let day = cal.startOfDay(for: session.endedAt ?? session.startedAt)
+            if let diff = cal.dateComponents([.day], from: day, to: todayStart).day,
+               diff >= 0, diff < 7 {
+                offsets.insert(diff)
+            }
+        }
+        talkDayOffsets = offsets
     }
 }
 

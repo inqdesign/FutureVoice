@@ -20,13 +20,29 @@ struct AccountStatus {
     var creditBalance: Int
     var planId: String?
     var subscriptionStatus: String    // 'trialing' | 'active' | 'grace' | 'expired' | 'inactive'
+    /// Admin/test accounts never spend — the balance is cosmetic. UI shows
+    /// "Unlimited" and drops the low-balance nudge.
+    var unlimited: Bool = false
+
+    /// True while the subscription actually entitles (paid or in trial).
+    var isEntitled: Bool {
+        ["trialing", "active", "grace"].contains(subscriptionStatus)
+    }
 
     /// "Free", or "Pro Monthly" while the subscription actually entitles.
     var planLabel: String {
-        let entitled = ["trialing", "active", "grace"].contains(subscriptionStatus)
-        guard entitled, let planId else { return "Free" }
+        if unlimited { return "Admin" }
+        guard isEntitled, let planId else { return "Free" }
         return planId.split(separator: "_").map(\.capitalized).joined(separator: " ")
     }
+
+    /// Balance for display — "Unlimited" for admin, else the number.
+    var balanceLabel: String {
+        unlimited ? "Unlimited" : "\(creditBalance)"
+    }
+
+    /// Below this, the plan card turns orange and nudges toward a top-up.
+    var isLowBalance: Bool { !unlimited && creditBalance <= 20 }
 
     static let empty = AccountStatus(email: nil, creditBalance: 0,
                                      planId: nil, subscriptionStatus: "inactive")
@@ -41,15 +57,16 @@ struct AccountStatus {
         out.email = session.user.email
         let userId = session.user.id.uuidString
 
-        struct CreditRow: Decodable { let balance: Int }
+        struct CreditRow: Decodable { let balance: Int; let unlimited: Bool? }
         if let rows: [CreditRow] = try? await SupabaseProvider.shared
             .from("user_credits")
-            .select("balance")
+            .select("balance,unlimited")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
             .value {
             out.creditBalance = rows.first?.balance ?? 0
+            out.unlimited = rows.first?.unlimited ?? false
         }
 
         struct SubRow: Decodable {
