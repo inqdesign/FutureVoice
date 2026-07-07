@@ -24,9 +24,9 @@ struct WatchTab: View {
             }
             .navigationTitle("Scenarios")
             .toolbarTitleDisplayMode(.inlineLarge)
-            .toolbar {
-                ToolbarItemGroup { plusButton }
-            }
+            // No toolbar "+": each section owns its own add — the "New persona"
+            // card in the People row and "New situation" in Situations — so a
+            // single global "+" that only made personas was a confusing dupe.
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView()
                     .environmentObject(appState)
@@ -45,15 +45,6 @@ struct WatchTab: View {
                     .environmentObject(appState)
             }
         }
-    }
-
-    /// Plain toolbar button — the nav bar supplies the circular Liquid Glass
-    /// chrome itself (iOS 26); adding our own frame/glass style double-stacked it.
-    private var plusButton: some View {
-        Button { showingNewVoice = true } label: {
-            Image(systemName: "plus")
-        }
-        .accessibilityLabel("New persona")
     }
 
     // MARK: - Content
@@ -127,6 +118,10 @@ struct WatchTab: View {
             }
             .listRowInsets(EdgeInsets())
             .listRowBackground(Color.clear)
+        } header: {
+            // Without a header this section left a large empty band up top,
+            // out of step with "Situations" below which has one.
+            Text("People")
         }
     }
 
