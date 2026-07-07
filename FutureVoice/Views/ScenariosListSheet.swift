@@ -48,7 +48,7 @@ struct ScenariosListSheet: View {
                 }
             }
             .sheet(isPresented: $showingBuilder) {
-                ScenarioBuilderSheet { newScenario in
+                ScenarioBuilderSheet(counterparts: appState.counterparts) { newScenario in
                     appState.saveScenario(newScenario)
                     // Auto-pick the freshly built scenario so the user goes
                     // straight into practicing instead of tapping again.

@@ -519,6 +519,11 @@ struct Scenario: Codable, Identifiable, Hashable {
     var notes: String           // optional free-text context
     var createdAt: Date = Date()
     var lastUsedAt: Date?
+    /// Optional link to one of the user's own personas (Counterpart). When
+    /// set, `role` holds that persona's relationship, and watching this
+    /// scenario uses the persona's real voice/identity instead of a generic
+    /// preset. Optional so scenarios saved before this decode unchanged.
+    var counterpartId: UUID? = nil
 
     /// Human-readable title shown in the list. Kept simple so the user can
     /// scan a long list quickly.

@@ -5,6 +5,10 @@ import SwiftUI
 /// user's scenario library. Returns the built Scenario via `onSave` —
 /// persistence + UI dismiss is handled by the caller.
 struct ScenarioBuilderSheet: View {
+    /// The user's own personas — offered as "who you're talking to" so a
+    /// scenario can be acted (and watched) by a real persona, not just a
+    /// generic role. Empty → the persona picker is hidden.
+    var counterparts: [Counterpart] = []
     let onSave: (Scenario) -> Void
     @Environment(\.dismiss) private var dismiss
 
@@ -13,6 +17,8 @@ struct ScenarioBuilderSheet: View {
     @State private var role: String = ""
     @State private var customRole: String = ""
     @State private var notes: String = ""
+    /// Set when the user picks one of their personas as "who".
+    @State private var selectedCounterpartId: UUID?
 
     private static let environments = [
         "Casual chat",
@@ -60,19 +66,51 @@ struct ScenarioBuilderSheet: View {
                 }
 
                 Section {
+                    // Your own personas first — picking one means the scenario
+                    // is acted (and watched) by that real persona's voice.
+                    if !counterparts.isEmpty {
+                        Text("Your people")
+                            .font(.caption).foregroundStyle(.secondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
+                                  alignment: .leading, spacing: 8) {
+                            ForEach(counterparts) { c in
+                                let on = selectedCounterpartId == c.id
+                                Button {
+                                    if on {
+                                        selectedCounterpartId = nil
+                                    } else {
+                                        selectedCounterpartId = c.id
+                                        role = ""; customRole = ""   // persona defines who
+                                    }
+                                } label: {
+                                    Text(c.name)
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 12).padding(.vertical, 6)
+                                        .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
+                                        .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        Text("Or a generic role:")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     chipGrid(items: Self.roles, selection: $role) {
-                        customRole = ""
+                        customRole = ""; selectedCounterpartId = nil
                     }
                     TextField("Or describe who (custom)…", text: $customRole)
                         .onChange(of: customRole) { _, new in
                             if !new.trimmingCharacters(in: .whitespaces).isEmpty {
-                                role = ""
+                                role = ""; selectedCounterpartId = nil
                             }
                         }
                 } header: {
                     Text("Who you're talking to")
                 } footer: {
-                    Text("The avatar will play this role. You practice your side.")
+                    Text(selectedCounterpartId != nil
+                         ? "Your persona plays this scene in their own voice."
+                         : "The avatar will play this role. You practice your side.")
                 }
 
                 Section("Anything specific?") {
@@ -127,7 +165,14 @@ struct ScenarioBuilderSheet: View {
         let c = customEnvironment.trimmingCharacters(in: .whitespacesAndNewlines)
         return c.isEmpty ? environment : c
     }
+    private var selectedCounterpart: Counterpart? {
+        selectedCounterpartId.flatMap { id in counterparts.first { $0.id == id } }
+    }
     private var resolvedRole: String {
+        // A chosen persona defines "who" via its relationship label.
+        if let c = selectedCounterpart {
+            return c.relationship.isEmpty ? c.name : c.relationship
+        }
         let c = customRole.trimmingCharacters(in: .whitespacesAndNewlines)
         return c.isEmpty ? role : c
     }
@@ -139,7 +184,8 @@ struct ScenarioBuilderSheet: View {
         let scenario = Scenario(
             environment: resolvedEnvironment,
             role: resolvedRole,
-            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines),
+            counterpartId: selectedCounterpartId
         )
         onSave(scenario)
         dismiss()

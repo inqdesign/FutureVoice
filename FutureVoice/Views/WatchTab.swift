@@ -32,15 +32,22 @@ struct WatchTab: View {
                     .environmentObject(appState)
             }
             .sheet(isPresented: $showingNewScenario) {
-                ScenarioBuilderSheet { newScenario in appState.saveScenario(newScenario) }
-                    .environmentObject(appState)
+                ScenarioBuilderSheet(counterparts: appState.counterparts) { newScenario in
+                    appState.saveScenario(newScenario)
+                }
+                .environmentObject(appState)
             }
             .fullScreenCover(item: $talkScenario) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
                     .environmentObject(appState)
             }
             .navigationDestination(item: $watchScenarioTarget) { s in
-                WatchView(counterpart: ScenariosListSheet.watchCounterpart(for: s),
+                // Watch with the linked persona's real voice when set; else a
+                // generic preset partner built from the role.
+                let cp = s.counterpartId
+                    .flatMap { id in appState.counterparts.first { $0.id == id } }
+                    ?? ScenariosListSheet.watchCounterpart(for: s)
+                WatchView(counterpart: cp,
                           customScenario: ScenariosListSheet.watchScenarioText(s))
                     .environmentObject(appState)
             }
@@ -134,7 +141,10 @@ struct WatchTab: View {
                     Button { talkScenario = s } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(s.displayTitle).font(.body).foregroundStyle(.primary)
-                            if !s.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                            if let name = linkedPersonaName(s) {
+                                Label(name, systemImage: "person.crop.circle.fill")
+                                    .font(.caption).foregroundStyle(.tint).lineLimit(1)
+                            } else if !s.notes.trimmingCharacters(in: .whitespaces).isEmpty {
                                 Text(s.notes).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                             }
                         }
@@ -159,7 +169,7 @@ struct WatchTab: View {
         } header: {
             Text("Situations")
         } footer: {
-            Text("Tap to talk it yourself, or Watch your fluent self play it out.")
+            Text("Tap a situation to talk it yourself, or Watch to hear your fluent self play it out with the other person.")
         }
     }
 
@@ -217,6 +227,12 @@ struct WatchTab: View {
 
     private func counterpart(for d: WatchDialogue) -> Counterpart? {
         appState.counterparts.first { $0.id == d.counterpartId }
+    }
+
+    /// Name of the persona linked to a scenario, if any — shown on the row so
+    /// it's clear who you'll watch it with.
+    private func linkedPersonaName(_ s: Scenario) -> String? {
+        s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
     }
 
     /// Rebuild a throwaway partner for a scenario watch (no saved Counterpart)
