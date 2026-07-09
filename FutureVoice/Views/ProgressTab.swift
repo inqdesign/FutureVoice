@@ -56,12 +56,12 @@ struct ProgressTab: View {
         // shadow reps) — label it what it is.
         var title: String {
             switch self {
-            case .overall:       return "Your English"
+            case .overall:       return "Overall"
             case .pronunciation: return "Shadowing"
             default:             return rawValue.capitalized
             }
         }
-        var short: String { self == .overall ? "Overall" : title }
+        var short: String { title }
     }
 
     var body: some View {
@@ -193,7 +193,7 @@ struct ProgressTab: View {
         return out
     }
 
-    // MARK: - Overall ("Your English")
+    // MARK: - Overall
 
     private var overallContent: some View {
         VStack(spacing: 16) {
@@ -636,7 +636,7 @@ struct ProgressTab: View {
         ContentUnavailableView {
             Label("No progress yet", systemImage: "chart.line.uptrend.xyaxis")
         } description: {
-            Text("Have a few conversations and I'll estimate your level and break down how your English is developing.")
+            Text("Have a few conversations and I'll estimate your level and break down how your \(LanguageCatalog.englishName(appState.targetLanguage)) is developing.")
         }
     }
 

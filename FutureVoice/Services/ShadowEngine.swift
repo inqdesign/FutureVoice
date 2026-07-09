@@ -32,9 +32,13 @@ enum ShadowEngine {
         let matchCount: Int
     }
 
-    static func analyze(target: String, learner: String) -> ShadowAnalysis {
-        let targetTokens = tokenize(target)
-        let learnerTokens = tokenize(learner)
+    /// `language` picks the token unit via LanguageCatalog: word for
+    /// space-delimited scripts, character for CJK (where STT spacing is
+    /// absent or unstable). Defaults to word so existing behavior holds.
+    static func analyze(target: String, learner: String, language: String = "en") -> ShadowAnalysis {
+        let style = LanguageCatalog.tokenStyle(language)
+        let targetTokens = tokenize(target, style: style)
+        let learnerTokens = tokenize(learner, style: style)
 
         let (matches, steps) = align(targetTokens, learnerTokens)
         let denom = max(targetTokens.count, learnerTokens.count)
@@ -81,7 +85,7 @@ enum ShadowEngine {
 
     static func systemPrompt(targetLanguage: String) -> String {
         """
-        You are a strict but fair pronunciation + delivery coach for \(targetLanguage). \
+        You are a strict but fair pronunciation + delivery coach for \(LanguageCatalog.englishName(targetLanguage)). \
         The learner shadowed a fluent line. You will be given:
           • target_line       — what they tried to say
           • learner_transcript — what on-device STT heard them say
@@ -139,11 +143,18 @@ enum ShadowEngine {
 
     /// Lowercase + strip punctuation; collapses contractions like "don't" to
     /// a single token. Comparison is case- and punctuation-insensitive.
-    private static func tokenize(_ text: String) -> [String] {
-        text
+    /// `.syllable` further splits each word into single characters, so CJK
+    /// attempts are compared syllable-by-syllable regardless of how the STT
+    /// chose to space them.
+    private static func tokenize(_ text: String, style: LanguageCatalog.TokenStyle) -> [String] {
+        let words = text
             .lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'-")).inverted)
             .filter { !$0.isEmpty }
+        switch style {
+        case .word:     return words
+        case .syllable: return words.flatMap { $0.map(String.init) }
+        }
     }
 
     /// Standard DP edit-distance alignment over token arrays. Returns the

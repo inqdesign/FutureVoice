@@ -567,7 +567,8 @@ private extension DrillView {
             sayIt = .idle
             return
         }
-        let analysis = ShadowEngine.analyze(target: card.targetPhrase, learner: text)
+        let analysis = ShadowEngine.analyze(target: card.targetPhrase, learner: text,
+                                            language: appState.targetLanguage)
         sayIt = .result(score: analysis.score, steps: analysis.steps)
         HapticEngine.shadowComplete(score: analysis.score)
     }

@@ -15,12 +15,9 @@ struct SetupFlowView: View {
     @State private var step: Int = 0
     @State private var targetLanguage: String = "en"
 
-    /// Languages the fluent self can speak. BCP-47 codes; display names come
-    /// from `Locale` so each shows in its own tongue (endonym) plus the
-    /// English name. English first — the most common target — then the rest.
-    private static let targetLanguages = [
-        "en", "es", "de", "fr", "it", "pt", "ja", "ko", "zh"
-    ]
+    /// Languages the fluent self can speak — from the central catalog, so
+    /// the picker, STT locales, and scoring rules can never disagree.
+    private static let targetLanguages = LanguageCatalog.targets.map(\.code)
 
     private static let totalSteps = 1
 
@@ -87,14 +84,12 @@ struct SetupFlowView: View {
 
     /// Language name in its own language, e.g. "Deutsch", "Español".
     private static func endonym(_ code: String) -> String {
-        Locale(identifier: code).localizedString(forLanguageCode: code)?.capitalized
-            ?? code.uppercased()
+        LanguageCatalog.endonym(code)
     }
 
     /// Language name in the device UI language (English today).
     private static func englishName(_ code: String) -> String {
-        Locale(identifier: "en").localizedString(forLanguageCode: code)?.capitalized
-            ?? code.uppercased()
+        LanguageCatalog.englishName(code)
     }
 
     // MARK: - Bottom bar

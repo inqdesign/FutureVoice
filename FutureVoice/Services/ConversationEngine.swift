@@ -16,6 +16,7 @@ enum ConversationEngine {
         persona: UserPersona? = nil,
         newsFacts: [String] = []
     ) -> String {
+        let languageName = LanguageCatalog.englishName(targetLanguage)
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
             .joined(separator: "\n")
         let weak = weakVocabAreas.isEmpty ? "—" : weakVocabAreas.joined(separator: ", ")
@@ -35,14 +36,14 @@ enum ConversationEngine {
         """
 
         return """
-        You're in a real-feeling SPOKEN \(targetLanguage) conversation with the user. \
+        You're in a real-feeling SPOKEN \(languageName) conversation with the user. \
         The point is for it to sound like two actual people talking — not a \
         language-class exchange. Read everything below, then talk like a real person.
 
-        \(personaBlock(persona))
+        \(personaBlock(persona, languageName: languageName))
 
         Language profile:
-        - Native language: \(nativeLanguage)
+        - Native language: \(LanguageCatalog.englishName(nativeLanguage))
         - Proficiency: \(level.rawValue.uppercased())
         - Recurring patterns to be gently aware of:
         \(patterns.isEmpty ? "  (none yet — this is an early session)" : patterns)
@@ -128,7 +129,7 @@ enum ConversationEngine {
         have an opinion on a Rick Rubin book.
 
         STRICT:
-        - Reply in \(targetLanguage) only.
+        - Reply in \(languageName) only.
         - Never correct the user mid-conversation. Corrections happen elsewhere.
         - Speak mostly AT their level (\(level.rawValue.uppercased())), but let a
           slightly-above-level word or turn of phrase slip in naturally now and
@@ -138,7 +139,7 @@ enum ConversationEngine {
 
     /// Render the persona as a compact natural-language block to inject into
     /// system prompts. Returns a friendly fallback when no persona is set.
-    static func personaBlock(_ persona: UserPersona?) -> String {
+    static func personaBlock(_ persona: UserPersona?, languageName: String) -> String {
         guard let p = persona, p.isMinimallyComplete else {
             return "About the user: (no persona yet — keep things generic but warm)"
         }
@@ -152,8 +153,8 @@ enum ConversationEngine {
         if !p.occupation.isEmpty { lines.append("- Does: \(p.occupation)") }
         if !p.household.isEmpty { lines.append("- Household: \(p.household)") }
         if !p.interests.isEmpty { lines.append("- Interests: \(p.interests.joined(separator: ", "))") }
-        if !p.englishSituations.isEmpty {
-            lines.append("- Needs English most for: \(p.englishSituations.joined(separator: ", "))")
+        if !p.situations.isEmpty {
+            lines.append("- Needs \(languageName) most for: \(p.situations.joined(separator: ", "))")
         }
         if !p.freeNotes.isEmpty { lines.append("- Notes: \(p.freeNotes)") }
         return lines.joined(separator: "\n")
@@ -161,13 +162,14 @@ enum ConversationEngine {
 
     /// System prompt for generating the post-session summary as strict JSON.
     static func summarySystemPrompt(targetLanguage: String, profile: LearnerProfile) -> String {
+        let languageName = LanguageCatalog.englishName(targetLanguage)
         let profileJSON = (try? String(
             data: JSONEncoder().encode(profile),
             encoding: .utf8
         )) ?? "{}"
 
         return """
-        The user just finished a conversation in \(targetLanguage).
+        The user just finished a conversation in \(languageName).
         You will be given the full transcript with role labels.
 
         Their existing learner profile:
@@ -212,7 +214,7 @@ enum ConversationEngine {
           SETTING, not evidence — do NOT anchor your estimate on it in either
           direction. Judge only from the transcript and metrics. Lowercase
           a1…c2.
-        - title: 2-5 words in \(targetLanguage) naming what the conversation
+        - title: 2-5 words in \(languageName) naming what the conversation
           was actually about — "Weekend plans with Boram", "Arguing about
           coffee prices". Concrete and specific, never generic ("Conversation",
           "Practice session" are failures).
@@ -293,7 +295,8 @@ enum ConversationEngine {
     /// AND produces the opening line, so the future self actually knows the
     /// story instead of vamping around a one-line blurb.
     static func newsOpenerInstruction(targetLanguage: String) -> String {
-        """
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
         The starting context is a REAL recent news story. Use web search to \
         read the actual coverage before answering.
 
@@ -302,8 +305,8 @@ enum ConversationEngine {
 
         - facts: 5-8 short plain-language facts from the coverage — what \
           happened, who, when, key numbers, notable reactions. Facts only, \
-          nothing invented. Each ≤ 20 words, in \(targetLanguage).
-        - opener: ONE natural spoken line in \(targetLanguage) bringing the \
+          nothing invented. Each ≤ 20 words, in \(languageName).
+        - opener: ONE natural spoken line in \(languageName) bringing the \
           story up the way a friend would — mention ONE concrete detail from \
           the facts, then make it easy for the user to react. Follow every \
           speaking rule above.
@@ -323,7 +326,7 @@ enum ConversationEngine {
         Return STRICT JSON only — no prose, no code fences:
         { "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
 
-        - "reply": your spoken conversational turn in \(targetLanguage), following
+        - "reply": your spoken conversational turn in \(LanguageCatalog.englishName(targetLanguage)), following
           every speaking rule above. This is the ONLY part the user hears.
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the

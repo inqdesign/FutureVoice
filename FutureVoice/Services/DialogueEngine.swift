@@ -63,8 +63,9 @@ enum DialogueEngine {
     }
 
     private static func systemPrompt(targetLanguage: String) -> String {
-        """
-        You generate naturalistic spoken dialogue in \(targetLanguage) between two \
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
+        You generate naturalistic spoken dialogue in \(languageName) between two \
         specific people. The user will watch this play out to learn how a confident, \
         fluent version of themselves would handle a real interaction.
 
@@ -77,13 +78,13 @@ enum DialogueEngine {
         { "title": "...", "turns": [ { "speaker": "user" | "counterpart", "text": "..." }, ... ] }
 
         Rules:
-        - title: 2-5 words in \(targetLanguage) naming what specifically
+        - title: 2-5 words in \(languageName) naming what specifically
           happens in THIS dialogue — distinct enough that two dialogues about
           the same scenario read differently in a list.
         - 6 to 10 turns total.
         - Alternate speakers naturally. Either can open — pick whoever opens this \
           situation more naturally.
-        - Each turn: 1–3 sentences. Real spoken English — contractions, hedges, \
+        - Each turn: 1–3 sentences. Real spoken \(languageName) — contractions, hedges, \
           half-finished thoughts, gentle interruptions are fine.
         - Reference SHARED context from the personas. Don't restate facts the two \
           already know about each other; show it through how they talk.

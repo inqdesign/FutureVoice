@@ -41,7 +41,7 @@ enum TopicEngine {
 
     private static func systemPrompt(targetLanguage: String, count: Int) -> String {
         """
-        You generate language-practice scenarios for an advanced \(targetLanguage) learner.
+        You generate language-practice scenarios for an advanced \(LanguageCatalog.englishName(targetLanguage)) learner.
         Given their persona, suggest \(count) SPECIFIC, REAL-LIFE situations they'd
         actually encounter THIS WEEK in their actual life. Avoid textbook clichés
         like "ordering coffee", "asking for directions", or "job interview" unless
@@ -49,7 +49,7 @@ enum TopicEngine {
 
         Each suggestion = a concrete moment with enough hook that a 5–10 minute
         natural conversation could flow from it. Reference their city, work,
-        family, interests, or stated English-needs situations.
+        family, interests, or the situations they say they need the language for.
 
         GOOD examples:
         - "Bumping into another Kita parent at pickup who's also confused about
@@ -92,8 +92,8 @@ enum TopicEngine {
         if !p.occupation.isEmpty { lines.append("- work: \(p.occupation)") }
         if !p.household.isEmpty { lines.append("- household: \(p.household)") }
         if !p.interests.isEmpty { lines.append("- interests: \(p.interests.joined(separator: ", "))") }
-        if !p.englishSituations.isEmpty {
-            lines.append("- english situations they care about: \(p.englishSituations.joined(separator: ", "))")
+        if !p.situations.isEmpty {
+            lines.append("- target-language situations they care about: \(p.situations.joined(separator: ", "))")
         }
         if !p.freeNotes.isEmpty { lines.append("- notes: \(p.freeNotes)") }
         return lines.joined(separator: "\n")
@@ -127,7 +127,7 @@ enum TopicEngine {
 
     private static func counterpartSystemPrompt(targetLanguage: String, count: Int) -> String {
         """
-        You generate \(count) realistic \(targetLanguage)-language scenarios where
+        You generate \(count) realistic \(LanguageCatalog.englishName(targetLanguage))-language scenarios where
         the USER and a specific COUNTERPART would meet, interact, or talk —
         anchored on their actual relationship and shared life context.
 

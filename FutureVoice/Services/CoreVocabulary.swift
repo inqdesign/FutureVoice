@@ -1,10 +1,15 @@
 import Foundation
 
-/// The vocabulary pool, loaded from the bundled CEFR-graded word list
-/// (`cefr_words.tsv`, A1–C2, content words only — from the CEFR-J and Octanove
+/// The vocabulary pool for the CURRENT target language, loaded from the
+/// graded word list that `LanguageCatalog` names for it (English:
+/// `cefr_words.tsv`, A1–C2, content words only — from the CEFR-J and Octanove
 /// vocabulary profiles). Each word carries its real CEFR level, so the level
 /// filter is accurate (frequency rank was NOT a valid level proxy). Headwords
 /// are already lemmas, so they match the lemmatized user speech directly.
+///
+/// Languages without a bundled list yet get an EMPTY pool — vocab tracking
+/// honestly shows nothing rather than grading against English words. Loaded
+/// once per launch; a target-language switch applies on the next launch.
 enum CoreVocabulary {
     struct Entry: Identifiable { let word: String; let level: CEFRLevel; var id: String { word } }
 
@@ -27,7 +32,12 @@ enum CoreVocabulary {
     }
 
     private static func load() -> [Entry] {
-        guard let url = Bundle.main.url(forResource: "cefr_words", withExtension: "tsv"),
+        let target = UserDefaults.standard
+            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        guard let resource = LanguageCatalog.language(target)?.wordlistResource else {
+            return []
+        }
+        guard let url = Bundle.main.url(forResource: resource, withExtension: "tsv"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return fallback }
         var out: [Entry] = []
         for line in text.split(whereSeparator: \.isNewline) {

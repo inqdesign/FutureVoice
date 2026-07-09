@@ -174,7 +174,7 @@ enum WeeklyReportEngine {
 
     private static func systemPrompt(targetLanguage: String, previousSummary: String?) -> String {
         var s = """
-        You analyze a learner's spoken \(targetLanguage) practice across many \
+        You analyze a learner's spoken \(LanguageCatalog.englishName(targetLanguage)) practice across many \
         conversation sessions and produce a single concise report.
 
         Output strict JSON matching this shape:

@@ -48,7 +48,7 @@ enum CounterpartParser {
     private static func systemPrompt() -> String {
         """
         The user just described a person they know — someone they'd practice
-        speaking English with in a simulated dialogue. The description was
+        speaking their target language with in a simulated dialogue. The description was
         spoken, so it may be casual, contain restarts, or trail off. Extract
         a structured profile.
 

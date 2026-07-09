@@ -324,8 +324,8 @@ struct PhraseFeedback: Codable, Identifiable, Hashable {
 // MARK: - User Persona
 
 /// Rich personal context the avatar uses to ground every conversation.
-/// The more of this is filled in, the more the avatar's English sounds
-/// like the user actually lives this life — not generic textbook English.
+/// The more of this is filled in, the more the avatar's speech sounds
+/// like the user actually lives this life — not generic textbook language.
 /// Drives conversation system prompts, summary grading, and (Phase B)
 /// simulation-mode scenario generation.
 struct UserPersona: Codable {
@@ -336,9 +336,16 @@ struct UserPersona: Codable {
     var occupation: String            // free text — "Solo founder of an AI app for parents"
     var household: String             // free text — "Wife and 4yo daughter at Kita"
     var interests: [String]           // ["AI", "parenting", "language learning"]
-    var englishSituations: [String]   // ["Kita parent small talk", "client calls", "doctor visits"]
+    var situations: [String]          // target-language moments — ["Kita parent small talk", "client calls"]
     var freeNotes: String             // catch-all
     var updatedAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case displayName, city, country, lengthOfStay, occupation, household,
+             interests, freeNotes, updatedAt
+        // Personas on disk predate multi-language prep — keep the legacy key.
+        case situations = "englishSituations"
+    }
 
     static let empty = UserPersona(
         displayName: "",
@@ -348,7 +355,7 @@ struct UserPersona: Codable {
         occupation: "",
         household: "",
         interests: [],
-        englishSituations: [],
+        situations: [],
         freeNotes: "",
         updatedAt: Date()
     )
@@ -362,7 +369,7 @@ struct UserPersona: Codable {
         let contextFilled = !occupation.trimmingCharacters(in: .whitespaces).isEmpty
             || !household.trimmingCharacters(in: .whitespaces).isEmpty
             || !interests.isEmpty
-            || !englishSituations.isEmpty
+            || !situations.isEmpty
         return coreFilled && contextFilled
     }
 }

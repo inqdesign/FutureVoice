@@ -35,7 +35,7 @@ struct WeeklyReportView: View {
 
     private var header: some View {
         HStack {
-            Text("Your English")
+            Text("Your \(LanguageCatalog.englishName(appState.targetLanguage))")
                 .font(.headline)
             Spacer()
             if appState.weeklyReportGenerating {

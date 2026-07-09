@@ -24,7 +24,7 @@ enum Translator {
         let k = key(text, lang)
         if let c = memory[k] { return c }
 
-        let languageName = Locale(identifier: "en").localizedString(forLanguageCode: lang) ?? lang
+        let languageName = LanguageCatalog.englishName(lang)
         do {
             let out = try await GeminiClient.shared.send(
                 system: """
@@ -65,14 +65,14 @@ enum Translator {
         let k = explainKey(original, alternative, lang)
         if let c = memory[k] { return c }
 
-        let languageName = Locale(identifier: "en").localizedString(forLanguageCode: lang) ?? lang
+        let languageName = LanguageCatalog.englishName(lang)
         do {
             let out = try await GeminiClient.shared.send(
                 system: """
-                You are an English coach. The learner said something; a more natural \
+                You are a language coach. The learner said something; a more natural \
                 version follows. Explain in \(languageName), in 2–3 short sentences, \
                 what was changed and why the natural version is better — quote the \
-                specific English words that changed. Output only the explanation.
+                specific words that changed. Output only the explanation.
                 """,
                 messages: [GeminiClient.Message(
                     role: .user,

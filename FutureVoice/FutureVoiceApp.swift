@@ -92,7 +92,7 @@ final class AppState: ObservableObject {
 
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
     private static let nativeLanguageKey = "futurevoice.nativeLanguage"
-    private static let targetLanguageKey = "futurevoice.targetLanguage"
+    private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
     private static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
     private static let setupCompleteKey = "futurevoice.setupComplete"

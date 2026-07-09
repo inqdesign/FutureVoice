@@ -49,8 +49,9 @@ enum DrillEnrichmentEngine {
     }
 
     private static func systemPrompt(targetLanguage: String) -> String {
-        """
-        The user is studying a flashcard for \(targetLanguage) fluency. The
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
+        The user is studying a flashcard for \(languageName) fluency. The
         card has a target phrase (the natural version) and optionally a source
         phrase (what they originally said) + reason. Generate a rich
         enrichment payload so they really internalize the pattern instead of
@@ -78,7 +79,7 @@ enum DrillEnrichmentEngine {
         - examples: 3 short scenarios in DIFFERENT contexts from the persona's
           life, each with one line that uses the target phrase naturally.
           situation = brief frame in English (≤ 14 words). sentence = the
-          spoken line in \(targetLanguage).
+          spoken line in \(languageName).
         - variants: 2-3 alternate ways to express the same intent at similar
           fluency level. note = ≤ 14 words on when this variant fits better
           (register, formality, mood).
@@ -86,7 +87,7 @@ enum DrillEnrichmentEngine {
           relatable trigger that makes the phrase easy to recall later. NOT
           "remember this!" — something concrete like "When you're about to
           apologize but it's not really your fault, reach for this."
-        - All "sentence" / "phrase" fields in \(targetLanguage). Everything
+        - All "sentence" / "phrase" fields in \(languageName). Everything
           else in English (notes, situations, hook).
         """
     }
@@ -111,8 +112,8 @@ enum DrillEnrichmentEngine {
             if !p.interests.isEmpty {
                 lines.append("- interests: \(p.interests.joined(separator: ", "))")
             }
-            if !p.englishSituations.isEmpty {
-                lines.append("- english situations: \(p.englishSituations.joined(separator: ", "))")
+            if !p.situations.isEmpty {
+                lines.append("- target-language situations: \(p.situations.joined(separator: ", "))")
             }
         } else {
             lines.append("- (sparse — pick neutral but believable scenarios)")

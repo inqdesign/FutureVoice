@@ -117,7 +117,7 @@ final class LiveTranscriber: ObservableObject {
                captureToFile: Bool = false) throws {
         guard !isRunning else { return }
         self.contextualStrings = Array(contextualStrings.prefix(50))
-        let rec = SFSpeechRecognizer(locale: Locale(identifier: locale))
+        let rec = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(locale)))
         guard let rec = rec, rec.isAvailable else { throw LiveError.unavailable }
         rec.defaultTaskHint = .dictation
 

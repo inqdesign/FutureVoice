@@ -40,7 +40,7 @@ final class SpeechTranscriber {
     ///   - audioURL: local file (16kHz mono WAV from `AudioRecorder` works well)
     ///   - languageCode: e.g. "en", "ko", "de"
     func transcribe(audioURL: URL, languageCode: String) async throws -> String {
-        let locale = Locale(identifier: languageCode)
+        let locale = Locale(identifier: LanguageCatalog.sttLocale(languageCode))
         guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable else {
             throw TranscribeError.recognizerUnavailable

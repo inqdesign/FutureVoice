@@ -67,7 +67,7 @@ struct PersonaOnboardingView: View {
         switch step {
         case 0: return isEditing ? "Profile" : "Hi"
         case 1: return "Your life"
-        default: return "Your English world"
+        default: return "Your \(LanguageCatalog.englishName(appState.targetLanguage)) world"
         }
     }
 
@@ -149,13 +149,13 @@ struct PersonaOnboardingView: View {
             }
 
             Section {
-                chipGrid(presets: Self.situationPresets, selected: persona.englishSituations) { tag in
-                    toggle(&persona.englishSituations, tag)
+                chipGrid(presets: Self.situationPresets, selected: persona.situations) { tag in
+                    toggle(&persona.situations, tag)
                 }
                 TextField("Add your own (comma-separated)", text: $situationsDraft)
-                    .onSubmit { mergeDraft(into: &persona.englishSituations, from: &situationsDraft) }
+                    .onSubmit { mergeDraft(into: &persona.situations, from: &situationsDraft) }
             } header: {
-                Text("When do you most need English?")
+                Text("When do you most need \(LanguageCatalog.englishName(appState.targetLanguage))?")
             }
 
             Section("Anything else (optional)") {
@@ -252,7 +252,7 @@ struct PersonaOnboardingView: View {
     private func finish() {
         // Make sure any unsubmitted free text gets folded in.
         mergeDraft(into: &persona.interests, from: &interestsDraft)
-        mergeDraft(into: &persona.englishSituations, from: &situationsDraft)
+        mergeDraft(into: &persona.situations, from: &situationsDraft)
         appState.savePersona(persona)
         dismiss()   // closes the edit sheet; on first-onboarding RootView swaps anyway
     }
