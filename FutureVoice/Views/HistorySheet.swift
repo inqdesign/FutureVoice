@@ -94,7 +94,8 @@ struct SessionDetailView: View {
             if let summary = session.summary {
                 if let card = summary.scorecard {
                     Section("Nutrition") {
-                        ScorecardView(scorecard: card)
+                        ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
+                                      userTurns: session.turns.filter { $0.role == .user })
                             .padding(.vertical, 6)
                     }
                 }

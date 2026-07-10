@@ -1443,13 +1443,17 @@ private struct SummarySheet: View {
     /// shadowing right here instead of sending the user tab-hunting.
     @State private var shadowLines: [Turn] = []
     @State private var shadowTurn: Turn?
+    /// This session's user turns — lets the grammar review play the actual
+    /// recordings behind its quotes.
+    @State private var summaryUserTurns: [Turn] = []
 
     var body: some View {
         NavigationStack {
             List {
                 if let card = summary.scorecard {
                     Section("Today's nutrition") {
-                        ScorecardView(scorecard: card)
+                        ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
+                                      userTurns: summaryUserTurns)
                             .padding(.vertical, 6)
                     }
                 }
@@ -1592,6 +1596,7 @@ private struct SummarySheet: View {
                         && $0.transcript.split(separator: " ").count >= 4 }
                     .suffix(4)
                 )
+                summaryUserTurns = turns.filter { $0.role == .user }
             }
             .sheet(item: $shadowTurn) { turn in
                 ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)

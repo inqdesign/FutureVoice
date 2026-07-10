@@ -202,12 +202,29 @@ struct SessionSummary: Codable {
     /// ("cooking verbs", "phone-call phrases"). Absorbed into
     /// `LearnerProfile.weakVocabAreas` → next conversation's system prompt.
     var weakVocabAreas: [String] = []
+    /// Every clear grammar slip in the user's own turns — the EVIDENCE behind
+    /// the scorecard's grammar score. Quotes are verified to literally appear
+    /// in the user's turns before being stored (hallucination-guarded, same
+    /// policy as `expressionsUsed`).
+    var grammarIssues: [GrammarIssue] = []
+}
+
+/// One concrete grammar slip from this session: the user's sentence verbatim,
+/// the grammatically fixed version, and the grammar point involved. Distinct
+/// from `PhraseFeedback`, which is about more NATURAL phrasing — this is
+/// strictly about incorrect grammar.
+struct GrammarIssue: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var quote: String       // what the user actually said
+    var correction: String  // same sentence, grammar fixed — nothing restyled
+    var note: String        // the grammar point, e.g. "missing article"
 }
 
 extension SessionSummary {
     enum CodingKeys: String, CodingKey {
         case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
         case scorecard, newWordsUsed, expressionsUsed, weakVocabAreas
+        case grammarIssues
     }
 
     // Custom decode so sessions saved BEFORE newWordsUsed/expressionsUsed
@@ -224,6 +241,7 @@ extension SessionSummary {
         newWordsUsed = try c.decodeIfPresent([String].self, forKey: .newWordsUsed) ?? []
         expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
         weakVocabAreas = try c.decodeIfPresent([String].self, forKey: .weakVocabAreas) ?? []
+        grammarIssues = try c.decodeIfPresent([GrammarIssue].self, forKey: .grammarIssues) ?? []
     }
 }
 

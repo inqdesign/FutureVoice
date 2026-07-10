@@ -4,6 +4,15 @@ import SwiftUI
 /// and the history detail view. iOS-native components only — no chart libs.
 struct ScorecardView: View {
     let scorecard: SessionScorecard
+    /// Verified grammar slips backing the grammar score. When present, the
+    /// grammar row becomes tappable and opens the full evidence list — a low
+    /// score should never be a number the user can't interrogate.
+    var grammarIssues: [GrammarIssue] = []
+    /// The session's user turns. Lets the grammar review play back the actual
+    /// recording behind each quoted slip.
+    var userTurns: [Turn] = []
+
+    @State private var showGrammarReview = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -13,16 +22,36 @@ struct ScorecardView: View {
 
             VStack(spacing: 10) {
                 axisRow(label: "Vocabulary",     axis: scorecard.vocabulary,     icon: "textformat.abc")
-                axisRow(label: "Grammar",        axis: scorecard.grammar,        icon: "checkmark.seal")
+                grammarRow
                 axisRow(label: "Expressiveness", axis: scorecard.expressiveness, icon: "quote.bubble")
                 axisRow(label: "Fluency & pace", axis: scorecard.fluency,        icon: "metronome")
                 pronunciationRow
             }
         }
+        .sheet(isPresented: $showGrammarReview) {
+            GrammarReviewView(axis: scorecard.grammar, issues: grammarIssues, userTurns: userTurns)
+        }
     }
 
     @ViewBuilder
-    private func axisRow(label: String, axis: AxisScore, icon: String) -> some View {
+    private var grammarRow: some View {
+        if grammarIssues.isEmpty {
+            axisRow(label: "Grammar", axis: scorecard.grammar, icon: "checkmark.seal")
+        } else {
+            Button {
+                showGrammarReview = true
+            } label: {
+                axisRow(label: "Grammar", axis: scorecard.grammar, icon: "checkmark.seal",
+                        detailCount: grammarIssues.count)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func axisRow(label: String, axis: AxisScore, icon: String,
+                         detailCount: Int? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
@@ -36,6 +65,11 @@ struct ScorecardView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(color(for: axis.score))
                     .monospacedDigit()
+                if detailCount != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
             }
             ProgressView(value: Double(axis.score), total: 100)
                 .tint(color(for: axis.score))
@@ -43,6 +77,11 @@ struct ScorecardView: View {
                 Text(axis.note)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+            }
+            if let n = detailCount {
+                Text("Review \(n) grammar \(n == 1 ? "slip" : "slips") from this talk")
+                    .font(.footnote.weight(.medium))
+                    .foregroundStyle(.tint)
             }
         }
     }
@@ -80,6 +119,148 @@ struct ScorecardView: View {
         case 80...: return .green
         case 50..<80: return .accentColor
         default: return .orange
+        }
+    }
+}
+
+// MARK: - Grammar review (the "why" behind the grammar score)
+
+/// One page collecting every verified grammar slip from the session: what the
+/// user literally said, the grammar-only fix, and the grammar point involved.
+/// Quotes are hallucination-guarded upstream — everything here appeared
+/// verbatim in the user's own turns.
+struct GrammarReviewView: View {
+    let axis: AxisScore
+    let issues: [GrammarIssue]
+    /// User turns from the same session — the recordings behind the quotes.
+    var userTurns: [Turn] = []
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var player = AudioPlayer()
+    @State private var playingIssueId: UUID?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal")
+                            .foregroundStyle(.tint)
+                        Text("Grammar")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(axis.score)")
+                            .font(.headline)
+                            .monospacedDigit()
+                    }
+                    if !axis.note.isEmpty {
+                        Text(axis.note)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                } footer: {
+                    Text("Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours.")
+                }
+
+                Section {
+                    ForEach(issues) { issue in
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "xmark")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.red)
+                                    .padding(.top, 3)
+                                Text(issue.quote)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 4)
+                                // Hear the actual recording this quote came from.
+                                if let turn = matchingTurn(for: issue), hasAudio(turn) {
+                                    Button {
+                                        togglePlay(issue, turn: turn)
+                                    } label: {
+                                        Image(systemName: playingIssueId == issue.id
+                                              ? "stop.circle.fill" : "play.circle")
+                                            .font(.title3)
+                                            .foregroundStyle(.tint)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(playingIssueId == issue.id
+                                                        ? "Stop playback" : "Play what you said")
+                                }
+                            }
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "checkmark")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.green)
+                                    .padding(.top, 3)
+                                Text(issue.correction)
+                                    .font(.body)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if !issue.note.isEmpty {
+                                Text(issue.note)
+                                    .font(.caption)
+                                    .foregroundStyle(.tint)
+                                    .padding(.leading, 22)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text("\(issues.count) \(issues.count == 1 ? "slip" : "slips") this session")
+                }
+            }
+            .navigationTitle("Grammar review")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onDisappear { player.stop() }
+        }
+    }
+
+    // MARK: - Playback of the user's own recording
+
+    /// Same normalization as the upstream hallucination guard, so a quote that
+    /// passed verification always finds its source turn here.
+    private func normalized(_ s: String) -> String {
+        s.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'")).inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    private func matchingTurn(for issue: GrammarIssue) -> Turn? {
+        let needle = normalized(issue.quote)
+        guard !needle.isEmpty else { return nil }
+        return userTurns.first { $0.role == .user && normalized($0.transcript).contains(needle) }
+    }
+
+    /// Resolve by turnId from the CURRENT container first — the absolute
+    /// `audioURL` goes stale when the app container moves on update/reinstall.
+    private func hasAudio(_ turn: Turn) -> Bool {
+        TurnAudioStore.shared.url(for: turn.id) != nil || turn.audioURL != nil
+    }
+
+    private func togglePlay(_ issue: GrammarIssue, turn: Turn) {
+        if playingIssueId == issue.id {
+            player.stop()
+            playingIssueId = nil
+            return
+        }
+        let data = TurnAudioStore.shared.data(for: turn.id)
+            ?? turn.audioURL.flatMap { try? Data(contentsOf: $0) }
+        guard let data else { return }
+        playingIssueId = issue.id
+        do {
+            try player.play(data, forceSessionReset: true) {
+                if playingIssueId == issue.id { playingIssueId = nil }
+            }
+        } catch {
+            playingIssueId = nil
         }
     }
 }
