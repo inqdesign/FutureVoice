@@ -455,15 +455,21 @@ h2 { font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.08; }
 
 /* hero */
 .hero { position: relative; padding: 84px 0 100px; overflow: hidden; }
+/* the voice gradient — WebGL paints it; the CSS background is the no-GL fallback */
+.voice-shader {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block; z-index: 0;
+  background: radial-gradient(120% 100% at 50% 100%, #12306B 0%, #0A1638 45%, #000 100%);
+}
 .hero::before {
-  content: ""; position: absolute; top: -240px; right: -160px;
-  width: 820px; height: 820px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(10,132,255,0.14) 0%, transparent 60%);
-  pointer-events: none;
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg,
+    rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.12) 30%,
+    rgba(0,0,0,0.28) 72%, #000 100%);
 }
 .hero-grid {
   display: grid; grid-template-columns: minmax(0, 1fr) auto;
-  gap: 60px; align-items: center; position: relative;
+  gap: 60px; align-items: center; position: relative; z-index: 2;
 }
 @media (max-width: 980px) {
   .hero { padding: 56px 0 80px; }
@@ -475,6 +481,8 @@ h2 { font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.08; }
   display: inline-flex; align-items: center; gap: 9px;
   font-size: 0.78rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--dim); border: 1px solid var(--line);
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   border-radius: 100px; padding: 7px 16px; margin-bottom: 30px;
 }
 .eyebrow .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: pulse 2.2s ease-in-out infinite; }
@@ -625,11 +633,11 @@ h2 { font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.08; }
 /* final */
 .final { text-align: center; padding: 130px 0 120px; position: relative; overflow: hidden; }
 .final::before {
-  content: ""; position: absolute; left: 50%; bottom: -340px; transform: translateX(-50%);
-  width: 900px; height: 620px; border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(10,132,255,0.18) 0%, transparent 70%);
-  pointer-events: none;
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg,
+    #000 0%, rgba(0,0,0,0.4) 38%, rgba(0,0,0,0.15) 72%, #000 100%);
 }
+.final .wrap { z-index: 2; }
 .final h2 { margin: 0 auto; max-width: 13em; }
 .final .sub { margin: 16px auto 0; color: var(--dim); font-size: 1.08rem; }
 .final .hero-ctas { justify-content: center; }
@@ -723,6 +731,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 34px 0 42px; }
 
 <!-- ═════════ HERO ═════════ -->
 <header class="hero">
+  <canvas class="voice-shader" id="shader-hero" aria-hidden="true"></canvas>
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <div class="stagger"><span class="eyebrow"><span class="pulse"></span>Language learning in your own voice · iOS beta</span></div>
@@ -1239,6 +1248,7 @@ footer { border-top: 1px solid var(--line-soft); padding: 34px 0 42px; }
 
 <!-- ═════════ FINAL ═════════ -->
 <section class="final">
+  <canvas class="voice-shader" id="shader-final" aria-hidden="true"></canvas>
   <div class="wrap" style="position: relative;">
     <div class="eq reveal" aria-hidden="true">
       <i style="--h:45%;--i:0"></i><i style="--h:80%;--i:1"></i><i style="--h:55%;--i:2"></i><i style="--h:95%;--i:3"></i><i style="--h:60%;--i:4"></i><i style="--h:85%;--i:5"></i><i style="--h:50%;--i:6"></i><i style="--h:70%;--i:7"></i><i style="--h:58%;--i:8"></i>
@@ -1324,9 +1334,141 @@ if (reduce) {
       w.classList.toggle("done", idx < wi);
       w.classList.toggle("now", idx === wi);
     });
+    // each highlighted word is a spoken syllable — the background breathes with it
+    if (wi < words.length) {
+      window.dispatchEvent(new CustomEvent("voice-pulse", { detail: { strength: 0.55 } }));
+    }
     wi = (wi + 1) % (words.length + 3); // pause a few beats at the end
   }, 450);
 }
+
+// ── voice-gradient background (WebGL, zero deps — CSP-safe) ──
+// One big, slow gradient in the app's VoiceGlow palette (deep navy →
+// vivid blue → sky): two very-low-frequency noise fields drifting into
+// each other, nothing else. The voice only breathes through it subtly —
+// ambient talk-pause rhythm plus "voice-pulse" events per karaoke
+// syllable lift the brightness, with the app's fast-attack/slow-release
+// envelope.
+(function () {
+  var VERT = "attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}";
+  var FRAG =
+    "precision highp float;\n" +
+    "uniform vec2 uRes;uniform float uTime;uniform float uVoice;uniform float uRot;\n" +
+    "const vec3 NAVY=vec3(.03,.05,.14);\n" + // VoiceGlow deep navy
+    "const vec3 BLUE=vec3(.16,.38,.92);\n" + // VoiceGlow vivid blue
+    "const vec3 SKY=vec3(.55,.73,1.);\n" +   // VoiceGlow sky
+    "vec3 permute(vec3 x){return mod(((x*34.)+1.)*x,289.);}\n" +
+    "float snoise(vec2 v){\n" +
+    "vec4 C=vec4(.211324865405187,.366025403784439,-.577350269189626,.024390243902439);\n" +
+    "vec2 i=floor(v+dot(v,C.yy));vec2 x0=v-i+dot(i,C.xx);\n" +
+    "vec2 i1=(x0.x>x0.y)?vec2(1.,0.):vec2(0.,1.);\n" +
+    "vec4 x12=x0.xyxy+C.xxzz;x12.xy-=i1;i=mod(i,289.);\n" +
+    "vec3 p=permute(permute(i.y+vec3(0.,i1.y,1.))+i.x+vec3(0.,i1.x,1.));\n" +
+    "vec3 m=max(.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.);\n" +
+    "m=m*m;m=m*m;\n" +
+    "vec3 x=2.*fract(p*C.www)-1.;vec3 h=abs(x)-.5;vec3 ox=floor(x+.5);vec3 a0=x-ox;\n" +
+    "m*=1.79284291400159-.85373472095314*(a0*a0+h*h);\n" +
+    "vec3 g;g.x=a0.x*x0.x+h.x*x0.y;g.yz=a0.yz*x12.xz+h.yz*x12.yw;\n" +
+    "return 130.*dot(m,g);}\n" +
+    "void main(){\n" +
+    "vec2 uv=(gl_FragCoord.xy-.5*uRes)/uRes.y;\n" +
+    "float c=cos(uRot),s=sin(uRot);vec2 p=mat2(c,-s,s,c)*uv;\n" +
+    "float t=uTime*.2;\n" +
+    "float n1=snoise(p*.55+vec2(t*.28,-t*.18));\n" +
+    "float n2=snoise(p*.9-vec2(t*.16,-t*.22)+4.);\n" +
+    "float f=n1*.8+n2*.35;\n" +
+    "vec3 col=mix(NAVY,BLUE,smoothstep(-.85,.95,f));\n" +
+    "col=mix(col,SKY,smoothstep(.55,1.5,f)*.7);\n" +
+    "col*=.92+.22*uVoice;\n" +
+    "float g=fract(sin(dot(gl_FragCoord.xy+mod(uTime,10.)*37.,vec2(12.9898,78.233)))*43758.5453);\n" +
+    "col+=(g-.5)*.04;\n" +
+    "gl_FragColor=vec4(col,1.);}";
+
+  // fast attack / slow release, mirroring the app's LevelSmoother (60ms / 350ms)
+  function makeEnvelope() {
+    var voice = 0, kick = 0;
+    window.addEventListener("voice-pulse", function (e) {
+      kick = Math.max(kick, (e.detail && e.detail.strength) || 0.6);
+    });
+    return function (t, dt) {
+      var amb = Math.max(0, Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1.3)) *
+                (0.5 + 0.5 * Math.sin(t * 0.11));
+      var target = Math.min(1, amb * 0.55 + kick);
+      kick *= Math.exp(-dt / 0.18);
+      var tau = target > voice ? 0.06 : 0.35;
+      voice += (target - voice) * (1 - Math.exp(-dt / tau));
+      return voice;
+    };
+  }
+
+  function mount(canvas, rot, t0) {
+    var gl = canvas.getContext("webgl", { antialias: false, alpha: false });
+    if (!gl) return; // undrawn canvas stays transparent → CSS fallback gradient shows
+    function sh(type, src) {
+      var o = gl.createShader(type);
+      gl.shaderSource(o, src); gl.compileShader(o);
+      return o;
+    }
+    var prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
+    gl.useProgram(prog);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    var loc = gl.getAttribLocation(prog, "p");
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    var uRes = gl.getUniformLocation(prog, "uRes"),
+        uT = gl.getUniformLocation(prog, "uTime"),
+        uV = gl.getUniformLocation(prog, "uVoice"),
+        uR = gl.getUniformLocation(prog, "uRot");
+    gl.uniform1f(uR, rot);
+
+    function size() {
+      var d = Math.min(window.devicePixelRatio || 1, 1.5);
+      var w = (canvas.clientWidth * d) | 0, h = (canvas.clientHeight * d) | 0;
+      if (w && h && (canvas.width !== w || canvas.height !== h)) {
+        canvas.width = w; canvas.height = h;
+        gl.viewport(0, 0, w, h);
+      }
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+    }
+
+    if (reduce) {
+      var drawOnce = function () {
+        size();
+        gl.uniform1f(uT, t0); gl.uniform1f(uV, 0.3);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
+      drawOnce();
+      window.addEventListener("resize", drawOnce);
+      return;
+    }
+
+    var envelope = makeEnvelope();
+    var visible = true, last = 0;
+    new IntersectionObserver(function (en) { visible = en[0].isIntersecting; }).observe(canvas);
+    function frame(ms) {
+      requestAnimationFrame(frame);
+      if (!visible) { last = ms; return; }
+      var dt = Math.min(0.1, (ms - last) / 1000 || 0.016);
+      last = ms;
+      size();
+      var t = t0 + ms / 1000;
+      gl.uniform1f(uT, t);
+      gl.uniform1f(uV, envelope(t, dt));
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  var hero = document.getElementById("shader-hero");
+  if (hero) mount(hero, 50 * Math.PI / 180, 7.8);   // uTime 7.8, rotationZ 50 — as configured
+  var fin = document.getElementById("shader-final");
+  if (fin) mount(fin, -35 * Math.PI / 180, 31.4);   // second surface, its own drift
+})();
 </script>
 <script type="module">
 // ── Web billing (Stripe Checkout via Supabase Edge Functions) ──
