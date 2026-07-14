@@ -16,6 +16,10 @@ struct ConversationDetailView: View {
     /// Core-list words the fluent self used that the user hasn't yet — their
     /// natural next words, computed on appear.
     @State private var fluentSelfNewWords: [String] = []
+    /// Per-turn notebook lookup key for every transcript token (NLTagger is
+    /// too slow to run inside row bodies), computed once on appear. Which of
+    /// those keys get highlighted is decided live against the vocab store.
+    @State private var turnTokenKeys: [UUID: [String]] = [:]
 
     private struct WordSheetItem: Identifiable {
         let word: String
@@ -38,7 +42,7 @@ struct ConversationDetailView: View {
                 if let sum = session.summary { highlights(sum) }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Transcript").font(.headline)
-                    Text("Tap any word your future self said to look it up.")
+                    Text("Highlighted words are worth picking up — tap one to check it out.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .padding(.top, 4)
@@ -47,7 +51,13 @@ struct ConversationDetailView: View {
                                   nativeLanguage: appState.nativeLanguage,
                                   targetLanguage: appState.targetLanguage,
                                   player: player,
-                                  onWordTap: { wordSheet = WordSheetItem(word: $0) })
+                                  tokenKeys: turnTokenKeys[turn.id] ?? [],
+                                  highlightedIndices: highlightIndices(for: turn),
+                                  onWordTap: { key in
+                                      wordSheet = WordSheetItem(
+                                          word: key,
+                                          words: fluentSelfNewWords.contains(key) ? fluentSelfNewWords : [])
+                                  })
                 }
             }
             .padding(20)
@@ -71,6 +81,12 @@ struct ConversationDetailView: View {
             fluentSelfNewWords = VocabStore.shared.pickupWords(
                 fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
                 atOrAbove: appState.proficiency)
+            var keys: [UUID: [String]] = [:]
+            for turn in session.turns where turn.role == .fluentSelf {
+                keys[turn.id] = turn.transcript.split(separator: " ")
+                    .map { VocabStore.lookupKey(for: String($0)) }
+            }
+            turnTokenKeys = keys
         }
         .onDisappear { player.stop() }
         .fullScreenCover(isPresented: $showingContinue) {
@@ -81,6 +97,22 @@ struct ConversationDetailView: View {
             WordSheet(initialWord: item.word, words: item.words)
                 .environmentObject(appState)
         }
+    }
+
+    /// Token indices worth the user's attention in a fluent-self line: pickup
+    /// words they haven't touched, plus words they're actively studying.
+    /// Evaluated against the live vocab store, so marking a word known from
+    /// its card drops the highlight when the sheet closes.
+    private func highlightIndices(for turn: Turn) -> Set<Int> {
+        guard let keys = turnTokenKeys[turn.id] else { return [] }
+        let pickup = Set(fluentSelfNewWords)
+        var out = Set<Int>()
+        for (i, key) in keys.enumerated() where !key.isEmpty {
+            if vocab.isStudying(key) || (pickup.contains(key) && vocab.state(of: key) == nil) {
+                out.insert(i)
+            }
+        }
+        return out
     }
 
     // MARK: - Session highlights (what you learned in this talk)
@@ -372,8 +404,13 @@ private struct TranscriptRow: View {
     let nativeLanguage: String
     let targetLanguage: String
     @ObservedObject var player: AudioPlayer
-    /// Called with the notebook lookup key when the user taps a word in a
-    /// fluent-self line.
+    /// Notebook lookup key per transcript token (parent precomputes — NLTagger
+    /// is too slow for row bodies), aligned with `transcript.split(" ")`.
+    let tokenKeys: [String]
+    /// Token indices highlighted as worth picking up; only these are tappable.
+    let highlightedIndices: Set<Int>
+    /// Called with the notebook lookup key when the user taps a highlighted
+    /// word in a fluent-self line.
     let onWordTap: (String) -> Void
 
     @State private var translation: String?
@@ -384,9 +421,26 @@ private struct TranscriptRow: View {
     @State private var reasonLoading = false
     @State private var showingShadow = false
     @State private var showingSuggestionShadow = false
-    /// The word index the user just tapped — briefly highlighted so the tap
-    /// reads as "I selected THIS word" before its card opens.
-    @State private var tappedWordIndex: Int?
+
+    /// The fluent-self line as one attributed string: normal text, except
+    /// pickup-worthy words which are tinted, dot-underlined, and carry a
+    /// `futurevoice://word/<tokenIndex>` link so they're tappable inline.
+    private var highlightedTranscript: AttributedString {
+        let tokens = turn.transcript.split(separator: " ")
+        var out = AttributedString()
+        for (index, token) in tokens.enumerated() {
+            var piece = AttributedString(String(token))
+            if highlightedIndices.contains(index) {
+                piece.foregroundColor = .accentColor
+                piece.font = .body.weight(.medium)
+                piece.underlineStyle = Text.LineStyle(pattern: .dot)
+                piece.link = URL(string: "futurevoice://word/\(index)")
+            }
+            out += piece
+            if index < tokens.count - 1 { out += AttributedString(" ") }
+        }
+        return out
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -394,35 +448,23 @@ private struct TranscriptRow: View {
                 .font(.caption).foregroundStyle(.secondary)
 
             if turn.role == .fluentSelf {
-                // Word-by-word so any word is tappable → its dictionary card.
-                // Same look as the plain line; FlowLayout wraps like text.
-                FlowLayout(spacing: 2, lineSpacing: 5) {
-                    ForEach(Array(turn.transcript.split(separator: " ").enumerated()),
-                            id: \.offset) { index, token in
-                        Text(token)
-                            .font(.body)
-                            .foregroundStyle(tappedWordIndex == index ? Color.white : Color.accentColor)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(tappedWordIndex == index ? Color.accentColor : .clear)
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                let key = VocabStore.lookupKey(for: String(token))
-                                guard !key.isEmpty else { return }
-                                HapticEngine.light()
-                                withAnimation(.easeOut(duration: 0.12)) { tappedWordIndex = index }
-                                onWordTap(key)
-                                // Clear the highlight after the card has taken
-                                // over, so returning to the transcript is clean.
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                                    withAnimation(.easeOut(duration: 0.2)) { tappedWordIndex = nil }
-                                }
-                            }
-                    }
-                }
+                // One Text with normal word spacing — only the few words worth
+                // picking up are highlighted and tappable (as inline links) →
+                // dictionary card. Highlighting every word carried no signal;
+                // the highlight IS the signal. Per-word token views made the
+                // line read as oddly justified text.
+                Text(highlightedTranscript)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .environment(\.openURL, OpenURLAction { url in
+                        guard url.scheme == "futurevoice", url.host() == "word",
+                              let index = Int(url.lastPathComponent),
+                              index < tokenKeys.count, !tokenKeys[index].isEmpty
+                        else { return .discarded }
+                        HapticEngine.light()
+                        onWordTap(tokenKeys[index])
+                        return .handled
+                    })
             } else {
                 Text(turn.transcript)
                     .font(.body)
