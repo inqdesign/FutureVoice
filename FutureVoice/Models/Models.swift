@@ -549,6 +549,23 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// scenario uses the persona's real voice/identity instead of a generic
     /// preset. Optional so scenarios saved before this decode unchanged.
     var counterpartId: UUID? = nil
+    /// The scenario's course content — words, expressions, and shadow lines
+    /// to master. Generated once on first open of the scenario page and
+    /// persisted here. nil for scenarios that haven't been opened yet
+    /// (and for all rows saved before this existed).
+    var curriculum: ScenarioCurriculum? = nil
+    /// Set when the user shelves a mastered (or abandoned) scenario. Archived
+    /// scenarios drop out of the main grid into the Archive section.
+    var archivedAt: Date? = nil
+
+    var isArchived: Bool { archivedAt != nil }
+
+    /// True once every curriculum item is mastered — the "book is finished"
+    /// state that unlocks archiving with a sense of completion.
+    var isMastered: Bool {
+        guard let c = curriculum, c.totalCount > 0 else { return false }
+        return c.masteredCount == c.totalCount
+    }
 
     /// Human-readable title shown in the list. Kept simple so the user can
     /// scan a long list quickly.
@@ -565,6 +582,65 @@ struct Scenario: Codable, Identifiable, Hashable {
             parts.append("notes=\(notes)")
         }
         return parts.joined(separator: " | ")
+    }
+}
+
+// MARK: - Scenario Curriculum (the scenario's "book" content)
+
+/// The course content of one scenario: the words, expressions, and shadow
+/// lines a learner should be able to produce in that situation. A scenario
+/// is a curriculum, not a replay shortcut — the goal is to master every item,
+/// then archive the book.
+///
+/// Mastery is deterministic, never LLM-judged, and rides the app's existing
+/// vocab tracking rather than a parallel system:
+///   - words → the word is in `VocabStore` (used in a real talk, or marked
+///     "I know it" on its word card)
+///   - expressions → in the VocabStore expression pool (used in a real talk
+///     or marked "I know it" on the card), or said under this scenario
+///   - shadow lines → a saved shadow attempt on the line scored ≥ threshold
+struct ScenarioCurriculum: Codable, Hashable {
+    struct Item: Codable, Identifiable, Hashable {
+        /// Stable id. Doubles as the synthetic Turn.id when the item is
+        /// practiced aloud, so shadow attempts + cached TTS audio stay
+        /// attached across opens.
+        var id: UUID = UUID()
+        var text: String
+        /// One-line usage hint ("when the nurse asks about symptoms").
+        var note: String
+        /// For words/expressions: a natural first-person sentence using the
+        /// item in this scenario's context. nil for shadow lines (text IS
+        /// the sentence) and for curricula generated before this existed.
+        var example: String? = nil
+        var masteredAt: Date? = nil
+
+        /// The line practiced aloud for this item — the example in context
+        /// when there is one, the bare text otherwise.
+        var spokenText: String { example ?? text }
+    }
+
+    var words: [Item] = []
+    var expressions: [Item] = []
+    var shadowLines: [Item] = []
+    /// The scene this whole curriculum is extracted from — ONE dialogue,
+    /// generated with the words/expressions in the same Gemini call so the
+    /// study list and what you watch are the same material. Replaying it is
+    /// free (audio content-cache); there is no "new watch" inside a book.
+    /// Optional so curricula persisted before this decode unchanged.
+    var dialogueTitle: String? = nil
+    var dialogue: [DialogueEngineTurn]? = nil
+    var generatedAt: Date = Date()
+
+    /// A shadow attempt at or above this score masters the line.
+    static let shadowMasteryScore = 80
+
+    var totalCount: Int { words.count + expressions.count + shadowLines.count }
+    var masteredCount: Int {
+        [words, expressions, shadowLines].flatMap { $0 }
+            .filter { $0.masteredAt != nil }.count
+    }
+    var progress: Double {
+        totalCount == 0 ? 0 : Double(masteredCount) / Double(totalCount)
     }
 }
 

@@ -250,6 +250,93 @@ final class AppState: ObservableObject {
         scenarios = ScenarioStore.shared.load()
     }
 
+    func setScenarioArchived(id: UUID, _ archived: Bool) {
+        guard var s = scenarios.first(where: { $0.id == id }) else { return }
+        s.archivedAt = archived ? Date() : nil
+        saveScenario(s)
+    }
+
+    /// Manual override from the curriculum page — the auto-detection below
+    /// only ever SETS mastery, so a hand-checked item stays checked.
+    func markCurriculumItemMastered(scenarioId: UUID, itemId: UUID) {
+        guard var s = scenarios.first(where: { $0.id == scenarioId }),
+              var c = s.curriculum else { return }
+        for path in [\ScenarioCurriculum.words, \.expressions, \.shadowLines] {
+            if let i = c[keyPath: path].firstIndex(where: { $0.id == itemId }) {
+                c[keyPath: path][i].masteredAt = Date()
+            }
+        }
+        s.curriculum = c
+        saveScenario(s)
+    }
+
+    /// Recompute mastery for one scenario's curriculum from what the user has
+    /// ACTUALLY done. Deterministic, no LLM, and it reads the app's existing
+    /// learning records instead of keeping a parallel one:
+    ///   - a word is mastered when `VocabStore` has it — i.e. the user used
+    ///     it in any real talk (post-session ingest) or tapped "I know it"
+    ///     on its word card
+    ///   - an expression is mastered when its record exists in VocabStore's
+    ///     expression pool — used in any real talk (session ingest) or
+    ///     self-declared via "I know it" on its card — or when it appears in
+    ///     the user's own turns under this scenario
+    ///   - a shadow line is mastered once a saved attempt scores
+    ///     ≥ `ScenarioCurriculum.shadowMasteryScore`
+    /// Only ever flips items ON — un-mastering is not a thing a later refresh
+    /// can do, so manual check-offs survive.
+    func refreshScenarioMastery(id: UUID) {
+        guard var s = scenarios.first(where: { $0.id == id }),
+              var c = s.curriculum else { return }
+
+        let spoken = SessionStore.shared.load()
+            .filter { $0.topic == s.displayTitle }
+            .flatMap { $0.turns }
+            .filter { $0.role == .user }
+            .map(\.transcript)
+            .joined(separator: " ")
+            .lowercased()
+
+        func saidByUser(_ phrase: String) -> Bool {
+            let needle = phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !needle.isEmpty else { return false }
+            let pattern = "\\b\(NSRegularExpression.escapedPattern(for: needle))\\b"
+            return spoken.range(of: pattern, options: .regularExpression) != nil
+        }
+
+        var changed = false
+        for i in c.words.indices where c.words[i].masteredAt == nil {
+            let word = c.words[i].text
+            // The store is keyed by lemma, but records written straight off a
+            // word card keep the tapped casing ("Oktoberfest") — check every
+            // form so a proper-noun curriculum word still gets its checkmark.
+            let known = [word, word.lowercased(), VocabStore.lookupKey(for: word)]
+                .contains { VocabStore.shared.state(of: $0) != nil }
+            if known || saidByUser(word) {
+                c.words[i].masteredAt = Date()
+                changed = true
+            }
+        }
+        for i in c.expressions.indices where c.expressions[i].masteredAt == nil {
+            let item = c.expressions[i]
+            if saidByUser(item.text) || VocabStore.shared.hasExpression(item.text) {
+                c.expressions[i].masteredAt = Date()
+                changed = true
+            }
+        }
+        for i in c.shadowLines.indices where c.shadowLines[i].masteredAt == nil {
+            let best = shadowAttempts
+                .filter { $0.turnId == c.shadowLines[i].id }
+                .map(\.matchScore).max() ?? 0
+            if best >= ScenarioCurriculum.shadowMasteryScore {
+                c.shadowLines[i].masteredAt = Date()
+                changed = true
+            }
+        }
+        guard changed else { return }
+        s.curriculum = c
+        saveScenario(s)
+    }
+
     func saveCounterpart(_ c: Counterpart) {
         CounterpartStore.shared.save(c)
         counterparts = CounterpartStore.shared.load()

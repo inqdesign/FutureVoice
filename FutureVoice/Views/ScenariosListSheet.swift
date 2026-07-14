@@ -20,9 +20,6 @@ struct ScenariosListSheet: View {
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
     @State private var newsError: String?
-    /// Set when the user taps a scenario's "Watch" — pushes WatchView with a
-    /// synthetic counterpart built from the scenario's role.
-    @State private var watchScenario: Scenario?
 
     private var interests: [String] { appState.persona?.interests ?? [] }
 
@@ -59,11 +56,6 @@ struct ScenariosListSheet: View {
                 InterestsEditorSheet()
                     .environmentObject(appState)
             }
-            .navigationDestination(item: $watchScenario) { s in
-                WatchView(counterpart: Self.watchCounterpart(for: s),
-                          customScenario: Self.watchScenarioText(s))
-                    .environmentObject(appState)
-            }
         }
         .presentationDetents([.medium, .large])
     }
@@ -79,13 +71,6 @@ struct ScenariosListSheet: View {
         c.background = s.notes
         c.voicePresetId = VoicePreset.catalog.first!.id
         return c
-    }
-
-    /// One-line scenario description handed to DialogueEngine as the topic.
-    static func watchScenarioText(_ s: Scenario) -> String {
-        let notes = s.notes.trimmingCharacters(in: .whitespaces)
-        let base = "At \(s.environment), a conversation with the \(s.role)"
-        return notes.isEmpty ? base : "\(base). \(notes)"
     }
 
     // MARK: - States
@@ -130,26 +115,14 @@ struct ScenariosListSheet: View {
                 }
             } else {
                 ForEach(appState.scenarios) { scenario in
-                    HStack(spacing: 10) {
-                        // Tap the row body → Talk (speak it yourself), the
-                        // existing primary action.
-                        Button {
-                            applyAndDismiss(scenario)
-                        } label: {
-                            row(scenario)
-                        }
-                        .buttonStyle(.plain)
-                        // Trailing pill → Watch (listen to your clone vs the
-                        // role play it out).
-                        Button {
-                            watchScenario = scenario
-                        } label: {
-                            Label("Watch", systemImage: "play.fill")
-                                .font(.caption.weight(.semibold))
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
+                    // Tap → Talk with this scenario. Watching its scene lives
+                    // in the book page (Scenarios tab), not in the Talk picker.
+                    Button {
+                        applyAndDismiss(scenario)
+                    } label: {
+                        row(scenario)
                     }
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             appState.deleteScenario(id: scenario.id)

@@ -1,26 +1,29 @@
 import SwiftUI
 
-/// Scenarios home — ONE unified grid of conversation cards. Each card is a
-/// situation paired with who you talk to (a generic role or one of your own
-/// personas); your fluent self is always the constant. Tapping a card starts
-/// a Talk; the ▶ badge watches your fluent self play it out. "Create your
-/// own" opens the builder. People (voice-cloned personas) are managed from
-/// the toolbar; they show up as the "who" inside cards.
+/// Scenarios home — a shelf of curriculum "books". Each scenario is a course:
+/// a situation + who you talk to, filled with words, expressions, and shadow
+/// lines to master. Tapping a card opens the book (ScenarioDetailView) —
+/// progress, checklist, the Talk/Watch study actions, and past watches all
+/// live there. Mastered or shelved books drop into the Archive at the bottom.
+/// People (voice-cloned personas) are managed from the toolbar; they show up
+/// as the "who" inside cards.
 struct WatchTab: View {
     @EnvironmentObject private var appState: AppState
     @State private var showingNewVoice = false
     @State private var showingNewScenario = false
     @State private var showingPeople = false
     @State private var talkScenario: Scenario?
-    @State private var watchScenarioTarget: Scenario?
+    @State private var openScenario: Scenario?
 
-    private static let recentLimit = 5
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+
+    private var activeScenarios: [Scenario] { appState.scenarios.filter { !$0.isArchived } }
+    private var archivedScenarios: [Scenario] { appState.scenarios.filter(\.isArchived) }
 
     var body: some View {
         NavigationStack {
             Group {
-                if appState.counterparts.isEmpty && appState.watchDialogues.isEmpty && appState.scenarios.isEmpty {
+                if appState.scenarios.isEmpty {
                     emptyState
                 } else {
                     content
@@ -29,13 +32,17 @@ struct WatchTab: View {
             .navigationTitle("Scenarios")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                // People = manage your voice-cloned personas (not a create
-                // dupe — creating happens inside the builder / this sheet).
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    // People = manage your voice-cloned personas (not a create
+                    // dupe — creating happens inside the builder / this sheet).
                     Button { showingPeople = true } label: {
                         Image(systemName: "person.2")
                     }
                     .accessibilityLabel("Your people")
+                    Button { showingNewScenario = true } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("New scenario")
                 }
             }
             .sheet(isPresented: $showingNewVoice) {
@@ -44,6 +51,9 @@ struct WatchTab: View {
             .sheet(isPresented: $showingNewScenario) {
                 ScenarioBuilderSheet(counterparts: appState.counterparts) { newScenario in
                     appState.saveScenario(newScenario)
+                    // Go straight into the fresh book — the curriculum starts
+                    // generating on open, so the user lands on a live page.
+                    openScenario = newScenario
                 }
                 .environmentObject(appState)
             }
@@ -55,14 +65,8 @@ struct WatchTab: View {
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
                     .environmentObject(appState)
             }
-            .navigationDestination(item: $watchScenarioTarget) { s in
-                // Watch with the linked persona's real voice when set; else a
-                // generic preset partner built from the role.
-                let cp = s.counterpartId
-                    .flatMap { id in appState.counterparts.first { $0.id == id } }
-                    ?? ScenariosListSheet.watchCounterpart(for: s)
-                WatchView(counterpart: cp,
-                          customScenario: ScenariosListSheet.watchScenarioText(s))
+            .navigationDestination(item: $openScenario) { s in
+                ScenarioDetailView(scenarioId: s.id)
                     .environmentObject(appState)
             }
         }
@@ -73,80 +77,71 @@ struct WatchTab: View {
     private var content: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 14) {
-                createCard
-                ForEach(appState.scenarios) { s in scenarioCard(s) }
+                ForEach(activeScenarios) { s in scenarioCard(s) }
             }
             .padding(.horizontal, 18)
             .padding(.top, 6)
 
-            if !recentDialogues.isEmpty { recentSection }
+            if !archivedScenarios.isEmpty { archiveSection }
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
     }
 
-    private var recentDialogues: [WatchDialogue] {
-        Array(appState.watchDialogues.sorted { $0.createdAt > $1.createdAt }
-            .prefix(Self.recentLimit))
-    }
-
     // MARK: - Cards
-
-    private var createCard: some View {
-        Button { showingNewScenario = true } label: {
-            VStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .strokeBorder(Color.accentColor.opacity(0.5),
-                                      style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                        .frame(width: 54, height: 54)
-                    Image(systemName: "plus").font(.title2.weight(.semibold)).foregroundStyle(.tint)
-                }
-                Text("Create your own").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
-                Text("Situation + who").font(.caption).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity).frame(height: 150)
-            .background(RoundedRectangle(cornerRadius: 18).fill(Color.accentColor.opacity(0.08)))
-            .overlay(RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(Color.accentColor.opacity(0.35),
-                              style: StrokeStyle(lineWidth: 1, dash: [6, 4])))
-        }
-        .buttonStyle(.plain)
-    }
 
     private func scenarioCard(_ s: Scenario) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topTrailing) {
-                HStack { cardAvatar(s); Spacer() }
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 82)
-                    .background(Color.accentColor.opacity(0.06))
-                Button { watchScenarioTarget = s } label: {
-                    Image(systemName: "play.circle.fill")
-                        .font(.title3).foregroundStyle(.tint).padding(9)
+            HStack(alignment: .top) {
+                cardAvatar(s)
+                Spacer()
+                if s.isMastered {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.title3).foregroundStyle(.green)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Watch")
             }
+            Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
-                Text(s.displayTitle).font(.subheadline.weight(.semibold))
+                Text(s.environment).font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary).lineLimit(1)
-                Text(cardSubtitle(s)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text("with \(linkedPersonaName(s) ?? s.role)")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12).padding(.vertical, 10)
+            .padding(.bottom, 8)
+            cardProgress(s)
         }
+        .padding(14)
         .frame(height: 150)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-        .clipShape(RoundedRectangle(cornerRadius: 18))
         .contentShape(Rectangle())
-        .onTapGesture { talkScenario = s }
+        .onTapGesture { openScenario = s }
         .contextMenu {
-            Button { talkScenario = s } label: { Label("Talk", systemImage: "mic.fill") }
-            Button { watchScenarioTarget = s } label: { Label("Watch", systemImage: "play.fill") }
+            Button { openScenario = s } label: { Label("Open", systemImage: "book") }
+            Button { talkScenario = s } label: { Label("Talk now", systemImage: "mic.fill") }
+            Button { appState.setScenarioArchived(id: s.id, true) } label: {
+                Label("Archive", systemImage: "archivebox")
+            }
             Button(role: .destructive) { appState.deleteScenario(id: s.id) } label: {
                 Label("Delete", systemImage: "trash")
             }
+        }
+    }
+
+    /// Bottom strip of the card: curriculum progress once the book exists,
+    /// or a "new book" hint before the first open generated it.
+    @ViewBuilder
+    private func cardProgress(_ s: Scenario) -> some View {
+        if let c = s.curriculum, c.totalCount > 0 {
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: c.progress)
+                    .tint(s.isMastered ? .green : .accentColor)
+                Text(s.isMastered ? "Mastered" : "\(c.masteredCount)/\(c.totalCount) mastered")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(s.isMastered ? .green : .secondary)
+            }
+        } else {
+            Label("Open to start", systemImage: "book")
+                .font(.caption2).foregroundStyle(.tint)
         }
     }
 
@@ -162,59 +157,56 @@ struct WatchTab: View {
         }
     }
 
-    /// Subtitle: the persona's name if linked, else the note, else the role.
-    private func cardSubtitle(_ s: Scenario) -> String {
-        if let name = linkedPersonaName(s) { return "with \(name)" }
-        let notes = s.notes.trimmingCharacters(in: .whitespaces)
-        return notes.isEmpty ? "with \(s.role)" : notes
-    }
+    // MARK: - Archive
 
-    // MARK: - Recent watches
-
-    private var recentSection: some View {
+    private var archiveSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Recent watches")
+            Text("Archive")
                 .font(.headline)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
             VStack(spacing: 0) {
-                ForEach(recentDialogues) { d in
-                    let c = counterpart(for: d) ?? scenarioCounterpart(for: d)
-                    NavigationLink {
-                        WatchView(counterpart: c, savedDialogue: d).environmentObject(appState)
-                    } label: {
-                        dialogueRow(d, counterpart: c)
-                    }
-                    .buttonStyle(.plain)
-                    if d.id != recentDialogues.last?.id { Divider().padding(.leading, 60) }
+                ForEach(archivedScenarios) { s in
+                    Button { openScenario = s } label: { archivedRow(s) }
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button { appState.setScenarioArchived(id: s.id, false) } label: {
+                                Label("Unarchive", systemImage: "tray.and.arrow.up")
+                            }
+                            Button(role: .destructive) { appState.deleteScenario(id: s.id) } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                    if s.id != archivedScenarios.last?.id { Divider().padding(.leading, 56) }
                 }
             }
+            .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemGroupedBackground)))
             .padding(.horizontal, 18)
-            Text("Replays are free — the audio is already cached.")
+            Text("Finished books. They keep their progress — unarchive anytime.")
                 .font(.caption).foregroundStyle(.secondary)
-                .padding(.horizontal, 20).padding(.top, 2).padding(.bottom, 12)
+                .padding(.horizontal, 20).padding(.top, 2)
         }
     }
 
-    private func dialogueRow(_ d: WatchDialogue, counterpart: Counterpart) -> some View {
+    private func archivedRow(_ s: Scenario) -> some View {
         HStack(spacing: 12) {
-            ZStack {
-                Circle().fill(Color.accentColor.opacity(0.12)).frame(width: 40, height: 40)
-                Text(Self.initials(counterpart.name))
-                    .font(.caption.weight(.semibold)).foregroundStyle(.tint)
-            }
+            Image(systemName: s.isMastered ? "checkmark.seal.fill" : "archivebox")
+                .font(.body)
+                .foregroundStyle(s.isMastered ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+                .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(d.displayTitle).font(.subheadline).foregroundStyle(.primary).lineLimit(1)
-                HStack(spacing: 5) {
-                    Text(counterpart.name)
-                    Text("·")
-                    Text(d.createdAt, format: .dateTime.month(.abbreviated).day())
-                }
-                .font(.caption).foregroundStyle(.secondary)
+                Text(s.environment).font(.subheadline).foregroundStyle(.primary).lineLimit(1)
+                Text("with \(linkedPersonaName(s) ?? s.role)")
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
+            if let c = s.curriculum, c.totalCount > 0 {
+                Text("\(c.masteredCount)/\(c.totalCount)")
+                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
         }
+        .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
     }
@@ -244,32 +236,19 @@ struct WatchTab: View {
         }
     }
 
-    private func counterpart(for d: WatchDialogue) -> Counterpart? {
-        appState.counterparts.first { $0.id == d.counterpartId }
-    }
-
     private func linkedPersonaName(_ s: Scenario) -> String? {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
-    }
-
-    /// Rebuild a throwaway partner for a scenario watch (no saved Counterpart)
-    /// from the name + voice stored on the dialogue, so it lists and replays.
-    private func scenarioCounterpart(for d: WatchDialogue) -> Counterpart {
-        var c = Counterpart.empty
-        c.name = d.speakerName ?? d.scenarioTitle
-        c.voicePresetId = d.voicePresetId ?? VoicePreset.catalog.first!.id
-        return c
     }
 
     // MARK: - Empty state
 
     private var emptyState: some View {
         ContentUnavailableView {
-            Label("Practice a conversation", systemImage: "bubble.left.and.bubble.right")
+            Label("Master a situation", systemImage: "book")
         } description: {
-            Text("Build a situation — pick where you are and who you're with (a generic role or someone from your real life) — and start right away.")
+            Text("Build a scenario — where you are and who you're with. It becomes a course: words, expressions, and lines to master, with your fluent self as the study partner.")
         } actions: {
-            Button("Create your own") { showingNewScenario = true }
+            Button("New scenario") { showingNewScenario = true }
                 .buttonStyle(.borderedProminent)
         }
     }
