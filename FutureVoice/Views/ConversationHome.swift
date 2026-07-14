@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Home — Notion-simple: white space, hairline dividers, minimal text. Plain
-/// section headers instead of heavy cards; one accent only on the primary
-/// action. Today (goal + start a talk) and Practice (bookmarked words).
+/// Home — designed like a phone's front door, not a dashboard. The hero is a
+/// breathing VoiceGlow call pill (same shader as the Talk screen's mic) that
+/// starts a free talk; everything else — today's goal, follow-ups, words — sits
+/// below it in light cards. One glow, one accent, no competing chrome.
 struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
@@ -17,17 +18,28 @@ struct ConversationHome: View {
     @State private var dueCount = 0
     @State private var todaySpokenSeconds = 0
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
-    @State private var showingCall = false
+    /// Presenting the call via an item (not a Bool) gives every presentation
+    /// a fresh view identity — with `isPresented`, ConversationView's
+    /// `State(initialValue:)` kept the FIRST evaluation's empty topic, so the
+    /// first topic pick always fell through to free talk.
+    @State private var callLaunch: CallLaunch?
     @State private var showingTopics = false
     @State private var showingProfile = false
     @State private var launchTopic = ""
     @State private var launchBlurb = ""
     @State private var launchIsNews = false
+
+    private struct CallLaunch: Identifiable {
+        let id = UUID()
+        var topic = ""
+        var blurb = ""
+        var isNews = false
+    }
     /// "Up next" feed: today's most useful follow-ups after talking.
     @State private var topShadowPick: PracticeStats.ShadowPick?
     @State private var lastSession: Session?
     @State private var shadowingPick: PracticeStats.ShadowPick?
-    /// Server-side account/billing snapshot — drives the plan card. Credits
+    /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
     /// subscription page. nil until the first fetch lands.
     @State private var account: AccountStatus?
@@ -40,29 +52,27 @@ struct ConversationHome: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if sessionCount == 0 {
-                    emptyState
-                } else {
-                    // Card layout, same idiom as ProgressTab's panels: grouped
-                    // background, one rounded card per content block.
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            card { todaySection }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    hero
+                    if sessionCount == 0 {
+                        firstRunHint
+                    } else {
+                        card { todaySection }
+                        if hasReviewRows {
                             card { upNextSection }
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.top, 4)
-                        .padding(.bottom, 36)
+                        card { wordsSection }
                     }
                 }
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle(greetingText)
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
-                // Credits moved into the Today card — the chip up here was
-                // squeezing the large title into "Good mor…".
                 ToolbarItemGroup {
                     profileButton
                 }
@@ -81,9 +91,9 @@ struct ConversationHome: View {
                                    topicIsNews: $launchIsNews)
                     .environmentObject(appState)
             }
-            .fullScreenCover(isPresented: $showingCall, onDismiss: reload) {
-                ConversationView(initialTopic: launchTopic, initialBlurb: launchBlurb,
-                                 initialIsNews: launchIsNews)
+            .fullScreenCover(item: $callLaunch, onDismiss: reload) { launch in
+                ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
+                                 initialIsNews: launch.isNews)
                     .environmentObject(appState)
             }
             .sheet(item: $shadowingPick, onDismiss: reload) { pick in
@@ -126,24 +136,68 @@ struct ConversationHome: View {
         }
     }
 
+    // MARK: - Hero (the call button)
+
+    /// The one big action on this screen: a full-width glow pill that starts a
+    /// free talk. Same shader + hairline treatment as the Talk screen's mic
+    /// pill, scaled up, so Home and the call read as one surface. The topic
+    /// picker rides underneath as the quiet alternative.
+    private var hero: some View {
+        VStack(spacing: 10) {
+            Button {
+                callLaunch = CallLaunch()
+            } label: {
+                ZStack {
+                    VoiceGlow(mode: .idle, level: 0)
+                    HStack(spacing: 10) {
+                        Image(systemName: "phone.fill")
+                            .font(.headline)
+                        Text("Talk to your fluent self")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.primary)
+                }
+                .frame(height: 76)
+                .frame(maxWidth: .infinity)
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Start a free talk")
+
+            Button {
+                launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingTopics = true
+            } label: {
+                Label("Choose a topic", systemImage: "square.grid.2x2")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.capsule)
+        }
+    }
+
     // MARK: - Today
 
+    /// Compact daily strip: goal bar + minutes on one line, streak/talks row
+    /// as the door to the calendar. The start-a-talk buttons moved to the
+    /// hero, so this card is purely "how today is going".
     private var todaySection: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            // Title + credit chip on one line.
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Today").font(.title3.weight(.semibold)).foregroundStyle(.primary)
                 Spacer()
                 creditChip
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
-                    .font(.subheadline).foregroundStyle(.secondary).monospacedDigit()
+            HStack(spacing: 12) {
                 progressBar
+                Text("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) min")
+                    .font(.footnote).foregroundStyle(.secondary).monospacedDigit()
+                    .layoutPriority(1)
             }
 
-            // Streak + talks are the door to the calendar.
             NavigationLink {
                 ActivityView()
             } label: {
@@ -159,8 +213,6 @@ struct ConversationHome: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            talkStarter
         }
     }
 
@@ -216,35 +268,15 @@ struct ConversationHome: View {
         }
     }
 
-    private var talkStarter: some View {
-        HStack(spacing: 10) {
-            Button {
-                launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingCall = true
-            } label: {
-                Text("Free talk").font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity).padding(.vertical, 11)
-            }
-            .buttonStyle(.borderedProminent)
-
-            Button {
-                launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingTopics = true
-            } label: {
-                Text("Topics").font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity).padding(.vertical, 11)
-            }
-            .buttonStyle(.bordered)
-        }
-    }
-
-    // MARK: - Up next (review + words in ONE card)
+    // MARK: - Up next
 
     private var hasReviewRows: Bool {
         dueCount > 0 || topShadowPick != nil || lastSession != nil
     }
 
-    /// Everything to review after talking, in one card: the actionable
-    /// follow-ups (due cards, a shadow line, the last conversation), then the
-    /// words you're collecting. The full hub still lives in the Practice tab.
+    /// Actionable follow-ups after talking: due cards, a shadow line, the last
+    /// conversation. Words live in their own card now — this one is only the
+    /// "do this next" list, so it disappears entirely when there's nothing due.
     private var upNextSection: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Up next")
@@ -286,42 +318,6 @@ struct ConversationHome: View {
                               subtitle: lastSessionSubtitle(last))
                 }
                 .buttonStyle(.plain)
-            }
-
-            if hasReviewRows { Divider().padding(.vertical, 6) }
-            wordsBlock
-        }
-    }
-
-    /// Bookmarked words to review — the tail of the Up next card, with a link
-    /// into the full notebook.
-    private var wordsBlock: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Words").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
-                Spacer()
-                NavigationLink { VocabularyView() } label: {
-                    HStack(spacing: 3) {
-                        Text("See all")
-                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
-                    }
-                    .font(.subheadline).foregroundStyle(.tint)
-                }
-            }
-            if vocab.studying.isEmpty {
-                Text("Bookmark words while you study and they'll show up here.")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10),
-                                    GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                    ForEach(Array(vocab.studying.prefix(6)), id: \.self) { word in
-                        Button { wordSheet = WordRef(value: word) } label: {
-                            StudyWordChip(word: word)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
             }
         }
     }
@@ -365,23 +361,67 @@ struct ConversationHome: View {
         return f
     }()
 
-    // MARK: - Empty
+    // MARK: - Words
 
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("Talk with your fluent self", systemImage: "phone.bubble")
-        } description: {
-            Text("Start a conversation and it shows up here.")
-        } actions: {
-            Button("Free talk") { launchTopic = ""; launchBlurb = ""; launchIsNews = false; showingCall = true }
-                .buttonStyle(.borderedProminent)
+    /// Bookmarked words as a one-line horizontal shelf — lighter than the old
+    /// grid, and it never grows the page: overflow scrolls sideways under the
+    /// card's rounded edges.
+    private var wordsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Words").font(.title3.weight(.semibold))
+                Spacer()
+                NavigationLink { VocabularyView() } label: {
+                    HStack(spacing: 3) {
+                        Text("See all")
+                        Image(systemName: "chevron.right").font(.caption2.weight(.semibold))
+                    }
+                    .font(.subheadline).foregroundStyle(.tint)
+                }
+            }
+            if vocab.studying.isEmpty {
+                Text("Bookmark words while you study and they'll show up here.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(Array(vocab.studying.prefix(12)), id: \.self) { word in
+                            Button { wordSheet = WordRef(value: word) } label: {
+                                StudyWordChip(word: word)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    // Cancel the card's inset so chips scroll edge-to-edge of
+                    // the card instead of clipping mid-air at the padding line.
+                    .padding(.horizontal, 18)
+                }
+                .padding(.horizontal, -18)
+            }
+        }
+    }
+
+    // MARK: - First run
+
+    /// Below the hero before the first conversation — explains what will fill
+    /// this screen. The call to action IS the hero pill, so no second button.
+    private var firstRunHint: some View {
+        card {
+            Label("Your fluent self is ready", systemImage: "waveform")
+                .font(.subheadline.weight(.semibold))
+            Text("Tap the call button above to have your first conversation. Review cards, lines to shadow, and saved words will all land here afterwards.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     // MARK: - Logic
 
     private func launchIfTopicPicked() {
-        if !launchTopic.isEmpty { showingCall = true }
+        guard !launchTopic.isEmpty else { return }
+        callLaunch = CallLaunch(topic: launchTopic, blurb: launchBlurb, isNews: launchIsNews)
     }
 
     private func reload() {
@@ -414,8 +454,8 @@ struct ConversationHome: View {
 }
 
 /// A bookmarked word chip — tapping OPENS the full word sheet (definition,
-/// pronunciation, examples, mark-known), instead of the old inline flip that
-/// only showed the meaning with nowhere to go next.
+/// pronunciation, examples, mark-known). Capsule shape to match the shelf's
+/// horizontal flow.
 private struct StudyWordChip: View {
     let word: String
 
@@ -423,18 +463,13 @@ private struct StudyWordChip: View {
         Text(word)
             .font(.callout.weight(.medium))
             .foregroundStyle(.primary)
-            .multilineTextAlignment(.center)
-            .lineLimit(2).minimumScaleFactor(0.8)
-            .frame(maxWidth: .infinity)
-            .frame(height: 58)
-            .padding(.horizontal, 10)
+            .lineLimit(1)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
             // tertiarySystemFill stays visible on the card's
             // secondarySystemGroupedBackground in BOTH light and dark.
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color(.tertiarySystemFill)))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color(.separator).opacity(0.6), lineWidth: 0.5)
-            )
-            .contentShape(Rectangle())
+            .background(Capsule().fill(Color(.tertiarySystemFill)))
+            .overlay(Capsule().stroke(Color(.separator).opacity(0.6), lineWidth: 0.5))
+            .contentShape(Capsule())
     }
 }

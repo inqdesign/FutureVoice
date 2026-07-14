@@ -191,6 +191,9 @@ enum ConversationEngine {
           "suggested_drills": ["phrase 1", "phrase 2", "phrase 3"],
           "expressions_used": ["...", "..."],
           "weak_vocab_areas": ["...", "..."],
+          "grammar_errors": [
+            { "quote": "...", "correction": "...", "note": "..." }
+          ],
           "overall_note": "1-2 sentence encouraging note",
           "scorecard": {
             "vocabulary":     { "score": 0, "note": "..." },
@@ -235,6 +238,22 @@ enum ConversationEngine {
           a different topic? Quote them VERBATIM from the user's turns —
           never invent or paraphrase. Most sessions have none — empty is a
           normal answer.
+        - grammar_errors: EVERY clear grammatical error in the user's turns
+          (up to 15) — articles, tense, subject-verb agreement, prepositions,
+          plurals, word order, wrong verb forms. This is the EVIDENCE behind
+          the grammar score: a user seeing a low score taps into this list,
+          so the score and this list must tell the same story.
+          - quote: the user's sentence VERBATIM from the transcript (the
+            clause containing the error if the turn is long). Never
+            paraphrase — a quote that isn't literally in the transcript
+            gets discarded.
+          - correction: the same sentence with ONLY the grammar fixed. Keep
+            their words and style; this is not the place for nicer phrasing
+            (that's phrases_used).
+          - note: ≤ 6 words naming the grammar point ("missing article",
+            "past tense needed", "preposition: 'on' → 'at'").
+          - The same error type appearing in different sentences = separate
+            entries. Empty array if the session was genuinely clean.
         - weak_vocab_areas: 0-3 SHORT topic labels (2-4 words each, e.g.
           "cooking verbs", "phone-call phrases") where the user visibly
           lacked words this session — reached for vague fillers, circumlocuted,
@@ -324,8 +343,18 @@ enum ConversationEngine {
 
         OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
         Return STRICT JSON only — no prose, no code fences:
-        { "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
+        { "transcript": "..." , "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
 
+        - "transcript": the user's latest message may include their recorded
+          AUDIO. The audio is the ground truth of what they said; the text in
+          that message is only an automatic speech-recognition guess and may
+          contain misheard words. Listen to the audio and write down VERBATIM
+          what the user actually said, in \(LanguageCatalog.englishName(targetLanguage)). Keep their exact
+          wording INCLUDING any grammar mistakes (corrections belong in
+          "suggestion", never here); skip filler sounds (uh, um). If no audio
+          is attached, set "transcript" to null.
+        - Base "reply" and "suggestion" on what the user ACTUALLY said per
+          the audio — not on the recognition guess.
         - "reply": your spoken conversational turn in \(LanguageCatalog.englishName(targetLanguage)), following
           every speaking rule above. This is the ONLY part the user hears.
         - "suggestion": include whenever the user's most recent line has a
@@ -367,13 +396,24 @@ enum ConversationEngine {
     /// produce. With plain-text model turns in the history, the model imitates
     /// its own past formatting and drifts out of JSON mode a few exchanges in —
     /// which silently killed every suggestion after the first turn.
-    static func geminiMessages(from turns: [Turn], tail: Int = 12) -> [GeminiClient.Message] {
-        let recent = turns.suffix(tail)
-        return recent.map { turn in
+    /// `lastUserAudio` (when present) is attached to the FINAL user turn —
+    /// the utterance the model is replying to — so it can hear the actual
+    /// speech instead of trusting the on-device STT text. Earlier user turns
+    /// stay text-only to keep the request small.
+    static func geminiMessages(from turns: [Turn], tail: Int = 12,
+                               lastUserAudio: GeminiClient.Message.InlineAudio? = nil)
+        -> [GeminiClient.Message] {
+        let recent = Array(turns.suffix(tail))
+        let lastUserIndex = recent.lastIndex { $0.role == .user }
+        return recent.enumerated().map { index, turn in
             if turn.role == .user {
-                return GeminiClient.Message(role: .user, content: turn.transcript)
+                return GeminiClient.Message(
+                    role: .user, content: turn.transcript,
+                    inlineAudio: index == lastUserIndex ? lastUserAudio : nil)
             }
-            let payload: [String: Any] = ["reply": turn.transcript, "suggestion": NSNull()]
+            let payload: [String: Any] = ["transcript": NSNull(),
+                                          "reply": turn.transcript,
+                                          "suggestion": NSNull()]
             let json = (try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys]))
                 .flatMap { String(data: $0, encoding: .utf8) }
             return GeminiClient.Message(role: .model, content: json ?? turn.transcript)
@@ -398,6 +438,10 @@ struct ConversationTurnPayload: Decodable {
     }
     let reply: String
     let suggestion: Suggestion?
+    /// Verbatim transcript of the user's last utterance as HEARD from the
+    /// attached audio — null when the turn carried no audio. Upgrades the
+    /// on-device STT text everywhere downstream (feed, summary, drills).
+    var transcript: String? = nil
 
     /// Maps to the domain type, dropping junk (empty / rule-like suggestions).
     func turnSuggestion() -> TurnSuggestion? {
@@ -435,12 +479,18 @@ struct ClaudeSummaryPayload: Decodable {
         let top_line: String
         let cefr_level: String?
     }
+    struct GrammarError: Decodable {
+        let quote: String
+        let correction: String
+        let note: String
+    }
     let title: String?
     let phrases_used: [Phrase]
     let new_patterns_detected: [Pattern]
     let suggested_drills: [String]
     let expressions_used: [String]?
     let weak_vocab_areas: [String]?
+    let grammar_errors: [GrammarError]?
     let overall_note: String
     let scorecard: Scorecard?
 
@@ -491,7 +541,13 @@ struct ClaudeSummaryPayload: Decodable {
             overallNote: overall_note,
             scorecard: card,
             expressionsUsed: expressions_used ?? [],
-            weakVocabAreas: weak_vocab_areas ?? []
+            weakVocabAreas: weak_vocab_areas ?? [],
+            grammarIssues: (grammar_errors ?? []).compactMap {
+                let quote = $0.quote.trimmingCharacters(in: .whitespacesAndNewlines)
+                let fix = $0.correction.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !quote.isEmpty, !fix.isEmpty else { return nil }
+                return GrammarIssue(quote: quote, correction: fix, note: $0.note)
+            }
         )
     }
 }

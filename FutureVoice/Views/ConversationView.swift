@@ -112,6 +112,10 @@ struct ConversationView: View {
     /// Real facts from the grounded news lookup — injected into every turn's
     /// system prompt so the future self actually knows the story.
     @State private var newsFacts: [String] = []
+    /// Raw 0…1 voice energy target for the mic pill's glow (mic RMS while
+    /// listening, playback RMS while speaking). VoiceGlow interpolates it
+    /// per frame, so no smoothing here.
+    @State private var voiceLevel: Float = 0
 
     private let userId = ProfileStore.localUserId
 
@@ -329,34 +333,21 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
-            if phase == .listening {
-                LevelMeter(level: live.level)
-                    .frame(height: 18)
-                    .padding(.horizontal, 32)
-                    .transition(.opacity)
-            }
-
+            // The aurora lives INSIDE the pill (Gemini-style), not across the
+            // screen. The shader paints the whole surface theme-aware: airy
+            // white with a blue bloom in light mode, deep navy in dark.
             Button { Task { await handleMicTap() } } label: {
                 ZStack {
-                    Circle()
-                        .fill(.tint)
-                        .frame(width: 64, height: 64)
-                        .opacity(micEnabled ? 1.0 : 0.4)
-                        .scaleEffect(phase == .listening ? 1.06 : 1.0)
-                        .animation(
-                            phase == .listening
-                                ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
-                                : .default,
-                            value: phase
-                        )
+                    VoiceGlow(mode: glowMode, level: voiceLevel)
                     Image(systemName: micSymbol)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(Color(.systemBackground))
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.primary)
                 }
+                .frame(width: 156, height: 64)
+                .clipShape(Capsule())
+                .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
             }
             .buttonStyle(.plain)
-            .tint(micTint)
-            .disabled(!micEnabled)
             .accessibilityLabel(Text(micA11yLabel))
 
             Text(micHint)
@@ -370,11 +361,26 @@ struct ConversationView: View {
         .frame(maxWidth: .infinity)
         // No background — the mic floats above the feed and the tab bar gets
         // a clean gap below it, so users don't read mic + tabs as one chunk.
+        .onChange(of: live.level) { _, new in
+            guard phase == .listening else { return }
+            voiceLevel = new
+        }
+        .onChange(of: player.level) { _, new in
+            guard phase == .speaking else { return }
+            voiceLevel = new
+        }
+        .onChange(of: phase) { _, _ in voiceLevel = 0 }
     }
 
-    /// Mic is always tappable — even mid-thinking/speaking it acts as
-    /// "hang up" for the phone call. iOS-native phone-call ergonomics.
-    private var micEnabled: Bool { true }
+    private var glowMode: VoiceGlow.Mode {
+        switch phase {
+        case .idle:      return .idle
+        case .listening: return .listening
+        case .thinking:  return .thinking
+        case .speaking:  return .speaking
+        }
+    }
+
 
     private var micSymbol: String {
         if phoneCallActive {
@@ -386,13 +392,6 @@ struct ConversationView: View {
             }
         }
         return "mic.fill"                                 // not in call → tap to start
-    }
-
-    private var micTint: Color {
-        if phoneCallActive {
-            return phase == .speaking ? .accentColor : .red
-        }
-        return .accentColor
     }
 
     private var micA11yLabel: String {
@@ -551,13 +550,30 @@ struct ConversationView: View {
             let opener: String
             if topicIsNews, let grounded = await openNewsConversation() {
                 opener = grounded
+            } else if topic.isEmpty,
+                      let canned = FreeTalkOpeners.shared.next(
+                          language: appState.targetLanguage,
+                          personaName: appState.persona?.displayName) {
+                // Free talk: greetings are interchangeable, so rotate a stored
+                // pool instead of paying a Gemini call per session — and since
+                // the texts repeat verbatim, the TTS content cache makes the
+                // voice free after each line's first play.
+                opener = canned
+            } else if topic.isEmpty,
+                      let generated = try? await FreeTalkOpeners.shared.generatePool(
+                          language: appState.targetLanguage,
+                          personaName: appState.persona?.displayName,
+                          proficiency: appState.proficiency) {
+                // First free talk (or language/persona changed): ONE call
+                // writes the whole pool; later sessions rotate through it.
+                opener = generated
             } else {
                 opener = try await GeminiClient.shared.send(
                     system: systemPrompt(),
                     messages: [GeminiClient.Message(
                         role: .user,
                         content: """
-                        Open this conversation with ONE natural opening line in \(appState.targetLanguage).
+                        Open this conversation with ONE natural opening line in \(LanguageCatalog.englishName(appState.targetLanguage)).
                         Be IN the scenario — don't summarize it, don't explain it. Just say the first
                         thing you'd say if this were really happening, in a way the user can respond to.
                         """
@@ -565,9 +581,23 @@ struct ConversationView: View {
                     idempotencyKey: "opener:\(sessionId.uuidString)"
                 )
             }
-            // Text-only opener. No TTS — saves an ElevenLabs call per topic
-            // pick. The user reads, responds, and audio kicks in from the
-            // avatar's first reply onward.
+            // Speak the opener in the cloned voice — a call starts with the
+            // fluent self TALKING, not a line to read. Repeated openers for
+            // the same phrasing hit the content cache, and the idempotency
+            // key keeps a re-open from billing ElevenLabs twice.
+            if let voiceId = appState.voiceCloneId {
+                do {
+                    try await speakAndAppend(opener, voiceId: voiceId,
+                                             idempotencyKey: "tts-opener:\(sessionId.uuidString)")
+                    // speakAndAppend owns the phase from here: playback
+                    // completion flips back to .idle and re-enters listening
+                    // in phone-call mode.
+                    return
+                } catch {
+                    // TTS blip — fall through to the text-only opener rather
+                    // than failing the whole session open.
+                }
+            }
             turns.append(Turn(
                 id: UUID(), role: .fluentSelf, audioURL: nil,
                 transcript: opener, durationMs: 0, timestamp: Date(),
@@ -639,18 +669,19 @@ struct ConversationView: View {
     }
 
     /// Vocabulary the user is LIKELY to say this turn — biases STT toward
-    /// the conversation's domain (topic words, names, news terms, and the
-    /// fluent self's last line, which learners often echo). Rebuilt every
-    /// turn since the mic restarts per turn.
+    /// the conversation's domain (topic words, names, news terms). Rebuilt
+    /// every turn since the mic restarts per turn.
+    ///
+    /// Deliberately does NOT include the fluent self's last line: contextual
+    /// strings make the recognizer substitute toward the hint list whenever
+    /// the audio is unclear, so biasing toward the avatar's words puts words
+    /// in the user's mouth they never said.
     private func recognitionHints() -> [String] {
         var hints: [String] = []
         if !topic.isEmpty { hints.append(topic) }
         if let name = appState.persona?.displayName, !name.isEmpty { hints.append(name) }
         hints.append(contentsOf: appState.persona?.interests ?? [])
         for fact in newsFacts { hints.append(contentsOf: Self.significantWords(fact)) }
-        if let lastReply = turns.last(where: { $0.role == .fluentSelf })?.transcript {
-            hints.append(contentsOf: Self.significantWords(lastReply))
-        }
         var seen = Set<String>()
         return hints.filter { seen.insert($0.lowercased()).inserted }
     }
@@ -667,11 +698,14 @@ struct ConversationView: View {
     // Gemini/TTS awaits below. Setting phase = .thinking is what makes the
     // monitor loop exit on its next tick.
     private func stopAndSend() async {
-        let finalText = live.stop()
+        // .thinking first so the endpoint monitor exits, then wait the beat
+        // for the recognizer's FINAL pass — the committed turn text is the
+        // language-model-rescored version, not the last raw partial.
+        phase = .thinking
+        let finalText = await live.stopAndFinalize()
         let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
-        phase = .thinking
 
         var userTurn = Turn(
             id: UUID(), role: .user, audioURL: nil,
@@ -701,16 +735,28 @@ struct ConversationView: View {
         phase = .thinking
         guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
         do {
-            // One structured call returns reply + optional inline correction
-            // (repopulates Turn.suggestion: chip UI, SRS ingest, weekly-report
-            // pairs, suggestion_rate metric).
+            // Attach the user's own recorded utterance so Gemini hears what
+            // was ACTUALLY said — on-device STT is the weak link for accented
+            // speech; the model returns its own verbatim transcript alongside
+            // the reply. ~32 kbps AAC, so even a long turn stays small.
+            var turnAudio: GeminiClient.Message.InlineAudio?
+            if let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
+               let url = turn.audioURL, let data = try? Data(contentsOf: url),
+               !data.isEmpty, data.count <= 4_000_000 {
+                turnAudio = .init(mimeType: "audio/aac",
+                                  base64Data: data.base64EncodedString())
+            }
+            // One structured call returns transcript + reply + optional inline
+            // correction (repopulates Turn.suggestion: chip UI, SRS ingest,
+            // weekly-report pairs, suggestion_rate metric).
             let payload: ConversationTurnPayload
             do {
                 payload = try await GeminiClient.shared.sendJSON(
                     system: systemPrompt()
                         + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
-                    messages: ConversationEngine.geminiMessages(from: turns),
-                    maxTokens: 512,
+                    messages: ConversationEngine.geminiMessages(from: turns,
+                                                                lastUserAudio: turnAudio),
+                    maxTokens: 768,
                     temperature: 0.7,
                     // Keyed to the user turn: the inline Retry button re-runs
                     // this same logical request without a second charge.
@@ -720,6 +766,15 @@ struct ConversationView: View {
                 // Model slipped out of JSON mode — treat the raw text as the
                 // spoken reply rather than failing the whole turn.
                 payload = ConversationTurnPayload(reply: raw, suggestion: nil)
+            }
+            // Upgrade the turn to what the model actually HEARD (audio is the
+            // ground truth) — the feed, session summary, drills, and profile
+            // all learn from the real utterance instead of the ASR guess.
+            if turnAudio != nil,
+               let heard = payload.transcript?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !heard.isEmpty,
+               let idx = turns.firstIndex(where: { $0.id == turnId }) {
+                turns[idx].transcript = heard
             }
             let replyText = payload.reply.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !replyText.isEmpty else {
@@ -840,12 +895,18 @@ struct ConversationView: View {
             }
         } catch {
             if let id = streamTurnId {
-                // Audio already started, then the stream broke mid-sentence:
-                // stop cleanly, drop the half-spoken turn, surface Retry
-                // (same idempotency key → the retry isn't charged again).
+                // Audio already started, then the stream broke mid-sentence
+                // (cellular loves doing this): stop cleanly, drop the
+                // half-spoken turn, and fall through to the buffered call —
+                // same idempotency key, so the re-synthesis isn't charged
+                // again. The line restarts from the top, which beats
+                // dead-ending the call on a Retry button. If the buffered
+                // call fails too, THAT error surfaces as the retry row.
+                // stop() doesn't fire the stream completion, so phase stays
+                // ours to manage — back to .thinking while we re-fetch.
                 player.stop()
                 turns.removeAll { $0.id == id }
-                throw error
+                phase = .thinking
             }
             // No audio reached the speaker → silent fallback.
         }
@@ -959,6 +1020,22 @@ struct ConversationView: View {
             computed.expressionsUsed = verifiedExpressions
             VocabStore.shared.ingestExpressions(
                 sessionId: sessionId, phrases: verifiedExpressions)
+
+            // Same guard for grammar evidence: a quote the user can't find in
+            // their own words destroys trust in the whole list. Compare with
+            // punctuation/casing stripped — STT and the LLM disagree on those
+            // even when the words match.
+            func normalized(_ s: String) -> String {
+                s.lowercased()
+                    .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'")).inverted)
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+            }
+            let normalizedHaystack = normalized(haystack)
+            computed.grammarIssues = computed.grammarIssues.filter {
+                let needle = normalized($0.quote)
+                return !needle.isEmpty && normalizedHaystack.contains(needle)
+            }
 
             summary = computed
             phase = .idle

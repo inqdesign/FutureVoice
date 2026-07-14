@@ -12,7 +12,7 @@ final class GeminiClient {
     static let shared = GeminiClient()
 
     private let session: URLSession
-    init(session: URLSession = .shared) {
+    init(session: URLSession = .edgeFunctions) {
         self.session = session
     }
 
@@ -38,6 +38,16 @@ final class GeminiClient {
         enum Role: String { case user, model }
         let role: Role
         let content: String
+        /// Optional audio attached alongside the text (conversation turns
+        /// attach the user's own recorded utterance so the model hears what
+        /// was actually said instead of trusting on-device STT). The audio
+        /// part is sent FIRST, the text rides along as the ASR hint.
+        var inlineAudio: InlineAudio? = nil
+
+        struct InlineAudio {
+            let mimeType: String     // e.g. "audio/aac"
+            let base64Data: String
+        }
     }
 
     // MARK: - Public
@@ -55,7 +65,13 @@ final class GeminiClient {
     ) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
-        struct Part: Encodable { let text: String }
+        // Optionals encode via encodeIfPresent, so a text part carries no
+        // "inlineData" key and vice versa — matching Gemini's part union.
+        struct InlineData: Encodable { let mimeType: String; let data: String }
+        struct Part: Encodable {
+            var text: String? = nil
+            var inlineData: InlineData? = nil
+        }
         struct Content: Encodable { let role: String; let parts: [Part] }
         struct SystemInstruction: Encodable { let parts: [Part] }
         struct ThinkingConfig: Encodable { let thinkingBudget: Int }
@@ -78,7 +94,15 @@ final class GeminiClient {
         let body = Body(
             model: model.rawValue,
             system_instruction: .init(parts: [.init(text: system)]),
-            contents: messages.map { Content(role: $0.role.rawValue, parts: [.init(text: $0.content)]) },
+            contents: messages.map { msg in
+                var parts: [Part] = []
+                if let audio = msg.inlineAudio {
+                    parts.append(Part(inlineData: .init(mimeType: audio.mimeType,
+                                                        data: audio.base64Data)))
+                }
+                parts.append(Part(text: msg.content))
+                return Content(role: msg.role.rawValue, parts: parts)
+            },
             generationConfig: .init(
                 temperature: temperature,
                 maxOutputTokens: maxTokens,
@@ -104,7 +128,7 @@ final class GeminiClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.dataWithRetry(for: request)
         try Self.validate(response: response, data: data)
 
         struct APIResponse: Decodable {

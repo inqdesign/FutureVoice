@@ -12,6 +12,11 @@ final class AudioPlayer: NSObject, ObservableObject {
     @Published private(set) var currentTime: TimeInterval = 0
     /// Total length of the loaded audio, available after `play`/`prepare`.
     @Published private(set) var duration: TimeInterval = 0
+    /// Live output level, 0…1, published while audio is audible. Drives the
+    /// Talk screen's voice orb so the visual rides the actual speech instead
+    /// of a canned pulse. Metered from AVAudioPlayer on the buffered path and
+    /// from a mixer tap on the streaming path.
+    @Published private(set) var level: Float = 0
 
     private var player: AVAudioPlayer?
     private var completion: (() -> Void)?
@@ -66,6 +71,7 @@ final class AudioPlayer: NSObject, ObservableObject {
         p.enableRate = true
         p.rate = rate
         p.delegate = self
+        p.isMeteringEnabled = true
         p.prepareToPlay()
         guard p.play() else { throw AudioPlayerError.playFailed }
 
@@ -162,6 +168,7 @@ final class AudioPlayer: NSObject, ObservableObject {
     func pause() {
         player?.pause()
         isPlaying = false
+        level = 0
         stopTicker()
     }
 
@@ -187,6 +194,7 @@ final class AudioPlayer: NSObject, ObservableObject {
         player = nil
         teardownStream(fireCompletion: false)
         isPlaying = false
+        level = 0
         currentTime = 0
         segmentEnd = nil
         loopEnabled = false
@@ -216,6 +224,20 @@ final class AudioPlayer: NSObject, ObservableObject {
         let node = AVAudioPlayerNode()
         engine.attach(node)
         engine.connect(node, to: engine.mainMixerNode, format: format)
+        // Meter what's actually being HEARD (post-mix), not what's scheduled —
+        // network chunks arrive ahead of playback, so metering in
+        // feedPCMStream would make the orb lead the voice.
+        engine.mainMixerNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
+            guard let data = buffer.floatChannelData?[0] else { return }
+            let count = Int(buffer.frameLength)
+            guard count > 0 else { return }
+            var sum: Float = 0
+            for i in 0..<count { sum += data[i] * data[i] }
+            let rms = (sum / Float(count)).squareRoot()
+            let db = 20 * log10(max(rms, 0.00001))
+            let norm = Self.normalizedLevel(dBFS: db)
+            Task { @MainActor [weak self] in self?.level = norm }
+        }
         engine.prepare()
         try engine.start()
         node.play()
@@ -279,8 +301,10 @@ final class AudioPlayer: NSObject, ObservableObject {
 
     private func teardownStream(fireCompletion: Bool) {
         guard streamEngine != nil || streamNode != nil else { return }
+        streamEngine?.mainMixerNode.removeTap(onBus: 0)
         streamNode?.stop()
         streamEngine?.stop()
+        level = 0
         streamNode = nil
         streamEngine = nil
         streamFormat = nil
@@ -341,8 +365,16 @@ final class AudioPlayer: NSObject, ObservableObject {
                     p.currentTime = self.segmentStart   // whole-file loop
                 }
                 self.currentTime = p.currentTime
+                p.updateMeters()
+                self.level = Self.normalizedLevel(dBFS: p.averagePower(forChannel: 0))
             }
         }
+    }
+
+    /// dBFS → 0…1 on the same perceptual scale LiveTranscriber uses for the
+    /// mic, so the orb reads mic and playback energy identically.
+    private static func normalizedLevel(dBFS: Float) -> Float {
+        max(0, min(1, (dBFS + 50) / 44))
     }
 
     private func stopTicker() {

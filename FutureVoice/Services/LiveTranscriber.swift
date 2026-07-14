@@ -12,6 +12,14 @@ import Speech
 /// commits the current transcript and restarts the recognition segment. The
 /// audio engine tap keeps feeding whichever request is currently active, so
 /// the user can keep talking without seeing earlier sentences vanish.
+///
+/// Committed text lives in per-segment `chunks`. A committed chunk starts as
+/// the segment's last PARTIAL hypothesis (so the UI never loses text), and is
+/// upgraded in place when that segment's language-model-rescored FINAL result
+/// arrives — partials are systematically worse (soundalike words, unrevised
+/// guesses), so every segment ends better than it looked live. Turn-committing
+/// callers should prefer `stopAndFinalize()` over `stop()` for the same
+/// reason: it waits a beat for the last segment's final pass.
 @MainActor
 final class LiveTranscriber: ObservableObject {
     @Published private(set) var transcript = ""
@@ -42,7 +50,14 @@ final class LiveTranscriber: ObservableObject {
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
     private var currentTask: SFSpeechRecognitionTask?
     private var taskGeneration = 0
-    private var committedText = ""
+    /// Committed segments in spoken order, keyed by the generation that
+    /// produced them so a late-arriving FINAL result can upgrade its own
+    /// chunk in place. gen -1 = frozen by a mid-run recognizer reset; no
+    /// final will ever cover that text, so it is never replaced.
+    private var chunks: [(gen: Int, text: String)] = []
+    /// Set while `stopAndFinalize()` waits for the last segment's final pass;
+    /// cleared when it arrives (or the wait times out).
+    private var finalizingGen: Int?
     private var lastSegmentText = ""
     private var lastChangeTime = Date()
     private var quietWatcher: Task<Void, Never>?
@@ -170,7 +185,8 @@ final class LiveTranscriber: ObservableObject {
 
         self.engine = engine
         self.recognizer = rec
-        self.committedText = ""
+        self.chunks = []
+        self.finalizingGen = nil
         self.transcript = ""
         self.lastSegmentText = ""
         self.lastChangeTime = Date()
@@ -196,7 +212,45 @@ final class LiveTranscriber: ObservableObject {
         currentRequest = nil
         currentTask = nil
         recognizer = nil
+        finalizingGen = nil
         level = 0
+        return transcript
+    }
+
+    /// Like `stop()`, but waits (briefly) for the recognizer's FINAL,
+    /// language-model-rescored pass of the last segment before returning.
+    /// The live transcript's tail is otherwise the last raw partial — the
+    /// worst hypothesis the recognizer ever held. The mic is off from the
+    /// first line; only the text quality improves during the wait.
+    func stopAndFinalize(timeout: TimeInterval = 0.9) async -> String {
+        guard isRunning else { return transcript }
+        isRunning = false
+        quietWatcher?.cancel()
+        quietWatcher = nil
+        appender.setRequest(nil)
+        engine?.stop()
+        engine?.inputNode.removeTap(onBus: 0)
+        lastRecordingURL = recorder.finish()
+        engine = nil
+        level = 0
+
+        if lastSegmentText.isEmpty {
+            // Nothing pending in the live segment — no final to wait for.
+            currentRequest?.endAudio()
+            currentTask?.finish()
+        } else {
+            finalizingGen = taskGeneration
+            currentRequest?.endAudio()
+            let deadline = Date().addingTimeInterval(timeout)
+            while finalizingGen != nil && Date() < deadline {
+                try? await Task.sleep(nanoseconds: 60_000_000)
+            }
+            finalizingGen = nil
+            currentTask?.cancel()
+        }
+        currentRequest = nil
+        currentTask = nil
+        recognizer = nil
         return transcript
     }
 
@@ -231,28 +285,36 @@ final class LiveTranscriber: ObservableObject {
         let myGen = taskGeneration
         currentTask = recognizer.recognitionTask(with: req) { [weak self] result, error in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                // Ignore late callbacks from a previous segment.
-                guard myGen == self.taskGeneration else { return }
-                self.handleResult(result, error: error)
+                self?.handleResult(result, error: error, generation: myGen)
             }
         }
     }
 
     private func commitAndRestart() {
         guard isRunning else { return }
-        // What the user has seen becomes a permanent prefix; the next
+        // What the user has seen becomes this segment's chunk; the next
         // recognition segment starts empty so further partials append.
-        committedText = transcript
+        if !lastSegmentText.isEmpty {
+            chunks.append((gen: taskGeneration, text: lastSegmentText))
+        }
         lastSegmentText = ""
         lastChangeTime = Date()
-        let oldTask = currentTask
         let oldReq = currentRequest
         currentTask = nil
         currentRequest = nil
         startNewSegment()
+        // endAudio() only — no task.finish(). The old task runs to its
+        // natural FINAL result, which arrives late and upgrades the chunk
+        // frozen above (partials are systematically worse text).
         oldReq?.endAudio()
-        oldTask?.finish()
+    }
+
+    /// Rebuilds the published transcript from committed chunks + the live
+    /// segment's current partial.
+    private func rebuildTranscript() {
+        var parts = chunks.map(\.text)
+        parts.append(lastSegmentText)
+        transcript = parts.filter { !$0.isEmpty }.joined(separator: " ")
     }
 
     private func startQuietWatcher() {
@@ -271,44 +333,61 @@ final class LiveTranscriber: ObservableObject {
         }
     }
 
-    private func handleResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
-        guard isRunning else { return }
+    private func handleResult(_ result: SFSpeechRecognitionResult?, error: Error?,
+                              generation myGen: Int) {
+        // Late callback from an already-committed segment. The only thing we
+        // still want from it is the FINAL, language-model-rescored text —
+        // strictly better than the partial its chunk was frozen with.
+        guard myGen == taskGeneration else {
+            if let result, result.isFinal,
+               let idx = chunks.firstIndex(where: { $0.gen == myGen }) {
+                let finalText = result.bestTranscription.formattedString
+                if !finalText.isEmpty { chunks[idx].text = finalText }
+                rebuildTranscript()
+            }
+            return
+        }
+
+        // Mic already stopped: `stopAndFinalize()` is waiting for the last
+        // segment's final pass. Accept exactly that, nothing else.
+        if !isRunning {
+            guard finalizingGen == myGen else { return }
+            if let result, result.isFinal {
+                let finalText = result.bestTranscription.formattedString
+                if !finalText.isEmpty { lastSegmentText = finalText }
+                rebuildTranscript()
+                finalizingGen = nil
+            } else if error != nil {
+                finalizingGen = nil
+            }
+            return
+        }
 
         if let result = result {
             let segmentText = result.bestTranscription.formattedString
 
             // SFSpeechRecognizer (especially on iOS 26) occasionally resets
-            // its internal segment mid-utterance: bestTranscription suddenly
-            // becomes empty or much shorter than the previous partial. Naive
-            // assignment then wipes everything the user already saw. Detect
-            // the shrink and treat it as a forced commit — freeze the longer
-            // version into committedText, then accept the new short text as
-            // the start of a fresh segment.
-            let prev = lastSegmentText
-            let shrank = segmentText.count + 4 < prev.count
-            if shrank && !prev.isEmpty {
-                committedText = committedText.isEmpty ? prev : committedText + " " + prev
-                lastSegmentText = segmentText
-                lastChangeTime = Date()
-                transcript = committedText.isEmpty
-                    ? segmentText
-                    : committedText + (segmentText.isEmpty ? "" : " " + segmentText)
-                currentWordTimings = result.bestTranscription.segments.map {
-                    WordTimingInfo(word: $0.substring,
-                                   startSeconds: $0.timestamp,
-                                   duration: $0.duration)
-                }
-                if result.isFinal { commitAndRestart() }
-                return
+            // its internal segment mid-utterance: bestTranscription starts
+            // OVER and the previous text is gone for good. Freeze the old
+            // text as a chunk so the user doesn't lose it. Crucially this
+            // must NOT fire on an ordinary hypothesis REVISION — partials
+            // routinely rewrite and briefly shrink while the recognizer
+            // rethinks, and freezing a revision bakes the stale wrong words
+            // into the transcript ahead of the corrected ones (phantom /
+            // duplicated text the user never said).
+            if !lastSegmentText.isEmpty,
+               Self.looksLikeSegmentReset(previous: lastSegmentText, current: segmentText) {
+                // gen -1: no final result will ever cover this text, so the
+                // late-final upgrade path must never touch it.
+                chunks.append((gen: -1, text: lastSegmentText))
+                lastSegmentText = ""
             }
 
             if segmentText != lastSegmentText {
                 lastChangeTime = Date()
                 lastSegmentText = segmentText
             }
-            transcript = committedText.isEmpty
-                ? segmentText
-                : committedText + " " + segmentText
+            rebuildTranscript()
             currentWordTimings = result.bestTranscription.segments.map {
                 WordTimingInfo(
                     word: $0.substring,
@@ -326,6 +405,20 @@ final class LiveTranscriber: ObservableObject {
         if error != nil {
             commitAndRestart()
         }
+    }
+
+    /// True when a new partial looks like the recognizer STARTED OVER rather
+    /// than revised its hypothesis: essentially none of the leading words
+    /// survive AND the text got drastically shorter. Erring toward "revision"
+    /// is the safe side — a wrongly-taken reset permanently duplicates text,
+    /// while a wrongly-taken revision merely re-listens to a few words.
+    private static func looksLikeSegmentReset(previous: String, current: String) -> Bool {
+        let prevWords = previous.lowercased().split(separator: " ")
+        let curWords = current.lowercased().split(separator: " ")
+        guard prevWords.count >= 3 else { return false }
+        guard curWords.count * 2 <= prevWords.count else { return false }
+        let sharedHead = zip(prevWords, curWords).prefix(while: { $0.0 == $0.1 }).count
+        return sharedHead == 0
     }
 
     // MARK: - Level metering
