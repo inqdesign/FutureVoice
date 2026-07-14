@@ -14,9 +14,14 @@ final class ElevenLabsClient {
     static let shared = ElevenLabsClient()
 
     private let session: URLSession
+    /// Voice-clone sample uploads are megabytes, not kilobytes — they get a
+    /// roomier resource timeout than the interactive calls.
+    private let uploadSession: URLSession
 
-    init(session: URLSession = .shared) {
+    init(session: URLSession = .edgeFunctions,
+         uploadSession: URLSession = .edgeFunctionUploads) {
         self.session = session
+        self.uploadSession = uploadSession
     }
 
     /// Edge Function base URL = `<SUPABASE_URL>/functions/v1`. Built once
@@ -72,7 +77,7 @@ final class ElevenLabsClient {
         }
         body.appendString("--\(boundary)--\r\n")
 
-        let (data, response) = try await session.upload(for: request, from: body)
+        let (data, response) = try await uploadSession.uploadWithRetry(for: request, from: body)
         try Self.validate(response: response, data: data)
 
         struct AddVoiceResponse: Decodable { let voice_id: String }
@@ -92,7 +97,7 @@ final class ElevenLabsClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["voice_id": voiceId])
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.dataWithRetry(for: request)
         try Self.validate(response: response, data: data)
     }
 
@@ -131,7 +136,7 @@ final class ElevenLabsClient {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.dataWithRetry(for: request)
         try Self.validate(response: response, data: data)
         return data
     }
@@ -280,7 +285,7 @@ final class ElevenLabsClient {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await session.dataWithRetry(for: request)
         try Self.validate(response: response, data: data)
 
         struct Alignment: Decodable {
