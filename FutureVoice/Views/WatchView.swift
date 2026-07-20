@@ -178,10 +178,9 @@ struct WatchView: View {
     let customScenario: String
     /// When set, skip Gemini generation and just replay this saved dialogue.
     let savedDialogue: WatchDialogue?
-    /// Whether a freshly generated dialogue is archived to the Watch tab.
-    /// False for scenario-watch (the counterpart is synthetic and would
-    /// orphan a row in the persona list) — those are one-shot, audio still
-    /// caches for in-session replay.
+    /// Whether a freshly generated dialogue is archived for replay.
+    /// False for scenario-watch (the book already owns its scene) — those
+    /// are one-shot, audio still caches for in-session replay.
     let persist: Bool
 
     init(counterpart: Counterpart,
@@ -309,8 +308,13 @@ struct WatchView: View {
             ?? topic?.title
             ?? customScenario
         let blurb = topic?.blurb ?? savedDialogue?.scenarioBlurb ?? ""
+        // Synthetic partners (topic watch, scenario watch) can lack a
+        // relationship — join only what's set so no trailing separator.
+        let speakerLine = [counterpart.name, counterpart.relationship]
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
         return VStack(alignment: .leading, spacing: 4) {
-            Text(counterpart.name + " · " + counterpart.relationship)
+            Text(speakerLine)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Text(title)

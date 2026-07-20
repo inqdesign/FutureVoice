@@ -1,35 +1,57 @@
 import SwiftUI
 
-/// Scenarios home — a shelf of curriculum "books". Each scenario is a course:
-/// a situation + who you talk to, filled with words, expressions, and shadow
-/// lines to master. Tapping a card opens the book (ScenarioDetailView) —
-/// progress, checklist, the Talk/Watch study actions, and past watches all
-/// live there. Mastered or shelved books drop into the Archive at the bottom.
-/// People (voice-cloned personas) are managed from the toolbar; they show up
-/// as the "who" inside cards.
+/// Watch home — two swipeable shelf pages of curriculum "books" behind
+/// ProgressTab-style chips ("By topic" / "By scenario"). Same mechanics,
+/// different seed: topic books come from a story in your interests (or any
+/// typed topic) via the "+" picker (WatchTopicSheet); situation books are
+/// built from a situation + who you talk to. Every book is a course — one
+/// scene to watch, its words, expressions, and shadow lines to master.
+/// Tapping a card opens the book (ScenarioDetailView); mastered or shelved
+/// books drop into each shelf's own Archive. People (voice-cloned personas)
+/// are managed from the toolbar; they show up as the "who" inside cards.
 struct WatchTab: View {
     @EnvironmentObject private var appState: AppState
     @State private var showingNewVoice = false
     @State private var showingNewScenario = false
     @State private var showingPeople = false
+    @State private var showingTopicWatch = false
     @State private var talkScenario: Scenario?
     @State private var openScenario: Scenario?
+    /// Optional because it doubles as the pager's scrollPosition binding
+    /// (same trick as ProgressTab.selected).
+    @State private var shelf: Shelf? = .topic
+
+    /// The two shelves: topic books (born from an interest/news topic) and
+    /// situation books (built scenarios). Same mechanics, split display.
+    enum Shelf: String, CaseIterable, Hashable {
+        case topic, scenario
+        var title: String {
+            switch self {
+            case .topic:    return "By topic"
+            case .scenario: return "By scenario"
+            }
+        }
+    }
 
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
 
-    private var activeScenarios: [Scenario] { appState.scenarios.filter { !$0.isArchived } }
-    private var archivedScenarios: [Scenario] { appState.scenarios.filter(\.isArchived) }
+    private var topicBooks: [Scenario] {
+        appState.scenarios.filter { !$0.isArchived && $0.isTopic == true }
+    }
+    private var situationBooks: [Scenario] {
+        appState.scenarios.filter { !$0.isArchived && $0.isTopic != true }
+    }
+    private var archivedTopicBooks: [Scenario] {
+        appState.scenarios.filter { $0.isArchived && $0.isTopic == true }
+    }
+    private var archivedSituationBooks: [Scenario] {
+        appState.scenarios.filter { $0.isArchived && $0.isTopic != true }
+    }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if appState.scenarios.isEmpty {
-                    emptyState
-                } else {
-                    content
-                }
-            }
-            .navigationTitle("Scenarios")
+            content
+            .navigationTitle("Watch")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
@@ -39,10 +61,13 @@ struct WatchTab: View {
                         Image(systemName: "person.2")
                     }
                     .accessibilityLabel("Your people")
-                    Button { showingNewScenario = true } label: {
+                    // "+" mirrors Home's topic button: one picker sheet for
+                    // everything new — a story/topic becomes a topic book,
+                    // and the scenario builder lives in its toolbar.
+                    Button { showingTopicWatch = true } label: {
                         Image(systemName: "plus")
                     }
-                    .accessibilityLabel("New scenario")
+                    .accessibilityLabel("New book")
                 }
             }
             .sheet(isPresented: $showingNewVoice) {
@@ -61,6 +86,15 @@ struct WatchTab: View {
                 PeopleSheet(onNew: { showingPeople = false; showingNewVoice = true })
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showingTopicWatch) {
+                // A picked topic becomes a book — land on its page right
+                // away so the curriculum starts generating (same move as
+                // the scenario builder above).
+                WatchTopicSheet { newBook in
+                    openScenario = newBook
+                }
+                .environmentObject(appState)
+            }
             .fullScreenCover(item: $talkScenario) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
                     .environmentObject(appState)
@@ -72,19 +106,123 @@ struct WatchTab: View {
         }
     }
 
-    // MARK: - Content
+    // MARK: - Content (paged shelves)
 
+    /// Same pager pattern as ProgressTab: a native horizontal-paging
+    /// ScrollView (not TabView(.page), which clips pages to the safe area)
+    /// with the chip bar pinned as a translucent top inset — content scrolls
+    /// under it and under the nav bar.
     private var content: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 14) {
-                ForEach(activeScenarios) { s in scenarioCard(s) }
+        ScrollView(.horizontal) {
+            LazyHStack(spacing: 0) {
+                ForEach(Shelf.allCases, id: \.self) { s in
+                    ScrollView {
+                        page(for: s)
+                            .padding(.top, 8)
+                            .padding(.bottom, 28)
+                    }
+                    .containerRelativeFrame(.horizontal)
+                    .id(s)
+                }
             }
-            .padding(.horizontal, 18)
-            .padding(.top, 6)
-
-            if !archivedScenarios.isEmpty { archiveSection }
+            .scrollTargetLayout()
         }
+        .scrollTargetBehavior(.paging)
+        .scrollPosition(id: $shelf)
+        .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            shelfBar
+                .padding(.top, 4)
+                .padding(.bottom, 6)
+                .background {
+                    // `.bar` (the system nav-bar material), not
+                    // `.ultraThinMaterial`, so this strip reads the same tone
+                    // as the standard nav bar on the plain tabs. The feathered
+                    // bottom edge keeps content underlapping translucently.
+                    Rectangle().fill(.bar)
+                        .mask {
+                            LinearGradient(stops: [.init(color: .black, location: 0),
+                                                   .init(color: .black, location: 0.82),
+                                                   .init(color: .clear, location: 1)],
+                                           startPoint: .top, endPoint: .bottom)
+                        }
+                        .ignoresSafeArea(edges: .top)
+                }
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
+    }
+
+    @ViewBuilder
+    private func page(for shelf: Shelf) -> some View {
+        switch shelf {
+        case .topic:    topicPage
+        case .scenario: scenarioPage
+        }
+    }
+
+    // MARK: - Shelf chips
+
+    /// Fitness+-style pills sized to their text, left-aligned — same look as
+    /// ProgressTab's sub-tab bar. Tapping animates the pager; swiping the
+    /// pages moves the selection back through `scrollPosition`.
+    private var shelfBar: some View {
+        HStack(spacing: 8) {
+            ForEach(Shelf.allCases, id: \.self) { s in
+                Button { withAnimation { shelf = s } } label: {
+                    Text(s.title)
+                        .font(.body.weight(.medium))
+                        .padding(.horizontal, 16).padding(.vertical, 9)
+                        .background(Capsule().fill(shelf == s ? Color(.label) : Color(.secondarySystemGroupedBackground)))
+                        .foregroundStyle(shelf == s ? Color(.systemBackground) : Color.primary)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - By topic
+
+    /// Topic books work exactly like situation books — one scene, a
+    /// checklist, mastery — they're just seeded from a story or a typed
+    /// topic. New ones come from the "+" picker (WatchTopicSheet).
+    @ViewBuilder
+    private var topicPage: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if topicBooks.isEmpty {
+                emptyTopicState
+                    .padding(.top, 24)
+            } else {
+                LazyVGrid(columns: columns, spacing: 14) {
+                    ForEach(topicBooks) { s in scenarioCard(s) }
+                }
+                .padding(.horizontal, 18)
+            }
+
+            if !archivedTopicBooks.isEmpty { archiveSection(archivedTopicBooks) }
+        }
+    }
+
+    // MARK: - By scenario
+
+    @ViewBuilder
+    private var scenarioPage: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if situationBooks.isEmpty {
+                emptyState
+                    .padding(.top, 24)
+            } else {
+                LazyVGrid(columns: columns, spacing: 14) {
+                    ForEach(situationBooks) { s in scenarioCard(s) }
+                }
+                .padding(.horizontal, 18)
+            }
+
+            if !archivedSituationBooks.isEmpty { archiveSection(archivedSituationBooks) }
+        }
     }
 
     // MARK: - Cards
@@ -101,8 +239,10 @@ struct WatchTab: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
+                // Topic titles are full story headlines — give them a second
+                // line (the card grows past minHeight when needed).
                 Text(s.environment).font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary).lineLimit(1)
+                    .foregroundStyle(.primary).lineLimit(s.isTopic == true ? 2 : 1)
                 Text("with \(linkedPersonaName(s) ?? s.role)")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
@@ -110,8 +250,7 @@ struct WatchTab: View {
             cardProgress(s)
         }
         .padding(14)
-        .frame(height: 150)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .onTapGesture { openScenario = s }
@@ -151,6 +290,8 @@ struct WatchTab: View {
             Circle().fill(Color.accentColor.opacity(0.18)).frame(width: 46, height: 46)
             if let name = linkedPersonaName(s) {
                 Text(Self.initials(name)).font(.subheadline.weight(.bold)).foregroundStyle(.tint)
+            } else if s.isTopic == true {
+                Image(systemName: "newspaper.fill").font(.title3).foregroundStyle(.tint)
             } else {
                 Image(systemName: Self.roleIcon(for: s.role)).font(.title3).foregroundStyle(.tint)
             }
@@ -159,14 +300,15 @@ struct WatchTab: View {
 
     // MARK: - Archive
 
-    private var archiveSection: some View {
+    /// One shelf's archive — each page lists only its own kind of book.
+    private func archiveSection(_ items: [Scenario]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Archive")
                 .font(.headline)
                 .padding(.horizontal, 20)
                 .padding(.top, 24)
             VStack(spacing: 0) {
-                ForEach(archivedScenarios) { s in
+                ForEach(items) { s in
                     Button { openScenario = s } label: { archivedRow(s) }
                         .buttonStyle(.plain)
                         .contextMenu {
@@ -177,7 +319,7 @@ struct WatchTab: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
-                    if s.id != archivedScenarios.last?.id { Divider().padding(.leading, 56) }
+                    if s.id != items.last?.id { Divider().padding(.leading, 56) }
                 }
             }
             .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemGroupedBackground)))
@@ -249,6 +391,17 @@ struct WatchTab: View {
             Text("Build a scenario — where you are and who you're with. It becomes a course: words, expressions, and lines to master, with your fluent self as the study partner.")
         } actions: {
             Button("New scenario") { showingNewScenario = true }
+                .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var emptyTopicState: some View {
+        ContentUnavailableView {
+            Label("Watch a topic", systemImage: "newspaper")
+        } description: {
+            Text("Pick a story from your interests — or any topic on your mind. It becomes a book: a scene to watch, plus its words and lines to master.")
+        } actions: {
+            Button("Pick a topic") { showingTopicWatch = true }
                 .buttonStyle(.borderedProminent)
         }
     }

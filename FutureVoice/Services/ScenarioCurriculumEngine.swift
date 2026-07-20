@@ -109,11 +109,24 @@ enum ScenarioCurriculumEngine {
         persona: UserPersona?,
         counterpart: Counterpart?
     ) -> String {
-        var lines = ["scenario:"]
-        lines.append("- where: \(scenario.environment)")
-        lines.append("- talking to: \(scenario.role)")
-        if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
-            lines.append("- context: \(scenario.notes)")
+        var lines: [String]
+        if scenario.isTopic == true {
+            // Topic book: the "situation" is a discussion about something the
+            // learner follows, not a transactional errand — frame it so the
+            // scene is two people actually talking the story through.
+            lines = ["scenario: a casual conversation about a topic the learner follows"]
+            lines.append("- topic: \(scenario.environment)")
+            lines.append("- talking with: \(scenario.role)")
+            if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                lines.append("- story context (facts from coverage — keep the dialogue consistent with these): \(scenario.notes)")
+            }
+        } else {
+            lines = ["scenario:"]
+            lines.append("- where: \(scenario.environment)")
+            lines.append("- talking to: \(scenario.role)")
+            if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                lines.append("- context: \(scenario.notes)")
+            }
         }
         if let c = counterpart {
             lines.append("- the other person is \(c.name) (\(c.relationship))")
