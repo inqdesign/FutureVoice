@@ -167,7 +167,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("You, but fluent")
                     .font(.largeTitle.weight(.bold))
-                Text("Everything Future Voice does, fueled up — in your own voice.")
+                Text("Everything nawana does, fueled up — in your own voice.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -415,7 +415,7 @@ struct PaywallView: View {
         guard trialDays > 2 else { return }
         let content = UNMutableNotificationContent()
         content.title = "Your free trial ends soon"
-        content.body = "Your Future Voice trial converts in 2 days. Cancel anytime in the App Store."
+        content.body = "Your nawana trial converts in 2 days. Cancel anytime in the App Store."
         content.sound = .default
         let fireIn = TimeInterval((trialDays - 2) * 24 * 60 * 60)
         let request = UNNotificationRequest(

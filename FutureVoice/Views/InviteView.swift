@@ -95,7 +95,7 @@ struct InviteView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "I'm practicing speaking with my own AI voice on Future Me. Join with my code \(code) and we both get bonus credits."
+        "I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get bonus credits."
     }
 
     private func reload() async {

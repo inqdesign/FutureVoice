@@ -71,6 +71,6 @@ struct BetaWelcomeView: View {
     }
 
     private func shareText(_ c: String) -> String {
-        "I'm practicing speaking with my own AI voice on Future Me. Join with my code \(c) and we both get bonus credits."
+        "I'm practicing speaking with my own AI voice on nawana. Join with my code \(c) and we both get bonus credits."
     }
 }

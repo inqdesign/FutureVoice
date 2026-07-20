@@ -61,7 +61,7 @@ struct VoiceCloneOnboardingView: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 } header: {
-                    Text("Why we need 30 seconds of your voice")
+                    Text("Why we need a minute of your voice")
                 }
 
                 Section {

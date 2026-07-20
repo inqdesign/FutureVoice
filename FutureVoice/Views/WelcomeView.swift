@@ -2,8 +2,10 @@ import AuthenticationServices
 import SwiftUI
 
 /// First screen — a swipeable, auto-playing carousel that shows the app's value
-/// through small animated mockups of the real UI (not generic icons), with a
-/// pill Sign in with Apple pinned below.
+/// through previews built from the SAME components the real screens use (the
+/// VoiceGlow dialer orb, the plain transcript feed, the shadow karaoke
+/// timeline, the CEFR level equalizer) — not generic icons or chat bubbles.
+/// A pill Sign in with Apple is pinned below.
 struct WelcomeView: View {
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
@@ -20,13 +22,13 @@ struct WelcomeView: View {
 
     private static let features: [Feature] = [
         Feature(title: "Talk with a fluent you",
-                subtitle: "Real conversations in your own voice — fluent, natural, unmistakably you."),
-        Feature(title: "Watch yourself with real people",
-                subtitle: "See your fluent self handle real moments with the actual people in your life."),
+                subtitle: "Call your fluent self and just talk — real conversations in your own voice, fluent and unmistakably you."),
+        Feature(title: "Watch real situations play out",
+                subtitle: "Scenes built from your life and interests — watch, then master every word, expression, and line inside."),
         Feature(title: "Make the words yours",
-                subtitle: "Shadow the exact expressions in your own voice, at any speed, until they stick."),
-        Feature(title: "AI that targets your gaps",
-                subtitle: "Every conversation is analyzed into the precise corrections and phrases you need next.")
+                subtitle: "Shadow the exact lines in your own voice, at any speed, until they stick."),
+        Feature(title: "Grow your word world",
+                subtitle: "Every word you speak joins your cloud — tap any one for its meaning and examples.")
     ]
 
     var body: some View {
@@ -45,7 +47,7 @@ struct WelcomeView: View {
 
             signInArea
         }
-        .background(Color(.systemBackground).ignoresSafeArea())
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 6_500_000_000)
@@ -58,13 +60,16 @@ struct WelcomeView: View {
     }
 
     private func featurePage(_ i: Int, _ f: Feature) -> some View {
-        VStack(spacing: 28) {
-            Spacer()
+        // One centered column per slide: a fixed-height hero area so the copy
+        // never jumps between slides during autoplay, then title + subtitle.
+        // maxHeight centers the whole group — no top-heavy void below.
+        VStack(spacing: 32) {
             mock(i)
-                .frame(height: 250)
+                .frame(height: 440)
+                .frame(maxWidth: .infinity)
             VStack(spacing: 12) {
                 Text(f.title)
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 28)
@@ -75,169 +80,38 @@ struct WelcomeView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 36)
             }
-            Spacer()
-            Spacer()
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Mockups (animated, real-UI-flavored)
+    // MARK: - Mockups — real screenshots of the actual app screens
 
-    @ViewBuilder
+    /// Each slide is a genuine screenshot of the live screen (captured via the
+    /// DEBUG capture harness), shown in a phone frame — not a reconstruction.
+    /// welcome_talk · welcome_watch · welcome_shadow · welcome_vocab.
+    private static let shots = ["welcome_talk", "welcome_watch", "welcome_shadow", "welcome_vocab"]
+
     private func mock(_ i: Int) -> some View {
-        switch i {
-        case 0: talkMock
-        case 1: watchMock
-        case 2: shadowMock
-        default: analysisMock
-        }
+        phoneShot(Self.shots[i])
     }
 
-    private var talkMock: some View {
-        card {
-            Text("Free talk").font(.caption2).foregroundStyle(.secondary)
-            chatBubble("So — how'd the launch go?", mine: false, label: "Future self")
-            chatBubble("Honestly? It went really well.", mine: true, label: "You")
-            chatBubble("That's huge. What surprised you most?", mine: false, label: "Future self")
-        }
-    }
-
-    private var watchMock: some View {
-        card {
-            HStack(spacing: 10) {
-                avatar("Y", "You")
-                Image(systemName: "arrow.left.arrow.right").font(.caption).foregroundStyle(.secondary)
-                avatar("S", "Sarah")
-                Spacer()
-            }
-            .padding(.bottom, 2)
-            chatBubble("Wait — it's been forever!", mine: false, label: "Sarah")
-            chatBubble("I know! Let's actually catch up.", mine: true, label: "You")
-        }
-    }
-
-    private var shadowMock: some View {
-        card {
-            Text("Target line").font(.caption2).foregroundStyle(.secondary)
-            (Text("I really ")
-             + Text("appreciate").foregroundColor(.accentColor)
-             + Text(" your help."))
-                .font(.subheadline.weight(.semibold))
-
-            GeometryReader { geo in
-                let w = geo.size.width
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6).fill(Color(.tertiarySystemFill)).frame(height: 34)
-                    RoundedRectangle(cornerRadius: 6).fill(Color.accentColor.opacity(0.2))
-                        .frame(width: w * 0.34, height: 34).offset(x: w * 0.33)
-                    ForEach(0..<10, id: \.self) { k in
-                        Rectangle().fill(Color.secondary.opacity(0.3))
-                            .frame(width: 1.5, height: 12).offset(x: w * (0.06 + Double(k) * 0.092))
-                    }
-                    TimelineView(.animation) { ctx in
-                        let t = ctx.date.timeIntervalSinceReferenceDate
-                        // Sawtooth: sweep forward across the loop region, then
-                        // jump back to the start and repeat (looping playback).
-                        let p = (t / 2.2).truncatingRemainder(dividingBy: 1.0)
-                        let frac = 0.33 + p * 0.34
-                        Capsule().fill(Color.primary).frame(width: 2.5, height: 40)
-                            .offset(x: w * frac)
-                    }
-                }
-                .frame(height: 34)
-            }
-            .frame(height: 34)
-
-            HStack(spacing: 14) {
-                Label("0.75×", systemImage: "gauge.with.dots.needle.50percent")
-                Label("Loop", systemImage: "repeat")
-            }
-            .font(.caption2).foregroundStyle(.tint)
-        }
-    }
-
-    private var analysisMock: some View {
-        card {
-            HStack {
-                Text("Last talk").font(.caption2).foregroundStyle(.secondary)
-                Spacer()
-                Text("78").font(.subheadline.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(.green)
-                    .padding(.horizontal, 9).padding(.vertical, 3)
-                    .background(Capsule().fill(Color.green.opacity(0.15)))
-            }
-            Text("What to work on").font(.caption).foregroundStyle(.secondary).padding(.top, 2)
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "arrow.right.circle.fill").font(.footnote).foregroundStyle(.orange).padding(.top, 1)
-                (Text("make a interview ").strikethrough().foregroundColor(.secondary)
-                 + Text("do an interview").foregroundColor(.primary))
-                    .font(.subheadline)
-            }
-            VStack(spacing: 7) {
-                axisRow("Vocabulary", 82)
-                axisRow("Grammar", 71)
-                axisRow("Fluency", 68)
-            }
-            .padding(.top, 4)
-        }
-    }
-
-    // MARK: - Mock building blocks
-
-    @ViewBuilder
-    private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 12) { content() }
-            .padding(16)
-            .frame(width: 300, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Color(.secondarySystemBackground)))
-            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.primary.opacity(0.06)))
-            .shadow(color: .black.opacity(0.06), radius: 12, y: 5)
-    }
-
-    /// Real chat-bubble: counterpart on the left (gray), you on the right
-    /// (accent) — iMessage-style, for the marketing mock only.
-    private func chatBubble(_ text: String, mine: Bool, label: String) -> some View {
-        VStack(alignment: mine ? .trailing : .leading, spacing: 2) {
-            Text(label).font(.caption2).foregroundStyle(.secondary)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(mine ? .white : .primary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(mine ? Color.accentColor : Color(.tertiarySystemFill))
-                )
-        }
-        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
-    }
-
-    private func axisRow(_ name: String, _ score: Int) -> some View {
-        HStack(spacing: 8) {
-            Text(name).font(.caption2).foregroundStyle(.secondary)
-                .frame(width: 82, alignment: .leading)
-            GeometryReader { g in
-                Capsule().fill(Color(.tertiarySystemFill))
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(Color.accentColor)
-                            .frame(width: g.size.width * CGFloat(score) / 100)
-                    }
-            }
-            .frame(height: 5)
-            Text("\(score)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
-                .frame(width: 22, alignment: .trailing)
-        }
-    }
-
-    private func avatar(_ initial: String, _ name: String) -> some View {
-        VStack(spacing: 4) {
-            ZStack {
-                Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 44, height: 44)
-                Text(initial).font(.headline).foregroundStyle(.tint)
-            }
-            Text(name).font(.caption2).foregroundStyle(.secondary)
-        }
+    /// A real screen screenshot inside a simple phone frame — thin dark bezel,
+    /// rounded corners, soft drop shadow. The image is the actual app.
+    private func phoneShot(_ name: String) -> some View {
+        Image(name)
+            .resizable()
+            .scaledToFit()
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .padding(5)
+            .background(
+                RoundedRectangle(cornerRadius: 35, style: .continuous)
+                    .fill(Color(.label).opacity(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 35, style: .continuous)
+                    .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
+            )
+            .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
     }
 
     // MARK: - Page dots + sign in
@@ -291,7 +165,7 @@ struct WelcomeView: View {
                     .multilineTextAlignment(.center)
                     .font(.body.weight(.semibold))
                     .padding(.vertical, 11)
-                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemBackground)))
+                    .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemGroupedBackground)))
                     .padding(.horizontal, 32)
                     .onChange(of: inviteCode) { _, _ in savePendingInvite() }
                 Text("You'll both get 500 credits when you sign in.")
@@ -316,4 +190,3 @@ struct WelcomeView: View {
         }
     }
 }
-
