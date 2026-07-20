@@ -159,10 +159,13 @@ struct ShadowTimelinePlayer: View {
             }
             .onEnded { g in
                 if dragMode == .scrub, abs(g.translation.width) < 6 {
-                    // Tap → select the word under the tap + move the playhead.
-                    let t = time(at: g.location.x, w: w, dur: dur)
-                    if let i = wordIndex(at: t) { selectedWordRange = i...i }
-                    player.seek(to: t)
+                    // Tap → just move the playhead. It must NOT touch the
+                    // selection: collapsing to the tapped word silently turned
+                    // the NEXT mic attempt into a one-word shadow ("the
+                    // karaoke stops at the first word"). Selecting stays an
+                    // explicit gesture — drag on the track, or tap words on
+                    // the target line.
+                    player.seek(to: time(at: g.location.x, w: w, dur: dur))
                 }
                 dragMode = nil
             }
@@ -213,7 +216,7 @@ struct ShadowTimelinePlayer: View {
                     .foregroundStyle(selectionTimes == nil ? Color(.tertiaryLabel) : Color.secondary)
             }
             .buttonStyle(.plain)
-            .disabled(selectedWordRange == nil)
+            .disabled(selectionTimes == nil)
         }
     }
 

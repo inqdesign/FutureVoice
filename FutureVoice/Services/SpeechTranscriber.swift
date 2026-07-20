@@ -35,6 +35,15 @@ final class SpeechTranscriber {
         }
     }
 
+    /// Text + per-word timestamps from the recognizer's FINAL pass over a
+    /// file. Unlike streaming partials, file-based final segments carry
+    /// timestamps solid enough to grade rhythm against — the same property
+    /// `LocalAlignment` relies on for the target audio.
+    struct ScoringResult {
+        let text: String
+        let wordTimings: [WordTiming]
+    }
+
     /// Final-quality transcription of a recorded attempt, for SCORING.
     ///
     /// Differs from `transcribe` in exactly the ways scoring accuracy needs:
@@ -51,7 +60,7 @@ final class SpeechTranscriber {
         languageCode: String,
         contextualStrings: [String],
         timeout: TimeInterval = 15
-    ) async -> String? {
+    ) async -> ScoringResult? {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(languageCode))),
               recognizer.isAvailable else { return nil }
         recognizer.defaultTaskHint = .dictation
@@ -82,7 +91,17 @@ final class SpeechTranscriber {
                     return
                 }
                 if let result, result.isFinal, once.claim() {
-                    cont.resume(returning: result.bestTranscription.formattedString)
+                    let timings = result.bestTranscription.segments.map { seg in
+                        WordTiming(
+                            word: seg.substring,
+                            startMs: Int(seg.timestamp * 1000),
+                            endMs: Int((seg.timestamp + seg.duration) * 1000)
+                        )
+                    }
+                    cont.resume(returning: ScoringResult(
+                        text: result.bestTranscription.formattedString,
+                        wordTimings: timings
+                    ))
                 }
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {

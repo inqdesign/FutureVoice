@@ -57,6 +57,137 @@ enum ShadowEngine {
         )
     }
 
+    // MARK: - Rhythm (deterministic)
+
+    /// One target word the learner also said (diff `match` or `sub`), with
+    /// its onset in both timelines. `deviationMs` is how far off the beat the
+    /// learner's onset was AFTER pace normalization — positive = behind
+    /// (late), negative = ahead (early). Pace itself is judged separately by
+    /// the duration ratio, so rhythm only measures the *shape* of the timing.
+    struct RhythmWord: Hashable {
+        let word: String
+        /// Index of the word in the practiced target range (0-based).
+        let targetIndex: Int
+        /// Onset relative to the first paired word, target timeline (ms).
+        let targetOnsetMs: Int
+        /// Learner onset mapped onto the target timeline (pace-normalized, ms).
+        let learnerOnsetMs: Int
+        var deviationMs: Int { learnerOnsetMs - targetOnsetMs }
+        /// Word span in the target timeline, for proportional rendering.
+        let targetDurationMs: Int
+        /// Learner word span, pace-normalized (ms).
+        let learnerDurationMs: Int
+    }
+
+    struct RhythmAnalysis: Hashable {
+        let score: Int              // 0–100, deterministic
+        let words: [RhythmWord]
+        /// Full extent of the target timeline covered by paired words (ms),
+        /// measured from the first paired onset to the last paired word end.
+        let targetSpanMs: Int
+    }
+
+    /// Full-credit half-width: onsets within ±this of the beat score 1.0.
+    private static let rhythmGraceMs = 60.0
+    /// Deviations at/after grace+this score 0. Linear in between.
+    private static let rhythmRampMs = 400.0
+
+    /// Per-word grade thresholds, shared with the UI so colors and score
+    /// always agree. |deviation| ≤ 120ms feels on-beat in casual speech;
+    /// beyond 300ms is unmistakably off.
+    static func rhythmGrade(deviationMs: Int) -> Int {
+        switch abs(deviationMs) {
+        case ...120:  return 2   // on beat
+        case ...300:  return 1   // slightly off
+        default:      return 0   // off
+        }
+    }
+
+    /// Deterministic rhythm comparison between the target line's word onsets
+    /// and the learner's (from final file recognition).
+    ///
+    /// Pairing walks the diff: a target slot (`match`/`sub`/`del`) consumes
+    /// one target timing, a learner slot (`match`/`sub`/`ins`) consumes one
+    /// learner timing; `match` AND `sub` pairs both count — an STT soundalike
+    /// still tells us WHEN the learner hit that slot. Guards mirror
+    /// `LocalAlignment`'s philosophy: any count mismatch between diff slots
+    /// and timing arrays returns nil (never show wrong data), as does CJK
+    /// syllable tokenization (diff tokens ≠ timing words) or < 3 pairs.
+    ///
+    /// Normalization: both timelines are re-zeroed on their first paired
+    /// onset, then the learner timeline is scaled by targetSpan/learnerSpan.
+    /// A uniformly slower attempt therefore scores 100 — overall speed is the
+    /// duration card's job; rhythm grades only relative word placement.
+    static func analyzeRhythm(
+        steps: [DiffStep],
+        targetTimings: [WordTiming],
+        learnerTimings: [WordTiming]
+    ) -> RhythmAnalysis? {
+        var pairs: [(targetIndex: Int, target: WordTiming, learner: WordTiming)] = []
+        var t = 0, l = 0
+        for step in steps {
+            switch step.op {
+            case .match, .sub:
+                guard t < targetTimings.count, l < learnerTimings.count else { return nil }
+                pairs.append((t, targetTimings[t], learnerTimings[l]))
+                t += 1; l += 1
+            case .del:
+                guard t < targetTimings.count else { return nil }
+                t += 1
+            case .ins:
+                guard l < learnerTimings.count else { return nil }
+                l += 1
+            }
+        }
+        // Slot counts must consume BOTH arrays exactly — anything else means
+        // tokenization and timings disagree (CJK, stray punctuation tokens).
+        guard t == targetTimings.count, l == learnerTimings.count,
+              pairs.count >= 3 else { return nil }
+
+        let t0 = pairs[0].target.startMs
+        let l0 = pairs[0].learner.startMs
+        guard let lastPair = pairs.last else { return nil }
+        let targetSpan = lastPair.target.startMs - t0
+        let learnerSpan = lastPair.learner.startMs - l0
+        guard targetSpan > 0, learnerSpan > 0 else { return nil }
+        let scale = Double(targetSpan) / Double(learnerSpan)
+
+        let words = pairs.map { pair in
+            RhythmWord(
+                word: pair.target.word,
+                targetIndex: pair.targetIndex,
+                targetOnsetMs: pair.target.startMs - t0,
+                learnerOnsetMs: Int((Double(pair.learner.startMs - l0) * scale).rounded()),
+                targetDurationMs: max(0, pair.target.endMs - pair.target.startMs),
+                learnerDurationMs: max(0, Int((Double(pair.learner.endMs - pair.learner.startMs) * scale).rounded()))
+            )
+        }
+
+        // Continuous per-word credit: 1.0 inside ±graceMs, fading linearly to
+        // 0 at grace+ramp. Mean × 100 → score. First/last words pin the
+        // normalization (deviation 0), which slightly flatters short lines —
+        // acceptable next to the ≥3-pair guard.
+        let credits = words.map { w -> Double in
+            let over = max(0, Double(abs(w.deviationMs)) - rhythmGraceMs)
+            return max(0, 1 - over / rhythmRampMs)
+        }
+        let mean = credits.reduce(0, +) / Double(credits.count)
+        let score = max(0, min(100, Int((mean * 100).rounded())))
+        let spanEnd = lastPair.target.endMs - t0
+        return RhythmAnalysis(score: score, words: words, targetSpanMs: max(spanEnd, targetSpan))
+    }
+
+    /// Compact rhythm evidence for the coach prompt — only meaningfully
+    /// off-beat words, e.g. `[weather +180] [is -240]` (+ = late, − = early).
+    static func renderRhythmForPrompt(_ rhythm: RhythmAnalysis?) -> String {
+        guard let rhythm else { return "n/a" }
+        let off = rhythm.words.filter { rhythmGrade(deviationMs: $0.deviationMs) < 2 }
+        guard !off.isEmpty else { return "all words on beat" }
+        return off.map { w in
+            String(format: "[%@ %+dms]", w.word, w.deviationMs)
+        }.joined(separator: " ")
+    }
+
     /// Compact rendering of the diff to inline into the prompt as evidence.
     /// Format example: `[= the] [= weather] [~ today/to-day] [- is] [+ uh]`.
     static func renderDiffForPrompt(_ steps: [DiffStep]) -> String {
@@ -91,6 +222,11 @@ enum ShadowEngine {
           • learner_transcript — what on-device STT heard them say
           • duration_ratio    — learner_duration / target_duration
           • diff              — token-level alignment using [= match] [~ sub] [- del] [+ ins]
+          • rhythm            — per-word onset deviation after pace \
+        normalization, computed from measured audio timestamps. \
+        [word +Nms] = the learner hit that word N ms LATE relative to the \
+        target's rhythm, [word -Nms] = early. Only off-beat words are listed. \
+        May be "n/a" when timing extraction failed.
 
         Treat the diff as ground truth for which words diverged. If STT clearly \
         misheard (e.g. a homophone), say so plainly — don't penalize the learner \
@@ -103,10 +239,12 @@ enum ShadowEngine {
         Rules:
         - "pronunciation": one sentence on pronunciation, citing specific tokens \
           from the diff. If the diff is all `=`, congratulate plainly.
-        - "pacing": one sentence using duration_ratio. 0.85–1.25 ≈ healthy. \
-          <0.85 = rushed, >1.25 = slow. (Matches the duration card in the UI.) \
-          Base pacing ONLY on duration_ratio — you have no pitch or stress \
-          data, so never claim to hear intonation, melody, or emphasis.
+        - "pacing": one sentence. Use duration_ratio for overall speed \
+          (0.85–1.25 ≈ healthy, <0.85 = rushed, >1.25 = slow — matches the \
+          duration card in the UI) and, when rhythm data is present, cite the \
+          most off-beat word(s) by name ("you land late on X"). Base timing \
+          claims ONLY on duration_ratio and rhythm — you have no pitch data, \
+          so never claim to hear intonation, melody, or emphasis.
         - "fix": one concrete thing for the next attempt. Reference a specific \
           word or sound, not generic advice ("stress the second syllable in X", \
           not "speak more clearly").
@@ -121,7 +259,8 @@ enum ShadowEngine {
         learnerText: String,
         targetDurationMs: Int,
         learnerDurationMs: Int,
-        diffSteps: [DiffStep]
+        diffSteps: [DiffStep],
+        rhythm: RhythmAnalysis? = nil
     ) -> String {
         let ratio: String
         if targetDurationMs > 0 {
@@ -136,6 +275,7 @@ enum ShadowEngine {
         learner_duration_ms: \(learnerDurationMs)
         duration_ratio: \(ratio)
         diff: \(renderDiffForPrompt(diffSteps))
+        rhythm: \(renderRhythmForPrompt(rhythm))
         """
     }
 

@@ -557,6 +557,11 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// Set when the user shelves a mastered (or abandoned) scenario. Archived
     /// scenarios drop out of the main grid into the Archive section.
     var archivedAt: Date? = nil
+    /// True for topic books — scenarios born from an interest/news topic
+    /// (WatchTopicSheet) rather than a built situation. Same curriculum
+    /// mechanics; drives the Watch tab's "By topic" shelf and a
+    /// discussion-flavored scene prompt. Optional so old rows decode.
+    var isTopic: Bool? = nil
 
     var isArchived: Bool { archivedAt != nil }
 
@@ -680,6 +685,7 @@ struct ShadowAttempt: Codable, Identifiable, Hashable {
     var learnerTranscript: String  // STT of the user
     var recordingFilename: String? // file in Documents/Recordings/ (nil if recording failed)
     var matchScore: Int            // 0–100
+    var rhythmScore: Int?          // 0–100 word-onset timing (nil = not measurable)
     var pronunciation: String
     var pacing: String
     var fix: String

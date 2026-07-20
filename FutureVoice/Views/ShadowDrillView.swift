@@ -29,6 +29,9 @@ struct ShadowDrillView: View {
     @State private var recordingFileURL: URL?
     @State private var feedback: ShadowFeedback?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
+    /// Word-onset timing comparison for the last attempt — nil whenever the
+    /// timing data wasn't trustworthy (see ShadowEngine.analyzeRhythm guards).
+    @State private var rhythm: ShadowEngine.RhythmAnalysis?
     @State private var error: String?
     /// The last failure was the 402 credit gate — the error alert then leads
     /// with the paywall instead of a dead-end OK.
@@ -74,6 +77,7 @@ struct ShadowDrillView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     targetSection
                     durationCard
+                    rhythmCard
                     if let fb = feedback {
                         feedbackSection(fb)
                     }
@@ -196,8 +200,15 @@ struct ShadowDrillView: View {
 
     /// Tap a target word to build the loop range: first tap sets an anchor
     /// (single word); the next tap extends to a phrase; a third starts over.
+    /// Re-tapping the lone selected word CLEARS the selection — the way back
+    /// to whole-line practice must be as easy as the way in.
     private func tapWord(_ i: Int) {
         guard phase == .idle || phase == .result else { return }
+        if selectedWordRange == i...i {
+            selectedWordRange = nil
+            selectionAnchor = nil
+            return
+        }
         if selectedWordRange == nil { selectionAnchor = nil }
         if let anchor = selectionAnchor {
             selectedWordRange = min(anchor, i)...max(anchor, i)
@@ -364,6 +375,80 @@ struct ShadowDrillView: View {
 
     private var karaokeAnimating: Bool {
         (phase == .syncing && syncStartedAt != nil) || player.isPlaying
+    }
+
+    // MARK: - Rhythm card
+
+    /// Two parallel word-onset timelines — target rhythm on top, the
+    /// learner's (pace-normalized) below. Because both rows are re-zeroed
+    /// and the learner row is scaled to the same span, a vertical offset
+    /// between a pair of bars reads directly as "you were early/late on this
+    /// word", independent of overall speed (which the duration card owns).
+    @ViewBuilder
+    private var rhythmCard: some View {
+        if let r = rhythm, !diffSteps.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Rhythm")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Label("\(r.score)", systemImage: "metronome")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(scoreColor(r.score))
+                }
+                VStack(spacing: 6) {
+                    rhythmRow(label: "Target", analysis: r, learner: false)
+                    rhythmRow(label: "You", analysis: r, learner: true)
+                }
+                Text("Word starts, speed-matched — orange landed off the target's beat.")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(12)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    private func rhythmRow(
+        label: String,
+        analysis: ShadowEngine.RhythmAnalysis,
+        learner: Bool
+    ) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(width: 44, alignment: .leading)
+            GeometryReader { geo in
+                let span = CGFloat(max(1, analysis.targetSpanMs))
+                ZStack(alignment: .topLeading) {
+                    ForEach(analysis.words, id: \.self) { w in
+                        let onsetMs = learner ? w.learnerOnsetMs : w.targetOnsetMs
+                        let durMs = learner ? w.learnerDurationMs : w.targetDurationMs
+                        let x = min(1, max(0, CGFloat(onsetMs) / span)) * geo.size.width
+                        let width = min(geo.size.width - x,
+                                        max(4, CGFloat(durMs) / span * geo.size.width))
+                        Capsule()
+                            .fill(learner
+                                  ? rhythmColor(deviationMs: w.deviationMs)
+                                  : Color.secondary.opacity(0.35))
+                            .frame(width: width, height: 8)
+                            .offset(x: x)
+                    }
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private func rhythmColor(deviationMs: Int) -> Color {
+        switch ShadowEngine.rhythmGrade(deviationMs: deviationMs) {
+        case 2:  return .green
+        case 1:  return .orange
+        default: return .red
+        }
     }
 
 
@@ -805,6 +890,7 @@ struct ShadowDrillView: View {
         // Reset state
         feedback = nil
         diffSteps = []
+        rhythm = nil
         userWordTimings = []
         prevTranscript = ""
 
@@ -878,21 +964,33 @@ struct ShadowDrillView: View {
         // file, final result only, biased toward the target line. Falls back
         // to the live text when the file pass fails (network, timeout).
         var scoredText = finalText
+        var learnerTimings: [WordTiming] = []
         if let url = recordingFileURL {
             let rescored = await SpeechTranscriber.transcribeForScoring(
                 audioURL: url,
                 languageCode: targetLanguage,
                 contextualStrings: Self.recognitionHints(for: attemptTargetText)
             )
-            if let rescored, !rescored.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                scoredText = rescored
-                prevTranscript = rescored
+            if let rescored, !rescored.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                scoredText = rescored.text
+                prevTranscript = rescored.text
+                learnerTimings = rescored.wordTimings
             }
         }
 
         let analysis = ShadowEngine.analyze(target: attemptTargetText, learner: scoredText,
                                             language: targetLanguage)
         diffSteps = analysis.steps
+
+        // Rhythm: pair the diff's matched slots with the target's word map
+        // and the learner's file-recognition timestamps. Every guard lives in
+        // analyzeRhythm — a nil here just means the card stays hidden.
+        let targetSlice = activeRange.map { Array(timings[$0]) } ?? timings
+        rhythm = ShadowEngine.analyzeRhythm(
+            steps: analysis.steps,
+            targetTimings: targetSlice,
+            learnerTimings: learnerTimings
+        )
         // Learner duration = measured utterance span (first voice → last
         // voice, incl. mid-speech pauses) from the mic energy meter — NOT the
         // wall clock, which includes lead-in silence and the auto-stop tail
@@ -918,7 +1016,8 @@ struct ShadowDrillView: View {
                         learnerText: scoredText,
                         targetDurationMs: attemptTargetDurationMs,
                         learnerDurationMs: learnerDurMs,
-                        diffSteps: analysis.steps
+                        diffSteps: analysis.steps,
+                        rhythm: rhythm
                     )
                 )],
                 maxTokens: 300
@@ -945,6 +1044,7 @@ struct ShadowDrillView: View {
             learnerTranscript: scoredText,
             recordingFilename: recordingFileURL?.lastPathComponent,
             matchScore: analysis.score,
+            rhythmScore: rhythm?.score,
             pronunciation: payload?.pronunciation ?? "",
             pacing: payload?.pacing ?? "",
             fix: payload?.fix ?? ""
@@ -976,6 +1076,21 @@ struct ShadowDrillView: View {
     // MARK: - Audio prep
 
     private func prepareAudio() async {
+        #if DEBUG
+        // Screenshot capture: synthesize evenly-spaced karaoke timings locally
+        // and skip the voice-clone/network path so the timeline renders offline.
+        if DebugCapture.captureShadow {
+            let words = turn.transcript.split(separator: " ").map(String.init)
+            let per = 380
+            timings = words.enumerated().map { i, w in
+                WordTiming(word: w, startMs: i * per, endMs: (i + 1) * per - 60)
+            }
+            targetDurationMs = words.count * per
+            if words.count >= 5 { selectedWordRange = 2...4 }   // show a loop region
+            phase = .idle
+            return
+        }
+        #endif
         guard let voiceId = appState.voiceCloneId else {
             self.error = "No voice clone yet — record yours under Me → Re-record voice."
             return
