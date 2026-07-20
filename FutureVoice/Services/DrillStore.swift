@@ -193,6 +193,9 @@ final class DrillStore {
     private func write(_ cards: [DrillCard]) {
         guard let data = try? encoder.encode(cards) else { return }
         try? data.write(to: fileURL, options: [.atomic])
+        // Every mutation funnels through here — keep the home-screen widget's
+        // snapshot of the due queue in sync.
+        StudyWidgetRefresher.schedule()
     }
 
     /// Lowercased, punctuation stripped, whitespace collapsed — so a summary

@@ -21,6 +21,10 @@ struct PracticeTab: View {
     @State private var recentSessions: [SessionRow] = []
     @State private var moreSessionsExist = false
     @State private var shadowPick: PracticeStats.ShadowPick?
+    /// Programmatic pushes driven by the study-widget deep links
+    /// (futurevoice://vocab and futurevoice://expressions).
+    @State private var showingVocabulary = false
+    @State private var showingExpressions = false
     // Effort signals (PracticeLog + shadow attempt history).
     @State private var todayReps = 0
     @State private var weekReps = 0
@@ -59,11 +63,41 @@ struct PracticeTab: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Practice")
             .toolbarTitleDisplayMode(.inlineLarge)
-            .onAppear(perform: reload)
+            .onAppear {
+                reload()
+                consumePendingRoute()
+            }
+            .onChange(of: appState.pendingPracticeRoute) { _, _ in
+                consumePendingRoute()
+            }
+            .navigationDestination(isPresented: $showingVocabulary) {
+                VocabularyView()
+            }
+            .navigationDestination(isPresented: $showingExpressions) {
+                ExpressionsView()
+                    .navigationTitle("Expressions")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
             .sheet(item: $shadowPick, onDismiss: reload) { pick in
                 ShadowDrillView(turn: pick.turn, targetLanguage: appState.targetLanguage)
                     .environmentObject(appState)
             }
+        }
+    }
+
+    /// Deep link handoff (study widget → vocabulary notebook). The route is
+    /// staged in AppState because on a cold launch the URL arrives before
+    /// this tab exists — onAppear picks it up; onChange covers warm taps.
+    private func consumePendingRoute() {
+        switch appState.pendingPracticeRoute {
+        case .vocabulary:
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = true
+        case .expressions:
+            appState.pendingPracticeRoute = nil
+            showingExpressions = true
+        case nil:
+            break
         }
     }
 

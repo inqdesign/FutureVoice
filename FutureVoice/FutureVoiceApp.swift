@@ -36,6 +36,11 @@ struct FutureVoiceApp: App {
             if phase == .background {
                 Task { await DrillReminder.reschedule() }
             }
+            // Cards drift due over time even with no store writes, so re-snapshot
+            // the widget's study queue at both edges of a foreground stint.
+            if phase == .active || phase == .background {
+                StudyWidgetRefresher.refresh()
+            }
         }
     }
 }
@@ -44,6 +49,16 @@ struct FutureVoiceApp: App {
 /// (voiceCloneId, language settings); JSON-on-disk stores for richer objects.
 @MainActor
 final class AppState: ObservableObject {
+    /// Deep-link destination inside the Practice tab. Set by RootTabView's
+    /// onOpenURL (e.g. the study widget's futurevoice://vocab), consumed by
+    /// PracticeTab when it appears — the tab may not be mounted yet at the
+    /// moment the URL arrives on a cold launch, hence the handoff via state.
+    enum PracticeRoute: Equatable {
+        case vocabulary
+        case expressions
+    }
+    @Published var pendingPracticeRoute: PracticeRoute?
+
     @Published var voiceCloneId: String? {
         didSet { UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey) }
     }

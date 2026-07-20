@@ -30,11 +30,14 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - target: FutureVoiceWidget
     entitlements:
       path: FutureVoice/Resources/FutureVoice.entitlements
       properties:
         com.apple.developer.applesignin:
           - Default
+        com.apple.security.application-groups:
+          - group.com.roro.futurevoice
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
@@ -47,6 +50,29 @@ targets:
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig
+
+  FutureVoiceWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: FutureVoiceWidget
+        excludes:
+          - "Info.plist"
+      # Shared data contract with the app — keep this list to files with no
+      # dependencies on Models.swift or the stores.
+      - path: FutureVoice/Shared/StudyWidgetShared.swift
+    entitlements:
+      path: FutureVoiceWidget/FutureVoiceWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.roro.futurevoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.widget
+        PRODUCT_NAME: FutureVoiceWidget
+        INFOPLIST_FILE: FutureVoiceWidget/Info.plist
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
 
   FutureVoiceTests:
     type: bundle.unit-test
