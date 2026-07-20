@@ -287,6 +287,9 @@ final class VocabStore: ObservableObject {
     nonisolated static func lookupKey(for raw: String) -> String {
         let w = raw.lowercased().trimmingCharacters(in: .punctuationCharacters)
         guard !w.isEmpty else { return w }
+        if Self.matchesKorean {
+            return KoreanMorph.dictionaryForm(of: w, in: CoreVocabulary.set) ?? w
+        }
         let tagger = NLTagger(tagSchemes: [.lemma])
         tagger.string = w
         tagger.setLanguage(.english, range: w.startIndex..<w.endIndex)
@@ -297,7 +300,17 @@ final class VocabStore: ObservableObject {
 
     // MARK: - Lemmatization
 
+    /// NLTagger's lemma scheme doesn't cover Korean, and Korean surface forms
+    /// carry particles/conjugation the wordlist headwords don't. Route by the
+    /// current target language (same launch-scoped read as CoreVocabulary).
+    nonisolated private static let matchesKorean: Bool = {
+        let target = UserDefaults.standard
+            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        return LanguageCatalog.language(target)?.code == "ko"
+    }()
+
     private func lemmas(in texts: [String]) -> Set<String> {
+        if Self.matchesKorean { return koreanLemmas(in: texts) }
         var out = Set<String>()
         let tagger = NLTagger(tagSchemes: [.lemma])
         for text in texts {
@@ -310,6 +323,23 @@ final class VocabStore: ObservableObject {
                 let lemma = (tag?.rawValue ?? String(lower[range])).lowercased()
                 if lemma.count > 1 { out.insert(lemma) }
                 return true
+            }
+        }
+        return out
+    }
+
+    /// Korean: map each spoken token to a wordlist headword via the
+    /// deterministic KoreanMorph heuristic (particle stripping, ending → 다).
+    /// Only lexicon hits come back — a candidate that isn't a headword is a
+    /// guess we couldn't verify, not a word to track.
+    private func koreanLemmas(in texts: [String]) -> Set<String> {
+        var out = Set<String>()
+        for text in texts {
+            let tokens = text.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            for token in tokens where !token.isEmpty {
+                if let head = KoreanMorph.dictionaryForm(of: token, in: CoreVocabulary.set) {
+                    out.insert(head)
+                }
             }
         }
         return out
@@ -353,6 +383,8 @@ final class VocabStore: ObservableObject {
         if let data = try? JSONEncoder().encode(studying) {
             try? data.write(to: studyingURL, options: [.atomic])
         }
+        // Notebook words show on the home-screen widget — refresh its snapshot.
+        StudyWidgetRefresher.schedule()
     }
 
     private func saveExpressions() {

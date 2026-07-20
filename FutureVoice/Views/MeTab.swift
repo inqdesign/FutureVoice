@@ -74,12 +74,23 @@ struct MeTab: View {
                 Section {
                     Picker(selection: $appState.proficiency) {
                         ForEach(CEFRLevel.allCases, id: \.self) { level in
-                            Text(level.rawValue.uppercased()).tag(level)
+                            Text(LanguageCatalog.levelLabel(level, target: appState.targetLanguage))
+                                .tag(level)
                         }
                     } label: {
                         row(icon: "chart.bar",
                             title: "Level",
                             subtitle: "Calibrates conversations and feedback")
+                    }
+                    Picker(selection: $appState.nativeLanguage) {
+                        ForEach(LanguageCatalog.targets.map(\.code).filter { $0 != appState.targetLanguage },
+                                id: \.self) { code in
+                            Text(LanguageCatalog.endonym(code)).tag(code)
+                        }
+                    } label: {
+                        row(icon: "globe",
+                            title: "My language",
+                            subtitle: "Explanations and translations use this")
                     }
                     if let ai = aiLevel, ai != appState.proficiency {
                         Button {

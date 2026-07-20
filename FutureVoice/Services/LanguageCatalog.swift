@@ -37,7 +37,10 @@ enum LanguageCatalog {
         Language(code: "it", sttLocale: "it-IT", tokenStyle: .word, wordlistResource: nil),
         Language(code: "pt", sttLocale: "pt-BR", tokenStyle: .word, wordlistResource: nil),
         Language(code: "ja", sttLocale: "ja-JP", tokenStyle: .syllable, wordlistResource: nil),
-        Language(code: "ko", sttLocale: "ko-KR", tokenStyle: .syllable, wordlistResource: nil),
+        // Korean wordlist: 국립국어원 「한국어 학습용 어휘 목록」 (2003, 5,965
+        // headwords, grades A/B/C) → A/B/C split by in-grade frequency rank
+        // into a1/a2, b1/b2, c1/c2.
+        Language(code: "ko", sttLocale: "ko-KR", tokenStyle: .syllable, wordlistResource: "cefr_words_ko"),
         Language(code: "zh", sttLocale: "zh-CN", tokenStyle: .syllable, wordlistResource: nil),
     ]
 
@@ -68,5 +71,24 @@ enum LanguageCatalog {
 
     static func tokenStyle(_ code: String) -> TokenStyle {
         language(code)?.tokenStyle ?? .word
+    }
+
+    // MARK: - Level naming
+
+    /// TOPIK equivalents of the CEFR bands, per the 국제통용 한국어 표준
+    /// 교육과정 correspondence (A1→1급 … C2→6급).
+    private static let topikByCEFR: [CEFRLevel: Int] = [
+        .a1: 1, .a2: 2, .b1: 3, .b2: 4, .c1: 5, .c2: 6
+    ]
+
+    /// How a CEFR level should read for a given target language. Internals
+    /// stay CEFR everywhere; Korean learners think in TOPIK levels, so the
+    /// label carries the official equivalence alongside.
+    static func levelLabel(_ level: CEFRLevel, target: String) -> String {
+        let cefr = level.rawValue.uppercased()
+        guard language(target)?.code == "ko", let topik = topikByCEFR[level] else {
+            return cefr
+        }
+        return "\(cefr) · TOPIK \(topik)"
     }
 }

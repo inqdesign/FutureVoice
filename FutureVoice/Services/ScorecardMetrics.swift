@@ -51,7 +51,7 @@ struct ScorecardMetrics: Codable {
 
         var levelCounts: [String: Int] = [:]
         for word in uniqueWords {
-            if let lv = CoreVocabulary.level(of: word) {
+            if let lv = CoreVocabulary.level(ofSurface: word) {
                 levelCounts[lv.rawValue, default: 0] += 1
             }
         }

@@ -251,7 +251,7 @@ enum WeeklyReportEngine {
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)
                 where !token.isEmpty && !seen.contains(token) {
                 seen.insert(token)
-                if let lv = CoreVocabulary.level(of: token) {
+                if let lv = CoreVocabulary.level(ofSurface: token) {
                     counts[lv, default: 0] += 1
                 }
             }

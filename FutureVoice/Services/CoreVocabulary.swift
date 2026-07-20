@@ -22,6 +22,23 @@ enum CoreVocabulary {
 
     static func level(of word: String) -> CEFRLevel? { levelByWord[word] }
 
+    /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
+    /// is a direct lookup; Korean surface forms carry particles/conjugation,
+    /// so they route through the KoreanMorph headword heuristic first.
+    static func level(ofSurface token: String) -> CEFRLevel? {
+        if isKorean {
+            guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
+            return levelByWord[head]
+        }
+        return levelByWord[token]
+    }
+
+    private static let isKorean: Bool = {
+        let target = UserDefaults.standard
+            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        return LanguageCatalog.language(target)?.code == "ko"
+    }()
+
     /// Words per CEFR level, computed once — for filter-scoped counts in the UI.
     static let countByLevel: [CEFRLevel: Int] =
         Dictionary(entries.map { ($0.level, 1) }, uniquingKeysWith: +)
