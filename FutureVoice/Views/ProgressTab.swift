@@ -106,12 +106,14 @@ struct ProgressTab: View {
                             // One continuous translucent panel from the status
                             // bar down to the chips (the nav bar's own opaque
                             // background is suppressed below), so scrolled
-                            // content genuinely shows through the header. Its
-                            // bottom edge is feathered with a gradient mask —
-                            // a hard material edge reads as a visible seam
-                            // against the background.
+                            // content genuinely shows through the header. `.bar`
+                            // (the system nav-bar material), not
+                            // `.ultraThinMaterial`, so the tone matches the
+                            // plain tabs' nav bar. Its bottom edge is feathered
+                            // with a gradient mask — a hard material edge reads
+                            // as a visible seam against the background.
                             .background {
-                                Rectangle().fill(.ultraThinMaterial)
+                                Rectangle().fill(.bar)
                                     .mask {
                                         LinearGradient(stops: [.init(color: .black, location: 0),
                                                                .init(color: .black, location: 0.82),
@@ -206,6 +208,14 @@ struct ProgressTab: View {
                     Text(lv.rawValue.uppercased())
                         .font(.system(size: 52, weight: .bold))
                         .foregroundStyle(.tint)
+                    // Korean target: learners orient by TOPIK, so show the
+                    // official CEFR↔TOPIK equivalence under the big number.
+                    if LanguageCatalog.levelLabel(lv, target: appState.targetLanguage)
+                        != lv.rawValue.uppercased() {
+                        Text(LanguageCatalog.levelLabel(lv, target: appState.targetLanguage))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
                     Text(canDo(lv)).font(.callout).fixedSize(horizontal: false, vertical: true)
                     Text("Assessed from \(totalSpeakingMinutes) min of conversation, pooled in your weekly read — vocabulary, grammar, fluency and expression together.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

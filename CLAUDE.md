@@ -8,10 +8,13 @@ iOS SwiftUI app. A user clones their own voice once (ElevenLabs), then practices
 
 **Current state (2026-06): four-tab app in TestFlight prep, NOT a Phase-1 spike.**
 
-- **Talk** (`ConversationView`) — phone-call-mode conversation: live STT → Gemini structured turn `{reply, suggestion}` → cloned-voice TTS, auto VAD turn-taking. Per-turn "say it more naturally" suggestions render as inline chips.
+Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`).
+
+- **Talk** (`ConversationHome` → `ConversationView`) — phone-call-mode conversation: live STT → Gemini structured turn `{reply, suggestion}` → cloned-voice TTS, auto VAD turn-taking. Per-turn "say it more naturally" suggestions render as inline chips. `MeTab` (persona, CEFR picker, voice re-record, history) opens from this tab's toolbar.
+- **Watch** (`WatchTab`) — two swipeable shelf pages of curriculum "books" (`Scenario` + `ScenarioCurriculum`) behind chip tabs, same mechanics, different seed: "By topic" (born from an interest/news topic via `WatchTopicSheet`, `Scenario.isTopic`) and "By scenario" (built situation + counterpart). Each book = one generated scene to watch + its words/expressions/shadow lines to master (`ScenarioDetailView`). Counterparts are voiced by ElevenLabs presets; the user's side is their clone.
 - **Practice** (`PracticeTab`) — Leitner SRS drill deck (`DrillStore`, boxes 0–5, active-recall reveal), per-session drill review, shadow practice (`ShadowDrillView`, karaoke timing + deterministic token-Levenshtein score from `ShadowEngine`).
-- **Watch** (`WatchTab`) — generated dialogues between the user's clone and a "counterpart" from their real life (ElevenLabs preset voices).
-- **Me** (`MeTab`) — persona, CEFR level picker, voice re-record, session history.
+- **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages (vocabulary, fluency, shadowing, …) behind swipeable chip tabs.
+- **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`).
 
 ## The learning loop (keep it closed)
 

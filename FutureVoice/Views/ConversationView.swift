@@ -139,6 +139,12 @@ struct ConversationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .onAppear {
+                // A call screen must never auto-lock mid-sentence: a long
+                // user turn has no touches, so the system idle timer fires
+                // right through it. App-global UIKit flag — re-asserted on
+                // every appear (a sheet on top can bounce this view's
+                // appearance) and balanced in onDisappear below.
+                UIApplication.shared.isIdleTimerDisabled = true
                 // Place the "call" once when the seat opens.
                 guard !didAutoStart else { return }
                 didAutoStart = true
@@ -152,6 +158,11 @@ struct ConversationView: View {
                 } else {
                     Task { await openConversation() }
                 }
+            }
+            .onDisappear {
+                // Balance the onAppear assert — leaving this true would keep
+                // the WHOLE app from ever auto-locking.
+                UIApplication.shared.isIdleTimerDisabled = false
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
@@ -193,7 +204,7 @@ struct ConversationView: View {
                 }
                 Button("Not now", role: .cancel) { }
             } message: {
-                Text("Future Voice needs the microphone and speech recognition to hear you speak. Turn them on in Settings → Future Voice.")
+                Text("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.")
             }
             .task { refreshDashboard() }
             .onChange(of: topic) { _, newTopic in
@@ -742,30 +753,21 @@ struct ConversationView: View {
             var turnAudio: GeminiClient.Message.InlineAudio?
             if let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
                let url = turn.audioURL, let data = try? Data(contentsOf: url),
-               !data.isEmpty, data.count <= 4_000_000 {
+               !data.isEmpty, data.count <= 2_000_000 {
                 turnAudio = .init(mimeType: "audio/aac",
                                   base64Data: data.base64EncodedString())
             }
-            // One structured call returns transcript + reply + optional inline
-            // correction (repopulates Turn.suggestion: chip UI, SRS ingest,
-            // weekly-report pairs, suggestion_rate metric).
             let payload: ConversationTurnPayload
             do {
-                payload = try await GeminiClient.shared.sendJSON(
-                    system: systemPrompt()
-                        + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
-                    messages: ConversationEngine.geminiMessages(from: turns,
-                                                                lastUserAudio: turnAudio),
-                    maxTokens: 768,
-                    temperature: 0.7,
-                    // Keyed to the user turn: the inline Retry button re-runs
-                    // this same logical request without a second charge.
-                    idempotencyKey: "turn:\(turnId.uuidString)"
-                )
-            } catch GeminiError.jsonNotFound(let raw) {
-                // Model slipped out of JSON mode — treat the raw text as the
-                // spoken reply rather than failing the whole turn.
-                payload = ConversationTurnPayload(reply: raw, suggestion: nil)
+                payload = try await turnPayload(audio: turnAudio, turnId: turnId)
+            } catch where turnAudio != nil && !error.isOutOfCredits {
+                // The audio-attached call is the NEW, riskier path (bigger
+                // upload, audio ingestion, longer JSON). If it fails for any
+                // retryable reason, silently rerun the exact pre-audio call —
+                // same idempotency key, so no second charge — instead of
+                // showing the error chip. Worst case = old behavior.
+                turnAudio = nil
+                payload = try await turnPayload(audio: nil, turnId: turnId)
             }
             // Upgrade the turn to what the model actually HEARD (audio is the
             // ground truth) — the feed, session summary, drills, and profile
@@ -777,11 +779,6 @@ struct ConversationView: View {
                 turns[idx].transcript = heard
             }
             let replyText = payload.reply.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !replyText.isEmpty else {
-                failedTurnId = turnId
-                phase = .idle
-                return
-            }
             if let s = payload.turnSuggestion(),
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
@@ -799,6 +796,44 @@ struct ConversationView: View {
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
             phase = .idle
+        }
+    }
+
+    /// One structured turn call: transcript + reply + optional inline
+    /// correction (repopulates Turn.suggestion: chip UI, SRS ingest,
+    /// weekly-report pairs, suggestion_rate metric). Throws on an empty
+    /// reply so the caller's audio→text rescue (and the Retry chip) engage
+    /// instead of silently dead-ending the turn.
+    private func turnPayload(audio: GeminiClient.Message.InlineAudio?,
+                             turnId: UUID) async throws -> ConversationTurnPayload {
+        do {
+            let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSON(
+                system: systemPrompt()
+                    + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
+                messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
+                // Headroom for transcript + reply + suggestion: a MAX_TOKENS
+                // truncation shows up here as a DecodingError-failed turn.
+                maxTokens: 1024,
+                temperature: 0.7,
+                // Keyed to the user turn: the inline Retry button and the
+                // audio→text rescue re-run this same logical request without
+                // a second charge.
+                idempotencyKey: "turn:\(turnId.uuidString)"
+            )
+            guard !payload.reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw GeminiError.invalidResponse
+            }
+            return payload
+        } catch GeminiError.jsonNotFound(let raw) {
+            // Model slipped out of JSON mode. Speak the raw text ONLY when it
+            // is actual prose — a fragment starting with "{" is a truncated
+            // JSON body, and reading that aloud is worse than failing into
+            // the rescue/Retry path.
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, !trimmed.hasPrefix("{") else {
+                throw GeminiError.invalidResponse
+            }
+            return ConversationTurnPayload(reply: trimmed, suggestion: nil)
         }
     }
 
