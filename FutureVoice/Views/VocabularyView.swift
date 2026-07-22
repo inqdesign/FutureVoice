@@ -117,10 +117,22 @@ struct VocabularyView: View {
                     // that leaves the top/bottom of tall screens empty.
                     let nd = hypot((sx - center.x) / center.x, (sy - center.y) / center.y)
                     let opacity = max(0, min(1, 1.25 - nd))
+                    let studying = store.isStudying(node.word)
                     Text(node.word)
                         .font(.system(size: node.size, weight: used ? .regular : .semibold, design: .rounded))
                         .foregroundStyle(used ? Color.secondary : Color.primary)
-                        .opacity(used ? opacity * 0.4 : opacity)
+                        .overlay(alignment: .topLeading) {
+                            // Status badge, floating just off the word's leading
+                            // top corner — same grammar as the word card's
+                            // toolbar: bookmark = studying, check = known.
+                            if studying || used {
+                                Image(systemName: studying ? "bookmark.fill" : "checkmark")
+                                    .font(.system(size: max(8, node.size * 0.42), weight: .semibold))
+                                    .foregroundStyle(studying ? Color.accentColor : Color.green)
+                                    .offset(x: -4, y: -max(8, node.size * 0.42))
+                            }
+                        }
+                        .opacity(opacity)
                         .fixedSize()
                         .position(x: sx, y: sy)
                         .onTapGesture {
