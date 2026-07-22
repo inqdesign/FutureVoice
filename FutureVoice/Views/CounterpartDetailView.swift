@@ -1,26 +1,19 @@
 import SwiftUI
 
-/// Read-only profile + scenario library + past-dialogue archive for one
-/// counterpart. Tap row in the list → land here → Edit (top trailing) or
-/// Start watching (bottom CTA) or tap a saved scenario / past dialogue.
+/// MANAGEMENT page for one counterpart — profile, cached situation ideas,
+/// and the past-dialogue archive. Watching is deliberately NOT launched from
+/// here: the one watch flow lives on the Watch tab (tap the persona bubble →
+/// situation composer). Keeping the two apart means every scene goes through
+/// the same composer and mints the same Practice book.
 ///
 /// Tracks the counterpart by ID and reads live from `appState.counterparts`
-/// so updates (Edit / Scenarios refresh) reflect immediately without a
-/// re-push.
+/// so updates (Edit / Ideas refresh) reflect immediately without a re-push.
 struct CounterpartDetailView: View {
     let counterpartId: UUID
     @EnvironmentObject private var appState: AppState
     @State private var showingEdit = false
-    @State private var showingWatch = false
     @State private var loadingScenarios = false
     @State private var scenarioError: String?
-    @State private var customWatchTarget: CustomLaunch?
-
-    struct CustomLaunch: Identifiable {
-        let id = UUID()
-        let counterpart: Counterpart
-        let topic: SuggestedTopic
-    }
 
     init(counterpartId: UUID) {
         self.counterpartId = counterpartId
@@ -83,32 +76,9 @@ struct CounterpartDetailView: View {
                 Button("Edit") { showingEdit = true }
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            Button {
-                showingWatch = true
-            } label: {
-                Label("Start watching", systemImage: "play.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.bar)
-        }
         .sheet(isPresented: $showingEdit) {
             CounterpartFormView(initial: c)
                 .environmentObject(appState)
-        }
-        .sheet(isPresented: $showingWatch) {
-            WatchSetupSheet(counterpart: c)
-                .environmentObject(appState)
-        }
-        .sheet(item: $customWatchTarget) { target in
-            NavigationStack {
-                WatchView(counterpart: target.counterpart, topic: target.topic)
-                    .environmentObject(appState)
-            }
         }
     }
 
@@ -157,21 +127,16 @@ struct CounterpartDetailView: View {
                 }
             } else {
                 ForEach(c.savedScenarios) { scenario in
-                    Button {
-                        customWatchTarget = CustomLaunch(counterpart: c, topic: scenario)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(scenario.title)
-                                .foregroundStyle(.primary)
-                            if !scenario.blurb.isEmpty {
-                                Text(scenario.blurb)
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(scenario.title)
+                            .foregroundStyle(.primary)
+                        if !scenario.blurb.isEmpty {
+                            Text(scenario.blurb)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 2)
                     }
-                    .buttonStyle(.plain)
+                    .padding(.vertical, 2)
                 }
             }
             if let err = scenarioError {
@@ -179,7 +144,7 @@ struct CounterpartDetailView: View {
             }
         } header: {
             HStack {
-                Text("Scenarios")
+                Text("Situation ideas")
                 Spacer()
                 if !c.savedScenarios.isEmpty {
                     Button {
@@ -196,7 +161,7 @@ struct CounterpartDetailView: View {
                 }
             }
         } footer: {
-            Text("Grounded in your relationship with \(c.name) — situations you'd actually be in together. Tap to watch a dialogue play out.")
+            Text("Grounded in your relationship with \(c.name) — these appear as ideas when you tap them on the Watch tab.")
         }
     }
 

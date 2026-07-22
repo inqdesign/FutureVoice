@@ -72,6 +72,10 @@ final class VocabStore: ObservableObject {
 
     func state(of lemma: String) -> State? { records[lemma]?.state }
 
+    /// When the word was last used/marked — real study time, for ordering
+    /// books by recency.
+    func lastAt(of lemma: String) -> Date? { records[lemma]?.lastAt }
+
     /// Words the user actually uses, most-recent first.
     func usedWords() -> [String] {
         records.filter { $0.value.state == .used }
