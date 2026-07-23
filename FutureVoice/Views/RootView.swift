@@ -44,7 +44,7 @@ struct RootView: View {
         } else if appState.voiceCloneId == nil {
             VoiceCloneOnboardingView()
         } else if appState.persona == nil {
-            PersonaOnboardingView()
+            PersonaIntakeView()
         } else {
             RootTabView()
         }
@@ -60,7 +60,7 @@ struct RootView: View {
         case "welcome":      return AnyView(WelcomeView())
         case "setup":        return AnyView(SetupFlowView())
         case "voice":        return AnyView(VoiceCloneOnboardingView())
-        case "persona":      return AnyView(PersonaOnboardingView())
+        case "persona":      return AnyView(PersonaIntakeView())
         case "betaWelcome":  return AnyView(BetaWelcomeView())
         default:             return nil
         }

@@ -1,12 +1,10 @@
 import SwiftUI
 import PhotosUI
 
-/// First-run persona collection. Three lightweight screens — name, life
-/// context, English world — that the fluent-self avatar uses as ground truth
-/// for every subsequent conversation. Skipping a field is fine; richer
-/// persona = more lived-in English from the avatar.
-///
-/// Re-used by `PersonaEditSheet` for later edits.
+/// Persona EDIT form (Me → Profile) — three lightweight screens covering the
+/// same fields the guided first-run flow (`PersonaIntakeView`) collects. The
+/// persona is the fluent-self avatar's ground truth for every conversation;
+/// richer persona = more lived-in speech from the avatar.
 struct PersonaOnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -29,11 +27,12 @@ struct PersonaOnboardingView: View {
         _isEditing = State(initialValue: initialPersona != nil)
     }
 
-    private static let interestPresets = [
+    // Also the preset source for `PersonaIntakeView`'s chip cards.
+    static let interestPresets = [
         "AI / tech", "parenting", "language learning", "music", "podcasts",
         "cooking", "travel", "sports", "fashion", "finance", "science", "art"
     ]
-    private static let situationPresets = [
+    static let situationPresets = [
         "Work meetings", "Client calls", "Kita / school",
         "Doctor / clinic", "Travel", "Online shopping",
         "Customer service", "Streaming / shows", "Reading articles",
