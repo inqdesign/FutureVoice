@@ -42,6 +42,14 @@ final class AudioPlayer: NSObject, ObservableObject {
     private var streamGain: Float = 1.0
     private var streamVoicedSumSquares: Double = 0
     private var streamVoicedSamples: Int = 0
+    // Per-voice learned gain, persisted across streams and launches. Without a
+    // seed every streamed line ramps up from unity (≤1.5 dB/chunk), so short
+    // clone lines end before reaching target — audibly quieter than the
+    // buffered path, which normalizes the whole file before playback.
+    private var streamVoiceKey: String?
+    private static func learnedGainKey(_ voiceKey: String) -> String {
+        "AudioPlayer.learnedStreamGain.\(voiceKey)"
+    }
 
     /// Plays MP3 data and calls `completion` when playback ends or fails.
     /// - Parameter configureSession: when false, skip the internal `.playback`
@@ -211,7 +219,11 @@ final class AudioPlayer: NSObject, ObservableObject {
     /// everything scheduled has actually been HEARD (dataPlayedBack), matching
     /// `play(_:completion:)` semantics. Does NOT touch the audio session
     /// (conversation keeps LiveTranscriber's .playAndRecord active).
-    func startPCMStream(sampleRate: Double, completion: (() -> Void)? = nil) throws {
+    /// - Parameter voiceKey: identity of the voice being streamed (voiceId).
+    ///   When provided, the AGC starts at the gain the last stream of this
+    ///   voice converged to instead of ramping up from unity.
+    func startPCMStream(sampleRate: Double, voiceKey: String? = nil,
+                        completion: (() -> Void)? = nil) throws {
         stop()   // clear any AVAudioPlayer/stream leftovers first
 
         guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
@@ -248,7 +260,14 @@ final class AudioPlayer: NSObject, ObservableObject {
         streamCompletion = completion
         streamPendingBuffers = 0
         streamFinished = false
+        streamVoiceKey = voiceKey
         streamGain = 1.0
+        if let voiceKey {
+            let learned = UserDefaults.standard.float(forKey: Self.learnedGainKey(voiceKey))
+            if learned > 1.0 {
+                streamGain = min(learned, pow(10, AudioLoudness.maxBoostDB / 20))
+            }
+        }
         streamVoicedSumSquares = 0
         streamVoicedSamples = 0
         isPlaying = true
@@ -301,6 +320,20 @@ final class AudioPlayer: NSObject, ObservableObject {
 
     private func teardownStream(fireCompletion: Bool) {
         guard streamEngine != nil || streamNode != nil else { return }
+        // Persist the gain this voice actually needs (from the raw pre-gain
+        // RMS, so the estimate is seed-independent) — the next stream starts
+        // there instead of ramping up from unity. Same 0.15s-of-voice floor
+        // as updateStreamGain before trusting the estimate.
+        if let voiceKey = streamVoiceKey, streamVoicedSamples > 3_000 {
+            let rms = Float((streamVoicedSumSquares / Double(streamVoicedSamples)).squareRoot())
+            if rms > 1e-6 {
+                let targetLinear = pow(10, AudioLoudness.targetRMSdBFS / 20)
+                let desired = max(1.0, min(targetLinear / rms,
+                                           pow(10, AudioLoudness.maxBoostDB / 20)))
+                UserDefaults.standard.set(desired, forKey: Self.learnedGainKey(voiceKey))
+            }
+        }
+        streamVoiceKey = nil
         streamEngine?.mainMixerNode.removeTap(onBus: 0)
         streamNode?.stop()
         streamEngine?.stop()

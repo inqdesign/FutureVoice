@@ -103,6 +103,13 @@ final class ElevenLabsClient {
 
     // MARK: - Text-to-Speech
 
+    /// Model for live conversation turns (Talk): Flash trades a little
+    /// expressiveness for ~200ms lower time-to-first-audio — the right side of
+    /// that trade in a phone-call loop, but not for Shadow/Watch, where the
+    /// audio IS the study material and fidelity wins. Same per-character price
+    /// as turbo.
+    static let conversationModelId = "eleven_flash_v2_5"
+
     /// Synthesizes speech in the cloned voice and returns MP3 data.
     /// - Parameters:
     ///   - voiceId: ElevenLabs voice id from `cloneVoice`

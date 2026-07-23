@@ -860,12 +860,15 @@ struct ConversationView: View {
         var receivedAnyChunk = false
         do {
             let result = try await ElevenLabsClient.shared.synthesizeStreaming(
-                voiceId: voiceId, text: text, idempotencyKey: idempotencyKey
+                voiceId: voiceId, text: text,
+                modelId: ElevenLabsClient.conversationModelId,
+                idempotencyKey: idempotencyKey
             ) { chunk in
                 if !receivedAnyChunk {
                     receivedAnyChunk = true
                     do {
-                        try player.startPCMStream(sampleRate: ElevenLabsClient.streamSampleRate) {
+                        try player.startPCMStream(sampleRate: ElevenLabsClient.streamSampleRate,
+                                                  voiceKey: voiceId) {
                             Task { @MainActor in
                                 guard phase == .speaking else { return }
                                 phase = .idle
@@ -948,6 +951,7 @@ struct ConversationView: View {
 
         let (newAudio, newTimings) = try await ElevenLabsClient.shared
             .synthesizeWithTimestamps(voiceId: voiceId, text: text,
+                                      modelId: ElevenLabsClient.conversationModelId,
                                       idempotencyKey: idempotencyKey)
         PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
         try appendTurnAndPlay(newAudio, timings: newTimings, transcript: text)
