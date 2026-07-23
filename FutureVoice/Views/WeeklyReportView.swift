@@ -17,18 +17,36 @@ struct WeeklyReportView: View {
             lastReport: report
         )
 
+        // One card per topic, not one wall — the summary reads first, and
+        // each list is scannable on its own.
         VStack(alignment: .leading, spacing: 16) {
-            header
-            pronunciationLine
+            card {
+                header
+                pronunciationLine
+                if let report {
+                    Text(report.summary)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("\(report.sessionCount) sessions · \(dateRange(report))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    emptyState(state)
+                }
+            }
             if let report {
                 reportBody(report)
-            } else {
-                emptyState(state)
             }
         }
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 12) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     // MARK: - Header
@@ -71,29 +89,24 @@ struct WeeklyReportView: View {
 
     @ViewBuilder
     private func reportBody(_ r: WeeklyReport) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(r.summary)
-                .font(.body)
-                .foregroundStyle(.primary)
-
-            Text("\(r.sessionCount) sessions · \(dateRange(r))")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if !r.newExpressions.isEmpty {
+        if !r.newExpressions.isEmpty {
+            card {
                 section(title: "New expressions you used") {
                     ForEach(r.newExpressions) { item in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(item.phrase).font(.subheadline).fontWeight(.semibold)
+                            Text(item.phrase).font(.body).fontWeight(.semibold)
                             Text("\u{201C}\(item.sampleSentence)\u{201D}")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
             }
+        }
 
-            if !r.repeatedMistakes.isEmpty {
+        if !r.repeatedMistakes.isEmpty {
+            card {
                 section(title: "Patterns to work on") {
                     ForEach(r.repeatedMistakes) { item in
                         VStack(alignment: .leading, spacing: 4) {
@@ -110,25 +123,30 @@ struct WeeklyReportView: View {
                             Text("\u{2192} \(item.fluentAlternative)")
                                 .fontWeight(.medium)
                             Text(item.note)
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
             }
+        }
 
-            if !r.suggestedExpressions.isEmpty {
+        if !r.suggestedExpressions.isEmpty {
+            card {
                 section(title: "Try adding these") {
                     ForEach(r.suggestedExpressions) { item in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(item.phrase).font(.subheadline).fontWeight(.semibold)
+                            Text(item.phrase).font(.body).fontWeight(.semibold)
                             Text(item.whenToUse)
-                                .font(.caption)
+                                .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                             Text("e.g. \u{201C}\(item.example)\u{201D}")
-                                .font(.caption)
+                                .font(.subheadline)
                                 .italic()
                                 .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -140,8 +158,7 @@ struct WeeklyReportView: View {
     private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+                .font(.headline)
             VStack(alignment: .leading, spacing: 12) {
                 content()
             }

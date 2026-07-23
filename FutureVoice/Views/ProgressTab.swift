@@ -1,16 +1,21 @@
 import SwiftUI
+import Charts
 
 /// Progress — expressed in CEFR (A1–C2) so it actually means something, not an
-/// arbitrary 0–100. Your level is ESTIMATED from the words you actually use
-/// (each word is CEFR-graded), which is a real measurement, not an LLM opinion.
-/// The other skills lean on measured numbers (WPM, shadow accuracy, error rate)
-/// plus the analyzer's qualitative "what to work on" notes.
+/// arbitrary 0–100. The overall level is ONE pooled AI judgment over all the
+/// user's speech (weekly read); the per-skill pages lean on measured numbers
+/// (CEFR-graded vocabulary, articulation WPM, correction rate, words/turn)
+/// plus the analyzer's qualitative "what to work on" notes. Shadowing and
+/// drill reps are PRACTICE, not assessment — they appear as effort (Activity)
+/// and never move the level.
 struct ProgressTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var vocab = VocabStore.shared
 
     // Optional because it doubles as the pager's scrollPosition binding.
     @State private var selected: Dim? = .overall
+    /// "How this is assessed" transparency sheet — the recipe with live numbers.
+    @State private var showingHowAssessed = false
     @State private var dashboard = PracticeStats.snapshot()
     @State private var dueCount = 0
 
@@ -31,8 +36,6 @@ struct ProgressTab: View {
     @State private var talkMinutes = 0
     @State private var wordsPerTurn = 0
     @State private var corrPer10 = 0.0
-    @State private var shadowAccuracy = 0
-    @State private var shadowAttempts = 0
     // Qualitative coaching notes (LLM), per dimension
     @State private var notesByDim: [Dim: [String]] = [:]
     @State private var scoredCount = 0
@@ -49,16 +52,61 @@ struct ProgressTab: View {
     @State private var reportUnlock: WeeklyReportEngine.UnlockState =
         .lockedFirst(secondsAccumulated: 0,
                      secondsRequired: WeeklyReportEngine.firstReportMinSeconds)
+    // Effort signals (moved here from Practice — measurement lives in
+    // Progress; Practice is the review queue + library).
+    /// Last 14 days of effort, oldest first — speaking minutes plus per-kind
+    /// reps, so the charts can show both HOW MUCH and WHICH KIND.
+    @State private var dailyEffort: [DayEffort] = []
+    @State private var weekReps = 0
+    @State private var daysActiveThisWeek = 0
+    @State private var avgShadowScore = 0
+    @State private var shadowTrend: PracticeStats.ShadowTrend?
+    /// CEFR level of each weekly read, oldest first — the level's history.
+    @State private var levelHistory: [LevelPoint] = []
+    /// Same key Home's goal ring uses — the dashed line in the time chart.
+    @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
+
+    struct DayEffort: Identifiable {
+        let day: Date
+        let talkTurns: Int
+        let shadowReps: Int
+        let drillReps: Int
+        let talkMinutes: Double
+        var id: Date { day }
+        var totalReps: Int { talkTurns + shadowReps + drillReps }
+    }
+
+    struct LevelPoint: Identifiable {
+        let date: Date
+        let rank: Int
+        let label: String
+        var id: Date { date }
+    }
+
+    /// One measured value at one point in time — the per-skill trend series.
+    struct TrendPoint: Identifiable {
+        let id = UUID()
+        let date: Date
+        let value: Double
+    }
+
+    // Per-skill trends, oldest first: one point per analyzed talk (vocab is
+    // cumulative by day instead — words don't belong to a single session).
+    @State private var fluencyTrend: [TrendPoint] = []
+    @State private var grammarTrend: [TrendPoint] = []
+    @State private var expressionTrend: [TrendPoint] = []
+    @State private var vocabTrend: [TrendPoint] = []
 
     enum Dim: String, CaseIterable, Hashable {
-        case overall, vocabulary, grammar, fluency, expressiveness, pronunciation
-        // "Pronunciation" oversold what's measured (STT text match from
-        // shadow reps) — label it what it is.
+        // Shadowing is deliberately NOT a dimension here: shadow scores
+        // measure practice effort, not level. They live in the Activity
+        // panel and in Practice — presenting them as an assessed "skill"
+        // misread as part of the level estimate.
+        case overall, vocabulary, grammar, fluency, expressiveness
         var title: String {
             switch self {
-            case .overall:       return "Overall"
-            case .pronunciation: return "Shadowing"
-            default:             return rawValue.capitalized
+            case .overall: return "Overall"
+            default:       return rawValue.capitalized
             }
         }
         var short: String { title }
@@ -123,7 +171,10 @@ struct ProgressTab: View {
                                     .ignoresSafeArea(edges: .top)
                             }
                     }
-                    .toolbarBackground(.hidden, for: .navigationBar)
+                    // NOT .toolbarBackground(.hidden): that drops the rounded
+                    // title font (see TransparentRoundedNavBar). The shim hides
+                    // the bar background the same way, fonts intact.
+                    .background(TransparentRoundedNavBar())
                 }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
@@ -146,7 +197,6 @@ struct ProgressTab: View {
         case .overall:        overallContent
         case .vocabulary:     vocabularyContent
         case .fluency:        fluencyContent
-        case .pronunciation:  pronunciationContent
         case .grammar:        grammarContent
         case .expressiveness: expressivenessContent
         }
@@ -185,15 +235,7 @@ struct ProgressTab: View {
         }
     }
 
-    /// Minimum shadow attempts before the Shadowing page/row shows a number —
-    /// an average of one or two reps isn't a statistic, it's an anecdote.
-    private static let minShadowAttempts = 5
-
-    private var availableDims: [Dim] {
-        var out: [Dim] = [.overall, .vocabulary, .grammar, .fluency, .expressiveness]
-        if shadowAttempts >= Self.minShadowAttempts { out.append(.pronunciation) }
-        return out
-    }
+    private var availableDims: [Dim] { Dim.allCases }
 
     // MARK: - Overall
 
@@ -219,6 +261,7 @@ struct ProgressTab: View {
                     Text(canDo(lv)).font(.callout).fixedSize(horizontal: false, vertical: true)
                     Text("Assessed from \(totalSpeakingMinutes) min of conversation, pooled in your weekly read — vocabulary, grammar, fluency and expression together.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    nextAssessmentStatus
                 } else {
                     Text("Building your level").font(.title.bold())
                     // The recipe made visible, equalizer-style: one bar per
@@ -232,15 +275,26 @@ struct ProgressTab: View {
                     Divider()
                     buildingStatus
                 }
+                Button { showingHowAssessed = true } label: {
+                    Label("How this is assessed", systemImage: "info.circle")
+                        .font(.footnote.weight(.medium))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .padding(.top, 2)
+            }
+            .sheet(isPresented: $showingHowAssessed) { howAssessedSheet }
+
+            // Needs two pooled reads before a "change over time" is honest —
+            // a single point is just the big number above, restated.
+            if levelHistory.count >= 2 {
+                levelHistoryPanel
             }
 
             panel {
                 Text("Across skills").font(.headline)
                 skillRow(.vocabulary, value: vocabLevel.map { $0.rawValue.uppercased() } ?? "—")
                 skillRow(.fluency, value: fluencyBand)
-                if shadowAttempts >= Self.minShadowAttempts {
-                    skillRow(.pronunciation, value: accuracyBand)
-                }
                 skillRow(.grammar, value: corrPer10 > 0 ? String(format: "%.1f/10 turns", corrPer10) : "—")
             }
 
@@ -249,20 +303,288 @@ struct ProgressTab: View {
                     Text("To reach \(next.rawValue.uppercased())").font(.headline)
                     Text(canDo(next)).font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    // Measurement tab stays measurement-only: the doing
-                    // (vocabulary, drills, shadowing) lives in Practice.
-                    Text("Start using more \(next.rawValue.uppercased())-level words in your talks — Practice → Vocabulary highlights them.")
-                        .font(.callout).fixedSize(horizontal: false, vertical: true)
+                    // Focus = the axes that MEASURE below the target level,
+                    // each with its live number — not a hardcoded "more
+                    // words". Measurement tab stays measurement-only: the
+                    // doing (vocabulary, drills, shadowing) lives in Practice.
+                    ForEach(focusTips(toward: next), id: \.text) { tip in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: tip.icon)
+                                .font(.subheadline)
+                                .foregroundStyle(.tint)
+                                .frame(width: 22)
+                            Text(tip.text).font(.callout)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 }
+            }
+
+            if dailyEffort.contains(where: { $0.talkMinutes > 0 }) {
+                studyTimePanel
+            }
+
+            if dailyEffort.contains(where: { $0.totalReps > 0 }) {
+                activityPanel
             }
 
             consistencyPanel
 
-            panel {
+            weeklyReadPanel
+        }
+    }
+
+    // MARK: - This week's read (digest — the full report is a push away)
+
+    /// The report, readable at a glance: the 1–2 sentence trend plus counts.
+    /// The full item lists (every expression, every correction) moved to
+    /// their own pushed page — a wall of text at the bottom of Overall was
+    /// getting skipped, not read.
+    private var weeklyReadPanel: some View {
+        panel {
+            HStack(alignment: .firstTextBaseline) {
                 Text("This week's read").font(.headline)
-                WeeklyReportView()
+                Spacer()
+                if appState.weeklyReportGenerating {
+                    ProgressView().controlSize(.small)
+                } else if let r = appState.weeklyReports.first {
+                    Text(readDateRange(r))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if let r = appState.weeklyReports.first {
+                Text(r.summary)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                digestRow(icon: "sparkles", count: r.newExpressions.count,
+                          text: "new expressions you used")
+                digestRow(icon: "arrow.triangle.2.circlepath", count: r.repeatedMistakes.count,
+                          text: "patterns to work on")
+                digestRow(icon: "plus.bubble", count: r.suggestedExpressions.count,
+                          text: "expressions worth adding")
+                NavigationLink {
+                    ScrollView {
+                        WeeklyReportView()
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 12)
+                    }
+                    .background(Color(.systemGroupedBackground).ignoresSafeArea())
+                    .navigationTitle("This week's read")
+                    .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    HStack {
+                        Text("Read the full report")
+                            .font(.subheadline.weight(.medium))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption).foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+                .padding(.top, 2)
+            } else {
+                weeklyReadLockedState
             }
         }
+    }
+
+    @ViewBuilder
+    private func digestRow(icon: String, count: Int, text: String) -> some View {
+        if count > 0 {
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+                    .frame(width: 22)
+                Text("\(count)")
+                    .font(.subheadline.weight(.semibold)).monospacedDigit()
+                Text(text)
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// No report yet — one calm line on what unlocks it, from the SAME
+    /// unlock state the building panel uses, so they never disagree.
+    @ViewBuilder
+    private var weeklyReadLockedState: some View {
+        switch reportUnlock {
+        case .lockedFirst(let acc, let req):
+            Text("Your first read unlocks after \(Int(req / 60)) minutes of talk.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                ProgressView(value: min(acc, req), total: req)
+                    .tint(.accentColor)
+                Text("\(Int(acc / 60))/\(Int(req / 60)) min")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
+        case .lockedNext(let days, let secondsRemaining):
+            let minsRem = max(1, Int((secondsRemaining / 60).rounded(.up)))
+            Text(days > 0
+                 ? "Next read in \(days) day\(days == 1 ? "" : "s")."
+                 : "Next read after \(minsRem) more min of new talk.")
+                .font(.subheadline).foregroundStyle(.secondary)
+        case .ready:
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.small)
+                Text("Analyzing your week…")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func readDateRange(_ r: WeeklyReport) -> String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return "\(fmt.string(from: r.periodStart)) – \(fmt.string(from: r.periodEnd))"
+    }
+
+    // MARK: - Level history (one point per weekly read)
+
+    private var levelHistoryPanel: some View {
+        panel {
+            Text("Level over time").font(.headline)
+            Chart(levelHistory) { p in
+                LineMark(x: .value("Read", p.date), y: .value("Level", p.rank))
+                    .interpolationMethod(.stepEnd)
+                    .foregroundStyle(.tint)
+                PointMark(x: .value("Read", p.date), y: .value("Level", p.rank))
+                    .foregroundStyle(.tint)
+            }
+            .chartYScale(domain: -0.5...5.5)
+            .chartYAxis {
+                AxisMarks(position: .leading, values: Array(0...5)) { value in
+                    AxisGridLine()
+                    AxisValueLabel {
+                        if let i = value.as(Int.self) {
+                            Text(CEFRLevel.allCases[i].rawValue.uppercased())
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
+            .frame(height: 150)
+            Text("One point per weekly read — each is the pooled assessment over that window's talk.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Study time (minutes actually spoken, per day)
+
+    private var studyTimePanel: some View {
+        panel {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Time speaking").font(.headline)
+                Spacer()
+                let weekMin = Int(dailyEffort.suffix(7).reduce(0) { $0 + $1.talkMinutes })
+                Text("\(weekMin) min this week")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            Chart {
+                ForEach(dailyEffort) { d in
+                    BarMark(x: .value("Day", d.day, unit: .day),
+                            y: .value("Minutes", d.talkMinutes))
+                        .foregroundStyle(Color.accentColor)
+                        .cornerRadius(3)
+                }
+                RuleMark(y: .value("Goal", Double(dailyGoalMinutes)))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundStyle(.secondary)
+            }
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: 3)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.day(), centered: true)
+                }
+            }
+            .frame(height: 120)
+            Text("Minutes you actually spoke, per day. The dashed line is your \(dailyGoalMinutes)-minute daily goal.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Activity (effort made visible — moved from Practice)
+
+    /// One (day, kind) slice for the stacked mix chart. Fixed kind order —
+    /// Talk · Shadowing · Drills — so colors never reshuffle between days.
+    private struct MixEntry: Identifiable {
+        let day: Date
+        let kind: String
+        let count: Int
+        var id: String { "\(kind)\(day.timeIntervalSinceReferenceDate)" }
+    }
+
+    private var mixEntries: [MixEntry] {
+        dailyEffort.flatMap { d in
+            [MixEntry(day: d.day, kind: "Talk", count: d.talkTurns),
+             MixEntry(day: d.day, kind: "Shadowing", count: d.shadowReps),
+             MixEntry(day: d.day, kind: "Drills", count: d.drillReps)]
+        }
+        .filter { $0.count > 0 }
+    }
+
+    private var activityPanel: some View {
+        panel {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Activity").font(.headline)
+                Spacer()
+                if let delta = shadowTrend?.delta {
+                    Label(delta >= 0 ? "shadow +\(delta)" : "shadow \(delta)",
+                          systemImage: delta >= 0 ? "arrow.up.right" : "arrow.down.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(delta >= 0 ? Color.green : Color.orange)
+                }
+            }
+            // Stacked by KIND, not just totals — a column that's always one
+            // color is the "I only ever do the comfortable thing" signal.
+            Chart(mixEntries) { e in
+                BarMark(x: .value("Day", e.day, unit: .day),
+                        y: .value("Reps", e.count))
+                    .foregroundStyle(by: .value("Kind", e.kind))
+                    .cornerRadius(2)
+            }
+            .chartForegroundStyleScale([
+                "Talk": Color(.systemBlue),
+                "Shadowing": Color(.systemGreen),
+                "Drills": Color(.systemOrange),
+            ])
+            .chartLegend(position: .bottom, spacing: 8)
+            .chartXAxis {
+                AxisMarks(values: .stride(by: .day, count: 3)) { _ in
+                    AxisGridLine()
+                    AxisValueLabel(format: .dateTime.day(), centered: true)
+                }
+            }
+            .frame(height: 130)
+            Text("What each day was made of — talk turns, shadow takes, drill reviews.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            HStack(spacing: 16) {
+                activityStat(value: "\(weekReps)", label: weekReps == 1 ? "rep this week" : "reps this week")
+                activityStat(value: "\(daysActiveThisWeek)", label: daysActiveThisWeek == 1 ? "day active" : "days active")
+                if avgShadowScore > 0 {
+                    activityStat(value: "\(avgShadowScore)", label: "avg shadow score")
+                }
+            }
+        }
+    }
+
+    private func activityStat(value: String, label: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value)
+                .font(.headline.weight(.bold))
+                .monospacedDigit()
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Per-axis CEFR estimates for the ring
@@ -382,6 +704,57 @@ struct ProgressTab: View {
         }
     }
 
+    /// Shown UNDER an existing level: when the next re-assessment happens and
+    /// exactly how much more talk gets you there — the "keep going" hook.
+    @ViewBuilder
+    private var nextAssessmentStatus: some View {
+        Divider()
+        if appState.weeklyReportGenerating {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Re-assessing your level now…")
+                    .font(.callout).foregroundStyle(.secondary)
+            }
+        } else {
+            switch reportUnlock {
+            case .lockedNext(let daysRemaining, let secondsRemaining):
+                Text("Next assessment")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                // The talk requirement as a live bar — filling it is the part
+                // the user can actually go do right now.
+                let required = WeeklyReportEngine.recurringMinSeconds
+                let done = max(0, min(required, required - secondsRemaining))
+                HStack(spacing: 10) {
+                    ProgressView(value: done, total: required)
+                        .tint(.accentColor)
+                    Text("\(Int(done / 60))/\(Int(required / 60)) min new talk")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                        .layoutPriority(1)
+                }
+                unlockConditionRow(
+                    icon: "calendar",
+                    met: daysRemaining == 0,
+                    text: daysRemaining == 0
+                        ? "A week since the last read"
+                        : (daysRemaining == 1 ? "1 more day" : "\(daysRemaining) more days"))
+                if secondsRemaining > 0 {
+                    Text("Talk \(max(1, Int((secondsRemaining / 60).rounded(.up)))) more minutes and this level gets re-read from everything new you've said.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            case .ready:
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Ready — re-assessing your level now…")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            case .lockedFirst:
+                // Can't happen once a level exists; nothing to show.
+                EmptyView()
+            }
+        }
+    }
+
     private func unlockConditionRow(icon: String, met: Bool, text: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: met ? "checkmark.circle.fill" : icon)
@@ -392,6 +765,77 @@ struct ProgressTab: View {
                 .font(.subheadline)
                 .foregroundStyle(met ? .secondary : .primary)
         }
+    }
+
+    // MARK: - How the level is assessed (transparency sheet)
+
+    /// The assessment recipe, shown with the user's LIVE numbers — every
+    /// ingredient names its measurement and how it maps to a band, so the
+    /// level never reads as a black box (or as "just vocabulary").
+    private var howAssessedSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text("Your level is one judgment over all your recorded speech, pooled in your weekly read — never a guess from a single session. It's read against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first read unlocks after \(Self.levelMinMinutes) minutes of talk, then refreshes weekly.")
+                        .font(.callout)
+                } header: {
+                    Text("The estimated level")
+                }
+                Section {
+                    assessedRow(name: "Vocabulary",
+                                level: vocabLevel.map { $0.rawValue.uppercased() },
+                                detail: usedTotal > 0
+                                    ? "\(usedTotal) distinct words you've actually used, each graded against the CEFR word list. Fully objective."
+                                    : "Graded from the words you actually use, against the CEFR word list. Fully objective.")
+                    assessedRow(name: "Fluency",
+                                level: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() },
+                                detail: effectivePace > 0
+                                    ? "\(effectivePace) words per minute of voiced speech — pauses and think-time removed."
+                                    : "Words per minute of voiced speech — pauses and think-time removed.")
+                    assessedRow(name: "Grammar",
+                                level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
+                                detail: corrPer10 > 0
+                                    ? String(format: "%.1f corrections per 10 turns — fewer reads higher.", corrPer10)
+                                    : "How often a more natural rephrase was suggested — fewer reads higher.")
+                    assessedRow(name: "Expression",
+                                level: expressionCEFR.map { "≈" + $0.rawValue.uppercased() },
+                                detail: wordsPerTurn > 0
+                                    ? "\(wordsPerTurn) words per turn — how far ideas get developed."
+                                    : "Words per turn — how far ideas get developed.")
+                } header: {
+                    Text("What's measured")
+                } footer: {
+                    Text("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. The pooled read weighs all of this evidence together.")
+                }
+                Section {
+                    Text("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.")
+                        .font(.callout)
+                } header: {
+                    Text("What never moves the level")
+                }
+            }
+            .navigationTitle("How it's assessed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showingHowAssessed = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func assessedRow(name: String, level: String?, detail: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name).font(.subheadline.weight(.medium))
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer()
+            Text(level ?? "—").font(.headline).monospacedDigit().foregroundStyle(.tint)
+        }
+        .padding(.vertical, 2)
     }
 
     private func skillRow(_ dim: Dim, value: String) -> some View {
@@ -439,6 +883,23 @@ struct ProgressTab: View {
                 }
                 Text("Estimated from \(usedTotal) distinct words you've actually used, each graded by CEFR level.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            if vocabTrend.count >= 2 {
+                panel {
+                    Text("Vocabulary growth").font(.headline)
+                    Chart(vocabTrend) { p in
+                        AreaMark(x: .value("Day", p.date), y: .value("Words", p.value))
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(Color.accentColor.opacity(0.15))
+                        LineMark(x: .value("Day", p.date), y: .value("Words", p.value))
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(.tint)
+                    }
+                    .frame(height: 130)
+                    Text("Distinct graded words you've used, accumulating from the day each was first said.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             panel {
                 Text("Words you use, by level").font(.headline)
@@ -497,20 +958,9 @@ struct ProgressTab: View {
                 : nil,
             measures: "Pace measured from voiced speech only — pauses and think-time don't drag it down.",
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
-            action: nil
-        )
-    }
-
-    private var pronunciationContent: some View {
-        measuredContent(
-            dim: .pronunciation,
-            big: "\(shadowAccuracy)",
-            bigUnit: "shadow accuracy",
-            band: accuracyBand,
-            measuredLine: "\(shadowAttempts) shadow attempt\(shadowAttempts == 1 ? "" : "s") — measured against your fluent self",
-            measures: "How closely your sounds match the target, measured from shadow practice.",
-            improve: "Shadow your fluent self's lines under Practice — listen, then match the rhythm and sounds.",
-            action: nil
+            action: nil,
+            trend: fluencyTrend,
+            trendCaption: "Words per minute of voiced speech — one point per talk."
         )
     }
 
@@ -523,7 +973,9 @@ struct ProgressTab: View {
             measuredLine: "How often a more natural rephrase was suggested — lower is better.",
             measures: "How correctly you build sentences — tenses, articles, agreement.",
             improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
-            action: nil
+            action: nil,
+            trend: grammarTrend,
+            trendCaption: "Corrections per 10 turns, one point per talk — DOWN is progress here."
         )
     }
 
@@ -536,15 +988,41 @@ struct ProgressTab: View {
             measuredLine: "Longer, richer turns usually mean you're elaborating more.",
             measures: "How vividly and naturally you get your meaning across.",
             improve: "Tell stories, react, and add detail — describe how things felt, not just what happened.",
-            action: nil
+            action: nil,
+            trend: expressionTrend,
+            trendCaption: "Average words per turn — one point per talk."
         )
     }
 
     private struct DimAction { let title: String; let icon: String; let destination: AnyView }
 
+    /// A dimension's trend over time — the same measurement as the page's
+    /// headline number, one point per analyzed talk.
+    @ViewBuilder
+    private func trendPanel(_ trend: [TrendPoint], unit: String, caption: String) -> some View {
+        if trend.count >= 2 {
+            panel {
+                Text("Trend").font(.headline)
+                Chart(trend) { p in
+                    LineMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                        .interpolationMethod(.monotone)
+                        .foregroundStyle(.tint)
+                    PointMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                        .foregroundStyle(.tint)
+                        .symbolSize(30)
+                }
+                .frame(height: 130)
+                Text(caption)
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
     private func measuredContent(dim: Dim, big: String, bigUnit: String, band: String?,
                                  measuredLine: String?, measures: String, improve: String,
-                                 action: DimAction?) -> some View {
+                                 action: DimAction?, trend: [TrendPoint] = [],
+                                 trendCaption: String = "") -> some View {
         VStack(spacing: 16) {
             panel {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -558,6 +1036,8 @@ struct ProgressTab: View {
                 }
                 Text(measures).font(.footnote).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
             }
+
+            trendPanel(trend, unit: bigUnit, caption: trendCaption)
 
             if let notes = notesByDim[dim], !notes.isEmpty {
                 panel {
@@ -601,6 +1081,41 @@ struct ProgressTab: View {
         }
     }
 
+    /// Concrete next-step focuses, derived from the SAME per-axis measurements
+    /// the assessment sheet shows: only axes currently measuring below the
+    /// target level appear, each anchored to its live number. Unmeasured axes
+    /// stay silent — no guessing. Capped at 3 so it reads as focus, not a
+    /// checklist.
+    private func focusTips(toward next: CEFRLevel) -> [(icon: String, text: String)] {
+        let targetRank = CoreVocabulary.levelRank(next)
+        func lags(_ lv: CEFRLevel?) -> Bool {
+            guard let lv else { return false }
+            return CoreVocabulary.levelRank(lv) < targetRank
+        }
+        var tips: [(icon: String, text: String)] = []
+        if lags(vocabLevel) {
+            tips.append((icon: "text.book.closed",
+                         text: "Use more \(next.rawValue.uppercased())-level words in your talks — Practice → Vocabulary highlights them."))
+        }
+        if lags(grammarCEFR) {
+            tips.append((icon: "checkmark.seal",
+                         text: String(format: "Corrections are at %.1f per 10 turns — run your review cards under Practice; they're built from your own slips.", corrPer10)))
+        }
+        if lags(fluencyCEFR) {
+            tips.append((icon: "gauge.with.needle",
+                         text: "Your pace is \(effectivePace) words/min — talk more often and a little longer; longer turns build flow."))
+        }
+        if lags(expressionCEFR) {
+            tips.append((icon: "text.bubble",
+                         text: "Your turns average \(wordsPerTurn) words — add detail: how things felt, not just what happened."))
+        }
+        if tips.isEmpty {
+            tips.append((icon: "checkmark.circle",
+                         text: "Every measured skill already reads at \(next.rawValue.uppercased()) or above — keep talking and the pooled read will catch up."))
+        }
+        return Array(tips.prefix(3))
+    }
+
     private func nextLevel(_ l: CEFRLevel) -> CEFRLevel? {
         let all = CEFRLevel.allCases
         guard let i = all.firstIndex(of: l), i + 1 < all.count else { return nil }
@@ -621,15 +1136,6 @@ struct ProgressTab: View {
         case low..<mid:   return "Conversational"
         case mid..<high:  return "Fluent"
         default:          return "Very fluent"
-        }
-    }
-
-    private var accuracyBand: String {
-        switch shadowAccuracy {
-        case ..<1:    return "—"
-        case 1..<60:  return "Developing"
-        case 60..<80: return "Solid"
-        default:      return "Strong"
         }
     }
 
@@ -654,8 +1160,49 @@ struct ProgressTab: View {
 
     private func reload() {
         dashboard = PracticeStats.snapshot()
-        dueCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
+        let drillCards = DrillStore.shared.load()
+        dueCount = drillCards.filter { $0.nextReviewAt <= Date() }.count
         vocab.backfillFromSessions()
+
+        // --- Effort: PracticeLog going forward; shadow-attempt history and
+        // card review dates backfill the days before the log existed. ---
+        let effortCal = Calendar.current
+        let effortNow = Date()
+        let todayStart = effortCal.startOfDay(for: effortNow)
+        let allEnded = SessionStore.shared.load().filter { $0.endedAt != nil }
+        var effort: [DayEffort] = []
+        for offset in (0..<14).reversed() {
+            guard let d = effortCal.date(byAdding: .day, value: -offset, to: todayStart) else { continue }
+            let log = PracticeLog.shared.day(d)
+            // Log going forward; attempt history / card review dates backfill
+            // the days before the log existed (same policy as before).
+            let shadowed = appState.shadowAttempts.filter { effortCal.isDate($0.createdAt, inSameDayAs: d) }.count
+            let reviewed = drillCards.filter { c in
+                c.lastReviewedAt.map { effortCal.isDate($0, inSameDayAs: d) } ?? false
+            }.count
+            let daySessions = allEnded.filter { effortCal.isDate($0.endedAt ?? $0.startedAt, inSameDayAs: d) }
+            let userTurns = daySessions.reduce(0) { acc, s in
+                acc + s.turns.filter { $0.role == .user }.count
+            }
+            let speakMs = daySessions.reduce(0) { acc, s in
+                acc + s.turns.filter { $0.role == .user }.reduce(0) { $0 + $1.durationMs }
+            }
+            effort.append(DayEffort(day: d,
+                                    talkTurns: userTurns,
+                                    shadowReps: max(log?.shadowReps ?? 0, shadowed),
+                                    drillReps: max(log?.drillReps ?? 0, reviewed),
+                                    talkMinutes: Double(speakMs) / 60000.0))
+        }
+        dailyEffort = effort
+        // "Reps" stays what it always meant — review work (shadow + drill),
+        // talk time is counted in minutes, not reps.
+        weekReps = effort.suffix(7).reduce(0) { $0 + $1.shadowReps + $1.drillReps }
+        daysActiveThisWeek = effort.suffix(7).filter { $0.shadowReps + $0.drillReps > 0 }.count
+        shadowTrend = PracticeStats.shadowTrend(attempts: appState.shadowAttempts, now: effortNow)
+        let recentScores = appState.shadowAttempts
+            .sorted { $0.createdAt > $1.createdAt }
+            .prefix(10).map(\.matchScore)
+        avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
 
         // --- Objective vocabulary CEFR estimate (from words actually used) ---
         var counts: [CEFRLevel: Int] = [:]
@@ -713,11 +1260,37 @@ struct ProgressTab: View {
         wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
         corrPer10 = mean(mets.map(\.suggestionRate)) * 10
 
-        // --- Pronunciation from measured shadow accuracy ---
-        let attempts = appState.shadowAttempts
-        shadowAttempts = attempts.count
-        let recentAtt = attempts.sorted { $0.createdAt > $1.createdAt }.prefix(10).map { $0.matchScore }
-        shadowAccuracy = recentAtt.isEmpty ? 0 : recentAtt.reduce(0, +) / recentAtt.count
+        // --- Per-skill trends: one point per analyzed talk, oldest first.
+        // The SAME deterministic measurements as the headline numbers above,
+        // just not averaged away. ---
+        var fT: [TrendPoint] = [], gT: [TrendPoint] = [], eT: [TrendPoint] = []
+        for s in scoredSessions.prefix(30).reversed() {
+            let m = ScorecardMetrics.compute(turns: s.turns)
+            let date = s.endedAt ?? s.startedAt
+            let pace = m.articulationRate > 0 ? m.articulationRate : m.wordsPerMinute
+            if pace > 0 { fT.append(TrendPoint(date: date, value: pace)) }
+            gT.append(TrendPoint(date: date, value: m.suggestionRate * 10))
+            if m.avgWordsPerUserTurn > 0 {
+                eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))
+            }
+        }
+        fluencyTrend = fT
+        grammarTrend = gT
+        expressionTrend = eT
+
+        // Vocabulary growth: cumulative distinct graded words, bucketed by
+        // the day each word was FIRST used (VocabStore keeps firstAt).
+        var cumulative = 0
+        vocabTrend = Dictionary(
+            grouping: vocab.records
+                .filter { $0.value.state == .used && CoreVocabulary.level(of: $0.key) != nil }
+                .map(\.value.firstAt),
+            by: { effortCal.startOfDay(for: $0) })
+            .sorted { $0.key < $1.key }
+            .map { day, firsts in
+                cumulative += firsts.count
+                return TrendPoint(date: day, value: Double(cumulative))
+            }
 
         let cards = scoredSessions.compactMap { $0.summary?.scorecard }
 
@@ -730,6 +1303,17 @@ struct ProgressTab: View {
             .compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
             .first
 
+        // Every read's level, oldest first — the level-over-time chart.
+        levelHistory = appState.weeklyReports
+            .compactMap { r in
+                r.cefrLevel.flatMap { CEFRLevel(rawValue: $0) }.map { lv in
+                    LevelPoint(date: r.generatedAt,
+                               rank: CoreVocabulary.levelRank(lv),
+                               label: lv.rawValue.uppercased())
+                }
+            }
+            .sorted { $0.date < $1.date }
+
         // Real unlock state for the building panel — and if the next read is
         // already unlocked, kick it off RIGHT HERE. Waiting for the next
         // conversation to end (the only other trigger) would leave the user
@@ -739,7 +1323,10 @@ struct ProgressTab: View {
             endedSessions: endedSessions,
             lastReport: appState.weeklyReports.first
         )
-        if aiLevel == nil, case .ready = reportUnlock {
+        // If a read is due, kick it off right here — for the FIRST level and
+        // for re-assessments alike. Otherwise "ready" would sit as a spinner
+        // until the next conversation happened to end.
+        if case .ready = reportUnlock {
             appState.maybeGenerateWeeklyReport()
         }
 
