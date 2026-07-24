@@ -1,189 +1,270 @@
 import SwiftUI
 
-/// Full read-back of a past conversation: the whole transcript (You / Future
-/// self), the session's score + note, with per-line "meaning" and audio replay.
-/// Review cards are one tap away at the bottom — but the default, expected view
-/// is the conversation itself, not the drill deck.
+/// One finished talk's "book" — the same page anatomy as a Watch book
+/// (ScenarioDetailView): header with progress + the two actions
+/// (Continue / Replay), then the checklist of review material, then the
+/// score. The material is DERIVED from the session by `TalkCurriculum`
+/// (pickup words + corrected lines), and mastery rides the app's existing
+/// engines (VocabStore, shadow attempts) — nothing here keeps its own books.
+///
+/// The raw conversation lives behind Replay (`TalkTranscriptView`), exactly
+/// like a Watch book's scene lives behind its Watch button.
 struct ConversationDetailView: View {
     @EnvironmentObject private var appState: AppState
     let session: Session
-    @StateObject private var player = AudioPlayer()
-    // Observed so chips restyle live when the word card marks a word
+    /// Set when this page is the wrap-up shown right after the talk ends —
+    /// adds Done + start-new/practice actions and the fresh shadow material.
+    /// Nil when opened from Practice: same page, browsing mode. ONE session
+    /// detail page for both moments.
+    var postTalk: PostTalkActions? = nil
+    // Observed so mastery rows restyle live when a word card marks a word
     // known / studying.
     @ObservedObject private var vocab = VocabStore.shared
-    @State private var showingContinue = false
-    @State private var wordSheet: WordSheetItem?
-    /// Core-list words the fluent self used that the user hasn't yet — their
-    /// natural next words, computed on appear.
-    @State private var fluentSelfNewWords: [String] = []
-    /// Per-turn notebook lookup key for every transcript token (NLTagger is
-    /// too slow to run inside row bodies), computed once on appear. Which of
-    /// those keys get highlighted is decided live against the vocab store.
-    @State private var turnTokenKeys: [UUID: [String]] = [:]
 
-    private struct WordSheetItem: Identifiable {
-        let word: String
-        /// The chip list the word was tapped from, in display order — the
-        /// sheet's chevrons walk this so sibling words open without a
-        /// close-and-reopen round trip. Empty for transcript word taps.
-        var words: [String] = []
-        var id: String { word }
+    struct PostTalkActions {
+        let onDone: () -> Void
+        let onStartNew: () -> Void
+    }
+
+    @State private var curriculum = TalkCurriculum.Snapshot()
+    @State private var archivedAt: Date?
+    @State private var drillCount = 0
+    @State private var showingContinue = false
+    @State private var showingTranscript = false
+    @State private var wordSheet: WordRef?
+    @State private var shadowLine: ScenarioCurriculum.Item?
+    /// Fluent-self line being shadowed from the post-talk "while it's fresh"
+    /// list (distinct from `shadowLine`, which is a corrected user sentence).
+    @State private var fluentShadowTurn: Turn?
+
+    private struct WordRef: Identifiable {
+        let value: String
+        /// Sibling list the word was tapped from — the sheet's chevrons walk
+        /// this order.
+        var siblings: [String] = []
+        var id: String { value }
     }
 
     private enum WordsTab { case you, futureSelf }
     @State private var wordsTab: WordsTab = .you
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                header
-                if let sc = session.summary?.scorecard { scorecardCard(sc) }
-                if let note = session.summary?.overallNote, !note.isEmpty { noteCard(note) }
-                if let sum = session.summary { highlights(sum) }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Transcript").font(.headline)
-                    Text("Highlighted words are worth picking up — tap one to check it out.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                .padding(.top, 4)
-                ForEach(session.turns) { turn in
-                    TranscriptRow(turn: turn,
-                                  nativeLanguage: appState.nativeLanguage,
-                                  targetLanguage: appState.targetLanguage,
-                                  player: player,
-                                  tokenKeys: turnTokenKeys[turn.id] ?? [],
-                                  highlightedIndices: highlightIndices(for: turn),
-                                  onWordTap: { key in
-                                      wordSheet = WordSheetItem(
-                                          word: key,
-                                          words: fluentSelfNewWords.contains(key) ? fluentSelfNewWords : [])
-                                  })
-                }
-            }
-            .padding(20)
+        List {
+            // Same vertical story as the old analysis screen — score, note,
+            // then the session highlights — wrapped in the book-page frame
+            // (header with progress + Continue/Replay on top, mastery +
+            // drills at the bottom).
+            headerSection
+            if curriculum.isMastered && archivedAt == nil { masteredBanner }
+            if let sc = session.summary?.scorecard { scoreSection(sc) }
+            if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
+            freshShadowSection
+            newWordsSection
+            expressionsSection
+            sayItBetterSection
+            shadowSection
+            drillNextSection
+            drillsSection
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    DrillView(source: .session(session.id))
-                        .navigationTitle("Review")
-                        .navigationBarTitleDisplayMode(.inline)
-                } label: {
-                    Label("Review", systemImage: "rectangle.stack")
-                }
-            }
+        .toolbar { toolbarMenu }
+        .onAppear(perform: refresh)
+        .navigationDestination(isPresented: $showingTranscript) {
+            TalkTranscriptView(session: session)
+                .environmentObject(appState)
         }
-        .safeAreaInset(edge: .bottom) { bottomBar }
-        .onAppear {
-            fluentSelfNewWords = VocabStore.shared.pickupWords(
-                fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
-                atOrAbove: appState.proficiency)
-            var keys: [UUID: [String]] = [:]
-            for turn in session.turns where turn.role == .fluentSelf {
-                keys[turn.id] = turn.transcript.split(separator: " ")
-                    .map { VocabStore.lookupKey(for: String($0)) }
-            }
-            turnTokenKeys = keys
-        }
-        .onDisappear { player.stop() }
-        .fullScreenCover(isPresented: $showingContinue) {
+        .fullScreenCover(isPresented: $showingContinue, onDismiss: refresh) {
             ConversationView(resumeSession: session)
                 .environmentObject(appState)
         }
-        .sheet(item: $wordSheet) { item in
-            WordSheet(initialWord: item.word, words: item.words)
+        .sheet(item: $wordSheet, onDismiss: refresh) { ref in
+            // The app's ONE word surface — same card the scenario books open.
+            // Chevrons walk the list the word was tapped from.
+            WordSheet(initialWord: ref.value, words: ref.siblings)
                 .environmentObject(appState)
         }
+        .sheet(item: $shadowLine, onDismiss: refresh) { item in
+            // The item id doubles as the synthetic Turn id (stable, derived
+            // from the source turn), so attempts + cached TTS stay attached.
+            ShadowDrillView(
+                turn: Turn(id: item.id, role: .fluentSelf, audioURL: nil,
+                           transcript: item.text, durationMs: 0,
+                           timestamp: session.startedAt, suggestion: nil),
+                targetLanguage: appState.targetLanguage
+            )
+            .environmentObject(appState)
+        }
+        .sheet(item: $fluentShadowTurn, onDismiss: refresh) { turn in
+            ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
+                .environmentObject(appState)
+        }
+        .safeAreaInset(edge: .bottom) { postTalkBar }
     }
 
-    /// Token indices worth the user's attention in a fluent-self line: pickup
-    /// words they haven't touched, plus words they're actively studying.
-    /// Evaluated against the live vocab store, so marking a word known from
-    /// its card drops the highlight when the sheet closes.
-    private func highlightIndices(for turn: Turn) -> Set<Int> {
-        guard let keys = turnTokenKeys[turn.id] else { return [] }
-        let pickup = Set(fluentSelfNewWords)
-        var out = Set<Int>()
-        for (i, key) in keys.enumerated() where !key.isEmpty {
-            if vocab.isStudying(key) || (pickup.contains(key) && vocab.state(of: key) == nil) {
-                out.insert(i)
-            }
-        }
-        return out
-    }
+    // MARK: - Header (cover + progress + actions)
 
-    // MARK: - Session highlights (what you learned in this talk)
-
-    /// The summary already knows the session's new words, verified expressions
-    /// and key corrections — surface them instead of leaving them buried in
-    /// the transcript.
-    @ViewBuilder
-    private func highlights(_ sum: SessionSummary) -> some View {
-        if !sum.newWordsUsed.isEmpty || !fluentSelfNewWords.isEmpty {
-            newWordsCard(sum)
-        }
-        if !sum.expressionsUsed.isEmpty {
-            card("Expressions you used", icon: "quote.bubble") {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(sum.expressionsUsed, id: \.self) { e in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "checkmark")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tint)
-                                .padding(.top, 3)
-                            Text(e).font(.subheadline)
-                                .fixedSize(horizontal: false, vertical: true)
+    private var headerSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle().fill(Color.accentColor.opacity(0.15))
+                            .frame(width: 56, height: 56)
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.title2).foregroundStyle(.tint)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(session.displayTitle)
+                            .font(.title3.weight(.semibold)).lineLimit(2)
+                        Text("\((session.endedAt ?? session.startedAt).formatted(date: .abbreviated, time: .shortened)) · \(session.turns.filter { $0.role == .user }.count) turns spoken")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        if archivedAt != nil {
+                            Label("Archived", systemImage: "archivebox")
+                                .font(.caption.weight(.medium)).foregroundStyle(.secondary)
                         }
                     }
+                    Spacer()
                 }
-            }
-        }
-        if !sum.phrasesUsed.isEmpty {
-            card("Say it better", icon: "sparkles") {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(sum.phrasesUsed) { p in
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(p.userSaid)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .strikethrough()
-                                .fixedSize(horizontal: false, vertical: true)
-                            Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
-                                .font(.subheadline)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                if curriculum.totalCount > 0 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressView(value: curriculum.progress)
+                            .tint(curriculum.isMastered ? .green : .accentColor)
+                        Text("\(curriculum.masteredCount) of \(curriculum.totalCount) mastered")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                HStack(spacing: 10) {
+                    // Post-talk the bottom bar owns "start a new conversation";
+                    // stacking a Continue full-screen cover over the just-torn-
+                    // down call would double up the call UI.
+                    if postTalk == nil {
+                        Button {
+                            showingContinue = true
+                        } label: {
+                            Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
+                                // Row tint would swallow the icon on the prominent
+                                // fill — force the content white (same fix as the
+                                // scenario book's Talk button).
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    Button {
+                        showingTranscript = true
+                    } label: {
+                        Label("Replay", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .controlSize(.large)
             }
+            .padding(.vertical, 6)
+        } footer: {
+            Text("Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation.")
         }
     }
 
-    /// One compact card for both word sources, switched by a segmented tab —
-    /// two stacked cards ate half the screen.
-    private func newWordsCard(_ sum: SessionSummary) -> some View {
-        let mine = sum.newWordsUsed
-        let theirs = Array(fluentSelfNewWords.prefix(24))
-        let tab: WordsTab = mine.isEmpty ? .futureSelf : (theirs.isEmpty ? .you : wordsTab)
-        return card("New words", icon: "text.book.closed") {
-            VStack(alignment: .leading, spacing: 12) {
-                if !mine.isEmpty, !theirs.isEmpty {
-                    Picker("Source", selection: $wordsTab) {
-                        Text("You · \(mine.count)").tag(WordsTab.you)
-                        Text("Future self · \(theirs.count)").tag(WordsTab.futureSelf)
-                    }
-                    .pickerStyle(.segmented)
-                }
-                if tab == .you {
-                    levelGroupedChips(mine)
-                } else {
-                    Text("Your future self used these; you haven't yet. Tap one to study it — or mark it as known.")
+    private var masteredBanner: some View {
+        Section {
+            HStack(spacing: 12) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.title2).foregroundStyle(.green)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Talk mastered").font(.subheadline.weight(.semibold))
+                    Text("Everything this conversation had to teach is yours.")
                         .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    levelGroupedChips(theirs)
                 }
+                Spacer()
+                Button("Archive") { setArchived(true) }
+                    .buttonStyle(.borderedProminent).tint(.green)
+                    .controlSize(.small)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    // MARK: - Session highlights (the analysis screen's core content)
+
+    /// "New words" — BOTH sides, exactly as the analysis screen always showed
+    /// them: words YOU used for the first time this talk (the win), and words
+    /// your future self used that you haven't yet (the next step — these are
+    /// also the book's word-mastery items). Level-grouped chips; chip state =
+    /// your relationship to the word (known / studying / untouched).
+    @ViewBuilder
+    private var newWordsSection: some View {
+        let mine = session.summary?.newWordsUsed ?? []
+        let theirs = curriculum.words.map(\.text)
+        if !mine.isEmpty || !theirs.isEmpty {
+            let tab: WordsTab = mine.isEmpty ? .futureSelf : (theirs.isEmpty ? .you : wordsTab)
+            Section {
+                VStack(alignment: .leading, spacing: 12) {
+                    if !mine.isEmpty, !theirs.isEmpty {
+                        Picker("Source", selection: $wordsTab) {
+                            Text("You · \(mine.count)").tag(WordsTab.you)
+                            Text("Future self · \(theirs.count)").tag(WordsTab.futureSelf)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                    if tab == .you {
+                        levelGroupedChips(mine)
+                    } else {
+                        Text("Your future self used these; you haven't yet. Tap one to study it — or mark it as known.")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        levelGroupedChips(theirs)
+                    }
+                }
+                .padding(.vertical, 6)
+            } header: {
+                Label("New words", systemImage: "text.book.closed")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var expressionsSection: some View {
+        if let sum = session.summary, !sum.expressionsUsed.isEmpty {
+            Section {
+                ForEach(sum.expressionsUsed, id: \.self) { e in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "checkmark")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                            .padding(.top, 3)
+                        Text(e).font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            } header: {
+                Label("Expressions you used", systemImage: "quote.bubble")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var sayItBetterSection: some View {
+        if let sum = session.summary, !sum.phrasesUsed.isEmpty {
+            Section {
+                ForEach(sum.phrasesUsed) { p in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(p.userSaid)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .strikethrough()
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
+                            .font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 2)
+                }
+            } header: {
+                Label("Say it better", systemImage: "sparkles")
             }
         }
     }
@@ -228,7 +309,7 @@ struct ConversationDetailView: View {
     private func wordChip(_ w: String, siblings: [String]) -> some View {
         let studying = vocab.isStudying(w)
         let known = !studying && vocab.state(of: w) != nil
-        return Button { wordSheet = WordSheetItem(word: w, words: siblings) } label: {
+        return Button { wordSheet = WordRef(value: w, siblings: siblings) } label: {
             HStack(spacing: 5) {
                 if studying {
                     Image(systemName: "bookmark.fill")
@@ -253,79 +334,277 @@ struct ConversationDetailView: View {
         .buttonStyle(.plain)
     }
 
-    private func card(_ title: String, icon: String, @ViewBuilder _ content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label(title, systemImage: icon)
-                .font(.subheadline.weight(.semibold))
-            content()
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-    }
+    // MARK: - Review material
 
-    private var header: some View {
-        Text((session.endedAt ?? session.startedAt).formatted(date: .abbreviated, time: .shortened))
-            .font(.caption)
-            .foregroundStyle(.secondary)
-    }
-
-    private func scorecardCard(_ sc: SessionScorecard) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Score").font(.subheadline.weight(.semibold))
-                Spacer()
-                Text("\(overall(sc))").font(.title3.weight(.bold)).monospacedDigit()
-                    .foregroundStyle(color(overall(sc)))
-            }
-            axis("Vocabulary", sc.vocabulary.score)
-            axis("Grammar", sc.grammar.score)
-            axis("Fluency", sc.fluency.score)
-            axis("Expressiveness", sc.expressiveness.score)
-            if let p = sc.pronunciation { axis("Pronunciation", p.score) }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
-    }
-
-    private func axis(_ name: String, _ score: Int) -> some View {
-        HStack(spacing: 10) {
-            Text(name).font(.caption).foregroundStyle(.secondary).frame(width: 110, alignment: .leading)
-            GeometryReader { geo in
-                Capsule().fill(Color(.tertiarySystemFill))
-                    .overlay(alignment: .leading) {
-                        Capsule().fill(color(score))
-                            .frame(width: max(0, geo.size.width * CGFloat(score) / 100))
+    @ViewBuilder
+    private var shadowSection: some View {
+        if !curriculum.shadowLines.isEmpty {
+            Section {
+                ForEach(curriculum.shadowLines) { line in
+                    Button {
+                        shadowLine = line
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            masteryMark(line.masteredAt != nil)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(line.text)
+                                    .font(.body)
+                                    .foregroundStyle(line.masteredAt != nil ? .secondary : .primary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if !line.note.isEmpty {
+                                    Text(line.note).font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            Spacer(minLength: 8)
+                            if let best = bestShadowScore(for: line.id) {
+                                Text("\(best)")
+                                    .font(.caption.weight(.semibold).monospacedDigit())
+                                    .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                sectionHeader(title: "Say it smoother", icon: "waveform", items: curriculum.shadowLines)
+            } footer: {
+                Text("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
             }
-            .frame(height: 6)
-            Text("\(score)").font(.caption2.monospacedDigit()).foregroundStyle(.secondary).frame(width: 26, alignment: .trailing)
         }
     }
 
-    private func noteCard(_ note: String) -> some View {
-        Text(note)
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemBackground)))
+    /// This session's cards as a swipe deck — shared destination for the
+    /// drills rows and the post-talk practice CTA.
+    private var sessionDeck: some View {
+        DrillView(source: .session(session.id))
+            .navigationTitle("Review")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var bottomBar: some View {
+    /// The wrap-up's "shadow this conversation" list: the last substantial
+    /// fluent-self lines of THIS talk, shadowable in one tap (the full
+    /// per-line list lives in Replay).
+    @ViewBuilder
+    private var freshShadowSection: some View {
+        let lines = Array(
+            session.turns.filter { $0.role == .fluentSelf
+                && $0.transcript.split(separator: " ").count >= 4 }
+            .suffix(4)
+        )
+        if !lines.isEmpty {
+            Section {
+                ForEach(lines) { turn in
+                    Button {
+                        fluentShadowTurn = turn
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: "waveform.badge.mic")
+                                .font(.subheadline)
+                                .foregroundStyle(.tint)
+                                .frame(width: 22)
+                            Text(turn.transcript)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            } header: {
+                Text("Shadow this conversation")
+            } footer: {
+                Text("Repeat your fluent self's lines from this talk.")
+            }
+        }
+    }
+
+    /// The wrap-up's "Drill next" list — phrases slightly above the user's
+    /// level to practice NEXT (already ingested as cards; each row drops into
+    /// this session's deck).
+    @ViewBuilder
+    private var drillNextSection: some View {
+        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
+            Section("Drill next") {
+                ForEach(drills, id: \.self) { drill in
+                    NavigationLink {
+                        sessionDeck
+                    } label: {
+                        Text(drill)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Practice-first close-out, unchanged from the old wrap-up sheet: the
+    /// primary action reviews this talk's cards, the secondary starts a new
+    /// conversation.
+    @ViewBuilder
+    private var postTalkBar: some View {
+        if let postTalk {
+            VStack(spacing: 10) {
+                if drillCount > 0 {
+                    NavigationLink {
+                        sessionDeck
+                    } label: {
+                        Label(drillCount == 1
+                              ? "Practice this card"
+                              : "Practice these \(drillCount) cards",
+                              systemImage: "rectangle.stack.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+                // Secondary once there are cards (Practice stays the clear
+                // primary); the sole prominent action otherwise.
+                if drillCount > 0 {
+                    startNewButton(postTalk).buttonStyle(.bordered)
+                } else {
+                    startNewButton(postTalk).buttonStyle(.borderedProminent)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.bar)
+        }
+    }
+
+    private func startNewButton(_ postTalk: PostTalkActions) -> some View {
         Button {
-            showingContinue = true
+            postTalk.onStartNew()
         } label: {
-            Label("Continue this conversation", systemImage: "phone.fill")
+            Label("Start a new conversation", systemImage: "arrow.uturn.left")
                 .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.bar)
+    }
+
+    @ViewBuilder
+    private var drillsSection: some View {
+        if drillCount > 0 {
+            Section {
+                NavigationLink {
+                    sessionDeck
+                } label: {
+                    HStack {
+                        Label("Cards from this talk", systemImage: "rectangle.stack")
+                        Spacer()
+                        Text("\(drillCount)")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            } footer: {
+                Text("A quick active-recall run through this talk's saved phrases.")
+            }
+        }
+    }
+
+    private func sectionHeader(title: String, icon: String,
+                               items: [ScenarioCurriculum.Item]) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+            Spacer()
+            let done = items.filter { $0.masteredAt != nil }.count
+            Text("\(done)/\(items.count)")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(done == items.count && !items.isEmpty ? .green : .secondary)
+        }
+    }
+
+    private func masteryMark(_ mastered: Bool) -> some View {
+        Image(systemName: mastered ? "checkmark.circle.fill" : "circle")
+            .font(.body)
+            .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
+    }
+
+    // MARK: - Score & note
+
+    /// The full scorecard — the same component the wrap-up always used: axis
+    /// notes, the tappable grammar row (review sheet with highlighted slips +
+    /// the user's own recordings), and the pronunciation row. Replaces the old
+    /// bars-only rendering so past talks keep every detail the wrap-up showed.
+    private func scoreSection(_ sc: SessionScorecard) -> some View {
+        Section("Score") {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Overall").font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text("\(overall(sc))").font(.title3.weight(.bold)).monospacedDigit()
+                        .foregroundStyle(color(overall(sc)))
+                }
+                ScorecardView(scorecard: sc,
+                              grammarIssues: session.summary?.grammarIssues ?? [],
+                              userTurns: session.turns.filter { $0.role == .user })
+            }
+            .padding(.vertical, 6)
+        }
+    }
+
+    private func noteSection(_ note: String) -> some View {
+        Section("Coach's note") {
+            Text(note)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Toolbar
+
+    private var toolbarMenu: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if let postTalk {
+                Button("Done") { postTalk.onDone() }
+                    .fontWeight(.semibold)
+            } else {
+                Menu {
+                    if archivedAt != nil {
+                        Button { setArchived(false) } label: {
+                            Label("Unarchive", systemImage: "tray.and.arrow.up")
+                        }
+                    } else {
+                        Button { setArchived(true) } label: {
+                            Label("Archive", systemImage: "archivebox")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+    }
+
+    // MARK: - Data
+
+    private func refresh() {
+        curriculum = TalkCurriculum.build(session: session,
+                                          proficiency: appState.proficiency,
+                                          shadowAttempts: appState.shadowAttempts)
+        archivedAt = SessionStore.shared.load().first { $0.id == session.id }?.archivedAt
+            ?? session.archivedAt
+        drillCount = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }.count
+    }
+
+    private func setArchived(_ flag: Bool) {
+        guard var s = SessionStore.shared.load().first(where: { $0.id == session.id }) else { return }
+        s.archivedAt = flag ? Date() : nil
+        SessionStore.shared.save(s)
+        archivedAt = s.archivedAt
+    }
+
+    private func bestShadowScore(for lineId: UUID) -> Int? {
+        let scores = appState.shadowAttempts.filter { $0.turnId == lineId }.map(\.matchScore)
+        return scores.max()
     }
 
     private func overall(_ sc: SessionScorecard) -> Int {
@@ -340,6 +619,173 @@ struct ConversationDetailView: View {
         case 50..<80: return .accentColor
         default: return .orange
         }
+    }
+}
+
+// MARK: - Replay (the raw conversation)
+
+/// The talk's "scene": the full transcript (same `DialogueLine` rows as the
+/// live call), a sequential audio replay of the whole conversation, and the
+/// Continue action — mirroring how a Watch book replays its dialogue.
+struct TalkTranscriptView: View {
+    @EnvironmentObject private var appState: AppState
+    let session: Session
+    @StateObject private var player = AudioPlayer()
+    @ObservedObject private var vocab = VocabStore.shared
+
+    @State private var wordSheet: WordSheetItem?
+    /// Core-list words the fluent self used that the user hasn't yet — their
+    /// natural next words, computed on appear (drives inline highlights).
+    @State private var fluentSelfNewWords: [String] = []
+    /// Per-turn notebook lookup key for every transcript token (NLTagger is
+    /// too slow to run inside row bodies), computed once on appear.
+    @State private var turnTokenKeys: [UUID: [String]] = [:]
+    @State private var showingContinue = false
+    @State private var isPlaying = false
+    @State private var currentIndex: Int?
+
+    private struct WordSheetItem: Identifiable {
+        let word: String
+        var words: [String] = []
+        var id: String { word }
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 14) {
+                    Text("Highlighted words are worth picking up — tap one to check it out.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    ForEach(Array(session.turns.enumerated()), id: \.element.id) { idx, turn in
+                        TranscriptRow(turn: turn,
+                                      nativeLanguage: appState.nativeLanguage,
+                                      targetLanguage: appState.targetLanguage,
+                                      player: player,
+                                      tokenKeys: turnTokenKeys[turn.id] ?? [],
+                                      highlightedIndices: highlightIndices(for: turn),
+                                      onWordTap: { key in
+                                          wordSheet = WordSheetItem(
+                                              word: key,
+                                              words: fluentSelfNewWords.contains(key) ? fluentSelfNewWords : [])
+                                      })
+                            .id(idx)
+                    }
+                }
+                .padding(20)
+            }
+            .onChange(of: currentIndex) { _, idx in
+                if let idx { withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo(idx, anchor: .center) } }
+            }
+        }
+        .navigationTitle(session.displayTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
+        .safeAreaInset(edge: .bottom) { controls }
+        .onAppear {
+            fluentSelfNewWords = VocabStore.shared.pickupWords(
+                fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
+                atOrAbove: appState.proficiency)
+            var keys: [UUID: [String]] = [:]
+            for turn in session.turns where turn.role == .fluentSelf {
+                keys[turn.id] = turn.transcript.split(separator: " ")
+                    .map { VocabStore.lookupKey(for: String($0)) }
+            }
+            turnTokenKeys = keys
+        }
+        .onDisappear {
+            // Gate before stopping — stop() fires the current completion,
+            // which would otherwise chain into the next turn after the view
+            // is gone (same trap WatchView documents).
+            isPlaying = false
+            player.stop()
+        }
+        .fullScreenCover(isPresented: $showingContinue) {
+            ConversationView(resumeSession: session)
+                .environmentObject(appState)
+        }
+        .sheet(item: $wordSheet) { item in
+            WordSheet(initialWord: item.word, words: item.words)
+                .environmentObject(appState)
+        }
+    }
+
+    private var controls: some View {
+        HStack(spacing: 16) {
+            Button {
+                if isPlaying {
+                    isPlaying = false
+                    player.stop()
+                } else {
+                    Task { await playFrom(index: currentIndex ?? 0) }
+                }
+            } label: {
+                Label(isPlaying ? "Pause" : "Replay",
+                      systemImage: isPlaying ? "pause.fill" : "play.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+
+            Button {
+                isPlaying = false
+                player.stop()
+                showingContinue = true
+            } label: {
+                Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .controlSize(.large)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+    }
+
+    /// Sequential replay of the stored per-turn audio (user mic + synthesized
+    /// fluent-self lines). Turns whose audio didn't survive are skipped, not
+    /// re-synthesized — replay is always free.
+    private func playFrom(index: Int) async {
+        guard index < session.turns.count else { return }
+        isPlaying = true
+        var i = index
+        while isPlaying && i < session.turns.count {
+            let turn = session.turns[i]
+            guard let data = TurnAudioStore.shared.data(for: turn.id)
+                    ?? turn.audioURL.flatMap({ try? Data(contentsOf: $0) }) else {
+                i += 1
+                continue
+            }
+            currentIndex = i
+            do {
+                try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+                    do {
+                        try player.play(data) { cont.resume(returning: ()) }
+                    } catch {
+                        cont.resume(throwing: error)
+                    }
+                }
+            } catch {
+                isPlaying = false
+                return
+            }
+            i += 1
+        }
+        isPlaying = false
+        currentIndex = nil
+    }
+
+    /// Token indices worth the user's attention in a fluent-self line: pickup
+    /// words they haven't touched, plus words they're actively studying.
+    private func highlightIndices(for turn: Turn) -> Set<Int> {
+        guard let keys = turnTokenKeys[turn.id] else { return [] }
+        let pickup = Set(fluentSelfNewWords)
+        var out = Set<Int>()
+        for (i, key) in keys.enumerated() where !key.isEmpty {
+            if vocab.isStudying(key) || (pickup.contains(key) && vocab.state(of: key) == nil) {
+                out.insert(i)
+            }
+        }
+        return out
     }
 }
 
@@ -371,7 +817,7 @@ struct WordSheet: View {
     }
 }
 
-/// All past conversations → each opens its full transcript.
+/// All past conversations → each opens its book page.
 struct ConversationsListView: View {
     @State private var sessions: [Session] = []
 
@@ -442,11 +888,13 @@ private struct TranscriptRow: View {
         return out
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(turn.role == .user ? "You" : "Future self")
-                .font(.caption).foregroundStyle(.secondary)
+    /// Speaker separation comes from `DialogueLine` — the same component the
+    /// live call screen and Watch use — so all three stay in sync.
+    private var speaker: DialogueSpeaker { turn.role == .user ? .user : .other }
 
+    var body: some View {
+        DialogueLine(speaker: speaker,
+                     name: turn.role == .user ? "You" : "Future self") {
             if turn.role == .fluentSelf {
                 // One Text with normal word spacing — only the few words worth
                 // picking up are highlighted and tappable (as inline links) →
@@ -454,8 +902,6 @@ private struct TranscriptRow: View {
                 // the highlight IS the signal. Per-word token views made the
                 // line read as oddly justified text.
                 Text(highlightedTranscript)
-                    .font(.body)
-                    .fixedSize(horizontal: false, vertical: true)
                     .environment(\.openURL, OpenURLAction { url in
                         guard url.scheme == "futurevoice", url.host() == "word",
                               let index = Int(url.lastPathComponent),
@@ -467,52 +913,51 @@ private struct TranscriptRow: View {
                     })
             } else {
                 Text(turn.transcript)
-                    .font(.body)
-                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            // One action row per line. Listen works for the user's own turns
-            // too (their mic audio is kept from the conversation); Shadow and
-            // Meaning only make sense on the fluent self's lines — translating
-            // the user's own words back at them says nothing.
-            if hasAudio || turn.role == .fluentSelf {
-                HStack(spacing: 8) {
-                    if hasAudio {
-                        Button { playTurn() } label: {
-                            Label("Listen", systemImage: "play.circle")
+        } accessory: {
+            VStack(alignment: speaker.alignment, spacing: 8) {
+                // One action row per line. Listen works for the user's own turns
+                // too (their mic audio is kept from the conversation); Shadow and
+                // Meaning only make sense on the fluent self's lines — translating
+                // the user's own words back at them says nothing.
+                if hasAudio || turn.role == .fluentSelf {
+                    HStack(spacing: 8) {
+                        if hasAudio {
+                            Button { playTurn() } label: {
+                                Label("Listen", systemImage: "play.circle")
+                            }
                         }
-                    }
-                    if turn.role == .fluentSelf, hasAudio {
-                        Button { showingShadow = true } label: {
-                            Label("Shadow", systemImage: "waveform.badge.mic")
+                        if turn.role == .fluentSelf, hasAudio {
+                            Button { showingShadow = true } label: {
+                                Label("Shadow", systemImage: "waveform.badge.mic")
+                            }
                         }
-                    }
-                    if turn.role == .fluentSelf {
-                        Button(action: toggleMeaning) {
-                            HStack(spacing: 4) {
-                                if loading { ProgressView().controlSize(.mini) }
-                                else { Image(systemName: "character.bubble") }
-                                Text(showing ? "Hide meaning" : "Meaning")
+                        if turn.role == .fluentSelf {
+                            Button(action: toggleMeaning) {
+                                HStack(spacing: 4) {
+                                    if loading { ProgressView().controlSize(.mini) }
+                                    else { Image(systemName: "character.bubble") }
+                                    Text(showing ? "Hide meaning" : "Meaning")
+                                }
                             }
                         }
                     }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .tint(.accentColor)
                 }
-                .font(.caption.weight(.semibold))
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-                .tint(.accentColor)
-            }
 
-            if turn.role == .fluentSelf, showing, let t = translation {
-                Text(t).font(.subheadline).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                if turn.role == .fluentSelf, showing, let t = translation {
+                    Text(t).font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-            if turn.role == .user, let s = turn.suggestion {
-                suggestionBox(s)
+                if turn.role == .user, let s = turn.suggestion {
+                    suggestionBox(s)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .sheet(isPresented: $showingShadow) {
             ShadowDrillView(turn: turn, targetLanguage: targetLanguage)
@@ -564,14 +1009,13 @@ private struct TranscriptRow: View {
     }
 
     /// A synthetic fluent-self turn for shadowing the suggestion. The id is
-    /// derived from the real turn's id so repeated shadow sessions reuse the
-    /// same cached audio instead of synthesizing/duplicating it every time.
+    /// the talk-curriculum shadow-line id (derived from the real turn's id),
+    /// so attempts recorded here master the book's line and cached audio is
+    /// shared across both surfaces.
     private func suggestionTurn(_ s: TurnSuggestion) -> Turn {
-        var bytes = turn.id.uuid
-        bytes.0 ^= 0xFF
-        return Turn(id: UUID(uuid: bytes), role: .fluentSelf, audioURL: nil,
-                    transcript: s.alternative, durationMs: 0,
-                    timestamp: turn.timestamp, suggestion: nil)
+        Turn(id: TalkCurriculum.shadowLineId(for: turn.id), role: .fluentSelf, audioURL: nil,
+             transcript: s.alternative, durationMs: 0,
+             timestamp: turn.timestamp, suggestion: nil)
     }
 
     /// Audio exists if TurnAudioStore still has it (resolved from the CURRENT

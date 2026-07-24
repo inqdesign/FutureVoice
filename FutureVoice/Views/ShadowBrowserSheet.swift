@@ -46,6 +46,7 @@ struct ShadowBrowserView: View {
 
     var body: some View {
         content
+            .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .top, spacing: 0) {
                 if !appState.savedLines.isEmpty || !appState.shadowAttempts.isEmpty {
                     Picker("Filter", selection: $filter) {

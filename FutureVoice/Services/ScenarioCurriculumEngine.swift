@@ -123,7 +123,13 @@ enum ScenarioCurriculumEngine {
         } else {
             lines = ["scenario:"]
             lines.append("- where: \(scenario.environment)")
-            lines.append("- talking to: \(scenario.role)")
+            let role = scenario.role.trimmingCharacters(in: .whitespaces)
+            // Free-described situations carry no explicit partner — cast
+            // whoever the situation implies (a landlord scene gets a
+            // landlord, an interview gets an interviewer), never a default.
+            lines.append(role.isEmpty
+                ? "- talking to: infer the natural counterpart for this situation"
+                : "- talking to: \(role)")
             if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
                 lines.append("- context: \(scenario.notes)")
             }

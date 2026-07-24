@@ -1,132 +1,296 @@
 import SwiftUI
 
-/// Shared "In the news" section — recent stories matched to the persona's
-/// interests, backed by `NewsTopicEngine` + `NewsTopicStore`. Used by both
-/// the Talk topic picker (`ScenariosListSheet`) and the Watch topic picker
-/// (`WatchTopicSheet`); what happens on tap is the caller's `onPick`.
-/// Must be placed inside a `List`/`Form`.
-struct NewsTopicSection: View {
-    /// Footer copy — each host phrases the payoff differently (talk vs watch).
-    let footer: String
-    let onPick: (SuggestedTopic) -> Void
+/// Home's discover block: a chip switch (News · Scenarios) over ONE
+/// horizontal card rail. News = recent stories matched to the persona's
+/// interests (`NewsTopicEngine` + `NewsTopicStore`); Scenarios = the user's
+/// own situations, recency-first. Tapping a card starts the call via the
+/// host's closures.
+///
+/// Lives in a plain ScrollView/VStack (NOT a List) — the rail spans the full
+/// screen width naturally, cards align to the shared 20pt grid via inner
+/// padding, and nothing can clip them at a section boundary.
+struct DiscoverSection: View {
+    let onPickNews: (SuggestedTopic) -> Void
+    let onPickScenario: (Scenario) -> Void
+    let onAllScenarios: () -> Void
+    let onBuildScenario: () -> Void
 
     @EnvironmentObject private var appState: AppState
 
+    @State private var tab: Tab = .news
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
     @State private var newsError: String?
     @State private var showingInterests = false
 
+    enum Tab: String, CaseIterable {
+        case news = "News"
+        case scenarios = "Scenarios"
+    }
+
     private var interests: [String] { appState.persona?.interests ?? [] }
 
+    /// News-born topic books stay out of here — they belong to the news
+    /// taxonomy, not the scenario rail.
+    private var scenarios: [Scenario] {
+        appState.scenarios.filter { $0.isTopic != true }
+            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
+    }
+
     var body: some View {
-        Section {
-            if interests.isEmpty {
-                Button { showingInterests = true } label: {
-                    Label("Add interests", systemImage: "plus.circle")
-                        .font(.subheadline)
-                }
-            } else if newsTopics.isEmpty {
-                if loadingNews {
-                    HStack(spacing: 10) {
-                        ProgressView()
-                        Text("Finding stories…").foregroundStyle(.secondary)
-                    }
-                } else {
-                    // Auto-load happens on open; this row is the retry path
-                    // when that failed or returned nothing.
-                    Button {
-                        Task { await fetchNews() }
-                    } label: {
-                        Label("Load stories", systemImage: "newspaper")
-                            .font(.subheadline)
-                    }
-                }
+        VStack(alignment: .leading, spacing: 12) {
+            header
+            switch tab {
+            case .news:      newsContent
+            case .scenarios: scenariosContent
+            }
+        }
+        .sheet(isPresented: $showingInterests, onDismiss: reloadNewsForInterests) {
+            InterestsEditorSheet()
+                .environmentObject(appState)
+        }
+        .task {
+            // Stories come from the shared platform pool (cheap read), so
+            // auto-load on open; the local cache skips even the network hop
+            // within the same day.
+            guard newsTopics.isEmpty, !interests.isEmpty else { return }
+            if let cached = NewsTopicStore.shared.valid(for: interests) {
+                newsTopics = displaySelection(from: cached)
             } else {
-                ForEach(newsTopics) { item in
-                    Button {
-                        onPick(item)
-                    } label: {
-                        newsRow(item)
-                    }
-                    .buttonStyle(.plain)
-                }
+                await fetchNews()
             }
-            if let e = newsError {
-                Text(e).font(.caption).foregroundStyle(.red)
+        }
+    }
+
+    // MARK: - Header (chips + per-tab accessories)
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            ForEach(Tab.allCases, id: \.self) { t in
+                chip(t)
             }
-        } header: {
-            HStack(spacing: 16) {
-                Text("In the news")
-                Spacer()
+            Spacer()
+            if tab == .news {
                 Button { showingInterests = true } label: {
-                    Label("Edit interests", systemImage: "slider.horizontal.3")
-                        .labelStyle(.iconOnly)
+                    Image(systemName: "slider.horizontal.3")
                 }
+                .accessibilityLabel("Edit interests")
                 if !newsTopics.isEmpty {
                     Button {
                         Task { await fetchNews(refresh: true) }
                     } label: {
                         if loadingNews {
-                            ProgressView().controlSize(.mini)
+                            ProgressView().controlSize(.small)
                         } else {
-                            Label("Refresh", systemImage: "arrow.clockwise")
-                                .labelStyle(.iconOnly)
+                            Image(systemName: "arrow.clockwise")
                         }
                     }
                     .disabled(loadingNews)
+                    .accessibilityLabel("Refresh stories")
+                }
+            } else {
+                Button(action: onBuildScenario) {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Build a scenario")
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private func chip(_ t: Tab) -> some View {
+        Button { withAnimation(.easeOut(duration: 0.15)) { tab = t } } label: {
+            Text(t.rawValue)
+                .font(.subheadline.weight(.medium))
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(Capsule().fill(tab == t ? Color(.label) : Color(.secondarySystemGroupedBackground)))
+                .foregroundStyle(tab == t ? Color(.systemBackground) : Color.primary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The one rail both tabs share: full-width scroll track, cards inset to
+    /// the 20pt grid by the HStack's own padding.
+    private func rail<Content: View>(@ViewBuilder _ cards: () -> Content) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 12) { cards() }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
+        }
+        .scrollClipDisabled()
+    }
+
+    // MARK: - News
+
+    @ViewBuilder
+    private var newsContent: some View {
+        if interests.isEmpty {
+            Button { showingInterests = true } label: {
+                Label("Add interests", systemImage: "plus.circle")
+                    .font(.subheadline)
+            }
+            .padding(.horizontal, 20)
+        } else if newsTopics.isEmpty {
+            if loadingNews {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Finding stories…").foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 20)
+            } else {
+                // Auto-load happens on open; this is the retry path when
+                // that failed or returned nothing.
+                Button {
+                    Task { await fetchNews() }
+                } label: {
+                    Label("Load stories", systemImage: "newspaper")
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 20)
+            }
+        } else {
+            rail {
+                ForEach(newsTopics) { item in
+                    Button { onPickNews(item) } label: { newsCard(item) }
+                        .buttonStyle(.plain)
                 }
             }
-            // Presentation + lifecycle hang off the header (not the Section
-            // itself) so List keeps recognizing this as a plain section.
-            .sheet(isPresented: $showingInterests, onDismiss: reloadNewsForInterests) {
-                InterestsEditorSheet()
-                    .environmentObject(appState)
-            }
-            .task {
-                // Stories come from the shared platform pool (cheap read), so
-                // auto-load on open; the local cache skips even the network
-                // hop within the same day.
-                guard newsTopics.isEmpty, !interests.isEmpty else { return }
-                if let cached = NewsTopicStore.shared.valid(for: interests) {
-                    newsTopics = displaySelection(from: cached)
-                } else {
-                    await fetchNews()
+        }
+        if let e = newsError {
+            Text(e).font(.caption).foregroundStyle(.red)
+                .padding(.horizontal, 20)
+        }
+    }
+
+    /// Rail card WIDTH — narrower than a Practice grid card; the rail wants
+    /// tall, poster-ish cards you flick through, not wide review tiles.
+    private static let cardWidth: CGFloat = 176
+
+    /// A news STORY to start a call about — the Practice card's visual
+    /// language (rounded surface, bare tinted glyph, text pinned to the
+    /// bottom) but purpose-built for tapping into a conversation, so there's
+    /// no mastery strip. Category sits in the top-right, opposite the glyph.
+    private func newsCard(_ item: SuggestedTopic) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                Image(systemName: "newspaper.fill").font(.title2).foregroundStyle(.tint)
+                Spacer()
+                if let category = item.category, !category.isEmpty {
+                    Text(category.capitalized)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.tint)
+                        .lineLimit(1)
                 }
             }
-        } footer: {
-            if !interests.isEmpty {
-                Text(footer)
+            Spacer(minLength: 14)
+            Text(item.title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+            if !item.blurb.isEmpty {
+                Text(item.blurb)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Breathing room between headline and its detail.
+                    .padding(.top, 7)
+            }
+        }
+        .padding(14)
+        .frame(width: Self.cardWidth, alignment: .leading)
+        .frame(minHeight: 190, alignment: .top)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Scenarios
+
+    @ViewBuilder
+    private var scenariosContent: some View {
+        if scenarios.isEmpty {
+            Button(action: onBuildScenario) {
+                Label("Build your first scenario", systemImage: "plus")
+                    .font(.subheadline)
+            }
+            .padding(.horizontal, 20)
+        } else {
+            rail {
+                ForEach(scenarios.prefix(8)) { s in
+                    Button { onPickScenario(s) } label: { scenarioCard(s) }
+                        .buttonStyle(.plain)
+                }
+                allScenariosCard
             }
         }
     }
 
-    private func newsRow(_ item: SuggestedTopic) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "newspaper.fill")
-                .foregroundStyle(.tint)
-                .font(.title3)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
-                    .font(.body)
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                if !item.blurb.isEmpty {
-                    Text(item.blurb)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(3)
+    /// A SITUATION to talk out — same visual language as the news card
+    /// (Practice's surface + bare glyph), no mastery strip: tapping starts
+    /// the call, it isn't a review book here.
+    private func scenarioCard(_ s: Scenario) -> some View {
+        let name = personaName(s)
+        let partner: String? = {
+            if let name { return name }
+            let r = s.role.trimmingCharacters(in: .whitespaces)
+            return r.isEmpty ? nil : r
+        }()
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top) {
+                if let name {
+                    Text(Books.initials(name)).font(.title3.weight(.bold)).foregroundStyle(.tint)
+                } else {
+                    Image(systemName: Books.roleIcon(for: s.role)).font(.title2).foregroundStyle(.tint)
                 }
+                Spacer()
             }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.tertiary)
+            Spacer(minLength: 14)
+            Text(s.environment)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+            if let partner {
+                Text("with \(partner)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.top, 7)
+            }
         }
-        .padding(.vertical, 2)
+        .padding(14)
+        .frame(width: Self.cardWidth, alignment: .leading)
+        .frame(minHeight: 190, alignment: .top)
+        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
     }
+
+    private func personaName(_ s: Scenario) -> String? {
+        s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
+    }
+
+    /// Rail tail — the door to the full collection (browse, build, delete).
+    private var allScenariosCard: some View {
+        Button(action: onAllScenarios) {
+            VStack(spacing: 8) {
+                Image(systemName: "rectangle.stack")
+                    .font(.title2).foregroundStyle(.tint)
+                Text("All scenarios")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Text("\(scenarios.count)")
+                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+            }
+            .frame(width: 120)
+            .frame(minHeight: 190)
+            .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - News data
 
     private func fetchNews(refresh: Bool = false) async {
         loadingNews = true

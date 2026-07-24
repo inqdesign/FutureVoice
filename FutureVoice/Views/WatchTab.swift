@@ -106,14 +106,7 @@ struct WatchTab: View {
             composer = ComposerConfig(person: c)
         } label: {
             VStack(spacing: 6) {
-                ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15))
-                        .frame(width: 64, height: 64)
-                        .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
-                    Text(Books.initials(c.name))
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(.tint)
-                }
+                PersonBubble(name: c.name)
                 Text(c.name)
                     .font(.caption)
                     .foregroundStyle(.primary)
@@ -347,11 +340,7 @@ struct SituationComposerSheet: View {
     private func personHeader(_ p: Counterpart) -> some View {
         Section {
             HStack(spacing: 12) {
-                ZStack {
-                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
-                    Text(Books.initials(p.name))
-                        .font(.caption.weight(.semibold)).foregroundStyle(.tint)
-                }
+                PersonBubble(name: p.name, size: 40)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(p.name).font(.body.weight(.medium))
                     if !p.relationship.isEmpty {
@@ -645,5 +634,26 @@ struct SituationBuilderSheet: View {
         let s = Scenario(environment: description, role: "", notes: "")
         appState.saveScenario(s)
         onWatch(s)
+    }
+}
+
+// MARK: - PersonBubble
+
+/// THE counterpart avatar — initials on a tinted circle. Every surface that
+/// shows a person (the stories row, the composer header, onboarding's People
+/// visual) renders through this one view so they can't drift apart.
+struct PersonBubble: View {
+    let name: String
+    var size: CGFloat = 64
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Color.accentColor.opacity(0.15))
+                .frame(width: size, height: size)
+                .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.35), lineWidth: 1.5))
+            Text(Books.initials(name))
+                .font(size >= 56 ? .headline.weight(.bold) : .caption.weight(.semibold))
+                .foregroundStyle(.tint)
+        }
     }
 }

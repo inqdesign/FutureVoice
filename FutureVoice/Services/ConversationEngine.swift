@@ -243,6 +243,14 @@ enum ConversationEngine {
           plurals, word order, wrong verb forms. This is the EVIDENCE behind
           the grammar score: a user seeing a low score taps into this list,
           so the score and this list must tell the same story.
+          - The transcript is SPEECH transcribed to text. Punctuation,
+            capitalization, and spelling were produced by the transcriber,
+            NOT by the user — NEVER report them as errors, here or anywhere
+            in this JSON. A missing comma is a transcription artifact, not
+            a grammar slip. Only report errors a listener could HEAR.
+          - Only CLEAR errors a fluent speaker would never produce. Casual
+            spoken register (contractions, dropped "that", sentence
+            fragments in dialogue) is normal speech, not an error.
           - quote: the user's sentence VERBATIM from the transcript (the
             clause containing the error if the turn is long). Never
             paraphrase — a quote that isn't literally in the transcript

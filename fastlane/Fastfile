@@ -1,0 +1,51 @@
+# nawana — App Store Connect automation
+#
+# One-time setup (5 min):
+#   1. App Store Connect → Users and Access → Integrations → App Store Connect API
+#      → Generate API Key (role: App Manager) → download the .p8 file ONCE.
+#   2. Save it as fastlane/AuthKey.p8 (gitignored) and export:
+#        export ASC_KEY_ID="XXXXXXXXXX"        # Key ID shown next to the key
+#        export ASC_ISSUER_ID="xxxxxxxx-...."  # Issuer ID at the top of that page
+#   3. `brew install fastlane` (or `gem install fastlane`)
+#
+# Then:
+#   fastlane metadata      # upload name/subtitle/description/keywords/promo/URLs (en-US + ko)
+#   fastlane screenshots   # upload whatever is in fastlane/screenshots/<locale>/
+#
+# What this CANNOT do (do once by hand in ASC):
+#   Paid Apps agreement + banking · subscription products · age rating · App Privacy labels
+
+default_platform(:ios)
+
+def asc_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: File.expand_path("AuthKey.p8", __dir__)
+  )
+end
+
+platform :ios do
+  desc "Push all text metadata (en-US + ko) to App Store Connect"
+  lane :metadata do
+    deliver(
+      api_key: asc_key,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,                  # skip the interactive HTML preview
+      precheck_include_in_app_purchases: false
+    )
+  end
+
+  desc "Push screenshots from fastlane/screenshots/"
+  lane :screenshots do
+    deliver(
+      api_key: asc_key,
+      skip_binary_upload: true,
+      skip_metadata: true,
+      overwrite_screenshots: true,
+      force: true,
+      precheck_include_in_app_purchases: false
+    )
+  end
+end

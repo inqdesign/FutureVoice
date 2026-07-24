@@ -168,10 +168,9 @@ struct WatchSetupSheet: View {
 }
 
 /// The actual Watch player. Generates the dialogue once on appear, then
-/// auto-plays each turn with the right voice. Chat-bubble layout is OK here
-/// — this screen's whole point is "you're observing, not participating", so
-/// the metaphor genuinely fits (CLAUDE.md's no-bubble rule applies to the
-/// call screen, not to scripted-dialogue observation).
+/// auto-plays each turn with the right voice. Lines render through the shared
+/// `DialogueLine`, the same component the live call transcript and the
+/// conversation archive use.
 struct WatchView: View {
     let counterpart: Counterpart
     let topic: SuggestedTopic?
@@ -341,56 +340,41 @@ struct WatchView: View {
     @ViewBuilder
     private func bubble(turn: DialogueEngine.Turn, isCurrent: Bool) -> some View {
         let isUser = turn.speaker == .user
-        HStack {
-            if isUser { Spacer(minLength: 40) }
-            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
-                Text(isUser ? "You" : counterpart.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(turn.text)
-                    .font(.body)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(isUser ? Color.accentColor.opacity(0.18) : Color(.secondarySystemBackground))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(isCurrent ? Color.accentColor : .clear, lineWidth: 2)
-                    )
-                HStack(spacing: 16) {
+        DialogueLine(speaker: isUser ? .user : .other,
+                     name: isUser ? "You" : counterpart.name,
+                     isCurrent: isCurrent) {
+            Text(turn.text)
+        } accessory: {
+            HStack(spacing: 16) {
+                Button {
+                    // Shadow practice records the mic — stop dialogue
+                    // playback so it doesn't bleed under the sheet.
+                    pause()
+                    bridge = ShadowBridge(turn: asTurn(turn))
+                } label: {
+                    Label("Shadow this", systemImage: "waveform.badge.mic")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.tint)
+
+                // Same learning loop as Talk: a line worth keeping goes
+                // into the SRS drill queue and resurfaces on schedule.
+                if isPhraseSaved(turn.text) {
+                    Label("Saved", systemImage: "checkmark")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
                     Button {
-                        // Shadow practice records the mic — stop dialogue
-                        // playback so it doesn't bleed under the sheet.
-                        pause()
-                        bridge = ShadowBridge(turn: asTurn(turn))
+                        savePhrase(turn.text)
                     } label: {
-                        Label("Shadow this", systemImage: "waveform.badge.mic")
+                        Label("Save phrase", systemImage: "plus.circle")
                             .font(.caption)
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.tint)
-
-                    // Same learning loop as Talk: a line worth keeping goes
-                    // into the SRS drill queue and resurfaces on schedule.
-                    if isPhraseSaved(turn.text) {
-                        Label("Saved", systemImage: "checkmark")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else {
-                        Button {
-                            savePhrase(turn.text)
-                        } label: {
-                            Label("Save phrase", systemImage: "plus.circle")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.tint)
-                    }
                 }
             }
-            if !isUser { Spacer(minLength: 40) }
         }
     }
 

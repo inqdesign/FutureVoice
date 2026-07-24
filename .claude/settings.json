@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -rn \"ExpressionDetailView\" /Users/eunggyuelee/FutureVoice/FutureVoice --include=\"*.swift\"; echo ---; grep -rn \"Models.swift.*bookmark\" /dev/null; grep -n \"bookmarking one does NOT count\\\\|in the VocabStore expression pool, or shadowed\" /Users/eunggyuelee/FutureVoice/FutureVoice/Models/Models.swift)",
+      "Read(//dev/**)",
+      "Bash(xcodebuild -downloadComponent MetalToolchain)",
+      "Bash(xcrun simctl *)",
+      "Bash(swift orb_render.swift orb_states.png)",
+      "Bash(swift orb_render.swift orb_states2.png)",
+      "Bash(swift glow3_render.swift)",
+      "Bash(mv glow3_states.png glow4_states.png)",
+      "Bash(swift pill_render.swift)",
+      "Bash(mv pill_states.png pill_states2.png)",
+      "Bash(swift pill2_render.swift)",
+      "Bash(mv pill_theme.png pill_theme2.png)"
+    ]
+  }
+}

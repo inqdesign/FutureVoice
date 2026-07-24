@@ -41,7 +41,17 @@ struct ConversationView: View {
     /// endAndClose defers its dismiss until the first-talk feedback closes.
     @State private var dismissAfterFeedback = false
     @State private var showMicPermissionAlert = false
+    /// Flipped by tearDown() when the screen closes. Every async continuation
+    /// (Gemini reply, TTS synthesis, stream chunks, auto-restart) checks it
+    /// and bails — otherwise a reply in flight at close time keeps talking
+    /// over the home screen and overlaps the next call's session.
+    @State private var isTornDown = false
     @Environment(\.dismiss) private var dismiss
+
+    /// RootTabView's free-talk presentation hosts this view in a ZStack (not
+    /// a cover), where dismiss() is a no-op — closing must hand control back
+    /// to the presenter so it can play the pill morph in reverse.
+    private var onClose: (() -> Void)?
 
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
     /// topic launches a scenario; empty = free talk. Pass `resumeSession` to
@@ -49,7 +59,9 @@ struct ConversationView: View {
     /// turns preloaded as context). The call auto-starts on appear so it feels
     /// like placing a phone call.
     init(initialTopic: String = "", initialBlurb: String = "",
-         initialIsNews: Bool = false, resumeSession: Session? = nil) {
+         initialIsNews: Bool = false, resumeSession: Session? = nil,
+         onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
             _topicBlurb = State(initialValue: "")
@@ -113,7 +125,7 @@ struct ConversationView: View {
     /// system prompt so the future self actually knows the story.
     @State private var newsFacts: [String] = []
     /// Raw 0…1 voice energy target for the mic pill's glow (mic RMS while
-    /// listening, playback RMS while speaking). VoiceGlow interpolates it
+    /// listening, playback RMS while speaking). Futureself interpolates it
     /// per frame, so no smoothing here.
     @State private var voiceLevel: Float = 0
 
@@ -135,7 +147,7 @@ struct ConversationView: View {
             }
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
-            .navigationTitle(topic.isEmpty ? "Free talk" : topic)
+            .navigationTitle(topic.isEmpty ? "Let's talk" : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .onAppear {
@@ -184,7 +196,7 @@ struct ConversationView: View {
                 PaywallView(offerTrial: false)
             }
             .sheet(item: $feedbackContext, onDismiss: {
-                if dismissAfterFeedback { dismissAfterFeedback = false; dismiss() }
+                if dismissAfterFeedback { dismissAfterFeedback = false; close() }
             }) { ctx in
                 BetaFeedbackSheet(context: ctx)
             }
@@ -233,8 +245,7 @@ struct ConversationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                Task { await endPhoneCall() }
-                dismiss()
+                close()
             } label: {
                 Label("Close", systemImage: "xmark")
             }
@@ -344,12 +355,13 @@ struct ConversationView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
-            // The aurora lives INSIDE the pill (Gemini-style), not across the
-            // screen. The shader paints the whole surface theme-aware: airy
-            // white with a blue bloom in light mode, deep navy in dark.
+            // The pixel grid lives INSIDE the pill, not across the screen.
+            // The shader paints the whole surface theme-aware in a pure-blue
+            // mosaic: airy white with blue pixels in light mode, near-black
+            // with sky pixels in dark.
             Button { Task { await handleMicTap() } } label: {
                 ZStack {
-                    VoiceGlow(mode: glowMode, level: voiceLevel)
+                    Futureself(mode: glowMode, level: voiceLevel)
                     Image(systemName: micSymbol)
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundStyle(.primary)
@@ -383,7 +395,7 @@ struct ConversationView: View {
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
     }
 
-    private var glowMode: VoiceGlow.Mode {
+    private var glowMode: Futureself.Mode {
         switch phase {
         case .idle:      return .idle
         case .listening: return .listening
@@ -592,6 +604,8 @@ struct ConversationView: View {
                     idempotencyKey: "opener:\(sessionId.uuidString)"
                 )
             }
+            // The screen may have closed while the opener was being fetched.
+            guard !isTornDown else { return }
             // Speak the opener in the cloned voice — a call starts with the
             // fluent self TALKING, not a line to read. Repeated openers for
             // the same phrasing hit the content cache, and the idempotency
@@ -651,6 +665,7 @@ struct ConversationView: View {
     }
 
     private func startRecording() async {
+        guard !isTornDown else { return }
         let granted = await LiveTranscriber.requestPermissions()
         guard granted else {
             // iOS won't re-prompt once denied — guide the user to Settings
@@ -769,6 +784,8 @@ struct ConversationView: View {
                 turnAudio = nil
                 payload = try await turnPayload(audio: nil, turnId: turnId)
             }
+            // The screen may have closed while the reply was in flight.
+            guard !isTornDown else { return }
             // Upgrade the turn to what the model actually HEARD (audio is the
             // ground truth) — the feed, session summary, drills, and profile
             // all learn from the real utterance instead of the ASR guess.
@@ -844,6 +861,7 @@ struct ConversationView: View {
 
     private func speakAndAppend(_ text: String, voiceId: String,
                                 idempotencyKey: String? = nil) async throws {
+        guard !isTornDown else { return }
         // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
         // fluent-self lines (greetings, short acknowledgements, etc.).
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
@@ -864,6 +882,9 @@ struct ConversationView: View {
                 modelId: ElevenLabsClient.conversationModelId,
                 idempotencyKey: idempotencyKey
             ) { chunk in
+                // Closed mid-stream: swallow the chunks — never (re)start
+                // playback on a dead screen.
+                if isTornDown { return }
                 if !receivedAnyChunk {
                     receivedAnyChunk = true
                     do {
@@ -962,6 +983,7 @@ struct ConversationView: View {
     /// fallback, and older edge deployments.
     private func appendTurnAndPlay(_ audio: Data, timings: [WordTiming],
                                    transcript text: String) throws {
+        guard !isTornDown else { return }
         let turnId = UUID()
         let savedURL = TurnAudioStore.shared.save(audio, turnId: turnId, timings: timings)
         let durationMs = Self.mp3DurationMs(audio)
@@ -1073,7 +1095,11 @@ struct ConversationView: View {
             let normalizedHaystack = normalized(haystack)
             computed.grammarIssues = computed.grammarIssues.filter {
                 let needle = normalized($0.quote)
+                // A "fix" that only touches punctuation/casing (normalized
+                // forms identical) is a transcription nitpick, not a spoken
+                // grammar error — drop it.
                 return !needle.isEmpty && normalizedHaystack.contains(needle)
+                    && needle != normalized($0.correction)
             }
 
             summary = computed
@@ -1124,6 +1150,27 @@ struct ConversationView: View {
         dashboard = PracticeStats.snapshot()
     }
 
+    /// Exit the call screen — back to the presenter's morph when hosted in
+    /// RootTabView's ZStack, plain dismiss when presented as a cover.
+    private func close() {
+        tearDown()
+        if let onClose { onClose() } else { dismiss() }
+    }
+
+    /// Hard-stop every live pipeline this screen owns, and mark the screen
+    /// dead so in-flight async work can't resurrect audio after the UI is
+    /// gone. Idempotent — safe to call from any close path.
+    private func tearDown() {
+        guard !isTornDown else { return }
+        isTornDown = true
+        if phoneCallActive { HapticEngine.phoneCallEnded() }
+        phoneCallActive = false
+        cancelSilenceTimer()
+        _ = live.stop()
+        player.stop()
+        phase = .idle
+    }
+
     private func startNewSession() {
         failedTurnId = nil
         summary = nil
@@ -1151,7 +1198,7 @@ struct ConversationView: View {
             dismissAfterFeedback = true
             feedbackContext = .firstTalk
         } else {
-            dismiss()
+            close()
         }
     }
 
@@ -1185,42 +1232,45 @@ private struct TurnView: View {
     @State private var showing = false
     @State private var loading = false
 
+    /// Speaker separation (side, fill, name label) comes from `DialogueLine`
+    /// — the same component Watch and the conversation archive use — so the
+    /// three surfaces stay in sync when the style changes.
+    private var speaker: DialogueSpeaker { turn.role == .user ? .user : .other }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(turn.role == .user ? "You" : "Future self")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        DialogueLine(speaker: speaker,
+                     name: turn.role == .user ? "You" : "Future self",
+                     scale: .call) {
             Text(turn.transcript)
-                .font(.title3)
-                .foregroundStyle(turn.role == .user ? .primary : Color.accentColor)
-
-            Button(action: toggleMeaning) {
-                HStack(spacing: 4) {
-                    if loading {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Image(systemName: "character.bubble")
+        } accessory: {
+            VStack(alignment: speaker.alignment, spacing: 6) {
+                Button(action: toggleMeaning) {
+                    HStack(spacing: 4) {
+                        if loading {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "character.bubble")
+                        }
+                        Text(showing ? "Hide meaning" : "Meaning")
                     }
-                    Text(showing ? "Hide meaning" : "Meaning")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-
-            if showing, let t = translation {
-                Text(t)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+                }
+                .buttonStyle(.plain)
 
-            if turn.role == .user, let suggestion = turn.suggestion {
-                SuggestionChip(suggestion: suggestion, original: turn.transcript,
-                               nativeLanguage: nativeLanguage)
+                if showing, let t = translation {
+                    Text(t)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if turn.role == .user, let suggestion = turn.suggestion {
+                    SuggestionChip(suggestion: suggestion, original: turn.transcript,
+                                   nativeLanguage: nativeLanguage)
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func toggleMeaning() {
@@ -1315,17 +1365,14 @@ private struct SuggestionChip: View {
 private struct PartialTurnView: View {
     let text: String
 
+    /// The in-progress user line — same slot and fill as the finished turn it
+    /// becomes, so nothing jumps sideways when the final transcript lands.
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("You")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        DialogueLine(speaker: .user, name: "You", scale: .call) {
             Text(text.isEmpty ? "Listening…" : text)
-                .font(.title3)
                 .foregroundStyle(.secondary)
                 .italic(text.isEmpty)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -1544,252 +1591,40 @@ private struct RetryReplyRow: View {
     }
 }
 
+/// Post-talk wrap-up — now just the ONE session detail page
+/// (`ConversationDetailView`) in post-talk mode, so what you see right after
+/// a talk and what Practice opens later are the same page. The session was
+/// saved before this sheet is presented; the page reads it back from the
+/// store. The summary parameter only drives the sheet's item identity.
 private struct SummarySheet: View {
     let summary: SessionSummary
     let sessionId: UUID
     let onDone: () -> Void
     let onStartNew: () -> Void
     @EnvironmentObject private var appState: AppState
-    @Environment(\.dismiss) private var dismiss
-    /// Cards this session just produced, loaded once on appear so the bottom
-    /// action can route straight into reviewing them.
-    @State private var practiceCardCount = 0
-    /// Fluent-self lines from THIS session — the freshest shadow material
-    /// there is. Loaded from the just-saved session so the summary can offer
-    /// shadowing right here instead of sending the user tab-hunting.
-    @State private var shadowLines: [Turn] = []
-    @State private var shadowTurn: Turn?
-    /// This session's user turns — lets the grammar review play the actual
-    /// recordings behind its quotes.
-    @State private var summaryUserTurns: [Turn] = []
+    @State private var session: Session?
 
     var body: some View {
         NavigationStack {
-            List {
-                if let card = summary.scorecard {
-                    Section("Today's nutrition") {
-                        ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
-                                      userTurns: summaryUserTurns)
-                            .padding(.vertical, 6)
-                    }
-                }
-                if !shadowLines.isEmpty {
-                    Section {
-                        ForEach(shadowLines) { turn in
-                            Button {
-                                shadowTurn = turn
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: "waveform.badge.mic")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.tint)
-                                        .frame(width: 22)
-                                    Text(turn.transcript)
-                                        .font(.body)
-                                        .foregroundStyle(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                    Spacer(minLength: 8)
-                                    Image(systemName: "chevron.right")
-                                        .font(.footnote.weight(.semibold))
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } header: {
-                        Text("Shadow this conversation")
-                    } footer: {
-                        Text("Repeat your fluent self while the lines are still fresh.")
-                    }
-                }
-                if !summary.newWordsUsed.isEmpty || !summary.expressionsUsed.isEmpty {
-                    Section("Words & expressions you used") {
-                        if !summary.newWordsUsed.isEmpty {
-                            let grouped = Dictionary(grouping: summary.newWordsUsed) {
-                                CoreVocabulary.level(of: $0)
-                            }
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("New words")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                ForEach(CEFRLevel.allCases, id: \.self) { lv in
-                                    if let words = grouped[lv], !words.isEmpty {
-                                        newWordGroup(lv.rawValue.uppercased(), words)
-                                    }
-                                }
-                                if let other = grouped[nil], !other.isEmpty {
-                                    newWordGroup("Other", other)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                            NavigationLink {
-                                VocabularyView()
-                            } label: {
-                                Text("Open your notebook")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tint)
-                            }
-                        }
-                        ForEach(summary.expressionsUsed, id: \.self) { expr in
-                            Label(expr, systemImage: "quote.bubble")
-                                .font(.subheadline)
-                                .padding(.vertical, 2)
-                        }
-                        if !summary.expressionsUsed.isEmpty {
-                            NavigationLink {
-                                ExpressionsView()
-                                    .navigationTitle("Expressions")
-                                    .navigationBarTitleDisplayMode(.inline)
-                            } label: {
-                                Text("All your expressions")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.tint)
-                            }
-                        }
-                    }
-                }
-                Section("Note") {
-                    Text(summary.overallNote)
-                }
-                if !summary.phrasesUsed.isEmpty {
-                    // Each of these is already a review card (DrillStore
-                    // ingested them in endSession) — tapping any row drops
-                    // into this session's deck instead of dead-ending.
-                    Section {
-                        ForEach(summary.phrasesUsed) { phrase in
-                            NavigationLink {
-                                sessionDeck
-                            } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(phrase.userSaid)
-                                        .foregroundStyle(.secondary)
-                                    Text(phrase.fluentAlternative)
-                                        .font(.body)
-                                    Text(phrase.reason)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    } header: {
-                        Text("More natural alternatives")
-                    } footer: {
-                        Text("Tap any line to practice it — these are already in your review deck.")
-                    }
-                }
-                if !summary.suggestedDrills.isEmpty {
-                    Section("Drill next") {
-                        ForEach(summary.suggestedDrills, id: \.self) { drill in
-                            NavigationLink {
-                                sessionDeck
-                            } label: {
-                                Text(drill)
-                            }
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Session summary")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { onDone() }
-                        .fontWeight(.semibold)
-                }
-            }
-            .onAppear {
-                practiceCardCount = DrillStore.shared.load()
-                    .filter { $0.sourceSessionId == sessionId }.count
-                // The session was saved before this sheet appeared — pull its
-                // fluent-self lines as immediate shadow material (substantial
-                // ones only; "yeah?" isn't worth a karaoke rep).
-                let turns = SessionStore.shared.load()
-                    .first { $0.id == sessionId }?.turns ?? []
-                shadowLines = Array(
-                    turns.filter { $0.role == .fluentSelf
-                        && $0.transcript.split(separator: " ").count >= 4 }
-                    .suffix(4)
-                )
-                summaryUserTurns = turns.filter { $0.role == .user }
-            }
-            .sheet(item: $shadowTurn) { turn in
-                ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
-                    .environmentObject(appState)
-            }
-            .safeAreaInset(edge: .bottom) { bottomActions }
-        }
-    }
-
-    /// This session's cards as a swipe deck — shared destination for the
-    /// bottom CTA and every alternatives/drill row above.
-    private var sessionDeck: some View {
-        DrillView(source: .session(sessionId))
-            .navigationTitle("Practice")
-            .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// One CEFR level's freshly-used words as a labeled chip row.
-    @ViewBuilder
-    private func newWordGroup(_ label: String, _ words: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.tint)
-            FlowLayout {
-                ForEach(words, id: \.self) { word in
-                    Text(word)
-                        .font(.subheadline)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color(.secondarySystemBackground), in: Capsule())
-                }
-            }
-        }
-    }
-
-    /// Practice-first close-out. The cards from this conversation already
-    /// exist in the SRS deck (ingested in `endSession`); the primary action
-    /// drops the user straight into reviewing just them, closing the
-    /// talk → summary → practice loop without a tab hunt.
-    @ViewBuilder
-    private var bottomActions: some View {
-        VStack(spacing: 10) {
-            if practiceCardCount > 0 {
-                NavigationLink {
-                    sessionDeck
-                } label: {
-                    Label(practiceCardCount == 1
-                          ? "Practice this card"
-                          : "Practice these \(practiceCardCount) cards",
-                          systemImage: "rectangle.stack.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-            }
-            // Secondary once there are cards to practice (so Practice stays
-            // the clear primary); the sole prominent action otherwise.
-            if practiceCardCount > 0 {
-                startNewButton.buttonStyle(.bordered)
+            if let session {
+                ConversationDetailView(
+                    session: session,
+                    postTalk: .init(onDone: onDone, onStartNew: onStartNew))
             } else {
-                startNewButton.buttonStyle(.borderedProminent)
+                // Unreachable in practice: endSession saves before presenting.
+                ProgressView()
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(.bar)
-    }
-
-    private var startNewButton: some View {
-        Button {
-            onStartNew()
-        } label: {
-            Label("Start a new conversation", systemImage: "arrow.uturn.left")
-                .frame(maxWidth: .infinity)
+        .onAppear {
+            if var s = SessionStore.shared.load().first(where: { $0.id == sessionId }) {
+                // Belt and braces: endSession saves a summary-less DRAFT before
+                // the summary call. If the row read back is that draft, the
+                // page would lose its score/words/expressions sections — the
+                // summary we were handed is always the freshest.
+                s.summary = summary
+                session = s
+            }
         }
-        .controlSize(.large)
     }
 }
 

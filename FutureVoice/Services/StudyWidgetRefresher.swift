@@ -15,6 +15,9 @@ enum StudyWidgetRefresher {
 
     @MainActor
     static func refresh() {
+        // Mirror the app's Futureself palette so the widget's pixel surface
+        // wears the same theme the user picked in-app.
+        StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")
         refreshWords()
         refreshExpressions()
     }

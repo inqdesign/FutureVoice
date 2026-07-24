@@ -163,13 +163,14 @@ struct GrammarReviewView: View {
 
                 Section {
                     ForEach(issues) { issue in
+                        let diff = GrammarDiff(quote: issue.quote, correction: issue.correction)
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "xmark")
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.red)
                                     .padding(.top, 3)
-                                Text(issue.quote)
+                                Text(diff.quoteText)
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -194,7 +195,7 @@ struct GrammarReviewView: View {
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.green)
                                     .padding(.top, 3)
-                                Text(issue.correction)
+                                Text(diff.correctionText)
                                     .font(.body)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -243,6 +244,81 @@ struct GrammarReviewView: View {
     /// `audioURL` goes stale when the app container moves on update/reinstall.
     private func hasAudio(_ turn: Turn) -> Bool {
         TurnAudioStore.shared.url(for: turn.id) != nil || turn.audioURL != nil
+    }
+
+    // MARK: - Word-level diff highlighting
+
+    /// Deterministic word-level diff between the quote and its correction, so
+    /// the review highlights exactly WHICH words were wrong instead of making
+    /// the user spot the difference themselves. Wrong words: red strikethrough;
+    /// fixed/added words: green bold. Computed in code — never by the LLM.
+    private struct GrammarDiff {
+        let quoteText: AttributedString
+        let correctionText: AttributedString
+
+        init(quote: String, correction: String) {
+            let qWords = quote.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+            let cWords = correction.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+            let (qKeep, cKeep) = Self.commonIndices(qWords, cWords)
+
+            quoteText = Self.render(qWords, keep: qKeep) { run in
+                run.foregroundColor = .red
+                run.strikethroughStyle = .single
+            }
+            correctionText = Self.render(cWords, keep: cKeep) { run in
+                run.foregroundColor = .green
+                run.inlinePresentationIntent = .stronglyEmphasized
+            }
+        }
+
+        /// Compare words with punctuation/casing stripped — the same
+        /// normalization the hallucination guard uses — so "bank," vs "bank"
+        /// never lights up as a change.
+        private static func norm(_ s: String) -> String {
+            s.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'")).inverted)
+                .filter { !$0.isEmpty }
+                .joined()
+        }
+
+        /// Longest-common-subsequence over normalized words; returns the index
+        /// sets of UNCHANGED words on each side. Sentences are short, so the
+        /// O(n·m) table is trivial.
+        private static func commonIndices(_ a: [String], _ b: [String]) -> (Set<Int>, Set<Int>) {
+            let na = a.map(norm), nb = b.map(norm)
+            var dp = Array(repeating: Array(repeating: 0, count: nb.count + 1), count: na.count + 1)
+            for i in stride(from: na.count - 1, through: 0, by: -1) {
+                for j in stride(from: nb.count - 1, through: 0, by: -1) {
+                    dp[i][j] = na[i] == nb[j]
+                        ? dp[i + 1][j + 1] + 1
+                        : max(dp[i + 1][j], dp[i][j + 1])
+                }
+            }
+            var keepA = Set<Int>(), keepB = Set<Int>()
+            var i = 0, j = 0
+            while i < na.count && j < nb.count {
+                if na[i] == nb[j] {
+                    keepA.insert(i); keepB.insert(j); i += 1; j += 1
+                } else if dp[i + 1][j] >= dp[i][j + 1] {
+                    i += 1
+                } else {
+                    j += 1
+                }
+            }
+            return (keepA, keepB)
+        }
+
+        private static func render(_ words: [String], keep: Set<Int>,
+                                   changed style: (inout AttributedString) -> Void) -> AttributedString {
+            var out = AttributedString()
+            for (i, word) in words.enumerated() {
+                if i > 0 { out += AttributedString(" ") }
+                var run = AttributedString(word)
+                if !keep.contains(i) { style(&run) }
+                out += run
+            }
+            return out
+        }
     }
 
     private func togglePlay(_ issue: GrammarIssue, turn: Turn) {

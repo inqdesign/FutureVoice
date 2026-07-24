@@ -45,6 +45,7 @@ struct ExpressionsView: View {
         }
         .navigationTitle("\(store.expressionCount) expressions")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .sheet(item: $selected) { ref in
             ExpressionSheet(initialPhrase: ref.value, phrases: entries.map(\.text))
                 .environmentObject(appState)

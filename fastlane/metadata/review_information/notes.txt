@@ -1,0 +1,11 @@
+ABOUT THE VOICE CLONE (important for review):
+- During onboarding the user records a 60-second sample of their OWN voice, with explicit consent, to create a personal text-to-speech voice (via ElevenLabs).
+- The app can only clone the signed-in user's own voice — there is no way to import audio of another person or clone anyone else.
+- The clone is used solely to speak the user's practice lines back in their own voice ("your fluent self"). Re-recording permanently deletes the previous clone; the user can delete their voice or entire account in-app (Me tab).
+
+REVIEW LOGISTICS:
+- Sign in with Apple is the only auth method; any Apple ID works.
+- Onboarding requires microphone + speech recognition permissions and the 60-second recording before the main app unlocks.
+- All AI requests (Gemini, ElevenLabs) route through our Supabase Edge Functions; no provider API keys ship in the binary.
+- Subscriptions are auto-renewable; credits fund AI usage. Restore/cancel via the App Store.
+- If you need beta credits or an invite code, contact hello.dearroroapp@gmail.com and we will respond quickly.

@@ -60,7 +60,8 @@ enum NewsTopicEngine {
             var added = false
             for category in order {
                 guard let list = byCategory[category], round < list.count else { continue }
-                out.append(SuggestedTopic(title: list[round].title, blurb: list[round].blurb))
+                out.append(SuggestedTopic(title: list[round].title, blurb: list[round].blurb,
+                                          category: list[round].category))
                 added = true
                 if out.count >= cap { break }
             }

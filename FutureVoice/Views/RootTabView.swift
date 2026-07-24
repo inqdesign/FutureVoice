@@ -12,6 +12,9 @@ struct RootTabView: View {
     /// Beta intro shows ONCE, right after onboarding — in place of a paywall
     /// (no subscription during the beta). Explains the free quota + invites.
     @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
+    /// Drives the free-talk pill's outline + orbiting highlight so the chrome
+    /// matches whichever Futureself palette the surface is wearing.
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @State private var showingBetaWelcome = false
     /// Non-nil while the free-talk call is up. A fresh UUID per call gives
     /// ConversationView a clean view identity each time (same reason
@@ -64,10 +67,11 @@ struct RootTabView: View {
                     .zIndex(1)
             }
 
-            // Floating Free talk pill — Talk tab only. It lives HERE (not in
-            // ConversationHome) so it can ride above the tab bar and above
-            // the call layer during the morph.
-            if selection == .home && !pillHidden {
+            // Floating Free talk pill — Talk tab's ROOT only: pushed pages
+            // (Activity, scenario list) drop it via talkRootVisible. It lives
+            // HERE (not in ConversationHome) so it can ride above the tab bar
+            // and above the call layer during the morph.
+            if selection == .home && !pillHidden && appState.talkRootVisible {
                 freeTalkPill
                     .zIndex(2)
             }
@@ -115,25 +119,32 @@ struct RootTabView: View {
         Button(action: startFreeTalk) {
             ZStack {
                 Futureself(mode: .idle, level: 0)
-                Text("Free talk")
+                Text("Let's talk")
                     .font(.headline)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
             }
             .frame(width: pillDocked ? 156 : 180, height: pillDocked ? 64 : 56)
             .clipShape(Capsule())
-            .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            // Base outline: the full edge is always defined, in the palette's
+            // own color so the frame belongs to the surface it wraps.
+            .overlay(Capsule().strokeBorder(pillTint.opacity(0.55), lineWidth: 1))
             // What makes the resting pill catch the eye: a light reflection
-            // orbiting the outline — quiet surface, living edge.
-            .overlay(ReflectiveOutline().opacity(pillDocked ? 0 : 1))
+            // orbiting that outline — quiet surface, living edge, same hue.
+            .overlay(ReflectiveOutline(tint: pillTint).opacity(pillDocked ? 0 : 1))
             .shadow(color: .black.opacity(pillDocked ? 0 : 0.18), radius: 14, y: 6)
         }
         .buttonStyle(.plain)
         .allowsHitTesting(freeTalkCallId == nil && !freeTalkClosing)
-        .accessibilityLabel("Start a free talk call")
+        .accessibilityLabel("Let's talk — start a call")
         .accessibilityHidden(freeTalkCallId != nil)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .padding(.bottom, pillDocked ? 46 : 61)
+    }
+
+    /// The live Futureself palette's tint, driving the pill's outline chrome.
+    private var pillTint: Color {
+        (FutureselfTheme(rawValue: storedTheme) ?? .blue).tint
     }
 
     private func startFreeTalk() {
@@ -173,10 +184,13 @@ struct RootTabView: View {
 }
 
 /// A specular highlight orbiting a capsule's border — an angular-gradient
-/// stroke segment (accent → white core → accent) rotating on the animation
-/// timeline. The rest of the outline stays clear so the underlying hairline
-/// stroke keeps defining the shape.
+/// stroke segment (tint → soft core → tint) rotating on the animation
+/// timeline. The rest of the outline stays clear so the base outline keeps
+/// defining the shape. `tint` follows the live Futureself palette so the
+/// sheen shares the surface's hue instead of a fixed blue.
 private struct ReflectiveOutline: View {
+    var tint: Color
+
     var body: some View {
         TimelineView(.animation) { tl in
             let t = tl.date.timeIntervalSinceReferenceDate
@@ -184,21 +198,26 @@ private struct ReflectiveOutline: View {
             Capsule()
                 .strokeBorder(
                     AngularGradient(
-                        // Transparent stops are accent-at-zero-alpha, NOT
+                        // Transparent stops are tint-at-zero-alpha, NOT
                         // .clear — interpolating toward clear (transparent
                         // BLACK) drags the fade through muddy grays that
-                        // read as a dark smudge on light backgrounds.
+                        // read as a dark smudge on light backgrounds. The
+                        // core is a lightened tint rather than pure white so
+                        // the sheen reads as a soft gleam, not a hard spark.
                         gradient: Gradient(stops: [
-                            .init(color: Color.accentColor.opacity(0), location: 0.00),
-                            .init(color: Color.accentColor.opacity(0.85), location: 0.08),
+                            .init(color: tint.opacity(0), location: 0.00),
+                            .init(color: tint.opacity(0.9), location: 0.08),
+                            // Bright core = the moving gleam. White gives it
+                            // the specular pop; the tinted flanks keep the
+                            // whole sheen in the palette's hue.
                             .init(color: .white, location: 0.12),
-                            .init(color: Color.accentColor.opacity(0.85), location: 0.16),
-                            .init(color: Color.accentColor.opacity(0), location: 0.24),
-                            .init(color: Color.accentColor.opacity(0), location: 1.00),
+                            .init(color: tint.opacity(0.9), location: 0.16),
+                            .init(color: tint.opacity(0), location: 0.24),
+                            .init(color: tint.opacity(0), location: 1.00),
                         ]),
                         center: .center,
                         angle: angle),
-                    lineWidth: 1.8)
+                    lineWidth: 1.6)
         }
         .allowsHitTesting(false)
     }

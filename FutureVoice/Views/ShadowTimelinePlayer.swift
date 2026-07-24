@@ -1,16 +1,42 @@
 import SwiftUI
 
+/// Layout constants for the trimmer. Kept OUTSIDE the (now generic) player —
+/// generic types can't hold static stored properties.
+private enum TLConst {
+    static let speeds: [Float] = [0.5, 0.75, 1.0, 1.25]
+    static let trackHeight: CGFloat = 54
+    static let handleW: CGFloat = 14
+    static let grabRadius: CGFloat = 24
+    static let minTimeSelection: Double = 0.2
+}
+
 /// Trimmer-style player for the shadow target line. The loop region shows as a
 /// band with grabbable START and END handles (like a video trimmer), so it's
 /// obvious where the loop begins and ends and easy to nudge. Selection is a
 /// WORD-INDEX range shared with the target-line text, so editing either side
 /// keeps them in sync and the loop tracks it live. Drives the parent's
 /// AudioPlayer so karaoke highlighting follows playback.
-struct ShadowTimelinePlayer: View {
+struct ShadowTimelinePlayer<MicControl: View>: View {
     let audioURL: URL
     let timings: [WordTiming]
     @Binding var selectedWordRange: ClosedRange<Int>?
     @ObservedObject var player: AudioPlayer
+    /// The parent's mic/record control, dropped into the transport row between
+    /// the loop toggle and the speed menu so the primary action shares the
+    /// row instead of owning a whole block below (which crowded the analysis).
+    private let micControl: MicControl
+
+    init(audioURL: URL,
+         timings: [WordTiming],
+         selectedWordRange: Binding<ClosedRange<Int>?>,
+         player: AudioPlayer,
+         @ViewBuilder micControl: () -> MicControl) {
+        self.audioURL = audioURL
+        self.timings = timings
+        self._selectedWordRange = selectedWordRange
+        self.player = player
+        self.micControl = micControl()
+    }
 
     @State private var loop = false
     @State private var playbackRate: Float = 1.0
@@ -22,11 +48,6 @@ struct ShadowTimelinePlayer: View {
     @State private var timeSelection: ClosedRange<Double>?
 
     private enum DragMode { case start, end, scrub }
-    private static let speeds: [Float] = [0.5, 0.75, 1.0, 1.25]
-
-    private static let trackHeight: CGFloat = 54
-    private static let handleW: CGFloat = 14
-    private static let grabRadius: CGFloat = 24
 
     private var markerTimes: [Double] { timings.map { Double($0.startMs) / 1000.0 } }
 
@@ -50,7 +71,7 @@ struct ShadowTimelinePlayer: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .fill(Color(.secondarySystemBackground))
         )
         .onAppear {
@@ -61,7 +82,7 @@ struct ShadowTimelinePlayer: View {
             // line" is the most common starting point anyway.
             if selectedWordRange == nil && timeSelection == nil {
                 if timings.isEmpty {
-                    timeSelection = 0...max(player.duration, Self.minTimeSelection)
+                    timeSelection = 0...max(player.duration, TLConst.minTimeSelection)
                 } else {
                     selectedWordRange = 0...(timings.count - 1)
                 }
@@ -93,7 +114,7 @@ struct ShadowTimelinePlayer: View {
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color(.tertiarySystemFill))
-                    .frame(height: Self.trackHeight)
+                    .frame(height: TLConst.trackHeight)
 
                 ForEach(Array(markerTimes.enumerated()), id: \.offset) { _, t in
                     Rectangle()
@@ -105,7 +126,7 @@ struct ShadowTimelinePlayer: View {
                 if let sx, let ex {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(Color.accentColor.opacity(0.18))
-                        .frame(width: max(0, ex - sx), height: Self.trackHeight)
+                        .frame(width: max(0, ex - sx), height: TLConst.trackHeight)
                         .offset(x: sx)
                     handle(at: sx)
                     handle(at: ex)
@@ -114,36 +135,36 @@ struct ShadowTimelinePlayer: View {
                 // Playhead
                 Capsule()
                     .fill(Color.primary)
-                    .frame(width: 2.5, height: Self.trackHeight + 8)
+                    .frame(width: 2.5, height: TLConst.trackHeight + 8)
                     .offset(x: max(0, min(w - 2.5, CGFloat(player.currentTime / dur) * w)))
                     .shadow(color: Color(.systemBackground), radius: 1)
             }
-            .frame(height: Self.trackHeight)
+            .frame(height: TLConst.trackHeight)
             .contentShape(Rectangle())
             .gesture(dragGesture(w: w, dur: dur, sx: sx, ex: ex))
         }
-        .frame(height: Self.trackHeight)
+        .frame(height: TLConst.trackHeight)
     }
 
     private func handle(at x: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 5)
             .fill(Color.accentColor)
-            .frame(width: Self.handleW, height: Self.trackHeight)
+            .frame(width: TLConst.handleW, height: TLConst.trackHeight)
             .overlay(
                 Capsule()
                     .fill(Color.white.opacity(0.9))
                     .frame(width: 2, height: 16)
             )
-            .offset(x: x - Self.handleW / 2)
+            .offset(x: x - TLConst.handleW / 2)
     }
 
     private func dragGesture(w: CGFloat, dur: Double, sx: CGFloat?, ex: CGFloat?) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { g in
                 if dragMode == nil {
-                    if let sx, abs(g.startLocation.x - sx) < Self.grabRadius {
+                    if let sx, abs(g.startLocation.x - sx) < TLConst.grabRadius {
                         dragMode = .start
-                    } else if let ex, abs(g.startLocation.x - ex) < Self.grabRadius {
+                    } else if let ex, abs(g.startLocation.x - ex) < TLConst.grabRadius {
                         dragMode = .end
                     } else {
                         dragMode = .scrub
@@ -191,6 +212,9 @@ struct ShadowTimelinePlayer: View {
     }
 
     private var controls: some View {
+        // Mic is CENTERED to the row via an overlay, not squeezed between the
+        // side groups — the speed pill's variable width would otherwise shove
+        // it off-center. Play/loop hug the left, speed/clear hug the right.
         HStack(spacing: 20) {
             Button { togglePlay() } label: {
                 Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
@@ -206,7 +230,7 @@ struct ShadowTimelinePlayer: View {
             }
             .buttonStyle(.plain)
 
-            Spacer()
+            Spacer(minLength: 72)
 
             speedMenu
 
@@ -218,12 +242,13 @@ struct ShadowTimelinePlayer: View {
             .buttonStyle(.plain)
             .disabled(selectionTimes == nil)
         }
+        .overlay { micControl }
     }
 
     private var speedMenu: some View {
         Menu {
             Picker("Speed", selection: $playbackRate) {
-                ForEach(Self.speeds, id: \.self) { r in
+                ForEach(TLConst.speeds, id: \.self) { r in
                     Text(speedLabel(r)).tag(r)
                 }
             }
@@ -231,8 +256,11 @@ struct ShadowTimelinePlayer: View {
             Text(speedLabel(playbackRate))
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
-                .foregroundStyle(playbackRate == 1.0 ? Color.secondary : Color.accentColor)
-                .padding(.horizontal, 14)
+                // Primary (not secondary) at 1× — on the dark pill the muted
+                // gray was near-invisible, so the label looked blank; accent
+                // still marks a changed speed.
+                .foregroundStyle(playbackRate == 1.0 ? Color.primary : Color.accentColor)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(Capsule().fill(Color(.tertiarySystemFill)))
         }
@@ -265,8 +293,8 @@ struct ShadowTimelinePlayer: View {
         if timings.isEmpty {
             let r = timeSelection ?? t...t
             timeSelection = isStart
-                ? min(t, r.upperBound - Self.minTimeSelection)...r.upperBound
-                : r.lowerBound...max(t, r.lowerBound + Self.minTimeSelection)
+                ? min(t, r.upperBound - TLConst.minTimeSelection)...r.upperBound
+                : r.lowerBound...max(t, r.lowerBound + TLConst.minTimeSelection)
             return
         }
         guard let i = wordIndex(at: t) else { return }
@@ -280,14 +308,13 @@ struct ShadowTimelinePlayer: View {
 
     /// Smallest useful time-based loop — avoids zero-width selections that
     /// would stutter the player.
-    private static let minTimeSelection: Double = 0.2
 
     private func selectRange(from x0: CGFloat, to x1: CGFloat, w: CGFloat, dur: Double) {
         let a = time(at: x0, w: w, dur: dur)
         let b = time(at: x1, w: w, dur: dur)
         if timings.isEmpty {
             let lo = min(a, b), hi = max(a, b)
-            if hi - lo >= Self.minTimeSelection { timeSelection = lo...hi }
+            if hi - lo >= TLConst.minTimeSelection { timeSelection = lo...hi }
             return
         }
         guard let i = wordIndex(at: min(a, b)), let j = wordIndex(at: max(a, b)) else { return }

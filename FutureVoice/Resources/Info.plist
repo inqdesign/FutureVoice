@@ -17,7 +17,7 @@
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>1.0.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -36,6 +36,11 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- Bundled title font (page/navigation titles). -->
+	<key>UIAppFonts</key>
+	<array>
+		<string>GeistPixel-Square.ttf</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
@@ -45,9 +50,9 @@
 
 	<!-- Permissions -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Future Voice records your voice so it can clone it and let you hear yourself speaking fluently in another language.</string>
+	<string>nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Future Voice transcribes what you say on-device so it can compare your speech with the fluent version of your voice.</string>
+	<string>nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice.</string>
 
 	<!-- Injected from FutureVoice.xcconfig.
 	     Only Supabase URL + anon key are bundled — those are safe-by-design

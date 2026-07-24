@@ -148,6 +148,20 @@ final class AuthService: NSObject, ObservableObject {
         session = nil
     }
 
+    /// Server-side account deletion (Apple Guideline 5.1.1(v)). The Edge
+    /// Function deletes the ElevenLabs clones, cancels any Stripe web
+    /// subscription, and destroys the auth user — every user table cascades
+    /// from auth.users. On success the server-side user no longer exists, so
+    /// we only clear the LOCAL session; a server sign-out would just 401.
+    /// Throws on failure so the UI can show the error and keep the account.
+    func deleteAccount() async throws {
+        isWorking = true
+        defer { isWorking = false }
+        try await SupabaseProvider.shared.functions.invoke("account-delete")
+        try? await SupabaseProvider.shared.auth.signOut(scope: .local)
+        session = nil
+    }
+
     // MARK: - Nonce helpers (Apple-recommended boilerplate)
 
     private static func randomNonceString(length: Int = 32) -> String {

@@ -49,6 +49,7 @@ struct ScenarioDetailView: View {
         }
         .navigationTitle(scenario?.environment ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
@@ -137,17 +138,20 @@ struct ScenarioDetailView: View {
                         Circle().fill(Color.accentColor.opacity(0.15))
                             .frame(width: 56, height: 56)
                         if let name = linkedPersonaName(s) {
-                            Text(WatchTab.initials(name))
+                            Text(Books.initials(name))
                                 .font(.headline.weight(.bold)).foregroundStyle(.tint)
                         } else {
-                            Image(systemName: WatchTab.roleIcon(for: s.role))
+                            Image(systemName: Books.roleIcon(for: s.role))
                                 .font(.title2).foregroundStyle(.tint)
                         }
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text(s.environment).font(.title3.weight(.semibold))
-                        Text("with \(linkedPersonaName(s) ?? s.role)")
-                            .font(.subheadline).foregroundStyle(.secondary)
+                        if let partner = linkedPersonaName(s)
+                            ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role) {
+                            Text("with \(partner)")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                        }
                         if s.isArchived {
                             Label("Archived", systemImage: "archivebox")
                                 .font(.caption.weight(.medium)).foregroundStyle(.secondary)
@@ -490,6 +494,17 @@ struct ScenarioDetailView: View {
 
     private func watchCounterpart(for s: Scenario) -> Counterpart {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id } }
-            ?? ScenariosListSheet.watchCounterpart(for: s)
+            ?? Self.syntheticCounterpart(for: s)
+    }
+
+    /// Throwaway counterpart built from the scenario's role, so the scene can
+    /// play with a preset voice when no real person is linked. Never saved.
+    static func syntheticCounterpart(for s: Scenario) -> Counterpart {
+        var c = Counterpart.empty
+        c.name = s.role.trimmingCharacters(in: .whitespaces).isEmpty ? "the other person" : s.role
+        c.location = s.environment
+        c.background = s.notes
+        c.voicePresetId = VoicePreset.catalog.first!.id
+        return c
     }
 }

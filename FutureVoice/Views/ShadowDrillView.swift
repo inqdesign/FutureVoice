@@ -128,20 +128,31 @@ struct ShadowDrillView: View {
 
     // MARK: - Sections
 
+    /// True when the trimmer/transport row is on screen (idle or result with
+    /// cached audio) — in those phases the mic control rides inside that row
+    /// rather than as a standalone block.
+    private var timelineAvailable: Bool {
+        guard phase == .idle || phase == .result, let url = cachedAudioURL else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
     /// Scrub / select-a-phrase / loop player. Lives in the unified bottom bar
     /// next to the speak button; hidden while recording so it can't fight the
     /// sync session.
     @ViewBuilder
     private var timelinePlayer: some View {
-        if (phase == .idle || phase == .result),
-           let url = cachedAudioURL,
-           FileManager.default.fileExists(atPath: url.path) {
+        if timelineAvailable, let url = cachedAudioURL {
             ShadowTimelinePlayer(
                 audioURL: url,
                 timings: timings,
                 selectedWordRange: $selectedWordRange,
                 player: player
-            )
+            ) {
+                // Inline in the transport row, but still the primary action —
+                // bigger than the 44pt glyph buttons around it so it clearly
+                // leads, without owning a whole block below.
+                micButton(diameter: 60)
+            }
         }
     }
 
@@ -703,42 +714,53 @@ struct ShadowDrillView: View {
     /// "Hear it" — select a phrase, loop it, then tap the mic to shadow it.
     private var bottomBar: some View {
         VStack(spacing: 12) {
-            timelinePlayer
-
-            Button {
-                Task { await handleSyncTap() }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(.tint)
-                        .frame(width: 64, height: 64)
-                        .opacity(syncEnabled ? 1.0 : 0.4)
-                        .scaleEffect(phase == .syncing ? 1.06 : 1.0)
-                        .animation(
-                            phase == .syncing
-                                ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
-                                : .default,
-                            value: phase
-                        )
-                    Image(systemName: micSymbol)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(Color(.systemBackground))
-                }
+            // In idle/result the mic rides INSIDE the trimmer's transport row
+            // (see timelinePlayer). Only when that row is absent — recording,
+            // counting down, analyzing — does the mic stand alone at full size.
+            if timelineAvailable {
+                timelinePlayer
+            } else {
+                micButton(diameter: 64)
             }
-            .buttonStyle(.plain)
-            .tint(phase == .syncing ? .red : .accentColor)
-            .disabled(!syncEnabled)
-
-            Text(micHint)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(height: 16)
         }
-        .padding(.horizontal, 20)
+        // Sheet-like: the card hugs the screen edges (small side inset) with a
+        // generous corner radius. No status caption — the mic's own state
+        // (idle / red-pulsing / countdown overlay) already says enough.
+        .padding(.horizontal, 8)
         .padding(.top, 10)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity)
-        .background(.bar)
+        // No outer material — the trimmer's own rounded card is the only
+        // container; a second full-width background read as a box-in-a-box.
+    }
+
+    /// The primary record/redo control. `diameter` lets it be full-size when
+    /// standalone (64) or compact inside the transport row (52); the glyph and
+    /// pulse scale with the phase either way.
+    private func micButton(diameter: CGFloat) -> some View {
+        Button {
+            Task { await handleSyncTap() }
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(.tint)
+                    .frame(width: diameter, height: diameter)
+                    .opacity(syncEnabled ? 1.0 : 0.4)
+                    .scaleEffect(phase == .syncing ? 1.06 : 1.0)
+                    .animation(
+                        phase == .syncing
+                            ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                            : .default,
+                        value: phase
+                    )
+                Image(systemName: micSymbol)
+                    .font(.system(size: diameter * 0.375, weight: .semibold))
+                    .foregroundStyle(Color(.systemBackground))
+            }
+        }
+        .buttonStyle(.plain)
+        .tint(phase == .syncing ? .red : .accentColor)
+        .disabled(!syncEnabled)
     }
 
     @ViewBuilder
@@ -894,14 +916,25 @@ struct ShadowDrillView: View {
         userWordTimings = []
         prevTranscript = ""
 
-        // Countdown 3-2-1 with haptic ticks; final "go" is a stronger pulse.
+        // Countdown 3-2-1-0 with haptic ticks; "0" IS the go beat so the
+        // start lands on a visible number instead of an unmarked pause after
+        // "1" (which made the exact start moment hard to catch). The stronger
+        // "go" pulse fires on 0 and it stays on screen through mic setup until
+        // the karaoke sweep takes over.
         phase = .countdown
         for n in [3, 2, 1] {
             countdownValue = n
             HapticEngine.countdownTick()
             try? await Task.sleep(nanoseconds: 700_000_000)
         }
+        countdownValue = 0
         HapticEngine.countdownGo()
+        // Hold "0" for a beat BEFORE the synchronous mic setup runs. Without
+        // this suspension SwiftUI coalesces straight to .syncing and never
+        // paints 0 at all. This linger is the visible "go" flash — the learner
+        // starts on it, and the karaoke sweep (syncStartedAt below) begins
+        // right after, matching their natural speech onset.
+        try? await Task.sleep(nanoseconds: 350_000_000)
 
         // Start mic recognition ONLY — no playback. Playing the target audio
         // through the speaker bleeds into the mic, which inflates the score

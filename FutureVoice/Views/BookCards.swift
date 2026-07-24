@@ -3,6 +3,17 @@ import SwiftUI
 /// Shared avatar vocabulary for the book shelves (Practice's
 /// Talks · Topics · Scenarios) and the people list.
 enum Books {
+    /// Category color coding — one hue per book family, shared by the
+    /// Practice chips and every card of that family so a shelf is tellable
+    /// at a glance even in the mixed Studying grid: Talks = blue,
+    /// Topics = orange, Scenarios = purple. Mastery stays green everywhere.
+    static let talksColor: Color = .blue
+    static let topicsColor: Color = .orange
+    static let scenariosColor: Color = .purple
+    static func color(for scenario: Scenario) -> Color {
+        scenario.isTopic == true ? topicsColor : scenariosColor
+    }
+
     static func initials(_ name: String) -> String {
         let parts = name.split(separator: " ").prefix(2)
         return parts.compactMap { $0.first.map(String.init) }.joined().uppercased()
@@ -64,6 +75,7 @@ struct ScenarioBookCard: View {
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
+        .tint(Books.color(for: scenario))
     }
 
     /// Who the "with" line names — the linked persona, else the role; nil for
@@ -93,7 +105,7 @@ struct ScenarioBookCard: View {
         if let c = scenario.curriculum, c.totalCount > 0 {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: c.progress)
-                    .tint(scenario.isMastered ? .green : .accentColor)
+                    .tint(scenario.isMastered ? .green : Books.color(for: scenario))
                 Text(scenario.isMastered ? "Mastered" : "\(c.masteredCount)/\(c.totalCount) mastered")
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(scenario.isMastered ? .green : .secondary)
@@ -112,10 +124,18 @@ struct TalkBookCard: View {
     let session: Session
     let snapshot: TalkCurriculum.Snapshot?
 
+    /// The last time this book was worked — a mastery event or the last time
+    /// the talk itself was had/continued, whichever is later. Falls back to
+    /// the start date for a brand-new, untouched book.
+    private var lastStudiedAt: Date {
+        [snapshot?.lastStudiedAt, session.endedAt, session.startedAt]
+            .compactMap { $0 }.max() ?? session.startedAt
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
-                Image(systemName: "phone.fill").font(.title2).foregroundStyle(.tint)
+                Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2).foregroundStyle(.tint)
                 Spacer()
                 if snapshot?.isMastered == true {
                     Image(systemName: "checkmark.seal.fill")
@@ -126,7 +146,11 @@ struct TalkBookCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(session.displayTitle).font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary).lineLimit(2)
-                Text((session.endedAt ?? session.startedAt).formatted(date: .abbreviated, time: .omitted))
+                // When you last WORKED this book, not when the chat happened —
+                // the most recent of a mastery event or talking/continuing it,
+                // so it keeps advancing as you study. Relative ("2 days ago")
+                // reads as recency, which is the point.
+                Text("Studied \(lastStudiedAt.formatted(.relative(presentation: .named)))")
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             .padding(.bottom, 8)
@@ -136,6 +160,7 @@ struct TalkBookCard: View {
         .frame(maxWidth: .infinity, minHeight: 150, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
+        .tint(Books.talksColor)
     }
 
     @ViewBuilder
@@ -144,7 +169,7 @@ struct TalkBookCard: View {
             if s.totalCount > 0 {
                 VStack(alignment: .leading, spacing: 4) {
                     ProgressView(value: s.progress)
-                        .tint(s.isMastered ? .green : .accentColor)
+                        .tint(s.isMastered ? .green : Books.talksColor)
                     Text(s.isMastered ? "Mastered" : "\(s.masteredCount)/\(s.totalCount) mastered")
                         .font(.caption2.monospacedDigit())
                         .foregroundStyle(s.isMastered ? .green : .secondary)

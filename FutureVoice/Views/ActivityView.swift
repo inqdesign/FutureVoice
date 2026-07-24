@@ -1,15 +1,16 @@
 import SwiftUI
 
-/// Activity calendar — not just WHICH days you practiced but HOW MUCH:
-/// the month grid is a heat map of minutes actually spoken (darker = more),
-/// tapping a day opens its breakdown (minutes, talks, shadow takes, drill
-/// reviews), and the header carries streaks plus total speaking time.
-/// Reached by tapping the streak on Home and from Progress.
+/// Activity — not just WHICH days you practiced but HOW MUCH: every grid cell
+/// is a heat square of minutes actually spoken (darker = more). Month view is
+/// a calendar; Year view is a contribution grid of the whole year. Tapping a
+/// day opens its breakdown (minutes, talks, shadow takes, drill reviews) and
+/// links back to that day's talks. Reached from Home's streak and Progress.
 struct ActivityView: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var activeDays: Set<Date> = []
     @State private var displayedMonth = Date()
+    @State private var viewMode: ViewMode = .month
     @State private var currentStreak = 0
     @State private var longestStreak = 0
     /// Whole minutes of USER speech per day (start-of-day keyed).
@@ -20,13 +21,29 @@ struct ActivityView: View {
     @State private var drillCards: [DrillCard] = []
     @State private var selectedDay: Date?
 
+    enum ViewMode: String, CaseIterable, Identifiable {
+        case month, year
+        var id: String { rawValue }
+        var label: String { rawValue.capitalized }
+    }
+
     private let cal = Calendar.current
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                statsHeader
-                calendarCard
+            VStack(spacing: 18) {
+                statsBar
+                Picker("View", selection: $viewMode) {
+                    ForEach(ViewMode.allCases) { m in Text(m.label).tag(m) }
+                }
+                .pickerStyle(.segmented)
+                switch viewMode {
+                case .month: monthCard
+                case .year:  yearCard
+                }
+                // Always rendered when a day is selected — never toggled off,
+                // so switching days doesn't pop the card in and out and jump
+                // the scroll position.
                 if let day = selectedDay {
                     dayDetailCard(day)
                 }
@@ -38,20 +55,30 @@ struct ActivityView: View {
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Activity")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .onAppear(perform: load)
     }
 
-    // MARK: - Stats
+    // MARK: - Stats (compact single row)
 
-    private var statsHeader: some View {
-        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                  spacing: 12) {
-            statTile("\(currentStreak)", "day streak", icon: "flame.fill",
-                     tint: currentStreak > 0 ? .orange : .secondary)
-            statTile("\(longestStreak)", "longest streak", icon: "trophy.fill", tint: .accentColor)
-            statTile(totalTimeString, "total speaking", icon: "waveform", tint: .accentColor)
-            statTile("\(activeDays.count)", "active days", icon: "calendar", tint: .accentColor)
+    private var statsBar: some View {
+        HStack(spacing: 0) {
+            compactStat("\(currentStreak)", "day streak", icon: "flame.fill",
+                        tint: currentStreak > 0 ? .orange : .secondary)
+            statDivider
+            compactStat("\(longestStreak)", "longest", icon: "trophy.fill", tint: .accentColor)
+            statDivider
+            compactStat(totalTimeString, "total", icon: "waveform", tint: .accentColor)
+            statDivider
+            compactStat("\(activeDays.count)", "days", icon: "calendar", tint: .accentColor)
         }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    private var statDivider: some View {
+        Divider().frame(height: 26)
     }
 
     /// Lifetime user speech, humanized: "47m" → "3h 12m".
@@ -60,34 +87,22 @@ struct ActivityView: View {
         return mins < 60 ? "\(mins)m" : "\(mins / 60)h \(mins % 60)m"
     }
 
-    private func statTile(_ value: String, _ label: String, icon: String, tint: Color) -> some View {
-        VStack(spacing: 5) {
-            Image(systemName: icon).font(.subheadline).foregroundStyle(tint)
-            Text(value).font(.title3.weight(.bold)).monospacedDigit()
+    private func compactStat(_ value: String, _ label: String, icon: String, tint: Color) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: icon).font(.caption2).foregroundStyle(tint)
+                Text(value).font(.subheadline.weight(.bold)).monospacedDigit()
+            }
             Text(label).font(.caption2).foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    // MARK: - Calendar
+    // MARK: - Month view
 
-    private var calendarCard: some View {
+    private var monthCard: some View {
         VStack(spacing: 14) {
-            HStack {
-                Button { shiftMonth(-1) } label: {
-                    Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
-                }
-                Spacer()
-                Text(monthTitle).font(.headline)
-                Spacer()
-                Button { shiftMonth(1) } label: {
-                    Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
-                }
-                .disabled(isCurrentMonth)
-                .opacity(isCurrentMonth ? 0.3 : 1)
-            }
+            periodHeader
 
             HStack(spacing: 0) {
                 ForEach(weekdaySymbols, id: \.self) { s in
@@ -102,18 +117,16 @@ struct ActivityView: View {
                 }
             }
 
-            // Month roll-up + how to read the heat.
             HStack {
                 Text(monthSummary)
                 Spacer()
-                Text("darker = more minutes")
+                heatLegend
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
-            if let comparison = monthComparison {
+            if let comparison = periodComparison {
                 Text(comparison)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.caption2).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -122,31 +135,85 @@ struct ActivityView: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    private var monthSummary: String {
-        let days = monthCells.compactMap { $0 }.map { cal.startOfDay(for: $0) }
-        let active = days.filter { activeDays.contains($0) }.count
-        let mins = days.reduce(0) { $0 + (minutesByDay[$1] ?? 0) }
-        return "This month: \(active) active days · \(mins) min spoken"
+    // MARK: - Year view (contribution grid)
+
+    private var yearCard: some View {
+        VStack(spacing: 16) {
+            periodHeader
+
+            // 12 mini-months, 3 across — the whole year on one screen, no
+            // horizontal scroll.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3),
+                      spacing: 16) {
+                ForEach(Array(monthsOfYear.enumerated()), id: \.offset) { _, month in
+                    miniMonth(month)
+                }
+            }
+
+            HStack {
+                Text(yearSummary)
+                Spacer()
+                heatLegend
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            if let comparison = periodComparison {
+                Text(comparison)
+                    .font(.caption2).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    /// Minutes spoken in any calendar month.
-    private func monthMinutes(_ month: Date) -> Int {
-        minutesByDay.reduce(0) { acc, entry in
-            cal.isDate(entry.key, equalTo: month, toGranularity: .month) ? acc + entry.value : acc
+    private func miniMonth(_ month: Date) -> some View {
+        VStack(spacing: 5) {
+            Text(monthShortSymbol(month))
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7),
+                      spacing: 2) {
+                ForEach(Array(cells(for: month).enumerated()), id: \.offset) { _, date in
+                    yearCell(date)
+                }
+            }
         }
     }
 
-    /// "+32 min vs June" — only once the previous month has anything to
-    /// compare against.
-    private var monthComparison: String? {
-        guard let prev = cal.date(byAdding: .month, value: -1, to: displayedMonth) else { return nil }
-        let prevMins = monthMinutes(prev)
-        guard prevMins > 0 else { return nil }
-        let delta = monthMinutes(displayedMonth) - prevMins
-        let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate("MMMM")
-        return "\(delta >= 0 ? "+" : "")\(delta) min vs \(f.string(from: prev))"
+    private var heatLegend: some View {
+        HStack(spacing: 4) {
+            Text("less")
+            ForEach([0.0, 0.4, 0.65, 0.85, 1.0], id: \.self) { o in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(o == 0 ? Color(.tertiarySystemFill) : Color.accentColor.opacity(o))
+                    .frame(width: 9, height: 9)
+            }
+            Text("more")
+        }
     }
+
+    // MARK: - Period header (shared)
+
+    private var periodHeader: some View {
+        HStack {
+            Button { shift(-1) } label: {
+                Image(systemName: "chevron.left").font(.subheadline.weight(.semibold))
+            }
+            Spacer()
+            Text(periodTitle).font(.headline)
+            Spacer()
+            Button { shift(1) } label: {
+                Image(systemName: "chevron.right").font(.subheadline.weight(.semibold))
+            }
+            .disabled(!canGoNext)
+            .opacity(canGoNext ? 1 : 0.3)
+        }
+    }
+
+    // MARK: - Cells
 
     @ViewBuilder
     private func dayCell(_ date: Date?) -> some View {
@@ -154,41 +221,77 @@ struct ActivityView: View {
             let day = cal.startOfDay(for: date)
             let active = activeDays.contains(day)
             let isToday = cal.isDateInToday(date)
+            let future = isFuture(day)
             let mins = minutesByDay[day] ?? 0
             let strong = active && heatOpacity(mins) >= 0.6
             let isSelected = selectedDay == day
             Text("\(cal.component(.day, from: date))")
                 .font(.callout)
-                .foregroundStyle(strong ? Color.white : (isToday ? Color.accentColor : Color.primary))
+                // Future days are dimmed and inert — they can't be selected.
+                .foregroundStyle(future ? AnyShapeStyle(.tertiary)
+                                 : (strong ? AnyShapeStyle(.white)
+                                    : (isSelected || isToday ? AnyShapeStyle(Color.accentColor)
+                                       : AnyShapeStyle(.primary))))
                 .frame(maxWidth: .infinity, minHeight: 38)
                 .background(
                     ZStack {
                         if active {
                             Circle().fill(Color.accentColor.opacity(heatOpacity(mins)))
                         } else if isToday {
-                            Circle().strokeBorder(Color.accentColor, lineWidth: 1.5)
+                            Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5)
                         }
+                        // Selection stays in the blue family — a solid accent
+                        // ring, not the old black/white one.
                         if isSelected {
-                            Circle().strokeBorder(Color.primary, lineWidth: 2)
+                            Circle().strokeBorder(Color.accentColor, lineWidth: 2.5)
                         }
                     }
                     .frame(width: 38, height: 38)
                 )
                 .contentShape(Circle())
-                .onTapGesture {
-                    selectedDay = (selectedDay == day) ? nil : day
-                }
+                .onTapGesture { if !future { selectedDay = day } }
         } else {
             Color.clear.frame(maxWidth: .infinity, minHeight: 38)
         }
     }
 
+    @ViewBuilder
+    private func yearCell(_ date: Date?) -> some View {
+        if let date {
+            let day = cal.startOfDay(for: date)
+            let future = isFuture(day)
+            let active = activeDays.contains(day)
+            let mins = minutesByDay[day] ?? 0
+            let isSelected = selectedDay == day
+            RoundedRectangle(cornerRadius: 2)
+                // Future days are drawn faint so the grid still reads as a full
+                // year, but they're inert.
+                .fill(active ? Color.accentColor.opacity(heatOpacity(mins))
+                      : Color(.tertiarySystemFill).opacity(future ? 0.4 : 1))
+                .aspectRatio(1, contentMode: .fit)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 2)
+                        .strokeBorder(Color.accentColor,
+                                      lineWidth: isSelected ? 1.5 : (cal.isDateInToday(date) ? 1 : 0))
+                )
+                .contentShape(Rectangle())
+                .onTapGesture { if !future { selectedDay = day } }
+        } else {
+            Color.clear.aspectRatio(1, contentMode: .fit)
+        }
+    }
+
+    /// A day strictly after today — not yet lived, so not selectable.
+    private func isFuture(_ day: Date) -> Bool {
+        day > cal.startOfDay(for: Date())
+    }
+
     /// Minutes → heat bucket, anchored to the ~10-minute daily-goal scale.
     private func heatOpacity(_ minutes: Int) -> Double {
         switch minutes {
-        case ..<1:   return 0.25   // talked, but under a minute
-        case 1..<5:  return 0.4
-        case 5..<10: return 0.65
+        case ..<1:    return 0.25   // talked, but under a minute
+        case 1..<5:   return 0.4
+        case 5..<10:  return 0.65
         case 10..<20: return 0.85
         default:      return 1.0
         }
@@ -274,16 +377,25 @@ struct ActivityView: View {
         }
     }
 
-    // MARK: - Month math
+    // MARK: - Period math
 
-    private var monthTitle: String {
+    private var periodTitle: String {
         let f = DateFormatter()
-        f.setLocalizedDateFormatFromTemplate("MMMM yyyy")
+        f.setLocalizedDateFormatFromTemplate(viewMode == .month ? "MMMM yyyy" : "yyyy")
         return f.string(from: displayedMonth)
     }
 
-    private var isCurrentMonth: Bool {
-        cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+    private var canGoNext: Bool {
+        switch viewMode {
+        case .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
+        case .year:  return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .year)
+        }
+    }
+
+    private func shift(_ by: Int) {
+        if by > 0, !canGoNext { return }
+        let unit: Calendar.Component = viewMode == .month ? .month : .year
+        displayedMonth = cal.date(byAdding: unit, value: by, to: displayedMonth) ?? displayedMonth
     }
 
     private var weekdaySymbols: [String] {
@@ -293,8 +405,11 @@ struct ActivityView: View {
     }
 
     /// Leading blanks + each day of the displayed month.
-    private var monthCells: [Date?] {
-        let comps = cal.dateComponents([.year, .month], from: displayedMonth)
+    private var monthCells: [Date?] { cells(for: displayedMonth) }
+
+    /// Leading blanks + each day of the month `date` falls in.
+    private func cells(for date: Date) -> [Date?] {
+        let comps = cal.dateComponents([.year, .month], from: date)
         guard let first = cal.date(from: comps),
               let range = cal.range(of: .day, in: .month, for: first) else { return [] }
         let firstWeekday = cal.component(.weekday, from: first)
@@ -306,9 +421,52 @@ struct ActivityView: View {
         return cells
     }
 
-    private func shiftMonth(_ by: Int) {
-        if by > 0, isCurrentMonth { return }
-        displayedMonth = cal.date(byAdding: .month, value: by, to: displayedMonth) ?? displayedMonth
+    /// The 12 months of the displayed year, Jan → Dec.
+    private var monthsOfYear: [Date] {
+        let comps = cal.dateComponents([.year], from: displayedMonth)
+        guard let jan1 = cal.date(from: comps) else { return [] }
+        return (0..<12).compactMap { cal.date(byAdding: .month, value: $0, to: jan1) }
+    }
+
+    private func monthShortSymbol(_ month: Date) -> String {
+        let idx = cal.component(.month, from: month) - 1
+        let symbols = cal.shortMonthSymbols
+        return symbols.indices.contains(idx) ? symbols[idx] : ""
+    }
+
+    // MARK: - Summaries
+
+    private var monthSummary: String {
+        let days = monthCells.compactMap { $0 }.map { cal.startOfDay(for: $0) }
+        let active = days.filter { activeDays.contains($0) }.count
+        let mins = days.reduce(0) { $0 + (minutesByDay[$1] ?? 0) }
+        return "\(active) active days · \(mins) min"
+    }
+
+    private var yearSummary: String {
+        let year = cal.component(.year, from: displayedMonth)
+        let active = activeDays.filter { cal.component(.year, from: $0) == year }.count
+        let mins = periodMinutes(displayedMonth, granularity: .year)
+        return "\(active) active days · \(mins) min this year"
+    }
+
+    /// Minutes spoken in the calendar month/year that `date` falls in.
+    private func periodMinutes(_ date: Date, granularity: Calendar.Component) -> Int {
+        minutesByDay.reduce(0) { acc, entry in
+            cal.isDate(entry.key, equalTo: date, toGranularity: granularity) ? acc + entry.value : acc
+        }
+    }
+
+    /// "+32 min vs June" / "+120 min vs 2025" — vs the previous period.
+    private var periodComparison: String? {
+        let unit: Calendar.Component = viewMode == .month ? .month : .year
+        guard let prev = cal.date(byAdding: unit, value: -1, to: displayedMonth) else { return nil }
+        let prevMins = periodMinutes(prev, granularity: unit)
+        guard prevMins > 0 else { return nil }
+        let delta = periodMinutes(displayedMonth, granularity: unit) - prevMins
+        let f = DateFormatter()
+        f.setLocalizedDateFormatFromTemplate(viewMode == .month ? "MMMM" : "yyyy")
+        return "\(delta >= 0 ? "+" : "")\(delta) min vs \(f.string(from: prev))"
     }
 
     // MARK: - Data
@@ -339,10 +497,11 @@ struct ActivityView: View {
         drillCards = DrillStore.shared.load()
         currentStreak = currentStreak(in: days)
         longestStreak = longestStreak(in: days)
-        // Land with today's story open when there is one.
+        // Land with a day already open so the detail card is present from the
+        // start (no first-tap height jump): today if active, else most recent.
         if selectedDay == nil {
             let today = cal.startOfDay(for: Date())
-            if days.contains(today) { selectedDay = today }
+            selectedDay = days.contains(today) ? today : days.max()
         }
     }
 

@@ -164,6 +164,10 @@ struct Session: Codable, Identifiable {
     var endedAt: Date?
     var turns: [Turn]
     var summary: SessionSummary?
+    /// Set when the user shelves a finished talk whose review material
+    /// (see `TalkCurriculum`) is mastered — same lifecycle as an archived
+    /// scenario book. Optional so old rows decode unchanged.
+    var archivedAt: Date? = nil
 }
 
 extension Session {
@@ -557,9 +561,9 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// Set when the user shelves a mastered (or abandoned) scenario. Archived
     /// scenarios drop out of the main grid into the Archive section.
     var archivedAt: Date? = nil
-    /// True for topic books — scenarios born from an interest/news topic
-    /// (WatchTopicSheet) rather than a built situation. Same curriculum
-    /// mechanics; drives the Watch tab's "By topic" shelf and a
+    /// True for topic books — scenarios born from a news story (Home's Watch
+    /// verb on a News ingredient) rather than a built situation. Same
+    /// curriculum mechanics; drives Practice's "Topics" shelf and a
     /// discussion-flavored scene prompt. Optional so old rows decode.
     var isTopic: Bool? = nil
 
@@ -573,16 +577,20 @@ struct Scenario: Codable, Identifiable, Hashable {
     }
 
     /// Human-readable title shown in the list. Kept simple so the user can
-    /// scan a long list quickly.
+    /// scan a long list quickly. Free-described situations (Watch composer,
+    /// no person) have no role — the description IS the title.
     var displayTitle: String {
-        "\(environment) · with \(role)"
+        let r = role.trimmingCharacters(in: .whitespaces)
+        return r.isEmpty ? environment : "\(environment) · with \(r)"
     }
 
     /// Structured prompt blurb the conversation system prompt parses to put
     /// the avatar into character. Same `environment=… | role=… | notes=…`
     /// format the builder previously wrote directly into topicBlurb.
     var promptBlurb: String {
-        var parts = ["environment=\(environment)", "role=\(role)"]
+        var parts = ["environment=\(environment)"]
+        let r = role.trimmingCharacters(in: .whitespaces)
+        if !r.isEmpty { parts.append("role=\(r)") }
         if !notes.trimmingCharacters(in: .whitespaces).isEmpty {
             parts.append("notes=\(notes)")
         }
@@ -658,6 +666,9 @@ struct SuggestedTopic: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var title: String
     var blurb: String
+    /// The interest/category this story was matched from (news topics only).
+    /// Optional so persona scenarios and rows saved before this decode fine.
+    var category: String? = nil
 }
 
 // MARK: - Saved Line (user's personal shadow archive)

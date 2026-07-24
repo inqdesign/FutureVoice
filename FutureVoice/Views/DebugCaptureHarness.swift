@@ -34,19 +34,177 @@ enum DebugCapture {
             once("vocab") { seedVocab() }
             return AnyView(NavigationStack { VocabularyView() })
         case "home":
-            once("home") { seedVocab(); seedSessions() }
+            once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
         case "watch":
+            // The Watch tab folded into Practice's shelves — capture that.
             once("watch") { seedScenarios(into: appState) }
+            return AnyView(PracticeTab())
+        case "watchtab":
+            once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())
+        case "intake-people":
+            return AnyView(CounterpartVoiceIntakeView())
+        case "builder":
+            // Renders the sheet's content full-screen (no host to present it).
+            return AnyView(SituationBuilderSheet(root: WatchTab.situationTree[0]) { _ in })
+        case "progress":
+            once("progress") {
+                seedVocab(); seedSessions(scored: true)
+                // A pooled weekly read so the big CEFR level (not "building")
+                // renders for design capture.
+                let report = WeeklyReport(
+                    id: UUID(),
+                    periodStart: Date().addingTimeInterval(-7 * 86_400),
+                    periodEnd: Date(),
+                    sessionCount: 6, targetLanguage: "en",
+                    newExpressions: [], repeatedMistakes: [], suggestedExpressions: [],
+                    summary: "Steady, confident week — your range is widening.",
+                    cefrLevel: "b2", generatedAt: Date())
+                WeeklyReportStore.shared.save(report)
+                appState.weeklyReports = [report]
+            }
+            return AnyView(ProgressTab().environmentObject(appState))
         case "shadow":
             once("shadow") { captureShadow = true }
             return AnyView(NavigationStack {
                 ShadowDrillView(turn: shadowTurn, targetLanguage: "en")
             })
+        case "expr":
+            once("expr") { seedVocab() }
+            return AnyView(NavigationStack { ExpressionsView() })
+        case "score":
+            once("score") { seedVocab() }
+            return AnyView(NavigationStack {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Last talk").font(.caption).foregroundStyle(.secondary)
+                        ScorecardView(scorecard: sampleScorecard)
+                            .padding(18)
+                            .background(RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .fill(Color(.secondarySystemBackground)))
+                    }
+                    .padding(20)
+                }
+                .navigationTitle("Scorecard")
+                .navigationBarTitleDisplayMode(.inline)
+            })
+        case "glow":
+            // The call button's pixel surface across its states, for design
+            // review screenshots (the live surface animates; this freezes
+            // representative frames side by side).
+            return AnyView(GlowGallery())
+        case "widget":
+            // The home-screen widgets at their real families over the
+            // Futureself pixel surface — design review before installing.
+            return AnyView(WidgetGallery())
+        case "tabs":
+            // The full tab shell — used to review the floating Free talk pill
+            // sitting above the real tab bar.
+            once("tabs") { seedVocab(); seedSessions(); seedScenarios(into: appState) }
+            return AnyView(RootTabView())
+        case "talkdetail", "talkdetail-mid", "talkdetail-low":
+            // The ONE session detail page in post-talk mode — exactly what
+            // the wrap-up sheet presents when a talk ends. Lists don't honor
+            // an initial scroll offset, so the "-mid"/"-low" variants blank
+            // out the UPPER sections' data instead, letting screenshots reach
+            // the lower ones.
+            once("talkdetail") { seedVocab() }
+            var s = talkDetailSession
+            if name != "talkdetail" {
+                s.summary?.scorecard = nil
+                s.summary?.overallNote = ""
+            }
+            if name == "talkdetail-low" {
+                // No substantial fluent lines → the fresh-shadow list and
+                // word chips drop out; the page starts at Expressions.
+                s.turns = s.turns.filter { $0.role == .user }
+                s.summary?.newWordsUsed = []
+            }
+            let session = s
+            return AnyView(NavigationStack {
+                ConversationDetailView(
+                    session: session,
+                    postTalk: .init(onDone: {}, onStartNew: {}))
+            })
+        case "themes":
+            // The settings grid of Futureself themes, in its List habitat.
+            return AnyView(NavigationStack {
+                List {
+                    Section {
+                        FutureselfThemePicker()
+                    } header: {
+                        Text("Appearance")
+                    } footer: {
+                        Text("Future self is the pixel surface behind every call button — tap a theme to feel it.")
+                    }
+                }
+                .navigationTitle("Me")
+            })
         default:
             return nil
         }
+    }
+
+    static var sampleScorecard: SessionScorecard {
+        SessionScorecard(
+            vocabulary: AxisScore(score: 82, note: "Reached for precise, specific words."),
+            grammar: AxisScore(score: 71, note: "A few article and tense slips to tidy."),
+            expressiveness: AxisScore(score: 68, note: "Getting more natural and idiomatic."),
+            fluency: AxisScore(score: 74, note: "Steady pace, fewer long pauses."),
+            pronunciation: AxisScore(score: 80, note: "Clear, with good linking."),
+            topLine: "Confident, natural talk — tighten a few articles.",
+            cefrLevel: "b1")
+    }
+
+    /// One fully-populated finished talk — every section of the session
+    /// detail page has material (scorecard + grammar slips, new words,
+    /// expressions, say-it-better, suggestions → shadow lines, drill next).
+    static var talkDetailSession: Session {
+        let started = Date().addingTimeInterval(-900)
+        let turns = [
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "So — how did the interview go yesterday?", durationMs: 3200,
+                 timestamp: started, suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "Honestly, it go really well. I felt prepared.", durationMs: 62_000,
+                 timestamp: started.addingTimeInterval(6),
+                 suggestion: TurnSuggestion(alternative: "Honestly, it went really well — I felt prepared.",
+                                            reason: "past tense")),
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "That's a compelling perspective — you clearly took the initiative to prioritize what mattered.", durationMs: 4200,
+                 timestamp: started.addingTimeInterval(70), suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "How relaxed I stayed, even on hard question.", durationMs: 58_000,
+                 timestamp: started.addingTimeInterval(80),
+                 suggestion: TurnSuggestion(alternative: "How relaxed I stayed, even on the hard questions.",
+                                            reason: "article + plural"))
+        ]
+        var summary = SessionSummary(
+            phrasesUsed: [PhraseFeedback(userSaid: "it go really well",
+                                         fluentAlternative: "it went really well",
+                                         reason: "past tense")],
+            newPatternsDetected: [],
+            suggestedDrills: ["I'd say the trade-off was worth it.",
+                              "Looking back, I would have prepared differently."],
+            overallNote: "Confident, natural talk — tighten a few articles.",
+            scorecard: sampleScorecard)
+        summary.newWordsUsed = ["prepared", "relaxed", "interview"]
+        summary.expressionsUsed = ["felt prepared"]
+        summary.grammarIssues = [
+            GrammarIssue(quote: "Honestly, it go really well.",
+                         correction: "Honestly, it went really well.",
+                         note: "past tense needed"),
+            GrammarIssue(quote: "even on hard question",
+                         correction: "even on the hard questions",
+                         note: "article + plural")
+        ]
+        return Session(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D1")!,
+            userId: UUID(), targetLanguage: "en", mode: .conversation,
+            topic: "Job interview", startedAt: started,
+            endedAt: started.addingTimeInterval(600),
+            turns: turns, summary: summary)
     }
 
     // MARK: - Vocabulary + expressions
@@ -75,11 +233,24 @@ enum DebugCapture {
         _ = VocabStore.shared.addExpression("catch up on")
         _ = VocabStore.shared.addExpression("walk you through")
         _ = VocabStore.shared.addExpression("turned out to be")
+
+        // A few review cards due NOW, so Home's "Review N cards" action shows.
+        let due: [(String, String, String)] = [
+            ("it go really well", "it went really well", "past tense"),
+            ("I very like it", "I really like it", "adverb choice"),
+            ("more easy", "easier", "comparative form"),
+        ]
+        for (src, tgt, why) in due {
+            DrillStore.shared.save(DrillCard(
+                sourcePhrase: src, targetPhrase: tgt, reason: why,
+                createdAt: Date(), lastReviewedAt: nil,
+                nextReviewAt: Date().addingTimeInterval(-3600), box: 0))
+        }
     }
 
     // MARK: - Sessions (Home stats + mission)
 
-    static func seedSessions() {
+    static func seedSessions(scored: Bool = false) {
         let uid = UUID()
         for day in 0..<3 {
             let ended = Date().addingTimeInterval(Double(-day) * 86_400 + 3_600)
@@ -98,10 +269,17 @@ enum DebugCapture {
                      transcript: "How relaxed I stayed, even on the hard questions.", durationMs: 58_000,
                      timestamp: started.addingTimeInterval(80), suggestion: nil)
             ]
+            // scored: attach a scorecard summary so ProgressTab's assessed
+            // branch (chip header + level pages) renders instead of the
+            // empty state.
+            let summary = scored ? SessionSummary(
+                phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
+                overallNote: "Confident, natural talk — tighten a few articles.",
+                scorecard: sampleScorecard) : nil
             SessionStore.shared.save(Session(
                 id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
                 topic: "Job interview", startedAt: started, endedAt: ended,
-                turns: turns, summary: nil))
+                turns: turns, summary: summary))
         }
     }
 
@@ -133,6 +311,32 @@ enum DebugCapture {
         c.shadowLines = take(lines)
         c.dialogueTitle = "The scene"
         return c
+    }
+
+    /// Interests + a cached news pool, so the home capture renders the news
+    /// card rail offline (no edge-function call).
+    static func seedNews(into appState: AppState) {
+        let interests = ["ai / tech", "cooking"]
+        if var p = appState.persona {
+            if p.interests.isEmpty { p.interests = interests; appState.persona = p }
+        } else {
+            appState.persona = UserPersona(
+                displayName: "Alex", city: "Munich", country: "Germany",
+                lengthOfStay: "", occupation: "", household: "",
+                interests: interests, situations: [], freeNotes: "", updatedAt: Date())
+        }
+        let effective = appState.persona?.interests ?? interests
+        NewsTopicStore.shared.save([
+            SuggestedTopic(title: "Did you hear about OpenAI's model hacking a company?",
+                           blurb: "An AI model reportedly breached another tech firm, leading to discussions about controlling autonomous agents.",
+                           category: "ai / tech"),
+            SuggestedTopic(title: "Have you heard beef tallow is making a comeback?",
+                           blurb: "The traditional cooking fat is seeing a resurgence in restaurants and home kitchens.",
+                           category: "cooking"),
+            SuggestedTopic(title: "Did you see the home robot folding laundry?",
+                           blurb: "A startup demoed a household robot completing chores end to end.",
+                           category: "ai / tech"),
+        ], interests: effective)
     }
 
     static func seedScenarios(into appState: AppState) {
@@ -167,6 +371,98 @@ enum DebugCapture {
              role: .fluentSelf, audioURL: nil,
              transcript: "I really appreciate you taking the time to help me.",
              durationMs: 3200, timestamp: Date(), suggestion: nil)
+    }
+}
+
+/// Every state of the call button's pixel surface, in the exact pill styling
+/// ConversationView uses, so a single screenshot reviews the whole design.
+private struct GlowGallery: View {
+    var body: some View {
+        VStack(spacing: 28) {
+            pill(.idle, level: 0, symbol: "mic.fill", caption: "idle")
+            pill(.listening, level: 0.35, symbol: "stop.fill", caption: "listening · quiet")
+            pill(.listening, level: 0.95, symbol: "stop.fill", caption: "listening · loud")
+            pill(.thinking, level: 0, symbol: "ellipsis", caption: "thinking")
+            pill(.speaking, level: 0.7, symbol: "waveform", caption: "speaking")
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
+    }
+
+    private func pill(_ mode: Futureself.Mode, level: Float,
+                      symbol: String, caption: String) -> some View {
+        VStack(spacing: 8) {
+            ZStack {
+                Futureself(mode: mode, level: level)
+                Image(systemName: symbol)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+            .frame(width: 156, height: 64)
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            Text(caption)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The two home-screen widgets at their real families — the shared pinboard
+/// render (cork + stickies), exactly what `StudyWidgetView` composes, for
+/// design review (the extension can't be screenshotted headlessly).
+private struct WidgetGallery: View {
+    private let words: [StudyWidgetItem] = [
+        .init(text: "negotiate", note: "B1"), .init(text: "tentative", note: "C1"),
+        .init(text: "revitalize", note: "C1"), .init(text: "meticulous", note: "C1"),
+        .init(text: "on the fence", note: "B2"), .init(text: "downplay", note: "B2"),
+        .init(text: "leverage", note: "B2"), .init(text: "snagged", note: "")]
+    private let phrases: [StudyWidgetItem] = [
+        .init(text: "walk me through it", note: ""), .init(text: "I'd rather grab a coffee", note: ""),
+        .init(text: "it seems a lot of parents", note: "×2"), .init(text: "let's circle back", note: "")]
+
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 26) {
+                HStack(alignment: .top, spacing: 18) {
+                    card(.words, capacity: 3, columns: 1, fillsBoard: true,
+                         size: CGSize(width: 158, height: 158), shuffle: false)
+                    card(.words, theme: 2, capacity: 4, columns: 2, noteSize: .compact,
+                         size: CGSize(width: 338, height: 158), shuffle: true)
+                }
+                card(.expressions, theme: 5, capacity: 3, columns: 1, fillsBoard: true,
+                     size: CGSize(width: 338, height: 158), shuffle: true)
+                card(.words, theme: 3, capacity: 8, columns: 2, noteSpacing: 16,
+                     noteSize: .large, fillsBoard: true,
+                     size: CGSize(width: 338, height: 354), shuffle: true)
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func card(_ section: StudyWidgetSection, theme: Int = 0, capacity: Int,
+                      columns: Int, noteSpacing: CGFloat = 12,
+                      noteSize: StickyNote.Size = .regular, fillsBoard: Bool = false,
+                      size: CGSize, shuffle: Bool) -> some View {
+        let items = section == .words ? words : phrases
+        return PinboardBoard(section: section, items: items,
+                             theme: theme, seed: 3, capacity: capacity, columns: columns,
+                             noteSpacing: noteSpacing, noteSize: noteSize,
+                             fillsBoard: fillsBoard) {
+            if shuffle {
+                ShuffleSticker()
+            }
+        }
+        .padding(14)
+        .frame(width: size.width, height: size.height)
+        .background(CorkSurface())
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
     }
 }
 #endif

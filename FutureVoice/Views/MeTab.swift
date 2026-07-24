@@ -17,6 +17,9 @@ struct MeTab: View {
     @State private var showingPaywall = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
+    @State private var confirmingAccountDelete = false
+    @State private var deletingAccount = false
+    @State private var accountDeleteError: String?
     @State private var regeneratingVoice = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
@@ -116,13 +119,18 @@ struct MeTab: View {
                     Text("Your CEFR level shapes each conversation. The daily goal drives the ring on Home.")
                 }
 
-                Section("Appearance") {
+                Section {
                     Picker("Theme", selection: $appState.appearance) {
                         ForEach(AppAppearance.allCases, id: \.self) { mode in
                             Text(mode.label).tag(mode)
                         }
                     }
                     .pickerStyle(.segmented)
+                    FutureselfThemePicker()
+                } header: {
+                    Text("Appearance")
+                } footer: {
+                    Text("Future self is the pixel surface behind every call button — tap a theme to feel it.")
                 }
 
                 Section("Voice") {
@@ -157,6 +165,22 @@ struct MeTab: View {
                     } label: {
                         Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
                     }
+                    // Apple Guideline 5.1.1(v): account creation in-app requires
+                    // account deletion in-app.
+                    Button(role: .destructive) {
+                        confirmingAccountDelete = true
+                    } label: {
+                        HStack {
+                            Label("Delete account", systemImage: "trash")
+                            if deletingAccount {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(deletingAccount)
+                } footer: {
+                    Text("Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too.")
                 }
 
                 #if DEBUG
@@ -208,6 +232,20 @@ struct MeTab: View {
             } message: {
                 Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
             }
+            .alert("Delete your account?", isPresented: $confirmingAccountDelete) {
+                Button("Cancel", role: .cancel) {}
+                Button("Delete forever", role: .destructive) { deleteAccount() }
+            } message: {
+                Text("This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.")
+            }
+            .alert("Couldn't delete account", isPresented: Binding(
+                get: { accountDeleteError != nil },
+                set: { if !$0 { accountDeleteError = nil } }
+            )) {
+                Button("OK") { accountDeleteError = nil }
+            } message: {
+                Text(accountDeleteError ?? "")
+            }
             #if DEBUG
             .alert("Replay onboarding?", isPresented: $confirmingOnboardingReset) {
                 Button("Cancel", role: .cancel) {}
@@ -231,6 +269,25 @@ struct MeTab: View {
             .sorted(by: { $0.generatedAt > $1.generatedAt })
             .compactMap({ $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } })
             .first
+    }
+
+    /// Server first, local second: the Edge Function removes the clone,
+    /// cancels web billing, and destroys the auth user; only after that
+    /// succeeds do we erase the device. On failure nothing local is touched —
+    /// the user keeps a working account and sees the error.
+    private func deleteAccount() {
+        guard !deletingAccount else { return }
+        deletingAccount = true
+        Task {
+            defer { deletingAccount = false }
+            do {
+                try await auth.deleteAccount()
+                appState.wipeLocalData()   // session is nil → RootView shows Welcome
+                dismiss()
+            } catch {
+                accountDeleteError = error.localizedDescription
+            }
+        }
     }
 
     private func regenerateFromSavedSample() {

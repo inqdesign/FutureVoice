@@ -1,12 +1,48 @@
 import SwiftUI
 
-/// Ambient bottom glow for the Talk screen (Shaders/VoiceGlow.metal): a soft
-/// aurora anchored to the bottom edge that breathes when idle, lifts with the
-/// user's voice while listening, shimmers while thinking, and rides playback
-/// while the fluent self speaks. Always present — only its brightness changes,
-/// so nothing pops in or out with state transitions. Pure visual; no
+/// The six palettes the Futureself surface can wear. Raw value is what the
+/// shader receives and what `@AppStorage("futureselfTheme")` persists, so
+/// the order here is frozen — append new themes, never reorder.
+enum FutureselfTheme: Int, CaseIterable, Identifiable {
+    case blue = 0, mono, emerald, amber, coral, aqua
+
+    var id: Int { rawValue }
+
+    var label: String {
+        switch self {
+        case .blue:    return "Blue"
+        case .mono:    return "Mono"
+        case .emerald: return "Emerald"
+        case .amber:   return "Amber"
+        case .coral:   return "Coral"
+        case .aqua:    return "Aqua"
+        }
+    }
+
+    /// Representative SwiftUI color for UI chrome that must match the shader
+    /// surface — the call button's outline, the orbiting highlight. Each is
+    /// the palette's vivid step (kPalette[theme][*][3] in Futureself.metal);
+    /// keep in sync if the shader palettes change.
+    var tint: Color {
+        switch self {
+        case .blue:    return Color(red: 0.040, green: 0.360, blue: 0.960)
+        case .mono:    return Color(red: 0.550, green: 0.550, blue: 0.560)
+        case .emerald: return Color(red: 0.050, green: 0.640, blue: 0.420)
+        case .amber:   return Color(red: 0.960, green: 0.560, blue: 0.050)
+        case .coral:   return Color(red: 0.950, green: 0.230, blue: 0.320)
+        case .aqua:    return Color(red: 0.040, green: 0.640, blue: 0.760)
+        }
+    }
+}
+
+/// Futureself — the call button's living surface (Shaders/Futureself.metal):
+/// a quantized pixel grid in the app icon's mosaic identity. Cells twinkle
+/// when idle, ignite bottom-up with the user's voice while listening, sweep
+/// with a scanner while thinking, and bloom center-out with playback while
+/// the fluent self speaks. Always present — only cell states change, so
+/// nothing pops in or out with state transitions. Pure visual; no
 /// hit-testing, no implicit animations.
-struct VoiceGlow: View {
+struct Futureself: View {
     enum Mode: Float {
         case idle = 0, listening = 1, thinking = 2, speaking = 3
     }
@@ -14,9 +50,13 @@ struct VoiceGlow: View {
     var mode: Mode
     /// 0…1 target voice energy — mic RMS or playback RMS by state. Arrives in
     /// coarse steps at the audio-buffer rate; the smoother below interpolates
-    /// it per FRAME so the glow glides instead of stepping.
+    /// it per FRAME so the surface glides instead of stepping.
     var level: Float
+    /// Explicit palette override (the settings previews). nil — the live
+    /// surfaces everywhere — follows the user's chosen theme.
+    var theme: FutureselfTheme? = nil
 
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @Environment(\.colorScheme) private var colorScheme
     /// Reference type on purpose: mutating it never invalidates the view —
     /// TimelineView already redraws every frame, the smoother just advances.
@@ -30,16 +70,18 @@ struct VoiceGlow: View {
                 // sin() phases; the wrap every ~17 min is imperceptible.
                 let t = Float(now.truncatingRemainder(dividingBy: 1000))
                 let display = smoother.step(toward: level, at: now)
+                let resolved = theme ?? FutureselfTheme(rawValue: storedTheme) ?? .blue
                 // Fill color is ignored — the shader owns the palette and
                 // paints the full surface, theme-aware via the dark flag.
                 Rectangle()
                     .fill(.black)
-                    .colorEffect(ShaderLibrary.voiceGlow(
+                    .colorEffect(ShaderLibrary.futureself(
                         .float2(Float(geo.size.width), Float(geo.size.height)),
                         .float(t),
                         .float(display),
                         .float(mode.rawValue),
-                        .float(colorScheme == .dark ? 1 : 0)
+                        .float(colorScheme == .dark ? 1 : 0),
+                        .float(Float(resolved.rawValue))
                     ))
             }
         }
@@ -47,8 +89,61 @@ struct VoiceGlow: View {
     }
 }
 
+/// Settings picker for the Futureself theme: a 3×2 grid of live mini
+/// surfaces. Tapping a theme selects it and fires a center-out voice bloom
+/// on that preview, so the choice is felt, not just seen.
+struct FutureselfThemePicker: View {
+    @AppStorage("futureselfTheme") private var stored = FutureselfTheme.blue.rawValue
+    /// Raw value of the theme currently playing its tap bloom, if any.
+    @State private var bursting: Int?
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: 14) {
+            ForEach(FutureselfTheme.allCases) { theme in
+                let selected = stored == theme.rawValue
+                Button { select(theme) } label: {
+                    VStack(spacing: 6) {
+                        // Resting previews idle at a mid level so every
+                        // palette actually shows its colors; the tap bloom
+                        // then drives to full.
+                        Futureself(mode: .speaking,
+                                   level: bursting == theme.rawValue ? 1 : 0.32,
+                                   theme: theme)
+                            .frame(height: 44)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().strokeBorder(
+                                selected ? Color.accentColor : Color(.separator).opacity(0.5),
+                                lineWidth: selected ? 2 : 0.5))
+                        Text(theme.label)
+                            .font(.caption2)
+                            .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("\(theme.label) theme"))
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func select(_ theme: FutureselfTheme) {
+        stored = theme.rawValue
+        // Drive the preview like a real utterance: level jumps to 1 (fast
+        // attack blooms the cells center-out), then releases after a beat —
+        // the smoother's slow decay handles the exhale.
+        bursting = theme.rawValue
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            if bursting == theme.rawValue { bursting = nil }
+        }
+    }
+}
+
 /// Frame-rate exponential smoothing with asymmetric time constants: a fast
-/// attack (~60 ms) so the glow leaps with a syllable, a slow release
+/// attack (~60 ms) so the surface leaps with a syllable, a slow release
 /// (~350 ms) so it exhales instead of flickering out.
 private final class LevelSmoother {
     private var value: Float = 0

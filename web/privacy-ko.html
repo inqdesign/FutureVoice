@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>개인정보 처리방침 — nawana</title>
+<meta name="description" content="nawana가 당신의 목소리·대화·데이터를 다루는 방식." />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://nawana.app/privacy-ko.html" />
+<style>
+  :root{
+    --bg:#121110; --tx:#EDECE8; --dim:#9C9A94; --faint:#6E6C66;
+    --sans:"Helvetica Neue",Helvetica,Arial,-apple-system,"Apple SD Gothic Neo",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--tx);font-family:var(--sans);line-height:1.7;
+       -webkit-font-smoothing:antialiased;padding:48px 24px 96px}
+  main{max-width:680px;margin:0 auto}
+  a{color:var(--tx)}
+  h1{font-size:1.8rem;letter-spacing:-.02em;margin-bottom:4px}
+  .meta{color:var(--faint);font-size:.85rem;margin-bottom:40px}
+  h2{font-size:1.12rem;margin:36px 0 10px}
+  p,li{color:var(--dim);font-size:.95rem}
+  strong{color:var(--tx);font-weight:600}
+  ul{padding-left:20px;margin:8px 0}
+  li{margin:6px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.9rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #2A2925;color:var(--dim);vertical-align:top}
+  th{color:var(--tx);font-weight:600}
+  .lang{float:right;font-size:.85rem;color:var(--dim)}
+  .top{color:var(--dim);font-size:.85rem;text-decoration:none;display:inline-block;margin-bottom:28px}
+</style>
+</head>
+<body>
+<main>
+  <a class="lang" href="/privacy.html">English</a>
+  <a class="top" href="/ko.html">← nawana</a>
+  <h1>개인정보 처리방침</h1>
+  <p class="meta">nawana · Dear RoRo, 뮌헨, 독일 · 시행일 2026년 7월 23일</p>
+
+  <p>nawana는 명시적인 동의 아래 딱 한 번 목소리를 클론해, 유창해진 나와 말하기를 연습하는 언어 학습 앱입니다. 목소리는 가장 개인적인 데이터입니다. 이 문서는 우리가 그것으로 무엇을 하고, 무엇을 하지 않는지를 정확히 설명합니다.</p>
+
+  <h2>요약</h2>
+  <ul>
+    <li><strong>설정할 때 60초 녹음 한 번.</strong> 사용자가 직접 시작한 대화·연습 밖에서는 절대 녹음하지 않습니다.</li>
+    <li><strong>학습 데이터는 아이폰에 저장됩니다.</strong> 세션, 대화 기록, 드릴 카드, 단어장, 진행 상황은 기기에 저장되며 우리 서버에 올라가지 않습니다.</li>
+    <li><strong>광고 없음, 추적 없음, 분석 SDK 없음.</strong> 데이터를 광고 목적으로 판매하거나 공유하지 않으며, 앱에 제3자 추적 도구가 없습니다.</li>
+    <li><strong>언제든 삭제할 수 있습니다.</strong> 목소리를 다시 녹음하면 이전 클론은 영구 삭제됩니다. 계정을 삭제하면 음성 클론과 계정 데이터가 함께 삭제됩니다.</li>
+  </ul>
+
+  <h2>수집하는 것과 이유</h2>
+  <table>
+    <tr><th>데이터</th><th>이유</th><th>저장 위치</th></tr>
+    <tr><td>Apple 로그인 (사용자 식별자, 이메일)</td><td>계정, 구독 권한, 초대 크레딧</td><td>백엔드 (Supabase)</td></tr>
+    <tr><td>60초 음성 녹음</td><td>개인 음성 클론 생성</td><td>ElevenLabs에서 처리, 앱에는 클론 참조만 보관</td></tr>
+    <tr><td>대화·섀도잉 중 발화</td><td>전사, 유창한 문장 제안, 발음 채점 — 핵심 기능</td><td>가능한 경우 기기 내 전사, 대화 텍스트는 요청 시에만 처리되고 결과는 아이폰에 저장</td></tr>
+    <tr><td>구독·크레딧 잔액</td><td>대화, 음성 생성, 섀도잉 이용</td><td>Apple (구매) + 백엔드 (잔액)</td></tr>
+  </table>
+
+  <h2>소중히 다루는 목소리</h2>
+  <ul>
+    <li>음성 클론은 사용자가 의도적으로 60초 설정 샘플을 녹음한 후에만 만들어집니다. 백그라운드 청취는 없습니다.</li>
+    <li>클론은 <strong>오직 본인의 목소리만</strong> 재현합니다. nawana로 타인의 목소리를 클론할 수 없습니다.</li>
+    <li>언제든 다시 녹음할 수 있습니다 — 새 클론이 만들어지면 이전 클론은 영구 삭제됩니다.</li>
+    <li>목소리 또는 계정 전체를 앱 안에서 언제든 삭제할 수 있습니다 (Me → 계정).</li>
+  </ul>
+
+  <h2>데이터를 위탁 처리하는 곳</h2>
+  <p>앱은 AI 제공사와 직접 통신하지 않습니다. 모든 요청은 자체 백엔드를 경유하므로, 제공사 API 키가 휴대폰에 존재하지 않습니다.</p>
+  <ul>
+    <li><strong>Supabase</strong> — 인증, 구독, AI 요청의 안전한 중계</li>
+    <li><strong>ElevenLabs</strong> — 음성 클론 생성과 유창한 문장의 음성 합성</li>
+    <li><strong>Google (Gemini)</strong> — 대화 응답, 유창한 문장 제안, 세션 분석. 텍스트만 전송되며 오디오는 Google에 전송되지 않습니다</li>
+    <li><strong>Apple</strong> — Apple 로그인, 구독, 기기 내 음성 인식</li>
+  </ul>
+  <p>위 수탁사는 계약에 따라 당사를 위해서만 데이터를 처리하며, 자체 목적으로 사용할 수 없습니다.</p>
+
+  <h2>하지 않는 것</h2>
+  <ul>
+    <li>광고 없음, 데이터 판매 없음, 앱 간 추적 없음</li>
+    <li>앱 내 제3자 분석 SDK 없음</li>
+    <li>사용자가 시작하지 않은 활동에서의 녹음 없음</li>
+    <li>목소리·대화를 자사 또는 제3자 AI 모델 학습에 사용하지 않음</li>
+  </ul>
+
+  <h2>보관과 삭제</h2>
+  <ul>
+    <li>학습 데이터(세션·드릴·진행 상황)는 기기에 저장되며 앱을 삭제하면 함께 사라집니다.</li>
+    <li>음성 클론은 교체·삭제하거나 계정을 삭제할 때까지 유지됩니다.</li>
+    <li>계정 삭제(앱 내 Me → 계정 → 계정 삭제)는 음성 클론, 계정 기록, 크레딧 잔액을 제거합니다. 구매 기록은 Apple의 정책에 따라 Apple이 보관합니다.</li>
+  </ul>
+
+  <h2>이용자의 권리</h2>
+  <p>개인정보 처리 책임자는 Dear RoRo(독일 뮌헨)입니다. 이용자는 자신의 개인정보에 대한 열람·정정·이동·처리 제한·삭제를 요구할 권리와 감독 기관에 민원을 제기할 권리가 있습니다. 음성 데이터는 명시적 동의를 근거로 처리되며, 목소리 또는 계정 삭제로 언제든 동의를 철회할 수 있습니다.</p>
+
+  <h2>아동</h2>
+  <p>nawana는 만 13세 미만(또는 해당 국가의 최소 연령 미만) 아동을 대상으로 하지 않으며, 아동의 데이터를 고의로 수집하지 않습니다.</p>
+
+  <h2>변경과 문의</h2>
+  <p>중요한 변경이 있을 경우 앱 또는 이 페이지에서 알립니다. 문의: <a href="mailto:hello.dearroroapp@gmail.com">hello.dearroroapp@gmail.com</a></p>
+
+  <p class="meta" style="margin-top:48px">© 2026 Dear RoRo · Munich</p>
+</main>
+</body>
+</html>

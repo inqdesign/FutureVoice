@@ -3,7 +3,7 @@ import SwiftUI
 
 /// First screen — a swipeable, auto-playing carousel that shows the app's value
 /// through previews built from the SAME components the real screens use (the
-/// VoiceGlow dialer orb, the plain transcript feed, the shadow karaoke
+/// Futureself dialer orb, the plain transcript feed, the shadow karaoke
 /// timeline, the CEFR level equalizer) — not generic icons or chat bubbles.
 /// A pill Sign in with Apple is pinned below.
 struct WelcomeView: View {
@@ -11,6 +11,15 @@ struct WelcomeView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var page = 0
     @State private var autoplay = true
+
+    init() {
+        #if DEBUG
+        // Screenshot helper: `-welcomePage <n>` lands directly on one slide.
+        let start = UserDefaults.standard.integer(forKey: "welcomePage")
+        _page = State(initialValue: start)
+        _autoplay = State(initialValue: start == 0)
+        #endif
+    }
     @State private var showInvite = false
     @State private var inviteCode = ""
 
@@ -23,12 +32,14 @@ struct WelcomeView: View {
     private static let features: [Feature] = [
         Feature(title: "Talk with a fluent you",
                 subtitle: "Call your fluent self and just talk — real conversations in your own voice, fluent and unmistakably you."),
-        Feature(title: "Watch real situations play out",
-                subtitle: "Scenes built from your life and interests — watch, then master every word, expression, and line inside."),
+        Feature(title: "Bring your people in",
+                subtitle: "The people you actually talk to — your barista, your boss, your doctor — become the cast of every practice."),
+        Feature(title: "Watch it before it happens",
+                subtitle: "Tomorrow's situation, played out with your people — watch how your fluent self handles it, line by line."),
         Feature(title: "Make the words yours",
                 subtitle: "Shadow the exact lines in your own voice, at any speed, until they stick."),
         Feature(title: "Grow your word world",
-                subtitle: "Every word you speak joins your cloud — tap any one for its meaning and examples.")
+                subtitle: "Every word you speak joins your cloud — drag through it, tap any word for meaning and examples.")
     ]
 
     var body: some View {
@@ -47,7 +58,10 @@ struct WelcomeView: View {
 
             signInArea
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        // systemBackground (not grouped) — the same ground the real
+        // conversation screens use, so DialogueLine's neutral bubble fill in
+        // the Talk/Watch heroes reads as a filled bubble, not empty text.
+        .background(Color(.systemBackground).ignoresSafeArea())
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 6_500_000_000)
@@ -84,34 +98,21 @@ struct WelcomeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Mockups — real screenshots of the actual app screens
+    // MARK: - Key visuals — the real components, alive
 
-    /// Each slide is a genuine screenshot of the live screen (captured via the
-    /// DEBUG capture harness), shown in a phone frame — not a reconstruction.
-    /// welcome_talk · welcome_watch · welcome_shadow · welcome_vocab.
-    private static let shots = ["welcome_talk", "welcome_watch", "welcome_shadow", "welcome_vocab"]
-
+    /// Each slide is a LIVE composition of the actual app UI (WelcomeHeroes):
+    /// the real Futureself pill taking a call turn, the real PersonBubbles
+    /// drifting, a scene playing through DialogueLine, the shadow karaoke
+    /// line, and the word cloud panning itself. No screenshots.
+    @ViewBuilder
     private func mock(_ i: Int) -> some View {
-        phoneShot(Self.shots[i])
-    }
-
-    /// A real screen screenshot inside a simple phone frame — thin dark bezel,
-    /// rounded corners, soft drop shadow. The image is the actual app.
-    private func phoneShot(_ name: String) -> some View {
-        Image(name)
-            .resizable()
-            .scaledToFit()
-            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-            .padding(5)
-            .background(
-                RoundedRectangle(cornerRadius: 35, style: .continuous)
-                    .fill(Color(.label).opacity(0.85))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 35, style: .continuous)
-                    .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.18), radius: 18, y: 10)
+        switch i {
+        case 0:  TalkHero()
+        case 1:  PeopleHero()
+        case 2:  WatchHero()
+        case 3:  ShadowHero()
+        default: VocabHero()
+        }
     }
 
     // MARK: - Page dots + sign in
@@ -144,6 +145,18 @@ struct WelcomeView: View {
             .padding(.horizontal, 32)
 
             inviteArea
+
+            #if DEBUG
+            // Testing only: walk the onboarding flow without Apple sign-in.
+            // RootView's debugSkipAuth gate reads this; never compiled into
+            // release builds.
+            Button("Skip sign-in (debug)") {
+                UserDefaults.standard.set(true, forKey: "debugSkipAuth")
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .padding(.top, 2)
+            #endif
 
             if auth.isWorking { ProgressView().padding(.top, 4) }
             if let err = auth.lastError {

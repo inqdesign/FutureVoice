@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -21,7 +22,7 @@ struct ExpressionsWidget: Widget {
     var body: some WidgetConfiguration { StudyWidgetConfiguration(section: .expressions).body }
 }
 
-/// Shared configuration — both widgets are the same list, only their data
+/// Shared configuration — both widgets are the same pinboard, only their data
 /// source, copy, and deep link differ (all carried by `StudyWidgetSection`).
 struct StudyWidgetConfiguration {
     let section: StudyWidgetSection
@@ -32,11 +33,36 @@ struct StudyWidgetConfiguration {
             provider: StudyTimelineProvider(section: section)
         ) { entry in
             StudyWidgetView(entry: entry)
-                .containerBackground(Color(.systemBackground), for: .widget)
+                .containerBackground(for: .widget) {
+                    // Corkboard behind the stickies — fixed grain: the board
+                    // stays put while notes come and go.
+                    CorkSurface()
+                }
         }
         .configurationDisplayName(section.displayName)
         .description(section.galleryDescription)
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
+    }
+}
+
+// MARK: - Shuffle (interactive)
+
+/// The in-widget Shuffle button. Bumps the section's shuffle cursor in the
+/// App Group so the timeline provider advances the visible words on the next
+/// (immediate) reload — the one lever that gives a widget on-demand motion.
+struct ShuffleStudyIntent: AppIntent {
+    static var title: LocalizedStringResource = "Shuffle words"
+
+    @Parameter(title: "Section") var sectionRaw: String
+
+    init() {}
+    init(section: StudyWidgetSection) { sectionRaw = section.rawValue }
+
+    func perform() async throws -> some IntentResult {
+        if let section = StudyWidgetSection(rawValue: sectionRaw) {
+            StudyWidgetSnapshotStore.bumpShuffle(section, by: 3)
+        }
+        return .result()
     }
 }
 
@@ -48,13 +74,18 @@ struct StudyEntry: TimelineEntry {
     /// The collection, rotated so this entry's window starts at a fresh item.
     let items: [StudyWidgetItem]
     let total: Int
+    let theme: Int
+    /// Drives the cork grain + sticky jitter; shifts with the window so the
+    /// board re-pins subtly on each slide and on every manual shuffle.
+    let seed: Int
 }
 
 struct StudyTimelineProvider: TimelineProvider {
     let section: StudyWidgetSection
 
     func placeholder(in context: Context) -> StudyEntry {
-        StudyEntry(date: Date(), section: section, items: sampleItems, total: sampleItems.count)
+        StudyEntry(date: Date(), section: section, items: sampleItems,
+                   total: sampleItems.count, theme: 0, seed: 0)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (StudyEntry) -> Void) {
@@ -84,87 +115,86 @@ struct StudyTimelineProvider: TimelineProvider {
 
     /// One entry per 30 minutes for ~6h, each sliding the list window forward
     /// a few rows — spaced exposure to the whole collection instead of the
-    /// same pinned few. `.atEnd` re-reads the snapshot and starts over.
+    /// same pinned few. The manual shuffle cursor is folded into the offset so
+    /// a tap jumps the window immediately. `.atEnd` re-reads and starts over.
     private func entries(from snapshot: StudyWidgetSnapshot, now: Date = Date()) -> [StudyEntry] {
         let items = snapshot.items
+        let theme = StudyWidgetSnapshotStore.themeIndex
+        let shuffle = StudyWidgetSnapshotStore.shuffleCursor(section)
         guard !items.isEmpty else {
-            return [StudyEntry(date: now, section: section, items: [], total: 0)]
+            return [StudyEntry(date: now, section: section, items: [], total: 0, theme: theme, seed: shuffle)]
         }
         let stride = 3
         let slots = items.count <= stride ? 1 : 12
         return (0..<slots).map { slot in
-            let offset = (slot * stride) % items.count
+            let base = slot * stride + shuffle
+            let offset = ((base % items.count) + items.count) % items.count
             return StudyEntry(
                 date: now.addingTimeInterval(Double(slot) * 30 * 60),
                 section: section,
                 items: Array(items[offset...] + items[..<offset]),
-                total: snapshot.total
+                total: snapshot.total,
+                theme: theme,
+                seed: base
             )
         }
     }
 }
 
-// MARK: - Views
+// MARK: - View
 
 struct StudyWidgetView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var scheme
     let entry: StudyEntry
 
     var body: some View {
         Group {
-            switch family {
-            case .accessoryRectangular: lockScreen
-            case .systemLarge:          list(rows: 8, spacing: 10)
-            case .systemMedium:         list(rows: 4, spacing: 7)
-            default:                    list(rows: 3, spacing: 7)
+            if family == .accessoryRectangular {
+                lockScreen
+            } else {
+                let style = boardStyle
+                PinboardBoard(section: entry.section, items: entry.items,
+                              theme: entry.theme, seed: entry.seed,
+                              capacity: style.capacity, columns: style.columns,
+                              noteSpacing: style.spacing, noteSize: style.size,
+                              fillsBoard: style.fills) {
+                    if family != .systemSmall {
+                        Button(intent: ShuffleStudyIntent(section: entry.section)) {
+                            ShuffleSticker()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
         .widgetURL(entry.section.deepLink)
     }
 
-    private func list(rows: Int, spacing: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: spacing) {
-            header
-            if entry.items.isEmpty {
-                Spacer(minLength: 0)
-                emptyState
-                Spacer(minLength: 0)
-            } else {
-                ForEach(entry.items.prefix(rows), id: \.self) { item in
-                    row(item)
-                }
-                Spacer(minLength: 0)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    private struct BoardStyle {
+        let capacity: Int
+        let columns: Int
+        let size: StickyNote.Size
+        let fills: Bool
+        let spacing: CGFloat
     }
 
-    private func row(_ item: StudyWidgetItem) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 6) {
-            Text(item.text)
-                .font(.subheadline.weight(entry.section == .words ? .semibold : .regular))
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            if entry.section.showsNote, !item.note.isEmpty {
-                Text(item.note)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var header: some View {
-        HStack(spacing: 4) {
-            Label(entry.section.shortLabel, systemImage: entry.section.systemImage)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-            if entry.total > 0 {
-                Text("\(entry.total)")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.accentColor)
-            }
+    /// Per-family board shape. Words are short → two columns on wide
+    /// families; expressions are strips → always one. Large boards grow the
+    /// paper (`.large` + fills) so notes scale with the widget instead of
+    /// leaving bare cork.
+    private var boardStyle: BoardStyle {
+        switch family {
+        case .systemLarge:
+            return entry.section == .words
+                ? BoardStyle(capacity: 8, columns: 2, size: .large, fills: true, spacing: 16)
+                : BoardStyle(capacity: 6, columns: 1, size: .large, fills: true, spacing: 16)
+        case .systemMedium:
+            return entry.section == .words
+                ? BoardStyle(capacity: 4, columns: 2, size: .compact, fills: false, spacing: 12)
+                : BoardStyle(capacity: 3, columns: 1, size: .regular, fills: true, spacing: 12)
+        default:
+            return BoardStyle(capacity: 3, columns: 1, size: .regular, fills: true, spacing: 12)
         }
     }
 
@@ -191,17 +221,5 @@ struct StudyWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(entry.section == .words ? "No saved words yet" : "Nothing collected yet")
-                .font(.subheadline.weight(.semibold))
-            Text(entry.section == .words
-                 ? "Tap a word in a talk to save it."
-                 : "Have a talk — phrases land here.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
     }
 }

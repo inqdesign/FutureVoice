@@ -45,6 +45,16 @@ struct PracticeTab: View {
             case .scenarios: return "Scenarios"
             }
         }
+        /// Category color for the selected-chip fill; nil = the cross-cutting
+        /// Studying page, which keeps the monochrome label fill.
+        var color: Color? {
+            switch self {
+            case .studying:  return nil
+            case .talks:     return Books.talksColor
+            case .topics:    return Books.topicsColor
+            case .scenarios: return Books.scenariosColor
+            }
+        }
     }
 
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
@@ -159,14 +169,15 @@ struct PracticeTab: View {
                 HStack(spacing: 8) {
                     ForEach(Shelf.allCases, id: \.self) { s in
                         Button { withAnimation { shelf = s } } label: {
-                            // Fitness+-style pills: monochrome selection — the
-                            // active chip fills with the label color and
-                            // inverts its text.
+                            // Fitness+-style pills, but the active book chip
+                            // fills with its category color (white text works
+                            // on all three hues in both appearances);
+                            // Studying keeps the monochrome label fill.
                             Text(s.title)
                                 .font(.body.weight(.medium))
                                 .padding(.horizontal, 16).padding(.vertical, 9)
-                                .background(Capsule().fill(shelf == s ? Color(.label) : Color(.secondarySystemGroupedBackground)))
-                                .foregroundStyle(shelf == s ? Color(.systemBackground) : Color.primary)
+                                .background(Capsule().fill(shelf == s ? (s.color ?? Color(.label)) : Color(.secondarySystemGroupedBackground)))
+                                .foregroundStyle(shelf == s ? (s.color != nil ? Color.white : Color(.systemBackground)) : Color.primary)
                         }
                         .buttonStyle(.plain)
                         .id(s)

@@ -451,3 +451,13 @@ enabled = true
 # verified against Apple's pinned root CAs inside the function.
 verify_jwt = false
 entrypoint = "./functions/apple-webhook/index.ts"
+
+[functions.account-delete]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/account-delete/index.ts"
+
+[functions.waitlist-confirm]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/waitlist-confirm/index.ts"

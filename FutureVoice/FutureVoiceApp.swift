@@ -59,6 +59,12 @@ final class AppState: ObservableObject {
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
+    /// True while the Talk tab is showing its ROOT list (nothing pushed).
+    /// ConversationHome flips it from its root's onAppear/onDisappear;
+    /// RootTabView uses it to keep the floating Free-talk pill off pushed
+    /// pages (Activity, scenario lists, …).
+    @Published var talkRootVisible = true
+
     @Published var voiceCloneId: String? {
         didSet { UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey) }
     }
@@ -399,6 +405,39 @@ final class AppState: ObservableObject {
     func resetVoiceClone() {
         pendingDeleteVoiceId = voiceCloneId
         voiceCloneId = nil
+    }
+
+    /// Post-account-deletion local wipe — the device should look factory-fresh
+    /// to whoever signs in next. The server side (clone, credits, auth user)
+    /// is already gone by the time this runs; here we remove every JSON store
+    /// and audio file in Documents, clear all futurevoice.* defaults, and
+    /// reset the in-memory state that gates RootView so a future sign-in
+    /// starts at setup instead of inheriting a ghost account's data.
+    func wipeLocalData() {
+        let fm = FileManager.default
+        if let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first {
+            let contents = (try? fm.contentsOfDirectory(at: docs, includingPropertiesForKeys: nil)) ?? []
+            for url in contents { try? fm.removeItem(at: url) }
+        }
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("futurevoice.") {
+            defaults.removeObject(forKey: key)
+        }
+        // Published state — the didSet observers re-persist the fresh values,
+        // which is exactly what a first-run install would look like.
+        voiceCloneId = nil
+        pendingDeleteVoiceId = nil
+        persona = nil
+        setupComplete = false
+        learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
+        topicSuggestions = []
+        counterparts = []
+        watchDialogues = []
+        scenarios = []
+        shadowAttempts = []
+        savedLines = []
+        weeklyReports = []
+        StudyWidgetRefresher.refresh()   // blank the home-screen widgets too
     }
 
     /// Clone (or re-clone) the voice from a recorded sample WAV. Normalizes the

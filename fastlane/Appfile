@@ -1,0 +1,2 @@
+app_identifier("com.roro.futurevoice")
+# Auth uses an App Store Connect API key (see Fastfile) — no Apple ID password here.

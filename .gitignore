@@ -43,3 +43,9 @@ Recordings/
 # Misc
 *.swp
 *.bak
+
+# fastlane — never commit the ASC API key or run artifacts
+fastlane/AuthKey*.p8
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/README.md
