@@ -46,6 +46,16 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
     /// no word timings (e.g. they'd cost credits the user doesn't have).
     /// Playback is pure time-based either way; words only add snapping.
     @State private var timeSelection: ClosedRange<Double>?
+    /// Undo stack of prior selections. Every committed change PUSHES the
+    /// region you were leaving; the back button POPS one, so repeated taps
+    /// walk backward through every region you drilled — the last pop lands on
+    /// the whole line you started from.
+    @State private var selectionHistory: [ClosedRange<Int>] = []
+    /// Selection captured at the START of a trimmer drag; pushed onto
+    /// `selectionHistory` when the drag ends having actually moved.
+    @State private var dragStartSelection: ClosedRange<Int>?
+    /// Set by the restore button so its own pop isn't re-logged as history.
+    @State private var suppressNextHistory = false
 
     private enum DragMode { case start, end, scrub }
 
@@ -63,16 +73,29 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
         return nil
     }
 
+    /// The back button is live whenever there's a prior selection to pop.
+    private var restoreAvailable: Bool { !selectionHistory.isEmpty }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             timeline
+                .padding(.horizontal, 4)
             labels
             controls
         }
-        .padding(14)
+        // Roomier than before — the trimmer breathes, and the vertical
+        // padding gives the transport row space from the card edges.
+        .padding(.horizontal, 18)
+        .padding(.vertical, 20)
+        // Glass, not a solid fill — the scroll content behind the bottom
+        // inset shows through as a frosted blur.
         .background(
             RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
         )
         .onAppear {
             guard !player.isPlaying, let data = try? Data(contentsOf: audioURL) else { return }
@@ -98,6 +121,30 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
             if player.isPlaying, let s = selectionTimes {
                 player.updateSegment(from: s.start, to: s.end)
             }
+        }
+        // Karaoke timings recovered in the BACKGROUND arrive after this view
+        // is already on screen (audio plays immediately; timings catch up).
+        // selectionTimes only reads `timeSelection` while timings are empty —
+        // so once they land, migrate the default whole-line (or a drag made
+        // in the meantime) into a word range, or the highlight would vanish.
+        // History for selection changes that DON'T come from a trimmer drag
+        // (word taps on the target line). Mid-drag frames are excluded via
+        // dragMode; the drag's own history is committed once, in onEnded.
+        .onChange(of: selectedWordRange) { old, new in
+            guard dragMode == nil else { return }
+            if suppressNextHistory { suppressNextHistory = false; return }
+            if let old, old != new { selectionHistory.append(old) }
+        }
+        .onChange(of: timings) { _, new in
+            guard !new.isEmpty, selectedWordRange == nil else { return }
+            if let t = timeSelection {
+                let lo = new.firstIndex { Double($0.endMs) / 1000.0 > t.lowerBound } ?? 0
+                let hi = new.lastIndex { Double($0.startMs) / 1000.0 < t.upperBound } ?? (new.count - 1)
+                selectedWordRange = min(lo, hi)...max(lo, hi)
+            } else {
+                selectedWordRange = 0...(new.count - 1)
+            }
+            timeSelection = nil
         }
     }
 
@@ -162,6 +209,11 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
         DragGesture(minimumDistance: 0)
             .onChanged { g in
                 if dragMode == nil {
+                    // Snapshot the selection as this gesture BEGINS — committed
+                    // at drag end as the "previous" so the bounce-back button
+                    // returns to the region you were on before, not a mid-drag
+                    // intermediate value.
+                    dragStartSelection = selectedWordRange
                     if let sx, abs(g.startLocation.x - sx) < TLConst.grabRadius {
                         dragMode = .start
                     } else if let ex, abs(g.startLocation.x - ex) < TLConst.grabRadius {
@@ -189,6 +241,12 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
                     player.seek(to: time(at: g.location.x, w: w, dur: dur))
                 }
                 dragMode = nil
+                // A completed drag that actually moved the region → push
+                // where we came from onto the back-button history.
+                if let from = dragStartSelection, from != selectedWordRange {
+                    selectionHistory.append(from)
+                }
+                dragStartSelection = nil
             }
     }
 
@@ -219,6 +277,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
             Button { togglePlay() } label: {
                 Image(systemName: player.isPlaying ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 44))
+                    .frame(width: 44, height: 44)
                     .foregroundStyle(.tint)
             }
             .buttonStyle(.plain)
@@ -226,6 +285,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
             Button { loop.toggle(); player.setLoopEnabled(loop) } label: {
                 Image(systemName: loop ? "repeat.circle.fill" : "repeat.circle")
                     .font(.system(size: 44))
+                    .frame(width: 44, height: 44)
                     .foregroundStyle(loop ? Color.accentColor : Color.secondary)
             }
             .buttonStyle(.plain)
@@ -234,13 +294,23 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
 
             speedMenu
 
-            Button { selectedWordRange = nil; timeSelection = nil } label: {
-                Image(systemName: "xmark.circle")
+            // Step back through the regions you drilled — ALWAYS visible so
+            // the feature is discoverable; gray until there's history to pop.
+            // Each tap walks one region backward; the last lands on the full
+            // line you started from.
+            Button {
+                guard let prev = selectionHistory.popLast() else { return }
+                suppressNextHistory = true
+                selectedWordRange = prev
+            } label: {
+                Image(systemName: "arrow.uturn.backward.circle")
                     .font(.system(size: 44))
-                    .foregroundStyle(selectionTimes == nil ? Color(.tertiaryLabel) : Color.secondary)
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(restoreAvailable ? Color.secondary : Color(.tertiaryLabel))
             }
             .buttonStyle(.plain)
-            .disabled(selectionTimes == nil)
+            .disabled(!restoreAvailable)
+            .accessibilityLabel("Previous selection")
         }
         .overlay { micControl }
     }
@@ -256,6 +326,8 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
             Text(speedLabel(playbackRate))
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 // Primary (not secondary) at 1× — on the dark pill the muted
                 // gray was near-invisible, so the label looked blank; accent
                 // still marks a changed speed.
