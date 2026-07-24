@@ -168,6 +168,52 @@ enum AudioLoudness {
         return header + pcm
     }
 
+    /// Decode an on-disk audio file (any AVFoundation-readable container — the
+    /// conversation mic capture is `.m4a`/AAC) to a 16 kHz mono 16-bit PCM WAV.
+    ///
+    /// Why: the user's turn audio is sent to Gemini as ground truth so grammar
+    /// scoring reflects what they ACTUALLY said, not the error-prone on-device
+    /// STT text. But the raw `.m4a` bytes were being labelled `audio/aac` — a
+    /// container/MIME mismatch that can make the model quietly ignore the audio
+    /// and fall back to the STT guess (so a clipped word reads as the learner's
+    /// grammar mistake). WAV is unambiguous; 16 kHz mono keeps a ~1-minute turn
+    /// well under the inline-attachment size cap. Returns nil on any failure —
+    /// the caller then sends no audio rather than broken audio.
+    static func wav16kMono(fromFileAt url: URL) -> Data? {
+        guard let inFile = try? AVAudioFile(forReading: url) else { return nil }
+        let inFormat = inFile.processingFormat
+        let frameCount = AVAudioFrameCount(inFile.length)
+        guard frameCount > 0,
+              let inBuffer = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: frameCount),
+              (try? inFile.read(into: inBuffer)) != nil,
+              inBuffer.frameLength > 0 else { return nil }
+
+        guard let outFormat = AVAudioFormat(commonFormat: .pcmFormatInt16,
+                                            sampleRate: 16_000, channels: 1,
+                                            interleaved: true),
+              let converter = AVAudioConverter(from: inFormat, to: outFormat) else { return nil }
+
+        let ratio = 16_000.0 / inFormat.sampleRate
+        let outCapacity = AVAudioFrameCount(Double(inBuffer.frameLength) * ratio) + 4096
+        guard let outBuffer = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: outCapacity) else { return nil }
+
+        var fed = false
+        var convError: NSError?
+        let status = converter.convert(to: outBuffer, error: &convError) { _, inStatus in
+            if fed { inStatus.pointee = .noDataNow; return nil }
+            fed = true
+            inStatus.pointee = .haveData
+            return inBuffer
+        }
+        guard status != .error, convError == nil,
+              outBuffer.frameLength > 0,
+              let channelData = outBuffer.int16ChannelData else { return nil }
+
+        let byteCount = Int(outBuffer.frameLength) * MemoryLayout<Int16>.size
+        let pcm = Data(bytes: channelData[0], count: byteCount)
+        return wavData(fromPCM16: pcm, sampleRate: 16_000, channels: 1)
+    }
+
     /// Peak-normalizes a recorded voice-clone WAV to near full scale BEFORE it
     /// is uploaded to ElevenLabs. IVC reproduces the loudness of its sample, so
     /// a quiet phone-mic take (often -26 to -34 dBFS) yields a quiet clone that

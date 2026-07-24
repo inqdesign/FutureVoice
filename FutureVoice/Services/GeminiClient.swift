@@ -45,7 +45,7 @@ final class GeminiClient {
         var inlineAudio: InlineAudio? = nil
 
         struct InlineAudio {
-            let mimeType: String     // e.g. "audio/aac"
+            let mimeType: String     // e.g. "audio/wav"
             let base64Data: String
         }
     }

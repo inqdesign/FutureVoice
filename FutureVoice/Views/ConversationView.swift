@@ -569,6 +569,15 @@ struct ConversationView: View {
 
     private func openConversation() async {
         phase = .thinking
+        // The opener plays before any mic session exists — arm the call's
+        // audio session or the greeting streams into `.soloAmbient` (muted by
+        // the ring switch on most phones). Detached: `setActive` can block
+        // for hundreds of ms, and inline it lands exactly on the open-morph
+        // frames. It runs while the opener text is fetched; awaited below
+        // before anything plays.
+        let audioSessionReady = Task.detached(priority: .userInitiated) {
+            AudioSessionRouting.warmUpForConversation()
+        }
         do {
             let opener: String
             if topicIsNews, let grounded = await openNewsConversation() {
@@ -606,6 +615,8 @@ struct ConversationView: View {
             }
             // The screen may have closed while the opener was being fetched.
             guard !isTornDown else { return }
+            // Session must be armed before playback OR the mic fallback below.
+            await audioSessionReady.value
             // Speak the opener in the cloned voice — a call starts with the
             // fluent self TALKING, not a line to read. Repeated openers for
             // the same phrasing hit the content cache, and the idempotency
@@ -767,10 +778,14 @@ struct ConversationView: View {
             // the reply. ~32 kbps AAC, so even a long turn stays small.
             var turnAudio: GeminiClient.Message.InlineAudio?
             if let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
-               let url = turn.audioURL, let data = try? Data(contentsOf: url),
-               !data.isEmpty, data.count <= 2_000_000 {
-                turnAudio = .init(mimeType: "audio/aac",
-                                  base64Data: data.base64EncodedString())
+               let url = turn.audioURL,
+               // Convert the .m4a capture to 16kHz mono WAV: the previous path
+               // shipped raw .m4a bytes mislabelled "audio/aac", so the model
+               // could ignore the audio and score grammar off the STT text.
+               let wav = AudioLoudness.wav16kMono(fromFileAt: url),
+               !wav.isEmpty, wav.count <= 3_000_000 {   // ~90s at 16kHz mono
+                turnAudio = .init(mimeType: "audio/wav",
+                                  base64Data: wav.base64EncodedString())
             }
             let payload: ConversationTurnPayload
             do {
@@ -1146,8 +1161,18 @@ struct ConversationView: View {
     }
 
     private func refreshDashboard() {
-        dueDrillCount = DrillStore.shared.dueCount()
-        dashboard = PracticeStats.snapshot()
+        // Off-main: `PracticeStats.snapshot()` decodes the FULL session
+        // archive — on the appear frame it visibly hitches the pill→call
+        // morph, and it only gets slower as sessions accumulate. Reads only,
+        // so a background hop is safe; results land back on the main actor.
+        Task.detached(priority: .utility) {
+            let due = DrillStore.shared.dueCount()
+            let snap = PracticeStats.snapshot()
+            await MainActor.run {
+                dueDrillCount = due
+                dashboard = snap
+            }
+        }
     }
 
     /// Exit the call screen — back to the presenter's morph when hosted in

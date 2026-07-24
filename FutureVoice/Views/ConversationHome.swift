@@ -99,6 +99,16 @@ struct ConversationHome: View {
                 }
             }
             .onAppear(perform: reload)
+            // Warm the free-talk opener pool while the user is still on the
+            // launcher — the first "Let's talk" then greets from a canned
+            // line instead of blocking on a live Gemini call.
+            .task {
+                await FreeTalkOpeners.shared.warmUp(
+                    language: appState.targetLanguage,
+                    personaName: appState.persona?.displayName,
+                    proficiency: appState.proficiency
+                )
+            }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 // Only pitch the trial to someone who still has free credits;
                 // a spent balance means they've already used the free tier.
@@ -108,7 +118,7 @@ struct ConversationHome: View {
                 MeTab().environmentObject(appState).environmentObject(auth)
             }
             .sheet(isPresented: $showingBuilder) {
-                ScenarioBuilderSheet(counterparts: appState.counterparts) { newScenario in
+                ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
                     appState.saveScenario(newScenario)
                     // Straight into the conversation with the fresh scenario.
                     runScenario(newScenario)
@@ -513,7 +523,7 @@ struct TalkScenariosListView: View {
             }
         }
         .sheet(isPresented: $showingBuilder) {
-            ScenarioBuilderSheet(counterparts: appState.counterparts) { newScenario in
+            ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
                 appState.saveScenario(newScenario)
                 // Straight into the conversation with the fresh scenario.
                 onPick(newScenario)

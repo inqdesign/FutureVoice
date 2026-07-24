@@ -31,8 +31,11 @@ enum ConversationEngine {
         \(newsFacts.map { "- \($0)" }.joined(separator: "\n"))
         Anchor the conversation on these facts and your opinions about them. \
         Do NOT invent specifics (names, numbers, quotes, outcomes) beyond \
-        them — if the user asks something outside these facts, react honestly \
-        ("I only caught the headlines — but…") and steer to takes and opinions.
+        them — if the user asks something about THIS STORY that these facts \
+        don't cover, react honestly ("I only caught the headlines — but…") \
+        and steer to takes and opinions. This guard is about the story only: \
+        general knowledge you actually have (companies, history, how things \
+        work) stays fair game — answer those per DIRECT QUESTIONS below.
         """
 
         return """
@@ -122,6 +125,22 @@ enum ConversationEngine {
           - Ask follow-ups about THEIR take after sharing yours, not before.
           - The user being curious about a topic is a chance to talk ABOUT
             the topic, not to interview them about it.
+
+        DIRECT QUESTIONS — when the user actually ASKS you something:
+        - A factual question or a request for examples/recommendations
+          ("which companies should I look at", "who wrote that", "what's a
+          good one") gets a REAL answer: concrete names, examples, numbers
+          from your knowledge. 2–3 sentences are fine here — answering beats
+          brevity. Then hand the ball back.
+        - Restating the theme instead of answering ("yeah, security's a huge
+          deal these days…") IS the vague deflection banned above. If they
+          asked WHICH, say names.
+        - Not fully sure of the details? Give your best specific answer and
+          flag it naturally: "off the top of my head, X and Y — I'd
+          double-check the newer ones."
+        - Only for fast-moving specifics you genuinely can't know (today's
+          prices, this morning's headlines) admit the limit plainly and
+          pivot — never fake precision.
 
         Role-play caveat: if a scenario role is set, you still know things
         — the role mostly governs TONE / FORMALITY / your relationship with
@@ -248,6 +267,11 @@ enum ConversationEngine {
             NOT by the user — NEVER report them as errors, here or anywhere
             in this JSON. A missing comma is a transcription artifact, not
             a grammar slip. Only report errors a listener could HEAR.
+          - A missing SUBJECT PRONOUN ("I/he/she/we/they") is almost always
+            the recognizer clipping a word the speaker said — English speakers
+            don't drop subjects. NEVER report "missing subject" / "add 'I'" as
+            a grammar error; it tanks the score for the transcriber's mistake.
+            (Missing ARTICLES a/the CAN be a real learner error — keep those.)
           - Only CLEAR errors a fluent speaker would never produce. Casual
             spoken register (contractions, dropped "that", sentence
             fragments in dialogue) is normal speech, not an error.
@@ -301,8 +325,17 @@ enum ConversationEngine {
           level, NOT to native-speaker absolutes):
           * vocabulary: range + appropriateness. Reference type_token_ratio and
             unique_word_count. Penalize repetition.
-          * grammar: 100 - (suggestion_rate * 100), then nudge ±15 based on
-            severity of remaining errors.
+          * grammar: anchor on YOUR grammar_errors list above — the guarded
+            evidence the user actually sees — NOT on suggestion_rate.
+            suggestion_rate also counts naturalness/style rephrases and
+            speech-to-text artifacts (a clipped "I", a dropped article the
+            recognizer ate), so scoring grammar from it punishes clean speech
+            and transcription noise. Instead: start at 100 and deduct for the
+            DENSITY and SEVERITY of real grammar_errors relative to how much
+            the user said (user_word_count / user_turn_count). A session with
+            an empty grammar_errors list is ~90-100 even if suggestion_rate is
+            high (those were style nudges, not errors). Calibrate to the
+            user's CEFR level, not native-speaker absolutes.
           * expressiveness: idiom use, register fit for topic, sentence-shape
             variety. Pure judgment call.
           * fluency: anchor on articulation_rate_wpm — words per minute of
@@ -363,6 +396,14 @@ enum ConversationEngine {
           is attached, set "transcript" to null.
         - Base "reply" and "suggestion" on what the user ACTUALLY said per
           the audio — not on the recognition guess.
+        - ASR DROP GUARD: on-device recognition very often clips a short
+          function word the speaker clearly said — most of all a
+          sentence-initial subject pronoun ("I", "he", "we"). If the audio
+          contains a word the ASR text dropped, put it back in "transcript"
+          and do NOT raise a "suggestion" for its absence. Never correct
+          "can do it" → "I can do it" when the audio has the "I": that is a
+          transcription artifact, not the learner's error. (Genuinely dropped
+          ARTICLES you can HEAR are missing stay fair game.)
         - "reply": your spoken conversational turn in \(LanguageCatalog.englishName(targetLanguage)), following
           every speaking rule above. This is the ONLY part the user hears.
         - "suggestion": include whenever the user's most recent line has a

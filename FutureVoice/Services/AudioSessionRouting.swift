@@ -57,6 +57,21 @@ enum AudioSessionRouting {
         session.currentRoute.outputs.contains { externalOutputPorts.contains($0.portType) }
     }
 
+    /// Pre-arm the session for a conversation call, BEFORE the first
+    /// fluent-self line plays. The streaming player deliberately never touches
+    /// the session (mid-call it must inherit LiveTranscriber's `.playAndRecord`)
+    /// — but on the first call of a launch nothing has configured one yet, so
+    /// the opener used to play on the default `.soloAmbient` session: silenced
+    /// by the ring switch and stuck on default routing. Uses the same
+    /// category/options the conversation transcriber sets, so the
+    /// `LiveTranscriber.start` that follows changes nothing.
+    static func warmUpForConversation() {
+        let session = AVAudioSession.sharedInstance()
+        try? session.setCategory(.playAndRecord, mode: .default, options: recordOptions)
+        try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        applyOutputRoute(session)
+    }
+
     /// Call right after `setActive(true)`. Snaps to the loud bottom speaker only
     /// when nothing external is connected; otherwise clears any override so the
     /// audio follows the connected headphones.

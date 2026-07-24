@@ -61,6 +61,27 @@ final class FreeTalkOpeners {
         return line
     }
 
+    /// True when a valid pool exists for this language/persona. Read-only —
+    /// unlike `next()` it never advances the rotation cursor.
+    func hasPool(language: String, personaName: String?) -> Bool {
+        guard let pool = load(),
+              pool.key == Self.key(language: language, personaName: personaName),
+              !pool.lines.isEmpty else { return false }
+        return true
+    }
+
+    /// Fire-and-forget warm-up for the Talk launcher: generate the pool ahead
+    /// of the first "Let's talk" so that call opens on a canned line instead
+    /// of holding the greeting hostage to a live Gemini call (which, cold,
+    /// used to be the multi-second blank screen on the first free talk).
+    /// No-op when a valid pool already exists; failures stay silent — the
+    /// in-call fallback path still generates on demand.
+    func warmUp(language: String, personaName: String?, proficiency: CEFRLevel) async {
+        guard !hasPool(language: language, personaName: personaName) else { return }
+        _ = try? await generatePool(language: language, personaName: personaName,
+                                    proficiency: proficiency)
+    }
+
     /// Generate (or refresh) the pool with one Gemini call. Returns the first
     /// line in rotation so the generating session can use it directly.
     func generatePool(language: String,
