@@ -4,25 +4,30 @@ import SwiftUI
 /// user answers a few things so the app knows what to teach and how to
 /// calibrate, BEFORE the heavier voice-clone recording step.
 ///
-/// Three cards, one tap each:
-///   1. Target language   ← which language the fluent self speaks
-///   2. Level             ← CEFR self-rating; calibrates every conversation
-///   3. Native language   ← explanations/translations speak this
+/// Two cards, one tap each:
+///   1. Level             ← CEFR self-rating; calibrates every conversation
+///   2. Native language   ← explanations/translations speak this
+///
+/// The practice target is fixed to English — the multi-language engine stays
+/// in `LanguageCatalog`, it's just not offered as a choice here.
 ///
 /// Flips `appState.setupComplete` on finish; RootView then routes to the
 /// voice-clone step.
 struct SetupFlowView: View {
     @EnvironmentObject private var appState: AppState
     @State private var step: Int = 0
-    @State private var targetLanguage: String = "en"
     @State private var level: CEFRLevel = .b1
     @State private var nativeLanguage: String = "ko"
 
-    /// Languages the fluent self can speak — from the central catalog, so
-    /// the picker, STT locales, and scoring rules can never disagree.
-    private static let targetLanguages = LanguageCatalog.targets.map(\.code)
+    /// The one language the fluent self speaks. Fixed to English; the catalog
+    /// still supports others, they're just not user-selectable.
+    private let targetLanguage = "en"
 
-    private static let totalSteps = 3
+    /// Languages offered as a native language — every catalog language except
+    /// the (fixed) English target.
+    private static let nativeChoices = LanguageCatalog.targets.map(\.code).filter { $0 != "en" }
+
+    private static let totalSteps = 2
 
     var body: some View {
         NavigationStack {
@@ -32,8 +37,7 @@ struct SetupFlowView: View {
                     .padding(.top, 8)
                 Form {
                     switch step {
-                    case 0: languageStep
-                    case 1: levelStep
+                    case 0: levelStep
                     default: nativeStep
                     }
                 }
@@ -44,7 +48,6 @@ struct SetupFlowView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
-            targetLanguage = appState.targetLanguage
             nativeLanguage = appState.nativeLanguage
             level = appState.proficiency
             #if DEBUG
@@ -58,31 +61,12 @@ struct SetupFlowView: View {
 
     private var title: String {
         switch step {
-        case 0: return "Which language?"
-        case 1: return "Your level?"
+        case 0: return "Your level?"
         default: return "Your language?"
         }
     }
 
-    // MARK: - Step 1 · Target language
-
-    private var languageStep: some View {
-        Section {
-            ForEach(Self.targetLanguages, id: \.self) { code in
-                pickRow(
-                    title: Self.endonym(code),
-                    subtitle: Self.englishName(code),
-                    selected: targetLanguage == code
-                ) { targetLanguage = code }
-            }
-        } header: {
-            Text("What do you want to practice?")
-        } footer: {
-            Text("Your fluent self speaks this. You can change it later in settings.")
-        }
-    }
-
-    // MARK: - Step 2 · Level
+    // MARK: - Step 1 · Level
 
     /// CEFR self-rating. Every conversation, correction, and word card is
     /// calibrated to this, so it's asked up front rather than defaulted — a
@@ -116,14 +100,14 @@ struct SetupFlowView: View {
         }
     }
 
-    // MARK: - Step 3 · Native language
+    // MARK: - Step 2 · Native language
 
     /// The language the learner already lives in. Drives "Explain in my
     /// language", correction explanations, and word-card translations — a
-    /// Korean-learning American should read those in English, not Korean.
+    /// Japanese learner should read those in Japanese, not English.
     private var nativeStep: some View {
         Section {
-            ForEach(Self.targetLanguages.filter { $0 != targetLanguage }, id: \.self) { code in
+            ForEach(Self.nativeChoices, id: \.self) { code in
                 pickRow(
                     title: Self.endonym(code),
                     subtitle: Self.englishName(code),
@@ -207,11 +191,11 @@ struct SetupFlowView: View {
     private func advance() {
         if step < Self.totalSteps - 1 {
             step += 1
-            // Entering the native step with native == target (e.g. a Korean
-            // learner arrives with the old "ko" default): flip to the likely
-            // answer so the checkmark isn't on a nonsensical row.
+            // English can't be a native choice (it's the fixed target), so a
+            // legacy "en" native default would leave no row checked — flip it
+            // to the most common answer instead.
             if step == Self.totalSteps - 1, nativeLanguage == targetLanguage {
-                nativeLanguage = targetLanguage == "en" ? "ko" : "en"
+                nativeLanguage = "ko"
             }
         } else {
             finish()
