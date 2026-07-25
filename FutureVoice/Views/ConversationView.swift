@@ -810,7 +810,8 @@ struct ConversationView: View {
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].transcript = heard
             }
-            let replyText = payload.reply.trimmingCharacters(in: .whitespacesAndNewlines)
+            let replyText = Self.stripLeakedSchemaTail(payload.reply)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             if let s = payload.turnSuggestion(),
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
@@ -867,6 +868,21 @@ struct ConversationView: View {
             }
             return ConversationTurnPayload(reply: trimmed, suggestion: nil)
         }
+    }
+
+    /// Defensive cleanup: a malformed model turn occasionally NESTS the whole
+    /// {reply, suggestion, transcript} schema INSIDE the reply string (escaped),
+    /// so after JSON-decoding the reply literally trails with
+    /// `","suggestion":null,"transcript":"…"}`. That must never be spoken —
+    /// cut the reply at the first such seam.
+    static func stripLeakedSchemaTail(_ reply: String) -> String {
+        let pattern = #""\s*,\s*"(?:suggestion|transcript|reply)"\s*:"#
+        guard let re = try? NSRegularExpression(pattern: pattern),
+              let m = re.firstMatch(in: reply, range: NSRange(reply.startIndex..., in: reply)),
+              let r = Range(m.range, in: reply) else {
+            return reply
+        }
+        return String(reply[..<r.lowerBound])
     }
 
     private func retryReply() {

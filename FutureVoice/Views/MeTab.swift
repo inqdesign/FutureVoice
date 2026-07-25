@@ -66,7 +66,7 @@ struct MeTab: View {
                     } label: {
                         row(icon: "gift",
                             title: "Invite & earn credits",
-                            subtitle: "You both get 500 per friend")
+                            subtitle: "You both get 300 per friend")
                     }
                 } header: {
                     Text("Account")

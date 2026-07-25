@@ -17,6 +17,20 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the scenario composer: it pre-selects a category
+    /// and injects sample AI chips so the layout renders offline.
+    static var composerPreview = false
+    static let sampleCategoryIdeas: [SuggestedTopic] = [
+        .init(title: "order came out wrong", blurb: "At a cafe: my order came out wrong and I want to point it out politely."),
+        .init(title: "asking for a recommendation", blurb: "At a cafe: I can't decide, so I ask the barista what they'd recommend."),
+        .init(title: "the wifi is down", blurb: "At a cafe: the wifi is down and I ask the barista for the password / a fix."),
+        .init(title: "card reader won't work", blurb: "At a cafe: the card reader keeps failing and I sort out paying without holding up the line."),
+        .init(title: "running into an old colleague", blurb: "At a cafe: I run into a former colleague at the next table and we catch up."),
+        .init(title: "keeping a table while I step out", blurb: "At a cafe: I ask someone to watch my table while I take a quick call."),
+        .init(title: "complimenting the latte art", blurb: "At a cafe: I compliment the barista's latte art and chat a little."),
+        .init(title: "a mix-up with someone's name", blurb: "At a cafe: they called the wrong name for my drink and I sort it out."),
+    ]
+
     /// Idempotent per name — the resolver may evaluate more than once.
     private static func once(_ name: String, _ work: () -> Void) {
         guard !seeded.contains(name) else { return }
@@ -48,6 +62,10 @@ enum DebugCapture {
         case "builder":
             // Renders the sheet's content full-screen (no host to present it).
             return AnyView(SituationBuilderSheet(root: WatchTab.situationTree[0]) { _ in })
+        case "composer":
+            once("composer") { seedNews(into: appState); composerPreview = true }
+            return AnyView(ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { _ in }
+                .environmentObject(appState))
         case "progress":
             once("progress") {
                 seedVocab(); seedSessions(scored: true)

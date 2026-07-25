@@ -50,16 +50,21 @@ enum LocalAlignment {
         }
     }
 
-    /// One-shot recognition with a hard timeout — a recognizer that never
-    /// reports final/error must not hang shadow's prepareAudio forever.
+    /// One-shot recognition with a hard timeout AND cooperative cancellation —
+    /// a recognizer that never reports final/error must not hang, and when the
+    /// caller's Task is cancelled (e.g. the learner starts a live mic session,
+    /// which must not run a SECOND speech recognizer concurrently) the
+    /// underlying `SFSpeechRecognitionTask` is actually stopped, not just
+    /// abandoned mid-flight.
     private static func recognize(
         recognizer: SFSpeechRecognizer,
         request: SFSpeechURLRecognitionRequest,
         timeout: TimeInterval = 15
     ) async -> [SFTranscriptionSegment]? {
-        final class Once: @unchecked Sendable {
-            private let lock = NSLock()
+        final class Holder: @unchecked Sendable {
+            let lock = NSLock()
             private var done = false
+            var task: SFSpeechRecognitionTask?
             func claim() -> Bool {
                 lock.lock(); defer { lock.unlock() }
                 if done { return false }
@@ -67,25 +72,32 @@ enum LocalAlignment {
                 return true
             }
         }
-        let once = Once()
+        let holder = Holder()
 
-        return await withCheckedContinuation { cont in
-            var task: SFSpeechRecognitionTask?
-            task = recognizer.recognitionTask(with: request) { result, error in
-                if error != nil {
-                    if once.claim() { cont.resume(returning: nil) }
-                    return
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (cont: CheckedContinuation<[SFTranscriptionSegment]?, Never>) in
+                let task = recognizer.recognitionTask(with: request) { result, error in
+                    if error != nil {
+                        if holder.claim() { cont.resume(returning: nil) }
+                        return
+                    }
+                    if let result, result.isFinal, holder.claim() {
+                        cont.resume(returning: result.bestTranscription.segments)
+                    }
                 }
-                if let result, result.isFinal, once.claim() {
-                    cont.resume(returning: result.bestTranscription.segments)
+                holder.lock.lock(); holder.task = task; holder.lock.unlock()
+                DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
+                    if holder.claim() {
+                        task.cancel()
+                        cont.resume(returning: nil)
+                    }
                 }
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
-                if once.claim() {
-                    task?.cancel()
-                    cont.resume(returning: nil)
-                }
-            }
+        } onCancel: {
+            // Stop the file recognizer so it can't collide with a live mic
+            // session. Its error callback then resumes the continuation.
+            holder.lock.lock(); let t = holder.task; holder.lock.unlock()
+            t?.cancel()
         }
     }
 

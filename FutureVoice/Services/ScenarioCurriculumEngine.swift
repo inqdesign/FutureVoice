@@ -30,13 +30,21 @@ enum ScenarioCurriculumEngine {
         persona: UserPersona?,
         counterpart: Counterpart?,
         proficiency: CEFRLevel,
-        targetLanguage: String
+        targetLanguage: String,
+        weakVocabAreas: [String] = [],
+        recurringMistakes: [LearnerPattern] = []
     ) async throws -> ScenarioCurriculum {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency),
             messages: [GeminiClient.Message(
                 role: .user,
-                content: userMessage(scenario: scenario, persona: persona, counterpart: counterpart)
+                content: userMessage(
+                    scenario: scenario,
+                    persona: persona,
+                    counterpart: counterpart,
+                    weakVocabAreas: weakVocabAreas,
+                    recurringMistakes: recurringMistakes
+                )
             )],
             maxTokens: 2200,
             purpose: "scenario-curriculum",
@@ -107,7 +115,9 @@ enum ScenarioCurriculumEngine {
     private static func userMessage(
         scenario: Scenario,
         persona: UserPersona?,
-        counterpart: Counterpart?
+        counterpart: Counterpart?,
+        weakVocabAreas: [String],
+        recurringMistakes: [LearnerPattern]
     ) -> String {
         var lines: [String]
         if scenario.isTopic == true {
@@ -145,6 +155,22 @@ enum ScenarioCurriculumEngine {
             if !place.isEmpty { lines.append("- lives in: \(place)") }
             if !p.occupation.isEmpty { lines.append("- work: \(p.occupation)") }
             if !p.household.isEmpty { lines.append("- household: \(p.household)") }
+            if !p.interests.isEmpty { lines.append("- interests: \(p.interests.joined(separator: ", "))") }
+            if !p.situations.isEmpty {
+                lines.append("- needs the language most for: \(p.situations.joined(separator: ", "))")
+            }
+            if !p.freeNotes.isEmpty { lines.append("- notes: \(p.freeNotes)") }
+        }
+        // Steer the study picks toward what this learner actually gets wrong,
+        // so the book's words/expressions target known gaps — not generic ones.
+        let weak = weakVocabAreas.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let mistakes = recurringMistakes.prefix(3)
+            .map { "\($0.mistake) → \($0.correction)" }
+        if !weak.isEmpty || !mistakes.isEmpty {
+            lines.append("")
+            lines.append("learner focus (bias study picks here where the scene allows, never force it):")
+            if !weak.isEmpty { lines.append("- weak vocab areas: \(weak.joined(separator: ", "))") }
+            if !mistakes.isEmpty { lines.append("- recurring mistakes: \(mistakes.joined(separator: "; "))") }
         }
         return lines.joined(separator: "\n")
     }

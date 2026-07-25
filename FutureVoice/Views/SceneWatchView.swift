@@ -82,7 +82,9 @@ struct SceneWatchView: View {
                 persona: appState.persona,
                 counterpart: counterpart,
                 proficiency: appState.proficiency,
-                targetLanguage: appState.targetLanguage
+                targetLanguage: appState.targetLanguage,
+                weakVocabAreas: appState.learnerProfile.weakVocabAreas,
+                recurringMistakes: appState.learnerProfile.recurringMistakes
             )
             guard var fresh = scenario else { return }
             fresh.curriculum = curriculum

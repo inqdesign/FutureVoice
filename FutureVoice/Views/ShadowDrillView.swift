@@ -45,6 +45,10 @@ struct ShadowDrillView: View {
     @State private var cachedAudioURL: URL?
     @State private var timings: [WordTiming] = []
     @State private var autoStopTask: Task<Void, Never>?
+    /// Background karaoke-timing recovery (file speech-recognition). Cancelled
+    /// before a live mic session starts — two speech recognizers running at
+    /// once break the recording (it cut off after the first line).
+    @State private var recoverTask: Task<Void, Never>?
     /// Word-index range selected for loop practice, shared between the target
     /// line text and the timeline player (both read/write it).
     @State private var selectedWordRange: ClosedRange<Int>?
@@ -727,8 +731,7 @@ struct ShadowDrillView: View {
         // generous corner radius. No status caption — the mic's own state
         // (idle / red-pulsing / countdown overlay) already says enough.
         .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
+        .padding(.vertical, 16)
         .frame(maxWidth: .infinity)
         // No outer material — the trimmer's own rounded card is the only
         // container; a second full-width background read as a box-in-a-box.
@@ -888,6 +891,11 @@ struct ShadowDrillView: View {
         // Stop any loop/preview playback before recording so the speaker audio
         // doesn't bleed into the mic.
         player.stop()
+        // Kill the background timing-recovery recognizer FIRST — a second
+        // speech recognizer running against the file collides with the live
+        // mic recognizer and truncates the recording after the first line.
+        recoverTask?.cancel()
+        recoverTask = nil
         // Ensure we have target timings loaded (used for the visual reference)
         if cachedAudioURL == nil {
             await prepareAudio()
@@ -1148,65 +1156,78 @@ struct ShadowDrillView: View {
             }
         }
 
-        var loadedTimings = TurnAudioStore.shared.timings(for: turn.id)
+        let loadedTimings = TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
             ?? []
 
-        // Free path first: the audio is already on disk but has no word map
-        // (every conversation turn — streaming TTS returns no timestamps).
-        // Recover timings locally with on-device speech recognition before
-        // ever considering the paid re-synthesis.
-        if let existing = url, loadedTimings.isEmpty {
-            phase = .loadingAudio
-            let local = await LocalAlignment.wordTimings(
-                audioURL: existing,
-                languageCode: targetLanguage,
-                expectedText: turn.transcript
-            )
+        // Audio already on disk → make the UI usable IMMEDIATELY. The trimmer
+        // and mic work with time-based looping even without word timings, so
+        // recovering karaoke timings — a possibly multi-second on-device
+        // alignment, or a paid re-synth — must NOT block practice behind a
+        // "Loading…" state. It runs in the background; karaoke just lights up
+        // if/when the timings land.
+        if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
+            cachedAudioURL = ready
+            targetDurationMs = Self.durationMs(of: ready)
+            timings = loadedTimings
             phase = .idle
-            if !local.isEmpty {
-                loadedTimings = local
-                TurnAudioStore.shared.saveTimings(local, for: turn.id)
+            if loadedTimings.isEmpty {
+                // Cancellable + off the critical path: the UI is already live,
+                // and this MUST be cancellable so it doesn't run alongside the
+                // mic recognizer.
+                recoverTask?.cancel()
+                recoverTask = Task { await recoverTimings(url: ready, voiceId: voiceId) }
+            }
+            return
+        }
+
+        // No cached audio at all — synthesizing it IS the blocking step, since
+        // nothing is playable until it lands.
+        phase = .loadingAudio
+        do {
+            let (data, newTimings) = try await ElevenLabsClient.shared
+                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
+            PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
+            let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
+            cachedAudioURL = saved
+            if let saved { targetDurationMs = Self.durationMs(of: saved) }
+            timings = newTimings
+            phase = .idle
+        } catch {
+            outOfCredits = error.isOutOfCredits
+            phase = .idle
+            self.error = outOfCredits
+                ? "You're out of credits — synthesizing this line needs a top-up."
+                : "Couldn't load audio for this line: \(error.localizedDescription)"
+        }
+    }
+
+    /// Recover karaoke word-timings in the BACKGROUND (never blocks the UI):
+    /// the free on-device alignment first, then — only if that can't match the
+    /// line — a paid re-synth. Any failure just leaves karaoke off; the
+    /// trimmer's time-based looping already works.
+    private func recoverTimings(url: URL, voiceId: String) async {
+        let local = await LocalAlignment.wordTimings(
+            audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript)
+        if Task.isCancelled { return }
+        if !local.isEmpty {
+            TurnAudioStore.shared.saveTimings(local, for: turn.id)
+            timings = local
+            return
+        }
+        do {
+            let (data, newTimings) = try await ElevenLabsClient.shared
+                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
+            PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
+            _ = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
+            if !newTimings.isEmpty { timings = newTimings }
+        } catch {
+            // The audio already plays; only karaoke is affected. A credit
+            // gate gets a quiet inline note, other failures stay silent.
+            if error.isOutOfCredits {
+                timingNote = "Word timings need credits — karaoke highlighting is off, but you can still loop any part by dragging on the timeline."
             }
         }
-
-        if url == nil || loadedTimings.isEmpty {
-            phase = .loadingAudio
-            do {
-                let (data, newTimings) = try await ElevenLabsClient.shared
-                    .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
-                PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
-                if let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings) {
-                    url = saved
-                }
-                if !newTimings.isEmpty { loadedTimings = newTimings }
-                phase = .idle
-            } catch {
-                outOfCredits = error.isOutOfCredits
-                phase = .idle
-                if url != nil && outOfCredits {
-                    // The audio is already cached — practice continues fine,
-                    // just without karaoke timings. This is the "replaying is
-                    // free" promise: a quiet inline note, never a scary alert.
-                    timingNote = "Word timings need credits — karaoke highlighting is off, but you can still loop any part by dragging on the timeline."
-                } else {
-                    self.error = outOfCredits
-                        ? "You're out of credits — synthesizing this line needs a top-up."
-                        : "Karaoke timings unavailable: \(error.localizedDescription)"
-                    if url == nil { return }
-                }
-            }
-        }
-
-        if !loadedTimings.isEmpty && TurnAudioStore.shared.timings(for: turn.id) == nil {
-            TurnAudioStore.shared.saveTimings(loadedTimings, for: turn.id)
-        }
-
-        cachedAudioURL = url
-        if let url = url {
-            targetDurationMs = Self.durationMs(of: url)
-        }
-        timings = loadedTimings
     }
 
     private static func durationMs(of url: URL) -> Int {

@@ -69,6 +69,19 @@ enum StudyWidgetSection: String, CaseIterable {
         case .expressions: return URL(string: "futurevoice://expressions")
         }
     }
+
+    /// Deep link to a SPECIFIC item — a tapped word or phrase carries its text
+    /// as `?q=…` so the app opens that item's page, not just the list. Falls
+    /// back to the plain list link if the text is empty or the URL can't build.
+    func deepLink(for text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let base = deepLink,
+              var comps = URLComponents(url: base, resolvingAgainstBaseURL: false) else {
+            return deepLink
+        }
+        comps.queryItems = [URLQueryItem(name: "q", value: trimmed)]
+        return comps.url ?? deepLink
+    }
     /// Whether a row's trailing note (CEFR level) should render. Expressions
     /// carry a usage count instead, which reads as clutter in a glance.
     var showsNote: Bool { self == .words }
@@ -374,13 +387,18 @@ struct PinboardBoard<Accessory: View>: View {
                     // Expressions hug their writing and land staggered
                     // (left / center / right) like notes actually pinned to
                     // a board; full-width strips read as banners.
-                    StickyNote(text: item.text,
-                               tag: section.showsNote ? item.note : "",
-                               pin: pin, salt: seed &+ i, size: noteSize,
-                               levelColored: section.showsNote,
-                               expands: fillsBoard,
-                               hugsWidth: section == .expressions)
-                        .frame(maxWidth: .infinity, alignment: staggerAlignment(i))
+                    // Each note deep-links to ITS item (word/phrase) so a tap
+                    // opens that page — not just the list. (Links are per-note
+                    // on medium/large; small falls back to the widgetURL.)
+                    Link(destination: noteLink(item.text)) {
+                        StickyNote(text: item.text,
+                                   tag: section.showsNote ? item.note : "",
+                                   pin: pin, salt: seed &+ i, size: noteSize,
+                                   levelColored: section.showsNote,
+                                   expands: fillsBoard,
+                                   hugsWidth: section == .expressions)
+                    }
+                    .frame(maxWidth: .infinity, alignment: staggerAlignment(i))
                     if !fillsBoard, i < shown.count - 1 { Spacer(minLength: 0) }
                 }
             }
@@ -392,14 +410,21 @@ struct PinboardBoard<Accessory: View>: View {
                             pin: Color) -> some View {
         VStack(spacing: noteSpacing) {
             ForEach(slice, id: \.offset) { pair in
-                StickyNote(text: pair.element.text,
-                           tag: section.showsNote ? pair.element.note : "",
-                           pin: pin, salt: seed &+ pair.offset, size: noteSize,
-                           levelColored: section.showsNote,
-                           expands: fillsBoard)
+                Link(destination: noteLink(pair.element.text)) {
+                    StickyNote(text: pair.element.text,
+                               tag: section.showsNote ? pair.element.note : "",
+                               pin: pin, salt: seed &+ pair.offset, size: noteSize,
+                               levelColored: section.showsNote,
+                               expands: fillsBoard)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: fillsBoard ? .infinity : nil)
+    }
+
+    /// Per-note deep link to its specific word/phrase.
+    private func noteLink(_ text: String) -> URL {
+        section.deepLink(for: text) ?? URL(string: "futurevoice://practice")!
     }
 
     /// A strip of masking tape carrying the label, slightly askew.

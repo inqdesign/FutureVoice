@@ -566,8 +566,23 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// curriculum mechanics; drives Practice's "Topics" shelf and a
     /// discussion-flavored scene prompt. Optional so old rows decode.
     var isTopic: Bool? = nil
+    /// The category bucket this scenario was built/filed under (composer:
+    /// "Cafe", "Interview", …) + its SF Symbol. Shown as a tag on the card.
+    /// Optional so scenarios saved before this decode unchanged.
+    var category: String? = nil
+    var categoryIcon: String? = nil
+    /// A short, clean summary of the situation for the card — NOT the raw
+    /// prompt the user typed (which drives the conversation via `environment`).
+    var summary: String? = nil
 
     var isArchived: Bool { archivedAt != nil }
+
+    /// What the card shows: the tidy summary if we have one, else the
+    /// environment text (older scenarios, or ones with no summary yet).
+    var cardTitle: String {
+        if let s = summary?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty { return s }
+        return environment
+    }
 
     /// True once every curriculum item is mastered — the "book is finished"
     /// state that unlocks archiving with a sense of completion.

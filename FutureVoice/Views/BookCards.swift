@@ -57,10 +57,9 @@ struct ScenarioBookCard: View {
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
-                // Topic headlines and free-described situations are full
-                // sentences — give them a second line (the card grows past
-                // minHeight when needed).
-                Text(scenario.environment).font(.subheadline.weight(.semibold))
+                // The tidy summary (not the raw prompt); topic headlines are
+                // full sentences so give them a second line.
+                Text(scenario.cardTitle).font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(scenario.isTopic == true || partnerLabel == nil ? 2 : 1)
                 if let partnerLabel {

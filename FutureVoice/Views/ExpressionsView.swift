@@ -7,25 +7,59 @@ import SwiftUI
 /// Tapping a row opens the expression's card as a sheet — same interaction as
 /// tapping a word anywhere in the app.
 struct ExpressionsView: View {
+    /// A specific phrase to open on entry (from a widget note tap).
+    var initialPhrase: String? = nil
+
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @State private var selected: PhraseRef?
+    @State private var didOpenInitial = false
+    @State private var filter: Filter = .all
 
     private struct PhraseRef: Identifiable {
         let value: String
         var id: String { value }
     }
 
-    private var entries: [VocabStore.ExpressionEntry] { store.expressionEntries() }
+    /// Same three lenses the word notebook uses, at the phrase level.
+    enum Filter: String, CaseIterable, Identifiable {
+        case all, studying, known
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .all:      return "All"
+            case .studying: return "Studying"
+            case .known:    return "Known"
+            }
+        }
+    }
+
+    private var entries: [VocabStore.ExpressionEntry] {
+        let all = store.expressionEntries()
+        switch filter {
+        case .all:      return all
+        case .studying: return all.filter { store.isStudyingExpression($0.text) }
+        case .known:    return all.filter { store.isKnownExpression($0.text) }
+        }
+    }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            Picker("Filter", selection: $filter) {
+                ForEach(Filter.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
             if entries.isEmpty {
                 ContentUnavailableView {
-                    Label("No expressions yet", systemImage: "quote.bubble")
+                    Label(emptyTitle, systemImage: "quote.bubble")
                 } description: {
-                    Text("Expressions you use in your talks will collect here.")
+                    Text(emptyMessage)
                 }
+                .frame(maxHeight: .infinity)
             } else {
                 List {
                     Section {
@@ -38,7 +72,9 @@ struct ExpressionsView: View {
                             .buttonStyle(.plain)
                         }
                     } footer: {
-                        Text("Captured automatically from what you say.")
+                        Text(filter == .all
+                             ? "Captured automatically from what you say. Bookmark the ones you want to study."
+                             : "\(entries.count) \(filter.label.lowercased())")
                     }
                 }
             }
@@ -46,14 +82,46 @@ struct ExpressionsView: View {
         .navigationTitle("\(store.expressionCount) expressions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
+        .onAppear {
+            // Opened from a widget note tap → jump straight to that phrase.
+            if let initialPhrase, !didOpenInitial {
+                didOpenInitial = true
+                selected = PhraseRef(value: initialPhrase)
+            }
+        }
         .sheet(item: $selected) { ref in
             ExpressionSheet(initialPhrase: ref.value, phrases: entries.map(\.text))
                 .environmentObject(appState)
         }
     }
 
+    private var emptyTitle: String {
+        switch filter {
+        case .all:      return "No expressions yet"
+        case .studying: return "Nothing to study yet"
+        case .known:    return "Nothing marked known"
+        }
+    }
+    private var emptyMessage: String {
+        switch filter {
+        case .all:      return "Expressions you use in your talks will collect here."
+        case .studying: return "Bookmark an expression to keep studying it — it'll show here and on your widget."
+        case .known:    return "Mark expressions you've got down as known."
+        }
+    }
+
     private func row(_ entry: VocabStore.ExpressionEntry) -> some View {
-        HStack(spacing: 12) {
+        let studying = store.isStudyingExpression(entry.text)
+        let known = store.isKnownExpression(entry.text)
+        return HStack(spacing: 12) {
+            // Status badge, same grammar as the word cloud: bookmark = studying,
+            // check = known.
+            if studying || known {
+                Image(systemName: studying ? "bookmark.fill" : "checkmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(studying ? Color.accentColor : Color.green)
+                    .frame(width: 16)
+            }
             VStack(alignment: .leading, spacing: 3) {
                 Text(Self.display(entry.text))
                     .font(.body)
@@ -123,7 +191,8 @@ struct ExpressionCard: View {
 
     private var navList: [String] { navigationPhrases ?? [] }
     private var navIndex: Int? { navList.firstIndex(of: phrase) }
-    private var isKnown: Bool { store.hasExpression(phrase) }
+    private var isKnown: Bool { store.isKnownExpression(phrase) }
+    private var isStudying: Bool { store.isStudyingExpression(phrase) }
 
     var body: some View {
         ScrollView {
@@ -270,17 +339,19 @@ struct ExpressionCard: View {
 
     private var actionBar: some View {
         HStack(spacing: 12) {
-            blurButton("Shadow it", icon: "waveform.badge.mic", tint: .primary) {
-                shadowing = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
-                                 transcript: bestShadowSentence, durationMs: 0,
-                                 timestamp: Date(), suggestion: nil)
+            blurButton(isStudying ? "Studying" : "Study",
+                       icon: isStudying ? "bookmark.fill" : "bookmark",
+                       tint: isStudying ? .accentColor : .primary) {
+                // Bookmark to keep studying — mirrors adding a word to the
+                // notebook; the phrase then shows on the Expressions widget.
+                store.setStudyingExpression(phrase, !isStudying)
             }
-            blurButton("I know it",
+            blurButton(isKnown ? "Known" : "I know it",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
-                // Idempotent — repeat taps just refresh lastAt. Stay on the
-                // phrase so it visibly flips green, same as WordCard.
-                store.addExpression(phrase)
+                // Toggle known — stay on the phrase so it visibly flips, same
+                // as WordCard.
+                store.setKnownExpression(phrase, !isKnown)
             }
         }
         .padding(.horizontal, 16)
@@ -307,13 +378,6 @@ struct ExpressionCard: View {
     }
 
     // MARK: - Logic
-
-    /// What "Shadow it" practices: a full natural sentence using the phrase —
-    /// the first dictionary example when we have one, the bare phrase until
-    /// the entry loads.
-    private var bestShadowSentence: String {
-        entry?.examples.first?.text ?? phrase
-    }
 
     private func load() async {
         entry = nil

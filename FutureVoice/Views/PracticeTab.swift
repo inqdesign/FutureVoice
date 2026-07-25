@@ -23,6 +23,10 @@ struct PracticeTab: View {
     /// Programmatic push of the vocabulary notebook, driven by the
     /// futurevoice://vocab deep link (study widget tap).
     @State private var showingVocabulary = false
+    @State private var showingExpressions = false
+    /// A specific item to open when arriving from a widget note tap.
+    @State private var vocabInitialWord: String?
+    @State private var expressionInitialPhrase: String?
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -112,7 +116,12 @@ struct PracticeTab: View {
                 consumePendingRoute()
             }
             .navigationDestination(isPresented: $showingVocabulary) {
-                VocabularyView()
+                VocabularyView(initialWord: vocabInitialWord)
+            }
+            .navigationDestination(isPresented: $showingExpressions) {
+                ExpressionsView(initialPhrase: expressionInitialPhrase)
+                    .navigationTitle("Expressions")
+                    .navigationBarTitleDisplayMode(.inline)
             }
             .navigationDestination(item: $openScenario) { s in
                 ScenarioDetailView(scenarioId: s.id)
@@ -129,9 +138,18 @@ struct PracticeTab: View {
     /// staged in AppState because on a cold launch the URL arrives before
     /// this tab exists — onAppear picks it up; onChange covers warm taps.
     private func consumePendingRoute() {
-        guard appState.pendingPracticeRoute == .vocabulary else { return }
-        appState.pendingPracticeRoute = nil
-        showingVocabulary = true
+        switch appState.pendingPracticeRoute {
+        case .vocabulary(let word):
+            appState.pendingPracticeRoute = nil
+            vocabInitialWord = word
+            showingVocabulary = true
+        case .expressions(let phrase):
+            appState.pendingPracticeRoute = nil
+            expressionInitialPhrase = phrase
+            showingExpressions = true
+        case nil:
+            break
+        }
     }
 
     // MARK: - Pages

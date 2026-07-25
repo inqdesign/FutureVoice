@@ -53,8 +53,8 @@ struct WelcomeView: View {
             .simultaneousGesture(DragGesture(minimumDistance: 6).onChanged { _ in autoplay = false })
 
             pageDots
-                .padding(.top, 4)
-                .padding(.bottom, 8)
+                .padding(.top, 2)
+                .padding(.bottom, 6)
 
             signInArea
         }
@@ -77,10 +77,24 @@ struct WelcomeView: View {
         // One centered column per slide: a fixed-height hero area so the copy
         // never jumps between slides during autoplay, then title + subtitle.
         // maxHeight centers the whole group — no top-heavy void below.
-        VStack(spacing: 32) {
+        VStack(spacing: 28) {
             mock(i)
                 .frame(height: 440)
                 .frame(maxWidth: .infinity)
+                // The hero can overrun the available height on small screens.
+                // Rather than a hard clip, let it fade out at the very top and
+                // bottom edges so the asset dissolves into the ground.
+                .mask(
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0),
+                            .init(color: .black, location: 0.07),
+                            .init(color: .black, location: 0.93),
+                            .init(color: .clear, location: 1)
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
             VStack(spacing: 12) {
                 Text(f.title)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
@@ -164,8 +178,8 @@ struct WelcomeView: View {
                     .multilineTextAlignment(.center).padding(.horizontal, 32)
             }
         }
-        .padding(.top, 8)
-        .padding(.bottom, 28)
+        .padding(.top, 6)
+        .padding(.bottom, 14)
     }
 
     @ViewBuilder

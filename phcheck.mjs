@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch();
+const p = await b.newPage();
+const sent=[];
+p.on('request', r=>{ const u=r.url(); if(u.includes('i.posthog.com')&&(u.includes('/e')||u.includes('/i/v0')||u.includes('capture'))) sent.push(u.split('?')[0]); });
+await p.goto('file:///Users/eunggyuelee/FutureVoice/web/index.full.html');
+await p.waitForTimeout(2500);
+const opted = await p.evaluate(()=>{ try{ return window.posthog && window.posthog.has_opted_out_capturing ? window.posthog.has_opted_out_capturing() : 'unknown'; }catch(e){ return 'err:'+e.message; } });
+console.log('has_opted_out_capturing (file://):', opted, '| capture requests sent:', sent.length);
+await b.close();

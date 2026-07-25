@@ -7,6 +7,10 @@ import Supabase   // FunctionInvokeOptions for the free word-entry lookup
 /// often you've used the word; tap one for its card (part of speech, meaning,
 /// example). Words enter the cloud automatically as you use them in talks.
 struct VocabularyView: View {
+    /// A specific word to open on entry (from a widget note tap); nil starts
+    /// on a study word as before.
+    var initialWord: String? = nil
+
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = VocabStore.shared
@@ -39,7 +43,9 @@ struct VocabularyView: View {
                         inited = true
                         store.backfillFromSessions()
                         level = LevelFilter(appState.proficiency)   // start at the user's level
-                        currentWord = store.studying.first         // open on a study word
+                        // A widget-tapped word opens straight to its card; the
+                        // sheet shows it regardless of the cloud's level filter.
+                        currentWord = initialWord ?? store.studying.first
                     }
                     if nodes.isEmpty { rebuild(center: true) }      // don't recompute on every re-appear
                 }
@@ -475,7 +481,7 @@ struct WordCard: View {
                     .tint(store.isStudying(word) ? .accentColor : .secondary)
 
                     Button {
-                        store.markKnown(word)
+                        isKnown ? store.unmark(word) : store.markKnown(word)
                     } label: {
                         Image(systemName: isKnown ? "checkmark.circle.fill" : "checkmark.circle")
                     }
@@ -650,14 +656,13 @@ struct WordCard: View {
                        tint: studying ? .accentColor : .primary) {
                 studying ? store.removeStudying(word) : store.addStudying(word)
             }
-            blurButton("I know it",
+            blurButton(isKnown ? "Known" : "I know it",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
-                // Stay on the word so it visibly flips to the green "known"
-                // state — confirmation the tap worked. Deliberately NO jump to
-                // the next study word: that made the toggle read "Studying"
-                // right after the tap, as if "I know it" had started studying.
-                store.markKnown(word)
+                // Toggle: tap to mark known, tap again to clear it. Stay on the
+                // word so it visibly flips — confirmation the tap worked.
+                // Deliberately NO jump to the next study word.
+                isKnown ? store.unmark(word) : store.markKnown(word)
             }
         }
         .padding(.horizontal, 16)

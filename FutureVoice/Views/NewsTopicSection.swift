@@ -241,12 +241,20 @@ struct DiscoverSection: View {
                 if let name {
                     Text(Books.initials(name)).font(.title3.weight(.bold)).foregroundStyle(.tint)
                 } else {
-                    Image(systemName: Books.roleIcon(for: s.role)).font(.title2).foregroundStyle(.tint)
+                    Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
+                        .font(.title2).foregroundStyle(.tint)
                 }
                 Spacer()
+                if let category = s.category, !category.isEmpty {
+                    Text(category)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.tint)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 14)
-            Text(s.environment)
+            // The tidy summary, NOT the raw prompt the user typed.
+            Text(s.cardTitle)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.primary)
                 .lineLimit(4)

@@ -91,15 +91,19 @@ struct RootTabView: View {
         // never reach here.
         .onOpenURL { url in
             guard url.scheme == "futurevoice" else { return }
+            // A tapped widget note carries its item as ?q=… so we open that
+            // exact word/phrase; absent, we open the plain list.
+            let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "q" })?.value
             switch url.host {
             case "practice":
                 selection = .practice
             case "vocab":
                 selection = .practice
-                appState.pendingPracticeRoute = .vocabulary
+                appState.pendingPracticeRoute = .vocabulary(word: q)
             case "expressions":
                 selection = .practice
-                appState.pendingPracticeRoute = .expressions
+                appState.pendingPracticeRoute = .expressions(phrase: q)
             default:
                 break
             }

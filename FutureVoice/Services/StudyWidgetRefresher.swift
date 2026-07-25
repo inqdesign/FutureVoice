@@ -33,13 +33,10 @@ enum StudyWidgetRefresher {
     @MainActor
     private static func refreshWords() {
         let vocab = VocabStore.shared
-        // The words the user deliberately collected to study, newest first;
-        // top up with recently-used words so the widget isn't empty for
-        // someone who hasn't saved any to the notebook yet.
-        var words = vocab.studying
-        for w in vocab.usedWords() where !words.contains(w) {
-            words.append(w)
-        }
+        // ONLY the words the user deliberately collected to study (the
+        // notebook), newest first — the widget mirrors what they're actively
+        // studying, not every word they've ever used.
+        let words = vocab.studying
         let items = words.prefix(maxItems).map {
             StudyWidgetItem(text: $0, note: VocabStore.coreLevelLabel(for: $0))
         }
@@ -53,17 +50,27 @@ enum StudyWidgetRefresher {
 
     @MainActor
     private static func refreshExpressions() {
-        // Expressions the user has picked up in talks, newest first. Same
-        // source as the Expressions library page, so the widget's tap-through
-        // lands on a list that matches what it was showing.
-        let entries = VocabStore.shared.expressionEntries()
-        let items = entries.prefix(maxItems).map {
-            StudyWidgetItem(text: $0.text, note: $0.count > 1 ? "×\($0.count)" : "")
+        // ONLY the expressions the user bookmarked to study, newest first —
+        // mirrors the Words widget (notebook words) at the phrase level.
+        let vocab = VocabStore.shared
+        let countByKey = Dictionary(vocab.expressionEntries().map { ($0.text, $0.count) },
+                                    uniquingKeysWith: { a, _ in a })
+        let keys = vocab.studyingExpressions
+        let items = keys.prefix(maxItems).map { key -> StudyWidgetItem in
+            let count = countByKey[key] ?? 0
+            return StudyWidgetItem(text: Self.capitalizedFirst(key),
+                                   note: count > 1 ? "×\(count)" : "")
         }
         StudyWidgetSnapshotStore.save(
-            StudyWidgetSnapshot(updatedAt: Date(), total: entries.count, items: Array(items)),
+            StudyWidgetSnapshot(updatedAt: Date(), total: keys.count, items: Array(items)),
             for: .expressions)
         WidgetCenter.shared.reloadTimelines(ofKind: StudyWidgetSection.expressions.widgetKind)
+    }
+
+    /// Stored expression keys are lowercased; show with a capital first letter.
+    private static func capitalizedFirst(_ s: String) -> String {
+        guard let f = s.first else { return s }
+        return f.uppercased() + s.dropFirst()
     }
 }
 

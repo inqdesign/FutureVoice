@@ -76,17 +76,21 @@ body{
 .join.done .seg, .join.done .joinrow{ display:none; }
 @media (max-width:760px){
   .mark{ top:24px; left:24px; width:54px; }
-  .fself{ left:24px; top:112px; transform:none; }
-  .band{ left:24px; right:24px; bottom:30px; flex-direction:column; align-items:flex-start; gap:24px; }
-  .join{ width:100%; max-width:420px; }
+  .fself{ left:24px; top:112px; transform:none; }   /* JS centers it between logo and band */
+  /* "In beta testing" moves to the top-right, level with the logo */
+  .eyebrow{ position:fixed; top:44px; right:24px; margin:0; z-index:2; }
+  .band{ left:24px; right:24px; bottom:24px; flex-direction:column; align-items:flex-start; gap:22px; }
+  .join{ width:100%; max-width:420px; gap:12px; }
+  .join .msg{ min-height:0; }
 }
 </style>
 <!-- PostHog web analytics -->
 <script>
   !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-  posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'});
-  // exclude internal visits: open nawana.app/?ph=off once per browser (…/?ph=on to re-enable)
-  try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){posthog.opt_out_capturing();}}catch(e){}
+  // Never track local dev (file://, localhost) or opted-out browsers (nawana.app/?ph=off).
+  var _opt=(location.protocol==='file:')||/^(localhost|127\.|0\.0\.0\.0|\[?::1)/.test(location.hostname);
+  try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
+  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); }
 </script>
 </head>
 <body>
@@ -132,7 +136,7 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // and the flower TYPE changed (petal count N). Dark palette forced (this
 // hero is always dark).
 (function () {
-  var FS = 'precision highp float;uniform vec2 r;uniform float t;uniform float s;uniform sampler2D gx;uniform float gn;uniform vec3 pc;uniform vec3 ic;uniform float gr;' +
+  var FS = 'precision highp float;uniform vec2 r;uniform float t;uniform float s;uniform sampler2D gx;uniform float gn;uniform vec3 pc;uniform vec3 ic;uniform float gr;uniform vec2 uMouse;' +
     'float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}' +
     'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);' +
     'return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}' +
@@ -166,7 +170,8 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     'vec2 cuv=cc/r;float asp=r.x/r.y;vec2 p=vec2(cuv.x*asp,cuv.y);' +
     'float L=.05;' +
     // one flower + its stem — flower TYPE changed to N=8 petals (was 6), bigger
-    'vec2 f1=vec2(asp*.70+.02*sin(t*.5+s),.55);' +
+    // flower center follows the mouse a little (parallax)
+    'vec2 f1=vec2(asp*.70+.02*sin(t*.5+s),.55)+uMouse*vec2(.08,.06);' +
     'L=max(L,flower(p,f1,.32,s,8.));L=max(L,stem(p,f1,s));' +
     'float lvl=sqrt(clamp(L,0.,1.));' +
     'float gi=floor(lvl*(gn-1.)+.5);' +
@@ -213,6 +218,13 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   gl.uniform1f(gl.getUniformLocation(pr, 'gn'), N);
   var uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 's');
   var uPC = gl.getUniformLocation(pr, 'pc'), uIC = gl.getUniformLocation(pr, 'ic'), uGR = gl.getUniformLocation(pr, 'gr');
+  var uM = gl.getUniformLocation(pr, 'uMouse');
+  // the flower drifts toward the cursor; smoothed so it eases rather than snaps
+  var tmx = 0, tmy = 0, mx = 0, my = 0;
+  window.addEventListener('pointermove', function (e) {
+    tmx = (e.clientX / window.innerWidth - 0.5) * 2;
+    tmy = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
   var t0 = 0;
   (function frame(ms) {
     if (!t0) t0 = ms || 0;
@@ -221,6 +233,8 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; gl.viewport(0, 0, w, hh); }
     // dark palette (this hero is always dark) — paper ≈ hero bg, ink = subtle
     gl.uniform3f(uPC, .071, .067, .063); gl.uniform3f(uIC, .58, .55, .5); gl.uniform1f(uGR, .022);
+    mx += (tmx - mx) * 0.045; my += (tmy - my) * 0.045;
+    gl.uniform2f(uM, reduce ? 0 : mx, reduce ? 0 : my);
     gl.uniform2f(uR, w, hh);
     gl.uniform1f(uT, reduce ? 4.0 : ((ms || 0) - t0) / 1000);
     gl.uniform1f(uS, 0.0);
@@ -392,8 +406,30 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // ── Beta play: orb → center play button, drives Futureself from the audio ──
 (function(){
   var audio=document.getElementById('baudio'), pb=document.getElementById('playbtn');
+  var orb=document.getElementById('fself');
   var actx, analyser, srcNode, data, pumping=false;
-  window.startBetaPlay=function(){ document.body.classList.add('beta-play'); if(pb) pb.hidden=false; };
+  // On mobile, center the orb vertically between the logo and the bottom band.
+  // On desktop, clear inline styles so the CSS (mid-left) takes over.
+  function centerOrb(){
+    if(!orb || document.body.classList.contains('beta-play')) return;
+    var prev=orb.style.transition; orb.style.transition='none';
+    if(window.matchMedia('(max-width:760px)').matches){
+      var mark=document.querySelector('.mark'), band=document.querySelector('.band');
+      if(mark&&band){
+        var mb=mark.getBoundingClientRect().bottom, bt=band.getBoundingClientRect().top;
+        orb.style.left='24px'; orb.style.transform='none';
+        orb.style.top=Math.max(mb+8, (mb+bt)/2 - orb.offsetHeight/2)+'px';
+      }
+    } else { orb.style.top=''; orb.style.left=''; orb.style.transform=''; }
+    void orb.offsetWidth; orb.style.transition=prev;
+  }
+  window.addEventListener('load', centerOrb);
+  window.addEventListener('resize', centerOrb);
+  centerOrb();
+  window.startBetaPlay=function(){
+    if(orb){ orb.style.top=''; orb.style.left=''; orb.style.transform=''; }  // let the CSS glide it to center
+    document.body.classList.add('beta-play'); if(pb) pb.hidden=false;
+  };
   if(!pb||!audio) return;
   function initAudio(){
     try{

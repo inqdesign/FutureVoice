@@ -392,7 +392,9 @@ struct ScenarioDetailView: View {
                 persona: appState.persona,
                 counterpart: counterpart,
                 proficiency: appState.proficiency,
-                targetLanguage: appState.targetLanguage
+                targetLanguage: appState.targetLanguage,
+                weakVocabAreas: appState.learnerProfile.weakVocabAreas,
+                recurringMistakes: appState.learnerProfile.recurringMistakes
             )
             // Re-read: a Talk could have ended (marking lastUsedAt) meanwhile.
             guard var fresh = scenario else { return }

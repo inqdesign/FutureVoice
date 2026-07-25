@@ -56,7 +56,7 @@ struct InviteView: View {
             } header: {
                 Text("Your invite code")
             } footer: {
-                Text("You and your friend each get 500 credits when they join with your code — for up to 10 friends.")
+                Text("You and your friend each get 300 credits when they join with your code — for up to 10 friends.")
             }
 
             Section {
@@ -84,7 +84,7 @@ struct InviteView: View {
             } header: {
                 Text("Have a code?")
             } footer: {
-                Text("Enter a friend's code once to get 500 bonus credits.")
+                Text("Enter a friend's code once to get 300 bonus credits.")
             }
         }
         .navigationTitle("Invite & credits")
@@ -110,7 +110,7 @@ struct InviteView: View {
         defer { redeeming = false }
         do {
             balance = try await ReferralService.redeem(code: codeInput)
-            redeemMessage = "Redeemed — 500 credits added."
+            redeemMessage = "Redeemed — 300 credits added."
             codeInput = ""
             referral = await ReferralService.fetchMine()
         } catch let err as ReferralService.RedeemError {

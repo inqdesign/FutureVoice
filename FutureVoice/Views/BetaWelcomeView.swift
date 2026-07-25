@@ -18,7 +18,7 @@ struct BetaWelcomeView: View {
             VStack(spacing: 10) {
                 Text("Welcome to the beta")
                     .font(.title.bold())
-                Text("No subscription while we're in beta. You start with 500 credits — enough to talk, practice, and clone your voice.")
+                Text("No subscription while we're in beta. You start with 300 credits — enough to talk, practice, and clone your voice.")
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -27,7 +27,7 @@ struct BetaWelcomeView: View {
             VStack(spacing: 12) {
                 Text("Running low? Invite friends.")
                     .font(.headline)
-                Text("You and your friend each get 500 credits — for up to 10 friends.")
+                Text("You and your friend each get 300 credits — for up to 10 friends.")
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)

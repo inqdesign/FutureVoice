@@ -53,9 +53,11 @@ final class AppState: ObservableObject {
     /// onOpenURL (e.g. the study widget's futurevoice://vocab), consumed by
     /// PracticeTab when it appears — the tab may not be mounted yet at the
     /// moment the URL arrives on a cold launch, hence the handoff via state.
+    /// A specific word/phrase (from a widget note tap) opens that item's page;
+    /// nil opens the plain list (header tap, or the small widget).
     enum PracticeRoute: Equatable {
-        case vocabulary
-        case expressions
+        case vocabulary(word: String? = nil)
+        case expressions(phrase: String? = nil)
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 

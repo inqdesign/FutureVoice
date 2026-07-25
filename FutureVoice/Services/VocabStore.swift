@@ -23,6 +23,9 @@ final class VocabStore: ObservableObject {
     @Published private(set) var studying: [String] = []
     /// Multi-word expressions the user has used (lowercased key -> record).
     @Published private(set) var expressionRecords: [String: Record] = [:]
+    /// Expressions the user bookmarked to keep studying — the phrase-level
+    /// analogue of `studying`. Lowercased keys, newest first.
+    @Published private(set) var studyingExpressions: [String] = []
     /// Session ids already folded in, so re-ingest is cheap/idempotent.
     private var ingestedSessions: Set<UUID> = []
     private var ingestedExpressionSessions: Set<UUID> = []
@@ -32,6 +35,7 @@ final class VocabStore: ObservableObject {
     private let studyingURL: URL
     private let expressionsURL: URL
     private let expressionsMetaURL: URL
+    private let studyingExpressionsURL: URL
 
     init() {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -40,6 +44,7 @@ final class VocabStore: ObservableObject {
         studyingURL = dir.appendingPathComponent("vocab_studying.json")
         expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
+        studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
         load()
     }
 
@@ -56,6 +61,57 @@ final class VocabStore: ObservableObject {
     func removeStudying(_ word: String) {
         studying.removeAll { $0 == word }
         saveStudying()
+    }
+
+    // MARK: - Expression study state (bookmark + known), mirroring words
+
+    private func exprKey(_ phrase: String) -> String {
+        phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    func isStudyingExpression(_ phrase: String) -> Bool {
+        studyingExpressions.contains(exprKey(phrase))
+    }
+
+    /// Bookmark / un-bookmark an expression for study. Bookmarking ensures a
+    /// record exists so the phrase shows up in the Expressions list even if it
+    /// was added by hand rather than picked up in a talk.
+    func setStudyingExpression(_ phrase: String, _ studying: Bool) {
+        let k = exprKey(phrase)
+        guard !k.isEmpty else { return }
+        if studying {
+            guard !studyingExpressions.contains(k) else { return }
+            studyingExpressions.insert(k, at: 0)
+            if expressionRecords[k] == nil {
+                expressionRecords[k] = Record(state: .used, firstAt: Date(), lastAt: Date(), count: 0)
+                saveExpressions()
+            }
+        } else {
+            studyingExpressions.removeAll { $0 == k }
+        }
+        saveStudyingExpressions()
+    }
+
+    func isKnownExpression(_ phrase: String) -> Bool {
+        expressionRecords[exprKey(phrase)]?.state == .known
+    }
+
+    /// Mark / unmark an expression as known. Unmarking falls back to `.used`
+    /// (it's still an expression the user has met), never deletes the record.
+    func setKnownExpression(_ phrase: String, _ known: Bool) {
+        let k = exprKey(phrase)
+        guard !k.isEmpty else { return }
+        if var r = expressionRecords[k] {
+            r.state = known ? .known : .used
+            r.lastAt = Date()
+            expressionRecords[k] = r
+        } else if known {
+            expressionRecords[k] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0)
+        }
+        saveExpressions()
+        // Known-state changes can move a phrase in/out of the widget's studying
+        // view is unaffected, but keep the snapshot fresh for the count badge.
+        StudyWidgetRefresher.schedule()
     }
 
     // MARK: - Stats
@@ -372,6 +428,10 @@ final class VocabStore: ObservableObject {
            let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
             ingestedExpressionSessions = ids
         }
+        if let data = try? Data(contentsOf: studyingExpressionsURL),
+           let list = try? JSONDecoder().decode([String].self, from: data) {
+            studyingExpressions = list
+        }
     }
 
     private func save() {
@@ -388,6 +448,14 @@ final class VocabStore: ObservableObject {
             try? data.write(to: studyingURL, options: [.atomic])
         }
         // Notebook words show on the home-screen widget — refresh its snapshot.
+        StudyWidgetRefresher.schedule()
+    }
+
+    private func saveStudyingExpressions() {
+        if let data = try? JSONEncoder().encode(studyingExpressions) {
+            try? data.write(to: studyingExpressionsURL, options: [.atomic])
+        }
+        // The Expressions widget shows only bookmarked phrases — refresh it.
         StudyWidgetRefresher.schedule()
     }
 

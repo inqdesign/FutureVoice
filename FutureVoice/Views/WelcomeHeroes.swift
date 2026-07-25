@@ -59,6 +59,30 @@ struct TalkHero: View {
         [Line(id: 0, speaker: .user,  text: "I keep freezing when they speak fast."),
          Line(id: 1, speaker: .other, text: "Then let's slow it down together."),
          Line(id: 2, speaker: .user,  text: "Okay. That actually helps.")],
+
+        [Line(id: 0, speaker: .other, text: "What's been on your mind lately?"),
+         Line(id: 1, speaker: .user,  text: "I want to sound more natural on calls."),
+         Line(id: 2, speaker: .other, text: "We'll get you there — one call at a time.")],
+
+        [Line(id: 0, speaker: .other, text: "How'd the presentation land?"),
+         Line(id: 1, speaker: .user,  text: "They actually asked follow-up questions."),
+         Line(id: 2, speaker: .other, text: "That means they were hooked.")],
+
+        [Line(id: 0, speaker: .user,  text: "I froze up ordering at the restaurant."),
+         Line(id: 1, speaker: .other, text: "Happens to everyone. What did you want to say?"),
+         Line(id: 2, speaker: .user,  text: "Just to ask what they'd recommend.")],
+
+        [Line(id: 0, speaker: .other, text: "Big week coming up?"),
+         Line(id: 1, speaker: .user,  text: "My in-laws are visiting for the holidays."),
+         Line(id: 2, speaker: .other, text: "Let's rehearse the small talk, then.")],
+
+        [Line(id: 0, speaker: .user,  text: "How do I not sound rude when I disagree?"),
+         Line(id: 1, speaker: .other, text: "Start with what you agree on first."),
+         Line(id: 2, speaker: .user,  text: "Oh, that's a good trick.")],
+
+        [Line(id: 0, speaker: .other, text: "You closed the deal, didn't you?"),
+         Line(id: 1, speaker: .user,  text: "I did! I stayed calm the whole time."),
+         Line(id: 2, speaker: .other, text: "That's the version of you we've been building.")],
     ]
 
     @State private var convo = 0
@@ -335,84 +359,197 @@ struct WatchHero: View {
 // MARK: - 4. Shadow
 
 struct ShadowHero: View {
-    /// The same sample line the shadow capture uses, with the evenly-spaced
-    /// timings `ShadowDrillView` synthesizes offline (380 ms per word).
+    /// The sample line, with the evenly-spaced timings `ShadowDrillView`
+    /// synthesizes offline (380 ms per word).
     private static let words = "I really appreciate you taking the time to help me."
         .split(separator: " ").map(String.init)
     private static let perWordMs = 380
-    private static let selected = 2...4          // "appreciate you taking"
-    private static let cycleMs = words.count * perWordMs + 1400
+    private static let selected = 2...5          // "appreciate you taking the"
 
-    @State private var cycleStart = Date()
+    private static var durMs: Int { words.count * perWordMs + 200 }
+    private static var loopStartMs: Int { selected.lowerBound * perWordMs }
+    private static var loopEndMs: Int { (selected.upperBound + 1) * perWordMs }
+    /// Playhead loops the selected phrase (like the real loop toggle), pausing
+    /// briefly at each end.
+    private static var cycleMs: Int { (loopEndMs - loopStartMs) + 900 }
+
+    // Timeline geometry — matched to ShadowTimelinePlayer's TLConst.
+    private static let trackHeight: CGFloat = 54
+    private static let handleW: CGFloat = 14
+
+    @State private var start = Date()
 
     var body: some View {
-        VStack(spacing: 22) {
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text("Target line")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("\(Self.words.count) words")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                // Karaoke words — real FlowLayout, and ShadowDrillView's exact
-                // colour grammar: passed = primary, current = accent,
-                // upcoming = secondary; the practiced phrase carries the
-                // accent selection wash.
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
-                    let elapsed = Int(context.date.timeIntervalSince(cycleStart) * 1000)
-                    let nowMs = elapsed % Self.cycleMs
-                    FlowLayout(spacing: 1, lineSpacing: 6) {
-                        ForEach(Array(Self.words.enumerated()), id: \.offset) { i, word in
-                            Text(word)
-                                .font(.title2.weight(.semibold))
-                                .foregroundStyle(color(at: i, nowMs: nowMs))
-                                .padding(.horizontal, 2)
-                                .padding(.vertical, 1)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Self.selected.contains(i)
-                                              ? Color.accentColor.opacity(0.22)
-                                              : Color.clear)
-                                )
-                        }
-                    }
-                }
-            }
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(.secondarySystemBackground))
-            )
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let t = Int(context.date.timeIntervalSince(start) * 1000)
+            let phase = t % Self.cycleMs
+            // Playhead sweeps the loop region, then holds at the end.
+            let span = Self.loopEndMs - Self.loopStartMs
+            let nowMs = Self.loopStartMs + min(span, phase)
 
-            // The player's controls, at a glance: loop the phrase, slow it down.
-            HStack(spacing: 10) {
-                Label("Loop", systemImage: "repeat")
-                    .foregroundStyle(.tint)
-                Text("0.75×")
-                Label("Your voice", systemImage: "waveform")
+            VStack(spacing: 16) {
+                targetLine(nowMs: nowMs)
+                scrubber(nowMs: nowMs)
             }
-            .font(.caption.weight(.semibold))
-            .labelStyle(.titleAndIcon)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Color(.secondarySystemBackground)))
-            Spacer(minLength: 0)
+            .padding(.horizontal, 22)
         }
-        .padding(.horizontal, 28)
-        .onAppear { cycleStart = Date() }
+        .onAppear { start = Date() }
+    }
+
+    // MARK: - Target line (real FlowLayout + karaoke colours)
+
+    private func targetLine(nowMs: Int) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Target line").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Text("\(Self.words.count) words").font(.caption2).foregroundStyle(.tertiary)
+            }
+            // ShadowDrillView's exact grammar: passed = primary, current =
+            // accent, upcoming = secondary; the loop phrase carries the wash.
+            FlowLayout(spacing: 1, lineSpacing: 6) {
+                ForEach(Array(Self.words.enumerated()), id: \.offset) { i, word in
+                    Text(word)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(color(at: i, nowMs: nowMs))
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Self.selected.contains(i)
+                                      ? Color.accentColor.opacity(0.22)
+                                      : Color.clear)
+                        )
+                }
+            }
+        }
+    }
+
+    // MARK: - Scrubber (mirrors ShadowTimelinePlayer 1:1)
+
+    private func scrubber(nowMs: Int) -> some View {
+        VStack(spacing: 16) {
+            timeline(nowMs: nowMs)
+                .padding(.horizontal, 4)
+            labels(nowMs: nowMs)
+            controls
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 20)
+        // Glass card + hairline border — matches ShadowTimelinePlayer's
+        // current styling (was a solid secondarySystemBackground fill).
+        .background(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5)
+        )
+    }
+
+    private func timeline(nowMs: Int) -> some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let dur = CGFloat(Self.durMs)
+            let sx = CGFloat(Self.loopStartMs) / dur * w
+            let ex = CGFloat(Self.loopEndMs) / dur * w
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(.tertiarySystemFill))
+                    .frame(height: Self.trackHeight)
+
+                // Per-word tick markers.
+                ForEach(0..<Self.words.count, id: \.self) { i in
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.30))
+                        .frame(width: 1.5, height: 16)
+                        .offset(x: CGFloat(i * Self.perWordMs) / dur * w)
+                }
+
+                // Loop band + START/END handles.
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.accentColor.opacity(0.18))
+                    .frame(width: max(0, ex - sx), height: Self.trackHeight)
+                    .offset(x: sx)
+                handle(at: sx)
+                handle(at: ex)
+
+                // Playhead.
+                Capsule()
+                    .fill(Color.primary)
+                    .frame(width: 2.5, height: Self.trackHeight + 8)
+                    .offset(x: max(0, min(w - 2.5, CGFloat(nowMs) / dur * w)))
+                    .shadow(color: Color(.systemBackground), radius: 1)
+            }
+            .frame(height: Self.trackHeight)
+        }
+        .frame(height: Self.trackHeight)
+    }
+
+    private func handle(at x: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: 5)
+            .fill(Color.accentColor)
+            .frame(width: Self.handleW, height: Self.trackHeight)
+            .overlay(Capsule().fill(Color.white.opacity(0.9)).frame(width: 2, height: 16))
+            .offset(x: x - Self.handleW / 2)
+    }
+
+    private func labels(nowMs: Int) -> some View {
+        HStack {
+            Text(timeLabel(nowMs))
+            Spacer()
+            Text("loop \(timeLabel(Self.loopStartMs))–\(timeLabel(Self.loopEndMs))")
+                .foregroundStyle(.tint)
+            Spacer()
+            Text(timeLabel(Self.durMs))
+        }
+        .font(.caption.monospacedDigit())
+        .foregroundStyle(.secondary)
+    }
+
+    /// The transport row — play, loop (on), the centered mic, speed, and the
+    /// A/B "hear my take" — matched to ShadowTimelinePlayer's current controls
+    /// (the old xmark/clear was replaced by these).
+    private var controls: some View {
+        HStack(spacing: 20) {
+            Image(systemName: "play.circle.fill")
+                .font(.system(size: 44)).foregroundStyle(.tint)
+            Image(systemName: "repeat.circle.fill")
+                .font(.system(size: 44)).foregroundStyle(Color.accentColor)
+            Spacer(minLength: 72)
+            Text("1×")
+                .font(.subheadline.weight(.semibold)).monospacedDigit()
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12).padding(.vertical, 9)
+                .background(Capsule().fill(Color(.tertiarySystemFill)))
+            // A/B compare — hear your own last take next to the target.
+            Image(systemName: "person.wave.2.fill")
+                .font(.system(size: 44)).foregroundStyle(.tint)
+        }
+        .overlay {
+            // The centered mic — the primary record action.
+            Image(systemName: "mic.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 56, height: 56)
+                .background(Circle().fill(Color.accentColor))
+        }
     }
 
     private func color(at i: Int, nowMs: Int) -> Color {
         let start = i * Self.perWordMs
         let end = start + Self.perWordMs
+        // Only the loop phrase animates; the rest rests quiet, like loop mode.
+        if !Self.selected.contains(i) { return .secondary }
         if nowMs >= end   { return .primary }
         if nowMs >= start { return .accentColor }
         return .secondary
+    }
+
+    private func timeLabel(_ ms: Int) -> String {
+        let s = Double(ms) / 1000.0
+        return String(format: "%d:%04.1f", Int(s) / 60, s.truncatingRemainder(dividingBy: 60))
     }
 }
 
