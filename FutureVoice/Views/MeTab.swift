@@ -86,7 +86,7 @@ struct MeTab: View {
                             subtitle: "Calibrates conversations and feedback")
                     }
                     Picker(selection: $appState.nativeLanguage) {
-                        ForEach(LanguageCatalog.targets.map(\.code).filter { $0 != appState.targetLanguage },
+                        ForEach(LanguageCatalog.nativeLanguages.filter { $0 != appState.targetLanguage },
                                 id: \.self) { code in
                             Text(LanguageCatalog.endonym(code)).tag(code)
                         }

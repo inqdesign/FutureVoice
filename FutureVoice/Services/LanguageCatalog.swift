@@ -44,6 +44,30 @@ enum LanguageCatalog {
         Language(code: "zh", sttLocale: "zh-CN", tokenStyle: .syllable, wordlistResource: nil),
     ]
 
+    /// Languages offered as the learner's NATIVE language — what every
+    /// explanation, correction and word-card gloss is written in. Unlike
+    /// `targets`, a native language needs NO STT locale, wordlist or
+    /// tokenizer: it's only ever handed to the LLM as a display name, so any
+    /// BCP-47 code the OS can name works. That's why this list is far wider
+    /// than `targets` — it covers essentially every sizable English-learning
+    /// market. Ordered by region (East/SE Asia → South Asia → Middle East &
+    /// Central Asia → Europe → Africa); order = setup picker order.
+    /// English is intentionally absent — it's the fixed practice target.
+    static let nativeLanguages: [String] = [
+        // East & Southeast Asia
+        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
+        // South Asia
+        "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
+        // Middle East & Central Asia
+        "ar", "fa", "tr", "he", "kk", "uz", "az", "ka", "hy", "ps",
+        // Europe
+        "es", "pt", "fr", "de", "it", "ru", "pl", "uk", "nl", "ro", "el", "cs",
+        "hu", "sv", "da", "fi", "no", "sk", "bg", "hr", "sr", "lt", "lv", "et",
+        "sl", "ca",
+        // Africa
+        "sw", "am", "af", "ha", "yo", "zu",
+    ]
+
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code
         return targets.first { $0.code == base }

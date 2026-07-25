@@ -23,9 +23,9 @@ struct SetupFlowView: View {
     /// still supports others, they're just not user-selectable.
     private let targetLanguage = "en"
 
-    /// Languages offered as a native language — every catalog language except
-    /// the (fixed) English target.
-    private static let nativeChoices = LanguageCatalog.targets.map(\.code).filter { $0 != "en" }
+    /// Languages offered as a native language — the catalog's wide native
+    /// list, minus the (fixed) English target for safety.
+    private static let nativeChoices = LanguageCatalog.nativeLanguages.filter { $0 != "en" }
 
     private static let totalSteps = 2
 
