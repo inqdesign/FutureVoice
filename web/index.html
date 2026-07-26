@@ -455,7 +455,7 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   // captions: load the WebVTT matching the current audio language, sync by time
   var cap=document.getElementById('caption'), cues=[], capSrc=null;
   function tc(x){ x=x.trim().split(' ')[0]; var q=x.split(':'), n=0;
-    if(q.length===3) n=(+q[0])*3600+(+q[1])*60+parseFloat(q[1+1]);
+    if(q.length===3) n=(+q[0])*3600+(+q[1])*60+parseFloat(q[2]);
     else if(q.length===2) n=(+q[0])*60+parseFloat(q[1]); else n=parseFloat(q[0]||0);
     return n||0; }
   function parseVTT(txt){ var out=[], blk=txt.replace(/\r/g,'').split(/\n\n+/);
@@ -514,11 +514,19 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   pb.addEventListener('click', function(){
     if(!actx) initAudio();
     if(actx && actx.state==='suspended') actx.resume();
+    loadCaptions();
     if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); }
   });
   audio.addEventListener('play', function(){ pb.classList.add('playing'); if(!pumping){ pumping=true; pump(); } });
   audio.addEventListener('pause', function(){ pb.classList.remove('playing'); window.__fselfAudioLevel=null; });
-  audio.addEventListener('ended', function(){ pb.classList.remove('playing'); window.__fselfAudioLevel=null; });
+  audio.addEventListener('ended', function(){ pb.classList.remove('playing'); window.__fselfAudioLevel=null; if(cap) cap.textContent=''; });
+  audio.addEventListener('timeupdate', function(){
+    if(!cap) return;
+    if(!cues.length){ cap.textContent=''; return; }
+    var ct=audio.currentTime, cur='';
+    for(var i=0;i<cues.length;i++){ if(ct>=cues[i].s && ct<cues[i].e){ cur=cues[i].t; break; } }
+    if(cap.textContent!==cur) cap.textContent=cur;
+  });
 })();
 </script>
 </body>

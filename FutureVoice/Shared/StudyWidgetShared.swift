@@ -167,19 +167,50 @@ func pixelFont(_ size: CGFloat) -> Font {
     return .system(size: size, weight: .semibold, design: .monospaced)
 }
 
+/// The widget's tone, derived from the user's chosen Futureself theme so the
+/// home-screen widget matches the in-app dialer surface. `ground` is the dark
+/// display background, `bezel` the thick frame, `vivid` the pixel word colour —
+/// all the same hue family. Theme 0 (blue) is the default; 1 (mono) is the
+/// neutral charcoal look.
+enum WidgetTheme {
+    // dark-ramp steps lifted from Futureself.metal (ground → vivid).
+    private static let groundC: [(Double, Double, Double)] = [
+        (0.030, 0.036, 0.070), (0.030, 0.030, 0.032), (0.022, 0.038, 0.032),
+        (0.048, 0.036, 0.020), (0.048, 0.022, 0.036), (0.018, 0.038, 0.044),
+    ]
+    private static let bezelC: [(Double, Double, Double)] = [
+        (0.020, 0.130, 0.400), (0.140, 0.140, 0.150), (0.020, 0.230, 0.160),
+        (0.400, 0.220, 0.020), (0.380, 0.050, 0.140), (0.015, 0.230, 0.280),
+    ]
+    private static let vividC: [(Double, Double, Double)] = [
+        (0.480, 0.720, 1.000), (0.960, 0.960, 0.970), (0.560, 0.940, 0.760),
+        (1.000, 0.830, 0.480), (1.000, 0.640, 0.660), (0.560, 0.940, 1.000),
+    ]
+    private static func c(_ t: [(Double, Double, Double)], _ i: Int) -> Color {
+        let v = t[((i % t.count) + t.count) % t.count]
+        return Color(red: v.0, green: v.1, blue: v.2)
+    }
+    static func ground(_ i: Int) -> Color { c(groundC, i) }
+    static func bezel(_ i: Int) -> Color { c(bezelC, i) }
+    static func vivid(_ i: Int) -> Color { c(vividC, i) }
+}
+
 struct WidgetGrid: View {
+    var theme: Int = 0
     /// Corner shape — matches the home-screen widget's own radius via
     /// `ContainerRelativeShape` inside a widget; a rounded rect elsewhere (the
     /// app's design-review gallery).
     var shape: AnyShape = AnyShape(ContainerRelativeShape())
 
     var body: some View {
+        let ground = WidgetTheme.ground(theme)
+        let vivid = WidgetTheme.vivid(theme)
         Canvas { ctx, size in
-            ctx.fill(Path(CGRect(origin: .zero, size: size)),
-                     with: .color(Color(red: 0.16, green: 0.16, blue: 0.17)))
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(ground))
             let step: CGFloat = 26
+            // Grid lines tinted with the theme's vivid colour, very faint.
+            let line = vivid.opacity(0.06)
             var x: CGFloat = 0
-            let line = Color.white.opacity(0.055)
             while x <= size.width {
                 ctx.stroke(Path { $0.move(to: CGPoint(x: x, y: 0)); $0.addLine(to: CGPoint(x: x, y: size.height)) },
                            with: .color(line), lineWidth: 1)
@@ -192,18 +223,17 @@ struct WidgetGrid: View {
                 y += step
             }
         }
-        // Inner shadow — a soft dark ring hugging the edge, so the grid reads
-        // as a recessed display behind the bezel.
+        // Inner shadow — a soft dark ring hugging the edge, recessed-display feel.
         .overlay {
             shape
                 .stroke(Color.black.opacity(0.8), lineWidth: 14)
                 .blur(radius: 9)
                 .mask(shape)
         }
-        // Thick display bezel (stroke is centered on the edge; the OS clips
-        // the outer half, leaving a solid inner frame).
+        // Thick display bezel in the theme tone (stroke is centered on the
+        // edge; the OS clips the outer half, leaving a solid inner frame).
         .overlay {
-            shape.stroke(Color.black, lineWidth: 9)
+            shape.stroke(WidgetTheme.bezel(theme), lineWidth: 9)
         }
     }
 }
@@ -236,6 +266,8 @@ struct StudyCard<Prev: View, Next: View>: View {
     let note: String         // CEFR level / usage count, shown small
     let emptyText: String
     var compact: Bool = false
+    /// The pixel word's colour — the theme's vivid tone.
+    var wordColor: Color = .white
     @ViewBuilder var prev: () -> Prev
     @ViewBuilder var next: () -> Next
 
@@ -285,7 +317,7 @@ struct StudyCard<Prev: View, Next: View>: View {
             VStack(spacing: compact ? 2 : 5) {
                 Text(word)
                     .font(pixelFont(compact ? 30 : 42))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(wordColor)
                     .lineLimit(2)
                     .minimumScaleFactor(0.4)
                     .multilineTextAlignment(.center)

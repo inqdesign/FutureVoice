@@ -432,18 +432,19 @@ private struct GlowGallery: View {
 /// render (cork + stickies), exactly what `StudyWidgetView` composes, for
 /// design review (the extension can't be screenshotted headlessly).
 private struct WidgetGallery: View {
+    // 0 blue · 1 mono · 2 emerald · 3 amber · 4 coral · 5 aqua
     var body: some View {
         ScrollView {
             VStack(spacing: 26) {
                 HStack(alignment: .top, spacing: 18) {
-                    card(.words, word: "Correspondent", note: "C1",
+                    card(.words, word: "Correspondent", note: "C1", theme: 0,
                          size: CGSize(width: 158, height: 158), compact: true)
-                    card(.words, word: "Negotiate", note: "B1",
+                    card(.words, word: "Negotiate", note: "B1", theme: 2,
                          size: CGSize(width: 338, height: 158), compact: false)
                 }
-                card(.expressions, word: "Walk me through it", note: "",
+                card(.expressions, word: "Walk me through it", note: "", theme: 3,
                      size: CGSize(width: 338, height: 158), compact: false)
-                card(.words, word: "Meticulous", note: "C1",
+                card(.words, word: "Meticulous", note: "C1", theme: 4,
                      size: CGSize(width: 338, height: 354), compact: false)
             }
             .padding(24)
@@ -451,18 +452,20 @@ private struct WidgetGallery: View {
         .background(Color(.systemGroupedBackground))
     }
 
-    private func card(_ section: StudyWidgetSection, word: String, note: String,
+    private func card(_ section: StudyWidgetSection, word: String, note: String, theme: Int,
                       size: CGSize, compact: Bool) -> some View {
         let nav: CGFloat = compact ? 30 : 38
         return StudyCard(label: section.shortLabel, word: word,
                          note: section.showsNote ? note : "",
-                         emptyText: "", compact: compact) {
+                         emptyText: "", compact: compact,
+                         wordColor: WidgetTheme.vivid(theme)) {
             NavCircle(direction: .prev, size: nav)
         } next: {
             NavCircle(direction: .next, size: nav)
         }
         .frame(width: size.width, height: size.height)
-        .background(WidgetGrid(shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+        .background(WidgetGrid(theme: theme,
+                               shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }

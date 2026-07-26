@@ -33,7 +33,7 @@ struct StudyWidgetConfiguration {
             provider: StudyTimelineProvider(section: section)
         ) { entry in
             StudyWidgetView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGrid() }
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
         }
         .configurationDisplayName(section.displayName)
         .description(section.galleryDescription)
@@ -76,13 +76,15 @@ struct StudyEntry: TimelineEntry {
     let item: StudyWidgetItem?     // the word/phrase at the cursor; nil = empty
     let position: Int              // 1-based index for the "3 / 20" style count
     let total: Int
+    let theme: Int                 // the user's Futureself theme index
 }
 
 struct StudyTimelineProvider: TimelineProvider {
     let section: StudyWidgetSection
 
     func placeholder(in context: Context) -> StudyEntry {
-        StudyEntry(date: Date(), section: section, item: sampleItem, position: 1, total: 12)
+        StudyEntry(date: Date(), section: section, item: sampleItem, position: 1, total: 12,
+                   theme: StudyWidgetSnapshotStore.themeIndex)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (StudyEntry) -> Void) {
@@ -103,14 +105,15 @@ struct StudyTimelineProvider: TimelineProvider {
     }
 
     private func entry(from snapshot: StudyWidgetSnapshot, now: Date = Date()) -> StudyEntry {
+        let theme = StudyWidgetSnapshotStore.themeIndex
         let items = snapshot.items
         guard !items.isEmpty else {
-            return StudyEntry(date: now, section: section, item: nil, position: 0, total: 0)
+            return StudyEntry(date: now, section: section, item: nil, position: 0, total: 0, theme: theme)
         }
         let raw = StudyWidgetSnapshotStore.cursor(section)
         let idx = ((raw % items.count) + items.count) % items.count
         return StudyEntry(date: now, section: section, item: items[idx],
-                          position: idx + 1, total: items.count)
+                          position: idx + 1, total: items.count, theme: theme)
     }
 }
 
@@ -140,7 +143,8 @@ struct StudyWidgetView: View {
                   word: entry.item?.text ?? "",
                   note: entry.section.showsNote ? (entry.item?.note ?? "") : "",
                   emptyText: emptyText,
-                  compact: compact) {
+                  compact: compact,
+                  wordColor: WidgetTheme.vivid(entry.theme)) {
             Button(intent: StepStudyIntent(section: entry.section, delta: -1)) {
                 NavCircle(direction: .prev, size: navSize)
             }

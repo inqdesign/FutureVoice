@@ -131,6 +131,8 @@ struct FutureselfThemePicker: View {
 
     private func select(_ theme: FutureselfTheme) {
         stored = theme.rawValue
+        // The study widgets wear the same theme — repaint them at once.
+        StudyWidgetRefresher.refresh()
         // Drive the preview like a real utterance: level jumps to 1 (fast
         // attack blooms the cells center-out), then releases after a beat —
         // the smoother's slow decay handles the exhale.

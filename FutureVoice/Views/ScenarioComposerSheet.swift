@@ -508,7 +508,8 @@ struct ScenarioComposerSheet: View {
         defer { loadingOptions = false }
         do {
             let result = try await TopicEngine.suggestForPath(
-                path: labels, persona: appState.persona, targetLanguage: appState.targetLanguage)
+                path: labels, persona: appState.persona, counterpart: person,
+                targetLanguage: appState.targetLanguage)
             optionsCache[key] = result
             // Guard against a stale response (user navigated during the await).
             if path.map(\.label) == labels { options = result }

@@ -283,16 +283,27 @@ enum TopicEngine {
     static func suggestForPath(
         path: [String],
         persona: UserPersona?,
+        counterpart: Counterpart? = nil,
         targetLanguage: String,
         count: Int = 8
     ) async throws -> [SuggestedTopic] {
-        let system = pathSystemPrompt(targetLanguage: targetLanguage, count: count, depth: path.count)
+        let system = pathSystemPrompt(targetLanguage: targetLanguage, count: count,
+                                      depth: path.count, counterpart: counterpart)
         var lines = ["path: \(path.joined(separator: " > "))"]
         if let p = persona, p.isMinimallyComplete {
             if !p.occupation.isEmpty { lines.append("persona work: \(p.occupation)") }
             if !p.household.isEmpty { lines.append("persona household: \(p.household)") }
             let place = [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", ")
             if !place.isEmpty { lines.append("persona lives in: \(place)") }
+        }
+        if let c = counterpart {
+            lines.append("")
+            lines.append("COUNTERPART (the scene is WITH this person):")
+            lines.append("- name: \(c.name)")
+            if !c.relationship.isEmpty { lines.append("- relationship: \(c.relationship)") }
+            if !c.howWeMet.isEmpty { lines.append("- how they met: \(c.howWeMet)") }
+            if !c.background.isEmpty { lines.append("- shared context: \(c.background)") }
+            if !c.commonTopics.isEmpty { lines.append("- common topics: \(c.commonTopics)") }
         }
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
@@ -302,7 +313,19 @@ enum TopicEngine {
         return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
     }
 
-    private static func pathSystemPrompt(targetLanguage: String, count: Int, depth: Int) -> String {
+    private static func pathSystemPrompt(targetLanguage: String, count: Int, depth: Int,
+                                         counterpart: Counterpart? = nil) -> String {
+        let withPerson = counterpart.map { c in
+            """
+
+            EVERY scenario is WITH \(c.name)\(c.relationship.isEmpty ? "" : " (\(c.relationship))") —
+            a real moment the two of them would plausibly share, grounded in
+            their relationship. The title/blurb should read as being with them
+            ("catch up over coffee", "help \(c.name) move a couch"), NOT a generic
+            stranger interaction. Write the blurb in the first person about that
+            shared moment.
+            """
+        } ?? ""
         let levelGuidance = depth <= 1
             ? """
               The path is just the top CATEGORY. Return \(count) broad SUB-AREAS
@@ -321,7 +344,7 @@ enum TopicEngine {
         return """
         You help an advanced \(LanguageCatalog.englishName(targetLanguage)) learner build a
         conversation scenario by drilling down one step at a time.
-
+        \(withPerson)
         \(levelGuidance)
 
         Return STRICT JSON only — no prose, no code fences:
