@@ -19,9 +19,9 @@ struct VoiceCloneOnboardingView: View {
     @State private var quality: AudioSampleQuality?
 
     /// ElevenLabs IVC quality climbs steeply up to ~60-90 seconds of speech.
-    /// Under ~45s the clone sounds noticeably flatter, so that's our hard
-    /// minimum; we still surface a "great clone unlocked" cue at 60s+.
-    private static let minSeconds: Double = 45
+    /// We keep the whole flow on that 60–90 range the footer promises: the
+    /// countdown targets 60s (usable), 75s is the sweet spot, 90s auto-stops.
+    private static let minSeconds: Double = 60
     private static let recommendedSeconds: Double = 75
     /// Hard cap — auto-stop here. Well past the 75s sweet spot and far under
     /// ElevenLabs' 11 MB upload limit (~130s at 16-bit/44.1k mono).
@@ -49,6 +49,12 @@ struct VoiceCloneOnboardingView: View {
     Now a few different shapes: "Could you actually repeat that?" "Wait — that's \
     not quite right." "Honestly, I'm not sure yet, but here's what I think." \
     "Oh, that's brilliant — say more."
+
+    And honestly, here's why I'm doing this. I want to look back in a year and \
+    hear how far I've come. Small steps — one call today, one tomorrow, one the \
+    day after. Some days it'll feel slow. Some days it'll just click. Either \
+    way, I keep showing up. That's the whole trick, isn't it? Keep talking, \
+    keep going, and let it all add up.
 
     Okay. That should be enough. Talk to me soon.
     """
