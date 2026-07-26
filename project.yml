@@ -44,7 +44,7 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: FutureVoice
         INFOPLIST_FILE: FutureVoice/Resources/Info.plist
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_OBJC_BRIDGING_HEADER: ""
         ENABLE_PREVIEWS: "YES"
     configFiles:
@@ -74,7 +74,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.widget
         PRODUCT_NAME: FutureVoiceWidget
         INFOPLIST_FILE: FutureVoiceWidget/Info.plist
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
 
   FutureVoiceTests:

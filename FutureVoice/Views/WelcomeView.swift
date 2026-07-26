@@ -58,6 +58,7 @@ struct WelcomeView: View {
 
             signInArea
         }
+        .iPadContentPadding()
         // systemBackground (not grouped) — the same ground the real
         // conversation screens use, so DialogueLine's neutral bubble fill in
         // the Talk/Watch heroes reads as a filled bubble, not empty text.

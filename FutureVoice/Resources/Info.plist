@@ -47,6 +47,16 @@
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!-- iPad: support every orientation so the app always fills the screen.
+	     Locking to portrait letterboxes with black bars when the iPad is held
+	     in landscape. Content width is tamed with .iPadContentPadding() instead. -->
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 
 	<!-- Permissions -->
 	<key>NSMicrophoneUsageDescription</key>
