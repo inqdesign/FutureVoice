@@ -22,13 +22,12 @@ struct WatchTab: View {
     @State private var watchScene: Scenario?
     @State private var showingPeople = false
     @State private var showingNewVoice = false
-    /// The category card that was tapped — presents the builder sheet.
-    @State private var builderRoot: SituationBranch?
 
     struct ComposerConfig: Identifiable {
         let id = UUID()
         var person: Counterpart?
-        var prefill = ""
+        /// Pre-selected category (from a "Likely situations" card).
+        var category: ScenarioComposerSheet.Category?
     }
 
     var body: some View {
@@ -53,7 +52,12 @@ struct WatchTab: View {
                 }
             }
             .sheet(item: $composer) { cfg in
-                SituationComposerSheet(person: cfg.person, initialText: cfg.prefill) { scenario in
+                // The ONE unified composer — same as Talk's "+", but its action
+                // is Watch (play the scene). Saves the scenario, then plays it.
+                ScenarioComposerSheet(person: cfg.person,
+                                      initialCategory: cfg.category,
+                                      ctaTitle: "Watch", ctaIcon: "play.fill") { scenario in
+                    appState.saveScenario(scenario)
                     composer = nil
                     watchScene = scenario
                 }
@@ -65,13 +69,6 @@ struct WatchTab: View {
             }
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView().environmentObject(appState)
-            }
-            .sheet(item: $builderRoot) { node in
-                SituationBuilderSheet(root: node) { scenario in
-                    builderRoot = nil
-                    watchScene = scenario
-                }
-                .environmentObject(appState)
             }
             .navigationDestination(item: $watchScene) { s in
                 SceneWatchView(scenarioId: s.id)
@@ -171,7 +168,7 @@ struct WatchTab: View {
         }
     }
 
-    // MARK: - 3. Likely situations (card grid → builder sheet)
+    // MARK: - 3. Likely situations (category cards → the unified composer)
 
     private var likelySection: some View {
         Section {
@@ -186,13 +183,15 @@ struct WatchTab: View {
         } header: {
             Text("Likely situations")
         } footer: {
-            Text("Tap a card, then sharpen it chip by chip — or watch right away.")
+            Text("Tap a category — the composer suggests specific scenarios you can watch.")
         }
     }
 
     private func categoryCard(_ node: SituationBranch) -> some View {
         Button {
-            builderRoot = node
+            // Jump into the unified composer pre-scoped to this category.
+            composer = ComposerConfig(
+                category: ScenarioComposerSheet.Category(title: node.label, icon: node.icon))
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 Image(systemName: node.icon)

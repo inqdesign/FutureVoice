@@ -220,6 +220,14 @@ struct DiscoverSection: View {
                 ForEach(scenarios.prefix(8)) { s in
                     Button { onPickScenario(s) } label: { scenarioCard(s) }
                         .buttonStyle(.plain)
+                        // Horizontal cards can't swipe — long-press to delete.
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                appState.deleteScenario(id: s.id)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
                 }
                 allScenariosCard
             }

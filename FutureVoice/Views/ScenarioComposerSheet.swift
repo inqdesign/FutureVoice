@@ -16,6 +16,9 @@ import SwiftUI
 /// (Talk vs Watch) and what the caller does with the minted `Scenario`.
 struct ScenarioComposerSheet: View {
     var person: Counterpart?
+    /// Pre-select a category on open (Watch's "Likely situations" cards jump
+    /// straight into it, so its AI ideas load immediately).
+    var initialCategory: Category? = nil
     let ctaTitle: String
     let ctaIcon: String
     let onCommit: (Scenario) -> Void
@@ -109,6 +112,9 @@ struct ScenarioComposerSheet: View {
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
+            .onAppear {
+                if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
+            }
             #if DEBUG
             .onAppear {
                 if DebugCapture.composerPreview, path.isEmpty {

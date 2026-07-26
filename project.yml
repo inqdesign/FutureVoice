@@ -61,6 +61,9 @@ targets:
       # Shared data contract with the app — keep this list to files with no
       # dependencies on Models.swift or the stores.
       - path: FutureVoice/Shared/StudyWidgetShared.swift
+      # Pixel title font, shared with the app (registered in the widget's
+      # Info.plist UIAppFonts).
+      - path: FutureVoice/Resources/Fonts/GeistPixel-Square.ttf
     entitlements:
       path: FutureVoiceWidget/FutureVoiceWidget.entitlements
       properties:

@@ -38,51 +38,87 @@ struct TalkHero: View {
     private static let conversations: [[Line]] = [
         [Line(id: 0, speaker: .other, text: "So — how'd the interview go?"),
          Line(id: 1, speaker: .user,  text: "Honestly? It went really well."),
-         Line(id: 2, speaker: .other, text: "That's huge. What surprised you most?")],
+         Line(id: 2, speaker: .other, text: "That's huge. What surprised you most?"),
+         Line(id: 3, speaker: .user,  text: "They actually laughed at my joke."),
+         Line(id: 4, speaker: .other, text: "See? You're more charming than you think."),
+         Line(id: 5, speaker: .user,  text: "Maybe I am. Fingers crossed for the offer.")],
 
         [Line(id: 0, speaker: .other, text: "You sound lighter today."),
          Line(id: 1, speaker: .user,  text: "I finally booked the trip to Lisbon."),
-         Line(id: 2, speaker: .other, text: "No way! When do you leave?")],
+         Line(id: 2, speaker: .other, text: "No way! When do you leave?"),
+         Line(id: 3, speaker: .user,  text: "Early next month, for ten days."),
+         Line(id: 4, speaker: .other, text: "Ten days — you'll actually get to slow down."),
+         Line(id: 5, speaker: .user,  text: "That's exactly what I need right now.")],
 
         [Line(id: 0, speaker: .user,  text: "Can I run something by you?"),
          Line(id: 1, speaker: .other, text: "Always. What's on your mind?"),
-         Line(id: 2, speaker: .user,  text: "I'm thinking of switching teams at work.")],
+         Line(id: 2, speaker: .user,  text: "I'm thinking of switching teams at work."),
+         Line(id: 3, speaker: .other, text: "Interesting — what's pulling you toward it?"),
+         Line(id: 4, speaker: .user,  text: "I want work that stretches me more."),
+         Line(id: 5, speaker: .other, text: "Then that's worth a real talk with your manager.")],
 
         [Line(id: 0, speaker: .other, text: "How was dinner with her parents?"),
          Line(id: 1, speaker: .user,  text: "Nerve-wracking — but they were lovely."),
-         Line(id: 2, speaker: .other, text: "See? You worried over nothing.")],
+         Line(id: 2, speaker: .other, text: "See? You worried over nothing."),
+         Line(id: 3, speaker: .user,  text: "Her dad and I talked football for an hour."),
+         Line(id: 4, speaker: .other, text: "Sounds like you won him over."),
+         Line(id: 5, speaker: .user,  text: "I think I actually did.")],
 
         [Line(id: 0, speaker: .other, text: "Did you make it to the gym?"),
          Line(id: 1, speaker: .user,  text: "I did — first time in weeks."),
-         Line(id: 2, speaker: .other, text: "Proud of you. How'd it feel?")],
+         Line(id: 2, speaker: .other, text: "Proud of you. How'd it feel?"),
+         Line(id: 3, speaker: .user,  text: "Rough at first, then kind of amazing."),
+         Line(id: 4, speaker: .other, text: "That's the part that keeps you coming back."),
+         Line(id: 5, speaker: .user,  text: "Right? I already booked tomorrow.")],
 
         [Line(id: 0, speaker: .user,  text: "I keep freezing when they speak fast."),
          Line(id: 1, speaker: .other, text: "Then let's slow it down together."),
-         Line(id: 2, speaker: .user,  text: "Okay. That actually helps.")],
+         Line(id: 2, speaker: .user,  text: "Okay. That actually helps."),
+         Line(id: 3, speaker: .other, text: "Next time, just ask them to repeat it."),
+         Line(id: 4, speaker: .user,  text: "I never thought that was allowed."),
+         Line(id: 5, speaker: .other, text: "It's what fluent people do all the time.")],
 
         [Line(id: 0, speaker: .other, text: "What's been on your mind lately?"),
          Line(id: 1, speaker: .user,  text: "I want to sound more natural on calls."),
-         Line(id: 2, speaker: .other, text: "We'll get you there — one call at a time.")],
+         Line(id: 2, speaker: .other, text: "We'll get you there — one call at a time."),
+         Line(id: 3, speaker: .user,  text: "Some days it feels so far off."),
+         Line(id: 4, speaker: .other, text: "You're further than you were a month ago."),
+         Line(id: 5, speaker: .user,  text: "That's fair. I'll keep showing up.")],
 
         [Line(id: 0, speaker: .other, text: "How'd the presentation land?"),
          Line(id: 1, speaker: .user,  text: "They actually asked follow-up questions."),
-         Line(id: 2, speaker: .other, text: "That means they were hooked.")],
+         Line(id: 2, speaker: .other, text: "That means they were hooked."),
+         Line(id: 3, speaker: .user,  text: "One even asked if we could ship it sooner."),
+         Line(id: 4, speaker: .other, text: "That's a great problem to have."),
+         Line(id: 5, speaker: .user,  text: "I'm still buzzing from it, honestly.")],
 
         [Line(id: 0, speaker: .user,  text: "I froze up ordering at the restaurant."),
          Line(id: 1, speaker: .other, text: "Happens to everyone. What did you want to say?"),
-         Line(id: 2, speaker: .user,  text: "Just to ask what they'd recommend.")],
+         Line(id: 2, speaker: .user,  text: "Just to ask what they'd recommend."),
+         Line(id: 3, speaker: .other, text: "Let's practice it — say it to me now."),
+         Line(id: 4, speaker: .user,  text: "What would you recommend tonight?"),
+         Line(id: 5, speaker: .other, text: "Perfect. That's all it takes.")],
 
         [Line(id: 0, speaker: .other, text: "Big week coming up?"),
          Line(id: 1, speaker: .user,  text: "My in-laws are visiting for the holidays."),
-         Line(id: 2, speaker: .other, text: "Let's rehearse the small talk, then.")],
+         Line(id: 2, speaker: .other, text: "Let's rehearse the small talk, then."),
+         Line(id: 3, speaker: .user,  text: "I never know how to start with them."),
+         Line(id: 4, speaker: .other, text: "Ask about their drive over — it always opens up."),
+         Line(id: 5, speaker: .user,  text: "Simple. I can definitely do that.")],
 
         [Line(id: 0, speaker: .user,  text: "How do I not sound rude when I disagree?"),
          Line(id: 1, speaker: .other, text: "Start with what you agree on first."),
-         Line(id: 2, speaker: .user,  text: "Oh, that's a good trick.")],
+         Line(id: 2, speaker: .user,  text: "Oh, that's a good trick."),
+         Line(id: 3, speaker: .other, text: "Then say 'that said' and add your view."),
+         Line(id: 4, speaker: .user,  text: "That said, I'd take a different approach."),
+         Line(id: 5, speaker: .other, text: "Exactly — firm, but not rude.")],
 
         [Line(id: 0, speaker: .other, text: "You closed the deal, didn't you?"),
          Line(id: 1, speaker: .user,  text: "I did! I stayed calm the whole time."),
-         Line(id: 2, speaker: .other, text: "That's the version of you we've been building.")],
+         Line(id: 2, speaker: .other, text: "That's the version of you we've been building."),
+         Line(id: 3, speaker: .user,  text: "I even handled their pushback smoothly."),
+         Line(id: 4, speaker: .other, text: "A month ago that would've rattled you."),
+         Line(id: 5, speaker: .user,  text: "It really would have. Feels good.")],
     ]
 
     @State private var convo = 0
@@ -136,30 +172,31 @@ struct TalkHero: View {
         }
     }
 
-    /// One call turn, looped over a fresh conversation each time: fluent self
-    /// speaks → you answer (listening ignites) → thinking sweep → the reply
-    /// blooms → advance to the next conversation.
+    /// Loops over a fresh conversation each time, walking every turn regardless
+    /// of how many there are: you speak → the mic listens; the fluent self
+    /// replies → a short thinking sweep, then the line blooms as it speaks.
     private func run() async {
         while !Task.isCancelled {
             set(mode: .idle, level: 0, visible: 0)
             await pause(0.7)
-            let opensWithUser = lines.first?.speaker.isUser ?? false
-            // First line.
-            set(mode: opensWithUser ? .listening : .speaking,
-                level: opensWithUser ? 0.8 : 0.65, visible: 1)
-            await pause(opensWithUser ? 1.4 : 1.8)
-            // Second line — the other party.
-            set(mode: opensWithUser ? .thinking : .listening,
-                level: opensWithUser ? 0 : 0.5, visible: 1)
-            await pause(0.5)
-            set(mode: opensWithUser ? .speaking : .listening,
-                level: opensWithUser ? 0.7 : 0.85, visible: 2)
-            await pause(1.7)
-            // Third line.
-            set(mode: .thinking, level: 0, visible: 2)
-            await pause(1.0)
-            set(mode: .speaking, level: 0.7, visible: 3)
-            await pause(2.1)
+            let turns = lines
+            for i in turns.indices {
+                if Task.isCancelled { return }
+                if turns[i].speaker.isUser {
+                    // Your line — the mic listens as you speak.
+                    set(mode: .listening, level: 0.82, visible: i + 1)
+                    await pause(1.5)
+                } else {
+                    // The fluent self replies: a brief thinking beat (skipped on
+                    // an opening line), then the reply blooms while it speaks.
+                    if i > 0 {
+                        set(mode: .thinking, level: 0, visible: i)
+                        await pause(0.9)
+                    }
+                    set(mode: .speaking, level: 0.68, visible: i + 1)
+                    await pause(1.9)
+                }
+            }
             // Next conversation.
             withAnimation(.easeInOut(duration: 0.4)) { visible = 0 }
             await pause(0.35)
@@ -264,22 +301,30 @@ struct WatchHero: View {
         Scene(name: "Sofia", relationship: "Your barista", title: "Trying something new",
               lines: [(.other, "Morning! The usual oat latte?"),
                       (.user,  "Actually — can I try something new today?"),
-                      (.other, "Ooh, feeling adventurous. How about a cortado?")]),
+                      (.other, "Ooh, feeling adventurous. How about a cortado?"),
+                      (.user,  "What's a cortado like?"),
+                      (.other, "Bolder — equal parts espresso and warm milk.")]),
 
         Scene(name: "Dr. Park", relationship: "Family doctor", title: "The check-up",
               lines: [(.other, "So, what brings you in today?"),
                       (.user,  "I've had a cough that won't quite go away."),
-                      (.other, "How long has it been lingering?")]),
+                      (.other, "How long has it been lingering?"),
+                      (.user,  "About two weeks now, mostly at night."),
+                      (.other, "Let's take a listen to your chest.")]),
 
         Scene(name: "Mina", relationship: "Team lead", title: "Asking for time off",
               lines: [(.other, "You wanted to chat before standup?"),
                       (.user,  "Yeah — I'd like the last week of March off."),
-                      (.other, "Let me check the sprint, but that should work.")]),
+                      (.other, "Let me check the sprint, but that should work."),
+                      (.user,  "I can wrap up the report before I go."),
+                      (.other, "Perfect. Send me the dates and I'll approve it.")]),
 
         Scene(name: "Alex", relationship: "Landlord", title: "The leaky faucet",
               lines: [(.other, "You mentioned something needs fixing?"),
                       (.user,  "The kitchen tap's been dripping all week."),
-                      (.other, "I'll send someone over on Thursday.")]),
+                      (.other, "I'll send someone over on Thursday."),
+                      (.user,  "Morning works best if that's possible."),
+                      (.other, "I'll ask them to come before noon.")]),
     ]
 
     @State private var scene = 0

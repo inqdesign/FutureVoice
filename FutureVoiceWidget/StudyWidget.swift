@@ -22,8 +22,8 @@ struct ExpressionsWidget: Widget {
     var body: some WidgetConfiguration { StudyWidgetConfiguration(section: .expressions).body }
 }
 
-/// Shared configuration — both widgets are the same pinboard, only their data
-/// source, copy, and deep link differ (all carried by `StudyWidgetSection`).
+/// Shared configuration — both widgets are the same single-word card, only
+/// their data source, copy, and deep link differ (carried by the section).
 struct StudyWidgetConfiguration {
     let section: StudyWidgetSection
 
@@ -33,111 +33,84 @@ struct StudyWidgetConfiguration {
             provider: StudyTimelineProvider(section: section)
         ) { entry in
             StudyWidgetView(entry: entry)
-                .containerBackground(for: .widget) {
-                    // Corkboard behind the stickies — fixed grain: the board
-                    // stays put while notes come and go.
-                    CorkSurface()
-                }
+                .containerBackground(for: .widget) { WidgetGrid() }
         }
         .configurationDisplayName(section.displayName)
         .description(section.galleryDescription)
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
+        // Drop the system's default content margins so the grid/bezel and the
+        // word use the full widget — our own tight padding controls the inset.
+        .contentMarginsDisabled()
     }
 }
 
-// MARK: - Shuffle (interactive)
+// MARK: - Prev / Next (interactive)
 
-/// The in-widget Shuffle button. Bumps the section's shuffle cursor in the
-/// App Group so the timeline provider advances the visible words on the next
-/// (immediate) reload — the one lever that gives a widget on-demand motion.
-struct ShuffleStudyIntent: AppIntent {
-    static var title: LocalizedStringResource = "Shuffle words"
+/// Steps the section's cursor ±1 in the App Group, so tapping Prev/Next moves
+/// to the neighbouring word on the next (immediate) widget reload.
+struct StepStudyIntent: AppIntent {
+    static var title: LocalizedStringResource = "Next / previous word"
 
     @Parameter(title: "Section") var sectionRaw: String
+    @Parameter(title: "Delta") var delta: Int
 
     init() {}
-    init(section: StudyWidgetSection) { sectionRaw = section.rawValue }
+    init(section: StudyWidgetSection, delta: Int) {
+        sectionRaw = section.rawValue
+        self.delta = delta
+    }
 
     func perform() async throws -> some IntentResult {
         if let section = StudyWidgetSection(rawValue: sectionRaw) {
-            StudyWidgetSnapshotStore.bumpShuffle(section, by: 3)
+            StudyWidgetSnapshotStore.stepCursor(section, by: delta)
         }
         return .result()
     }
 }
 
-// MARK: - Timeline
+// MARK: - Timeline (a single item at the cursor)
 
 struct StudyEntry: TimelineEntry {
     let date: Date
     let section: StudyWidgetSection
-    /// The collection, rotated so this entry's window starts at a fresh item.
-    let items: [StudyWidgetItem]
+    let item: StudyWidgetItem?     // the word/phrase at the cursor; nil = empty
+    let position: Int              // 1-based index for the "3 / 20" style count
     let total: Int
-    let theme: Int
-    /// Drives the cork grain + sticky jitter; shifts with the window so the
-    /// board re-pins subtly on each slide and on every manual shuffle.
-    let seed: Int
 }
 
 struct StudyTimelineProvider: TimelineProvider {
     let section: StudyWidgetSection
 
     func placeholder(in context: Context) -> StudyEntry {
-        StudyEntry(date: Date(), section: section, items: sampleItems,
-                   total: sampleItems.count, theme: 0, seed: 0)
+        StudyEntry(date: Date(), section: section, item: sampleItem, position: 1, total: 12)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (StudyEntry) -> Void) {
-        if context.isPreview {
-            completion(placeholder(in: context))
-        } else {
-            completion(entries(from: StudyWidgetSnapshotStore.load(section)).first ?? placeholder(in: context))
-        }
+        completion(context.isPreview ? placeholder(in: context)
+                                     : entry(from: StudyWidgetSnapshotStore.load(section)))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<StudyEntry>) -> Void) {
-        completion(Timeline(entries: entries(from: StudyWidgetSnapshotStore.load(section)), policy: .atEnd))
+        // One entry — the word at the current cursor. The Prev/Next buttons (and
+        // app-side snapshot writes) reload the timeline; no time-based rotation.
+        completion(Timeline(entries: [entry(from: StudyWidgetSnapshotStore.load(section))],
+                            policy: .never))
     }
 
-    private var sampleItems: [StudyWidgetItem] {
-        switch section {
-        case .words:
-            return [StudyWidgetItem(text: "negotiate", note: "B1"),
-                    StudyWidgetItem(text: "tentative", note: "C1"),
-                    StudyWidgetItem(text: "revitalize", note: "C1")]
-        case .expressions:
-            return [StudyWidgetItem(text: "walk me through it", note: ""),
-                    StudyWidgetItem(text: "I'd rather grab a coffee", note: ""),
-                    StudyWidgetItem(text: "it seems a lot of parents", note: "×2")]
-        }
+    private var sampleItem: StudyWidgetItem {
+        section == .words ? StudyWidgetItem(text: "Negotiate", note: "B1")
+                          : StudyWidgetItem(text: "Walk me through it", note: "")
     }
 
-    /// One entry per 30 minutes for ~6h, each sliding the list window forward
-    /// a few rows — spaced exposure to the whole collection instead of the
-    /// same pinned few. The manual shuffle cursor is folded into the offset so
-    /// a tap jumps the window immediately. `.atEnd` re-reads and starts over.
-    private func entries(from snapshot: StudyWidgetSnapshot, now: Date = Date()) -> [StudyEntry] {
+    private func entry(from snapshot: StudyWidgetSnapshot, now: Date = Date()) -> StudyEntry {
         let items = snapshot.items
-        let theme = StudyWidgetSnapshotStore.themeIndex
-        let shuffle = StudyWidgetSnapshotStore.shuffleCursor(section)
         guard !items.isEmpty else {
-            return [StudyEntry(date: now, section: section, items: [], total: 0, theme: theme, seed: shuffle)]
+            return StudyEntry(date: now, section: section, item: nil, position: 0, total: 0)
         }
-        let stride = 3
-        let slots = items.count <= stride ? 1 : 12
-        return (0..<slots).map { slot in
-            let base = slot * stride + shuffle
-            let offset = ((base % items.count) + items.count) % items.count
-            return StudyEntry(
-                date: now.addingTimeInterval(Double(slot) * 30 * 60),
-                section: section,
-                items: Array(items[offset...] + items[..<offset]),
-                total: snapshot.total,
-                theme: theme,
-                seed: base
-            )
-        }
+        let raw = StudyWidgetSnapshotStore.cursor(section)
+        let idx = ((raw % items.count) + items.count) % items.count
+        return StudyEntry(date: now, section: section, item: items[idx],
+                          position: idx + 1, total: items.count)
     }
 }
 
@@ -145,7 +118,6 @@ struct StudyTimelineProvider: TimelineProvider {
 
 struct StudyWidgetView: View {
     @Environment(\.widgetFamily) private var family
-    @Environment(\.colorScheme) private var scheme
     let entry: StudyEntry
 
     var body: some View {
@@ -153,69 +125,59 @@ struct StudyWidgetView: View {
             if family == .accessoryRectangular {
                 lockScreen
             } else {
-                let style = boardStyle
-                PinboardBoard(section: entry.section, items: entry.items,
-                              theme: entry.theme, seed: entry.seed,
-                              capacity: style.capacity, columns: style.columns,
-                              noteSpacing: style.spacing, noteSize: style.size,
-                              fillsBoard: style.fills) {
-                    if family != .systemSmall {
-                        Button(intent: ShuffleStudyIntent(section: entry.section)) {
-                            ShuffleSticker()
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                card
             }
         }
-        .widgetURL(entry.section.deepLink)
+        // Tapping the card body (not the buttons) opens this item's page.
+        .widgetURL(entry.item.map { entry.section.deepLink(for: $0.text) } ?? entry.section.deepLink)
     }
 
-    private struct BoardStyle {
-        let capacity: Int
-        let columns: Int
-        let size: StickyNote.Size
-        let fills: Bool
-        let spacing: CGFloat
-    }
+    private var compact: Bool { family == .systemSmall }
+    private var navSize: CGFloat { compact ? 30 : 38 }
 
-    /// Per-family board shape. Words are short → two columns on wide
-    /// families; expressions are strips → always one. Large boards grow the
-    /// paper (`.large` + fills) so notes scale with the widget instead of
-    /// leaving bare cork.
-    private var boardStyle: BoardStyle {
-        switch family {
-        case .systemLarge:
-            return entry.section == .words
-                ? BoardStyle(capacity: 8, columns: 2, size: .large, fills: true, spacing: 16)
-                : BoardStyle(capacity: 6, columns: 1, size: .large, fills: true, spacing: 16)
-        case .systemMedium:
-            return entry.section == .words
-                ? BoardStyle(capacity: 4, columns: 2, size: .compact, fills: false, spacing: 12)
-                : BoardStyle(capacity: 3, columns: 1, size: .regular, fills: true, spacing: 12)
-        default:
-            return BoardStyle(capacity: 3, columns: 1, size: .regular, fills: true, spacing: 12)
+    private var card: some View {
+        StudyCard(label: entry.section.shortLabel,
+                  word: entry.item?.text ?? "",
+                  note: entry.section.showsNote ? (entry.item?.note ?? "") : "",
+                  emptyText: emptyText,
+                  compact: compact) {
+            Button(intent: StepStudyIntent(section: entry.section, delta: -1)) {
+                NavCircle(direction: .prev, size: navSize)
+            }
+            .buttonStyle(.plain)
+            .disabled(entry.total <= 1)
+        } next: {
+            Button(intent: StepStudyIntent(section: entry.section, delta: 1)) {
+                NavCircle(direction: .next, size: navSize)
+            }
+            .buttonStyle(.plain)
+            .disabled(entry.total <= 1)
         }
+    }
+
+    private var emptyText: String {
+        entry.section == .words
+            ? "Save words to study them here"
+            : "Bookmark phrases to study them here"
     }
 
     private var lockScreen: some View {
         VStack(alignment: .leading, spacing: 2) {
-            if let first = entry.items.first {
-                Text(first.text)
+            if let item = entry.item {
+                Text(item.text)
                     .font(.headline)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
-                if entry.items.count > 1 {
-                    Text(entry.items.dropFirst().prefix(2).map(\.text).joined(separator: " · "))
+                if entry.total > 1 {
+                    Text("\(entry.position) / \(entry.total)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
             } else {
                 Text("Future Voice").font(.headline)
                 Text(entry.section == .words
                      ? "Save words to study them here"
-                     : "Have a talk to collect phrases")
+                     : "Bookmark phrases to study them here")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }

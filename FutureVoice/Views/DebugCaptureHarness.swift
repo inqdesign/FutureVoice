@@ -113,9 +113,11 @@ enum DebugCapture {
             // representative frames side by side).
             return AnyView(GlowGallery())
         case "widget":
-            // The home-screen widgets at their real families over the
-            // Futureself pixel surface — design review before installing.
-            return AnyView(WidgetGallery())
+            // Design-review of the single-word widget card. NOTE: the app's
+            // global .fontDesign(.rounded) forces the pixel title font to
+            // render rounded HERE — the real widget target has no such
+            // ancestor, so on the home screen it shows GeistPixel as designed.
+            return AnyView(WidgetGallery().fontDesign(nil))
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.
@@ -430,57 +432,39 @@ private struct GlowGallery: View {
 /// render (cork + stickies), exactly what `StudyWidgetView` composes, for
 /// design review (the extension can't be screenshotted headlessly).
 private struct WidgetGallery: View {
-    private let words: [StudyWidgetItem] = [
-        .init(text: "negotiate", note: "B1"), .init(text: "tentative", note: "C1"),
-        .init(text: "revitalize", note: "C1"), .init(text: "meticulous", note: "C1"),
-        .init(text: "on the fence", note: "B2"), .init(text: "downplay", note: "B2"),
-        .init(text: "leverage", note: "B2"), .init(text: "snagged", note: "")]
-    private let phrases: [StudyWidgetItem] = [
-        .init(text: "walk me through it", note: ""), .init(text: "I'd rather grab a coffee", note: ""),
-        .init(text: "it seems a lot of parents", note: "×2"), .init(text: "let's circle back", note: "")]
-
-    @Environment(\.colorScheme) private var scheme
-
     var body: some View {
         ScrollView {
             VStack(spacing: 26) {
                 HStack(alignment: .top, spacing: 18) {
-                    card(.words, capacity: 3, columns: 1, fillsBoard: true,
-                         size: CGSize(width: 158, height: 158), shuffle: false)
-                    card(.words, theme: 2, capacity: 4, columns: 2, noteSize: .compact,
-                         size: CGSize(width: 338, height: 158), shuffle: true)
+                    card(.words, word: "Correspondent", note: "C1",
+                         size: CGSize(width: 158, height: 158), compact: true)
+                    card(.words, word: "Negotiate", note: "B1",
+                         size: CGSize(width: 338, height: 158), compact: false)
                 }
-                card(.expressions, theme: 5, capacity: 3, columns: 1, fillsBoard: true,
-                     size: CGSize(width: 338, height: 158), shuffle: true)
-                card(.words, theme: 3, capacity: 8, columns: 2, noteSpacing: 16,
-                     noteSize: .large, fillsBoard: true,
-                     size: CGSize(width: 338, height: 354), shuffle: true)
+                card(.expressions, word: "Walk me through it", note: "",
+                     size: CGSize(width: 338, height: 158), compact: false)
+                card(.words, word: "Meticulous", note: "C1",
+                     size: CGSize(width: 338, height: 354), compact: false)
             }
             .padding(24)
         }
         .background(Color(.systemGroupedBackground))
     }
 
-    private func card(_ section: StudyWidgetSection, theme: Int = 0, capacity: Int,
-                      columns: Int, noteSpacing: CGFloat = 12,
-                      noteSize: StickyNote.Size = .regular, fillsBoard: Bool = false,
-                      size: CGSize, shuffle: Bool) -> some View {
-        let items = section == .words ? words : phrases
-        return PinboardBoard(section: section, items: items,
-                             theme: theme, seed: 3, capacity: capacity, columns: columns,
-                             noteSpacing: noteSpacing, noteSize: noteSize,
-                             fillsBoard: fillsBoard) {
-            if shuffle {
-                ShuffleSticker()
-            }
+    private func card(_ section: StudyWidgetSection, word: String, note: String,
+                      size: CGSize, compact: Bool) -> some View {
+        let nav: CGFloat = compact ? 30 : 38
+        return StudyCard(label: section.shortLabel, word: word,
+                         note: section.showsNote ? note : "",
+                         emptyText: "", compact: compact) {
+            NavCircle(direction: .prev, size: nav)
+        } next: {
+            NavCircle(direction: .next, size: nav)
         }
-        .padding(14)
         .frame(width: size.width, height: size.height)
-        .background(CorkSurface())
+        .background(WidgetGrid(shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.18), radius: 8, y: 4)
+        .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }
 }
 #endif
