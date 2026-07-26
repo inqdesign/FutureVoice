@@ -61,6 +61,13 @@ final class AppState: ObservableObject {
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
+    /// A specific item to focus (open its card) from a widget note tap. Kept
+    /// separate from the route so it reaches the page EVEN WHEN it's already
+    /// on screen — VocabularyView/ExpressionsView observe these and open the
+    /// item, then clear it. (The route only pushes the page.)
+    @Published var focusWord: String?
+    @Published var focusPhrase: String?
+
     /// True while the Talk tab is showing its ROOT list (nothing pushed).
     /// ConversationHome flips it from its root's onAppear/onDisappear;
     /// RootTabView uses it to keep the floating Free-talk pill off pushed

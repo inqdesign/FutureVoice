@@ -101,9 +101,11 @@ struct RootTabView: View {
             case "vocab":
                 selection = .practice
                 appState.pendingPracticeRoute = .vocabulary(word: q)
+                appState.focusWord = q          // opens the card even if the page is already up
             case "expressions":
                 selection = .practice
                 appState.pendingPracticeRoute = .expressions(phrase: q)
+                appState.focusPhrase = q
             default:
                 break
             }

@@ -7,10 +7,6 @@ import Supabase   // FunctionInvokeOptions for the free word-entry lookup
 /// often you've used the word; tap one for its card (part of speech, meaning,
 /// example). Words enter the cloud automatically as you use them in talks.
 struct VocabularyView: View {
-    /// A specific word to open on entry (from a widget note tap); nil starts
-    /// on a study word as before.
-    var initialWord: String? = nil
-
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var store = VocabStore.shared
@@ -45,10 +41,18 @@ struct VocabularyView: View {
                         level = LevelFilter(appState.proficiency)   // start at the user's level
                         // A widget-tapped word opens straight to its card; the
                         // sheet shows it regardless of the cloud's level filter.
-                        currentWord = initialWord ?? store.studying.first
+                        currentWord = appState.focusWord ?? store.studying.first
+                        appState.focusWord = nil
                     }
                     if nodes.isEmpty { rebuild(center: true) }      // don't recompute on every re-appear
                 }
+        }
+        // A later widget tap (page already open) focuses the new word's card.
+        .onChange(of: appState.focusWord) { _, w in
+            guard let w else { return }
+            currentWord = w
+            showSheet = true
+            appState.focusWord = nil
         }
         .navigationTitle(titleText)
         .navigationBarTitleDisplayMode(.inline)

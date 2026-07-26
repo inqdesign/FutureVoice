@@ -24,9 +24,6 @@ struct PracticeTab: View {
     /// futurevoice://vocab deep link (study widget tap).
     @State private var showingVocabulary = false
     @State private var showingExpressions = false
-    /// A specific item to open when arriving from a widget note tap.
-    @State private var vocabInitialWord: String?
-    @State private var expressionInitialPhrase: String?
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -116,10 +113,10 @@ struct PracticeTab: View {
                 consumePendingRoute()
             }
             .navigationDestination(isPresented: $showingVocabulary) {
-                VocabularyView(initialWord: vocabInitialWord)
+                VocabularyView()
             }
             .navigationDestination(isPresented: $showingExpressions) {
-                ExpressionsView(initialPhrase: expressionInitialPhrase)
+                ExpressionsView()
                     .navigationTitle("Expressions")
                     .navigationBarTitleDisplayMode(.inline)
             }
@@ -138,14 +135,15 @@ struct PracticeTab: View {
     /// staged in AppState because on a cold launch the URL arrives before
     /// this tab exists — onAppear picks it up; onChange covers warm taps.
     private func consumePendingRoute() {
+        // Route only pushes the page; the specific item comes via
+        // appState.focusWord/focusPhrase (observed by the page even if it's
+        // already on screen).
         switch appState.pendingPracticeRoute {
-        case .vocabulary(let word):
+        case .vocabulary:
             appState.pendingPracticeRoute = nil
-            vocabInitialWord = word
             showingVocabulary = true
-        case .expressions(let phrase):
+        case .expressions:
             appState.pendingPracticeRoute = nil
-            expressionInitialPhrase = phrase
             showingExpressions = true
         case nil:
             break

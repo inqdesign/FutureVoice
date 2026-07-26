@@ -7,13 +7,9 @@ import SwiftUI
 /// Tapping a row opens the expression's card as a sheet — same interaction as
 /// tapping a word anywhere in the app.
 struct ExpressionsView: View {
-    /// A specific phrase to open on entry (from a widget note tap).
-    var initialPhrase: String? = nil
-
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @State private var selected: PhraseRef?
-    @State private var didOpenInitial = false
     @State private var filter: Filter = .all
 
     private struct PhraseRef: Identifiable {
@@ -84,10 +80,16 @@ struct ExpressionsView: View {
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
             // Opened from a widget note tap → jump straight to that phrase.
-            if let initialPhrase, !didOpenInitial {
-                didOpenInitial = true
-                selected = PhraseRef(value: initialPhrase)
+            if let p = appState.focusPhrase {
+                selected = PhraseRef(value: p)
+                appState.focusPhrase = nil
             }
+        }
+        // A later widget tap (page already open) opens the new phrase.
+        .onChange(of: appState.focusPhrase) { _, p in
+            guard let p else { return }
+            selected = PhraseRef(value: p)
+            appState.focusPhrase = nil
         }
         .sheet(item: $selected) { ref in
             ExpressionSheet(initialPhrase: ref.value, phrases: entries.map(\.text))
