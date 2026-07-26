@@ -48,6 +48,13 @@ body{
 .playbtn:hover svg{ transform:scale(1.08); }
 .playbtn .ico-pause{ display:none; }
 .playbtn.playing .ico-play{ display:none; } .playbtn.playing .ico-pause{ display:block; }
+/* synced captions under the play button (beta-play only) */
+.caption{ position:fixed; left:50%; top:calc(50% + 118px); transform:translateX(-50%); z-index:5;
+  width:min(620px,86vw); text-align:center; white-space:pre-line;
+  font-size:clamp(15px,1.8vw,19px); line-height:1.5; color:var(--tx);
+  opacity:0; pointer-events:none; transition:opacity .35s; text-shadow:0 1px 12px rgba(0,0,0,.7); }
+.beta-play .caption{ opacity:1; }
+@media (max-width:760px){ .caption{ top:calc(50% + 104px); font-size:15.5px; } }
 .band{ position:fixed; left:40px; right:40px; bottom:40px; z-index:2;
   display:flex; align-items:flex-end; justify-content:space-between; gap:48px; }
 /* status eyebrow above the wordmark */
@@ -132,6 +139,7 @@ body{
     <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
   </button>
+  <div class="caption" id="caption" aria-live="polite"></div>
   <audio id="baudio" src="/beta.mp3" preload="none" crossorigin="anonymous"></audio>
 
 <script>
@@ -444,6 +452,24 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   var audio=document.getElementById('baudio'), pb=document.getElementById('playbtn');
   var orb=document.getElementById('fself');
   var actx, analyser, srcNode, data, pumping=false;
+  // captions: load the WebVTT matching the current audio language, sync by time
+  var cap=document.getElementById('caption'), cues=[], capSrc=null;
+  function tc(x){ x=x.trim().split(' ')[0]; var q=x.split(':'), n=0;
+    if(q.length===3) n=(+q[0])*3600+(+q[1])*60+parseFloat(q[1+1]);
+    else if(q.length===2) n=(+q[0])*60+parseFloat(q[1]); else n=parseFloat(q[0]||0);
+    return n||0; }
+  function parseVTT(txt){ var out=[], blk=txt.replace(/\r/g,'').split(/\n\n+/);
+    for(var i=0;i<blk.length;i++){ var ls=blk[i].split('\n'), ti=-1;
+      for(var j=0;j<ls.length;j++){ if(ls[j].indexOf('-->')>-1){ ti=j; break; } }
+      if(ti<0) continue; var mm=ls[ti].split('-->');
+      var tx=ls.slice(ti+1).join('\n').trim(); if(tx) out.push({s:tc(mm[0]),e:tc(mm[1]),t:tx}); }
+    return out; }
+  function loadCaptions(){
+    var src=audio.getAttribute('src')||''; var vtt=/beta-en/.test(src)?'/beta-en.vtt':'/beta-ko.vtt';
+    if(vtt===capSrc) return; capSrc=vtt; cues=[]; if(cap) cap.textContent='';
+    fetch(vtt).then(function(r){ return r.ok?r.text():''; })
+      .then(function(x){ cues=x?parseVTT(x):[]; }).catch(function(){ cues=[]; });
+  }
   // On mobile, center the orb vertically between the logo and the bottom band.
   // On desktop, clear inline styles so the CSS (mid-left) takes over.
   function centerOrb(){
