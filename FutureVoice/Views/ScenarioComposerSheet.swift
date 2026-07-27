@@ -194,7 +194,14 @@ struct ScenarioComposerSheet: View {
                             .font(.caption2.weight(.semibold)).foregroundStyle(.tertiary)
                     }
                     Button {
-                        navigate(to: Array(path.prefix(i + 1)))
+                        // Tapping the CATEGORY crumb (index 0) returns to the
+                        // category grid so you can pick a different one;
+                        // deeper crumbs just back up to that step.
+                        if i == 0 {
+                            navigate(to: [])
+                        } else {
+                            navigate(to: Array(path.prefix(i + 1)))
+                        }
                     } label: {
                         HStack(spacing: 5) {
                             if let icon = crumb.icon { glyph(icon, font: .caption2) }

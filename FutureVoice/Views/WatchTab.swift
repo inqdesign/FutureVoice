@@ -35,6 +35,7 @@ struct WatchTab: View {
             List {
                 peopleSection
                 makeYourOwnSection
+                scenariosSection
                 likelySection
             }
             .listStyle(.insetGrouped)
@@ -133,6 +134,80 @@ struct WatchTab: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("New person")
+    }
+
+    // MARK: - Your scenarios (the same list Talk shows — watch them here too)
+
+    private var savedScenarios: [Scenario] {
+        appState.scenarios.filter { $0.isTopic != true }
+            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
+    }
+
+    @ViewBuilder
+    private var scenariosSection: some View {
+        if !savedScenarios.isEmpty {
+            Section {
+                // Same 2-column card grid as "Likely situations" below.
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
+                          spacing: 12) {
+                    ForEach(savedScenarios) { s in
+                        scenarioCard(s)
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+            } header: {
+                Text("Your scenarios")
+            } footer: {
+                Text("The situations you've built — tap to watch the scene again.")
+            }
+        }
+    }
+
+    private func scenarioCard(_ s: Scenario) -> some View {
+        let personaName = s.counterpartId.flatMap { id in
+            appState.counterparts.first { $0.id == id }?.name
+        }
+        let partner = personaName
+            ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role)
+        return Button {
+            watchScene = s
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                if let personaName {
+                    Text(Books.initials(personaName))
+                        .font(.title3.weight(.bold)).foregroundStyle(.tint)
+                } else {
+                    Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
+                        .font(.title2).foregroundStyle(.tint)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(s.cardTitle)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let partner {
+                        Text("with \(partner)")
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            // Fill the row's height so a short card matches its taller sibling
+            // (LazyVGrid sizes the row to the tallest cell).
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground)))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                appState.deleteScenario(id: s.id)
+            } label: { Label("Delete", systemImage: "trash") }
+        }
     }
 
     // MARK: - 2. Make your own (the default)
