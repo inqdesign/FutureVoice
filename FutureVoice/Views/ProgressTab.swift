@@ -1300,8 +1300,11 @@ struct ProgressTab: View {
         }
 
         // --- Measured signals from recent sessions' turns ---
+        // Archived talks are out: the user shelved them, so they stop counting
+        // as score/assessment evidence (unarchiving brings them back). The
+        // activity/effort panels above still count them — time spoken is real.
         let scoredSessions = SessionStore.shared.load()
-            .filter { $0.endedAt != nil && $0.summary?.scorecard != nil }
+            .filter { $0.endedAt != nil && $0.archivedAt == nil && $0.summary?.scorecard != nil }
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
         scoredCount = scoredSessions.count
 
@@ -1392,7 +1395,10 @@ struct ProgressTab: View {
         // already unlocked, kick it off RIGHT HERE. Waiting for the next
         // conversation to end (the only other trigger) would leave the user
         // staring at a full progress bar with nothing happening.
-        let endedSessions = SessionStore.shared.load().filter { $0.endedAt != nil }
+        // Same archived-out filter as AppState.maybeGenerateWeeklyReport, so
+        // the unlock bar and the actual generation never disagree.
+        let endedSessions = SessionStore.shared.load()
+            .filter { $0.endedAt != nil && $0.archivedAt == nil }
         reportUnlock = WeeklyReportEngine.unlockState(
             endedSessions: endedSessions,
             lastReport: appState.weeklyReports.first

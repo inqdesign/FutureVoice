@@ -176,7 +176,9 @@ final class AppState: ObservableObject {
     /// session. Checks unlock state and, if ready, fires the engine in the
     /// background — UI never blocks on the Gemini call.
     func maybeGenerateWeeklyReport() {
-        let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
+        // Archived talks are out of the evidence pool — same rule as the
+        // Progress tab's score stats.
+        let sessions = SessionStore.shared.load().filter { $0.endedAt != nil && $0.archivedAt == nil }
         let last = weeklyReports.first
         guard case .ready = WeeklyReportEngine.unlockState(
             endedSessions: sessions,
@@ -196,11 +198,48 @@ final class AppState: ObservableObject {
                 await MainActor.run {
                     WeeklyReportStore.shared.save(report)
                     self.weeklyReports = WeeklyReportStore.shared.load()
+                    // The measured level replaces the self-reported setting —
+                    // from here scoring calibration, pickup-word difficulty
+                    // and the talk-card label all track measurement. A manual
+                    // change in Me still overrides until the next assessment.
+                    if let lvl = report.cefrLevel.flatMap(CEFRLevel.init(rawValue:)),
+                       lvl != self.proficiency {
+                        self.proficiency = lvl
+                    }
                 }
             } catch {
                 print("weekly report generation failed:", error)
             }
         }
+    }
+
+    /// Archive / unarchive a talk. Archived talks keep their book (openable
+    /// from the Practice shelf's Archived list) but stop counting as score
+    /// and assessment evidence — so flipping this re-runs the latest
+    /// assessment when the talk was inside its window. Unarchiving restores
+    /// the evidence the same way.
+    func setSessionArchived(id: UUID, _ archived: Bool) {
+        guard var s = SessionStore.shared.load().first(where: { $0.id == id }),
+              (s.archivedAt != nil) != archived else { return }
+        s.archivedAt = archived ? Date() : nil
+        SessionStore.shared.save(s)
+        reassessAfterEvidenceChange(in: s)
+    }
+
+    /// Delete a talk for good: the session row, its drill cards, and its
+    /// cached per-turn audio. If the talk was evidence in the latest
+    /// assessment, that assessment is voided and re-run without it.
+    func deleteSession(id: UUID) {
+        guard let s = SessionStore.shared.load().first(where: { $0.id == id }) else { return }
+        SessionStore.shared.delete(id: id)
+        DrillStore.shared.deleteForSession(id)
+        for turn in s.turns {
+            TurnAudioStore.shared.delete(turnId: turn.id)
+            if let url = turn.audioURL {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        reassessAfterEvidenceChange(in: s)
     }
 
     /// Evidence inside an already-minted assessment changed — the user

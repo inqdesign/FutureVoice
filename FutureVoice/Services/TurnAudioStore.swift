@@ -42,6 +42,13 @@ final class TurnAudioStore {
         return try? Data(contentsOf: url)
     }
 
+    /// Remove cached audio + timings for a turn — session-deletion cleanup.
+    func delete(turnId: UUID) {
+        try? FileManager.default.removeItem(
+            at: dir.appendingPathComponent("\(turnId.uuidString).mp3"))
+        try? FileManager.default.removeItem(at: timingsURL(for: turnId))
+    }
+
     // MARK: - Word timings
 
     func timings(for turnId: UUID) -> [WordTiming]? {

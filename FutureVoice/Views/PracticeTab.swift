@@ -351,7 +351,7 @@ struct PracticeTab: View {
                 Label("Archive", systemImage: "archivebox")
             }
             Button(role: .destructive) {
-                SessionStore.shared.delete(id: session.id)
+                appState.deleteSession(id: session.id)
                 reload()
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -394,7 +394,7 @@ struct PracticeTab: View {
                                     mastered: talkSnapshots[s.id]?.isMastered == true,
                                     destination: .talk(s),
                                     unarchive: { setTalkArchived(s, false) },
-                                    delete: { SessionStore.shared.delete(id: s.id); reload() })
+                                    delete: { appState.deleteSession(id: s.id); reload() })
                 })
             }
         }
@@ -516,9 +516,9 @@ struct PracticeTab: View {
     }
 
     private func setTalkArchived(_ session: Session, _ flag: Bool) {
-        guard var s = SessionStore.shared.load().first(where: { $0.id == session.id }) else { return }
-        s.archivedAt = flag ? Date() : nil
-        SessionStore.shared.save(s)
+        // Via AppState: archived talks leave the score/assessment evidence,
+        // which may re-run the latest assessment.
+        appState.setSessionArchived(id: session.id, flag)
         reload()
     }
 

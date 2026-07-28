@@ -4,6 +4,7 @@ import SwiftUI
 /// full transcript and summary; swipe to delete.
 /// Reusable body view — parent supplies NavigationStack + title.
 struct HistoryView: View {
+    @EnvironmentObject private var appState: AppState
     @State private var sessions: [Session] = []
 
     var body: some View {
@@ -33,7 +34,8 @@ struct HistoryView: View {
 
     private func delete(at offsets: IndexSet) {
         let ids = offsets.map { sessions[$0].id }
-        for id in ids { SessionStore.shared.delete(id: id) }
+        // Full cleanup (drill cards, audio) + possible re-assessment.
+        for id in ids { appState.deleteSession(id: id) }
         sessions = SessionStore.shared.load()
     }
 }

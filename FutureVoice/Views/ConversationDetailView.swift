@@ -33,8 +33,10 @@ struct ConversationDetailView: View {
         let onStartNew: () -> Void
     }
 
+    @Environment(\.dismiss) private var dismiss
     @State private var curriculum = TalkCurriculum.Snapshot()
     @State private var archivedAt: Date?
+    @State private var showingDeleteConfirm = false
     @State private var drillCount = 0
     @State private var showingContinue = false
     @State private var showingTranscript = false
@@ -109,6 +111,16 @@ struct ConversationDetailView: View {
                 .environmentObject(appState)
         }
         .safeAreaInset(edge: .bottom) { postTalkBar }
+        .confirmationDialog("Delete this talk?", isPresented: $showingDeleteConfirm,
+                            titleVisibility: .visible) {
+            Button("Delete talk", role: .destructive) {
+                appState.deleteSession(id: session.id)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.")
+        }
     }
 
     // MARK: - Header (cover + progress + actions)
@@ -550,8 +562,10 @@ struct ConversationDetailView: View {
                         .foregroundStyle(color(overall(sc)))
                 }
                 // The scores are feedback on THIS talk, graded against the
-                // user's own level — say so, or they read as absolute.
-                Text("Scored at your \(appState.proficiency.rawValue.uppercased()) level — how this talk went, not your overall level.")
+                // user's LEVEL SETTING (Me tab) — say so precisely, or "your
+                // C1 level" reads as a level claim that can contradict the
+                // measured level.
+                Text(scoreContextLine(sc))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -598,6 +612,9 @@ struct ConversationDetailView: View {
                             Label("Archive", systemImage: "archivebox")
                         }
                     }
+                    Button(role: .destructive) { showingDeleteConfirm = true } label: {
+                        Label("Delete talk", systemImage: "trash")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
@@ -622,15 +639,27 @@ struct ConversationDetailView: View {
     }
 
     private func setArchived(_ flag: Bool) {
-        guard var s = SessionStore.shared.load().first(where: { $0.id == session.id }) else { return }
-        s.archivedAt = flag ? Date() : nil
-        SessionStore.shared.save(s)
-        archivedAt = s.archivedAt
+        // Via AppState: archiving pulls the talk out of the score/assessment
+        // evidence, which may re-run the latest assessment.
+        appState.setSessionArchived(id: session.id, flag)
+        archivedAt = flag ? Date() : nil
     }
 
     private func bestShadowScore(for lineId: UUID) -> Int? {
         let scores = appState.shadowAttempts.filter { $0.turnId == lineId }.map(\.matchScore)
         return scores.max()
+    }
+
+    /// One caption explaining what the 0–100 scores are relative to. The
+    /// grading anchor is the user's level SETTING; when the analyzer also
+    /// took an independent read of this talk's level, show that too — it's
+    /// the honest per-talk level signal.
+    private func scoreContextLine(_ sc: SessionScorecard) -> String {
+        let setting = appState.proficiency.rawValue.uppercased()
+        if let read = sc.cefrLevel?.uppercased() {
+            return "Scored against your \(setting) level setting — this talk itself read as ≈\(read)."
+        }
+        return "Scored against your \(setting) level setting — how this talk went, not a level rating."
     }
 
     private func overall(_ sc: SessionScorecard) -> Int {
