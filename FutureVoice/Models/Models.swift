@@ -308,6 +308,17 @@ struct SessionScorecard: Codable, Hashable {
     var cefrLevel: String?            // AI's holistic CEFR read of the whole talk (a1…c2)
 }
 
+extension SessionScorecard {
+    /// Mean of the axis scores (+ pronunciation when present) — the single
+    /// headline number for a talk, shared by the detail header and the Talk
+    /// book card.
+    var overall: Int {
+        var s = [vocabulary.score, grammar.score, expressiveness.score, fluency.score]
+        if let p = pronunciation { s.append(p.score) }
+        return s.isEmpty ? 0 : s.reduce(0, +) / s.count
+    }
+}
+
 struct AxisScore: Codable, Hashable {
     var score: Int       // 0–100
     var note: String     // one short sentence

@@ -60,6 +60,9 @@ enum DebugCapture {
         case "practice-watch":
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
+        case "practice-studying":
+            once("practice-studying") { seedSessions(scored: true); seedScenarios(into: appState) }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())

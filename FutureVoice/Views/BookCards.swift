@@ -41,42 +41,45 @@ enum Books {
     }
 }
 
-/// A small pill naming where a book came from — Free talk, News, or a
-/// Scenario. Practice's shelves split by ACTIVITY (Talk vs Watch), so this
-/// tag carries the orthogonal SOURCE on each card. Build it from a `Session`
-/// (Talk book) or a `Scenario` (Watch book).
+/// A quiet source label for a book — "Free talk", "News", "Scenario", with an
+/// optional activity prefix ("Talk ·" / "Watch ·") for the mixed Studying grid
+/// where the shelf no longer says which activity a card came from. Plain gray
+/// text, no glyph or fill, so it names the source without pulling the eye off
+/// the title. `nil` when a legacy talk's source can't be known.
 struct OriginTag: View {
-    let label: String
-    let icon: String
-    let color: Color
+    let text: String
 
     var body: some View {
-        // Quiet source label — plain tinted text, no glyph or fill, so it
-        // names the origin without pulling the eye off the title.
-        Text(label)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(color)
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .foregroundStyle(.secondary)
             .lineLimit(1)
     }
-}
 
-extension OriginTag {
-    /// Talk book — the session's stored origin. Legacy rows (nil origin) fall
-    /// back to News when they carried a topic, else Free talk.
-    init(session: Session) {
-        switch session.origin ?? (session.topic?.isEmpty == false ? .news : .free) {
-        case .free:     self.init(label: "Free talk", icon: "waveform", color: Books.talksColor)
-        case .news:     self.init(label: "News", icon: "newspaper.fill", color: Books.topicsColor)
-        case .scenario: self.init(label: "Scenario", icon: "theatermasks.fill", color: Books.scenariosColor)
+    /// Talk book. Legacy rows (no stored origin) only claim "Free talk" when
+    /// they carried no topic; otherwise the source is genuinely unknown and we
+    /// show no source rather than mislabel a free talk as News. `showActivity`
+    /// prefixes "Talk ·" for the Studying grid.
+    init?(session: Session, showActivity: Bool = false) {
+        let source: String?
+        switch session.origin {
+        case .free:     source = "Free talk"
+        case .news:     source = "News"
+        case .scenario: source = "Scenario"
+        case .none:     source = (session.topic?.isEmpty ?? true) ? "Free talk" : nil
         }
+        guard showActivity || source != nil else { return nil }
+        text = Self.join(activity: showActivity ? "Talk" : nil, source: source)
     }
-    /// Watch book — a scenario is either a news-born topic or a built situation.
-    init(scenario: Scenario) {
-        if scenario.isTopic == true {
-            self.init(label: "News", icon: "newspaper.fill", color: Books.topicsColor)
-        } else {
-            self.init(label: "Scenario", icon: "theatermasks.fill", color: Books.scenariosColor)
-        }
+
+    /// Watch book — a scenario is a news-born topic or a built situation.
+    init(scenario: Scenario, showActivity: Bool = false) {
+        let source = scenario.isTopic == true ? "News" : "Scenario"
+        text = Self.join(activity: showActivity ? "Watch" : nil, source: source)
+    }
+
+    private static func join(activity: String?, source: String?) -> String {
+        [activity, source].compactMap { $0 }.joined(separator: " · ")
     }
 }
 
@@ -86,22 +89,23 @@ struct ScenarioBookCard: View {
     let scenario: Scenario
     /// Linked persona's name when the scenario points at a real person.
     let personaName: String?
+    /// Prefix the source line with the activity ("Watch ·") for the mixed
+    /// Studying grid, where the shelf no longer names the activity.
+    var showActivity: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 avatar
                 Spacer()
-                HStack(spacing: 6) {
-                    if scenario.isMastered {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.title3).foregroundStyle(.green)
-                    }
-                    OriginTag(scenario: scenario)
+                if scenario.isMastered {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.title3).foregroundStyle(.green)
                 }
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
+                OriginTag(scenario: scenario, showActivity: showActivity)
                 // The tidy summary (not the raw prompt); topic headlines are
                 // full sentences so give them a second line.
                 Text(scenario.cardTitle).font(.subheadline.weight(.semibold))
@@ -167,6 +171,8 @@ struct ScenarioBookCard: View {
 struct TalkBookCard: View {
     let session: Session
     let snapshot: TalkCurriculum.Snapshot?
+    /// Prefix the source line with "Talk ·" for the mixed Studying grid.
+    var showActivity: Bool = false
 
     /// The last time this book was worked — a mastery event or the last time
     /// the talk itself was had/continued, whichever is later. Falls back to
@@ -181,16 +187,19 @@ struct TalkBookCard: View {
             HStack(alignment: .top) {
                 Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2).foregroundStyle(.tint)
                 Spacer()
-                HStack(spacing: 6) {
-                    if snapshot?.isMastered == true {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.title3).foregroundStyle(.green)
-                    }
-                    OriginTag(session: session)
+                if snapshot?.isMastered == true {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.title3).foregroundStyle(.green)
+                }
+                // How the talk itself went — the single headline number, only
+                // once the summary has scored it.
+                if let sc = session.summary?.scorecard {
+                    scoreChip(sc.overall)
                 }
             }
             Spacer(minLength: 8)
             VStack(alignment: .leading, spacing: 2) {
+                OriginTag(session: session, showActivity: showActivity)
                 Text(session.displayTitle).font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary).lineLimit(2)
                 // When you last WORKED this book, not when the chat happened —
@@ -208,6 +217,25 @@ struct TalkBookCard: View {
         .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
         .contentShape(Rectangle())
         .tint(Books.talksColor)
+    }
+
+    /// The talk's overall score as a small ring — number inside, band color on
+    /// the stroke. Quiet, but present, so a Talk book shows how it went.
+    private func scoreChip(_ score: Int) -> some View {
+        Text("\(score)")
+            .font(.caption.weight(.bold).monospacedDigit())
+            .foregroundStyle(scoreBand(score))
+            .frame(width: 30, height: 30)
+            .background(Circle().stroke(scoreBand(score).opacity(0.35), lineWidth: 2))
+    }
+
+    private func scoreBand(_ s: Int) -> Color {
+        switch s {
+        case ..<50:  return .red
+        case ..<70:  return .orange
+        case ..<85:  return .blue
+        default:     return .green
+        }
     }
 
     @ViewBuilder

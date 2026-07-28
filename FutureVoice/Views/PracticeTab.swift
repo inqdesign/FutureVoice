@@ -268,8 +268,8 @@ struct PracticeTab: View {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(studyingBooks) { book in
                         switch book {
-                        case .talk(let session):     talkCard(session)
-                        case .scenario(let s):       scenarioCard(s)
+                        case .talk(let session):     talkCard(session, showActivity: true)
+                        case .scenario(let s):       scenarioCard(s, showActivity: true)
                         }
                     }
                 }
@@ -337,12 +337,13 @@ struct PracticeTab: View {
 
     /// One talk book card + its navigation and management actions — shared by
     /// the Talks shelf and the Studying grid.
-    private func talkCard(_ session: Session) -> some View {
+    private func talkCard(_ session: Session, showActivity: Bool = false) -> some View {
         NavigationLink {
             ConversationDetailView(session: session)
                 .environmentObject(appState)
         } label: {
-            TalkBookCard(session: session, snapshot: talkSnapshots[session.id])
+            TalkBookCard(session: session, snapshot: talkSnapshots[session.id],
+                         showActivity: showActivity)
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -360,8 +361,8 @@ struct PracticeTab: View {
 
     /// One scenario/topic book card + actions — shared by the Topics and
     /// Scenarios shelves and the Studying grid.
-    private func scenarioCard(_ s: Scenario) -> some View {
-        ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s))
+    private func scenarioCard(_ s: Scenario, showActivity: Bool = false) -> some View {
+        ScenarioBookCard(scenario: s, personaName: linkedPersonaName(s), showActivity: showActivity)
             .onTapGesture { openScenario = s }
             .contextMenu {
                 Button { openScenario = s } label: { Label("Open", systemImage: "book") }
