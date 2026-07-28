@@ -195,8 +195,8 @@ nawana 베타에 오신 걸 환영합니다.
 ## Submission checklist — in dependency order
 
 ### 0. Blockers found in code — ALL FIXED 2026-07-23
-- [x] **Account deletion in-app** — MeTab "Delete account" → `account-delete` Edge Function (deletes ElevenLabs clones, cancels Stripe web sub, destroys auth user; all tables cascade) + `AppState.wipeLocalData()`. **Deploy needed:** `supabase functions deploy account-delete`
-- [x] **Privacy Policy page** — `web/privacy.html` + `web/privacy-ko.html`, linked from both landing footers + sitemap. **Deploy the web/ folder.**
+- [x] **Account deletion in-app** — MeTab "Delete account" → `account-delete` Edge Function (deletes ElevenLabs clones, cancels Stripe web sub, destroys auth user; all tables cascade) + `AppState.wipeLocalData()`. DEPLOYED 2026-07-28 (verified 401 without auth).
+- [x] **Privacy Policy page** — https://nawana.app/privacy.html + /privacy-ko.html LIVE (200) as of 2026-07-28.
 - [x] Info.plist mic + speech strings rebranded to nawana
 - [x] `CFBundleShortVersionString` → 1.0.0 (app + widget)
 - [x] Export compliance — `ITSAppUsesNonExemptEncryption=false` already set
