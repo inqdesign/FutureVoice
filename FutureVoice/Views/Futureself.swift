@@ -26,7 +26,12 @@ enum FutureselfTheme: Int, CaseIterable, Identifiable {
     var tint: Color {
         switch self {
         case .blue:    return Color(red: 0.040, green: 0.360, blue: 0.960)
-        case .mono:    return Color(red: 0.550, green: 0.550, blue: 0.560)
+        // Mono's accent leans near-black so tinted chrome reads as ink, not a
+        // washed-out gray. Adaptive: deep charcoal in light, bright gray in
+        // dark — a single fixed near-black would vanish on a dark background.
+        case .mono:    return Color(UIColor { $0.userInterfaceStyle == .dark
+                                        ? UIColor(white: 0.86, alpha: 1)
+                                        : UIColor(white: 0.16, alpha: 1) })
         case .emerald: return Color(red: 0.050, green: 0.640, blue: 0.420)
         case .amber:   return Color(red: 0.960, green: 0.560, blue: 0.050)
         case .coral:   return Color(red: 0.950, green: 0.230, blue: 0.320)
