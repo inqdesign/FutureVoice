@@ -1,17 +1,33 @@
 import SwiftUI
 
-/// App entry point. Sign in first, then quick-answer setup (target language,
-/// …), then voice-clone onboarding, then persona, then the main tab UI. The
-/// auth gate is non-bypassable — without a Supabase session we can't proxy
-/// ElevenLabs/Gemini calls.
+/// App entry point. Sign in first, then quick-answer setup (level, native
+/// language), then persona, then voice-clone onboarding LAST — the heaviest
+/// ask sits at the top of the investment ladder and its Meet act drops
+/// straight into the first call. The auth gate is non-bypassable — without a
+/// Supabase session we can't proxy ElevenLabs/Gemini calls.
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
 
+    /// The whole app's accent follows the Futureself palette the user picked,
+    /// so every tinted control (buttons, `.foregroundStyle(.tint)`, and the
+    /// `Color.accentColor` chrome) matches the call button's living surface.
+    /// Defaults to `.blue` — the same palette a fresh install starts on.
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+
     init() { Self.applyRoundedNavBar() }
 
     var body: some View {
-        content.fontDesign(.rounded)
+        let accent = (FutureselfTheme(rawValue: storedTheme) ?? .blue).tint
+        // `.tint` drives inherited controls and `.foregroundStyle(.tint)`;
+        // `.accentColor` is what a literal `Color.accentColor` resolves to
+        // (it does NOT follow `.tint`). The app uses both, so set both — the
+        // deprecation on `.accentColor` is fine, it's still the only knob that
+        // reaches `Color.accentColor` descendants.
+        content
+            .fontDesign(.rounded)
+            .tint(accent)
+            .accentColor(accent)
     }
 
     @ViewBuilder
@@ -56,10 +72,16 @@ struct RootView: View {
             WelcomeView()
         } else if !appState.setupComplete {
             SetupFlowView()
-        } else if appState.voiceCloneId == nil {
-            VoiceCloneOnboardingView()
         } else if appState.persona == nil {
+            // Light taps before the heavy ask: persona's cards build the
+            // investment (and the first call's context) BEFORE the voice
+            // recording, so the clone lands as onboarding's finale — Meet act,
+            // then straight into the first call.
             PersonaIntakeView()
+        } else if appState.voiceCloneId == nil || appState.holdVoiceOnboarding {
+            // holdVoiceOnboarding keeps this screen up through the final act
+            // (greeting + theme pick) after the clone id has already landed.
+            VoiceCloneOnboardingView()
         } else {
             RootTabView()
         }
@@ -115,10 +137,25 @@ struct RootView: View {
 
 extension Font {
     /// Geist Pixel — the app's display face (page titles, big CEFR levels,
-    /// hero numbers). `.custom` falls back to the system font if the bundled
-    /// file is ever missing, so text never disappears.
+    /// hero numbers). Falls back to the system font if the bundled file is ever
+    /// missing, so text never disappears.
+    ///
+    /// IMPORTANT: prefer the `View.geistPixel(_:)` modifier below. The app
+    /// applies `.fontDesign(.rounded)` at the root, which re-designs (and so
+    /// silently discards) a custom font in every descendant Text — so setting
+    /// this Font alone renders as SF Rounded, not pixels. The View modifier
+    /// pairs it with the required `.fontDesign(nil)` reset.
     static func geistPixel(_ size: CGFloat) -> Font {
         .custom("GeistPixel-Square", size: size)
+    }
+}
+
+extension View {
+    /// Renders text in Geist Pixel. Applies the font AND resets the inherited
+    /// font design — without the reset, the root `.fontDesign(.rounded)` would
+    /// override the custom face and the text would fall back to SF Rounded.
+    func geistPixel(_ size: CGFloat) -> some View {
+        font(.geistPixel(size)).fontDesign(nil)
     }
 }
 
