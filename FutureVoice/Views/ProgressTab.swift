@@ -40,6 +40,12 @@ struct ProgressTab: View {
     /// higher is better. Replaces the old suggestion-rate proxy, which also
     /// counted style rephrases and STT noise and read in the wrong direction.
     @State private var grammarScore = 0
+    /// Verified grammar slips per 100 spoken words across the recent talks —
+    /// the SAME evidence family the assessment cites for grammatical
+    /// control, normalized by words (per-turn density would punish long
+    /// turns). Drives the ≈Grammar band so the sheet and the verdict tell
+    /// one story; the 0–100 score stays as the Grammar page's "recent form".
+    @State private var slipsPer100Words = 0.0
     // Qualitative coaching notes (LLM), per dimension
     @State private var notesByDim: [Dim: [String]] = [:]
     @State private var scoredCount = 0
@@ -247,12 +253,17 @@ struct ProgressTab: View {
 
     private var availableDims: [Dim] { Dim.allCases }
 
-    /// When the level was last actually assessed (latest report's timestamp).
-    private var latestAssessmentAt: Date? {
+    /// The latest report that carries a level — the assessment behind the
+    /// big number, its date, its rationale and its evidence snapshot.
+    private var latestAssessment: WeeklyReport? {
         appState.weeklyReports
             .filter { $0.cefrLevel != nil }
-            .map(\.generatedAt).max()
+            .sorted { $0.generatedAt > $1.generatedAt }
+            .first
     }
+
+    /// When the level was last actually assessed (latest report's timestamp).
+    private var latestAssessmentAt: Date? { latestAssessment?.generatedAt }
 
     /// True when the shown level is older than `levelStaleDays` — the display
     /// dims and says so rather than passing old evidence off as current.
@@ -337,11 +348,18 @@ struct ProgressTab: View {
                 levelHistoryPanel
             }
 
+            // ONE unit on the level page: CEFR bands, same values as the
+            // "How this is assessed" sheet and the pre-assessment equalizer.
+            // The raw numbers (WPM, 0–100 score, words/turn) live on each
+            // skill's own page behind the row.
             panel {
                 Text("Across skills").font(.headline)
                 skillRow(.vocabulary, value: vocabLevel.map { $0.rawValue.uppercased() } ?? "—")
-                skillRow(.fluency, value: fluencyBand)
-                skillRow(.grammar, value: grammarScore > 0 ? "\(grammarScore)/100" : "—")
+                skillRow(.fluency, value: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
+                skillRow(.grammar, value: grammarCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
+                skillRow(.expressiveness, value: expressionCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
+                Text("Same bands as \u{201C}How this is assessed\u{201D} — tap a skill for its measured numbers.")
+                    .font(.caption2).foregroundStyle(.tertiary)
             }
 
             if let lv = aiLevel, let next = nextLevel(lv) {
@@ -652,10 +670,14 @@ struct ProgressTab: View {
 
     /// Articulation pace → CEFR band. Speech-rate bands are a recognized
     /// (if rough) proficiency proxy; boundaries follow typical learner
-    /// articulation rates (natives ~150+).
+    /// articulation rates (natives ~150+). Sessions without mic-energy stats
+    /// fall back to wall-clock WPM, which runs ~20 WPM lower (think-time and
+    /// VAD wait included) — shift it up before banding, same correction
+    /// `fluencyBand` applies, so old data doesn't read 1–2 levels too low.
     private var fluencyCEFR: CEFRLevel? {
         guard effectivePace > 0 else { return nil }
-        switch effectivePace {
+        let adjusted = articulationWpm > 0 ? effectivePace : effectivePace + 20
+        switch adjusted {
         case ..<60:    return .a1
         case 60..<85:  return .a2
         case 85..<105: return .b1
@@ -665,10 +687,24 @@ struct ProgressTab: View {
         }
     }
 
-    /// Grammar score → CEFR band. The score itself is anchored on verified
-    /// grammar slips (see ConversationEngine's rubric), so this is a coarse
-    /// proxy mapping like the pace bands — hence the "≈" in the UI.
+    /// Grammar → CEFR band from verified slip DENSITY — the same evidence
+    /// the assessment cites for grammatical control, so this row and the
+    /// verdict's rationale always tell one story. (The 0–100 score can't do
+    /// that: it's calibrated to the user's level setting, so a high-slip
+    /// speaker can still score 70+.) Falls back to the score only when no
+    /// slip data exists, so absent data doesn't read as perfect grammar.
     private var grammarCEFR: CEFRLevel? {
+        guard scoredCount > 0 else { return nil }
+        if slipsPer100Words > 0 {
+            switch slipsPer100Words {
+            case 7...:      return .a1
+            case 4..<7:     return .a2
+            case 2..<4:     return .b1
+            case 1..<2:     return .b2
+            case 0.5..<1:   return .c1
+            default:        return .c2
+            }
+        }
         guard grammarScore > 0 else { return nil }
         switch grammarScore {
         case ..<40:     return .a1
@@ -680,15 +716,18 @@ struct ProgressTab: View {
         }
     }
 
-    /// Words per turn → CEFR band (how far ideas get developed per turn).
+    /// Words per turn → CEFR band. The WEAKEST proxy of the four — it
+    /// measures turn LENGTH, not expressive quality, and chatty speakers
+    /// inflate it. Thresholds sit deliberately high so a long-winded B1
+    /// doesn't read as C2.
     private var expressionCEFR: CEFRLevel? {
         guard wordsPerTurn > 0 else { return nil }
         switch wordsPerTurn {
-        case ..<5:    return .a1
-        case 5..<8:   return .a2
-        case 8..<12:  return .b1
-        case 12..<16: return .b2
-        case 16..<20: return .c1
+        case ..<6:    return .a1
+        case 6..<10:  return .a2
+        case 10..<16: return .b1
+        case 16..<24: return .b2
+        case 24..<34: return .c1
         default:      return .c2
         }
     }
@@ -834,10 +873,32 @@ struct ProgressTab: View {
         NavigationStack {
             List {
                 Section {
+                    if let lv = aiLevel {
+                        HStack {
+                            Text("Assessed level").font(.subheadline.weight(.medium))
+                            Spacer()
+                            Text(lv.rawValue.uppercased())
+                                .font(.headline).foregroundStyle(.tint)
+                        }
+                    }
+                    // The judge's own justification, citing the evidence
+                    // numbers — the verdict must never be unexplainable.
+                    if let why = latestAssessment?.levelRationale, !why.isEmpty {
+                        Text(why).font(.callout)
+                    }
                     Text("Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after \(Self.levelMinMinutes) minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.")
                         .font(.callout)
+                        .foregroundStyle(latestAssessment?.levelRationale == nil ? .primary : .secondary)
                 } header: {
-                    Text("The estimated level")
+                    Text(latestAssessment?.levelRationale == nil
+                         ? "The estimated level" : "Why this level")
+                } footer: {
+                    // Accountability: the exact measured evidence the judge
+                    // received, verbatim — a surprising verdict can be checked.
+                    if let ev = latestAssessment?.levelEvidence, !ev.isEmpty {
+                        Text("Evidence the assessment received:\n" + ev)
+                            .font(.caption2.monospaced())
+                    }
                 }
                 Section {
                     assessedRow(name: "Vocabulary",
@@ -852,9 +913,11 @@ struct ProgressTab: View {
                                     : "Words per minute of voiced speech — pauses and think-time removed.")
                     assessedRow(name: "Grammar",
                                 level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
-                                detail: grammarScore > 0
-                                    ? "Scoring \(grammarScore)/100 across recent talks — each talk graded from the verified grammar slips in what you said."
-                                    : "Each talk's 0–100 grammar score, graded from the verified grammar slips in what you said.")
+                                detail: slipsPer100Words > 0
+                                    ? String(format: "%.1f verified grammar slips per 100 spoken words — the same density the assessment weighs.", slipsPer100Words)
+                                    : (grammarScore > 0
+                                        ? "Scoring \(grammarScore)/100 across recent talks — each talk graded from the verified grammar slips in what you said."
+                                        : "Verified grammar slips per 100 spoken words — fewer reads higher."))
                     assessedRow(name: "Expression",
                                 level: expressionCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: wordsPerTurn > 0
@@ -863,7 +926,7 @@ struct ProgressTab: View {
                 } header: {
                     Text("What's measured")
                 } footer: {
-                    Text("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. The pooled read weighs all of this evidence together.")
+                    Text("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed.")
                 }
                 Section {
                     Text("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.")
@@ -1332,6 +1395,29 @@ struct ProgressTab: View {
             .filter { (0...100).contains($0) }
             .map(Double.init)
         grammarScore = Int(mean(recentGrammar).rounded())
+        // Slip density over the SAME window the latest assessment judged —
+        // the ≈Grammar band must cite the same number as the verdict's
+        // rationale. A recent-5 window can straddle a different set of talks
+        // and flip the band one panel below the rationale that contradicts
+        // it. No assessment yet → the recent talks.
+        let assessments = appState.weeklyReports
+            .filter { $0.cefrLevel != nil }
+            .sorted { $0.generatedAt > $1.generatedAt }
+        let densitySessions: [Session]
+        if let latest = assessments.first {
+            let windowStart = assessments.dropFirst().first?.periodEnd ?? .distantPast
+            let window = scoredSessions.filter {
+                let d = $0.endedAt ?? $0.startedAt
+                return d > windowStart && d <= latest.periodEnd
+            }
+            densitySessions = window.isEmpty ? Array(recent) : window
+        } else {
+            densitySessions = Array(recent)
+        }
+        let densityMets = densitySessions.map { ScorecardMetrics.compute(turns: $0.turns) }
+        let slips = densitySessions.reduce(0) { $0 + ($1.summary?.grammarIssues.count ?? 0) }
+        let words = densityMets.reduce(0) { $0 + $1.userWordCount }
+        slipsPer100Words = words > 0 ? Double(slips) / Double(words) * 100 : 0
 
         // --- Per-skill trends: one point per analyzed talk, oldest first.
         // The SAME deterministic measurements as the headline numbers above,

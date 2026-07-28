@@ -366,6 +366,16 @@ struct WeeklyReport: Codable, Identifiable {
     /// reports generated before this field decode unchanged.
     var cefrLevel: String?
 
+    /// The judge's own 2-3 sentence justification of `cefrLevel`, citing the
+    /// specific evidence (pace band, slip density, per-talk reads). Shown in
+    /// "How this is assessed" so the level is never an unexplainable verdict.
+    var levelRationale: String? = nil
+
+    /// Verbatim snapshot of the measured-delivery evidence block the judge
+    /// received — kept for accountability/debugging, so a surprising verdict
+    /// can be checked against what the judge actually saw.
+    var levelEvidence: String? = nil
+
     var generatedAt: Date
 }
 
