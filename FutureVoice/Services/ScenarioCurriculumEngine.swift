@@ -46,7 +46,7 @@ enum ScenarioCurriculumEngine {
                     recurringMistakes: recurringMistakes
                 )
             )],
-            maxTokens: 2200,
+            maxTokens: sceneScale(for: proficiency).maxTokens,
             purpose: "scenario-curriculum",
             // v2: the scene-based schema — a v1 cached response (no turns)
             // would fail to decode under this Payload.
@@ -72,8 +72,52 @@ enum ScenarioCurriculumEngine {
 
     // MARK: - Prompts
 
+    /// Scene size scales with the learner's level: beginners get short,
+    /// ownable turns; advanced learners get more turns and fuller sentences —
+    /// depth the scene needs, not a fixed cap. Token budget scales with it.
+    struct SceneScale {
+        let turnRange: String     // e.g. "8 to 10"
+        let turnStyle: String     // per-band sentence-length guidance
+        let maxTokens: Int
+    }
+
+    static func sceneScale(for proficiency: CEFRLevel) -> SceneScale {
+        switch proficiency {
+        case .a1, .a2:
+            return SceneScale(
+                turnRange: "8 to 10",
+                turnStyle: """
+                Each turn is ONE short, simple sentence (roughly 5–10 words) —
+                clear everyday phrasing the learner can fully own.
+                """,
+                maxTokens: 2200
+            )
+        case .b1, .b2:
+            return SceneScale(
+                turnRange: "8 to 12",
+                turnStyle: """
+                Each turn is 1–2 sentences, as long as the moment naturally
+                calls for — never padded, never artificially clipped.
+                """,
+                maxTokens: 2800
+            )
+        case .c1, .c2:
+            return SceneScale(
+                turnRange: "10 to 14",
+                turnStyle: """
+                Each turn is 1–3 full sentences at natural native pacing —
+                subordinate clauses, nuance, and follow-up questions welcome.
+                Go deeper into the substance of the situation; an advanced
+                learner should hear a conversation with real depth.
+                """,
+                maxTokens: 3600
+            )
+        }
+    }
+
     private static func systemPrompt(targetLanguage: String, proficiency: CEFRLevel) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
+        let scale = sceneScale(for: proficiency)
         return """
         You are a \(languageName) curriculum designer. Given ONE real-life
         scenario a learner (CEFR \(proficiency.rawValue.uppercased())) wants to master, write the SCENE
@@ -83,13 +127,13 @@ enum ScenarioCurriculumEngine {
         studies its words and expressions, and shadows their own lines.
 
         Content rules:
-        - turns: 8 to 12, alternating naturally; either side can open. Each
-          turn 1–2 sentences of real spoken \(languageName) — contractions,
-          hedges, natural register. The USER speaks as a confident, fluent
-          version of the learner (slightly above \(proficiency.rawValue.uppercased()), never textbook-stiff).
-          Every user turn must be a complete, speakable line 6–16 words long —
-          it will be shadowed ALOUD. No stage directions, brackets, or
-          placeholders anywhere.
+        - turns: \(scale.turnRange), alternating naturally; either side can open.
+          Real spoken \(languageName) — contractions, hedges, natural register.
+          \(scale.turnStyle)
+          The USER speaks as a confident, fluent version of the learner
+          (slightly above \(proficiency.rawValue.uppercased()), never textbook-stiff). Every user turn must
+          be a complete, speakable line — it will be shadowed ALOUD. No stage
+          directions, brackets, or placeholders anywhere.
         - words: 8 single words or short compounds that APPEAR in the dialogue
           and a \(proficiency.rawValue.uppercased()) learner plausibly doesn't own yet. No filler like
           "hello" / "thanks". note = one short cue for when it comes up.
