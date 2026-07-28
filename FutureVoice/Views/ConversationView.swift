@@ -368,9 +368,17 @@ struct ConversationView: View {
             Button { Task { await handleMicTap() } } label: {
                 ZStack {
                     Futureself(mode: glowMode, level: voiceLevel)
-                    Image(systemName: micSymbol)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.primary)
+                    // Glyph ONLY while the conversation is stopped — an
+                    // invitation to talk. During the call the living surface
+                    // itself is the state display (ignites with your voice,
+                    // scans while thinking, blooms while speaking); an icon on
+                    // top just fights the pixels and reads poorly.
+                    if let symbol = micSymbol {
+                        Image(systemName: symbol)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .transition(.opacity)
+                    }
                 }
                 .frame(width: 156, height: 64)
                 .clipShape(Capsule())
@@ -411,16 +419,10 @@ struct ConversationView: View {
     }
 
 
-    private var micSymbol: String {
-        if phoneCallActive {
-            switch phase {
-            case .listening: return "stop.fill"           // tap to hang up
-            case .thinking:  return "ellipsis"
-            case .speaking:  return "waveform"
-            case .idle:      return "stop.fill"           // mid-cycle, still in call
-            }
-        }
-        return "mic.fill"                                 // not in call → tap to start
+    /// nil while on call — the Futureself surface carries the state; the mic
+    /// glyph appears only when the conversation is stopped (tap to start).
+    private var micSymbol: String? {
+        phoneCallActive ? nil : "mic.fill"
     }
 
     private var micA11yLabel: String {

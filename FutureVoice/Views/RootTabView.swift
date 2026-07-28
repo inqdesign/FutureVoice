@@ -117,6 +117,19 @@ struct RootTabView: View {
                 appState.pendingFreeTalk = true
             case "practice":
                 selection = .practice
+                appState.pendingPracticeRoute = .studying   // land on the Studying shelf, not wherever it was left
+            case "book":
+                // Continue widget: open a specific book's detail page.
+                let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
+                let type = comps?.queryItems?.first(where: { $0.name == "type" })?.value ?? "talk"
+                if let idString = comps?.queryItems?.first(where: { $0.name == "id" })?.value,
+                   let id = UUID(uuidString: idString) {
+                    selection = .practice
+                    appState.pendingPracticeRoute = .book(kind: type, id: id)
+                } else {
+                    selection = .practice
+                    appState.pendingPracticeRoute = .studying
+                }
             case "vocab":
                 selection = .practice
                 appState.pendingPracticeRoute = .vocabulary(word: q)
@@ -148,17 +161,11 @@ struct RootTabView: View {
                     .geistPixel(18)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
-                    // Sequenced, not overlapped: the label clears first…
+                    // The label clears quickly and nothing replaces it: the
+                    // call's own pill is glyph-free while on call (the living
+                    // surface IS the state), so the docked proxy matches it by
+                    // showing bare pixels too.
                     .animation(.easeOut(duration: 0.15), value: pillDocked)
-                // …then the mic fades in, so by the time the proxy is docked it
-                // shows the SAME glyph as the call's real pill — nothing pops in
-                // when the proxy hands off, and the two never sit half-lit at
-                // once.
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .opacity(pillDocked ? 1 : 0)
-                    .animation(.easeIn(duration: 0.2).delay(0.15), value: pillDocked)
             }
             .frame(width: pillDocked ? 156 : 180, height: pillDocked ? 64 : 56)
             .clipShape(Capsule())
