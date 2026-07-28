@@ -44,6 +44,8 @@ struct ConversationHome: View {
         var topic = ""
         var blurb = ""
         var isNews = false
+        var origin: SessionOrigin = .free
+        var scenarioId: UUID? = nil
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -141,7 +143,9 @@ struct ConversationHome: View {
             }
             .fullScreenCover(item: $callLaunch, onDismiss: reload) { launch in
                 ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
-                                 initialIsNews: launch.isNews)
+                                 initialIsNews: launch.isNews,
+                                 initialOrigin: launch.origin,
+                                 initialScenarioId: launch.scenarioId)
                     .environmentObject(appState)
             }
         }
@@ -311,7 +315,8 @@ struct ConversationHome: View {
 
     private func runScenario(_ s: Scenario) {
         appState.markScenarioUsed(id: s.id)
-        callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false)
+        callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false,
+                                origin: .scenario, scenarioId: s.id)
     }
 
     private func runNews(_ t: SuggestedTopic) {
@@ -320,7 +325,8 @@ struct ConversationHome: View {
         callLaunch = CallLaunch(
             topic: t.title,
             blurb: "Recent news to discuss (facts from coverage): \(t.blurb)",
-            isNews: true
+            isNews: true,
+            origin: .news
         )
     }
 

@@ -115,6 +115,16 @@ enum SessionMode: String, Codable {
     case conversation
 }
 
+/// Where a talk started from — the SOURCE, distinct from the activity (a talk
+/// is always the Talk activity). Drives the per-book origin badge in Practice
+/// so a scenario-launched or news-launched call is tellable from a plain free
+/// talk. Optional on `Session` so pre-origin rows decode unchanged.
+enum SessionOrigin: String, Codable {
+    case free      // Free talk — no seed topic
+    case news      // Launched from an "In the news" topic
+    case scenario  // Launched from a scenario (see `Session.originScenarioId`)
+}
+
 enum TurnRole: String, Codable {
     case user
     case fluentSelf
@@ -129,6 +139,32 @@ struct Turn: Codable, Identifiable {
     let timestamp: Date
     var suggestion: TurnSuggestion?
     var fluency: FluencyStats? = nil   // measured delivery for user turns
+    /// User marked this turn as misheard by speech-to-text. Excluded from
+    /// every assessment path (scorecard metrics, weekly-read evidence,
+    /// review material) — the recording stays in the transcript for context.
+    var excludedFromScoring: Bool = false
+}
+
+extension Turn {
+    enum CodingKeys: String, CodingKey {
+        case id, role, audioURL, transcript, durationMs, timestamp
+        case suggestion, fluency, excludedFromScoring
+    }
+
+    // Custom decode so turns saved before `excludedFromScoring` existed still
+    // load — synthesized Decodable throws keyNotFound on the missing Bool.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        role = try c.decode(TurnRole.self, forKey: .role)
+        audioURL = try c.decodeIfPresent(URL.self, forKey: .audioURL)
+        transcript = try c.decode(String.self, forKey: .transcript)
+        durationMs = try c.decode(Int.self, forKey: .durationMs)
+        timestamp = try c.decode(Date.self, forKey: .timestamp)
+        suggestion = try c.decodeIfPresent(TurnSuggestion.self, forKey: .suggestion)
+        fluency = try c.decodeIfPresent(FluencyStats.self, forKey: .fluency)
+        excludedFromScoring = try c.decodeIfPresent(Bool.self, forKey: .excludedFromScoring) ?? false
+    }
 }
 
 /// Measured speaking delivery for one user turn — from the live mic energy.
@@ -168,6 +204,13 @@ struct Session: Codable, Identifiable {
     /// (see `TalkCurriculum`) is mastered — same lifecycle as an archived
     /// scenario book. Optional so old rows decode unchanged.
     var archivedAt: Date? = nil
+    /// Where this talk was launched from (free / news / scenario). Optional so
+    /// pre-origin rows decode; nil is treated as free (or news if it carried a
+    /// topic) for the Practice badge.
+    var origin: SessionOrigin? = nil
+    /// The scenario this talk was launched from, when `origin == .scenario` —
+    /// lets a Talk book tie back to its scenario.
+    var originScenarioId: UUID? = nil
 }
 
 extension Session {

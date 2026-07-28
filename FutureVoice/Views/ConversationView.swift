@@ -59,7 +59,8 @@ struct ConversationView: View {
     /// turns preloaded as context). The call auto-starts on appear so it feels
     /// like placing a phone call.
     init(initialTopic: String = "", initialBlurb: String = "",
-         initialIsNews: Bool = false, resumeSession: Session? = nil,
+         initialIsNews: Bool = false, initialOrigin: SessionOrigin = .free,
+         initialScenarioId: UUID? = nil, resumeSession: Session? = nil,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
         if let s = resumeSession {
@@ -70,10 +71,15 @@ struct ConversationView: View {
             _sessionStartedAt = State(initialValue: s.startedAt)
             _didSaveCurrentSession = State(initialValue: true)
             _isResuming = State(initialValue: true)
+            // Carry the original origin so a resumed talk keeps its badge.
+            _sessionOrigin = State(initialValue: s.origin ?? (s.topic?.isEmpty == false ? .news : .free))
+            _sessionScenarioId = State(initialValue: s.originScenarioId)
         } else {
             _topic = State(initialValue: initialTopic)
             _topicBlurb = State(initialValue: initialBlurb)
             _topicIsNews = State(initialValue: initialIsNews)
+            _sessionOrigin = State(initialValue: initialOrigin)
+            _sessionScenarioId = State(initialValue: initialScenarioId)
         }
     }
 
@@ -121,6 +127,11 @@ struct ConversationView: View {
     /// True when the topic is a news story ("In the news" picker). The opener
     /// call then runs search-grounded and collects `newsFacts`.
     @State private var topicIsNews = false
+    /// Where this talk started from — stamped onto the saved `Session` so
+    /// Practice can badge the book (free / news / scenario).
+    @State private var sessionOrigin: SessionOrigin = .free
+    /// The scenario this talk launched from, carried onto the saved session.
+    @State private var sessionScenarioId: UUID? = nil
     /// Real facts from the grounded news lookup — injected into every turn's
     /// system prompt so the future self actually knows the story.
     @State private var newsFacts: [String] = []
@@ -200,14 +211,9 @@ struct ConversationView: View {
             }) { ctx in
                 BetaFeedbackSheet(context: ctx)
             }
-            .onChange(of: outOfCredits) { _, hit in
-                // First time a tester hits the credit wall → ask for beta
-                // feedback right at the moment of maximum signal.
-                if hit && BetaFeedback.shouldShow(.creditsDepleted) {
-                    BetaFeedback.markShown(.creditsDepleted)
-                    feedbackContext = .creditsDepleted
-                }
-            }
+            // Hitting the credit wall now routes to the paywall's preference
+            // survey (see the "See plans" alert button) — no separate feedback
+            // sheet at depletion.
             .alert("Microphone access needed", isPresented: $showMicPermissionAlert) {
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -1066,7 +1072,9 @@ struct ConversationView: View {
             startedAt: sessionStartedAt,
             endedAt: Date(),
             turns: turns,
-            summary: nil
+            summary: nil,
+            origin: sessionOrigin,
+            originScenarioId: sessionScenarioId
         ))
         didSaveCurrentSession = true
         do {
@@ -1150,7 +1158,9 @@ struct ConversationView: View {
                 startedAt: sessionStartedAt,
                 endedAt: Date(),
                 turns: turns,
-                summary: computed
+                summary: computed,
+                origin: sessionOrigin,
+                originScenarioId: sessionScenarioId
             )
             SessionStore.shared.save(session)
             // Clear any cards from a previous end of THIS session (resume

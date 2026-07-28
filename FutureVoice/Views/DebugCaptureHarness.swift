@@ -54,6 +54,12 @@ enum DebugCapture {
             // The Watch tab folded into Practice's shelves — capture that.
             once("watch") { seedScenarios(into: appState) }
             return AnyView(PracticeTab())
+        case "practice-talk":
+            once("practice-talk") { seedSessions(scored: true); seedScenarios(into: appState) }
+            return AnyView(PracticeTab(initialShelf: .talk).environmentObject(appState))
+        case "practice-watch":
+            once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
+            return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())
@@ -296,10 +302,14 @@ enum DebugCapture {
                 phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
                 overallNote: "Confident, natural talk — tighten a few articles.",
                 scorecard: sampleScorecard) : nil
+            // Vary origin across the three so the Talk shelf shows every badge.
+            let origin: SessionOrigin = [.free, .news, .scenario][day % 3]
+            let topic: String? = origin == .free ? nil
+                : (origin == .news ? "Four-day work week" : "Job interview")
             SessionStore.shared.save(Session(
                 id: UUID(), userId: uid, targetLanguage: "en", mode: .conversation,
-                topic: "Job interview", startedAt: started, endedAt: ended,
-                turns: turns, summary: summary))
+                topic: topic, startedAt: started, endedAt: ended,
+                turns: turns, summary: summary, origin: origin))
         }
     }
 
@@ -437,6 +447,11 @@ private struct WidgetGallery: View {
         ScrollView {
             VStack(spacing: 26) {
                 HStack(alignment: .top, spacing: 18) {
+                    freeTalkCard(theme: 0)
+                    freeTalkCard(theme: 4)
+                    freeTalkCard(theme: 3)
+                }
+                HStack(alignment: .top, spacing: 18) {
                     card(.words, word: "Correspondent", note: "C1", theme: 0,
                          size: CGSize(width: 158, height: 158), compact: true)
                     card(.words, word: "Negotiate", note: "B1", theme: 2,
@@ -450,6 +465,26 @@ private struct WidgetGallery: View {
             .padding(24)
         }
         .background(Color(.systemGroupedBackground))
+    }
+
+    private func freeTalkCard(theme: Int) -> some View {
+        ZStack {
+            RadialGradient(colors: [.black.opacity(0.45), .black.opacity(0.0)],
+                           center: .center, startRadius: 4, endRadius: 90)
+            VStack(spacing: 8) {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 30, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+                Text("Let's talk").font(pixelFont(16)).foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
+            }
+        }
+        .frame(width: 158, height: 158)
+        .background(FutureselfStatic(theme: theme))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.black, lineWidth: 4.5))
+        .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }
 
     private func card(_ section: StudyWidgetSection, word: String, note: String, theme: Int,

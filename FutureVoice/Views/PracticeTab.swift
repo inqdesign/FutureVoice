@@ -10,10 +10,11 @@ import SwiftUI
 ///                  (notebook / shadow browser / expression list); the user
 ///                  picks what to practice — nothing is pre-picked for them,
 ///                  and there is no "due" queue concept here.
-///   2. Shelves   — the full review material, grouped by where it came from:
-///                  Talks · Topics · Scenarios. Every book is the same
-///                  anatomy (scene + words + lines + mastery); master
-///                  everything and it archives.
+///   2. Shelves   — the full review material, split by ACTIVITY: Talk (the
+///                  calls you had) · Watch (the scenes you watched). Each
+///                  card wears an origin tag (Free talk / News / Scenario)
+///                  for its source. Every book is the same anatomy (scene +
+///                  words + lines + mastery); master everything and it archives.
 ///
 /// Doing lives on Home (Talk / Watch CTAs); measuring lives in Progress.
 struct PracticeTab: View {
@@ -28,6 +29,11 @@ struct PracticeTab: View {
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
     @State private var shelf: Shelf? = .studying
+
+    /// Default lands on Studying; the capture harness opens a specific shelf.
+    init(initialShelf: Shelf? = .studying) {
+        _shelf = State(initialValue: initialShelf)
+    }
     @State private var openScenario: Scenario?
     @State private var talkLaunch: Scenario?
     @State private var talks: [Session] = []
@@ -37,13 +43,15 @@ struct PracticeTab: View {
     @State private var talkSnapshots: [UUID: TalkCurriculum.Snapshot] = [:]
 
     enum Shelf: String, CaseIterable, Hashable {
-        case studying, talks, topics, scenarios
+        // Split by ACTIVITY, not source: Talk = the calls you had, Watch = the
+        // scenes you watched. Each card carries an origin tag (Free talk /
+        // News / Scenario) for the orthogonal source.
+        case studying, talk, watch
         var title: String {
             switch self {
             case .studying:  return "Studying"
-            case .talks:     return "Talks"
-            case .topics:    return "Topics"
-            case .scenarios: return "Scenarios"
+            case .talk:      return "Talk"
+            case .watch:     return "Watch"
             }
         }
         /// Category color for the selected-chip fill; nil = the cross-cutting
@@ -51,9 +59,8 @@ struct PracticeTab: View {
         var color: Color? {
             switch self {
             case .studying:  return nil
-            case .talks:     return Books.talksColor
-            case .topics:    return Books.topicsColor
-            case .scenarios: return Books.scenariosColor
+            case .talk:      return Books.talkChipColor
+            case .watch:     return Books.watchChipColor
             }
         }
     }
@@ -157,17 +164,12 @@ struct PracticeTab: View {
         switch s {
         case .studying:
             studyingPage
-        case .talks:
+        case .talk:
             shelfPage { talksShelf }
-        case .topics:
+        case .watch:
             shelfPage {
-                scenarioShelf(topicBooks, archived: archivedTopicBooks,
-                              emptyText: "Pick a story with Watch on Home — it becomes a book here: a scene to watch, words and lines to master.")
-            }
-        case .scenarios:
-            shelfPage {
-                scenarioShelf(situationBooks, archived: archivedSituationBooks,
-                              emptyText: "Build a situation with Watch on Home — where you are and who you're with becomes a course.")
+                scenarioShelf(watchBooks, archived: archivedWatchBooks,
+                              emptyText: "Watch a situation or a news story on Home — it becomes a book here: a scene to watch, words and lines to master.")
             }
         }
     }
@@ -321,17 +323,16 @@ struct PracticeTab: View {
 
     // MARK: - Books (the shelves)
 
-    private var topicBooks: [Scenario] {
-        appState.scenarios.filter { !$0.isArchived && $0.isTopic == true }
+    /// Every watched book — news topics and built situations together, one
+    /// flat shelf per the Talk/Watch split; the card's origin tag names which.
+    /// Most-recently-touched first.
+    private var watchBooks: [Scenario] {
+        appState.scenarios.filter { !$0.isArchived }
+            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
-    private var situationBooks: [Scenario] {
-        appState.scenarios.filter { !$0.isArchived && $0.isTopic != true }
-    }
-    private var archivedTopicBooks: [Scenario] {
-        appState.scenarios.filter { $0.isArchived && $0.isTopic == true }
-    }
-    private var archivedSituationBooks: [Scenario] {
-        appState.scenarios.filter { $0.isArchived && $0.isTopic != true }
+    private var archivedWatchBooks: [Scenario] {
+        appState.scenarios.filter { $0.isArchived }
+            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 
     /// One talk book card + its navigation and management actions — shared by

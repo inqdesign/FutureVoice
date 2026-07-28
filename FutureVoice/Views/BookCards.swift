@@ -1,15 +1,18 @@
 import SwiftUI
 
-/// Shared avatar vocabulary for the book shelves (Practice's
-/// Talks · Topics · Scenarios) and the people list.
+/// Shared avatar vocabulary for the book shelves (Practice's Talk · Watch)
+/// and the people list.
 enum Books {
-    /// Category color coding — one hue per book family, shared by the
-    /// Practice chips and every card of that family so a shelf is tellable
-    /// at a glance even in the mixed Studying grid: Talks = blue,
-    /// Topics = orange, Scenarios = purple. Mastery stays green everywhere.
+    /// Source color coding — one hue per book source, carried by each card's
+    /// origin tag so a source is tellable at a glance even inside a single
+    /// activity shelf or the mixed Studying grid: Free talk = blue,
+    /// News = orange, Scenario = purple. Mastery stays green everywhere.
     static let talksColor: Color = .blue
     static let topicsColor: Color = .orange
     static let scenariosColor: Color = .purple
+    /// Practice's two activity chips.
+    static let talkChipColor: Color = .blue
+    static let watchChipColor: Color = .indigo
     static func color(for scenario: Scenario) -> Color {
         scenario.isTopic == true ? topicsColor : scenariosColor
     }
@@ -38,6 +41,45 @@ enum Books {
     }
 }
 
+/// A small pill naming where a book came from — Free talk, News, or a
+/// Scenario. Practice's shelves split by ACTIVITY (Talk vs Watch), so this
+/// tag carries the orthogonal SOURCE on each card. Build it from a `Session`
+/// (Talk book) or a `Scenario` (Watch book).
+struct OriginTag: View {
+    let label: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        Label(label, systemImage: icon)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8).padding(.vertical, 3)
+            .background(Capsule().fill(color.opacity(0.16)))
+            .lineLimit(1)
+    }
+}
+
+extension OriginTag {
+    /// Talk book — the session's stored origin. Legacy rows (nil origin) fall
+    /// back to News when they carried a topic, else Free talk.
+    init(session: Session) {
+        switch session.origin ?? (session.topic?.isEmpty == false ? .news : .free) {
+        case .free:     self.init(label: "Free talk", icon: "waveform", color: Books.talksColor)
+        case .news:     self.init(label: "News", icon: "newspaper.fill", color: Books.topicsColor)
+        case .scenario: self.init(label: "Scenario", icon: "theatermasks.fill", color: Books.scenariosColor)
+        }
+    }
+    /// Watch book — a scenario is either a news-born topic or a built situation.
+    init(scenario: Scenario) {
+        if scenario.isTopic == true {
+            self.init(label: "News", icon: "newspaper.fill", color: Books.topicsColor)
+        } else {
+            self.init(label: "Scenario", icon: "theatermasks.fill", color: Books.scenariosColor)
+        }
+    }
+}
+
 /// One scenario/topic book on a shelf — cover avatar, title, partner, and
 /// the mastery strip. Tap/context actions are the caller's.
 struct ScenarioBookCard: View {
@@ -50,9 +92,12 @@ struct ScenarioBookCard: View {
             HStack(alignment: .top) {
                 avatar
                 Spacer()
-                if scenario.isMastered {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.title3).foregroundStyle(.green)
+                HStack(spacing: 6) {
+                    if scenario.isMastered {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.title3).foregroundStyle(.green)
+                    }
+                    OriginTag(scenario: scenario)
                 }
             }
             Spacer(minLength: 8)
@@ -136,9 +181,12 @@ struct TalkBookCard: View {
             HStack(alignment: .top) {
                 Image(systemName: "bubble.left.and.bubble.right.fill").font(.title2).foregroundStyle(.tint)
                 Spacer()
-                if snapshot?.isMastered == true {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.title3).foregroundStyle(.green)
+                HStack(spacing: 6) {
+                    if snapshot?.isMastered == true {
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.title3).foregroundStyle(.green)
+                    }
+                    OriginTag(session: session)
                 }
             }
             Spacer(minLength: 8)
