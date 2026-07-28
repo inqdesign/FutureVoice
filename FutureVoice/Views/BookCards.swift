@@ -51,11 +51,11 @@ struct OriginTag: View {
     let color: Color
 
     var body: some View {
-        Label(label, systemImage: icon)
+        // Quiet source label — plain tinted text, no glyph or fill, so it
+        // names the origin without pulling the eye off the title.
+        Text(label)
             .font(.caption2.weight(.semibold))
             .foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(color.opacity(0.16)))
             .lineLimit(1)
     }
 }
