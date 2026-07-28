@@ -178,10 +178,6 @@ enum WidgetTheme {
         (0.030, 0.036, 0.070), (0.030, 0.030, 0.032), (0.022, 0.038, 0.032),
         (0.048, 0.036, 0.020), (0.048, 0.022, 0.036), (0.018, 0.038, 0.044),
     ]
-    private static let bezelC: [(Double, Double, Double)] = [
-        (0.020, 0.130, 0.400), (0.140, 0.140, 0.150), (0.020, 0.230, 0.160),
-        (0.400, 0.220, 0.020), (0.380, 0.050, 0.140), (0.015, 0.230, 0.280),
-    ]
     private static let vividC: [(Double, Double, Double)] = [
         (0.480, 0.720, 1.000), (0.960, 0.960, 0.970), (0.560, 0.940, 0.760),
         (1.000, 0.830, 0.480), (1.000, 0.640, 0.660), (0.560, 0.940, 1.000),
@@ -191,7 +187,6 @@ enum WidgetTheme {
         return Color(red: v.0, green: v.1, blue: v.2)
     }
     static func ground(_ i: Int) -> Color { c(groundC, i) }
-    static func bezel(_ i: Int) -> Color { c(bezelC, i) }
     static func vivid(_ i: Int) -> Color { c(vividC, i) }
 }
 
@@ -233,7 +228,7 @@ struct WidgetGrid: View {
         // Thick display bezel in the theme tone (stroke is centered on the
         // edge; the OS clips the outer half, leaving a solid inner frame).
         .overlay {
-            shape.stroke(WidgetTheme.bezel(theme), lineWidth: 9)
+            shape.stroke(WidgetTheme.vivid(theme), lineWidth: 9)
         }
     }
 }
