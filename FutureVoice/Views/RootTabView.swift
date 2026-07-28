@@ -33,6 +33,9 @@ struct RootTabView: View {
     /// re-tap from mounting a second ConversationView on top of the one
     /// that's tearing down (overlapping sessions).
     @State private var freeTalkClosing = false
+    /// Opaque backdrop behind the call, raised fast on open so the home never
+    /// shows through the call's opacity fade, dropped on close.
+    @State private var callBackdropShown = false
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -57,6 +60,16 @@ struct RootTabView: View {
                     .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
                     .tag(Tab.progress)
             }
+
+            // Opaque cover that snaps in ahead of the call's fade so the home
+            // (and tab bar) don't bleed through the half-transparent call
+            // screen mid-transition — the call content then resolves cleanly on
+            // this backdrop instead of double-exposing over the feed behind it.
+            Color(.systemBackground)
+                .ignoresSafeArea()
+                .opacity(callBackdropShown ? 1 : 0)
+                .allowsHitTesting(false)
+                .zIndex(0.5)
 
             // The free-talk call: fades in around the pill while the pill
             // slides down into its mic-pill pose.
@@ -135,13 +148,17 @@ struct RootTabView: View {
                     .geistPixel(18)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
-                // Cross-fades in as the label fades out, so by the time the
-                // proxy is docked it already shows the SAME mic glyph as the
-                // call's real pill — nothing pops in when the proxy hands off.
+                    // Sequenced, not overlapped: the label clears first…
+                    .animation(.easeOut(duration: 0.15), value: pillDocked)
+                // …then the mic fades in, so by the time the proxy is docked it
+                // shows the SAME glyph as the call's real pill — nothing pops in
+                // when the proxy hands off, and the two never sit half-lit at
+                // once.
                 Image(systemName: "mic.fill")
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 1 : 0)
+                    .animation(.easeIn(duration: 0.2).delay(0.15), value: pillDocked)
             }
             .frame(width: pillDocked ? 156 : 180, height: pillDocked ? 64 : 56)
             .clipShape(Capsule())
@@ -189,6 +206,9 @@ struct RootTabView: View {
         // One spring drives everything: the call fades in while the pill
         // slides/reshapes into the mic-pill pose. Once docked, the proxy
         // fades and the call's own (identical) pill takes over.
+        // Cover the home quickly (ahead of the slower morph spring) so it
+        // doesn't bleed through the call's fade-in.
+        withAnimation(.easeOut(duration: 0.22)) { callBackdropShown = true }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
             freeTalkCallId = UUID()
             pillDocked = true
@@ -211,6 +231,9 @@ struct RootTabView: View {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
                 freeTalkCallId = nil
                 pillDocked = false
+                // Drop the backdrop with the call so the home fades back in
+                // together, not after a blank beat.
+                callBackdropShown = false
             }
             // Let the call layer finish fading before the pill takes taps
             // again — a fresh call mounted now would overlap the teardown.
