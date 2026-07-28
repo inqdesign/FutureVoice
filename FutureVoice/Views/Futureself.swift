@@ -120,6 +120,10 @@ struct FutureselfThemePicker: View {
                             .font(.caption2)
                             .foregroundStyle(selected ? Color.accentColor : Color.secondary)
                     }
+                    // The swatch is a shader with `.allowsHitTesting(false)`,
+                    // so without this the tappable area shrinks to the thin
+                    // capsule border + the label text. Make the whole cell tap.
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("\(theme.label) theme"))
