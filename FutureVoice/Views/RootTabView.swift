@@ -202,20 +202,26 @@ struct RootTabView: View {
     }
 
     private func startFreeTalk() {
-        guard freeTalkCallId == nil, !freeTalkClosing else { return }
-        // One spring drives everything: the call fades in while the pill
-        // slides/reshapes into the mic-pill pose. Once docked, the proxy
-        // fades and the call's own (identical) pill takes over.
-        // Cover the home quickly (ahead of the slower morph spring) so it
-        // doesn't bleed through the call's fade-in.
+        guard freeTalkCallId == nil, !freeTalkClosing, !pillDocked else { return }
+        // Stage 1 — cover + morph ONLY. Mounting ConversationView in this same
+        // animation used to drop the spring's frames: inserting a whole
+        // NavigationStack (UINavigationController creation + toolbar layout)
+        // is expensive, and inline it lands exactly on the morph frames. So
+        // the spring animates nothing heavier than a Color and the pill.
         withAnimation(.easeOut(duration: 0.22)) { callBackdropShown = true }
         withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-            freeTalkCallId = UUID()
             pillDocked = true
         }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 500_000_000)
-            guard freeTalkCallId != nil else { return }   // closed mid-open
+            // Stage 2 — mount the call only after the morph has visually
+            // settled, fading it in over the now-static backdrop; its mount
+            // cost can't stutter an animation that has already finished.
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard pillDocked, !freeTalkClosing else { return }   // closed mid-open
+            withAnimation(.easeOut(duration: 0.2)) { freeTalkCallId = UUID() }
+            // Stage 3 — proxy hands off to the call's own identical mic pill.
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard freeTalkCallId != nil else { return }
             withAnimation(.easeOut(duration: 0.15)) { pillHidden = true }
         }
     }
@@ -228,12 +234,16 @@ struct RootTabView: View {
         withAnimation(.easeIn(duration: 0.1)) { pillHidden = false }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 100_000_000)
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+            // The call (and backdrop) dissolve on their own SHORT fade while
+            // the pill rises on its spring — decoupled, so the
+            // NavigationStack teardown rides the brief fade instead of
+            // stretching across the spring's frames.
+            withAnimation(.easeOut(duration: 0.2)) {
                 freeTalkCallId = nil
-                pillDocked = false
-                // Drop the backdrop with the call so the home fades back in
-                // together, not after a blank beat.
                 callBackdropShown = false
+            }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+                pillDocked = false
             }
             // Let the call layer finish fading before the pill takes taps
             // again — a fresh call mounted now would overlap the teardown.
