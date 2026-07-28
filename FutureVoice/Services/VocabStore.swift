@@ -139,6 +139,17 @@ final class VocabStore: ObservableObject {
             .map { $0.key }
     }
 
+    /// Words actually used within the last `days` — the evidence for the
+    /// CURRENT vocabulary level. A word said once a year ago proves what the
+    /// user could do then, not now; lifetime words stay in `usedWords()` for
+    /// the cumulative growth chart.
+    func usedWords(withinDays days: Int) -> [String] {
+        let cutoff = Date().addingTimeInterval(-Double(days) * 86_400)
+        return records.filter { $0.value.state == .used && $0.value.lastAt >= cutoff }
+            .sorted { $0.value.lastAt > $1.value.lastAt }
+            .map { $0.key }
+    }
+
     // MARK: - Mutation
 
     /// Fold a finished session's USER turns into the pool. No-op if already done.

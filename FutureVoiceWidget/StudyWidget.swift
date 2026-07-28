@@ -19,7 +19,7 @@ struct FutureVoiceWidgetBundle: WidgetBundle {
 /// the user's chosen theme.
 struct FreeTalkWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "FutureVoiceFreeTalkWidget",
+        StaticConfiguration(kind: freeTalkWidgetKind,
                             provider: FreeTalkProvider()) { entry in
             FreeTalkWidgetView(theme: entry.theme)
                 // Same surface as the Words/Phrases widgets — themed grid + bezel.

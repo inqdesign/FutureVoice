@@ -1,8 +1,9 @@
 import Foundation
 
 /// JSON-on-disk store for generated weekly reports, mirroring SessionStore /
-/// ShadowAttemptStore. Reports are append-only — never edited or replaced —
-/// so this is a flat array sorted newest-first on load.
+/// ShadowAttemptStore. Reports are never edited in place; the one exception
+/// is `delete(id:)`, used to VOID an assessment whose evidence the user has
+/// since repudiated (misheard-turn exclusion) so it can be re-run.
 ///
 /// Phase 2 should migrate this to Supabase too so the trend chart survives
 /// reinstall; for the first TestFlight we keep it local.
@@ -41,6 +42,13 @@ final class WeeklyReportStore {
         var all = load()
         all.removeAll { $0.id == report.id }
         all.append(report)
+        write(all)
+    }
+
+    /// Void one assessment — only for evidence-changed re-runs, never pruning.
+    func delete(id: UUID) {
+        var all = load()
+        all.removeAll { $0.id == id }
         write(all)
     }
 

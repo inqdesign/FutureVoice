@@ -90,6 +90,10 @@ enum StudyWidgetSection: String, CaseIterable {
     var showsNote: Bool { self == .words }
 }
 
+/// WidgetKit `kind` for the Free Talk widget — shared so the widget declares
+/// it and the app can reload it when the theme changes.
+let freeTalkWidgetKind = "FutureVoiceFreeTalkWidget"
+
 enum StudyWidgetSnapshotStore {
     static let appGroupID = "group.com.roro.futurevoice"
 
@@ -188,6 +192,14 @@ enum WidgetTheme {
     }
     static func ground(_ i: Int) -> Color { c(groundC, i) }
     static func vivid(_ i: Int) -> Color { c(vividC, i) }
+
+    /// The frame tone — the accent, dimmed a notch so the bezel reads as a
+    /// darker shade of the same hue, not the full-bright accent.
+    static func frame(_ i: Int) -> Color {
+        let v = vividC[((i % vividC.count) + vividC.count) % vividC.count]
+        let f = 0.68
+        return Color(red: v.0 * f, green: v.1 * f, blue: v.2 * f)
+    }
 }
 
 struct WidgetGrid: View {
@@ -228,7 +240,7 @@ struct WidgetGrid: View {
         // Thick display bezel in the theme tone (stroke is centered on the
         // edge; the OS clips the outer half, leaving a solid inner frame).
         .overlay {
-            shape.stroke(WidgetTheme.vivid(theme), lineWidth: 9)
+            shape.stroke(WidgetTheme.frame(theme), lineWidth: 9)
         }
     }
 }

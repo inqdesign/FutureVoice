@@ -87,6 +87,7 @@ private struct HistoryRow: View {
 
 /// Detail view for one stored session. Native iOS List grouping.
 struct SessionDetailView: View {
+    @EnvironmentObject private var appState: AppState
     /// State so misheard-turn exclusions made in the grammar review update
     /// the score and slip count in place.
     @State private var session: Session
@@ -103,7 +104,10 @@ struct SessionDetailView: View {
                         ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
                                       userTurns: session.turns.filter { $0.role == .user },
                                       sessionId: session.id,
-                                      onSessionUpdated: { session = $0 })
+                                      onSessionUpdated: {
+                                          session = $0
+                                          appState.reassessAfterEvidenceChange(in: $0)
+                                      })
                             .padding(.vertical, 6)
                     }
                 }

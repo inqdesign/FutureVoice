@@ -549,11 +549,23 @@ struct ConversationDetailView: View {
                     Text("\(overall(sc))").font(.title3.weight(.bold)).monospacedDigit()
                         .foregroundStyle(color(overall(sc)))
                 }
+                // The scores are feedback on THIS talk, graded against the
+                // user's own level — say so, or they read as absolute.
+                Text("Scored at your \(appState.proficiency.rawValue.uppercased()) level — how this talk went, not your overall level.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                 ScorecardView(scorecard: sc,
                               grammarIssues: session.summary?.grammarIssues ?? [],
                               userTurns: session.turns.filter { $0.role == .user },
                               sessionId: session.id,
-                              onSessionUpdated: { session = $0 })
+                              onSessionUpdated: {
+                                  session = $0
+                                  // Corrected evidence can void the latest
+                                  // level assessment — re-run it if this talk
+                                  // was part of its window.
+                                  appState.reassessAfterEvidenceChange(in: $0)
+                              })
             }
             .padding(.vertical, 6)
         }
@@ -702,6 +714,7 @@ struct TalkTranscriptView: View {
                                     if let updated = SessionStore.shared.excludeTurnFromScoring(
                                         sessionId: session.id, turnId: turn.id) {
                                         withAnimation { session = updated }
+                                        appState.reassessAfterEvidenceChange(in: updated)
                                     }
                                 } label: {
                                     Label("Misheard — exclude from scoring", systemImage: "mic.slash")

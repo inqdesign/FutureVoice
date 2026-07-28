@@ -50,6 +50,12 @@ struct ProgressTab: View {
     /// level estimate) unlocks — mirrors WeeklyReportEngine so the progress
     /// bar here and the report unlock never disagree.
     private static let levelMinMinutes = Int(WeeklyReportEngine.firstReportMinSeconds / 60)
+    /// Window for the CURRENT vocabulary level — words last used within this
+    /// many days. Lifetime words still feed the cumulative growth chart.
+    private static let vocabWindowDays = 90
+    /// A level assessed longer ago than this reads as stale — shown dimmed
+    /// with a "talk again to refresh" note instead of as today's truth.
+    private static let levelStaleDays = 28
     /// The REAL unlock state of the next weekly read — drives the building
     /// panel so it shows the actual conditions (days + new talk), never a
     /// full progress bar with nothing happening behind it.
@@ -241,6 +247,20 @@ struct ProgressTab: View {
 
     private var availableDims: [Dim] { Dim.allCases }
 
+    /// When the level was last actually assessed (latest report's timestamp).
+    private var latestAssessmentAt: Date? {
+        appState.weeklyReports
+            .filter { $0.cefrLevel != nil }
+            .map(\.generatedAt).max()
+    }
+
+    /// True when the shown level is older than `levelStaleDays` — the display
+    /// dims and says so rather than passing old evidence off as current.
+    private var levelIsStale: Bool {
+        guard let at = latestAssessmentAt else { return false }
+        return Date().timeIntervalSince(at) > Double(Self.levelStaleDays) * 86_400
+    }
+
     // MARK: - Overall
 
     private var overallContent: some View {
@@ -251,9 +271,11 @@ struct ProgressTab: View {
                 // early guesses from single sessions — if the sample isn't
                 // big enough, the honest display is "still collecting".
                 if let lv = aiLevel {
+                    // A stale level (no assessment in 4+ weeks) dims instead
+                    // of posing as today's truth.
                     Text(lv.rawValue.uppercased())
                         .geistPixel(52)
-                        .foregroundStyle(.tint)
+                        .foregroundStyle(levelIsStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
                     // Korean target: learners orient by TOPIK, so show the
                     // official CEFR↔TOPIK equivalence under the big number.
                     if LanguageCatalog.levelLabel(lv, target: appState.targetLanguage)
@@ -263,11 +285,30 @@ struct ProgressTab: View {
                             .foregroundStyle(.secondary)
                     }
                     Text(canDo(lv)).font(.callout).fixedSize(horizontal: false, vertical: true)
-                    Text("Assessed from \(totalSpeakingMinutes) min of conversation, pooled in your weekly read — vocabulary, grammar, fluency and expression together.")
-                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if let at = latestAssessmentAt {
+                        Text(levelIsStale
+                             ? "Assessed \(at.formatted(.relative(presentation: .named))) — a while back. Your next talks feed a fresh assessment."
+                             : "Assessed \(at.formatted(.relative(presentation: .named))) from your recent talk — vocabulary, grammar, fluency and expression together.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("Assessed from \(totalSpeakingMinutes) min of conversation — vocabulary, grammar, fluency and expression together.")
+                            .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }
                     nextAssessmentStatus
                 } else {
-                    Text("Building your level").font(.title.bold())
+                    // Before the first assessment: the self-reported onboarding
+                    // level, clearly labeled — an anchor, not a measurement.
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(appState.proficiency.rawValue.uppercased())
+                            .geistPixel(52)
+                            .foregroundStyle(.secondary)
+                        Text("self-reported")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.tertiary)
+                    }
+                    Text("Your starting point, as you set it. Your first assessment replaces it with a measured level.")
+                        .font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     // The recipe made visible, equalizer-style: one bar per
                     // measured ingredient, lit LED blocks = that axis's CEFR
                     // band. A weak axis is a visibly shorter column.
@@ -289,9 +330,10 @@ struct ProgressTab: View {
             }
             .sheet(isPresented: $showingHowAssessed) { howAssessedSheet }
 
-            // Needs two pooled reads before a "change over time" is honest —
-            // a single point is just the big number above, restated.
-            if levelHistory.count >= 2 {
+            // THE growth graph: your level, one point per assessment. Present
+            // from the first assessment on — with one point it explains that
+            // the curve starts at the second, instead of hiding entirely.
+            if !levelHistory.isEmpty {
                 levelHistoryPanel
             }
 
@@ -347,7 +389,7 @@ struct ProgressTab: View {
     private var weeklyReadPanel: some View {
         panel {
             HStack(alignment: .firstTextBaseline) {
-                Text("This week's read").font(.headline)
+                Text("Latest assessment").font(.headline)
                 Spacer()
                 if appState.weeklyReportGenerating {
                     ProgressView().controlSize(.small)
@@ -373,7 +415,7 @@ struct ProgressTab: View {
                             .padding(.vertical, 12)
                     }
                     .background(Color(.systemGroupedBackground).ignoresSafeArea())
-                    .navigationTitle("This week's read")
+                    .navigationTitle("Latest assessment")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar(.hidden, for: .tabBar)
                 } label: {
@@ -417,7 +459,7 @@ struct ProgressTab: View {
     private var weeklyReadLockedState: some View {
         switch reportUnlock {
         case .lockedFirst(let acc, let req):
-            Text("Your first read unlocks after \(Int(req / 60)) minutes of talk.")
+            Text("Your first assessment unlocks after \(Int(req / 60)) minutes of talk.")
                 .font(.subheadline).foregroundStyle(.secondary)
             HStack(spacing: 10) {
                 ProgressView(value: min(acc, req), total: req)
@@ -428,8 +470,8 @@ struct ProgressTab: View {
         case .lockedNext(let days, let secondsRemaining):
             let minsRem = max(1, Int((secondsRemaining / 60).rounded(.up)))
             Text(days > 0
-                 ? "Next read in \(days) day\(days == 1 ? "" : "s")."
-                 : "Next read after \(minsRem) more min of new talk.")
+                 ? "Next assessment in \(days) day\(days == 1 ? "" : "s")."
+                 : "Next assessment after \(minsRem) more min of new talk.")
                 .font(.subheadline).foregroundStyle(.secondary)
         case .ready:
             HStack(spacing: 10) {
@@ -446,34 +488,43 @@ struct ProgressTab: View {
         return "\(fmt.string(from: r.periodStart)) – \(fmt.string(from: r.periodEnd))"
     }
 
-    // MARK: - Level history (one point per weekly read)
+    // MARK: - Growth (level, one point per assessment)
 
+    /// The headline growth graph: only assessments move this line, so it IS
+    /// the honest "am I improving" answer — the 0–100 talk scores can't be
+    /// (they're graded relative to the current level).
     private var levelHistoryPanel: some View {
         panel {
-            Text("Level over time").font(.headline)
-            Chart(levelHistory) { p in
-                LineMark(x: .value("Read", p.date), y: .value("Level", p.rank))
-                    .interpolationMethod(.stepEnd)
-                    .foregroundStyle(.tint)
-                PointMark(x: .value("Read", p.date), y: .value("Level", p.rank))
-                    .foregroundStyle(.tint)
-            }
-            .chartYScale(domain: -0.5...5.5)
-            .chartYAxis {
-                AxisMarks(position: .leading, values: Array(0...5)) { value in
-                    AxisGridLine()
-                    AxisValueLabel {
-                        if let i = value.as(Int.self) {
-                            Text(CEFRLevel.allCases[i].rawValue.uppercased())
-                                .font(.caption2)
+            Text("Growth").font(.headline)
+            if levelHistory.count >= 2 {
+                Chart(levelHistory) { p in
+                    LineMark(x: .value("Assessment", p.date), y: .value("Level", p.rank))
+                        .interpolationMethod(.stepEnd)
+                        .foregroundStyle(.tint)
+                    PointMark(x: .value("Assessment", p.date), y: .value("Level", p.rank))
+                        .foregroundStyle(.tint)
+                }
+                .chartYScale(domain: -0.5...5.5)
+                .chartYAxis {
+                    AxisMarks(position: .leading, values: Array(0...5)) { value in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let i = value.as(Int.self) {
+                                Text(CEFRLevel.allCases[i].rawValue.uppercased())
+                                    .font(.caption2)
+                            }
                         }
                     }
                 }
+                .frame(height: 150)
+                Text("Your level, one point per assessment — this line is what growing looks like.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(height: 150)
-            Text("One point per weekly read — each is the pooled assessment over that window's talk.")
-                .font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -674,7 +725,7 @@ struct ProgressTab: View {
         } else {
             switch reportUnlock {
             case .lockedFirst(let acc, let req):
-                Text("Your level is graded by your first weekly read — one pooled assessment over ALL your talk, not a guess from one session.")
+                Text("Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session.")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 10) {
@@ -684,14 +735,14 @@ struct ProgressTab: View {
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 }
             case .lockedNext(let daysRemaining, let secondsRemaining):
-                Text("Your level is re-assessed with each weekly read. The next one needs both:")
+                Text("Your level is re-assessed regularly. The next assessment needs both:")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 unlockConditionRow(
                     icon: "calendar",
                     met: daysRemaining == 0,
                     text: daysRemaining == 0
-                        ? "A week since the last read"
+                        ? "A week since the last assessment"
                         : (daysRemaining == 1 ? "1 more day" : "\(daysRemaining) more days"))
                 unlockConditionRow(
                     icon: "mic.fill",
@@ -742,7 +793,7 @@ struct ProgressTab: View {
                     icon: "calendar",
                     met: daysRemaining == 0,
                     text: daysRemaining == 0
-                        ? "A week since the last read"
+                        ? "A week since the last assessment"
                         : (daysRemaining == 1 ? "1 more day" : "\(daysRemaining) more days"))
                 if secondsRemaining > 0 {
                     Text("Talk \(max(1, Int((secondsRemaining / 60).rounded(.up)))) more minutes and this level gets re-read from everything new you've said.")
@@ -783,7 +834,7 @@ struct ProgressTab: View {
         NavigationStack {
             List {
                 Section {
-                    Text("Your level is one judgment over all your recorded speech, pooled in your weekly read — never a guess from a single session. It's read against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first read unlocks after \(Self.levelMinMinutes) minutes of talk, then refreshes weekly.")
+                    Text("Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after \(Self.levelMinMinutes) minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.")
                         .font(.callout)
                 } header: {
                     Text("The estimated level")
@@ -792,8 +843,8 @@ struct ProgressTab: View {
                     assessedRow(name: "Vocabulary",
                                 level: vocabLevel.map { $0.rawValue.uppercased() },
                                 detail: usedTotal > 0
-                                    ? "\(usedTotal) distinct words you've actually used, each graded against the CEFR word list. Fully objective."
-                                    : "Graded from the words you actually use, against the CEFR word list. Fully objective.")
+                                    ? "\(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded against the CEFR word list. Fully objective."
+                                    : "Graded from the words you've used in the last \(Self.vocabWindowDays) days, against the CEFR word list. Fully objective.")
                     assessedRow(name: "Fluency",
                                 level: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: effectivePace > 0
@@ -888,7 +939,7 @@ struct ProgressTab: View {
                         .geistPixel(44).foregroundStyle(.tint)
                     Text("vocabulary level").font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text("Estimated from \(usedTotal) distinct words you've actually used, each graded by CEFR level.")
+                Text("Estimated from \(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded by CEFR level — your current speaking vocabulary, not everything ever.")
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if vocabTrend.count >= 2 {
@@ -910,6 +961,8 @@ struct ProgressTab: View {
             }
             panel {
                 Text("Words you use, by level").font(.headline)
+                Text("Distinct words from your talks in the last \(Self.vocabWindowDays) days.")
+                    .font(.caption).foregroundStyle(.secondary)
                 ForEach(CEFRLevel.allCases, id: \.self) { lv in
                     levelBar(lv)
                 }
@@ -978,11 +1031,11 @@ struct ProgressTab: View {
             bigUnit: "/ 100 · recent talks",
             band: nil,
             measuredLine: "The same grammar score each talk's card shows, averaged over your recent talks — higher is better.",
-            measures: "How correctly you build sentences — graded from verified slips in what you said, not from style suggestions.",
+            measures: "How correctly you build sentences, graded from verified slips at your current level — your recent form, not your CEFR level. Long-term growth shows in the Overall page's Growth graph.",
             improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
             action: nil,
             trend: grammarTrend,
-            trendCaption: "Grammar score per talk, 0–100 — UP is progress."
+            trendCaption: "Grammar score per talk, 0–100 at your level — UP is progress."
         )
     }
 
@@ -1212,9 +1265,12 @@ struct ProgressTab: View {
         avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
 
         // --- Objective vocabulary CEFR estimate (from words actually used) ---
+        // CURRENT level = words used in the recent window, not lifetime — a
+        // C1 word said once a year ago isn't evidence of today's vocabulary.
+        // The cumulative growth chart below still uses every word ever.
         var counts: [CEFRLevel: Int] = [:]
         var total = 0
-        for word in vocab.usedWords() {
+        for word in vocab.usedWords(withinDays: Self.vocabWindowDays) {
             if let lv = CoreVocabulary.level(of: word) {
                 counts[lv, default: 0] += 1
                 total += 1

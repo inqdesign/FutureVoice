@@ -203,6 +203,26 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Evidence inside an already-minted assessment changed — the user
+    /// excluded a misheard turn from a session. If that session falls inside
+    /// the LATEST assessment's window, the verdict is standing on repudiated
+    /// evidence: void it and re-run the assessment over the same (now
+    /// corrected) window. Older assessments stay — their windows closed with
+    /// the evidence they had, and the growth chart should stay honest history.
+    func reassessAfterEvidenceChange(in session: Session) {
+        guard let latest = weeklyReports.first else { return }
+        let when = session.endedAt ?? session.startedAt
+        // The latest window = everything after the previous report's end.
+        let windowStart = weeklyReports.dropFirst().first?.periodEnd ?? .distantPast
+        guard when > windowStart, when <= latest.periodEnd else { return }
+        WeeklyReportStore.shared.delete(id: latest.id)
+        weeklyReports = WeeklyReportStore.shared.load()
+        // With the voided report gone, the unlock conditions are met by the
+        // same window that produced it — this regenerates immediately, now
+        // with the excluded turns filtered out.
+        maybeGenerateWeeklyReport()
+    }
+
     /// Watches Supabase auth state. When a session appears (either restored
     /// on app launch or fresh sign-in), pull the latest cloud state down.
     /// Only thing we sync today is the active voice_clone_id — that's the

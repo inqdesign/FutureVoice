@@ -20,6 +20,9 @@ enum StudyWidgetRefresher {
         StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")
         refreshWords()
         refreshExpressions()
+        // The Free Talk widget has no data snapshot, but it wears the theme too
+        // — reload it so a theme change repaints it like the others.
+        WidgetCenter.shared.reloadTimelines(ofKind: freeTalkWidgetKind)
     }
 
     /// Fire-and-forget hook for nonisolated call sites (store writes may not
