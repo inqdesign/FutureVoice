@@ -1,14 +1,41 @@
+import AuthenticationServices
 import SwiftUI
 
-/// First-run screen — and re-run from the Profile menu. The user reads a
-/// short script aloud so ElevenLabs can clone their voice. iOS-native layout
-/// only: nav title, Form sections, single primary action with a live meter.
+/// First-run voice cloning — and re-run from the Profile menu. Not a form: a
+/// single full-screen stage where the Futureself surface is the protagonist
+/// from first frame to last, changing only its cell state (the component's
+/// own philosophy).
+///
+/// The pre-recording half is a step-by-step wizard — one idea per screen,
+/// nothing sprung on the user (recording NEVER starts as a side effect of
+/// entering a page):
+///
+///   1. **Intro**   — the narrative: another you, already fluent; you follow.
+///   2. **Mic**     — never Bluetooth earbuds; the mic permission is asked
+///                    HERE, on its own step, not mid-flow.
+///   3. **Spot**    — LIVE quiet-spot finder: ambient monitoring drives the
+///                    orb (noise stirs it, calm settles it) plus a verdict
+///                    line, so the user walks the phone to the right room.
+///                    Can't record now → it waits; bad take → re-record.
+///   4. **Script**  — read the script; mistakes are fine, keep going. Only
+///                    the explicit "Record my voice" tap starts recording.
+///
+/// Then the performance half:
+///
+///   5. **Recording** — the orb ignites with the LIVE mic level while the
+///                      teleprompter scrolls; a ring tracks the 60–90s window.
+///   6. **Review**    — listen back + the deterministic quality verdict.
+///   7. **Becoming**  — uploading: the orb thinks, cycling all six palettes.
+///   8. **Meet**      — the clone SPEAKS its first words in the user's own
+///                      voice; they pick the theme their fluent self wears.
 struct VoiceCloneOnboardingView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var auth: AuthService
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var recorder = AudioRecorder()
-    @StateObject private var preview = AudioPlayer()
+    @StateObject private var player = AudioPlayer()
 
-    @State private var status: Status = .idle
+    @State private var status: Status = .intro
     @State private var error: String?
     @State private var startedAt: Date?
     @State private var elapsedSeconds: Double = 0
@@ -18,177 +45,566 @@ struct VoiceCloneOnboardingView: View {
     @State private var recordedSampleURL: URL?
     @State private var quality: AudioSampleQuality?
 
+    // Becoming: cycling palette + staged narration.
+    @State private var becomingTheme: FutureselfTheme = .blue
+    @State private var becomingLine = Self.becomingLines[0]
+
+    // Meet: the greeting in the user's cloned voice, and the burst that
+    // blooms the orb when the act opens even if synthesis failed.
+    @State private var greetingData: Data?
+    @State private var meetBurst = false
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+
     /// ElevenLabs IVC quality climbs steeply up to ~60-90 seconds of speech.
-    /// We keep the whole flow on that 60–90 range the footer promises: the
-    /// countdown targets 60s (usable), 75s is the sweet spot, 90s auto-stops.
+    /// The countdown targets 60s (usable), 75s is the sweet spot, 90s
+    /// auto-stops.
     private static let minSeconds: Double = 60
     private static let recommendedSeconds: Double = 75
     /// Hard cap — auto-stop here. Well past the 75s sweet spot and far under
     /// ElevenLabs' 11 MB upload limit (~130s at 16-bit/44.1k mono).
     private static let maxSeconds: Double = 90
 
-    enum Status: Equatable {
-        case idle
+    /// Filename of a take that reached review but was never cloned — if the
+    /// app dies there, the next launch reopens review instead of making the
+    /// user re-record 90 seconds. Stores the name only (container paths can
+    /// change between launches); cleared on re-record and successful clone.
+    private static let pendingTakeKey = "futurevoice.pendingCloneTake"
+
+    enum Status: Int, Equatable {
+        case intro, mic, spot, script   // the wizard — one idea per screen
         case recording
         case reviewing   // recorded; user can listen + see quality before cloning
+        case account     // sign-up moment: the clone needs the server NOW
         case uploading
-        case done
+        case meet        // clone landed; greeting + theme pick
     }
 
     /// Phonetically varied so the clone has range — short and long vowels,
     /// hard consonants, rising and falling intonation. Read it like you mean
     /// it, not like a school recital.
-    private let cloneScript = """
-    Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm \
-    patient. I want to sound like me — just a more confident version.
+    private static let scriptParagraphs = [
+        "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",
+        "Let me describe a moment from this week. The weather turned cooler than I expected. I was walking and caught myself thinking in two languages at once — one for what I saw, one for what I felt. Funny how that works.",
+        "Now a few different shapes: \"Could you actually repeat that?\" \"Wait — that's not quite right.\" \"Honestly, I'm not sure yet, but here's what I think.\" \"Oh, that's brilliant — say more.\"",
+        "Okay. That should be enough. Talk to me soon.",
+    ]
 
-    Let me describe a moment from this week. The weather turned cooler than I \
-    expected. I was walking and caught myself thinking in two languages at once — \
-    one for what I saw, one for what I felt. Funny how that works.
+    /// The clone's first words — spoken in the user's own voice the moment it
+    /// exists. Short on purpose (one TTS call per onboarding).
+    private static let greetingLine =
+        "Hey — it's you. Just more fluent. Pick a color that feels like us."
 
-    Now a few different shapes: "Could you actually repeat that?" "Wait — that's \
-    not quite right." "Honestly, I'm not sure yet, but here's what I think." \
-    "Oh, that's brilliant — say more."
-
-    And honestly, here's why I'm doing this. I want to look back in a year and \
-    hear how far I've come. Small steps — one call today, one tomorrow, one the \
-    day after. Some days it'll feel slow. Some days it'll just click. Either \
-    way, I keep showing up. That's the whole trick, isn't it? Keep talking, \
-    keep going, and let it all add up.
-
-    Okay. That should be enough. Talk to me soon.
-    """
+    /// Staged narration for the cloning wait. Honest theater — no fake
+    /// percentages, just what the process is genuinely about.
+    private static let becomingLines = [
+        "Listening back to every word…",
+        "Learning your vowels…",
+        "Finding your tone…",
+        "Practicing your rhythm…",
+        "Almost there…",
+    ]
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("Your fluent self will speak in this voice. Once you record, every reply you hear in the app sounds like you.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text("Why we need a minute of your voice")
-                }
-
-                Section {
-                    Label {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Use your iPhone's built-in mic — a closet is ideal")
-                                .font(.callout.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text("Take your AirPods (or any Bluetooth earbuds) OUT first. Their mics record at low 8 kHz \u{201C}phone-call\u{201D} quality, so the clone ends up sounding nothing like you. For the cleanest result, step inside a clothes closet and record there — the clothes soak up echo like a real vocal booth. You only do this once, so make it count.")
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "iphone")
-                            .foregroundStyle(.orange)
-                    }
-                } header: {
-                    Text("Before you start")
-                }
-
-                Section {
-                    Text(cloneScript)
-                        .font(.body)
-                        .padding(.vertical, 4)
-                } header: {
-                    Text("Read this aloud, naturally")
-                } footer: {
-                    Text("Aim for 60–90 seconds somewhere quiet — a clothes closet is best. Vary your pitch a little — flat reading makes a flat clone.")
-                }
-
-                if status == .recording || elapsedSeconds > 0 {
-                    Section {
-                        HStack {
-                            Text(elapsedText)
-                                .font(.body.monospacedDigit())
-                            Spacer()
-                            Text(status == .recording ? "Recording" : "Stopped")
-                                .font(.caption)
-                                .foregroundStyle(status == .recording ? .red : .secondary)
-                        }
-                        levelMeter
-                            .frame(height: 18)
-                        if !recorder.inputDescription.isEmpty {
-                            HStack(spacing: 6) {
-                                Image(systemName: micIcon)
-                                    .foregroundStyle(isBadMic ? .orange : .secondary)
-                                    .font(.caption)
-                                Text(recorder.inputDescription)
-                                    .font(.caption)
-                                    .foregroundStyle(isBadMic ? .orange : .secondary)
-                            }
-                        }
-                    } header: {
-                        Text("Recording")
-                    } footer: {
-                        if isBadMic {
-                            Text("Bluetooth headsets use low-quality 8 kHz mics. Disconnect AirPods and use the iPhone built-in mic for a faithful clone.")
-                                .foregroundStyle(.orange)
-                        }
-                    }
-                }
-
-                if status == .reviewing {
-                    reviewSection
-                }
-
-                if let error = error {
-                    Section {
-                        Label(error, systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(.red)
-                    }
-                }
+        VStack(spacing: 0) {
+            stage
+                .padding(.top, 28)
+            // The script/teleprompter acts fill the space; the wizard steps
+            // keep their short copy anchored under the orb.
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, contentTopPadding)
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
             }
-            .navigationTitle("Your voice")
-            .navigationBarTitleDisplayMode(.large)
-            .safeAreaInset(edge: .bottom) {
-                actionBar
+            actionBar
+        }
+        .background(Color(.systemBackground).ignoresSafeArea())
+        .animation(.easeInOut(duration: 0.35), value: status)
+        .task(id: status == .uploading) {
+            if status == .uploading { await runBecoming() }
+        }
+        // Sign-up landed mid-flow: the account act resolves itself and the
+        // clone proceeds without another tap.
+        .onChange(of: auth.session == nil) { _, isNil in
+            if !isNil, status == .account { performClone() }
+        }
+        // The quiet-spot finder: monitor ambient noise only while the spot
+        // step is on stage — the orb becomes the room's meter.
+        .task(id: status == .spot) {
+            if status == .spot {
+                try? recorder.startMonitoring()
+            } else {
+                recorder.stopMonitoring()
             }
-            .onDisappear { stopTicker() }
+        }
+        .onDisappear {
+            stopTicker()
+            recorder.stopMonitoring()
+            player.stop()
+        }
+        .onAppear {
+            debugSeed()
+            restorePendingTake()
         }
     }
 
-    // MARK: - Review (listen + quality)
+    private var contentTopPadding: CGFloat {
+        switch status {
+        case .script, .recording: return 8
+        default:                  return 32
+        }
+    }
+
+    // MARK: - The stage (orb + ring + timer)
+
+    /// One fixed-size stage across every act so nothing jumps: the pixel
+    /// headline, the orb (with its recording ring), and the timer line.
+    private var stage: some View {
+        VStack(spacing: 20) {
+            Text(stageTitle)
+                .geistPixel(24)
+                .id(stageTitle)
+                .transition(.opacity)
+
+            ZStack {
+                // Recording ring — present only while it means something.
+                Circle()
+                    .stroke(Color(.tertiarySystemFill), lineWidth: 5)
+                    .opacity(status == .recording ? 1 : 0)
+                Circle()
+                    .trim(from: 0, to: min(1, elapsedSeconds / Self.maxSeconds))
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .opacity(status == .recording ? 1 : 0)
+                    .animation(.linear(duration: 0.15), value: elapsedSeconds)
+
+                Futureself(mode: orbMode, level: orbLevel, theme: orbTheme)
+                    .frame(width: orbSize, height: orbSize)
+                    .clipShape(Circle())
+                    .overlay(Circle().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            }
+            .frame(width: 182, height: orbSize + 14)
+
+            Text(timerLine)
+                .geistPixel(16)
+                .foregroundStyle(timerColor)
+                .opacity(timerLine.isEmpty ? 0 : 1)
+                .frame(height: 20)
+        }
+    }
+
+    /// The script step shrinks the orb so the full script gets the room —
+    /// the being steps aside while you rehearse.
+    private var orbSize: CGFloat {
+        status == .script ? 72 : 168
+    }
+
+    private var stageTitle: String {
+        switch status {
+        case .intro:     return "Your fluent self"
+        case .spot:      return "Find a quiet spot"
+        case .mic:       return "Mic check"
+        case .script:    return "Read this aloud"
+        case .recording: return "It's listening"
+        case .reviewing: return "How you sound"
+        case .account:   return "Make it yours"
+        case .uploading: return "Becoming you"
+        case .meet:      return "Meet your fluent self"
+        }
+    }
+
+    private var orbMode: Futureself.Mode {
+        switch status {
+        case .intro, .mic, .script, .account:
+            return .idle
+        // The spot step wears listening: ambient noise visibly stirs the
+        // surface, and finding a quiet room visibly settles it.
+        case .spot:      return .listening
+        case .recording: return .listening
+        case .reviewing: return player.isPlaying ? .speaking : .idle
+        case .uploading: return .thinking
+        case .meet:      return player.isPlaying ? .speaking : .idle
+        }
+    }
+
+    private var orbLevel: Float {
+        switch status {
+        case .intro, .mic, .script, .account:
+            return 0
+        case .spot:      return recorder.levels
+        case .recording: return recorder.levels
+        case .reviewing: return player.level
+        case .uploading: return 0.35
+        case .meet:      return meetBurst ? 1 : player.level
+        }
+    }
+
+    /// Palette override: the becoming act cycles all six; every other act
+    /// follows the stored theme (which the meet act's picker updates live).
+    private var orbTheme: FutureselfTheme? {
+        status == .uploading ? becomingTheme : nil
+    }
+
+    private var ringColor: Color {
+        elapsedSeconds >= Self.minSeconds ? .green : .red
+    }
+
+    private var timerLine: String {
+        switch status {
+        case .spot:
+            return ""   // the gate rows below carry the live readings
+        case .recording:
+            return elapsedText
+        case .reviewing:
+            if let q = quality { return "\(Int(q.durationSeconds))s recorded" }
+            return ""
+        default:
+            return ""
+        }
+    }
+
+    private var timerColor: Color {
+        status == .recording && elapsedSeconds >= Self.minSeconds ? .green : .secondary
+    }
+
+    // MARK: - Per-act content
 
     @ViewBuilder
-    private var reviewSection: some View {
-        Section {
+    private var content: some View {
+        switch status {
+        case .intro:     introContent
+        case .mic:       micContent
+        case .spot:      spotContent
+        case .script:    scriptContent
+        case .recording: recordingContent
+        case .reviewing: reviewingContent
+        case .account:   accountContent
+        case .uploading: uploadingContent
+        case .meet:      meetContent
+        }
+    }
+
+    // The sign-up moment — deferred all the way to here, where the clone
+    // genuinely needs the server. The user has already invested everything;
+    // the account is what brings the fluent self to life.
+    private var accountContent: some View {
+        VStack(spacing: 26) {
+            stepHeader("Your fluent self is ready.",
+                       "Create your account and it comes to life — your voice and your progress live there.")
+
+            if auth.isWorking { ProgressView() }
+        }
+        .transition(.opacity)
+    }
+
+    /// A wizard step's type stack: one big hook (the thing to remember) over
+    /// a quiet support line. The support's measure is capped so lines break
+    /// on phrases, never stranding a single word.
+    private func stepHeader(_ hook: String, _ support: String) -> some View {
+        VStack(spacing: 12) {
+            Text(hook)
+                .font(.title2.weight(.semibold))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(support)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .frame(maxWidth: 300)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    // Step 1 — the narrative. One thought, nothing else.
+    private var introContent: some View {
+        stepHeader("Another you.\nAlready fluent.",
+                   "It speaks perfect English in your own voice. From here, you just follow.")
+            .transition(.opacity)
+    }
+
+    // Step 2 — the mic. Permission is asked here, on its own step, so the
+    // system dialog never interrupts anything else (and so the next step can
+    // listen to the room).
+    private var micContent: some View {
+        VStack(spacing: 26) {
+            stepHeader("The iPhone's own mic.",
+                       "No Bluetooth earbuds — AirPods record at phone-call quality, and the clone won't sound like you.")
+
+            Label("Take your AirPods out before recording", systemImage: "airpods.gen3")
+                .font(.subheadline)
+                .foregroundStyle(.orange)
+        }
+        .transition(.opacity)
+    }
+
+    // Step 3 — the quiet-spot finder. The orb is LIVE: ambient noise stirs
+    // it, calm settles it. TWO gates, because quiet alone isn't enough — an
+    // open room can be silent and still smear the clone with echo:
+    //   1. noise  — walk until the room reads quiet;
+    //   2. echo   — clap once; the decay tail says dry or reverberant.
+    private var spotContent: some View {
+        VStack(spacing: 26) {
+            stepHeader("Quiet, and soft.",
+                       "Noise stirs the surface — walk until it settles. Soft rooms fix echo too: clothes, curtains, a parked car. A closet is perfect.")
+
+            if recorder.isMonitoring {
+                VStack(spacing: 0) {
+                    gateRow(symbol: "waveform", title: "Noise",
+                            value: String(format: "%.0f dB", recorder.ambientDBFS),
+                            state: noiseGate.state, tint: noiseGate.tint)
+                    Divider().padding(.leading, 44)
+                    gateRow(symbol: echoGate.symbol, title: "Echo",
+                            value: recorder.echoTailMs.map { String(format: "%.0f ms", $0) },
+                            state: echoGate.state, tint: echoGate.tint)
+                }
+                .padding(.horizontal, 14)
+                .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemBackground)))
+                .frame(maxWidth: 340)
+                .animation(.easeInOut(duration: 0.3), value: noiseGate.state)
+                .animation(.easeInOut(duration: 0.3), value: echoGate.state)
+
+                if bothGatesPass {
+                    Label("Record here.", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Can't record now? No rush — this will wait.", systemImage: "clock")
+                Label("Not happy with a take? You can re-record.", systemImage: "arrow.counterclockwise")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        }
+        .transition(.opacity)
+    }
+
+    /// One gate of the room checklist: leading symbol, name, live reading,
+    /// and a short colored state word.
+    private func gateRow(symbol: String, title: String, value: String?,
+                         state: String, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(tint)
+                .frame(width: 24)
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            if let value {
+                Text(value)
+                    .font(.subheadline.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            Text(state)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(tint)
+        }
+        .padding(.vertical, 12)
+    }
+
+    /// Echo tails at or under this read as a dry, soft room; longer means the
+    /// space is too live. Tune on device, not the simulator.
+    private static let dryTailMs: Double = 220
+
+    /// Gate 1 — how loud the room is. dBFS on the `.measurement` capture
+    /// chain — tune thresholds on device.
+    private var noiseGate: (state: String, tint: Color) {
+        let db = recorder.ambientDBFS
+        if db > -35 { return ("too noisy", .red) }
+        if db > -45 { return ("almost", .orange) }
+        return ("quiet", .green)
+    }
+
+    /// Gate 2 — how live the room is. Waits for a clap; each clap re-measures.
+    private var echoGate: (symbol: String, state: String, tint: Color) {
+        guard let tail = recorder.echoTailMs else {
+            return ("hands.clap", "clap to check", Color.accentColor)
+        }
+        if tail <= Self.dryTailMs { return ("checkmark.circle.fill", "dry", .green) }
+        return ("water.waves", "echoey", .orange)
+    }
+
+    private var bothGatesPass: Bool {
+        noiseGate.tint == .green && echoGate.tint == .green
+    }
+
+    // Step 4 — the script, in full, BEFORE anything records. Recording only
+    // starts on the explicit button tap.
+    private var scriptContent: some View {
+        VStack(spacing: 10) {
+            Text("Read it naturally. Mistakes are fine — just keep going.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                        Text(para)
+                            .font(.title3.weight(.medium))
+                            .lineSpacing(5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 16)
+            }
+            .mask(softEdges)
+
+            Text("60–90 seconds. Vary your pitch a little.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .transition(.opacity)
+    }
+
+    // Recording — the teleprompter.
+    private var recordingContent: some View {
+        VStack(spacing: 8) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                        Text(para)
+                            .font(.title3.weight(.medium))
+                            .lineSpacing(5)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .padding(.horizontal, 28)
+                .padding(.vertical, 18)
+            }
+            .mask(softEdges)
+
+            if !recorder.inputDescription.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: isBadMic ? "exclamationmark.triangle.fill" : "mic.fill")
+                    Text(isBadMic
+                         ? "Bluetooth mic — disconnect AirPods for a faithful clone"
+                         : recorder.inputDescription)
+                }
+                .font(.caption)
+                .foregroundStyle(isBadMic ? Color.orange : Color(.tertiaryLabel))
+            }
+        }
+        .transition(.opacity)
+    }
+
+    /// Soft top/bottom fade for scrolling text — no hard cuts.
+    private var softEdges: LinearGradient {
+        LinearGradient(
+            stops: [
+                .init(color: .clear, location: 0),
+                .init(color: .black, location: 0.06),
+                .init(color: .black, location: 0.92),
+                .init(color: .clear, location: 1)
+            ],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+
+    // Review.
+    private var reviewingContent: some View {
+        VStack(spacing: 18) {
+            if let q = quality {
+                VStack(spacing: 10) {
+                    HStack(spacing: 10) {
+                        Image(systemName: q.rating.symbol)
+                            .foregroundStyle(ratingTint(q.rating))
+                        Text(q.rating.label)
+                            .font(.callout.weight(.semibold))
+                    }
+                    ForEach(q.issues, id: \.self) { issue in
+                        Text(issue)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .padding(.horizontal, 32)
+            }
+
             Button {
                 togglePreview()
             } label: {
-                Label(preview.isPlaying ? "Stop" : "Listen to your recording",
-                      systemImage: preview.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                Label(player.isPlaying ? "Stop" : "Listen to your recording",
+                      systemImage: player.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                    .frame(maxWidth: 280)
             }
-        } header: {
-            Text("Review")
-        } footer: {
-            Text("Hear how you sound before cloning. We boost the level on upload, so a quiet take is fine — clarity matters more than loudness.")
-        }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
 
-        if let q = quality {
-            Section {
-                HStack(spacing: 10) {
-                    Image(systemName: q.rating.symbol)
-                        .foregroundStyle(ratingTint(q.rating))
-                    Text(q.rating.label)
-                        .font(.callout.weight(.semibold))
-                    Spacer()
-                    Text("\(Int(q.durationSeconds))s")
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
+            Text("We boost the level on upload — clarity matters more than loudness.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .transition(.opacity)
+    }
+
+    // The becoming.
+    private var uploadingContent: some View {
+        VStack(spacing: 12) {
+            Text(becomingLine)
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .id(becomingLine)
+                .transition(.opacity)
+            Text("About half a minute.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .transition(.opacity)
+    }
+
+    // Meet: greeting + theme pick.
+    private var meetContent: some View {
+        VStack(spacing: 22) {
+            stepHeader("It's you — fluent.",
+                       "Pick how your fluent self looks.")
+
+            HStack(spacing: 14) {
+                ForEach(FutureselfTheme.allCases) { theme in
+                    let selected = storedTheme == theme.rawValue
+                    Button { pick(theme) } label: {
+                        VStack(spacing: 5) {
+                            Futureself(mode: .speaking,
+                                       level: selected ? 0.75 : 0.3,
+                                       theme: theme)
+                                .frame(width: 40, height: 40)
+                                .clipShape(Circle())
+                                .overlay(Circle().strokeBorder(
+                                    selected ? theme.tint : Color(.separator).opacity(0.5),
+                                    lineWidth: selected ? 2 : 0.5))
+                            Text(theme.label)
+                                .font(.caption2)
+                                .foregroundStyle(selected ? .primary : .secondary)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("\(theme.label) theme"))
+                    .accessibilityAddTraits(selected ? .isSelected : [])
                 }
-                ForEach(q.issues, id: \.self) { issue in
-                    Label(issue, systemImage: "circle.fill")
-                        .labelStyle(BulletLabelStyle())
+            }
+
+            if greetingData != nil {
+                Button {
+                    playGreeting()
+                } label: {
+                    Label("Hear it again", systemImage: "arrow.clockwise")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text("Quality")
             }
         }
+        .transition(.opacity)
     }
 
     private func ratingTint(_ r: AudioSampleQuality.Rating) -> Color {
@@ -199,124 +615,161 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
-    private func togglePreview() {
-        if preview.isPlaying {
-            preview.stop()
-            return
-        }
-        guard let url = recordedSampleURL, let data = try? Data(contentsOf: url) else { return }
-        try? preview.play(data)
-    }
-
     // MARK: - Action bar
 
     @ViewBuilder
     private var actionBar: some View {
-        if status == .reviewing {
-            HStack(spacing: 12) {
-                Button {
-                    reRecord()
-                } label: {
-                    Label("Re-record", systemImage: "arrow.counterclockwise")
+        VStack(spacing: 8) {
+            switch status {
+            case .intro:
+                // Cross-stage back: reopen the persona cards. The published
+                // persona is only nil-ed — the store keeps the data, and the
+                // intake reopens pre-filled from it.
+                wizardBar(next: "Next", onBack: { appState.persona = nil }) { status = .mic }
+
+            case .mic:
+                wizardBar(next: "Next", backTo: .intro) { handleMicPermission() }
+
+            case .spot:
+                wizardBar(next: "Next", backTo: .mic) { status = .script }
+
+            case .script:
+                wizardBar(next: "Record my voice", nextIcon: "mic.fill", backTo: .spot) {
+                    startRecording()
+                }
+
+            case .recording:
+                Button(action: stopAndReview) {
+                    Label(elapsedSeconds >= Self.minSeconds ? "Stop & review" : "Stop (early)",
+                          systemImage: "stop.fill")
                         .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .tint(elapsedSeconds >= Self.recommendedSeconds ? .green : .red)
+                .disabled(elapsedSeconds < 1)
+
+                recordingFooter
+
+            case .reviewing:
+                HStack(spacing: 12) {
+                    Button {
+                        reRecord()
+                    } label: {
+                        Label("Re-record", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    Button {
+                        useThisVoice()
+                    } label: {
+                        Label("Use this voice", systemImage: "checkmark")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+
+            case .account:
+                HStack(spacing: 12) {
+                    Button {
+                        error = nil
+                        status = .reviewing
+                    } label: {
+                        Label("Back", systemImage: "chevron.left")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    // `.continue` label — this is a first-time sign-UP moment,
+                    // not a returning-user sign-in (Welcome handles those).
+                    SignInWithAppleButton(
+                        .continue,
+                        onRequest: { auth.configure($0) },
+                        onCompletion: { auth.handle(result: $0) }
+                    )
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 50)
+                    .clipShape(Capsule())
+                }
+
+            case .uploading:
+                Button {} label: {
+                    Label("Cloning your voice…", systemImage: "waveform")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(true)
+
+            case .meet:
+                // Onboarding's last tap — the clone exists, the theme is
+                // chosen, and this drops straight into the app's first call.
+                Button(action: finishMeet) {
+                    Text("Start talking")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.bar)
+    }
+
+    /// Shared wizard bar: optional Back (bordered) + Next (prominent) — the
+    /// same grammar SetupFlowView uses, so onboarding reads as one flow.
+    @ViewBuilder
+    private func wizardBar(next: String, nextIcon: String? = nil,
+                           backTo: Status? = nil, onBack: (() -> Void)? = nil,
+                           action: @escaping () -> Void) -> some View {
+        HStack(spacing: 12) {
+            if backTo != nil || onBack != nil {
+                // Compact Back — the primary action keeps the room it needs
+                // ("Record my voice" must never wrap). `backTo` steps within
+                // this wizard; `onBack` handles cross-stage exits.
+                Button {
+                    error = nil
+                    if let backTo { status = backTo } else { onBack?() }
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                Button {
-                    useThisVoice()
-                } label: {
-                    Label("Use this voice", systemImage: "checkmark")
+            }
+            Button(action: action) {
+                if let nextIcon {
+                    Label(next, systemImage: nextIcon)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Text(next)
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.bar)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+        }
+    }
+
+    @ViewBuilder
+    private var recordingFooter: some View {
+        if elapsedSeconds < Self.minSeconds {
+            Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more for a usable clone")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } else if elapsedSeconds < Self.recommendedSeconds {
+            Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the cleanest clone")
+                .font(.footnote)
+                .foregroundStyle(.green)
         } else {
-            VStack(spacing: 8) {
-                Button(action: handleTap) {
-                    Label(label, systemImage: icon)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(tint)
-                .disabled(status == .uploading || (status == .recording && elapsedSeconds < 1))
-
-                if status == .recording {
-                    if elapsedSeconds < Self.minSeconds {
-                        Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more for a usable clone")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                    } else if elapsedSeconds < Self.recommendedSeconds {
-                        Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the cleanest clone")
-                            .font(.footnote)
-                            .foregroundStyle(.green)
-                    } else {
-                        Text("Plenty for a great clone — stop whenever you're ready")
-                            .font(.footnote)
-                            .foregroundStyle(.green)
-                    }
-                } else if status == .uploading {
-                    ProgressView()
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.bar)
+            Text("Plenty for a great clone — stop whenever you're ready")
+                .font(.footnote)
+                .foregroundStyle(.green)
         }
     }
 
-    private var levelMeter: some View {
-        GeometryReader { geo in
-            let barCount = 20
-            let spacing: CGFloat = 4
-            let barWidth = (geo.size.width - spacing * CGFloat(barCount - 1)) / CGFloat(barCount)
-            HStack(spacing: spacing) {
-                ForEach(0..<barCount, id: \.self) { i in
-                    let position = Float(i) / Float(barCount - 1)
-                    let envelope = max(0.15, 1 - abs(position - 0.5) * 2 * abs(position - 0.5) * 2)
-                    let height = CGFloat(max(0.1, recorder.levels * envelope)) * geo.size.height
-                    Capsule()
-                        .fill(Color.accentColor)
-                        .frame(width: barWidth, height: height)
-                        .opacity(status == .recording ? (0.4 + Double(recorder.levels) * 0.6) : 0.25)
-                }
-            }
-            .frame(maxHeight: .infinity, alignment: .center)
-            .animation(.easeOut(duration: 0.08), value: recorder.levels)
-        }
-    }
-
-    private var icon: String {
-        switch status {
-        case .idle:      return "mic.fill"
-        case .recording: return "stop.fill"
-        case .reviewing: return "waveform"
-        case .uploading: return "arrow.up.circle"
-        case .done:      return "checkmark.circle.fill"
-        }
-    }
-
-    private var label: String {
-        switch status {
-        case .idle:      return "Start recording"
-        case .recording: return elapsedSeconds >= Self.minSeconds ? "Stop & review" : "Stop (early)"
-        case .reviewing: return "Review"
-        case .uploading: return "Cloning your voice…"
-        case .done:      return "Done"
-        }
-    }
-
-    private var tint: Color {
-        switch status {
-        case .recording: return elapsedSeconds >= Self.recommendedSeconds ? .green : .red
-        case .done:      return .green
-        default:         return .accentColor
-        }
-    }
+    // MARK: - Helpers
 
     private var elapsedText: String {
         let s = Int(elapsedSeconds)
@@ -327,81 +780,179 @@ struct VoiceCloneOnboardingView: View {
         recorder.inputDescription.lowercased().contains("bluetooth")
     }
 
-    private var micIcon: String {
-        isBadMic ? "exclamationmark.triangle.fill" : "mic.fill"
-    }
-
     // MARK: - Actions
 
-    private func handleTap() {
+    /// Mic step's Next: ask for the permission right here — its own moment,
+    /// with the Bluetooth warning still on screen — then move to the
+    /// quiet-spot finder (which needs the mic to listen to the room).
+    private func handleMicPermission() {
+        Task {
+            let granted = await recorder.requestPermission()
+            if granted {
+                error = nil
+                status = .spot
+            } else {
+                error = "Microphone access denied. Enable it in Settings."
+            }
+        }
+    }
+
+    /// The ONLY way recording starts: the explicit "Record my voice" tap on
+    /// the script step.
+    private func startRecording() {
         Task {
             do {
-                switch status {
-                case .idle:
-                    let granted = await recorder.requestPermission()
-                    guard granted else {
-                        error = "Microphone access denied. Enable it in Settings."
-                        return
-                    }
-                    error = nil
-                    elapsedSeconds = 0
-                    try recorder.start(quality: .voiceCloneHigh)
-                    startedAt = Date()
-                    startTicker()
-                    status = .recording
-
-                case .recording:
-                    stopAndReview()
-
-                case .reviewing, .uploading, .done:
-                    break
+                // Permission was granted on the mic step; re-check is free and
+                // covers the Settings-revoked edge.
+                let granted = await recorder.requestPermission()
+                guard granted else {
+                    error = "Microphone access denied. Enable it in Settings."
+                    return
                 }
+                error = nil
+                elapsedSeconds = 0
+                try recorder.start(quality: .voiceCloneHigh)
+                startedAt = Date()
+                startTicker()
+                status = .recording
             } catch {
                 self.error = error.localizedDescription
-                status = .idle
+                status = .script
                 stopTicker()
             }
         }
     }
 
-    /// Confirm the reviewed recording: persist the raw sample for later
-    /// re-generation, then normalize + upload to ElevenLabs.
+    private func togglePreview() {
+        if player.isPlaying {
+            player.stop()
+            return
+        }
+        guard let url = recordedSampleURL, let data = try? Data(contentsOf: url) else { return }
+        try? player.play(data)
+    }
+
+    /// Confirm the reviewed recording. If there's no account yet — the whole
+    /// onboarding runs account-free until here — this is THE sign-up moment:
+    /// the clone is the first thing that genuinely needs the server.
     private func useThisVoice() {
+        guard recordedSampleURL != nil else { return }
+        player.stop()
+        if auth.session == nil && !authBypassed {
+            status = .account
+            return
+        }
+        performClone()
+    }
+
+    #if DEBUG
+    private var authBypassed: Bool { UserDefaults.standard.bool(forKey: "debugSkipAuth") }
+    #else
+    private var authBypassed: Bool { false }
+    #endif
+
+    /// Persist the raw sample for later re-generation, clone, then synthesize
+    /// the clone's first words so the meet act can play them.
+    /// `holdVoiceOnboarding` keeps RootView from swapping away the moment the
+    /// voice id lands.
+    private func performClone() {
         guard let url = recordedSampleURL else { return }
-        preview.stop()
         status = .uploading
+        appState.holdVoiceOnboarding = true
         // Keep the original so the clone can be regenerated later without
         // recording again (Settings → Voice).
         VoiceSampleStore.shared.save(from: url)
         Task {
             do {
                 try await appState.regenerateVoiceClone(fromSampleAt: url)
-                status = .done   // RootView swaps away once voiceCloneId is set
+                UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+                // First words in the user's own voice. Best-effort: a failed
+                // synthesis never blocks the flow — the act just opens silent.
+                if let voiceId = appState.voiceCloneId {
+                    greetingData = try? await ElevenLabsClient.shared.synthesize(
+                        voiceId: voiceId, text: Self.greetingLine)
+                }
+                HapticEngine.success()
+                status = .meet
+                openMeet()
             } catch {
                 self.error = error.localizedDescription
                 status = .reviewing
+                appState.holdVoiceOnboarding = false
             }
         }
     }
 
+    /// Entry bloom for the meet act: a full-level burst (the smoother's slow
+    /// release handles the exhale), then the greeting takes over the orb.
+    private func openMeet() {
+        meetBurst = true
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            meetBurst = false
+            playGreeting()
+        }
+    }
+
+    private func playGreeting() {
+        guard let data = greetingData else { return }
+        player.stop()
+        try? player.play(data, forceSessionReset: true)
+    }
+
+    private func pick(_ theme: FutureselfTheme) {
+        storedTheme = theme.rawValue
+        // The study widgets wear the same theme — repaint them at once.
+        StudyWidgetRefresher.refresh()
+        HapticEngine.light()
+        // Feel the choice: the big orb re-speaks the greeting in this palette.
+        playGreeting()
+    }
+
+    private func finishMeet() {
+        player.stop()
+        appState.holdVoiceOnboarding = false   // RootView moves on to the tabs
+    }
+
     private func reRecord() {
-        preview.stop()
+        player.stop()
+        if let url = recordedSampleURL { try? FileManager.default.removeItem(at: url) }
+        UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
         recordedSampleURL = nil
         quality = nil
         elapsedSeconds = 0
         error = nil
-        status = .idle
+        status = .script
     }
 
     /// Stop recording and move to the review step. Shared by the manual
     /// Stop tap and the automatic stop at `maxSeconds`.
     private func stopAndReview() {
         stopTicker()
-        guard let rawURL = recorder.stop() else { status = .idle; return }
+        guard let rawURL = recorder.stop() else { status = .script; return }
         // Don't clone yet — let the user listen and see the quality check
         // first, then confirm with "Use this voice".
         recordedSampleURL = rawURL
         quality = AudioSampleQuality.analyze(url: rawURL)
+        // Remember the take so a relaunch reopens review, not step one.
+        UserDefaults.standard.set(rawURL.lastPathComponent, forKey: Self.pendingTakeKey)
+        status = .reviewing
+    }
+
+    /// Relaunch landing: if a reviewed-but-never-cloned take is still on
+    /// disk, resume straight at review — the user's 90 seconds are not lost.
+    private func restorePendingTake() {
+        guard status == .intro, recordedSampleURL == nil,
+              let name = UserDefaults.standard.string(forKey: Self.pendingTakeKey) else { return }
+        let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Recordings", isDirectory: true)
+            .appendingPathComponent(name)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+            return
+        }
+        recordedSampleURL = url
+        quality = AudioSampleQuality.analyze(url: url)
         status = .reviewing
     }
 
@@ -423,14 +974,46 @@ struct VoiceCloneOnboardingView: View {
         ticker?.invalidate()
         ticker = nil
     }
-}
 
-/// Indented bullet for the per-issue list in the quality section.
-private struct BulletLabelStyle: LabelStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "circle.fill").font(.system(size: 4))
-            configuration.title
+    // MARK: - Becoming loop
+
+    /// While uploading: advance the palette every beat and the narration every
+    /// other beat. `.task(id:)` cancels this the moment the act ends.
+    private func runBecoming() async {
+        var step = 0
+        while status == .uploading, !Task.isCancelled {
+            withAnimation(.easeInOut(duration: 0.6)) {
+                becomingTheme = FutureselfTheme.allCases[step % FutureselfTheme.allCases.count]
+                becomingLine = Self.becomingLines[min(step / 2, Self.becomingLines.count - 1)]
+            }
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
+            step += 1
         }
+    }
+
+    // MARK: - Debug capture seam
+
+    /// Screenshot harness: `-cloneStage <intro|spot|mic|script|recording|`
+    /// `reviewing|uploading|meet>` jumps straight to an act with stand-in
+    /// data — no mic, no network.
+    private func debugSeed() {
+        #if DEBUG
+        guard let stage = UserDefaults.standard.string(forKey: "cloneStage") else { return }
+        switch stage {
+        case "spot":      status = .spot
+        case "mic":       status = .mic
+        case "script":    status = .script
+        case "recording":
+            elapsedSeconds = 47
+            status = .recording
+        case "reviewing":
+            elapsedSeconds = 78
+            status = .reviewing
+        case "account":   status = .account
+        case "uploading": status = .uploading
+        case "meet":      status = .meet
+        default:          status = .intro
+        }
+        #endif
     }
 }

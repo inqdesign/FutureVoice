@@ -136,39 +136,85 @@ struct ChipPickerField: View {
 
 // MARK: - Speak or type
 
-/// Voice-first free-form answer for one category. The mic is the hero; a
-/// "Type instead" toggle swaps to a plain TextField over the same binding —
-/// voice is the default, never a requirement. Multiple takes append.
+/// ONE input field for a free-form answer — no modes, no swapping cards. The
+/// user can type at any time, or tap the mic in the field's corner and talk;
+/// dictation streams live into the same field. State changes touch only the
+/// mic button's color/icon and the caption text, never the geometry, so
+/// nothing jumps when recording starts or stops.
 struct SpeakOrTypeField: View {
     @Binding var text: String
     @Binding var locale: String
     /// Flips true once any dictation lands in `text` — callers use it to
     /// decide whether the answer needs an LLM cleanup pass on finish.
     var usedVoice: Binding<Bool>? = nil
-    var placeholder: String = "Tap the mic and just talk — wander, restart, change your mind. I'll sort it out."
+    var placeholder: String = "Type here — or tap the mic and just talk. I'll sort it out."
 
     @StateObject private var live = LiveTranscriber()
     @State private var isRecording = false
-    @State private var typing = false
     @State private var error: String?
+    /// `text` snapshot at record start (plus separator) — each live partial
+    /// re-renders as base + partial, so dictation streams into the field
+    /// without duplicating on revision.
+    @State private var dictationBase = ""
+    /// What `text` was before the take, restored if nothing was heard.
+    @State private var preTakeText = ""
 
     var body: some View {
-        VStack(spacing: 10) {
-            if typing {
-                typingCard
-            } else {
-                voiceCard
-            }
+        VStack(spacing: 6) {
+            VStack(spacing: 0) {
+                TextField(placeholder, text: $text, axis: .vertical)
+                    .lineLimit(5...10)
+                    .padding(14)
+                    // Don't fight the dictation stream mid-take; visually
+                    // unchanged, so this isn't a mode — just turn-taking.
+                    .allowsHitTesting(!isRecording)
 
-            Button {
-                if isRecording { commitRecordingNow() }
-                withAnimation { typing.toggle() }
-            } label: {
-                Label(typing ? "Talk instead" : "Type instead",
-                      systemImage: typing ? "mic" : "keyboard")
-                    .font(.footnote)
+                // Control row — fixed height; contents swap, geometry doesn't.
+                HStack(spacing: 10) {
+                    if isRecording {
+                        HStack(spacing: 5) {
+                            Circle().fill(.red).frame(width: 7, height: 7)
+                            Text("Listening — tap to finish")
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    } else {
+                        Picker("Language", selection: $locale) {
+                            Text("한국어").tag("ko")
+                            Text("English").tag("en")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 150)
+                    }
+                    Spacer()
+                    Button {
+                        Task { await toggleMic() }
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(isRecording ? Color.red : Color.accentColor)
+                                .frame(width: 40, height: 40)
+                                .scaleEffect(isRecording ? 1.08 : 1.0)
+                                .animation(
+                                    isRecording
+                                        ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+                                        : .default,
+                                    value: isRecording
+                                )
+                            Image(systemName: isRecording ? "stop.fill" : "mic.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color(.systemBackground))
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(isRecording ? "Stop dictation" : "Dictate")
+                }
+                .frame(height: 44)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 8)
             }
-            .foregroundStyle(.secondary)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
 
             if let e = error {
                 Label(e, systemImage: "exclamationmark.triangle")
@@ -176,82 +222,17 @@ struct SpeakOrTypeField: View {
                     .foregroundStyle(.red)
             }
         }
+        // Live dictation: every partial re-renders as base + partial, so the
+        // words appear in the field as they're spoken.
+        .onChange(of: live.transcript) { _, partial in
+            guard isRecording else { return }
+            let p = partial.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !p.isEmpty else { return }
+            text = dictationBase + p
+        }
         .onDisappear {
             if isRecording { commitRecordingNow() }
         }
-    }
-
-    // MARK: Cards
-
-    private var displayText: String {
-        let partial = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        if isRecording, !partial.isEmpty {
-            return text.isEmpty ? partial : text + "\n" + partial
-        }
-        return text
-    }
-
-    private var voiceCard: some View {
-        VStack(spacing: 14) {
-            Text(displayText.isEmpty ? placeholder : displayText)
-                .font(.body)
-                .foregroundStyle(displayText.isEmpty ? Color(.tertiaryLabel) : Color.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                Task { await toggleMic() }
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(isRecording ? Color.red : Color.accentColor)
-                        .frame(width: 64, height: 64)
-                        .scaleEffect(isRecording ? 1.06 : 1.0)
-                        .animation(
-                            isRecording
-                                ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true)
-                                : .default,
-                            value: isRecording
-                        )
-                    Image(systemName: isRecording ? "stop.fill" : "mic.fill")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(Color(.systemBackground))
-                }
-            }
-            .buttonStyle(.plain)
-
-            if isRecording {
-                HStack(spacing: 5) {
-                    Circle().fill(.red).frame(width: 7, height: 7)
-                    Text("Listening — tap to finish")
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            } else {
-                HStack(spacing: 8) {
-                    Text("I'll listen in")
-                    Picker("Language", selection: $locale) {
-                        Text("한국어").tag("ko")
-                        Text("English").tag("en")
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 150)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-
-    private var typingCard: some View {
-        TextField(placeholder, text: $text, axis: .vertical)
-            .lineLimit(4...10)
-            .padding(14)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: Recording
@@ -259,7 +240,7 @@ struct SpeakOrTypeField: View {
     private func toggleMic() async {
         if isRecording {
             isRecording = false
-            append(await live.stopAndFinalize())
+            finishTake(with: await live.stopAndFinalize())
             return
         }
         let granted = await LiveTranscriber.requestPermissions()
@@ -270,24 +251,31 @@ struct SpeakOrTypeField: View {
         error = nil
         do {
             try live.start(locale: locale)
+            preTakeText = text
+            dictationBase = text.isEmpty ? "" : text + "\n"
             isRecording = true
         } catch {
             self.error = error.localizedDescription
         }
     }
 
-    /// Synchronous commit for onDisappear / mode-toggle — skips the
-    /// final-pass wait `stopAndFinalize` would do.
+    /// Synchronous commit for onDisappear — skips the final-pass wait
+    /// `stopAndFinalize` would do.
     private func commitRecordingNow() {
         isRecording = false
-        append(live.stop())
+        finishTake(with: live.stop())
     }
 
-    private func append(_ heard: String) {
+    /// Settle the field after a take: final transcript wins; a silent take
+    /// restores exactly what was there before.
+    private func finishTake(with heard: String) {
         let trimmed = heard.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        text = text.isEmpty ? trimmed : text + "\n" + trimmed
-        usedVoice?.wrappedValue = true
+        if trimmed.isEmpty {
+            text = preTakeText
+        } else {
+            text = dictationBase + trimmed
+            usedVoice?.wrappedValue = true
+        }
     }
 }
 

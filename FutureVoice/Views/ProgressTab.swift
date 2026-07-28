@@ -248,7 +248,7 @@ struct ProgressTab: View {
                 // big enough, the honest display is "still collecting".
                 if let lv = aiLevel {
                     Text(lv.rawValue.uppercased())
-                        .font(.geistPixel(52))
+                        .geistPixel(52)
                         .foregroundStyle(.tint)
                     // Korean target: learners orient by TOPIK, so show the
                     // official CEFR↔TOPIK equivalence under the big number.
@@ -879,7 +879,7 @@ struct ProgressTab: View {
             panel {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text(vocabLevel?.rawValue.uppercased() ?? "—")
-                        .font(.geistPixel(44)).foregroundStyle(.tint)
+                        .geistPixel(44).foregroundStyle(.tint)
                     Text("vocabulary level").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Text("Estimated from \(usedTotal) distinct words you've actually used, each graded by CEFR level.")
@@ -931,7 +931,7 @@ struct ProgressTab: View {
         let maxC = max(1, perLevel.values.max() ?? 1)
         return HStack(spacing: 10) {
             Text(lv.rawValue.uppercased())
-                .font(.geistPixel(15))
+                .geistPixel(15)
                 .frame(width: 30, alignment: .leading)
                 .foregroundStyle(lv == vocabLevel ? Color.accentColor : .secondary)
             GeometryReader { g in
@@ -1027,7 +1027,7 @@ struct ProgressTab: View {
         VStack(spacing: 16) {
             panel {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text(big).font(.geistPixel(44)).foregroundStyle(.tint)
+                    Text(big).geistPixel(44).foregroundStyle(.tint)
                     Text(bigUnit).font(.subheadline).foregroundStyle(.secondary)
                     Spacer()
                     if let band { Text(band).font(.subheadline.weight(.semibold)) }

@@ -7,10 +7,15 @@ import SwiftUI
 /// timeline, the CEFR level equalizer) — not generic icons or chat bubbles.
 /// A pill Sign in with Apple is pinned below.
 struct WelcomeView: View {
+    @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
     @State private var page = 0
     @State private var autoplay = true
+    /// Sign-in is the SECONDARY path (returning users). New users tap
+    /// "Get started" and onboard account-free — sign-up comes later, at the
+    /// voice-clone moment.
+    @State private var showingSignIn = false
 
     init() {
         #if DEBUG
@@ -30,12 +35,18 @@ struct WelcomeView: View {
     }
 
     private static let features: [Feature] = [
-        Feature(title: "Talk with a fluent you",
-                subtitle: "Call your fluent self and just talk — real conversations in your own voice, fluent and unmistakably you."),
-        Feature(title: "Bring your people in",
-                subtitle: "The people you actually talk to — your barista, your boss, your doctor — become the cast of every practice."),
-        Feature(title: "Watch it before it happens",
-                subtitle: "Tomorrow's situation, played out with your people — watch how your fluent self handles it, line by line."),
+        // Slide one carries the whole product in two lines — the user should
+        // agree with THIS before anything else: another you, already fluent,
+        // and you learn English by talking with it.
+        Feature(title: "Another you.\nAlready fluent.",
+                subtitle: "Free talk, today's topics, real situations — speaking practice with your fluent self, in your voice."),
+        // Watch comes BEFORE People: first the idea (make any situation,
+        // watch your fluent self handle it — that's where expressions come
+        // from), then the deepening (do it with your real people).
+        Feature(title: "Watch yourself\nhandle it",
+                subtitle: "Make any situation — watch your fluent self handle it. That's where the ideas come from."),
+        Feature(title: "Then, with\nyour people",
+                subtitle: "Your barista, your boss, your doctor — watch your fluent self talk with them, then practice it."),
         Feature(title: "Make the words yours",
                 subtitle: "Shadow the exact lines in your own voice, at any speed, until they stick."),
         Feature(title: "Grow your word world",
@@ -80,7 +91,7 @@ struct WelcomeView: View {
         // maxHeight centers the whole group — no top-heavy void below.
         VStack(spacing: 28) {
             mock(i)
-                .frame(height: 440)
+                .frame(height: 410)
                 .frame(maxWidth: .infinity)
                 // The hero can overrun the available height on small screens.
                 // Rather than a hard clip, let it fade out at the very top and
@@ -123,8 +134,8 @@ struct WelcomeView: View {
     private func mock(_ i: Int) -> some View {
         switch i {
         case 0:  TalkHero()
-        case 1:  PeopleHero()
-        case 2:  WatchHero()
+        case 1:  WatchHero()    // the situation, watched line by line
+        case 2:  PeopleHero()   // then the same, with your real people
         case 3:  ShadowHero()
         default: VocabHero()
         }
@@ -145,21 +156,53 @@ struct WelcomeView: View {
 
     private var signInArea: some View {
         VStack(spacing: 8) {
-            SignInWithAppleButton(
-                onRequest: { request in
-                    // Capture the invite code at the sign-in moment so it's
-                    // redeemed as soon as the session lands.
-                    savePendingInvite()
-                    auth.configure(request)
-                },
-                onCompletion: { result in auth.handle(result: result) }
-            )
-            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-            .frame(height: 52)
-            .clipShape(Capsule())
-            .padding(.horizontal, 32)
+            if showingSignIn {
+                // Returning users: restore the account (and the voice clone
+                // that comes with it).
+                SignInWithAppleButton(
+                    onRequest: { request in
+                        // Capture the invite code at the sign-in moment so
+                        // it's redeemed as soon as the session lands.
+                        savePendingInvite()
+                        auth.configure(request)
+                    },
+                    onCompletion: { result in auth.handle(result: result) }
+                )
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 52)
+                .clipShape(Capsule())
+                .padding(.horizontal, 32)
 
-            inviteArea
+                Button("New here? Get started instead") {
+                    withAnimation { showingSignIn = false }
+                }
+                .font(.footnote)
+                .foregroundStyle(.tint)
+                .padding(.top, 2)
+            } else {
+                // The primary path: begin account-free. Sign-up comes later,
+                // at the voice-clone step — after the app has earned it.
+                Button {
+                    appState.onboardingStarted = true
+                } label: {
+                    Text("Get started")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .padding(.horizontal, 32)
+
+                Button("Already have an account? Sign in") {
+                    withAnimation { showingSignIn = true }
+                }
+                .font(.footnote)
+                .foregroundStyle(.tint)
+                .padding(.top, 2)
+
+                inviteArea
+            }
 
             #if DEBUG
             // Testing only: walk the onboarding flow without Apple sign-in.
@@ -196,7 +239,7 @@ struct WelcomeView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemGroupedBackground)))
                     .padding(.horizontal, 32)
                     .onChange(of: inviteCode) { _, _ in savePendingInvite() }
-                Text("You'll both get 500 credits when you sign in.")
+                Text("You'll both get 300 credits when you sign in.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .padding(.top, 4)

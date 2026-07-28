@@ -340,8 +340,10 @@ struct WatchView: View {
     @ViewBuilder
     private func bubble(turn: DialogueEngine.Turn, isCurrent: Bool) -> some View {
         let isUser = turn.speaker == .user
+        // The user's side of a watched scene is performed by the fluent
+        // self — label it that way, since the user is watching, not speaking.
         DialogueLine(speaker: isUser ? .user : .other,
-                     name: isUser ? "You" : counterpart.name,
+                     name: isUser ? "Future self" : counterpart.name,
                      isCurrent: isCurrent) {
             Text(turn.text)
         } accessory: {

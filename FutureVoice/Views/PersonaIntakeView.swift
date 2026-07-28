@@ -18,6 +18,12 @@ struct PersonaIntakeView: View {
 
     @State private var step: Step = .name
     @State private var persona: UserPersona = .empty
+
+    /// Draft persistence: answers + current card survive an app kill, so a
+    /// relaunch resumes where the user left off instead of re-asking seven
+    /// cards. Saved at every step transition, cleared on finish.
+    private static let draftKey = "futurevoice.personaDraft"
+    private static let draftStepKey = "futurevoice.personaDraftStep"
     @State private var locale = "ko"
     @State private var workVoiced = false
     @State private var peopleVoiced = false
@@ -47,11 +53,23 @@ struct PersonaIntakeView: View {
                 .scrollDismissesKeyboard(.interactively)
                 .animation(.snappy, value: step)
                 IntakeBottomBar(
-                    backVisible: step != .name,
-                    nextTitle: step == .extras ? "Start talking" : "Next",
+                    backVisible: true,
+                    // Voice clone follows this flow now, so the last card is a
+                    // "Next", not the app entrance.
+                    nextTitle: "Next",
                     nextEnabled: canAdvance,
                     isWorking: isFinishing,
-                    onBack: { withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .name } },
+                    onBack: {
+                        if step == .name {
+                            // Cross-stage back: reopen the quick-answer setup.
+                            // Answers survive — the draft here, appState there.
+                            saveDraft()
+                            appState.setupComplete = false
+                        } else {
+                            withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .name }
+                            saveDraft()
+                        }
+                    },
                     onNext: advance
                 )
             }
@@ -222,13 +240,43 @@ struct PersonaIntakeView: View {
             Task { await finish() }
         } else {
             withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .extras }
+            saveDraft()
         }
+    }
+
+    // MARK: - Draft persistence
+
+    private func saveDraft() {
+        if let data = try? JSONEncoder().encode(persona) {
+            UserDefaults.standard.set(data, forKey: Self.draftKey)
+        }
+        UserDefaults.standard.set(step.rawValue, forKey: Self.draftStepKey)
+    }
+
+    @discardableResult
+    private func restoreDraft() -> Bool {
+        guard let data = UserDefaults.standard.data(forKey: Self.draftKey),
+              let draft = try? JSONDecoder().decode(UserPersona.self, from: data) else { return false }
+        persona = draft
+        step = Step(rawValue: UserDefaults.standard.integer(forKey: Self.draftStepKey)) ?? .name
+        return true
+    }
+
+    private func clearDraft() {
+        UserDefaults.standard.removeObject(forKey: Self.draftKey)
+        UserDefaults.standard.removeObject(forKey: Self.draftStepKey)
     }
 
     private func seed() {
         guard !didSeed else { return }
         didSeed = true
         locale = appState.nativeLanguage
+        // A draft from an interrupted run wins — resume where the user left
+        // off instead of re-asking from card one. No draft but a saved
+        // persona (cross-stage Back from the voice-clone step) → edit that.
+        if !restoreDraft(), let saved = PersonaStore.shared.load() {
+            persona = saved
+        }
         // Seed the name from what Apple gave us at sign-in, so the user isn't
         // retyping something we already know. They can edit it.
         if persona.displayName.isEmpty,
@@ -275,6 +323,7 @@ struct PersonaIntakeView: View {
             }
         }
         appState.savePersona(persona)
+        clearDraft()
         dismiss()   // no-op on first run; RootView swaps once persona != nil
     }
 }

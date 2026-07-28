@@ -77,6 +77,19 @@ final class AppState: ObservableObject {
     @Published var voiceCloneId: String? {
         didSet { UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey) }
     }
+    /// Transient (never persisted): true while the voice-clone onboarding is
+    /// playing its final act (cloned-voice greeting + theme pick). Setting
+    /// `voiceCloneId` would otherwise make RootView swap the screen away the
+    /// instant the clone lands — before the user ever hears it. The view
+    /// raises this before cloning and lowers it on its final Continue.
+    @Published var holdVoiceOnboarding = false
+    /// True once the user tapped "Get started" on Welcome. Onboarding runs
+    /// account-free from there — sign-up is deferred to the moment the voice
+    /// clone actually needs the server. Persisted so a relaunch resumes the
+    /// flow instead of bouncing back to Welcome.
+    @Published var onboardingStarted: Bool = false {
+        didSet { UserDefaults.standard.set(onboardingStarted, forKey: Self.onboardingStartedKey) }
+    }
     @Published var nativeLanguage: String = "ko" {
         didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
     }
@@ -126,6 +139,7 @@ final class AppState: ObservableObject {
     private static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
     private static let setupCompleteKey = "futurevoice.setupComplete"
+    private static let onboardingStartedKey = "futurevoice.onboardingStarted"
 
     init() {
         let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
@@ -140,6 +154,7 @@ final class AppState: ObservableObject {
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
+        onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
         persona = PersonaStore.shared.load()
         topicSuggestions = TopicStore.shared.load()
         counterparts = CounterpartStore.shared.load()

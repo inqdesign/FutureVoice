@@ -126,7 +126,7 @@ struct RootTabView: View {
             ZStack {
                 Futureself(mode: .idle, level: 0)
                 Text("Let's talk")
-                    .font(.headline)
+                    .geistPixel(18)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
             }

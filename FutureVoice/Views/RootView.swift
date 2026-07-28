@@ -63,12 +63,16 @@ struct RootView: View {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if !auth.didResolveInitialSession && !authBypassed {
+        if !auth.didResolveInitialSession && !authBypassed && !appState.onboardingStarted {
             // Match the (blank) launch screen until we know whether there's a
             // stored session — a returning user then lands straight on Home
             // with no Welcome-screen flash.
             Color(.systemBackground).ignoresSafeArea()
-        } else if auth.session == nil && !authBypassed {
+        } else if auth.session == nil && !authBypassed && !appState.onboardingStarted {
+            // Welcome gates on "has the journey begun", NOT on the session:
+            // "Get started" enters onboarding account-free, and sign-up is
+            // deferred to the voice-clone step (the first server-bound act).
+            // The sign-in path here is for returning users restoring.
             WelcomeView()
         } else if !appState.setupComplete {
             SetupFlowView()

@@ -13,8 +13,29 @@ final class AudioRecorder: ObservableObject {
     /// they record a useless clone sample.
     @Published private(set) var inputDescription: String = ""
 
+    /// True while ambient monitoring runs (no keepable file, meters only).
+    @Published private(set) var isMonitoring = false
+    /// Slow ambient loudness, dBFS (≈ −60…0), ~0.6 s time constant — the
+    /// "how noisy is this room" reading behind the quiet-spot verdict, as
+    /// opposed to `levels` which is fast enough to ride syllables.
+    @Published private(set) var ambientDBFS: Float = -60
+    /// Last measured echo tail in milliseconds: how long a clap took to decay
+    /// 20 dB below its peak. Short (< ~220 ms) = dry, soft room; long = open,
+    /// reverberant space that would smear the clone. nil until a clap lands.
+    @Published private(set) var echoTailMs: Double?
+
+    /// Clap-tail tracker for the echo check (monitoring only).
+    private enum EchoPhase {
+        case armed                                  // waiting for a transient
+        case tracking(peak: Float, peakAt: Date)    // clap detected, watching decay
+        case cooling(until: Date)                   // ignore the clap's own settle
+    }
+    private var echoPhase: EchoPhase = .armed
+    private var meterTick = 0
+
     private var recorder: AVAudioRecorder?
     private var meterTimer: Timer?
+    private var monitorURL: URL?
 
     /// Two-quality recording. STT-bound user speech can stay at 16 kHz / 16-bit
     /// since Whisper and SFSpeechRecognizer expect that anyway. Voice CLONING
@@ -41,6 +62,7 @@ final class AudioRecorder: ObservableObject {
     /// Starts a new recording. Returns the destination file URL.
     @discardableResult
     func start(quality: Quality = .sttOptimal) throws -> URL {
+        if isMonitoring { stopMonitoring() }   // hand the mic over cleanly
         let session = AVAudioSession.sharedInstance()
         // `.measurement` flattens the iOS processing chain so we capture the
         // mic as-is for cloning — important to avoid the "compressed phone
@@ -122,6 +144,61 @@ final class AudioRecorder: ObservableObject {
         }
     }
 
+    // MARK: - Ambient monitoring (quiet-spot finder)
+
+    /// Meters the room WITHOUT keeping audio: records to a scratch file in
+    /// caches purely to drive `levels`/`ambientDBFS`, so the user can walk
+    /// around and watch the surface settle as they find a quiet spot. The
+    /// scratch file is deleted on stop — nothing is retained.
+    func startMonitoring() throws {
+        guard recorder == nil else { return }   // never fight a real recording
+        let session = AVAudioSession.sharedInstance()
+        // Same capture chain as the clone recording (.measurement, built-in
+        // mic) so the reading predicts actual take quality.
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker])
+        try session.setActive(true)
+        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+            try? session.setPreferredInput(builtIn)
+        }
+
+        let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ambient-monitor.wav")
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatLinearPCM),
+            AVSampleRateKey: 16_000,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsFloatKey: false,
+        ]
+        let rec = try AVAudioRecorder(url: url, settings: settings)
+        rec.isMeteringEnabled = true
+        guard rec.record() else { throw AudioRecorderError.recordFailed }
+
+        recorder = rec
+        monitorURL = url
+        isMonitoring = true
+        ambientDBFS = -60
+        echoTailMs = nil
+        echoPhase = .armed
+        inputDescription = Self.describeInput(session: session)
+        startMetering(interval: 0.01)   // 100 Hz — the echo check needs it
+    }
+
+    /// Stops monitoring and deletes the scratch file. Safe to call anytime.
+    func stopMonitoring() {
+        guard isMonitoring, let rec = recorder else { return }
+        rec.stop()
+        stopMetering()
+        isMonitoring = false
+        recorder = nil
+        if let url = monitorURL { try? FileManager.default.removeItem(at: url) }
+        monitorURL = nil
+        ambientDBFS = -60
+        echoTailMs = nil
+        echoPhase = .armed
+    }
+
     /// Stops the recording and returns the final file URL.
     @discardableResult
     func stop() -> URL? {
@@ -136,15 +213,64 @@ final class AudioRecorder: ObservableObject {
 
     // MARK: - Levels
 
-    private func startMetering() {
+    /// Recording meters at 20 Hz (plenty for a level bar). Monitoring runs at
+    /// 100 Hz — decay tails are 100–800 ms, so the echo check needs the finer
+    /// clock; `levels` still publishes at ~20 Hz to keep SwiftUI churn low.
+    private func startMetering(interval: TimeInterval = 0.05) {
         meterTimer?.invalidate()
-        meterTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        meterTick = 0
+        meterTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let rec = self.recorder, rec.isRecording else { return }
                 rec.updateMeters()
                 let power = rec.averagePower(forChannel: 0)            // dBFS, negative
-                let normalized = max(0, min(1, (power + 60) / 60))     // map -60…0 → 0…1
-                self.levels = normalized
+                self.meterTick += 1
+                // Publish the fast level at ≤ 20 Hz regardless of poll rate.
+                if interval >= 0.05 || self.meterTick % 5 == 0 {
+                    self.levels = max(0, min(1, (power + 60) / 60))    // map -60…0 → 0…1
+                }
+                if self.isMonitoring {
+                    self.stepEchoTracker(power: power)
+                } else {
+                    self.ambientDBFS = self.ambientDBFS * 0.92 + power * 0.08
+                }
+            }
+        }
+    }
+
+    /// One metering tick of the quiet-spot state machine: keep a slow ambient
+    /// baseline while armed, and when a clap-like transient fires, time how
+    /// long its energy takes to fall 20 dB — the room's echo tail.
+    private func stepEchoTracker(power: Float) {
+        let now = Date()
+        switch echoPhase {
+        case .armed:
+            if power > max(ambientDBFS + 18, -32) {
+                // Transient — start tracking its decay.
+                echoPhase = .tracking(peak: power, peakAt: now)
+            } else {
+                // Only the armed phase feeds the baseline, so the clap and its
+                // tail never contaminate the "how quiet is this room" reading.
+                // ~0.6 s time constant at 100 Hz.
+                ambientDBFS = ambientDBFS * 0.984 + power * 0.016
+            }
+        case .tracking(let peak, let peakAt):
+            if power > peak {
+                echoPhase = .tracking(peak: power, peakAt: now)   // still rising
+            } else {
+                let floorDB = max(peak - 20, ambientDBFS + 6)
+                if power <= floorDB {
+                    echoTailMs = now.timeIntervalSince(peakAt) * 1000
+                    echoPhase = .cooling(until: now.addingTimeInterval(0.4))
+                } else if now.timeIntervalSince(peakAt) > 1.2 {
+                    // Never decayed — extremely live room or sustained noise.
+                    echoTailMs = 1200
+                    echoPhase = .cooling(until: now.addingTimeInterval(0.4))
+                }
+            }
+        case .cooling(let until):
+            if now >= until, power < ambientDBFS + 10 {
+                echoPhase = .armed
             }
         }
     }

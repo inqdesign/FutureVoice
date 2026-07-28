@@ -12,12 +12,16 @@ import SwiftUI
 /// in `LanguageCatalog`, it's just not offered as a choice here.
 ///
 /// Flips `appState.setupComplete` on finish; RootView then routes to the
-/// voice-clone step.
+/// persona cards (voice clone comes last).
 struct SetupFlowView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var auth: AuthService
     @State private var step: Int = 0
     @State private var level: CEFRLevel = .b1
     @State private var nativeLanguage: String = "ko"
+    /// Backing out of step one crosses the auth boundary (Welcome lives
+    /// before sign-in), so it asks first instead of silently signing out.
+    @State private var confirmingSignOut = false
 
     /// The one language the fluent self speaks. Fixed to English; the catalog
     /// still supports others, they're just not user-selectable.
@@ -164,16 +168,24 @@ struct SetupFlowView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 12) {
-            if step > 0 {
-                Button {
+            Button {
+                if step > 0 {
                     step -= 1
-                } label: {
-                    Label("Back", systemImage: "chevron.left")
-                        .frame(maxWidth: .infinity)
+                } else if auth.session == nil {
+                    // Account-free onboarding (the normal path now): Welcome
+                    // is just the previous screen — no auth boundary to cross.
+                    backToWelcome()
+                } else {
+                    // Signed-in (returning user): going back to Welcome means
+                    // signing out, so confirm first.
+                    confirmingSignOut = true
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
+            } label: {
+                Label("Back", systemImage: "chevron.left")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
             Button {
                 advance()
             } label: {
@@ -186,6 +198,25 @@ struct SetupFlowView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)
+        .confirmationDialog("Back to the welcome screen?",
+                            isPresented: $confirmingSignOut, titleVisibility: .visible) {
+            Button("Sign out & go back", role: .destructive) { backToWelcome() }
+            Button("Stay", role: .cancel) {}
+        } message: {
+            Text("This signs you out. Your answers stay on this device.")
+        }
+    }
+
+    /// Return to Welcome: reopen the gate (and end the session if one
+    /// exists; in debug, drop the skip-auth bypass so Welcome actually shows).
+    private func backToWelcome() {
+        #if DEBUG
+        UserDefaults.standard.set(false, forKey: "debugSkipAuth")
+        #endif
+        appState.onboardingStarted = false
+        if auth.session != nil {
+            Task { await auth.signOut() }
+        }
     }
 
     private func advance() {
@@ -203,8 +234,9 @@ struct SetupFlowView: View {
     }
 
     private func finish() {
-        // Persist the answers, then open the gate so RootView moves on to the
-        // voice-clone step (which names the clone after this language).
+        // Persist the answers, then open the gate so RootView moves on to
+        // the persona cards (the clone, recorded later, is named after this
+        // language).
         appState.targetLanguage = targetLanguage
         appState.nativeLanguage = nativeLanguage
         appState.proficiency = level

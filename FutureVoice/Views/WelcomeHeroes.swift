@@ -27,138 +27,52 @@ import SwiftUI
 // MARK: - 1. Talk
 
 struct TalkHero: View {
-    struct Line: Identifiable {
-        let id: Int
-        let speaker: DialogueSpeaker
-        let text: String
-    }
-
-    /// Many short exchanges, rotated one per loop — so the transcript feels
-    /// like a living stream of different calls, not one canned demo.
-    private static let conversations: [[Line]] = [
-        [Line(id: 0, speaker: .other, text: "So — how'd the interview go?"),
-         Line(id: 1, speaker: .user,  text: "Honestly? It went really well."),
-         Line(id: 2, speaker: .other, text: "That's huge. What surprised you most?"),
-         Line(id: 3, speaker: .user,  text: "They actually laughed at my joke."),
-         Line(id: 4, speaker: .other, text: "See? You're more charming than you think."),
-         Line(id: 5, speaker: .user,  text: "Maybe I am. Fingers crossed for the offer.")],
-
-        [Line(id: 0, speaker: .other, text: "You sound lighter today."),
-         Line(id: 1, speaker: .user,  text: "I finally booked the trip to Lisbon."),
-         Line(id: 2, speaker: .other, text: "No way! When do you leave?"),
-         Line(id: 3, speaker: .user,  text: "Early next month, for ten days."),
-         Line(id: 4, speaker: .other, text: "Ten days — you'll actually get to slow down."),
-         Line(id: 5, speaker: .user,  text: "That's exactly what I need right now.")],
-
-        [Line(id: 0, speaker: .user,  text: "Can I run something by you?"),
-         Line(id: 1, speaker: .other, text: "Always. What's on your mind?"),
-         Line(id: 2, speaker: .user,  text: "I'm thinking of switching teams at work."),
-         Line(id: 3, speaker: .other, text: "Interesting — what's pulling you toward it?"),
-         Line(id: 4, speaker: .user,  text: "I want work that stretches me more."),
-         Line(id: 5, speaker: .other, text: "Then that's worth a real talk with your manager.")],
-
-        [Line(id: 0, speaker: .other, text: "How was dinner with her parents?"),
-         Line(id: 1, speaker: .user,  text: "Nerve-wracking — but they were lovely."),
-         Line(id: 2, speaker: .other, text: "See? You worried over nothing."),
-         Line(id: 3, speaker: .user,  text: "Her dad and I talked football for an hour."),
-         Line(id: 4, speaker: .other, text: "Sounds like you won him over."),
-         Line(id: 5, speaker: .user,  text: "I think I actually did.")],
-
-        [Line(id: 0, speaker: .other, text: "Did you make it to the gym?"),
-         Line(id: 1, speaker: .user,  text: "I did — first time in weeks."),
-         Line(id: 2, speaker: .other, text: "Proud of you. How'd it feel?"),
-         Line(id: 3, speaker: .user,  text: "Rough at first, then kind of amazing."),
-         Line(id: 4, speaker: .other, text: "That's the part that keeps you coming back."),
-         Line(id: 5, speaker: .user,  text: "Right? I already booked tomorrow.")],
-
-        [Line(id: 0, speaker: .user,  text: "I keep freezing when they speak fast."),
-         Line(id: 1, speaker: .other, text: "Then let's slow it down together."),
-         Line(id: 2, speaker: .user,  text: "Okay. That actually helps."),
-         Line(id: 3, speaker: .other, text: "Next time, just ask them to repeat it."),
-         Line(id: 4, speaker: .user,  text: "I never thought that was allowed."),
-         Line(id: 5, speaker: .other, text: "It's what fluent people do all the time.")],
-
-        [Line(id: 0, speaker: .other, text: "What's been on your mind lately?"),
-         Line(id: 1, speaker: .user,  text: "I want to sound more natural on calls."),
-         Line(id: 2, speaker: .other, text: "We'll get you there — one call at a time."),
-         Line(id: 3, speaker: .user,  text: "Some days it feels so far off."),
-         Line(id: 4, speaker: .other, text: "You're further than you were a month ago."),
-         Line(id: 5, speaker: .user,  text: "That's fair. I'll keep showing up.")],
-
-        [Line(id: 0, speaker: .other, text: "How'd the presentation land?"),
-         Line(id: 1, speaker: .user,  text: "They actually asked follow-up questions."),
-         Line(id: 2, speaker: .other, text: "That means they were hooked."),
-         Line(id: 3, speaker: .user,  text: "One even asked if we could ship it sooner."),
-         Line(id: 4, speaker: .other, text: "That's a great problem to have."),
-         Line(id: 5, speaker: .user,  text: "I'm still buzzing from it, honestly.")],
-
-        [Line(id: 0, speaker: .user,  text: "I froze up ordering at the restaurant."),
-         Line(id: 1, speaker: .other, text: "Happens to everyone. What did you want to say?"),
-         Line(id: 2, speaker: .user,  text: "Just to ask what they'd recommend."),
-         Line(id: 3, speaker: .other, text: "Let's practice it — say it to me now."),
-         Line(id: 4, speaker: .user,  text: "What would you recommend tonight?"),
-         Line(id: 5, speaker: .other, text: "Perfect. That's all it takes.")],
-
-        [Line(id: 0, speaker: .other, text: "Big week coming up?"),
-         Line(id: 1, speaker: .user,  text: "My in-laws are visiting for the holidays."),
-         Line(id: 2, speaker: .other, text: "Let's rehearse the small talk, then."),
-         Line(id: 3, speaker: .user,  text: "I never know how to start with them."),
-         Line(id: 4, speaker: .other, text: "Ask about their drive over — it always opens up."),
-         Line(id: 5, speaker: .user,  text: "Simple. I can definitely do that.")],
-
-        [Line(id: 0, speaker: .user,  text: "How do I not sound rude when I disagree?"),
-         Line(id: 1, speaker: .other, text: "Start with what you agree on first."),
-         Line(id: 2, speaker: .user,  text: "Oh, that's a good trick."),
-         Line(id: 3, speaker: .other, text: "Then say 'that said' and add your view."),
-         Line(id: 4, speaker: .user,  text: "That said, I'd take a different approach."),
-         Line(id: 5, speaker: .other, text: "Exactly — firm, but not rude.")],
-
-        [Line(id: 0, speaker: .other, text: "You closed the deal, didn't you?"),
-         Line(id: 1, speaker: .user,  text: "I did! I stayed calm the whole time."),
-         Line(id: 2, speaker: .other, text: "That's the version of you we've been building."),
-         Line(id: 3, speaker: .user,  text: "I even handled their pushback smoothly."),
-         Line(id: 4, speaker: .other, text: "A month ago that would've rattled you."),
-         Line(id: 5, speaker: .user,  text: "It really would have. Feels good.")],
+    /// Three ticker lanes flow BEHIND the orb — one per way into Talk —
+    /// alternating direction like passing traffic: news leftward, scenarios
+    /// rightward, free-talk prompts leftward. The orb, front and center,
+    /// keeps taking calls. No transcript here — that's Watch's visual.
+    private static let news = [
+        "Germany weighs a four-day work week",
+        "AI is changing how we interview",
+        "Rents keep climbing in big cities",
+        "The slow-travel comeback",
+    ]
+    private static let scenarios = [
+        "Ordering at a busy caf\u{00E9}",
+        "Asking your boss for Friday off",
+        "Small talk with your landlord",
+        "Returning shoes without a receipt",
+    ]
+    private static let freeTalk = [
+        "\u{201C}So — anything on your mind?\u{201D}",
+        "\u{201C}How did your day actually go?\u{201D}",
+        "\u{201C}What made you smile today?\u{201D}",
+        "\u{201C}Weekend plans yet?\u{201D}",
     ]
 
-    @State private var convo = 0
-    @State private var visible = 0
     @State private var mode: Futureself.Mode = .idle
     @State private var level: Float = 0
 
-    private var lines: [Line] { Self.conversations[convo] }
-
     var body: some View {
-        VStack(spacing: 0) {
-            // The call transcript — same DialogueLine, same .call scale as the
-            // live conversation screen. Bottom-aligned like a real call feed.
-            VStack(spacing: 14) {
-                Spacer(minLength: 0)
-                ForEach(lines.prefix(visible)) { line in
-                    DialogueLine(speaker: line.speaker,
-                                 name: line.speaker.isUser ? "You" : "Future self",
-                                 scale: .call) {
-                        Text(line.text)
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
+        ZStack {
+            // The lanes — full-bleed marquees, each its own pace/direction.
+            VStack(spacing: 12) {
+                HeroTicker(icon: "newspaper",    items: Self.news,      speed: 24, reverse: false)
+                HeroTicker(icon: "theatermasks", items: Self.scenarios, speed: 18, reverse: true)
+                HeroTicker(icon: "waveform",     items: Self.freeTalk,  speed: 27, reverse: false)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.horizontal, 24)
-            .clipped()
 
-            // The mic pill — exact chrome from ConversationView's call button.
+            // The protagonist — the lanes stream past behind it.
             ZStack {
                 Futureself(mode: mode, level: level)
                 Image(systemName: symbol)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(.primary)
+                    .contentTransition(.symbolEffect(.replace))
             }
-            .frame(width: 156, height: 64)
-            .clipShape(Capsule())
-            .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
-            .padding(.top, 22)
-            .padding(.bottom, 6)
+            .frame(width: 172, height: 172)
+            .clipShape(Circle())
+            .overlay(Circle().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
         }
         .task { await run() }
     }
@@ -166,54 +80,95 @@ struct TalkHero: View {
     private var symbol: String {
         switch mode {
         case .idle:      return "mic.fill"
-        case .listening: return "stop.fill"
+        case .listening: return "waveform"
         case .thinking:  return "ellipsis"
-        case .speaking:  return "waveform"
+        case .speaking:  return "speaker.wave.2.fill"
         }
     }
 
-    /// Loops over a fresh conversation each time, walking every turn regardless
-    /// of how many there are: you speak → the mic listens; the fluent self
-    /// replies → a short thinking sweep, then the line blooms as it speaks.
+    /// The orb's call loop: you speak (listening ignites) → a thinking
+    /// beat → the fluent self answers (speaking bloom) → breathe, repeat.
     private func run() async {
         while !Task.isCancelled {
-            set(mode: .idle, level: 0, visible: 0)
+            set(mode: .listening, level: 0.85)
+            await pause(1.4)
+            set(mode: .thinking, level: 0)
             await pause(0.7)
-            let turns = lines
-            for i in turns.indices {
-                if Task.isCancelled { return }
-                if turns[i].speaker.isUser {
-                    // Your line — the mic listens as you speak.
-                    set(mode: .listening, level: 0.82, visible: i + 1)
-                    await pause(1.5)
-                } else {
-                    // The fluent self replies: a brief thinking beat (skipped on
-                    // an opening line), then the reply blooms while it speaks.
-                    if i > 0 {
-                        set(mode: .thinking, level: 0, visible: i)
-                        await pause(0.9)
-                    }
-                    set(mode: .speaking, level: 0.68, visible: i + 1)
-                    await pause(1.9)
-                }
-            }
-            // Next conversation.
-            withAnimation(.easeInOut(duration: 0.4)) { visible = 0 }
-            await pause(0.35)
-            convo = (convo + 1) % Self.conversations.count
+            set(mode: .speaking, level: 0.7)
+            await pause(2.0)
+            set(mode: .idle, level: 0)
+            await pause(0.6)
         }
     }
 
-    private func set(mode: Futureself.Mode, level: Float, visible: Int) {
+    private func set(mode: Futureself.Mode, level: Float) {
         withAnimation(.spring(duration: 0.45)) {
             self.mode = mode
             self.level = level
-            self.visible = visible
         }
     }
 
     private func pause(_ s: Double) async {
         try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000))
+    }
+}
+
+/// One marquee lane: its items repeat seamlessly (two copies of the segment,
+/// offset by time, wrapped at the measured segment width). `reverse` flips
+/// the direction so adjacent lanes stream past each other.
+private struct HeroTicker: View {
+    let icon: String
+    let items: [String]
+    let speed: Double     // points per second
+    let reverse: Bool
+
+    @State private var segmentWidth: CGFloat = 0
+    @State private var start = Date()
+
+    var body: some View {
+        // GeometryReader is RIGID — it always reports exactly the proposed
+        // size, so the marquee's (very wide) fixedSize content can never leak
+        // into the page layout; it just overflows and gets clipped.
+        GeometryReader { geo in
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+                let elapsed = context.date.timeIntervalSince(start)
+                let raw = CGFloat(elapsed * speed)
+                let phase = segmentWidth > 0 ? raw.truncatingRemainder(dividingBy: segmentWidth) : 0
+                HStack(spacing: 10) {
+                    segment
+                    segment
+                }
+                .fixedSize()
+                .offset(x: reverse ? phase - segmentWidth : -phase)
+            }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .leading)
+            .clipped()
+        }
+        .frame(height: 42)
+    }
+
+    private var segment: some View {
+        HStack(spacing: 10) {
+            ForEach(items.indices, id: \.self) { i in
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.caption)
+                        .foregroundStyle(.tint)
+                    Text(items[i])
+                        .font(.footnote)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .background(Capsule().fill(Color(.secondarySystemBackground)))
+                .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+            }
+        }
+        .background(GeometryReader { geo in
+            Color.clear.onAppear { segmentWidth = geo.size.width + 10 }
+        })
     }
 }
 
@@ -349,8 +304,10 @@ struct WatchHero: View {
             // exactly like WatchView's bubbles.
             VStack(spacing: 12) {
                 ForEach(Array(s.lines.enumerated()), id: \.offset) { i, line in
+                    // In Watch, YOUR side is performed by the fluent self —
+                    // you watch it handle the scene, you don't speak.
                     DialogueLine(speaker: line.speaker,
-                                 name: line.speaker.isUser ? "You" : s.name,
+                                 name: line.speaker.isUser ? "Future self" : s.name,
                                  isCurrent: i == current) {
                         Text(line.text)
                     } accessory: {
