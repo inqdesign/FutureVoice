@@ -94,12 +94,12 @@ enum WeeklyReportEngine {
         let priorUserUtterances = endedSessions
             .filter { ($0.endedAt ?? .distantPast) <= windowStart }
             .flatMap { $0.turns }
-            .filter { $0.role == .user }
+            .filter { $0.role == .user && !$0.excludedFromScoring }
             .map { $0.transcript }
 
         let windowUserUtterances = windowSessions
             .flatMap { $0.turns }
-            .filter { $0.role == .user }
+            .filter { $0.role == .user && !$0.excludedFromScoring }
             .map { $0.transcript }
 
         guard !windowUserUtterances.isEmpty else { throw WeeklyReportError.noSessions }
@@ -119,7 +119,7 @@ enum WeeklyReportEngine {
             suggestionPairs.append((said, alt))
         }
         for session in windowSessions {
-            for turn in session.turns {
+            for turn in session.turns where !turn.excludedFromScoring {
                 if let s = turn.suggestion { addPair(said: turn.transcript, alt: s.alternative) }
             }
             for phrase in session.summary?.phrasesUsed ?? [] {

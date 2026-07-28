@@ -75,8 +75,11 @@ SourceKit diagnostics commonly show ghost errors ("Cannot find type …") for ne
 
 ## Model defaults
 
-- All LLM calls: Gemini `gemini-2.5-flash` with `thinkingBudget: 0`, via the `gemini` Edge Function (`GeminiClient.Model`).
-- Conversation turns: structured JSON `{reply, suggestion}` at temperature 0.7; analysis calls (summary, shadow bullets, weekly report) at 0.4 via `sendJSON`.
+- Default LLM: Gemini `gemini-3.6-flash` with `thinkingLevel: "low"` and DEFAULT sampling (Google recommends against sub-1.0 temperature on gen-3 — `GeminiClient` drops the caller's temperature for gen-3 models), via the `gemini` Edge Function (`GeminiClient.Model`).
+- Utility calls (Translator's pure translation, CounterpartParser, FreeTalkOpeners) run on `gemini-3.1-flash-lite`. Learner-facing coaching text stays on the default model.
+- `gemini-2.5-flash` remains in the enum as a rollback hatch only — the 2.5 family retires 2026-10-16.
+- Conversation turns: structured JSON `{reply, suggestion}`; analysis calls (summary, shadow bullets, weekly report) via `sendJSON`. Temperature args still exist on the API for 2.5-era callers but are ignored on gen-3.
+- TTS: Talk conversation turns use `eleven_flash_v2_5` (`ElevenLabsClient.conversationModelId`); Shadow/Watch/everything else stays on `eleven_turbo_v2_5`.
 
 ## Audio format
 

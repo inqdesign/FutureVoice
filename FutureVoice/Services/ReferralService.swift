@@ -2,7 +2,7 @@ import Foundation
 import Supabase
 
 /// Beta invite system. Each user has a shareable code; redeeming someone's
-/// code grants +500 credits to BOTH sides (inviter rewarded for up to 10
+/// code grants +300 credits to BOTH sides (inviter rewarded for up to 10
 /// invites). All credit math happens server-side in `redeem_referral`.
 struct ReferralStatus {
     var code: String?

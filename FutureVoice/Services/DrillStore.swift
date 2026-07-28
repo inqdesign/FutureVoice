@@ -68,6 +68,15 @@ final class DrillStore {
         write(all)
     }
 
+    /// Remove every card minted from one turn — used when the user flags the
+    /// turn as misheard by speech-to-text (its corrections drill a sentence
+    /// the user never said).
+    func deleteForTurn(_ turnId: UUID) {
+        var all = load()
+        all.removeAll { $0.sourceTurnId == turnId }
+        write(all)
+    }
+
     // MARK: - Scheduling
 
     /// Cards whose `nextReviewAt` is in the past or present, **newest first**.

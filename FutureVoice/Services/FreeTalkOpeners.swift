@@ -91,6 +91,7 @@ final class FreeTalkOpeners {
             system: Self.systemPrompt(language: language, personaName: personaName,
                                       proficiency: proficiency),
             messages: [GeminiClient.Message(role: .user, content: "Write the greetings.")],
+            model: .flashLite31,
             maxTokens: 500,
             purpose: "freetalk-openers",
             idempotencyKey: "freetalk-openers:\(Self.key(language: language, personaName: personaName))"

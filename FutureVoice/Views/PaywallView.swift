@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import Supabase
 
 /// Three-step trial-first paywall (pitch → trial timeline → plan picker),
 /// modeled on the Speak flow: sell the value, de-risk the trial, then show
@@ -20,7 +21,16 @@ struct PaywallView: View {
     @State private var period: PlanPeriod = .annual
     @State private var selectedTier: String = "premium"
 
-    enum Step { case pitch, timeline, plans }
+    // Beta subscription-preference survey (last step while `BetaConfig.isBeta`).
+    // Answers are folded into one `beta_reviews` row so no migration is needed.
+    @State private var surveyTier: String = "premium"      // premium | pro | none
+    @State private var surveyPeriod: PlanPeriod = .monthly
+    @State private var surveyComment: String = ""
+    @State private var surveySubmitting = false
+    @State private var surveySent = false
+    @State private var surveyError: String?
+
+    enum Step { case pitch, timeline, plans, survey }
 
     enum PlanPeriod: String, CaseIterable, Identifiable {
         case weekly, monthly, annual
@@ -38,7 +48,11 @@ struct PaywallView: View {
     /// Show the trial funnel only when the caller allows it AND Apple still
     /// offers this account an intro offer. Either being false means: skip the
     /// pitch, open on plans, and say "Subscribe" instead of "Try for free".
-    private var showsTrial: Bool { offerTrial && store.trialEligible }
+    private var showsTrial: Bool { offerTrial && store.trialEligible && !BetaConfig.isBeta }
+
+    /// During the beta the paywall can't sell, so it ends in a preference
+    /// survey rather than a purchase. `.plans` → `.survey` → submit.
+    private var showsSurvey: Bool { BetaConfig.collectsPreferenceSurvey }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,6 +63,7 @@ struct PaywallView: View {
                     case .pitch:    pitchContent
                     case .timeline: timelineContent
                     case .plans:    plansContent
+                    case .survey:   surveyContent
                     }
                 }
                 .padding(.horizontal, 24)
@@ -79,6 +94,11 @@ struct PaywallView: View {
         } message: {
             if case .failed(let msg) = store.purchaseState { Text(msg) }
         }
+        .alert("Thank you", isPresented: $surveySent) {
+            Button("Done") { dismiss() }
+        } message: {
+            Text("Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free.")
+        }
     }
 
     // MARK: - Chrome
@@ -92,6 +112,7 @@ struct PaywallView: View {
                 // Without a trial funnel there are no earlier steps — back
                 // from plans just closes.
                 case .plans:    showsTrial ? (step = .timeline) : dismiss()
+                case .survey:   step = .plans
                 }
             } label: {
                 Image(systemName: step == .pitch || (step == .plans && !showsTrial)
@@ -113,11 +134,14 @@ struct PaywallView: View {
                 switch step {
                 case .pitch:    step = .timeline
                 case .timeline: step = .plans
-                case .plans:    Task { await purchaseSelected() }
+                case .plans:
+                    if showsSurvey { step = .survey }
+                    else { Task { await purchaseSelected() } }
+                case .survey:   Task { await submitSurvey() }
                 }
             } label: {
                 Group {
-                    if store.purchaseState == .purchasing {
+                    if store.purchaseState == .purchasing || surveySubmitting {
                         ProgressView()
                     } else {
                         Text(ctaTitle)
@@ -129,15 +153,19 @@ struct PaywallView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(store.purchaseState == .purchasing)
+            .disabled(store.purchaseState == .purchasing || surveySubmitting)
 
-            if step == .plans {
+            if step == .plans && !showsSurvey {
                 Button("Restore purchases") {
                     Task { await store.restore() }
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            } else {
+            } else if step == .survey {
+                Text("Your answers go straight to the team building nawana.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            } else if step != .plans {
                 Text("\(store.trialDays) days free. Cancel anytime.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -154,9 +182,12 @@ struct PaywallView: View {
         case .pitch:    return "Try for free"
         case .timeline: return "See plans"
         case .plans:
+            if showsSurvey { return "Continue" }
             return showsTrial && selectedOption?.trialDays != nil
                 ? "Start my free \(store.trialDays)-day trial"
                 : "Subscribe"
+        case .survey:
+            return "Submit"
         }
     }
 
@@ -272,6 +303,13 @@ struct PaywallView: View {
                 .font(.largeTitle.weight(.bold))
                 .padding(.top, 12)
 
+            if showsSurvey {
+                Label("You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step.",
+                      systemImage: "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             Picker("Billing period", selection: $period) {
                 ForEach(PlanPeriod.allCases) { Text($0.label).tag($0) }
             }
@@ -280,22 +318,27 @@ struct PaywallView: View {
             VStack(spacing: 14) {
                 planCard(tier: "premium",
                          name: "Premium",
-                         blurb: "Serious immersion — three times the credits.",
-                         badge: "Best value")
+                         blurb: "Daily immersion in your voice — talks, Watch scenes, and shadowing without watching the meter.",
+                         badge: "Best for launch")
                 planCard(tier: "pro",
                          name: "Pro",
-                         blurb: "Steady daily practice.",
+                         blurb: "A light daily habit — enough for a short talk most days.",
                          badge: nil)
             }
 
-            if store.options.allSatisfy({ $0.product == nil }) && !store.loading {
+            if store.options.allSatisfy({ $0.localizedPrice == nil }) && !store.loading {
                 Label("Prices load from the App Store — not available yet in this build.",
+                      systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if store.options.allSatisfy({ $0.product == nil }) {
+                Label("Planned launch pricing — final prices confirm on the App Store at launch.",
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Text("Credits power voice synthesis and AI calls, and refill every cycle. Unused practice data never expires.")
+            Text("Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -342,6 +385,28 @@ struct PaywallView: View {
         store.options.first { $0.plan.tier == tier && $0.plan.period == period.rawValue }
     }
 
+    /// Percentage the annual plan saves versus paying monthly for a year, for
+    /// one tier. nil when either price is unknown or annual isn't cheaper.
+    private func annualSavingsPercent(tier: String) -> Int? {
+        // Prefer live prices; fall back to the planned price map so the badge
+        // still shows in the beta build, where StoreKit has no products.
+        let monthly = store.options
+            .first(where: { $0.plan.tier == tier && $0.plan.period == "monthly" })?.priceValue
+            ?? StoreKitService.PlanOption.plannedPriceValue["\(tier)_monthly"]
+        let annual = store.options
+            .first(where: { $0.plan.tier == tier && $0.plan.period == "annual" })?.priceValue
+            ?? StoreKitService.PlanOption.plannedPriceValue["\(tier)_annual"]
+        guard let monthly, let annual else { return nil }
+        // Do the percentage in Double — Decimal division of these values was
+        // truncating the sub-1 quotient to 0.
+        let m = NSDecimalNumber(decimal: monthly).doubleValue
+        let a = NSDecimalNumber(decimal: annual).doubleValue
+        let full = m * 12
+        guard m > 0, full > a else { return nil }
+        let pct = Int(((full - a) / full * 100).rounded())
+        return pct > 0 ? pct : nil
+    }
+
     private var selectedOption: StoreKitService.PlanOption? {
         option(tier: selectedTier)
     }
@@ -383,9 +448,16 @@ struct PaywallView: View {
                         }
                     }
                     Spacer()
-                    Text(opt?.localizedPrice.map { "\($0) / \(period.cycleNoun)" } ?? "—")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(opt?.localizedPrice.map { "\($0) / \(period.cycleNoun)" } ?? "—")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        if period == .annual, let saved = annualSavingsPercent(tier: tier) {
+                            Text("Save \(saved)% vs monthly")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.green)
+                        }
+                    }
                 }
             }
             .padding(16)
@@ -400,6 +472,171 @@ struct PaywallView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Step 4 · Beta preference survey (WTP with price anchors)
+
+    /// Planned launch stickers shown in the survey so answers are real WTP,
+    /// not abstract tier names. Keep in sync with `StoreKitService.plannedPrice`
+    /// and docs/launch-billing.md.
+    private func surveyPriceLabel(tier: String, period: PlanPeriod) -> String {
+        let key = "\(tier)_\(period.rawValue)"
+        return StoreKitService.PlanOption.plannedPrice[key] ?? "—"
+    }
+
+    private var surveyContent: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Help set the price")
+                    .font(.largeTitle.weight(.bold))
+                Text("No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 12)
+
+            surveyGroup("Which plan?") {
+                VStack(spacing: 10) {
+                    surveyTierRow(tier: "premium",
+                                  name: "Premium",
+                                  detail: "Daily immersion — ~15 min of talk a day")
+                    surveyTierRow(tier: "pro",
+                                  name: "Pro",
+                                  detail: "Light habit — a short talk most days")
+                    surveyTierRow(tier: "none",
+                                  name: "Neither",
+                                  detail: "Too expensive or not for me")
+                }
+            }
+
+            if surveyTier != "none" {
+                // Monthly + annual only — weekly has no locked sticker price yet
+                // (impulse SKU). Cleaner WTP signal for launch.
+                surveyGroup("How would you pay?") {
+                    Picker("Billing", selection: $surveyPeriod) {
+                        Text(PlanPeriod.monthly.label).tag(PlanPeriod.monthly)
+                        Text(PlanPeriod.annual.label).tag(PlanPeriod.annual)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Text("Selected: \(surveyPriceLabel(tier: surveyTier, period: surveyPeriod)) / \(surveyPeriod.cycleNoun)")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            surveyGroup("Anything we should know? (optional)") {
+                TextEditor(text: $surveyComment)
+                    .frame(minHeight: 90)
+                    .padding(8)
+                    .scrollContentBackground(.hidden)
+                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.secondarySystemBackground)))
+            }
+
+            if let surveyError {
+                Label(surveyError, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+            }
+
+            Label("Reviewing your saved words, drills, and dialogues stays free during the beta.",
+                  systemImage: "checkmark.seal.fill")
+                .font(.footnote)
+                .foregroundStyle(.green)
+        }
+    }
+
+    private func surveyTierRow(tier: String, name: String, detail: String) -> some View {
+        let isSelected = surveyTier == tier
+        let price: String = {
+            guard tier != "none" else { return "" }
+            return surveyPriceLabel(tier: tier, period: surveyPeriod)
+        }()
+        return Button {
+            surveyTier = tier
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .font(.title3)
+                    .padding(.top, 2)
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(name).font(.body.weight(.semibold))
+                        Spacer()
+                        if !price.isEmpty {
+                            Text(price)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.06),
+                            lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func surveyGroup<Content: View>(_ title: String,
+                                            @ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).font(.headline)
+            content()
+        }
+    }
+
+    /// Fold the answers into one `beta_reviews` row. Reuses the existing
+    /// table (context + free-text body) so there's no schema migration.
+    private func submitSurvey() async {
+        guard let session = try? await SupabaseProvider.shared.auth.session else {
+            surveyError = "You need to be signed in."
+            return
+        }
+        surveySubmitting = true
+        surveyError = nil
+        defer { surveySubmitting = false }
+
+        struct Row: Encodable {
+            let user_id: String
+            let context: String
+            let rating: Int?
+            let body: String
+        }
+        let note = surveyComment.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Include the price anchor the user saw so we can re-read WTP later
+        // even if list prices change.
+        let priceSeen = surveyTier == "none"
+            ? "n/a"
+            : surveyPriceLabel(tier: surveyTier, period: surveyPeriod)
+        let body = "tier=\(surveyTier); period=\(surveyPeriod.rawValue); price=\(priceSeen)"
+            + (note.isEmpty ? "" : "; note=\(note)")
+        do {
+            try await SupabaseProvider.shared
+                .from("beta_reviews")
+                .insert(Row(user_id: session.user.id.uuidString,
+                            context: "subscription_survey",
+                            rating: nil,
+                            body: body))
+                .execute()
+            surveySent = true
+        } catch {
+            surveyError = "Couldn't send — please try again."
+        }
     }
 
     // MARK: - Actions

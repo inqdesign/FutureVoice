@@ -87,7 +87,13 @@ private struct HistoryRow: View {
 
 /// Detail view for one stored session. Native iOS List grouping.
 struct SessionDetailView: View {
-    let session: Session
+    /// State so misheard-turn exclusions made in the grammar review update
+    /// the score and slip count in place.
+    @State private var session: Session
+
+    init(session: Session) {
+        _session = State(initialValue: session)
+    }
 
     var body: some View {
         List {
@@ -95,7 +101,9 @@ struct SessionDetailView: View {
                 if let card = summary.scorecard {
                     Section("Nutrition") {
                         ScorecardView(scorecard: card, grammarIssues: summary.grammarIssues,
-                                      userTurns: session.turns.filter { $0.role == .user })
+                                      userTurns: session.turns.filter { $0.role == .user },
+                                      sessionId: session.id,
+                                      onSessionUpdated: { session = $0 })
                             .padding(.vertical, 6)
                     }
                 }

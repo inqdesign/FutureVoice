@@ -83,7 +83,10 @@ struct RootTabView: View {
             // launch that goes straight to foreground wouldn't otherwise
             // publish a fresh snapshot.
             StudyWidgetRefresher.refresh()
+            consumeFreeTalk()   // cold launch from the Free Talk widget
         }
+        // Free Talk widget tap while the app is already up.
+        .onChange(of: appState.pendingFreeTalk) { _, _ in consumeFreeTalk() }
         // Study widget taps land in the Practice tab — futurevoice://vocab
         // additionally pushes the vocabulary notebook once the tab is up.
         // Note the transcript word links (futurevoice://word/…) are
@@ -96,6 +99,9 @@ struct RootTabView: View {
             let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first(where: { $0.name == "q" })?.value
             switch url.host {
+            case "freetalk":
+                selection = .home
+                appState.pendingFreeTalk = true
             case "practice":
                 selection = .practice
             case "vocab":
@@ -151,6 +157,15 @@ struct RootTabView: View {
     /// The live Futureself palette's tint, driving the pill's outline chrome.
     private var pillTint: Color {
         (FutureselfTheme(rawValue: storedTheme) ?? .blue).tint
+    }
+
+    /// Honour a pending Free Talk request from the widget deep link — only on
+    /// the Talk tab's root, and never on top of a live call.
+    private func consumeFreeTalk() {
+        guard appState.pendingFreeTalk else { return }
+        appState.pendingFreeTalk = false
+        guard freeTalkCallId == nil, !freeTalkClosing else { return }
+        startFreeTalk()
     }
 
     private func startFreeTalk() {

@@ -7,6 +7,63 @@ struct FutureVoiceWidgetBundle: WidgetBundle {
     var body: some Widget {
         VocabularyWidget()
         ExpressionsWidget()
+        FreeTalkWidget()
+    }
+}
+
+// MARK: - Free Talk widget — one tap starts a call
+
+/// A dedicated small button: tap the whole widget to open the app and start a
+/// Free Talk call (widgets can't record audio, so it deep-links). Wears a
+/// STATIC Futureself surface (the live Metal shader can't run in a widget) in
+/// the user's chosen theme.
+struct FreeTalkWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: "FutureVoiceFreeTalkWidget",
+                            provider: FreeTalkProvider()) { entry in
+            FreeTalkWidgetView(theme: entry.theme)
+                // Same surface as the Words/Phrases widgets — themed grid + bezel.
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+        }
+        .configurationDisplayName("Free Talk")
+        .description("One tap to call your fluent self.")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
+    }
+}
+
+struct FreeTalkEntry: TimelineEntry {
+    let date: Date
+    let theme: Int
+}
+
+struct FreeTalkProvider: TimelineProvider {
+    func placeholder(in context: Context) -> FreeTalkEntry {
+        FreeTalkEntry(date: Date(), theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+    func getSnapshot(in context: Context, completion: @escaping (FreeTalkEntry) -> Void) {
+        completion(FreeTalkEntry(date: Date(), theme: StudyWidgetSnapshotStore.themeIndex))
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<FreeTalkEntry>) -> Void) {
+        completion(Timeline(entries: [FreeTalkEntry(date: Date(), theme: StudyWidgetSnapshotStore.themeIndex)],
+                            policy: .never))
+    }
+}
+
+struct FreeTalkWidgetView: View {
+    let theme: Int
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(WidgetTheme.vivid(theme))
+            Text("Let's talk")
+                .font(pixelFont(16))
+                .foregroundStyle(WidgetTheme.vivid(theme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .widgetURL(URL(string: "futurevoice://freetalk"))
     }
 }
 

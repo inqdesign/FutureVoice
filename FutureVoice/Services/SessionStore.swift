@@ -71,6 +71,89 @@ final class SessionStore {
         return sessions.sorted { rank($0) > rank($1) }
     }
 
+    // MARK: - Misheard-turn exclusion
+
+    /// The user flagged a turn as misheard by speech-to-text: exclude it from
+    /// every deterministic metric, drop the grammar slips quoted from it,
+    /// rescale the stored grammar score to the remaining evidence, and delete
+    /// the drill cards minted from the turn. Returns the updated session.
+    @discardableResult
+    func excludeTurnFromScoring(sessionId: UUID, turnId: UUID) -> Session? {
+        guard var session = load().first(where: { $0.id == sessionId }),
+              let idx = session.turns.firstIndex(where: { $0.id == turnId }),
+              session.turns[idx].role == .user,
+              !session.turns[idx].excludedFromScoring else { return nil }
+
+        session.turns[idx].excludedFromScoring = true
+        let transcriptKey = Self.normalizedForMatch(session.turns[idx].transcript)
+
+        if var summary = session.summary {
+            let before = summary.grammarIssues.count
+            summary.grammarIssues.removeAll { issue in
+                let needle = Self.normalizedForMatch(issue.quote)
+                return !needle.isEmpty && transcriptKey.contains(needle)
+            }
+            let removed = before - summary.grammarIssues.count
+            // Rescale the grammar score deterministically: the deduction from
+            // 100 shrinks in proportion to the slips that survived. Removing
+            // the only slip returns the score to 100.
+            if removed > 0, before > 0, var card = summary.scorecard {
+                let deduction = Double(100 - card.grammar.score)
+                let remaining = Double(summary.grammarIssues.count) / Double(before)
+                card.grammar.score = min(100, 100 - Int((deduction * remaining).rounded()))
+                summary.scorecard = card
+            }
+            session.summary = summary
+        }
+
+        save(session)
+        DrillStore.shared.deleteForTurn(turnId)
+        return session
+    }
+
+    /// Resolve a grammar-review slip back to its source turn and exclude that
+    /// turn (which also removes the slip and rescales the score). When the
+    /// quote can't be traced to a turn, just the slip is dropped.
+    @discardableResult
+    func excludeMishearing(sessionId: UUID, issueId: UUID) -> Session? {
+        guard let session = load().first(where: { $0.id == sessionId }),
+              let issue = session.summary?.grammarIssues.first(where: { $0.id == issueId })
+        else { return nil }
+
+        let needle = Self.normalizedForMatch(issue.quote)
+        if !needle.isEmpty,
+           let turn = session.turns.first(where: {
+               $0.role == .user && Self.normalizedForMatch($0.transcript).contains(needle)
+           }) {
+            return excludeTurnFromScoring(sessionId: sessionId, turnId: turn.id)
+        }
+
+        // No traceable turn — remove the slip alone, with the same rescale.
+        var updated = session
+        guard var summary = updated.summary else { return nil }
+        let before = summary.grammarIssues.count
+        summary.grammarIssues.removeAll { $0.id == issueId }
+        if before > 0, var card = summary.scorecard {
+            let deduction = Double(100 - card.grammar.score)
+            let remaining = Double(summary.grammarIssues.count) / Double(before)
+            card.grammar.score = min(100, 100 - Int((deduction * remaining).rounded()))
+            summary.scorecard = card
+        }
+        updated.summary = summary
+        save(updated)
+        return updated
+    }
+
+    /// Same normalization the hallucination guard and drill ingestion use, so
+    /// a slip quote reliably finds the turn it was lifted from.
+    static func normalizedForMatch(_ text: String) -> String {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics
+                .union(CharacterSet(charactersIn: "'")).inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
     private func rank(_ s: Session) -> Date { s.endedAt ?? s.startedAt }
 
     private func write(_ sessions: [Session]) {

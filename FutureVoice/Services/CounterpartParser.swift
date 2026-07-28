@@ -30,6 +30,7 @@ enum CounterpartParser {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
+            model: .flashLite31,
             maxTokens: 600
         )
 

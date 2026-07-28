@@ -61,17 +61,21 @@ struct MeTab: View {
                             title: "What uses credits?",
                             subtitle: "And what's always free")
                     }
-                    NavigationLink {
-                        InviteView()
-                    } label: {
-                        row(icon: "gift",
-                            title: "Invite & earn credits",
-                            subtitle: "You both get 300 per friend")
+                    if BetaConfig.invitesAvailable {
+                        NavigationLink {
+                            InviteView()
+                        } label: {
+                            row(icon: "gift",
+                                title: "Invite & earn credits",
+                                subtitle: "You both get 300 per friend")
+                        }
                     }
                 } header: {
                     Text("Account")
                 } footer: {
-                    Text("Credits power voice synthesis and AI replies. Invite friends to earn more.")
+                    Text(BetaConfig.invitesAvailable
+                        ? "Credits power voice synthesis and AI replies. Invite friends to earn more."
+                        : "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.")
                 }
 
                 Section {

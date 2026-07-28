@@ -11,6 +11,13 @@ struct ScorecardView: View {
     /// The session's user turns. Lets the grammar review play back the actual
     /// recording behind each quoted slip.
     var userTurns: [Turn] = []
+    /// When set, the grammar review lets the user flag a slip as misheard by
+    /// speech-to-text — the source turn is excluded from scoring and the
+    /// grammar score rescales to the remaining evidence.
+    var sessionId: UUID? = nil
+    /// Fired after a misheard exclusion persists, with the updated session —
+    /// hosts refresh their copy so score and slip count stay live.
+    var onSessionUpdated: ((Session) -> Void)? = nil
 
     @State private var showGrammarReview = false
 
@@ -29,7 +36,9 @@ struct ScorecardView: View {
             }
         }
         .sheet(isPresented: $showGrammarReview) {
-            GrammarReviewView(axis: scorecard.grammar, issues: grammarIssues, userTurns: userTurns)
+            GrammarReviewView(axis: scorecard.grammar, issues: grammarIssues,
+                              userTurns: userTurns, sessionId: sessionId,
+                              onSessionUpdated: onSessionUpdated)
         }
     }
 
@@ -134,9 +143,19 @@ struct GrammarReviewView: View {
     let issues: [GrammarIssue]
     /// User turns from the same session — the recordings behind the quotes.
     var userTurns: [Turn] = []
+    /// When set, slips can be flagged as misheard — see `ScorecardView`.
+    var sessionId: UUID? = nil
+    var onSessionUpdated: ((Session) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @StateObject private var player = AudioPlayer()
     @State private var playingIssueId: UUID?
+    /// Local override after a misheard exclusion — one flag can remove
+    /// several slips (all quoted from the same turn) and moves the score.
+    @State private var updatedIssues: [GrammarIssue]?
+    @State private var updatedAxis: AxisScore?
+
+    private var displayIssues: [GrammarIssue] { updatedIssues ?? issues }
+    private var displayAxis: AxisScore { updatedAxis ?? axis }
 
     var body: some View {
         NavigationStack {
@@ -148,12 +167,12 @@ struct GrammarReviewView: View {
                         Text("Grammar")
                             .font(.headline)
                         Spacer()
-                        Text("\(axis.score)")
+                        Text("\(displayAxis.score)")
                             .font(.headline)
                             .monospacedDigit()
                     }
-                    if !axis.note.isEmpty {
-                        Text(axis.note)
+                    if !displayAxis.note.isEmpty {
+                        Text(displayAxis.note)
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
@@ -162,7 +181,7 @@ struct GrammarReviewView: View {
                 }
 
                 Section {
-                    ForEach(issues) { issue in
+                    ForEach(displayIssues) { issue in
                         let diff = GrammarDiff(quote: issue.quote, correction: issue.correction)
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(alignment: .top, spacing: 8) {
@@ -207,9 +226,22 @@ struct GrammarReviewView: View {
                             }
                         }
                         .padding(.vertical, 2)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if sessionId != nil {
+                                Button(role: .destructive) {
+                                    markMisheard(issue)
+                                } label: {
+                                    Label("Misheard", systemImage: "mic.slash")
+                                }
+                            }
+                        }
                     }
                 } header: {
-                    Text("\(issues.count) \(issues.count == 1 ? "slip" : "slips") this session")
+                    Text("\(displayIssues.count) \(displayIssues.count == 1 ? "slip" : "slips") this session")
+                } footer: {
+                    if sessionId != nil {
+                        Text("Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.")
+                    }
                 }
             }
             .navigationTitle("Grammar review")
@@ -221,6 +253,23 @@ struct GrammarReviewView: View {
             }
             .onDisappear { player.stop() }
         }
+    }
+
+    // MARK: - Misheard exclusion
+
+    /// Persist the exclusion, then refresh from the stored session — the
+    /// authoritative result may drop sibling slips from the same turn and
+    /// carries the rescaled grammar score.
+    private func markMisheard(_ issue: GrammarIssue) {
+        guard let sessionId,
+              let updated = SessionStore.shared.excludeMishearing(sessionId: sessionId,
+                                                                  issueId: issue.id)
+        else { return }
+        withAnimation {
+            updatedIssues = updated.summary?.grammarIssues ?? []
+            if let g = updated.summary?.scorecard?.grammar { updatedAxis = g }
+        }
+        onSessionUpdated?(updated)
     }
 
     // MARK: - Playback of the user's own recording

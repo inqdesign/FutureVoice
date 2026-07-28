@@ -68,6 +68,11 @@ final class AppState: ObservableObject {
     @Published var focusWord: String?
     @Published var focusPhrase: String?
 
+    /// Set by the Free Talk widget's deep link — RootTabView starts a call as
+    /// soon as it's up (staged, so a cold launch that isn't mounted yet still
+    /// fires once the tab appears).
+    @Published var pendingFreeTalk = false
+
     /// True while the Talk tab is showing its ROOT list (nothing pushed).
     /// ConversationHome flips it from its root's onAppear/onDisappear;
     /// RootTabView uses it to keep the floating Free-talk pill off pushed

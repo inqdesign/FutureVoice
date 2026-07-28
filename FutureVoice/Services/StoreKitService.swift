@@ -30,7 +30,31 @@ final class StoreKitService: ObservableObject {
         let product: Product?
         var id: String { plan.id }
 
-        var localizedPrice: String? { product?.displayPrice }
+        /// Live App Store price when the product loads, else the planned launch
+        /// price from `docs/launch-billing.md` — so the paywall (and beta WTP
+        /// survey) show real numbers before StoreKit products are live.
+        /// Weekly is an impulse tier with no fixed price yet → nil ("—").
+        var localizedPrice: String? { product?.displayPrice ?? PlanOption.plannedPrice[plan.id] }
+
+        // KRW App Store–style points for the locked EUR list prices in
+        // docs/launch-billing.md. Live StoreKit localizes once products ship.
+        static let plannedPrice: [String: String] = [
+            "pro_monthly":     "₩14,000",
+            "pro_annual":      "₩119,000",
+            "premium_monthly": "₩29,000",
+            "premium_annual":  "₩299,000",
+        ]
+
+        /// Numeric price for math (annual-vs-monthly savings). Live products
+        /// carry `product.price`; the fallback mirrors `plannedPrice`.
+        static let plannedPriceValue: [String: Decimal] = [
+            "pro_monthly":     14_000,
+            "pro_annual":      119_000,
+            "premium_monthly": 29_000,
+            "premium_annual":  299_000,
+        ]
+
+        var priceValue: Decimal? { product?.price ?? PlanOption.plannedPriceValue[plan.id] }
 
         /// Intro-offer length in days, when Apple has one configured.
         var trialDays: Int? {

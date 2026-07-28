@@ -30,8 +30,19 @@ final class GeminiClient {
     }
 
     enum Model: String {
+        /// Default brain (GA 2026-07-21) — conversation turns, analysis,
+        /// generation. Successor to 2.5 Flash, which retires 2026-10-16.
+        case flash36 = "gemini-3.6-flash"
+        /// Cheap fast tier for utility calls (translation, parsing, canned
+        /// openers) where top quality isn't load-bearing.
+        case flashLite31 = "gemini-3.1-flash-lite"
+        /// Legacy default — rollback escape hatch until the Oct 2026
+        /// retirement; don't wire new features to it.
         case flash25 = "gemini-2.5-flash"
-        case flashLite = "gemini-2.0-flash-lite"
+
+        /// Gen-3 models take `thinkingLevel` ("low"…) and prefer default
+        /// sampling; 2.5 takes `thinkingBudget` + explicit temperature.
+        var isGen3: Bool { self != .flash25 }
     }
 
     struct Message {
@@ -55,7 +66,7 @@ final class GeminiClient {
     func send(
         system: String,
         messages: [Message],
-        model: Model = .flash25,
+        model: Model = .flash36,
         maxTokens: Int = 512,
         temperature: Double = 0.7,
         searchGrounding: Bool = false,
@@ -74,9 +85,12 @@ final class GeminiClient {
         }
         struct Content: Encodable { let role: String; let parts: [Part] }
         struct SystemInstruction: Encodable { let parts: [Part] }
-        struct ThinkingConfig: Encodable { let thinkingBudget: Int }
+        struct ThinkingConfig: Encodable {
+            var thinkingBudget: Int? = nil   // 2.5 family: 0 = thinking off
+            var thinkingLevel: String? = nil // gen-3 family: "low" = minimum
+        }
         struct GenerationConfig: Encodable {
-            let temperature: Double
+            let temperature: Double?        // nil = omitted (model default)
             let maxOutputTokens: Int
             let thinkingConfig: ThinkingConfig
             let responseMimeType: String?   // nil = omitted
@@ -104,9 +118,16 @@ final class GeminiClient {
                 return Content(role: msg.role.rawValue, parts: parts)
             },
             generationConfig: .init(
-                temperature: temperature,
+                // Gemini 3.x: Google strongly recommends default sampling —
+                // sub-1.0 temperatures can degrade or loop gen-3 models, so
+                // the caller's value is only honored on the 2.5 family.
+                temperature: model.isGen3 ? nil : temperature,
                 maxOutputTokens: maxTokens,
-                thinkingConfig: .init(thinkingBudget: 0),
+                // Latency floor for the phone-call loop: thinking OFF on 2.5,
+                // the minimum "low" level on gen-3 (which can't fully disable).
+                thinkingConfig: model.isGen3
+                    ? .init(thinkingLevel: "low")
+                    : .init(thinkingBudget: 0),
                 // Force JSON output at the API level — prompt-only JSON drifts
                 // back to prose in long conversations because the model
                 // imitates its own (plain-text) turns in the history.
@@ -152,7 +173,7 @@ final class GeminiClient {
     func sendJSON<T: Decodable>(
         system: String,
         messages: [Message],
-        model: Model = .flash25,
+        model: Model = .flash36,
         maxTokens: Int = 1024,
         temperature: Double = 0.4,
         searchGrounding: Bool = false,

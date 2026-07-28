@@ -4,8 +4,8 @@ import Charts
 /// Progress — expressed in CEFR (A1–C2) so it actually means something, not an
 /// arbitrary 0–100. The overall level is ONE pooled AI judgment over all the
 /// user's speech (weekly read); the per-skill pages lean on measured numbers
-/// (CEFR-graded vocabulary, articulation WPM, correction rate, words/turn)
-/// plus the analyzer's qualitative "what to work on" notes. Shadowing and
+/// (CEFR-graded vocabulary, articulation WPM, the per-talk grammar score,
+/// words/turn) plus the analyzer's qualitative "what to work on" notes. Shadowing and
 /// drill reps are PRACTICE, not assessment — they appear as effort (Activity)
 /// and never move the level.
 struct ProgressTab: View {
@@ -35,7 +35,11 @@ struct ProgressTab: View {
     @State private var pausesPerMin = 0.0
     @State private var talkMinutes = 0
     @State private var wordsPerTurn = 0
-    @State private var corrPer10 = 0.0
+    /// Average of the recent talks' 0–100 grammar scores — the SAME number
+    /// each talk's scorecard shows (anchored on verified grammar slips),
+    /// higher is better. Replaces the old suggestion-rate proxy, which also
+    /// counted style rephrases and STT noise and read in the wrong direction.
+    @State private var grammarScore = 0
     // Qualitative coaching notes (LLM), per dimension
     @State private var notesByDim: [Dim: [String]] = [:]
     @State private var scoredCount = 0
@@ -269,7 +273,7 @@ struct ProgressTab: View {
                     // band. A weak axis is a visibly shorter column.
                     LevelEqualizer(bars: equalizerBars)
                         .padding(.top, 8)
-                    Text("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, corrections and turn length.")
+                    Text("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.")
                         .font(.caption2).foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     Divider()
@@ -295,7 +299,7 @@ struct ProgressTab: View {
                 Text("Across skills").font(.headline)
                 skillRow(.vocabulary, value: vocabLevel.map { $0.rawValue.uppercased() } ?? "—")
                 skillRow(.fluency, value: fluencyBand)
-                skillRow(.grammar, value: corrPer10 > 0 ? String(format: "%.1f/10 turns", corrPer10) : "—")
+                skillRow(.grammar, value: grammarScore > 0 ? "\(grammarScore)/100" : "—")
             }
 
             if let lv = aiLevel, let next = nextLevel(lv) {
@@ -610,15 +614,17 @@ struct ProgressTab: View {
         }
     }
 
-    /// Correction rate → CEFR band (fewer flagged rephrasings = higher).
+    /// Grammar score → CEFR band. The score itself is anchored on verified
+    /// grammar slips (see ConversationEngine's rubric), so this is a coarse
+    /// proxy mapping like the pace bands — hence the "≈" in the UI.
     private var grammarCEFR: CEFRLevel? {
-        guard scoredCount > 0 else { return nil }
-        switch corrPer10 {
-        case 4...:      return .a1
-        case 3..<4:     return .a2
-        case 2..<3:     return .b1
-        case 1..<2:     return .b2
-        case 0.5..<1:   return .c1
+        guard grammarScore > 0 else { return nil }
+        switch grammarScore {
+        case ..<40:     return .a1
+        case 40..<55:   return .a2
+        case 55..<70:   return .b1
+        case 70..<82:   return .b2
+        case 82..<92:   return .c1
         default:        return .c2
         }
     }
@@ -795,9 +801,9 @@ struct ProgressTab: View {
                                     : "Words per minute of voiced speech — pauses and think-time removed.")
                     assessedRow(name: "Grammar",
                                 level: grammarCEFR.map { "≈" + $0.rawValue.uppercased() },
-                                detail: corrPer10 > 0
-                                    ? String(format: "%.1f corrections per 10 turns — fewer reads higher.", corrPer10)
-                                    : "How often a more natural rephrase was suggested — fewer reads higher.")
+                                detail: grammarScore > 0
+                                    ? "Scoring \(grammarScore)/100 across recent talks — each talk graded from the verified grammar slips in what you said."
+                                    : "Each talk's 0–100 grammar score, graded from the verified grammar slips in what you said.")
                     assessedRow(name: "Expression",
                                 level: expressionCEFR.map { "≈" + $0.rawValue.uppercased() },
                                 detail: wordsPerTurn > 0
@@ -968,15 +974,15 @@ struct ProgressTab: View {
     private var grammarContent: some View {
         measuredContent(
             dim: .grammar,
-            big: corrPer10 > 0 ? String(format: "%.1f", corrPer10) : "—",
-            bigUnit: "corrections / 10 turns",
+            big: grammarScore > 0 ? "\(grammarScore)" : "—",
+            bigUnit: "/ 100 · recent talks",
             band: nil,
-            measuredLine: "How often a more natural rephrase was suggested — lower is better.",
-            measures: "How correctly you build sentences — tenses, articles, agreement.",
+            measuredLine: "The same grammar score each talk's card shows, averaged over your recent talks — higher is better.",
+            measures: "How correctly you build sentences — graded from verified slips in what you said, not from style suggestions.",
             improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
             action: nil,
             trend: grammarTrend,
-            trendCaption: "Corrections per 10 turns, one point per talk — DOWN is progress here."
+            trendCaption: "Grammar score per talk, 0–100 — UP is progress."
         )
     }
 
@@ -1100,7 +1106,7 @@ struct ProgressTab: View {
         }
         if lags(grammarCEFR) {
             tips.append((icon: "checkmark.seal",
-                         text: String(format: "Corrections are at %.1f per 10 turns — run your review cards under Practice; they're built from your own slips.", corrPer10)))
+                         text: "Your grammar score averages \(grammarScore)/100 — run your review cards under Practice; they're built from your own slips."))
         }
         if lags(fluencyCEFR) {
             tips.append((icon: "gauge.with.needle",
@@ -1259,7 +1265,14 @@ struct ProgressTab: View {
         pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
         talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
         wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
-        corrPer10 = mean(mets.map(\.suggestionRate)) * 10
+        // Grammar = the per-talk scorecard score (anchored on verified slips),
+        // NOT suggestionRate — that also counts style rephrases and STT noise,
+        // so it saturates and contradicts the score each talk shows.
+        let recentGrammar = recent
+            .compactMap { $0.summary?.scorecard?.grammar.score }
+            .filter { (0...100).contains($0) }
+            .map(Double.init)
+        grammarScore = Int(mean(recentGrammar).rounded())
 
         // --- Per-skill trends: one point per analyzed talk, oldest first.
         // The SAME deterministic measurements as the headline numbers above,
@@ -1270,7 +1283,11 @@ struct ProgressTab: View {
             let date = s.endedAt ?? s.startedAt
             let pace = m.articulationRate > 0 ? m.articulationRate : m.wordsPerMinute
             if pace > 0 { fT.append(TrendPoint(date: date, value: pace)) }
-            gT.append(TrendPoint(date: date, value: m.suggestionRate * 10))
+            // One point per talk: the talk's own 0–100 grammar score — the
+            // number the user already saw on that talk's card.
+            if let g = s.summary?.scorecard?.grammar.score, (0...100).contains(g) {
+                gT.append(TrendPoint(date: date, value: Double(g)))
+            }
             if m.avgWordsPerUserTurn > 0 {
                 eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))
             }

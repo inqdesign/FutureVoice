@@ -25,7 +25,9 @@ struct ScorecardMetrics: Codable {
     var vocabLevelCounts: [String: Int]
 
     static func compute(turns: [Turn]) -> ScorecardMetrics {
-        let userTurns = turns.filter { $0.role == .user }
+        // Turns the user flagged as misheard by speech-to-text carry garbage
+        // transcripts — leave them out of every measurement.
+        let userTurns = turns.filter { $0.role == .user && !$0.excludedFromScoring }
         let allWords = userTurns
             .flatMap { tokens(in: $0.transcript) }
 

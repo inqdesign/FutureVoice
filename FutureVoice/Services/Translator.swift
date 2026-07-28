@@ -32,6 +32,7 @@ enum Translator {
                 Output ONLY the translation — no quotes, no romanization, no notes, no original text.
                 """,
                 messages: [GeminiClient.Message(role: .user, content: text)],
+                model: .flashLite31,
                 maxTokens: 400,
                 temperature: 0.2
             )

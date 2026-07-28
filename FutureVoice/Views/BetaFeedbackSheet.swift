@@ -50,11 +50,18 @@ struct BetaFeedbackSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(context.subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets())
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(context.title)
+                            .font(.title2.bold())
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text(context.subtitle)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+                    .listRowBackground(Color.clear)
                 }
 
                 Section("Rating") {
@@ -86,7 +93,7 @@ struct BetaFeedbackSheet: View {
                     }
                 }
             }
-            .navigationTitle(context.title)
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {

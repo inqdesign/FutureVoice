@@ -88,7 +88,9 @@ enum TalkCurriculum {
         }
 
         // Shadow lines — every corrected sentence, in conversation order.
-        for turn in session.turns where turn.role == .user {
+        // Misheard-flagged turns are skipped: their "correction" fixes a
+        // sentence the user never said.
+        for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
             guard let s = turn.suggestion else { continue }
             var item = ScenarioCurriculum.Item(
                 id: shadowLineId(for: turn.id),

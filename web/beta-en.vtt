@@ -1,0 +1,454 @@
+WEBVTT
+
+00:00.120 --> 00:01.360
+Hello.
+
+00:01.360 --> 00:03.700
+My name is Eunggyu.
+
+00:03.700 --> 00:05.030
+I'm the person who built Nawana.
+
+00:05.030 --> 00:06.970
+Let me start with why I made it.
+
+00:06.970 --> 00:12.040
+That story explains almost everything about how this app works.
+
+00:12.040 --> 00:13.320
+I studied in Korea.
+
+00:13.320 --> 00:15.330
+In my second year of university,
+
+00:15.330 --> 00:17.740
+it hit me that I really needed English.
+
+00:17.740 --> 00:21.710
+So I transferred to a university in Newcastle, in England.
+
+00:21.710 --> 00:24.310
+But my English at that point was bad.
+
+00:24.310 --> 00:25.800
+Really bad.
+
+00:25.800 --> 00:27.150
+So before term started,
+
+00:27.150 --> 00:30.660
+I spent six months in Portsmouth doing an IELTS course.
+
+00:30.660 --> 00:32.000
+It was a good start.
+
+00:32.000 --> 00:34.060
+University was still hard.
+
+00:34.060 --> 00:37.600
+Anyway, I graduated, found a job in Germany,
+
+00:37.600 --> 00:41.110
+and I've been living here almost sixteen years now.
+
+00:41.110 --> 00:43.160
+Here's the part that matters.
+
+00:43.160 --> 00:45.520
+Almost all of my work has been in English.
+
+00:45.520 --> 00:48.510
+Client meetings, projects, managing teams —
+
+00:48.510 --> 00:49.890
+all of it in English.
+
+00:49.890 --> 00:52.280
+And I have never once felt fluent.
+
+00:52.280 --> 00:54.490
+I could get through the situation.
+
+00:54.490 --> 00:57.180
+I just couldn't say what I wanted to say,
+
+00:57.180 --> 00:59.210
+the way I wanted to say it.
+
+00:59.210 --> 01:01.210
+That gap never closed.
+
+01:01.210 --> 01:03.160
+So first — I built this app,
+
+01:03.160 --> 01:05.570
+but I'm not someone who has solved English,
+
+01:05.570 --> 01:08.680
+this homework that never ends for us.
+
+01:08.680 --> 01:10.840
+I'm practicing with it myself right now.
+
+01:10.840 --> 01:13.110
+It isn't finished, and it isn't proven.
+
+01:13.110 --> 01:16.040
+That's exactly why this beta exists.
+
+01:16.040 --> 01:19.360
+To find out whether the app works the way I think it does,
+
+01:19.360 --> 01:21.900
+and whether it genuinely helps people.
+
+01:21.900 --> 01:26.390
+So let me tell you what makes Nawana different from other English learning apps,
+
+01:26.390 --> 01:28.960
+and what problem it's trying to solve.
+
+01:28.960 --> 01:30.320
+When you start the app,
+
+01:30.320 --> 01:33.140
+the first thing you'll do is let it hear your voice.
+
+01:33.140 --> 01:34.360
+It takes one minute.
+
+01:34.360 --> 01:37.950
+And from that voice, the app builds your future self.
+
+01:37.950 --> 01:38.950
+That's right.
+
+01:38.950 --> 01:41.840
+Using AI, it creates the future you —
+
+01:41.840 --> 01:44.670
+the one who speaks English fluently.
+
+01:44.670 --> 01:46.360
+That's the heart of this app.
+
+01:46.360 --> 01:48.080
+Let me explain why.
+
+01:48.080 --> 01:50.460
+When we listen to a native speaker — in a video,
+
+01:50.460 --> 01:51.390
+in a classroom —
+
+01:51.390 --> 01:55.660
+some part of our brain files it away like this: that's them,
+
+01:55.660 --> 01:56.440
+not me.
+
+01:56.440 --> 02:01.470
+A perfect accent coming out of someone else's mouth actually feels like a wall to us.
+
+02:01.470 --> 02:04.960
+But when it's your own voice, it's different.
+
+02:04.960 --> 02:08.820
+Your tone, your timbre, the sound you actually make —
+
+02:08.820 --> 02:10.880
+coming back at you fluent.
+
+02:10.880 --> 02:12.510
+That wall disappears.
+
+02:12.510 --> 02:16.530
+It stops feeling like something to admire from a distance.
+
+02:16.530 --> 02:17.720
+It feels close.
+
+02:17.720 --> 02:19.000
+Not a different world —
+
+02:19.000 --> 02:21.750
+more like somewhere you could actually reach.
+
+02:21.750 --> 02:23.160
+That's how it feels.
+
+02:23.160 --> 02:25.300
+And that becomes our real goal.
+
+02:25.300 --> 02:28.840
+Not imitating the sound of someone else's pronunciation.
+
+02:28.840 --> 02:32.270
+That's why building your future voice is the first step.
+
+02:32.270 --> 02:35.840
+Once your future self exists, there are two ways to use it.
+
+02:35.840 --> 02:37.220
+The first is Talk.
+
+02:37.220 --> 02:40.500
+You speak, and your future self answers.
+
+02:40.500 --> 02:42.570
+You can just talk freely.
+
+02:42.570 --> 02:46.840
+No topic, no script — start, and follow wherever it goes.
+
+02:46.840 --> 02:48.990
+Or pick a news topic.
+
+02:48.990 --> 02:51.140
+When you build your profile at the beginning,
+
+02:51.140 --> 02:54.460
+we ask about your interests, and topics get built from that.
+
+02:54.460 --> 02:58.080
+So you're practicing on things you genuinely care about —
+
+02:58.080 --> 02:59.490
+with the latest news.
+
+02:59.490 --> 03:03.220
+You learn English and pick up some knowledge along the way.
+
+03:03.220 --> 03:04.620
+There are scenarios too.
+
+03:04.620 --> 03:08.680
+Ready-made ones — ordering at a café, checking into a hotel,
+
+03:08.680 --> 03:11.240
+going through airport immigration,
+
+03:11.240 --> 03:13.660
+meeting someone for the first time.
+
+03:13.660 --> 03:15.480
+Or you can build your own.
+
+03:15.480 --> 03:18.660
+If you have an interview coming up, put in the company name,
+
+03:18.660 --> 03:21.440
+the position, as much detail as you want.
+
+03:21.440 --> 03:23.800
+That becomes your practice.
+
+03:23.800 --> 03:26.470
+The second is Watch — and personally,
+
+03:26.470 --> 03:28.400
+this is my favorite feature.
+
+03:28.400 --> 03:30.490
+First you create a persona.
+
+03:30.490 --> 03:33.330
+Someone you might realistically end up talking to.
+
+03:33.330 --> 03:37.530
+If there's someone around you that you already speak English with,
+
+03:37.530 --> 03:39.840
+set them up as your conversation partner.
+
+03:39.840 --> 03:43.130
+Their name, their relationship to you, and so on —
+
+03:43.130 --> 03:46.650
+describe the person you know in as much detail as you can.
+
+03:46.650 --> 03:49.440
+And if there's no real person around you,
+
+03:49.440 --> 03:52.270
+an imaginary one works just as well.
+
+03:52.270 --> 03:53.680
+That's up to you.
+
+03:53.680 --> 03:58.580
+Then your future self and that person have a conversation about the topic you chose,
+
+03:58.580 --> 04:00.280
+and you watch it happen.
+
+04:00.280 --> 04:02.950
+If there's a good expression in there, you can shadow it.
+
+04:02.950 --> 04:07.380
+The words that come up in the conversation are there for you to study separately.
+
+04:07.380 --> 04:08.900
+I think for most learners,
+
+04:08.900 --> 04:11.610
+the hard part in conversation isn't grammar.
+
+04:11.610 --> 04:13.430
+It's not knowing what to say.
+
+04:13.430 --> 04:15.110
+There's no idea there.
+
+04:15.110 --> 04:18.410
+And because you've never actually been in these situations yourself,
+
+04:18.410 --> 04:21.080
+you don't know whether what you're saying is right,
+
+04:21.080 --> 04:23.710
+whether you're even allowed to say it that way.
+
+04:23.710 --> 04:28.400
+There's no model for that moment in your head — so you freeze.
+
+04:28.400 --> 04:31.210
+Watch simulates that situation for you.
+
+04:31.210 --> 04:33.570
+You see how your future self works through it,
+
+04:33.570 --> 04:37.490
+which words they use, which expressions sound natural.
+
+04:37.490 --> 04:39.440
+And once you've practiced enough,
+
+04:39.440 --> 04:42.690
+you run the same situation yourself in Talk.
+
+04:42.690 --> 04:44.440
+Watch to get the idea.
+
+04:44.440 --> 04:46.240
+Talk to make it yours.
+
+04:46.240 --> 04:48.130
+There's more in there too —
+
+04:48.130 --> 04:49.960
+things I personally felt were missing.
+
+04:49.960 --> 04:53.460
+The shadowing and vocabulary features especially.
+
+04:53.460 --> 04:55.840
+I really wanted to get those right.
+
+04:55.840 --> 04:59.540
+I'd love to keep going, but that's enough about the app.
+
+04:59.540 --> 05:01.040
+Now, a favor to ask.
+
+05:01.040 --> 05:02.440
+You'll get credits.
+
+05:02.440 --> 05:06.090
+The simple way to think about it: every time your future self speaks,
+
+05:06.090 --> 05:07.440
+that's a cost.
+
+05:07.440 --> 05:10.720
+Running this app is genuinely expensive right now.
+
+05:10.720 --> 05:13.280
+But I still felt it needed to exist —
+
+05:13.280 --> 05:16.510
+so even without much profit in it, I decided to try.
+
+05:16.510 --> 05:22.550
+Which is why what I really want is for the people who actually need this to get good use out of it.
+
+05:22.550 --> 05:25.080
+That's my request, and my hope.
+
+05:25.080 --> 05:27.060
+If you've heard all this and you're interested,
+
+05:27.060 --> 05:29.270
+if you want to try it — first,
+
+05:29.270 --> 05:32.020
+creating your voice is the most important thing.
+
+05:32.020 --> 05:34.550
+Recording quality really matters here.
+
+05:34.550 --> 05:40.620
+Because you have to hear yourself speaking fluently before you can feel what this app is worth.
+
+05:40.620 --> 05:43.380
+A good microphone would be wonderful,
+
+05:43.380 --> 05:45.910
+but your phone is completely fine.
+
+05:45.910 --> 05:48.800
+One rule: never use Bluetooth earbuds.
+
+05:48.800 --> 05:52.890
+Just put your phone inside your closet, in among the clothes.
+
+05:52.890 --> 05:56.810
+And then — this sounds strange — put your head in there too,
+
+05:56.810 --> 05:59.360
+and follow what the app tells you.
+
+05:59.360 --> 06:01.040
+Under a blanket works as well.
+
+06:01.040 --> 06:03.600
+But what matters is being comfortable,
+
+06:03.600 --> 06:06.160
+speaking the way you normally speak.
+
+06:06.160 --> 06:07.200
+Naturally.
+
+06:07.200 --> 06:09.800
+After that, just use it however you like.
+
+06:09.800 --> 06:11.140
+And tell me honestly.
+
+06:11.140 --> 06:12.720
+Tell me what you liked.
+
+06:12.720 --> 06:15.660
+If you've tried other apps, tell me what's lacking here,
+
+06:15.660 --> 06:16.930
+what needs improving.
+
+06:16.930 --> 06:20.840
+And if you stop using it — tell me where you closed the app.
+
+06:20.840 --> 06:22.840
+I'm not looking for encouragement.
+
+06:22.840 --> 06:26.110
+I want to know how real users actually use this,
+
+06:26.110 --> 06:28.230
+and how it actually feels.
+
+06:28.230 --> 06:29.880
+Thank you for starting this with me.
+
+06:29.880 --> 06:31.240
+I really hope it helps.

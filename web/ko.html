@@ -1527,15 +1527,16 @@ const BILLING = {
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
-// PLACEHOLDER prices — set these to match the Stripe Prices you create.
+// Locked launch prices — keep in sync with docs/launch-billing.md
+// (annual credits = exactly 12× monthly; "2 months free" is the sticker only).
 const PLANS = {
   pro: {
     monthly: { id: "pro_monthly",     price: "€9.99",   per: "/ 월", credits: "500 크레딧 / 월" },
-    annual:  { id: "pro_annual",      price: "€79.99",  per: "/ 년",  credits: "6,500 크레딧 / 년" },
+    annual:  { id: "pro_annual",      price: "€79.99",  per: "/ 년",  credits: "6,000 크레딧 / 년" },
   },
   premium: {
     monthly: { id: "premium_monthly", price: "€19.99",  per: "/ 월", credits: "1,500 크레딧 / 월" },
-    annual:  { id: "premium_annual",  price: "€159.99", per: "/ 년",  credits: "19,500 크레딧 / 년" },
+    annual:  { id: "premium_annual",  price: "€199.99", per: "/ 년",  credits: "18,000 크레딧 / 년" },
   },
 }
 

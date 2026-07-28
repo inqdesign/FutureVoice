@@ -468,22 +468,16 @@ private struct WidgetGallery: View {
     }
 
     private func freeTalkCard(theme: Int) -> some View {
-        ZStack {
-            RadialGradient(colors: [.black.opacity(0.45), .black.opacity(0.0)],
-                           center: .center, startRadius: 4, endRadius: 90)
-            VStack(spacing: 8) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
-                Text("Let's talk").font(pixelFont(16)).foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 2, y: 1)
-            }
+        VStack(spacing: 8) {
+            Image(systemName: "mic.fill")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(WidgetTheme.vivid(theme))
+            Text("Let's talk").font(pixelFont(16)).foregroundStyle(WidgetTheme.vivid(theme))
         }
         .frame(width: 158, height: 158)
-        .background(FutureselfStatic(theme: theme))
+        .background(WidgetGrid(theme: theme,
+                               shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.black, lineWidth: 4.5))
         .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }
 

@@ -1,76 +1,142 @@
-# Billing launch plan — pricing, webhooks, free tier
+# Billing & pricing — source of truth
 
-> Status: 2026-07-03. Stripe (web) + Apple (iOS) webhooks are implemented.
-> Current ElevenLabs plan: **Creator** ($22/mo) — confirmed 2026-07-03,
-> upgradeable anytime. App uses `eleven_turbo_v2_5` everywhere
-> (0.5 EL-credits/char), so: 100k EL credits = 200k chars = **2,000 internal
-> credits of monthly capacity**.
+> Status: **2026-07-26 — decided for launch.**  
+> Owner: product/marketing. Ops (ElevenLabs tier) is separate — upgrade EL
+> whenever real beta/paid usage warrants it; do not let capacity math block
+> product or pricing decisions.
 
-## 1. Unit economics (the pricing floor)
+---
 
-One internal credit = 100 TTS chars (turbo) ≈ 1 conversation turn's audio.
-A typical turn costs ~3 credits (TTS 2 + Gemini 1).
+## 0. Positioning (one line)
 
-| ElevenLabs plan | $/mo | capacity (internal cr/mo) | cost per internal cr | supports (at ~full utilization) |
-|---|---|---|---|---|
-| **Creator (current)** | $22 | **2,000** | ~$0.011 | ~4 pro subs OR 1 premium + 1 pro |
-| Pro | $99 | 10,000 | ~$0.010 | ~20 pro / ~6 premium |
-| Scale | $330 | 40,000 | ~$0.008 | ~80 pro / ~26 premium |
+> **Speak-level conversation practice, in your own cloned voice — at Speak-adjacent prices.**
 
-(Gemini 2.5-flash adds roughly $0.002–0.003 per turn — noise at these
-volumes. Overage past plan capacity bills at ElevenLabs' usage-based rate —
-verify the current rate before relying on it; upgrading tiers is cheaper.)
+| Tier | Job to be done | Anchor |
+|------|----------------|--------|
+| **Free** | Feel the product once | Clone + a few short talks |
+| **Pro** | Daily habit (~5 min talk) | Coffee money / TalkPal–ELSA band |
+| **Premium** | Serious immersion | Speak / 1 tutor hour per month |
 
-**Capacity is the binding constraint, not margin.** Creator's 2,000 cr/month
-means: one dev-bootstrap signup (1,000 cr) can consume half a month's
-capacity, and ~4 paying pro users saturate it.
+Always free after any paid generation: **replay, drills, progress, saved lines**.
+Credits only gate *creating new audio/AI* — never practicing with what exists.
 
-Upgrade triggers (check monthly EL usage dashboard):
-- → **Pro ($99)** when granted credits/month (subs + signups) exceed ~1,400
-  (70% of Creator capacity). In practice: ~3 paying users or an active
-  TestFlight cohort.
-- → **Scale ($330)** past ~7,000 granted credits/month (~15–20 paying users).
-Each upgrade also improves margin (0.011 → 0.008 per credit).
+---
 
-What a subscriber actually receives per month:
-- **pro 500cr** ≈ 150–160 conversation turns ≈ 5 turns/day — a light daily habit
-- **premium 1,500cr** ≈ 480 turns ≈ 15 turns/day + heavy shadow/Watch use
+## 1. Locked launch catalog
 
-## 2. Recommended prices (EUR, incl. VAT)
+### Prices
 
-Remember the stack of cuts: 19% VAT off the top, then Apple 15% (Small
-Business) or Stripe ~2% on what's left. Net revenue ≈ 71% (Apple) / 82%
-(Stripe web) of sticker price.
+| Plan | EUR (list, incl. VAT) | KRW (App Store fallback) | Net ~Apple SB (71%) |
+|------|----------------------|---------------------------|---------------------|
+| pro monthly | **€9.99** | **₩14,000** | ~€7.10 |
+| pro annual | **€79.99** | **₩119,000** | ~€57 (~29% off 12× monthly) |
+| premium monthly | **€19.99** | **₩29,000** | ~€14.30 |
+| premium annual | **€199.99** | **₩299,000** | ~€143 (~17% off 12× monthly) |
 
-| Plan | Price | Net (Apple SB) | Full-use cost (Creator) | Verdict |
-|---|---|---|---|---|
-| pro monthly | **€9.99** | ~€7.10 | ~€5.00 | healthy |
-| pro annual (6,500cr) | **€79.99** | ~€57 | ~€65 | thin at full use — acceptable (few max out) |
-| premium monthly | **€19.99** | ~€14.30 | ~€15.00 | breakeven worst-case, fine typical |
-| premium annual (19,500cr) | **€199.99** | ~€143 | ~€195 | **danger at full use** — see below |
+Annual story = **cheaper sticker price** (“~2 months free”), **not** extra credits.
 
-Annual-plan guardrails (pick one before launch):
-1. **Reduce annual bonus**: 6,500 → 6,000 and 19,500 → 18,000 (exactly 12×monthly).
-   The "2 months free" story then lives in the price, not in extra credits.
-2. **Drip annual credits monthly** (1/12 per month via cron) — kills the
-   "buy annual in month 1, burn 19,500 credits, refund" abuse tail.
-3. Keep as-is and accept the tail risk while user counts are small.
+### Credits per cycle (exact 12× for annual)
 
-Recommendation: (1) now — it's a single UPDATE on subscription_plans — plus
-(2) later if annual uptake grows.
+| Plan | Credits | What it buys (approx.) |
+|------|---------|------------------------|
+| pro weekly | 125 | Impulse week — app-only |
+| **pro monthly** | **500** | ~150 turns ≈ 5 turns/day |
+| **pro annual** | **6,000** | 12 × monthly |
+| premium weekly | 375 | Impulse week — app-only |
+| **premium monthly** | **1,500** | ~480 turns ≈ 15 turns/day + Watch/shadow |
+| **premium annual** | **18,000** | 12 × monthly |
 
-Weekly plans: keep them **app-only** (impulse tier). Web sells monthly/annual only.
+Weekly SKUs stay in the DB for StoreKit experiments; **web sells monthly + annual only**.  
+v1 paywall default period: **annual** (higher LTV); beta survey defaults to **monthly** (clearer WTP signal).
 
-## 3. Free tier — replace the dev bootstrap
+### Unit definition
 
-Today every signup gets 1,000 credits (`dev_bootstrap` trigger — ~2 months of
-pro-level usage, ~$11+ upstream cost per signup, abusable with throwaway
-Apple IDs). Replace **at production launch** (keep for TestFlight):
+- 1 internal credit ≈ 100 TTS chars (`eleven_turbo_v2_5`)
+- Typical conversation turn ≈ **3 credits** (TTS ~2 + Gemini 1)
+- 10-minute talk ≈ **~45 credits** (~4.5 cr / spoken minute)
+
+Charge table lives in `supabase/functions/_shared/credits.ts` — keep
+`CreditGuideView` in sync.
+
+---
+
+## 2. Free tier & acquisition
+
+| Surface | Amount | When |
+|---------|--------|------|
+| **Beta signup** | **300** | Live now (`beta300:` ledger prefix) |
+| **Launch signup** | **100** | Swap trigger at production open |
+| **Apple / Stripe trial** | Full selected plan cycle | Intro offer / trial webhook |
+| **Referral** (both sides) | **300**, inviter cap 10 | Standing loop; revisit if unit econ shifts |
+
+Beta 300 is intentionally generous so testers can form a habit and we can
+read real usage. Launch 100 is enough to clone + taste, not live on.
+
+Real trial = Apple intro offer / Stripe trial (grants a full cycle via webhook).
+
+---
+
+## 3. Beta phase (now) — what we measure
+
+Subscriptions are **not** for sale. The paywall ends in a **preference survey**
+(`beta_reviews.context = subscription_survey`) with **price anchors** so
+answers are WTP, not vibes.
+
+Watch in Supabase / Telegram:
+
+1. **Credit burn rate** — days to first 402, median cr/session, cr/day
+2. **Feature mix** — talk vs Watch vs shadow vs clone
+3. **Survey mix** — premium vs pro vs none × period
+4. **Depletion alerts** — first-time empty balance (already wired)
+
+**Do not** change prices mid-beta without a written reason.  
+**Do** upgrade ElevenLabs when the usage dashboard says so — product stays put.
+
+---
+
+## 4. Unit economics (floor, not a panic button)
+
+| EL plan | $/mo | ~internal cr/mo capacity | Notes |
+|---------|------|--------------------------|--------|
+| Creator | $22 | ~2,000 | Fine for early beta |
+| Pro | $99 | ~10,000 | Typical when paid cohort starts |
+| Scale | $330 | ~40,000 | ~15–20+ paying users |
+
+Gemini 2.5 Flash is noise at our prompt sizes.  
+Full-use cost vs net revenue at Creator rates:
+
+| Plan | Full-use cost | Verdict at typical use |
+|------|---------------|------------------------|
+| pro monthly | ~€5 vs ~€7 net | healthy |
+| pro annual | ~€60 vs ~€57 net | thin only if every user maxes out |
+| premium monthly | ~€15 vs ~€14 net | fine typical; breakeven if maxed |
+| premium annual | ~€180 vs ~€143 net | acceptable with 12× credits + normal under-use |
+
+Later (if annual share is high): drip annual credits 1/12 per month via cron.
+
+---
+
+## 5. Go-live checklist
+
+Apple:
+
+- [ ] Migration applied for annual 12× credits (`20260726…_annual_credits_12x`)
+- [ ] `APPLE_BUNDLE_ID` / `APPLE_APP_ID` secrets
+- [ ] `apple-webhook` deployed; ASC Server Notifications V2 pointed at it
+- [ ] Six products in ASC matching `subscription_plans.apple_product_id` + 7-day free trial
+- [ ] TestFlight: purchase → `user_subscriptions` + ledger grant with `apple_tx_` key
+- [ ] Ship only builds that set `appAccountToken` (older builds can't attribute)
+
+At launch day:
+
+- [ ] Signup grant 300 → **100** (SQL body swap; see historical snippet below)
+- [ ] Paywall leaves survey mode (`BetaConfig.isBeta = false`)
+- [ ] Web `PLANS` already match this doc; set Stripe price IDs + `BILLING.enabled`
+- [ ] MeTab shows live plan label (already wired)
+
+### Launch signup grant (apply at production open)
 
 ```sql
--- Launch migration: shrink signup grant from 1000 (dev) to 100.
--- 100 credits ≈ 30 conversation turns + a few drills — enough to feel the
--- product (clone voice = 5cr, ~10 short sessions), not enough to live on.
 create or replace function public.handle_new_user_credits()
 returns trigger
 language plpgsql
@@ -91,32 +157,12 @@ end;
 $$;
 ```
 
-(Trigger stays the same; only the function body changes. The `bootstrap:` and
-`signup:` idempotency prefixes keep old/new grants distinguishable in the
-ledger.) The real trial lives in Apple's intro offer / Stripe trial — those
-grant a full cycle's credits via the webhooks.
+---
 
-Referral grants (500/friend, InviteView) are unchanged but should get a cap
-audit before launch.
+## 6. Out of scope for v1 (parked)
 
-## 4. Go-live checklist (webhooks)
-
-Apple:
-- [ ] Apply migration `20260703120000_stripe_web_billing.sql` (also used by Apple flow's `source` column)
-- [ ] `supabase secrets set APPLE_BUNDLE_ID=com.roro.futurevoice APPLE_APP_ID=<numeric ASC app id>`
-- [ ] `supabase functions deploy apple-webhook --no-verify-jwt`
-- [ ] ASC → App Information → App Store Server Notifications V2:
-      Production + Sandbox URL `https://<project>.supabase.co/functions/v1/apple-webhook`
-- [ ] Create the 6 subscription products in ASC with the exact
-      `apple_product_id`s from subscription_plans; add intro offer (free trial)
-- [ ] Verify on TestFlight: purchase → `user_subscriptions` row (source
-      'apple') + `usage_ledger` grant with `apple_tx_` key
-- [ ] NOTE: purchases from builds BEFORE the appAccountToken change cannot be
-      attributed — ship that build before opening sales
-
-Stripe (web): see `web/README.md`.
-
-At launch:
-- [ ] Swap the signup-grant function (SQL above)
-- [ ] Update paywall + web PLANS copy to the final prices
-- [ ] MeTab "Beta — no subscription" copy is already replaced by the live plan label
+- Credit top-up packs (ledger already has `topup`)
+- Lifetime / founding-member SKU
+- Family / student plans
+- Hiding weekly from the app UI (keep for experiments)
+- Monthly drip for annual credits

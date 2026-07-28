@@ -11,12 +11,19 @@ import SwiftUI
 /// like a Watch book's scene lives behind its Watch button.
 struct ConversationDetailView: View {
     @EnvironmentObject private var appState: AppState
-    let session: Session
+    /// State (not let) so misheard-turn exclusions — made in the grammar
+    /// review sheet or the transcript — reflect immediately in the score.
+    @State private var session: Session
     /// Set when this page is the wrap-up shown right after the talk ends —
     /// adds Done + start-new/practice actions and the fresh shadow material.
     /// Nil when opened from Practice: same page, browsing mode. ONE session
     /// detail page for both moments.
     var postTalk: PostTalkActions? = nil
+
+    init(session: Session, postTalk: PostTalkActions? = nil) {
+        _session = State(initialValue: session)
+        self.postTalk = postTalk
+    }
     // Observed so mastery rows restyle live when a word card marks a word
     // known / studying.
     @ObservedObject private var vocab = VocabStore.shared
@@ -544,7 +551,9 @@ struct ConversationDetailView: View {
                 }
                 ScorecardView(scorecard: sc,
                               grammarIssues: session.summary?.grammarIssues ?? [],
-                              userTurns: session.turns.filter { $0.role == .user })
+                              userTurns: session.turns.filter { $0.role == .user },
+                              sessionId: session.id,
+                              onSessionUpdated: { session = $0 })
             }
             .padding(.vertical, 6)
         }
@@ -587,6 +596,11 @@ struct ConversationDetailView: View {
     // MARK: - Data
 
     private func refresh() {
+        // Pick up store-side changes (misheard exclusions made from the
+        // transcript, a continued conversation's new turns).
+        if let fresh = SessionStore.shared.load().first(where: { $0.id == session.id }) {
+            session = fresh
+        }
         curriculum = TalkCurriculum.build(session: session,
                                           proficiency: appState.proficiency,
                                           shadowAttempts: appState.shadowAttempts)
@@ -629,8 +643,13 @@ struct ConversationDetailView: View {
 /// Continue action — mirroring how a Watch book replays its dialogue.
 struct TalkTranscriptView: View {
     @EnvironmentObject private var appState: AppState
-    let session: Session
+    /// State so misheard-turn exclusions restyle the row in place.
+    @State private var session: Session
     @StateObject private var player = AudioPlayer()
+
+    init(session: Session) {
+        _session = State(initialValue: session)
+    }
     @ObservedObject private var vocab = VocabStore.shared
 
     @State private var wordSheet: WordSheetItem?
@@ -657,18 +676,38 @@ struct TalkTranscriptView: View {
                     Text("Highlighted words are worth picking up — tap one to check it out.")
                         .font(.caption).foregroundStyle(.secondary)
                     ForEach(Array(session.turns.enumerated()), id: \.element.id) { idx, turn in
-                        TranscriptRow(turn: turn,
-                                      nativeLanguage: appState.nativeLanguage,
-                                      targetLanguage: appState.targetLanguage,
-                                      player: player,
-                                      tokenKeys: turnTokenKeys[turn.id] ?? [],
-                                      highlightedIndices: highlightIndices(for: turn),
-                                      onWordTap: { key in
-                                          wordSheet = WordSheetItem(
-                                              word: key,
-                                              words: fluentSelfNewWords.contains(key) ? fluentSelfNewWords : [])
-                                      })
-                            .id(idx)
+                        VStack(alignment: .leading, spacing: 4) {
+                            TranscriptRow(turn: turn,
+                                          nativeLanguage: appState.nativeLanguage,
+                                          targetLanguage: appState.targetLanguage,
+                                          player: player,
+                                          tokenKeys: turnTokenKeys[turn.id] ?? [],
+                                          highlightedIndices: highlightIndices(for: turn),
+                                          onWordTap: { key in
+                                              wordSheet = WordSheetItem(
+                                                  word: key,
+                                                  words: fluentSelfNewWords.contains(key) ? fluentSelfNewWords : [])
+                                          })
+                                .opacity(turn.excludedFromScoring ? 0.45 : 1)
+                            if turn.excludedFromScoring {
+                                Label("Excluded from scoring — marked as misheard", systemImage: "mic.slash")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .id(idx)
+                        .contextMenu {
+                            if turn.role == .user && !turn.excludedFromScoring {
+                                Button(role: .destructive) {
+                                    if let updated = SessionStore.shared.excludeTurnFromScoring(
+                                        sessionId: session.id, turnId: turn.id) {
+                                        withAnimation { session = updated }
+                                    }
+                                } label: {
+                                    Label("Misheard — exclude from scoring", systemImage: "mic.slash")
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(20)
