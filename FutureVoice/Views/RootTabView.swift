@@ -135,12 +135,28 @@ struct RootTabView: View {
                     .geistPixel(18)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
+                // Cross-fades in as the label fades out, so by the time the
+                // proxy is docked it already shows the SAME mic glyph as the
+                // call's real pill — nothing pops in when the proxy hands off.
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .opacity(pillDocked ? 1 : 0)
             }
             .frame(width: pillDocked ? 156 : 180, height: pillDocked ? 64 : 56)
             .clipShape(Capsule())
-            // Base outline: the full edge is always defined, in the palette's
-            // own color so the frame belongs to the surface it wraps.
-            .overlay(Capsule().strokeBorder(pillTint.opacity(0.55), lineWidth: 1))
+            // Outline hand-off: resting shows the palette's living edge (1pt,
+            // tinted); docked cross-fades to the call mic pill's exact hairline
+            // (0.5pt separator) so the border doesn't jump when the real pill
+            // takes over.
+            .overlay {
+                ZStack {
+                    Capsule().strokeBorder(pillTint.opacity(0.55), lineWidth: 1)
+                        .opacity(pillDocked ? 0 : 1)
+                    Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5)
+                        .opacity(pillDocked ? 1 : 0)
+                }
+            }
             // What makes the resting pill catch the eye: a light reflection
             // orbiting that outline — quiet surface, living edge, same hue.
             .overlay(ReflectiveOutline(tint: pillTint).opacity(pillDocked ? 0 : 1))
