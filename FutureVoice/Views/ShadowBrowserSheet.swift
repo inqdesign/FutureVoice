@@ -10,17 +10,17 @@ struct ShadowBrowserView: View {
 
     @State private var sessions: [Session] = []
     @State private var shadowTarget: ShadowTarget?
-    /// One archive, three doors: everything / bookmarked / lines you've
-    /// actually shadow-practiced (≥1 recorded attempt).
-    @State private var filter: ArchiveFilter = .all
+    /// One archive, two doors: lines still waiting for a first attempt
+    /// (default) and lines you've actually shadow-practiced (≥1 recorded
+    /// attempt). Every line is in exactly one.
+    @State private var filter: ArchiveFilter = .toStudy
 
     enum ArchiveFilter: String, CaseIterable, Identifiable {
-        case all, saved, practiced
+        case toStudy, practiced
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .all: return "All"
-            case .saved: return "Saved"
+            case .toStudy: return "To study"
             case .practiced: return "Practiced"
             }
         }
@@ -33,8 +33,7 @@ struct ShadowBrowserView: View {
 
     private func passes(_ turn: Turn) -> Bool {
         switch filter {
-        case .all: return true
-        case .saved: return appState.isLineSaved(turn.id)
+        case .toStudy: return !practicedIds.contains(turn.id)
         case .practiced: return practicedIds.contains(turn.id)
         }
     }
@@ -48,7 +47,9 @@ struct ShadowBrowserView: View {
         content
             .toolbar(.hidden, for: .tabBar)
             .safeAreaInset(edge: .top, spacing: 0) {
-                if !appState.savedLines.isEmpty || !appState.shadowAttempts.isEmpty {
+                // The split only means something once at least one line has
+                // been practiced — until then everything is "to study".
+                if !appState.shadowAttempts.isEmpty {
                     Picker("Filter", selection: $filter) {
                         ForEach(ArchiveFilter.allCases) { f in
                             Text(f.label).tag(f)

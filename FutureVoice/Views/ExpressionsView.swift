@@ -10,22 +10,23 @@ struct ExpressionsView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @State private var selected: PhraseRef?
-    @State private var filter: Filter = .all
+    @State private var filter: Filter = .toStudy
 
     private struct PhraseRef: Identifiable {
         let value: String
         var id: String { value }
     }
 
-    /// Same three lenses the word notebook uses, at the phrase level.
+    /// Two lenses: what still needs work (default) and what's done. Every
+    /// expression is in exactly one — "to study" is simply everything not yet
+    /// marked known, so nothing hides behind a third tab.
     enum Filter: String, CaseIterable, Identifiable {
-        case all, studying, known
+        case toStudy, known
         var id: String { rawValue }
         var label: String {
             switch self {
-            case .all:      return "All"
-            case .studying: return "Studying"
-            case .known:    return "Known"
+            case .toStudy: return "To study"
+            case .known:   return "Known"
             }
         }
     }
@@ -33,9 +34,8 @@ struct ExpressionsView: View {
     private var entries: [VocabStore.ExpressionEntry] {
         let all = store.expressionEntries()
         switch filter {
-        case .all:      return all
-        case .studying: return all.filter { store.isStudyingExpression($0.text) }
-        case .known:    return all.filter { store.isKnownExpression($0.text) }
+        case .toStudy: return all.filter { !store.isKnownExpression($0.text) }
+        case .known:   return all.filter { store.isKnownExpression($0.text) }
         }
     }
 
@@ -68,9 +68,9 @@ struct ExpressionsView: View {
                             .buttonStyle(.plain)
                         }
                     } footer: {
-                        Text(filter == .all
-                             ? "Captured automatically from what you say. Bookmark the ones you want to study."
-                             : "\(entries.count) \(filter.label.lowercased())")
+                        Text(filter == .toStudy
+                             ? "Captured automatically from what you say. Mark the ones you've got down as known."
+                             : "\(entries.count) known")
                     }
                 }
             }
@@ -99,16 +99,14 @@ struct ExpressionsView: View {
 
     private var emptyTitle: String {
         switch filter {
-        case .all:      return "No expressions yet"
-        case .studying: return "Nothing to study yet"
-        case .known:    return "Nothing marked known"
+        case .toStudy: return "Nothing to study yet"
+        case .known:   return "Nothing marked known"
         }
     }
     private var emptyMessage: String {
         switch filter {
-        case .all:      return "Expressions you use in your talks will collect here."
-        case .studying: return "Bookmark an expression to keep studying it — it'll show here and on your widget."
-        case .known:    return "Mark expressions you've got down as known."
+        case .toStudy: return "Expressions you use in your talks will collect here."
+        case .known:   return "Mark expressions you've got down as known."
         }
     }
 
