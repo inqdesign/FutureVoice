@@ -383,6 +383,10 @@ struct ConversationView: View {
                 .frame(width: 156, height: 64)
                 .clipShape(Capsule())
                 .overlay(Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+                // The shader is `.allowsHitTesting(false)`, so with the glyph
+                // gone (on call) the label had NO tappable content and the
+                // hang-up tap silently died. Make the whole capsule the target.
+                .contentShape(Capsule())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text(micA11yLabel))
@@ -437,13 +441,15 @@ struct ConversationView: View {
         return turns.isEmpty ? "Start phone-call mode" : "Resume phone-call mode"
     }
 
+    /// With the pill glyph-free while on call, this line is the ONE place
+    /// that says tapping hangs up — every in-call state must name it.
     private var micHint: String {
         if phoneCallActive {
             switch phase {
-            case .listening: return "Listening — pause to send"
-            case .thinking:  return "Thinking…"
-            case .speaking:  return "Speaking…"
-            case .idle:      return "On call"
+            case .listening: return "Listening · pause to send · tap to stop"
+            case .thinking:  return "Thinking… · tap to stop"
+            case .speaking:  return "Speaking… · tap to stop"
+            case .idle:      return "On call · tap to stop"
             }
         }
         return turns.isEmpty ? "Tap to start a phone-call" : "Tap to continue"
