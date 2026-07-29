@@ -24,6 +24,13 @@ struct PersonaDeepenSheet: View {
     @State private var peopleVoiced = false
     @State private var extrasVoiced = false
     @State private var isSaving = false
+    @State private var detent: PresentationDetent
+
+    /// `startExpanded` opens at the large detent — used only by the DEBUG
+    /// screenshot harness; the real prompt always starts at medium.
+    init(startExpanded: Bool = false) {
+        _detent = State(initialValue: startExpanded ? .large : .medium)
+    }
 
     private var hasAnything: Bool {
         ![occupation, household, freeNotes]
@@ -36,7 +43,20 @@ struct PersonaDeepenSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     IntakeStepHeader(
                         question: "Make me sound more like you",
-                        detail: "The more your fluent self knows about your life, the more real every talk feels — your work, your people, your quirks come up naturally instead of small talk about nowhere. Just talk — your native language is fine.")
+                        detail: "The more I know your life, the more real every talk feels. Just talk — your native language is fine.")
+
+                    HStack {
+                        Text("Answer in")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Picker("Language", selection: $locale) {
+                            Text("한국어").tag("ko")
+                            Text("English").tag("en")
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 170)
+                    }
 
                     field(title: "What do you do?",
                           text: $occupation,
@@ -99,7 +119,7 @@ struct PersonaDeepenSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .large], selection: $detent)
         .interactiveDismissDisabled(isSaving)
     }
 
@@ -112,7 +132,8 @@ struct PersonaDeepenSheet: View {
                 text: text,
                 locale: $locale,
                 usedVoice: usedVoice,
-                placeholder: placeholder)
+                placeholder: placeholder,
+                showsLocalePicker: false)
         }
     }
 

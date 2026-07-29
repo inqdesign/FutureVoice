@@ -148,6 +148,10 @@ struct SpeakOrTypeField: View {
     /// decide whether the answer needs an LLM cleanup pass on finish.
     var usedVoice: Binding<Bool>? = nil
     var placeholder: String = "Type here — or tap the mic and just talk. I'll sort it out."
+    /// Hide the per-field 한국어/English segmented control when the host puts
+    /// ONE shared toggle above several stacked fields (PersonaDeepenSheet) —
+    /// three copies of the same picker read as clutter.
+    var showsLocalePicker = true
 
     @StateObject private var live = LiveTranscriber()
     @State private var isRecording = false
@@ -178,7 +182,7 @@ struct SpeakOrTypeField: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    } else {
+                    } else if showsLocalePicker {
                         Picker("Language", selection: $locale) {
                             Text("한국어").tag("ko")
                             Text("English").tag("en")

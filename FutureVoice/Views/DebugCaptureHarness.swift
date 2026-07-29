@@ -68,6 +68,12 @@ enum DebugCapture {
             return AnyView(WatchTab())
         case "intake-people":
             return AnyView(CounterpartVoiceIntakeView())
+        case "deepen", "deepen-full":
+            // The post-first-talk persona sheet over the real Talk home —
+            // "-full" starts at the large detent to review all three fields.
+            once("deepen") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
+            return AnyView(DeepenCaptureHost(expanded: name == "deepen-full")
+                .environmentObject(appState))
         case "builder":
             // Renders the sheet's content full-screen (no host to present it).
             return AnyView(SituationBuilderSheet(root: WatchTab.situationTree[0]) { _ in })
@@ -410,6 +416,23 @@ enum DebugCapture {
              role: .fluentSelf, audioURL: nil,
              transcript: "I really appreciate you taking the time to help me.",
              durationMs: 3200, timestamp: Date(), suggestion: nil)
+    }
+}
+
+/// Presents `PersonaDeepenSheet` over the seeded Talk home, exactly as the
+/// post-first-talk auto-prompt does (the deepenRow shows underneath too).
+private struct DeepenCaptureHost: View {
+    let expanded: Bool
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                PersonaDeepenSheet(startExpanded: expanded)
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
     }
 }
 
