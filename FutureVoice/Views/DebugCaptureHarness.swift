@@ -407,6 +407,11 @@ enum DebugCapture {
                                        curriculum: curriculum(mastered: 5), isTopic: false))
         appState.saveScenario(Scenario(environment: "Doctor's visit", role: "Doctor",
                                        notes: "", curriculum: curriculum(mastered: 3), isTopic: false))
+        // One brand-new 0% book so the Studying page's "Start next" section
+        // renders in captures.
+        appState.saveScenario(Scenario(environment: "Job interview · panel round",
+                                       role: "Interviewer", notes: "",
+                                       curriculum: curriculum(mastered: 0), isTopic: false))
     }
 
     // MARK: - Shadow (karaoke line)
@@ -595,8 +600,8 @@ private struct BookWidgetGallery: View {
                      kind: "watch", title: "Ordering at a busy café", subtitle: "with Barista",
                      mastered: 3, total: 8, hasBook: true)
                 tile(theme: 2, size: CGSize(width: 338, height: 158), compact: false,
-                     kind: "talk", title: "How the product launch went", subtitle: "Talk",
-                     mastered: 7, total: 9, hasBook: true)
+                     kind: "talk", title: "How the product launch went last week and what surprised me most",
+                     subtitle: "Talk", mastered: 7, total: 9, hasBook: true)
                 tile(theme: 4, size: CGSize(width: 338, height: 158), compact: false,
                      kind: "talk", title: "", subtitle: "", mastered: 0, total: 0, hasBook: false)
             }

@@ -220,6 +220,21 @@ struct PracticeTab: View {
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// Active (non-archived) book count behind each chip; Studying counts
+    /// what its page shows (in-progress + fresh unstarted).
+    private func shelfCount(_ s: Shelf) -> Int? {
+        switch s {
+        case .studying:
+            let n = studyingBooks.count + unstartedBooks.count
+            return n > 0 ? n : nil
+        case .talk:
+            return talks.isEmpty ? nil : talks.count
+        case .watch:
+            let n = watchBooks.count
+            return n > 0 ? n : nil
+        }
+    }
+
     // MARK: - Sub-tab bar (same chip vocabulary as Progress)
 
     private var shelfChips: some View {
@@ -232,11 +247,21 @@ struct PracticeTab: View {
                             // fills with its category color (white text works
                             // on all three hues in both appearances);
                             // Studying keeps the monochrome label fill.
-                            Text(s.title)
-                                .font(.body.weight(.medium))
-                                .padding(.horizontal, 16).padding(.vertical, 9)
-                                .background(Capsule().fill(shelf == s ? (s.color ?? Color(.label)) : Color(.secondarySystemGroupedBackground)))
-                                .foregroundStyle(shelf == s ? (s.color != nil ? Color.white : Color(.systemBackground)) : Color.primary)
+                            HStack(spacing: 5) {
+                                Text(s.title)
+                                // How many books live behind this chip, so an
+                                // empty-looking page still says the material
+                                // exists ("Talk 1 · Watch 1" after a first watch).
+                                if let n = shelfCount(s) {
+                                    Text("\(n)")
+                                        .monospacedDigit()
+                                        .opacity(0.55)
+                                }
+                            }
+                            .font(.body.weight(.medium))
+                            .padding(.horizontal, 16).padding(.vertical, 9)
+                            .background(Capsule().fill(shelf == s ? (s.color ?? Color(.label)) : Color(.secondarySystemGroupedBackground)))
+                            .foregroundStyle(shelf == s ? (s.color != nil ? Color.white : Color(.systemBackground)) : Color.primary)
                         }
                         .buttonStyle(.plain)
                         .id(s)
@@ -298,6 +323,25 @@ struct PracticeTab: View {
             .map { .scenario($0) }
         return (talkBooks + scenarioBooks)
             .sorted { lastStudied($0) > lastStudied($1) }
+    }
+
+    /// Fresh material at ZERO progress — the newest books an activity just
+    /// minted. Without this a first-ever watch left Studying empty (its book
+    /// sat on a shelf the user hadn't found yet), which read as "nothing
+    /// happened". Most recent few only; the shelves keep the full list.
+    private var unstartedBooks: [StudyBook] {
+        let talkBooks: [StudyBook] = talks
+            .filter { s in
+                guard let snap = talkSnapshots[s.id] else { return false }
+                return snap.masteredCount == 0 && snap.totalCount > 0
+            }
+            .map { .talk($0) }
+        let scenarioBooks: [StudyBook] = appState.scenarios
+            .filter { !$0.isArchived && ($0.curriculum?.masteredCount ?? 0) == 0 }
+            .map { .scenario($0) }
+        return Array((talkBooks + scenarioBooks)
+            .sorted { lastStudied($0) > lastStudied($1) }
+            .prefix(4))
     }
 
     /// Aggregate mastery across EVERY book the activities ever generated —
@@ -377,9 +421,7 @@ struct PracticeTab: View {
             overallCard
             reviewRow
             practiceShortcuts
-            if studyingBooks.isEmpty {
-                shelfHint("Nothing in progress yet. Open a book on a shelf and master your first word or line — it shows up here until the whole book is done.")
-            } else {
+            if !studyingBooks.isEmpty {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(studyingBooks) { book in
                         switch book {
@@ -388,6 +430,25 @@ struct PracticeTab: View {
                         }
                     }
                 }
+            }
+            // Fresh 0%-books CTA — the first watch/talk lands HERE, so a brand
+            // new user sees their material immediately instead of an empty page.
+            if !unstartedBooks.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Start next")
+                        .font(.headline)
+                    LazyVGrid(columns: columns, spacing: 14) {
+                        ForEach(unstartedBooks) { book in
+                            switch book {
+                            case .talk(let session):     talkCard(session, showActivity: true)
+                            case .scenario(let s):       scenarioCard(s, showActivity: true)
+                            }
+                        }
+                    }
+                }
+            }
+            if studyingBooks.isEmpty && unstartedBooks.isEmpty {
+                shelfHint("Nothing here yet. Have a talk or watch a scene on Home — the material it generates becomes books here; open one and master your first word or line.")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
