@@ -259,7 +259,7 @@ struct WatchTab: View {
         Section {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                       spacing: 12) {
-                ForEach(Self.situationTree) { node in
+                ForEach(prioritizedTree) { node in
                     categoryCard(node)
                 }
             }
@@ -294,6 +294,40 @@ struct WatchTab: View {
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    /// The grid, reordered so categories matching the persona's "when do you
+    /// most need it" picks come first (tree order within each group). The
+    /// onboarding chips are the whole point of asking — this is where they
+    /// visibly pay off.
+    private var prioritizedTree: [SituationBranch] {
+        let picked = appState.persona?.situations ?? []
+        guard !picked.isEmpty else { return Self.situationTree }
+        let wanted = Set(picked.flatMap { Self.categoryLabels(forSituation: $0) })
+        guard !wanted.isEmpty else { return Self.situationTree }
+        let (hits, rest) = Self.situationTree.reduce(into: ([SituationBranch](), [SituationBranch]())) {
+            acc, node in
+            if wanted.contains(node.label) { acc.0.append(node) } else { acc.1.append(node) }
+        }
+        return hits + rest
+    }
+
+    /// Map one persona situation (an onboarding preset or the user's own
+    /// words) to grid category labels. Presets map explicitly; free text
+    /// matches a category when its label appears in the text.
+    private static func categoryLabels(forSituation s: String) -> [String] {
+        let presetMap: [String: [String]] = [
+            "Work meetings": ["Work"],
+            "Client calls": ["Work"],
+            "Doctor / clinic": ["Health"],
+            "Travel": ["Travel"],
+            "Online shopping": ["Shopping"],
+            "Customer service": ["Shopping"],
+            "Daily small talk": ["Cafe"]
+        ]
+        if let mapped = presetMap[s] { return mapped }
+        let lowered = s.lowercased()
+        return situationTree.map(\.label).filter { lowered.contains($0.lowercased()) }
     }
 
     // MARK: - The chain data
