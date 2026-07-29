@@ -689,7 +689,12 @@ struct WordCard: View {
         if #available(iOS 26.0, *) {
             return AnyView(button.buttonStyle(.glass))
         } else {
-            return AnyView(button.buttonStyle(.bordered))
+            // .bordered alone is a translucent tint with NO blur, so over the
+            // scrolling sheet content the label fought whatever sat beneath it
+            // (visible on pre-26 iPads). A material capsule underneath gives
+            // the same read-through-blur the glass style provides.
+            return AnyView(button.buttonStyle(.bordered)
+                .background(.regularMaterial, in: Capsule()))
         }
     }
 

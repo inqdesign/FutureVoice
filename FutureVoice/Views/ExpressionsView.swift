@@ -373,7 +373,11 @@ struct ExpressionCard: View {
         if #available(iOS 26.0, *) {
             return AnyView(button.buttonStyle(.glass))
         } else {
-            return AnyView(button.buttonStyle(.bordered))
+            // .bordered alone is a translucent tint with NO blur — a material
+            // capsule underneath keeps the label readable over the sheet's
+            // scrolling content on pre-26 OSes (seen on iPad).
+            return AnyView(button.buttonStyle(.bordered)
+                .background(.regularMaterial, in: Capsule()))
         }
     }
 
