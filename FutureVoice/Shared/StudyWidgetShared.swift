@@ -289,17 +289,19 @@ enum WidgetTheme {
     static func ground(_ i: Int) -> Color { c(groundC, i) }
     static func vivid(_ i: Int) -> Color { c(vividC, i) }
 
-    /// The frame tone — the accent, dimmed a notch so the bezel reads as a
-    /// darker shade of the same hue, not the full-bright accent.
-    static func frame(_ i: Int) -> Color {
-        let idx = ((i % vividC.count) + vividC.count) % vividC.count
-        // Mono's vivid is near-white, so the usual dim would give a glaring
-        // grey frame on the charcoal ground — use a near-black bezel instead.
-        if idx == 1 { return Color(red: 0.14, green: 0.14, blue: 0.15) }
-        let v = vividC[idx]
-        let f = 0.68
-        return Color(red: v.0 * f, green: v.1 * f, blue: v.2 * f)
-    }
+    /// The frame tone — a DEEP, saturated shade of the accent (same hue, richer
+    /// and darker), hand-picked per theme. Scaling the vivid toward grey read
+    /// murky, so these are set directly. Mono has a white accent, so its bezel
+    /// goes near-black.
+    private static let frameC: [(Double, Double, Double)] = [
+        (0.030, 0.140, 0.480),  // blue    → deep blue
+        (0.090, 0.090, 0.100),  // mono    → near-black
+        (0.020, 0.320, 0.210),  // emerald → deep emerald
+        (0.500, 0.280, 0.030),  // amber   → deep amber
+        (0.500, 0.100, 0.150),  // coral   → deep rose
+        (0.020, 0.320, 0.420),  // aqua    → deep teal
+    ]
+    static func frame(_ i: Int) -> Color { c(frameC, i) }
 }
 
 struct WidgetGrid: View {
@@ -502,7 +504,7 @@ struct ProgressCard: View {
             ring(size: 92, lineWidth: 9)
             VStack(alignment: .leading, spacing: 11) {
                 statRow("flame.fill", "\(streakDays)", "day streak",
-                        tint: streakDays > 0 ? .orange : .white.opacity(0.4))
+                        tint: streakDays > 0 ? vivid : .white.opacity(0.4))
                 statRow("checklist", "\(dueCount)", "to review",
                         tint: dueCount > 0 ? vivid : .white.opacity(0.4))
                 studyRow
@@ -518,8 +520,8 @@ struct ProgressCard: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 17)
-            Text(value).font(pixelFont(17)).foregroundStyle(.white)
-            Text(label).font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+            Text(value).font(pixelFont(17)).foregroundStyle(tint)
+            Text(label).font(pixelFont(12)).foregroundStyle(.white.opacity(0.55))
             Spacer(minLength: 0)
         }
     }
@@ -528,12 +530,12 @@ struct ProgressCard: View {
         HStack(spacing: 8) {
             Image(systemName: "book.closed.fill")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(vivid)
                 .frame(width: 17)
-            Text("\(studyingWords)").font(pixelFont(17)).foregroundStyle(.white)
-            Text("words").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
-            Text("\(studyingExpressions)").font(pixelFont(17)).foregroundStyle(.white)
-            Text("phrases").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+            Text("\(studyingWords)").font(pixelFont(17)).foregroundStyle(vivid)
+            Text("words").font(pixelFont(12)).foregroundStyle(.white.opacity(0.55))
+            Text("\(studyingExpressions)").font(pixelFont(17)).foregroundStyle(vivid)
+            Text("phrases").font(pixelFont(12)).foregroundStyle(.white.opacity(0.55))
             Spacer(minLength: 0)
         }
     }
@@ -544,7 +546,7 @@ struct ProgressCard: View {
         VStack(spacing: 9) {
             ring(size: 72, lineWidth: 8)
             HStack(spacing: 14) {
-                miniStat("flame.fill", "\(streakDays)", streakDays > 0 ? .orange : .white.opacity(0.4))
+                miniStat("flame.fill", "\(streakDays)", streakDays > 0 ? vivid : .white.opacity(0.4))
                 miniStat("checklist", "\(dueCount)", dueCount > 0 ? vivid : .white.opacity(0.4))
             }
         }
@@ -554,7 +556,7 @@ struct ProgressCard: View {
     private func miniStat(_ icon: String, _ value: String, _ tint: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
-            Text(value).font(pixelFont(15)).foregroundStyle(.white)
+            Text(value).font(pixelFont(15)).foregroundStyle(tint)
         }
     }
 }
@@ -593,21 +595,25 @@ struct BookCard: View {
 
     private var bookBody: some View {
         VStack(spacing: compact ? 6 : 8) {
-            Spacer(minLength: 0)
-            Text(title)
-                .font(.system(size: compact ? 16 : 21, weight: .semibold))
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity)
-            if !compact && !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(1)
+            // The title block claims the flexible middle (via maxHeight:.infinity)
+            // so the title can use its full line allowance instead of being
+            // squeezed to one line by greedy spacers.
+            VStack(spacing: 5) {
+                Text(title)
+                    .font(pixelFont(compact ? 15 : 20))
+                    .foregroundStyle(vivid)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(compact ? 2 : 3)
+                    .minimumScaleFactor(0.5)
+                    .frame(maxWidth: .infinity)
+                if !compact && !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(pixelFont(12))
+                        .foregroundStyle(.white.opacity(0.55))
+                        .lineLimit(1)
+                }
             }
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             progressRow
         }
     }
@@ -627,7 +633,7 @@ struct BookCard: View {
                     .font(pixelFont(compact ? 12 : 14))
                     .foregroundStyle(vivid)
                 Text("mastered")
-                    .font(.system(size: compact ? 11 : 12))
+                    .font(pixelFont(compact ? 11 : 12))
                     .foregroundStyle(.white.opacity(0.55))
             }
             .frame(maxWidth: .infinity)
@@ -641,7 +647,7 @@ struct BookCard: View {
                 .font(.system(size: compact ? 24 : 30))
                 .foregroundStyle(vivid.opacity(0.85))
             Text("Nothing in progress")
-                .font(.system(size: compact ? 12 : 14))
+                .font(pixelFont(compact ? 12 : 14))
                 .foregroundStyle(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
             Spacer(minLength: 0)
