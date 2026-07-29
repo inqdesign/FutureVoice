@@ -24,18 +24,27 @@ final class AudioRecorder: ObservableObject {
     /// reverberant space that would smear the clone. nil until a clap lands.
     @Published private(set) var echoTailMs: Double?
 
-    /// Clap-tail tracker for the echo check (monitoring only).
+    /// Clap-tail tracker for the echo check (monitoring only). Timestamps are
+    /// SAMPLE-CLOCK seconds (frames seen ÷ sample rate), never wall clock —
+    /// decay timing must not inherit main-thread jitter.
     private enum EchoPhase {
-        case armed                                  // waiting for a transient
-        case tracking(peak: Float, peakAt: Date)    // clap detected, watching decay
-        case cooling(until: Date)                   // ignore the clap's own settle
+        case armed                                    // waiting for a transient
+        case tracking(peak: Float, peakAt: Double)    // clap detected, watching decay
+        case cooling(until: Double)                   // ignore the clap's own settle
     }
     private var echoPhase: EchoPhase = .armed
+    /// Previous 10 ms window's level — the rise-rate gate that separates a
+    /// clap (near-instant jump) from speech/rustle (slow ramp).
+    private var lastWindowDB: Float = -60
     private var meterTick = 0
 
     private var recorder: AVAudioRecorder?
     private var meterTimer: Timer?
-    private var monitorURL: URL?
+    private var monitorEngine: AVAudioEngine?
+
+    /// Serial frame counter owned by the tap closure — the monitoring time
+    /// base. Tap callbacks arrive on one thread in order, so no locking.
+    private final class FrameClock { var frames: Double = 0 }
 
     /// Two-quality recording. STT-bound user speech can stay at 16 kHz / 16-bit
     /// since Whisper and SFSpeechRecognizer expect that anyway. Voice CLONING
@@ -146,45 +155,77 @@ final class AudioRecorder: ObservableObject {
 
     // MARK: - Ambient monitoring (quiet-spot finder)
 
-    /// Meters the room WITHOUT keeping audio: records to a scratch file in
-    /// caches purely to drive `levels`/`ambientDBFS`, so the user can walk
-    /// around and watch the surface settle as they find a quiet spot. The
-    /// scratch file is deleted on stop — nothing is retained.
+    /// Meters the room WITHOUT keeping audio: an AVAudioEngine input tap
+    /// computes true RMS over ~10 ms windows stamped on the sample clock, so
+    /// `ambientDBFS`/`echoTailMs` measure the ROOM — not AVAudioRecorder's
+    /// meter ballistics (whose own release time used to dominate the clap
+    /// tail and read every room, even a closet, as echoey), and not
+    /// main-thread timer jitter. Nothing is written to disk.
     ///
     /// Async because session activation talks to audiod (hundreds of ms,
     /// worse on first activation + speaker rerouting) — it runs off the main
     /// actor so the quiet-spot step's transition never blocks on it.
     func startMonitoring() async throws {
-        guard recorder == nil else { return }   // never fight a real recording
+        // Never fight a real recording, and never double-start the engine.
+        guard recorder == nil, monitorEngine == nil else { return }
         try await Task.detached(priority: .userInitiated) {
             try Self.activateMonitoringSession()
         }.value
         // The spot step may have been left (or a real recording started)
         // while the session spun up — don't start a stale meter.
-        guard recorder == nil, !Task.isCancelled else { return }
+        guard recorder == nil, monitorEngine == nil, !Task.isCancelled else { return }
 
-        let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("ambient-monitor.wav")
-        let settings: [String: Any] = [
-            AVFormatIDKey: Int(kAudioFormatLinearPCM),
-            AVSampleRateKey: 16_000,
-            AVNumberOfChannelsKey: 1,
-            AVLinearPCMBitDepthKey: 16,
-            AVLinearPCMIsBigEndianKey: false,
-            AVLinearPCMIsFloatKey: false,
-        ]
-        let rec = try AVAudioRecorder(url: url, settings: settings)
-        rec.isMeteringEnabled = true
-        guard rec.record() else { throw AudioRecorderError.recordFailed }
+        let engine = AVAudioEngine()
+        let input = engine.inputNode
+        let format = input.outputFormat(forBus: 0)
+        let sampleRate = format.sampleRate
+        guard sampleRate > 0 else { throw AudioRecorderError.recordFailed }
 
-        recorder = rec
-        monitorURL = url
+        let clock = FrameClock()
+        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+            // Audio thread: slice the buffer into ~10 ms RMS windows with
+            // sample-clock timestamps, then hand the batch to the main actor
+            // in one hop. The hop adds latency but never timing error — the
+            // timestamps ride along.
+            guard let ch = buffer.floatChannelData?[0] else { return }
+            let n = Int(buffer.frameLength)
+            let base = clock.frames / sampleRate
+            clock.frames += Double(n)
+            let win = max(1, Int(sampleRate * 0.01))
+            var readings: [(db: Float, t: Double)] = []
+            var i = 0
+            while i < n {
+                let count = min(win, n - i)
+                var sum: Float = 0
+                for j in i..<(i + count) { sum += ch[j] * ch[j] }
+                let rms = (sum / Float(count)).squareRoot()
+                readings.append((20 * log10(max(rms, 1e-7)),
+                                 base + Double(i) / sampleRate))
+                i += count
+            }
+            Task { @MainActor [readings] in
+                guard let self, self.isMonitoring else { return }
+                for r in readings { self.stepEchoTracker(db: r.db, at: r.t) }
+                if let loudest = readings.map(\.db).max() {
+                    self.levels = max(0, min(1, (loudest + 60) / 60))
+                }
+            }
+        }
+        engine.prepare()
+        do {
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0)
+            throw error
+        }
+
+        monitorEngine = engine
         isMonitoring = true
         ambientDBFS = -60
         echoTailMs = nil
         echoPhase = .armed
+        lastWindowDB = -60
         inputDescription = Self.describeInput(session: AVAudioSession.sharedInstance())
-        startMetering(interval: 0.01)   // 100 Hz — the echo check needs it
     }
 
     /// Category + activation for ambient metering — same capture chain as the
@@ -211,18 +252,18 @@ final class AudioRecorder: ObservableObject {
         }
     }
 
-    /// Stops monitoring and deletes the scratch file. Safe to call anytime.
+    /// Stops monitoring and tears the engine down. Safe to call anytime.
     func stopMonitoring() {
-        guard isMonitoring, let rec = recorder else { return }
-        rec.stop()
-        stopMetering()
+        guard isMonitoring, let engine = monitorEngine else { return }
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+        monitorEngine = nil
         isMonitoring = false
-        recorder = nil
-        if let url = monitorURL { try? FileManager.default.removeItem(at: url) }
-        monitorURL = nil
+        levels = 0
         ambientDBFS = -60
         echoTailMs = nil
         echoPhase = .armed
+        lastWindowDB = -60
     }
 
     /// Stops the recording and returns the final file URL.
@@ -255,47 +296,50 @@ final class AudioRecorder: ObservableObject {
                 if interval >= 0.05 || self.meterTick % 5 == 0 {
                     self.levels = max(0, min(1, (power + 60) / 60))    // map -60…0 → 0…1
                 }
-                if self.isMonitoring {
-                    self.stepEchoTracker(power: power)
-                } else {
-                    self.ambientDBFS = self.ambientDBFS * 0.92 + power * 0.08
-                }
+                // Monitoring never runs through this timer anymore (it has
+                // its own engine tap) — this path only meters real recordings.
+                self.ambientDBFS = self.ambientDBFS * 0.92 + power * 0.08
             }
         }
     }
 
-    /// One metering tick of the quiet-spot state machine: keep a slow ambient
-    /// baseline while armed, and when a clap-like transient fires, time how
-    /// long its energy takes to fall 20 dB — the room's echo tail.
-    private func stepEchoTracker(power: Float) {
-        let now = Date()
+    /// One 10 ms window of the quiet-spot state machine: keep a slow ambient
+    /// baseline while armed, and when a clap fires, time how long its energy
+    /// takes to fall 20 dB — the room's echo tail. `t` is sample-clock
+    /// seconds from the monitoring tap.
+    private func stepEchoTracker(db: Float, at t: Double) {
+        defer { lastWindowDB = db }
         switch echoPhase {
         case .armed:
-            if power > max(ambientDBFS + 18, -32) {
-                // Transient — start tracking its decay.
-                echoPhase = .tracking(peak: power, peakAt: now)
+            // A clap is loud AND *sudden* — require a near-instant rise on
+            // top of the absolute threshold, so speech, rustling clothes, and
+            // closing doors (slow ramps) never start a bogus measurement.
+            if db > max(ambientDBFS + 18, -32), db - lastWindowDB >= 15 {
+                echoPhase = .tracking(peak: db, peakAt: t)
             } else {
                 // Only the armed phase feeds the baseline, so the clap and its
                 // tail never contaminate the "how quiet is this room" reading.
-                // ~0.6 s time constant at 100 Hz.
-                ambientDBFS = ambientDBFS * 0.984 + power * 0.016
+                // ~0.6 s time constant at 10 ms windows. Slow-ramp loudness
+                // lands here too — it IS ambient noise, and absorbing it
+                // raises the clap threshold accordingly.
+                ambientDBFS = ambientDBFS * 0.984 + db * 0.016
             }
         case .tracking(let peak, let peakAt):
-            if power > peak {
-                echoPhase = .tracking(peak: power, peakAt: now)   // still rising
+            if db > peak {
+                echoPhase = .tracking(peak: db, peakAt: t)   // still rising
             } else {
                 let floorDB = max(peak - 20, ambientDBFS + 6)
-                if power <= floorDB {
-                    echoTailMs = now.timeIntervalSince(peakAt) * 1000
-                    echoPhase = .cooling(until: now.addingTimeInterval(0.4))
-                } else if now.timeIntervalSince(peakAt) > 1.2 {
+                if db <= floorDB {
+                    echoTailMs = (t - peakAt) * 1000
+                    echoPhase = .cooling(until: t + 0.4)
+                } else if t - peakAt > 1.2 {
                     // Never decayed — extremely live room or sustained noise.
                     echoTailMs = 1200
-                    echoPhase = .cooling(until: now.addingTimeInterval(0.4))
+                    echoPhase = .cooling(until: t + 0.4)
                 }
             }
         case .cooling(let until):
-            if now >= until, power < ambientDBFS + 10 {
+            if t >= until, db < ambientDBFS + 10 {
                 echoPhase = .armed
             }
         }
