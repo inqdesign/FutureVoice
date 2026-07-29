@@ -667,6 +667,33 @@ struct ProgressTab: View {
     // Vocabulary is graded directly (word-list lookup). The other three are
     // deterministic proxies mapped to CEFR bands — real measurements, but
     // heuristic mappings, so the UI marks them "≈".
+    //
+    // Band edges live in ONE table per skill, used BOTH by the ≈level
+    // mapping and by the trend charts' background zones — the chart can
+    // never show a different band than the mapping assigns.
+
+    typealias BandSpec = (level: CEFRLevel, range: ClosedRange<Double>)
+
+    private static let fluencyBands: [BandSpec] = [
+        (.a1, 0...60), (.a2, 60...85), (.b1, 85...105),
+        (.b2, 105...125), (.c1, 125...145), (.c2, 145...200)
+    ]
+    /// Verified slips per 100 words — ordered best-first (fewer is higher).
+    private static let grammarBands: [BandSpec] = [
+        (.c2, 0...0.5), (.c1, 0.5...1), (.b2, 1...2),
+        (.b1, 2...4), (.a2, 4...7), (.a1, 7...15)
+    ]
+    private static let expressionBands: [BandSpec] = [
+        (.a1, 0...6), (.a2, 6...10), (.b1, 10...16),
+        (.b2, 16...24), (.c1, 24...34), (.c2, 34...60)
+    ]
+
+    /// Half-open lookup ([lower, upper)); values past the table's end take
+    /// the LAST entry's level, so an off-scale measurement doesn't go unbanded.
+    private static func band(for value: Double, in specs: [BandSpec]) -> CEFRLevel? {
+        specs.first { value >= $0.range.lowerBound && value < $0.range.upperBound }?.level
+            ?? specs.last?.level
+    }
 
     /// Articulation pace → CEFR band. Speech-rate bands are a recognized
     /// (if rough) proficiency proxy; boundaries follow typical learner
@@ -677,14 +704,7 @@ struct ProgressTab: View {
     private var fluencyCEFR: CEFRLevel? {
         guard effectivePace > 0 else { return nil }
         let adjusted = articulationWpm > 0 ? effectivePace : effectivePace + 20
-        switch adjusted {
-        case ..<60:    return .a1
-        case 60..<85:  return .a2
-        case 85..<105: return .b1
-        case 105..<125: return .b2
-        case 125..<145: return .c1
-        default:        return .c2
-        }
+        return Self.band(for: Double(adjusted), in: Self.fluencyBands)
     }
 
     /// Grammar → CEFR band from verified slip DENSITY — the same evidence
@@ -696,14 +716,7 @@ struct ProgressTab: View {
     private var grammarCEFR: CEFRLevel? {
         guard scoredCount > 0 else { return nil }
         if slipsPer100Words > 0 {
-            switch slipsPer100Words {
-            case 7...:      return .a1
-            case 4..<7:     return .a2
-            case 2..<4:     return .b1
-            case 1..<2:     return .b2
-            case 0.5..<1:   return .c1
-            default:        return .c2
-            }
+            return Self.band(for: slipsPer100Words, in: Self.grammarBands)
         }
         guard grammarScore > 0 else { return nil }
         switch grammarScore {
@@ -722,14 +735,7 @@ struct ProgressTab: View {
     /// doesn't read as C2.
     private var expressionCEFR: CEFRLevel? {
         guard wordsPerTurn > 0 else { return nil }
-        switch wordsPerTurn {
-        case ..<6:    return .a1
-        case 6..<10:  return .a2
-        case 10..<16: return .b1
-        case 16..<24: return .b2
-        case 24..<34: return .c1
-        default:      return .c2
-        }
+        return Self.band(for: Double(wordsPerTurn), in: Self.expressionBands)
     }
 
     private var equalizerBars: [LevelEqualizer.Bar] {
@@ -1083,23 +1089,48 @@ struct ProgressTab: View {
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
             action: nil,
             trend: fluencyTrend,
-            trendCaption: "Words per minute of voiced speech — one point per talk."
+            trendCaption: "Words per minute of voiced speech — one point per talk. Background zones are the ≈CEFR pace bands.",
+            trendBands: Self.fluencyBands
         )
     }
 
+    /// ONE currency on this page: verified slip density → the same ≈band the
+    /// assessment cites. The 0–100 talk score was shown here before and kept
+    /// reading as a level ("71 = B?") — it lives on talk cards only now.
     private var grammarContent: some View {
         measuredContent(
             dim: .grammar,
-            big: grammarScore > 0 ? "\(grammarScore)" : "—",
-            bigUnit: "/ 100 · recent talks",
+            big: grammarCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—",
+            bigUnit: "grammatical control",
             band: nil,
-            measuredLine: "The same grammar score each talk's card shows, averaged over your recent talks — higher is better.",
-            measures: "How correctly you build sentences, graded from verified slips at your current level — your recent form, not your CEFR level. Long-term growth shows in the Overall page's Growth graph.",
+            measuredLine: slipsPer100Words > 0
+                ? String(format: "%.1f verified grammar slips per 100 spoken words across your assessed talks%@.",
+                         slipsPer100Words, grammarTargetHint)
+                : "Verified grammar slips per 100 spoken words — fewer reads higher.",
+            measures: "Counted from transcript-verified slips only — STT artifacts and style suggestions are excluded. This is the exact number your level assessment weighs.",
             improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
             action: nil,
             trend: grammarTrend,
-            trendCaption: "Grammar score per talk, 0–100 at your level — UP is progress."
+            trendCaption: "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one.",
+            trendTarget: grammarNextBandThreshold,
+            trendBands: Self.grammarBands
         )
+    }
+
+    /// "— get under 2.0 and this reads ≈B2" — the concrete next-band goal.
+    private var grammarTargetHint: String {
+        guard let t = grammarNextBandThreshold, let lv = grammarCEFR,
+              let next = nextLevel(lv) else { return "" }
+        return String(format: " — get under %.1f and this reads ≈%@", t, next.rawValue.uppercased())
+    }
+
+    /// Upper density bound of the NEXT band up (nil at ≈C2 / no data) —
+    /// derived from the same band table as the mapping and the chart zones.
+    private var grammarNextBandThreshold: Double? {
+        guard slipsPer100Words > 0, let lv = grammarCEFR,
+              let idx = Self.grammarBands.firstIndex(where: { $0.level == lv }),
+              idx > 0 else { return nil }
+        return Self.grammarBands[idx - 1].range.upperBound
     }
 
     private var expressivenessContent: some View {
@@ -1113,7 +1144,8 @@ struct ProgressTab: View {
             improve: "Tell stories, react, and add detail — describe how things felt, not just what happened.",
             action: nil,
             trend: expressionTrend,
-            trendCaption: "Average words per turn — one point per talk."
+            trendCaption: "Average words per turn — one point per talk. Background zones are the ≈CEFR bands.",
+            trendBands: Self.expressionBands
         )
     }
 
@@ -1122,18 +1154,55 @@ struct ProgressTab: View {
     /// A dimension's trend over time — the same measurement as the page's
     /// headline number, one point per analyzed talk.
     @ViewBuilder
-    private func trendPanel(_ trend: [TrendPoint], unit: String, caption: String) -> some View {
+    private func trendPanel(_ trend: [TrendPoint], unit: String, caption: String,
+                            target: Double? = nil,
+                            bands: [BandSpec] = []) -> some View {
         if trend.count >= 2 {
+            // Y-domain from the data (plus the goal line), padded — bands are
+            // then CLIPPED to it, so the zones label the visible range instead
+            // of squashing the curve to fit every band.
+            let values = trend.map(\.value) + (target.map { [$0] } ?? [])
+            let span = max((values.max() ?? 1) - (values.min() ?? 0), 1)
+            let lo = max(0, (values.min() ?? 0) - span * 0.25)
+            let hi = (values.max() ?? 1) + span * 0.25
             panel {
                 Text("Trend").font(.headline)
-                Chart(trend) { p in
-                    LineMark(x: .value("Talk", p.date), y: .value(unit, p.value))
-                        .interpolationMethod(.monotone)
-                        .foregroundStyle(.tint)
-                    PointMark(x: .value("Talk", p.date), y: .value(unit, p.value))
-                        .foregroundStyle(.tint)
-                        .symbolSize(30)
+                Chart {
+                    // CEFR zones behind the curve — same edges as the ≈band
+                    // mapping (one shared table per skill).
+                    ForEach(Array(bands.enumerated()), id: \.offset) { i, band in
+                        if band.range.lowerBound < hi && band.range.upperBound > lo {
+                            RectangleMark(
+                                yStart: .value(unit, max(band.range.lowerBound, lo)),
+                                yEnd: .value(unit, min(band.range.upperBound, hi))
+                            )
+                            .foregroundStyle(Color(.secondarySystemFill)
+                                .opacity(i.isMultiple(of: 2) ? 0.55 : 0.25))
+                            .annotation(position: .overlay, alignment: .topTrailing) {
+                                Text(band.level.rawValue.uppercased())
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.trailing, 4)
+                                    .padding(.top, 1)
+                            }
+                        }
+                    }
+                    ForEach(trend) { p in
+                        LineMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                            .interpolationMethod(.monotone)
+                            .foregroundStyle(.tint)
+                        PointMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                            .foregroundStyle(.tint)
+                            .symbolSize(30)
+                    }
+                    // The next-band goal line — gives the curve a finish line.
+                    if let target {
+                        RuleMark(y: .value(unit, target))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                            .foregroundStyle(.secondary)
+                    }
                 }
+                .chartYScale(domain: lo...hi)
                 .frame(height: 130)
                 Text(caption)
                     .font(.caption).foregroundStyle(.secondary)
@@ -1145,7 +1214,9 @@ struct ProgressTab: View {
     private func measuredContent(dim: Dim, big: String, bigUnit: String, band: String?,
                                  measuredLine: String?, measures: String, improve: String,
                                  action: DimAction?, trend: [TrendPoint] = [],
-                                 trendCaption: String = "") -> some View {
+                                 trendCaption: String = "",
+                                 trendTarget: Double? = nil,
+                                 trendBands: [BandSpec] = []) -> some View {
         VStack(spacing: 16) {
             panel {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -1160,7 +1231,8 @@ struct ProgressTab: View {
                 Text(measures).font(.footnote).foregroundStyle(.tertiary).fixedSize(horizontal: false, vertical: true)
             }
 
-            trendPanel(trend, unit: bigUnit, caption: trendCaption)
+            trendPanel(trend, unit: bigUnit, caption: trendCaption,
+                       target: trendTarget, bands: trendBands)
 
             if let notes = notesByDim[dim], !notes.isEmpty {
                 panel {
@@ -1222,7 +1294,8 @@ struct ProgressTab: View {
         }
         if lags(grammarCEFR) {
             tips.append((icon: "checkmark.seal",
-                         text: "Your grammar score averages \(grammarScore)/100 — run your review cards under Practice; they're built from your own slips."))
+                         text: String(format: "You're at %.1f verified slips per 100 words%@ — your review cards under Practice target exactly these.",
+                                      slipsPer100Words, grammarTargetHint)))
         }
         if lags(fluencyCEFR) {
             tips.append((icon: "gauge.with.needle",
@@ -1428,10 +1501,17 @@ struct ProgressTab: View {
             let date = s.endedAt ?? s.startedAt
             let pace = m.articulationRate > 0 ? m.articulationRate : m.wordsPerMinute
             if pace > 0 { fT.append(TrendPoint(date: date, value: pace)) }
-            // One point per talk: the talk's own 0–100 grammar score — the
-            // number the user already saw on that talk's card.
-            if let g = s.summary?.scorecard?.grammar.score, (0...100).contains(g) {
-                gT.append(TrendPoint(date: date, value: Double(g)))
+            // One point per talk: verified slip density — the same currency
+            // as the page's ≈band and the assessment's rationale. Legacy
+            // sessions predating slip capture decode as zero slips; a zero
+            // with a mediocre grammar score is missing data, not clean
+            // speech — skip those, keep genuinely clean talks.
+            if let summary = s.summary, m.userWordCount > 0 {
+                let slips = summary.grammarIssues.count
+                if slips > 0 || (summary.scorecard?.grammar.score ?? 0) >= 90 {
+                    gT.append(TrendPoint(date: date,
+                                         value: Double(slips) / Double(m.userWordCount) * 100))
+                }
             }
             if m.avgWordsPerUserTurn > 0 {
                 eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))

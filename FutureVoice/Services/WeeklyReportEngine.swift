@@ -246,6 +246,17 @@ enum WeeklyReportEngine {
             should land within one band of their median, and the pooled
             sample being LARGER usually supports the higher end the evidence
             allows, not the cautious floor.
+          * The overall level is the profile's CENTER OF GRAVITY across the
+            four dimensions — NOT the minimum. Per the official descriptors,
+            grammatical accuracy caps the overall only to the degree errors
+            IMPAIR COMMUNICATION: frequent slips whose meaning stays clear
+            are compatible with B2 ("does not make errors which cause
+            misunderstanding"); accuracy caps at B1 only when errors
+            regularly obscure what the speaker means. An uneven profile
+            (e.g. C1 pace, B2 vocabulary, B1 accuracy) therefore reads B2
+            overall unless the transcripts show meaning actually breaking
+            down. State in level_rationale whether the errors you saw
+            obscure meaning or not — that judgment decides the boundary.
         - level_rationale: 2-3 plain sentences the learner will read,
           justifying cefr_level by NAMING the concrete evidence — the pace
           number and its band, the slip density, the per-talk reads, the
