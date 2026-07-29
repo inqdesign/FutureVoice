@@ -314,13 +314,22 @@ enum ShadowEngine {
         guard language.hasPrefix("en") else { return out }
         // Irregulars first, then generic suffixes. "'s"/"'d" are ambiguous
         // (is/has, would/had) but expand identically on both sides, so the
-        // comparison stays symmetric even when the gloss is wrong.
+        // comparison stays symmetric even when the gloss is wrong. The
+        // colloquial merges matter for DELETIONS: STT writing "wanna" for a
+        // learner who said "want to" scored "to" as a word they never said.
         let irregular: [(String, String)] = [
             ("won't", "will not"), ("can't", "can not"), ("cannot", "can not"),
             ("shan't", "shall not"), ("let's", "let us"), ("y'all", "you all"),
+            ("wanna", "want to"), ("gonna", "going to"), ("gotta", "got to"),
+            ("lemme", "let me"), ("gimme", "give me"), ("kinda", "kind of"),
+            ("sorta", "sort of"), ("outta", "out of"), ("dunno", "do not know"),
+            ("'cause", "because"), ("cuz", "because"),
         ]
         for (from, to) in irregular {
-            out = out.replacingOccurrences(of: from, with: to)
+            // Lookarounds instead of \b: apostrophe-initial forms ("'cause")
+            // have no word boundary between the space and the apostrophe.
+            out = out.replacingOccurrences(
+                of: "(?<![a-z])\(from)(?![a-z])", with: to, options: .regularExpression)
         }
         let suffixes: [(String, String)] = [
             ("n't", " not"), ("'re", " are"), ("'m", " am"), ("'ve", " have"),

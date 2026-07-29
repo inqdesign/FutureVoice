@@ -947,30 +947,14 @@ struct ShadowDrillView: View {
         userWordTimings = []
         prevTranscript = ""
 
-        // Countdown 3-2-1-0 with haptic ticks; "0" IS the go beat so the
-        // start lands on a visible number instead of an unmarked pause after
-        // "1" (which made the exact start moment hard to catch). The stronger
-        // "go" pulse fires on 0 and it stays on screen through mic setup until
-        // the karaoke sweep takes over.
-        phase = .countdown
-        for n in [3, 2, 1] {
-            countdownValue = n
-            HapticEngine.countdownTick()
-            try? await Task.sleep(nanoseconds: 700_000_000)
-        }
-        countdownValue = 0
-        HapticEngine.countdownGo()
-        // Hold "0" for a beat BEFORE the synchronous mic setup runs. Without
-        // this suspension SwiftUI coalesces straight to .syncing and never
-        // paints 0 at all. This linger is the visible "go" flash — the learner
-        // starts on it, and the karaoke sweep (syncStartedAt below) begins
-        // right after, matching their natural speech onset.
-        try? await Task.sleep(nanoseconds: 350_000_000)
-
-        // Start mic recognition ONLY — no playback. Playing the target audio
-        // through the speaker bleeds into the mic, which inflates the score
-        // and falsely advances the karaoke highlight. The visual cursor still
-        // sweeps based on syncStartedAt so the user has a tempo reference.
+        // Start mic recognition BEFORE the countdown — no playback. Playing
+        // the target audio through the speaker bleeds into the mic, which
+        // inflates the score and falsely advances the karaoke highlight.
+        // Mic-first matters: setup used to run AFTER the "go" beat, so a
+        // learner who started speaking ON the beat had their first word(s)
+        // missing from the scoring file and marked as deletions through no
+        // fault of their own. The countdown's lead-in silence is harmless —
+        // recognition skips it and rhythm timing is relative to first voice.
         do {
             // Bias recognition toward the exact line being shadowed — we know
             // what the learner is TRYING to say, so accented pronunciations
@@ -988,6 +972,21 @@ struct ShadowDrillView: View {
         // AVAudioEngine tap LiveTranscriber sets up; both see the same mic.
         recordingFileURL = (try? recorder.start(quality: .sttOptimal))
 
+        // Countdown 3-2-1-0 with haptic ticks; "0" IS the go beat so the
+        // start lands on a visible number instead of an unmarked pause after
+        // "1" (which made the exact start moment hard to catch). The mic is
+        // already hot, so speaking right on (or slightly before) the beat is
+        // fully captured.
+        phase = .countdown
+        for n in [3, 2, 1] {
+            countdownValue = n
+            HapticEngine.countdownTick()
+            try? await Task.sleep(nanoseconds: 700_000_000)
+        }
+        countdownValue = 0
+        HapticEngine.countdownGo()
+        try? await Task.sleep(nanoseconds: 350_000_000)
+
         phase = .syncing
         // Countdown just ended → start the clock and karaoke immediately.
         // STT-triggered clock had unacceptable latency (~300ms) since the
@@ -1004,6 +1003,18 @@ struct ShadowDrillView: View {
         autoStopTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: UInt64(cutoffMs) * 1_000_000)
             guard !Task.isCancelled, phase == .syncing else { return }
+            // Never cut a speaker mid-word: while the mic still hears voice,
+            // extend in 200ms steps (up to +4s) and only stop once they've
+            // actually gone quiet. The fixed cutoff was truncating slow
+            // attempts' tails, which then scored as deletions of words the
+            // learner clearly said.
+            let hardCap = Date().addingTimeInterval(4)
+            while !Task.isCancelled, phase == .syncing, Date() < hardCap,
+                  let lastVoiced = live.lastVoicedAt,
+                  Date().timeIntervalSince(lastVoiced) < 0.5 {
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
+            guard !Task.isCancelled, phase == .syncing else { return }
             finishSync()
         }
     }
@@ -1012,12 +1023,18 @@ struct ShadowDrillView: View {
         guard phase == .syncing else { return }
         autoStopTask?.cancel()
         autoStopTask = nil
-        let finalText = live.stop()
-        // Stop the parallel WAV writer; URL is already stored from start().
-        _ = recorder.stop()
-        prevTranscript = finalText
         phase = .analyzing
-        Task { await analyze(finalText: finalText) }
+        Task { @MainActor in
+            // Tail grace: a stop tap usually lands mid-final-syllable — give
+            // the recorder 300ms so the last word's tail reaches the file the
+            // scoring pass reads (a clipped tail reads as a deletion).
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            let finalText = live.stop()
+            // Stop the parallel WAV writer; URL is already stored from start().
+            _ = recorder.stop()
+            prevTranscript = finalText
+            await analyze(finalText: finalText)
+        }
     }
 
     private func analyze(finalText: String) async {
