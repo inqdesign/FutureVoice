@@ -161,7 +161,10 @@ final class DrillStore {
 
         for turn in turns where turn.role == .user {
             if let s = turn.suggestion {
-                add(source: turn.transcript, target: s.alternative, reason: s.reason, turnId: turn.id)
+                // Quote only the sentence the suggestion rewrites, never the
+                // whole (possibly minute-long) turn transcript.
+                add(source: Self.relevantFragment(of: turn.transcript, matching: s.alternative),
+                    target: s.alternative, reason: s.reason, turnId: turn.id)
             }
         }
         for p in summary.phrasesUsed {
@@ -210,6 +213,33 @@ final class DrillStore {
     /// Lowercased, punctuation stripped, whitespace collapsed — so a summary
     /// quote like "I go to store yesterday." still matches the raw transcript
     /// "i go to store yesterday" despite casing/punctuation drift.
+    /// A user turn can be a minute-long ramble while the suggestion rewrites
+    /// ONE sentence of it — quoting the whole transcript blew the drill card
+    /// off the screen. Keep the sentence that actually corresponds to the
+    /// correction (highest word overlap with the target); fall back to a hard
+    /// prefix cut when there's nothing to match against. Applied at ingest for
+    /// new cards AND at render for the cards already in users' stores.
+    static func relevantFragment(of source: String, matching target: String,
+                                 maxChars: Int = 160) -> String {
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxChars else { return trimmed }
+        let sentences = trimmed
+            .split(whereSeparator: { ".!?\n".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let targetWords = Set(normalizedForMatch(target).split(separator: " "))
+        if sentences.count > 1, !targetWords.isEmpty,
+           let best = sentences.max(by: { overlap($0, targetWords) < overlap($1, targetWords) }),
+           overlap(best, targetWords) > 0 {
+            return best.count > maxChars ? best.prefix(maxChars) + "…" : best
+        }
+        return trimmed.prefix(maxChars) + "…"
+    }
+
+    private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
+        Set(normalizedForMatch(sentence).split(separator: " ")).intersection(targetWords).count
+    }
+
     private static func normalizedForMatch(_ text: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(.whitespaces)
         let stripped = String(text.unicodeScalars.filter { allowed.contains($0) })

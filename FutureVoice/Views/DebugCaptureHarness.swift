@@ -63,6 +63,11 @@ enum DebugCapture {
         case "practice-studying":
             once("practice-studying") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "drills":
+            // The SRS review sheet, incl. a legacy card whose source is a whole
+            // rambling turn — verifies the render-time fragment trim.
+            once("drills") { seedVocab() }
+            return AnyView(DrillSheet().environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())
@@ -287,6 +292,23 @@ enum DebugCapture {
                 createdAt: Date(), lastReviewedAt: nil,
                 nextReviewAt: Date().addingTimeInterval(-3600), box: 0))
         }
+        // One legacy-style card with a WHOLE rambling turn as its source, to
+        // verify the render-time fragment trim keeps the card on screen.
+        DrillStore.shared.save(DrillCard(
+            sourcePhrase: """
+            Hey I'm just wondering if there is any kind of Yeah, where people come and set \
+            the same goal and Together towards to the door like English learning I see a lot of \
+            people are learning and practicing Gather set the same goal like 100 days challenge \
+            your 30 day challenge and they just calm and share their experience in progress. \
+            I kinda like this whole community and I'm sure there are tons of community but I'm \
+            just trying to. Feel something around Nirvana the app that I'm gonna be working on
+            """,
+            targetPhrase: "I'm trying to build something around the app that I'm going to work on.",
+            reason: "Use \"build something around\" for creating a community around an app.",
+            // Newest createdAt → first in the due queue (sorted newest-first),
+            // so the capture opens straight on this card.
+            createdAt: Date().addingTimeInterval(60), lastReviewedAt: nil,
+            nextReviewAt: Date().addingTimeInterval(-7200), box: 0))
     }
 
     // MARK: - Sessions (Home stats + mission)

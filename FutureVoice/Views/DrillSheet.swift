@@ -306,7 +306,11 @@ private extension DrillView {
             if !card.sourcePhrase.isEmpty {
                 labeled("You said") {
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(card.sourcePhrase)
+                        // Cards ingested before the fragment trim carry the
+                        // WHOLE turn transcript — trim at render too, so the
+                        // stored backlog doesn't blow the card off the screen.
+                        Text(DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                         matching: card.targetPhrase))
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .strikethrough(revealed)
