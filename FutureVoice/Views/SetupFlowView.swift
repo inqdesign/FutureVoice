@@ -5,8 +5,12 @@ import SwiftUI
 /// calibrate, BEFORE the heavier voice-clone recording step.
 ///
 /// Two cards, one tap each:
-///   1. Level             ← CEFR self-rating; calibrates every conversation
-///   2. Native language   ← explanations/translations speak this
+///   1. Native language   ← explanations/translations speak this
+///   2. Level             ← CEFR self-rating; calibrates every conversation
+///
+/// Native language leads — it's a plain fact with an obvious answer, so the
+/// very first question never reads like a test. The level self-rating comes
+/// second, once the user is already moving.
 ///
 /// The practice target is fixed to English — the multi-language engine stays
 /// in `LanguageCatalog`, it's just not offered as a choice here.
@@ -41,8 +45,8 @@ struct SetupFlowView: View {
                     .padding(.top, 8)
                 Form {
                     switch step {
-                    case 0: levelStep
-                    default: nativeStep
+                    case 0: nativeStep
+                    default: levelStep
                     }
                 }
                 Spacer(minLength: 0)
@@ -54,6 +58,10 @@ struct SetupFlowView: View {
         .onAppear {
             nativeLanguage = appState.nativeLanguage
             level = appState.proficiency
+            // English can't be a native choice (it's the fixed target), so a
+            // legacy "en" native default would leave no row checked — flip it
+            // to the most common answer instead.
+            if nativeLanguage == targetLanguage { nativeLanguage = "ko" }
             #if DEBUG
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
             if UserDefaults.standard.object(forKey: "onboardingStep") != nil {
@@ -65,8 +73,8 @@ struct SetupFlowView: View {
 
     private var title: String {
         switch step {
-        case 0: return "Your level?"
-        default: return "Your language?"
+        case 0: return "Your language?"
+        default: return "Your level?"
         }
     }
 
@@ -222,12 +230,6 @@ struct SetupFlowView: View {
     private func advance() {
         if step < Self.totalSteps - 1 {
             step += 1
-            // English can't be a native choice (it's the fixed target), so a
-            // legacy "en" native default would leave no row checked — flip it
-            // to the most common answer instead.
-            if step == Self.totalSteps - 1, nativeLanguage == targetLanguage {
-                nativeLanguage = "ko"
-            }
         } else {
             finish()
         }

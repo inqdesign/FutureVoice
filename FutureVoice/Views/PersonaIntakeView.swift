@@ -1,35 +1,30 @@
 import SwiftUI
 import PhotosUI
 
-/// First-run persona collection, one guided card per category. Each category
-/// uses the input that fits it: typed fields for name/city, chips for
-/// interests/situations, speak-first (with a typing fallback) for the
-/// narrative answers. Dictated answers get one Gemini polish pass on finish
-/// (`PersonaParser`); a failed polish never blocks onboarding — raw
-/// transcripts are still usable ground truth. Later edits happen in the
+/// First-run persona collection — four light cards only: name, home, and the
+/// two chip picks (interests feed the news rail, situations steer scenario
+/// suggestions). The narrative "tell me about…" answers (occupation,
+/// household, quirks) are deliberately NOT asked here — the first talk works
+/// generic-but-warm, and `PersonaDeepenSheet` asks for the rich version right
+/// after it, when the user has felt why it matters. Later edits happen in the
 /// plain form (`PersonaOnboardingView`) from Me → Profile.
 struct PersonaIntakeView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     private enum Step: Int, CaseIterable {
-        case name, home, work, people, interests, situations, extras
+        case name, home, interests, situations
     }
 
     @State private var step: Step = .name
     @State private var persona: UserPersona = .empty
 
     /// Draft persistence: answers + current card survive an app kill, so a
-    /// relaunch resumes where the user left off instead of re-asking seven
+    /// relaunch resumes where the user left off instead of re-asking the
     /// cards. Saved at every step transition, cleared on finish.
     private static let draftKey = "futurevoice.personaDraft"
     private static let draftStepKey = "futurevoice.personaDraftStep"
-    @State private var locale = "ko"
-    @State private var workVoiced = false
-    @State private var peopleVoiced = false
-    @State private var extrasVoiced = false
     @State private var avatarPick: PhotosPickerItem?
-    @State private var isFinishing = false
     @State private var didSeed = false
 
     var body: some View {
@@ -58,7 +53,6 @@ struct PersonaIntakeView: View {
                     // "Next", not the app entrance.
                     nextTitle: "Next",
                     nextEnabled: canAdvance,
-                    isWorking: isFinishing,
                     onBack: {
                         if step == .name {
                             // Cross-stage back: reopen the quick-answer setup.
@@ -86,11 +80,8 @@ struct PersonaIntakeView: View {
         switch step {
         case .name:       nameStep
         case .home:       homeStep
-        case .work:       workStep
-        case .people:     peopleStep
         case .interests:  interestsStep
         case .situations: situationsStep
-        case .extras:     extrasStep
         }
     }
 
@@ -154,47 +145,11 @@ struct PersonaIntakeView: View {
         }
     }
 
-    private var workStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: "What do you do?",
-                detail: "Just talk — your native language is fine. I'll sort it out.")
-            IntakeHints(bullets: [
-                "Your work, study, or main project",
-                "What a typical day looks like",
-                "Anything you're building or learning right now"
-            ])
-            SpeakOrTypeField(
-                text: $persona.occupation,
-                locale: $locale,
-                usedVoice: $workVoiced,
-                placeholder: "e.g. Solo founder of an AI app for parents")
-        }
-    }
-
-    private var peopleStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: "Who's in your daily life?",
-                detail: "The cast of your everyday stories. Skip if you like.")
-            IntakeHints(bullets: [
-                "Who you live with — names welcome",
-                "Kids, partner, pets",
-                "People you end up talking about a lot"
-            ])
-            SpeakOrTypeField(
-                text: $persona.household,
-                locale: $locale,
-                usedVoice: $peopleVoiced,
-                placeholder: "e.g. Wife and 4yo daughter at Kita")
-        }
-    }
-
     private var interestsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
                 question: "What are you into?",
-                detail: "Tap what fits — these become conversation fuel.")
+                detail: "Tap what fits — these pick your news stories and fuel conversations.")
             ChipPickerField(
                 presets: PersonaOnboardingView.interestPresets,
                 selection: $persona.interests)
@@ -212,19 +167,6 @@ struct PersonaIntakeView: View {
         }
     }
 
-    private var extrasStep: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            IntakeStepHeader(
-                question: "Anything else I should know?",
-                detail: "Quirks, goals, pet peeves — whatever helps me sound like you. Totally optional.")
-            SpeakOrTypeField(
-                text: $persona.freeNotes,
-                locale: $locale,
-                usedVoice: $extrasVoiced,
-                placeholder: "Anything that helps me sound like you")
-        }
-    }
-
     // MARK: - Flow
 
     private var canAdvance: Bool {
@@ -236,10 +178,10 @@ struct PersonaIntakeView: View {
     }
 
     private func advance() {
-        if step == .extras {
-            Task { await finish() }
+        if step == .situations {
+            finish()
         } else {
-            withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .extras }
+            withAnimation { step = Step(rawValue: step.rawValue + 1) ?? .situations }
             saveDraft()
         }
     }
@@ -258,7 +200,11 @@ struct PersonaIntakeView: View {
         guard let data = UserDefaults.standard.data(forKey: Self.draftKey),
               let draft = try? JSONDecoder().decode(UserPersona.self, from: data) else { return false }
         persona = draft
-        step = Step(rawValue: UserDefaults.standard.integer(forKey: Self.draftStepKey)) ?? .name
+        // A draft step from the old seven-card flow can point past the end —
+        // clamp instead of silently restarting at card one.
+        let raw = min(UserDefaults.standard.integer(forKey: Self.draftStepKey),
+                      Step.allCases.count - 1)
+        step = Step(rawValue: raw) ?? .name
         return true
     }
 
@@ -270,7 +216,6 @@ struct PersonaIntakeView: View {
     private func seed() {
         guard !didSeed else { return }
         didSeed = true
-        locale = appState.nativeLanguage
         // A draft from an interrupted run wins — resume where the user left
         // off instead of re-asking from card one. No draft but a saved
         // persona (cross-stage Back from the voice-clone step) → edit that.
@@ -294,34 +239,7 @@ struct PersonaIntakeView: View {
         #endif
     }
 
-    private func finish() async {
-        isFinishing = true
-        defer { isFinishing = false }
-        // Only dictated answers go through the polish pass — typed text is
-        // already deliberate; rewriting it would surprise the user.
-        let voicedOccupation = workVoiced ? persona.occupation : ""
-        let voicedHousehold = peopleVoiced ? persona.household : ""
-        let voicedNotes = extrasVoiced ? persona.freeNotes : ""
-        if !(voicedOccupation.isEmpty && voicedHousehold.isEmpty && voicedNotes.isEmpty) {
-            do {
-                let polished = try await PersonaParser.polish(
-                    occupation: voicedOccupation,
-                    household: voicedHousehold,
-                    freeNotes: voicedNotes,
-                    languageHint: locale)
-                if !voicedOccupation.isEmpty, !polished.occupation.isEmpty {
-                    persona.occupation = polished.occupation
-                }
-                if !voicedHousehold.isEmpty, !polished.household.isEmpty {
-                    persona.household = polished.household
-                }
-                if !voicedNotes.isEmpty, !polished.free_notes.isEmpty {
-                    persona.freeNotes = polished.free_notes
-                }
-            } catch {
-                // Keep the raw transcripts — never block onboarding on the polish.
-            }
-        }
+    private func finish() {
         appState.savePersona(persona)
         clearDraft()
         dismiss()   // no-op on first run; RootView swaps once persona != nil
