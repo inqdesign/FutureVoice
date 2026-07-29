@@ -35,9 +35,11 @@ struct DrillView: View {
 
     @EnvironmentObject private var appState: AppState
     @StateObject private var player = AudioPlayer()
-    @StateObject private var live = LiveTranscriber()
 
     @State private var queue: [DrillCard] = []
+    /// Which card's user recording is playing right now — drives the play
+    /// button's play→stop icon swap so a tap has visible feedback.
+    @State private var playingTurnId: UUID?
     @State private var initialCount: Int = 0
     @State private var isLoadingAudio = false
     @State private var error: String?
@@ -49,18 +51,6 @@ struct DrillView: View {
     /// the fluent version in their head (or out loud) FIRST. Grading swipes
     /// are disabled until revealed, so "Got it" always means actual recall.
     @State private var topCardRevealed = false
-
-    /// "Say it" quick check — speak the revealed target, get a deterministic
-    /// ShadowEngine score + diff right on the card. No LLM call, so it's
-    /// instant and free; full karaoke practice stays in the Shadow sheet.
-    @State private var sayIt: SayItState = .idle
-    @State private var sayItStopTask: Task<Void, Never>?
-
-    enum SayItState: Equatable {
-        case idle
-        case listening
-        case result(score: Int, steps: [ShadowEngine.DiffStep])
-    }
 
     private static let swipeThreshold: CGFloat = 100
 
@@ -101,14 +91,11 @@ struct DrillView: View {
             .environmentObject(appState)
         }
         .onAppear(perform: loadQueue)
-        .onChange(of: live.transcript) { _, _ in
-            // Silence-based auto-stop: every transcript change pushes the
-            // stop deadline 1.5s out; when the user pauses, we grade.
-            guard case .listening = sayIt,
-                  !live.transcript.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-            scheduleSayItStop(after: 1.5)
+        // Clear the play-button state the moment playback naturally ends.
+        .onChange(of: player.isPlaying) { _, playing in
+            if !playing { playingTurnId = nil }
         }
-        .onDisappear { cancelSayIt() }
+        .onDisappear { player.stop() }
     }
 
     /// After dismissing the enrichment sheet, the top card may have had its
@@ -320,15 +307,26 @@ private extension DrillView {
                         // let them replay what they REALLY said.
                         if let turnId = card.sourceTurnId,
                            TurnAudioStore.shared.url(for: turnId) != nil {
+                            let playingThis = playingTurnId == turnId && player.isPlaying
                             Button {
-                                playUserRecording(turnId)
+                                if playingThis {
+                                    player.stop()
+                                    playingTurnId = nil
+                                } else {
+                                    playUserRecording(turnId)
+                                }
                             } label: {
-                                Image(systemName: "play.circle.fill")
+                                // play → stop while the recording runs, with a
+                                // replace transition — the tap visibly "takes"
+                                // and the running state is tellable at a glance.
+                                Image(systemName: playingThis ? "stop.circle.fill" : "play.circle.fill")
                                     .font(.title3)
                                     .foregroundStyle(.tint)
+                                    .contentTransition(.symbolEffect(.replace))
+                                    .symbolEffect(.pulse, isActive: playingThis)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Play your recording")
+                            .accessibilityLabel(playingThis ? "Stop your recording" : "Play your recording")
                         }
                     }
                 }
@@ -352,10 +350,6 @@ private extension DrillView {
                 }
             }
 
-            if isTop, revealed {
-                sayItSection(card)
-            }
-
             Spacer(minLength: 12)
 
             if revealed {
@@ -368,13 +362,11 @@ private extension DrillView {
                     .disabled(isLoadingAudio)
 
                     pillButton(systemImage: "waveform.badge.mic", text: "Shadow") {
-                        cancelSayIt()
                         shadowingCard = card
                     }
 
                     pillButton(systemImage: card.enrichment == nil ? "books.vertical" : "books.vertical.fill",
                                text: "Examples") {
-                        cancelSayIt()
                         showingEnrichmentFor = card
                     }
                 }
@@ -434,156 +426,6 @@ private extension DrillView {
         }
     }
 
-    // MARK: - Say it (deterministic speak-to-check)
-
-    @ViewBuilder
-    func sayItSection(_ card: DrillCard) -> some View {
-        switch sayIt {
-        case .idle:
-            Button {
-                Task { await startSayIt() }
-            } label: {
-                Label("Say it", systemImage: "mic")
-                    .font(.subheadline.weight(.medium))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-
-        case .listening:
-            // Neutral container, not a red-tinted capsule: red text on a pink
-            // blob read as an error state. Red stays reserved for the one
-            // thing that IS red — the stop control.
-            Button {
-                finishSayIt()
-            } label: {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "waveform")
-                        .symbolEffect(.variableColor.iterative, options: .repeating)
-                        .foregroundStyle(.tint)
-                        .padding(.top, 2)
-                    Text(live.transcript.isEmpty ? "Listening…" : live.transcript)
-                        .font(.subheadline)
-                        .foregroundStyle(live.transcript.isEmpty ? Color.secondary : Color.primary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 8)
-                    Image(systemName: "stop.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(.red)
-                }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemFill)))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
-        case .result(let score, let steps):
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Label("\(score)", systemImage: "gauge.with.dots.needle.67percent")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(sayItScoreColor(score))
-                        .monospacedDigit()
-                    Spacer()
-                    Button("Retry") { Task { await startSayIt() } }
-                        .font(.caption.weight(.medium))
-                }
-                sayItDiffText(steps)
-                    .font(.subheadline)
-                Text(score >= 75
-                     ? "Nailed it — swipe right."
-                     : "Close — hear it again, or swipe left to retry later.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color(.tertiarySystemBackground))
-            )
-        }
-    }
-
-    func sayItScoreColor(_ score: Int) -> Color {
-        switch score {
-        case 80...: return .green
-        case 50..<80: return .accentColor
-        default: return .orange
-        }
-    }
-
-    /// Same rendering convention as ShadowDrillView's diff: matches plain,
-    /// substitutions orange, skipped words struck through, extras as (+word).
-    func sayItDiffText(_ steps: [ShadowEngine.DiffStep]) -> Text {
-        var out = Text("")
-        var first = true
-        for step in steps {
-            let space = first ? Text("") : Text(" ")
-            switch step.op {
-            case .match:
-                out = out + space + Text(step.target ?? "").foregroundStyle(.primary)
-            case .sub:
-                out = out + space + Text(step.target ?? "").foregroundStyle(.orange)
-            case .del:
-                out = out + space + Text(step.target ?? "").foregroundStyle(.secondary).strikethrough()
-            case .ins:
-                out = out + space + Text("(+\(step.learner ?? ""))").foregroundStyle(.orange)
-            }
-            first = false
-        }
-        return out
-    }
-
-    func startSayIt() async {
-        player.stop()
-        let granted = await LiveTranscriber.requestPermissions()
-        guard granted else {
-            error = "Microphone or speech permission denied."
-            return
-        }
-        do {
-            try live.start(locale: appState.targetLanguage, preferBuiltInMic: true)
-            sayIt = .listening
-            // Backstop if the user never speaks; silence watcher takes over
-            // once the first words arrive.
-            scheduleSayItStop(after: 8)
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    func scheduleSayItStop(after seconds: Double) {
-        sayItStopTask?.cancel()
-        sayItStopTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            guard !Task.isCancelled, case .listening = sayIt else { return }
-            finishSayIt()
-        }
-    }
-
-    func finishSayIt() {
-        sayItStopTask?.cancel()
-        sayItStopTask = nil
-        let text = live.stop().trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let card = queue.first, !text.isEmpty else {
-            sayIt = .idle
-            return
-        }
-        let analysis = ShadowEngine.analyze(target: card.targetPhrase, learner: text,
-                                            language: appState.targetLanguage)
-        sayIt = .result(score: analysis.score, steps: analysis.steps)
-        HapticEngine.shadowComplete(score: analysis.score)
-    }
-
-    func cancelSayIt() {
-        sayItStopTask?.cancel()
-        sayItStopTask = nil
-        if case .listening = sayIt { _ = live.stop() }
-        sayIt = .idle
-    }
-
     private var emptyState: some View {
         ContentUnavailableView(
             initialCount == 0 ? "No drills due" : "Nice work",
@@ -640,7 +482,8 @@ private extension DrillView {
         guard !queue.isEmpty else { return }
         queue.removeFirst()
         topCardRevealed = false
-        cancelSayIt()
+        player.stop()
+        playingTurnId = nil
         if queue.isEmpty { onDeckCompleted?() }
     }
 
@@ -648,9 +491,9 @@ private extension DrillView {
     /// Local file only — no credits, no network.
     private func playUserRecording(_ turnId: UUID) {
         guard let data = TurnAudioStore.shared.data(for: turnId) else { return }
-        cancelSayIt()
         do {
             try player.play(data, forceSessionReset: true)
+            playingTurnId = turnId
         } catch {
             self.error = error.localizedDescription
         }
@@ -658,10 +501,9 @@ private extension DrillView {
 
     private func playTarget(_ card: DrillCard) async {
         guard let voiceId = appState.voiceCloneId else { return }
-        // A prior Say-it run leaves the session in .measurement mode, which
-        // makes plain playback noticeably quiet — force-reset (same fix as
-        // ShadowDrillView's preview).
-        cancelSayIt()
+        // Force-reset keeps playback loud even if another surface left the
+        // audio session in .measurement mode (same fix as ShadowDrillView).
+        playingTurnId = nil
         if let cached = PhraseAudioStore.shared.data(text: card.targetPhrase, voiceId: voiceId) {
             do { try player.play(cached, forceSessionReset: true) } catch { self.error = error.localizedDescription }
             return
