@@ -37,8 +37,8 @@ enum ShadowEngine {
     /// absent or unstable). Defaults to word so existing behavior holds.
     static func analyze(target: String, learner: String, language: String = "en") -> ShadowAnalysis {
         let style = LanguageCatalog.tokenStyle(language)
-        let targetTokens = tokenize(target, style: style)
-        let learnerTokens = tokenize(learner, style: style)
+        let targetTokens = tokenize(expandForDiff(target, language: language), style: style)
+        let learnerTokens = tokenize(expandForDiff(learner, language: language), style: style)
 
         let (matches, steps) = align(targetTokens, learnerTokens)
         let denom = max(targetTokens.count, learnerTokens.count)
@@ -280,6 +280,59 @@ enum ShadowEngine {
     }
 
     // MARK: - Internals
+
+    /// Canonicalize surface forms that STT and written text spell differently
+    /// so they never register as substitutions: digit runs become the
+    /// language's spelled-out number ("20" → "twenty" / "이십"), and English
+    /// contractions expand ("I'm" → "i am", "won't" → "will not"). Applied to
+    /// BOTH sides before tokenizing, so whichever convention each side used,
+    /// they meet in the middle. The rendered diff already shows lowercased
+    /// tokens, so expanded forms are consistent with the existing display.
+    static func expandForDiff(_ text: String, language: String) -> String {
+        var out = text.lowercased()
+        // Hyphens → spaces so "twenty-one"/"check-in" (written) match
+        // "twenty one"/"check in" (how STT writes them). Spell-out below
+        // strips its own hyphens at insertion for the same reason.
+        out = out.replacingOccurrences(of: "-", with: " ")
+
+        // Digits → spell-out in the practice language. Word-ish digit runs
+        // only; anything NumberFormatter can't parse is left alone.
+        if let re = try? NSRegularExpression(pattern: #"\d+"#) {
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .spellOut
+            formatter.locale = Locale(identifier: language)
+            let matches = re.matches(in: out, range: NSRange(out.startIndex..., in: out))
+            for m in matches.reversed() {
+                guard let r = Range(m.range, in: out),
+                      let n = Int(out[r]),
+                      let spelled = formatter.string(from: NSNumber(value: n)) else { continue }
+                let flat = spelled.lowercased().replacingOccurrences(of: "-", with: " ")
+                out.replaceSubrange(r, with: " \(flat) ")
+            }
+        }
+
+        guard language.hasPrefix("en") else { return out }
+        // Irregulars first, then generic suffixes. "'s"/"'d" are ambiguous
+        // (is/has, would/had) but expand identically on both sides, so the
+        // comparison stays symmetric even when the gloss is wrong.
+        let irregular: [(String, String)] = [
+            ("won't", "will not"), ("can't", "can not"), ("cannot", "can not"),
+            ("shan't", "shall not"), ("let's", "let us"), ("y'all", "you all"),
+        ]
+        for (from, to) in irregular {
+            out = out.replacingOccurrences(of: from, with: to)
+        }
+        let suffixes: [(String, String)] = [
+            ("n't", " not"), ("'re", " are"), ("'m", " am"), ("'ve", " have"),
+            ("'ll", " will"), ("'d", " would"), ("'s", " is"),
+        ]
+        for (suffix, expansion) in suffixes {
+            out = out.replacingOccurrences(
+                of: "(?<=[a-z])\(suffix)\\b", with: expansion,
+                options: .regularExpression)
+        }
+        return out
+    }
 
     /// Lowercase + strip punctuation; collapses contractions like "don't" to
     /// a single token. Comparison is case- and punctuation-insensitive.

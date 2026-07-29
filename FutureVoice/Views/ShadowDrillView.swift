@@ -26,6 +26,10 @@ struct ShadowDrillView: View {
     @State private var syncStartedAt: Date?
     @State private var userWordTimings: [UserWordHit] = []
     @State private var prevTranscript: String = ""
+    /// True when scoring had to use the live partial hypothesis because the
+    /// file re-recognition pass failed (usually network) — shown as a
+    /// trust-calibrating footnote on the result.
+    @State private var usedRoughTranscript = false
     @State private var recordingFileURL: URL?
     @State private var feedback: ShadowFeedback?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
@@ -660,10 +664,29 @@ struct ShadowDrillView: View {
                 .foregroundStyle(.tint)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 6) {
-                Text("What I heard")
+                // The colored line is the TARGET scored against the attempt —
+                // it was previously titled "What I heard", which read as a
+                // transcript and made honest recognition feel wrong.
+                Text("Your match")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 diffText.font(.body)
+                if !prevTranscript.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("What I heard")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 4)
+                    Text(prevTranscript)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                if usedRoughTranscript {
+                    Label("Rough transcript — the final recognition pass didn't finish (network). The score may be off this time.",
+                          systemImage: "wifi.exclamationmark")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.top, 2)
+                }
             }
         }
     }
@@ -1006,6 +1029,7 @@ struct ShadowDrillView: View {
         // to the live text when the file pass fails (network, timeout).
         var scoredText = finalText
         var learnerTimings: [WordTiming] = []
+        usedRoughTranscript = true
         if let url = recordingFileURL {
             let rescored = await SpeechTranscriber.transcribeForScoring(
                 audioURL: url,
@@ -1016,7 +1040,14 @@ struct ShadowDrillView: View {
                 scoredText = rescored.text
                 prevTranscript = rescored.text
                 learnerTimings = rescored.wordTimings
+                usedRoughTranscript = false
             }
+        }
+        // Scoring fell back to the live PARTIAL hypothesis — systematically
+        // worse than the file pass. Surface it in the result UI and count it,
+        // so "the score felt wrong" days are checkable against data.
+        if usedRoughTranscript {
+            Telemetry.log("shadow_rescore_failed")
         }
 
         let analysis = ShadowEngine.analyze(target: attemptTargetText, learner: scoredText,
