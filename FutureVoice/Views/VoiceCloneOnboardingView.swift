@@ -137,7 +137,7 @@ struct VoiceCloneOnboardingView: View {
         // step is on stage — the orb becomes the room's meter.
         .task(id: status == .spot) {
             if status == .spot {
-                try? recorder.startMonitoring()
+                try? await recorder.startMonitoring()
             } else {
                 recorder.stopMonitoring()
             }
@@ -790,6 +790,9 @@ struct VoiceCloneOnboardingView: View {
             let granted = await recorder.requestPermission()
             if granted {
                 error = nil
+                // Warm the audio session NOW (background) so the spot step's
+                // meter is alive almost as soon as the page lands.
+                AudioRecorder.prewarmMonitoringSession()
                 status = .spot
             } else {
                 error = "Microphone access denied. Enable it in Settings."

@@ -150,16 +150,18 @@ final class AudioRecorder: ObservableObject {
     /// caches purely to drive `levels`/`ambientDBFS`, so the user can walk
     /// around and watch the surface settle as they find a quiet spot. The
     /// scratch file is deleted on stop — nothing is retained.
-    func startMonitoring() throws {
+    ///
+    /// Async because session activation talks to audiod (hundreds of ms,
+    /// worse on first activation + speaker rerouting) — it runs off the main
+    /// actor so the quiet-spot step's transition never blocks on it.
+    func startMonitoring() async throws {
         guard recorder == nil else { return }   // never fight a real recording
-        let session = AVAudioSession.sharedInstance()
-        // Same capture chain as the clone recording (.measurement, built-in
-        // mic) so the reading predicts actual take quality.
-        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker])
-        try session.setActive(true)
-        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
-            try? session.setPreferredInput(builtIn)
-        }
+        try await Task.detached(priority: .userInitiated) {
+            try Self.activateMonitoringSession()
+        }.value
+        // The spot step may have been left (or a real recording started)
+        // while the session spun up — don't start a stale meter.
+        guard recorder == nil, !Task.isCancelled else { return }
 
         let url = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ambient-monitor.wav")
@@ -181,8 +183,32 @@ final class AudioRecorder: ObservableObject {
         ambientDBFS = -60
         echoTailMs = nil
         echoPhase = .armed
-        inputDescription = Self.describeInput(session: session)
+        inputDescription = Self.describeInput(session: AVAudioSession.sharedInstance())
         startMetering(interval: 0.01)   // 100 Hz — the echo check needs it
+    }
+
+    /// Category + activation for ambient metering — same capture chain as the
+    /// clone recording (.measurement, built-in mic) so the reading predicts
+    /// actual take quality. Blocking (audiod round-trips); call OFF the main
+    /// actor.
+    nonisolated private static func activateMonitoringSession() throws {
+        let session = AVAudioSession.sharedInstance()
+        try session.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker])
+        try session.setActive(true)
+        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
+            try? session.setPreferredInput(builtIn)
+        }
+    }
+
+    /// Fire-and-forget pre-warm: activate the monitoring session the moment
+    /// mic permission lands, so the quiet-spot step that follows opens with
+    /// the session already hot and its meter alive almost immediately.
+    /// Repeating the calls in `startMonitoring` is fine — reconfiguring an
+    /// already-active session is cheap.
+    nonisolated static func prewarmMonitoringSession() {
+        Task.detached(priority: .userInitiated) {
+            try? activateMonitoringSession()
+        }
     }
 
     /// Stops monitoring and deletes the scratch file. Safe to call anytime.
