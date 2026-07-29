@@ -292,8 +292,53 @@ struct PracticeTab: View {
             .sorted { lastStudied($0) > lastStudied($1) }
     }
 
+    /// Aggregate mastery across EVERY book the activities ever generated —
+    /// active and archived, Talk and Watch. Per-book progress lives on each
+    /// card; this is the one number for "how much of all my material is done".
+    private var overallProgress: (mastered: Int, total: Int) {
+        var mastered = 0, total = 0
+        for s in talks + archivedTalks {
+            if let snap = talkSnapshots[s.id] {
+                mastered += snap.masteredCount
+                total += snap.totalCount
+            }
+        }
+        for sc in appState.scenarios {
+            if let c = sc.curriculum {
+                mastered += c.masteredCount
+                total += c.totalCount
+            }
+        }
+        return (mastered, total)
+    }
+
+    /// The whole-library progress card topping the Studying page: big percent
+    /// in the display face, the bar, and the raw count.
+    @ViewBuilder
+    private var overallCard: some View {
+        let p = overallProgress
+        if p.total > 0 {
+            let done = p.mastered == p.total
+            HStack(alignment: .center, spacing: 14) {
+                Text("\(Int((Double(p.mastered) / Double(p.total) * 100).rounded()))%")
+                    .geistPixel(30)
+                    .foregroundStyle(done ? .green : .primary)
+                VStack(alignment: .leading, spacing: 5) {
+                    ProgressView(value: Double(p.mastered), total: Double(p.total))
+                        .tint(done ? .green : .accentColor)
+                    Text("\(p.mastered) of \(p.total) mastered · everything from your talks and watches")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(14)
+            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+        }
+    }
+
     private var studyingPage: some View {
         VStack(alignment: .leading, spacing: 16) {
+            overallCard
             practiceShortcuts
             if studyingBooks.isEmpty {
                 shelfHint("Nothing in progress yet. Open a book on a shelf and master your first word or line — it shows up here until the whole book is done.")
