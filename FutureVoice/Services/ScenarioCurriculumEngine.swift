@@ -32,7 +32,13 @@ enum ScenarioCurriculumEngine {
         proficiency: CEFRLevel,
         targetLanguage: String,
         weakVocabAreas: [String] = [],
-        recurringMistakes: [LearnerPattern] = []
+        recurringMistakes: [LearnerPattern] = [],
+        // A scenario is a reusable template — re-watching writes a NEW take.
+        // avoidTitles: earlier takes' titles, so the model picks a different
+        // angle. runKey: distinguishes this take in the idempotency key
+        // (still guards double-taps within one watch).
+        avoidTitles: [String] = [],
+        runKey: String? = nil
     ) async throws -> ScenarioCurriculum {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency),
@@ -43,14 +49,16 @@ enum ScenarioCurriculumEngine {
                     persona: persona,
                     counterpart: counterpart,
                     weakVocabAreas: weakVocabAreas,
-                    recurringMistakes: recurringMistakes
+                    recurringMistakes: recurringMistakes,
+                    avoidTitles: avoidTitles
                 )
             )],
             maxTokens: sceneScale(for: proficiency).maxTokens,
             purpose: "scenario-curriculum",
             // v2: the scene-based schema — a v1 cached response (no turns)
             // would fail to decode under this Payload.
-            idempotencyKey: "curriculum-v2:\(scenario.id.uuidString)"
+            idempotencyKey: runKey.map { "curriculum-v2:\(scenario.id.uuidString):\($0)" }
+                ?? "curriculum-v2:\(scenario.id.uuidString)"
         )
         let turns = payload.turns.map {
             DialogueEngineTurn(
@@ -161,7 +169,8 @@ enum ScenarioCurriculumEngine {
         persona: UserPersona?,
         counterpart: Counterpart?,
         weakVocabAreas: [String],
-        recurringMistakes: [LearnerPattern]
+        recurringMistakes: [LearnerPattern],
+        avoidTitles: [String] = []
     ) -> String {
         var lines: [String]
         if scenario.isTopic == true {
@@ -215,6 +224,16 @@ enum ScenarioCurriculumEngine {
             lines.append("learner focus (bias study picks here where the scene allows, never force it):")
             if !weak.isEmpty { lines.append("- weak vocab areas: \(weak.joined(separator: ", "))") }
             if !mistakes.isEmpty { lines.append("- recurring mistakes: \(mistakes.joined(separator: "; "))") }
+        }
+        let previous = avoidTitles.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        if !previous.isEmpty {
+            lines.append("")
+            lines.append("""
+            The learner has already watched these takes of this scenario: \
+            \(previous.map { "\"\($0)\"" }.joined(separator: ", ")). \
+            Write a FRESH take — a different opening, complication, or beat \
+            of the same situation, never a rephrase of a previous take.
+            """)
         }
         return lines.joined(separator: "\n")
     }

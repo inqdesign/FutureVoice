@@ -734,6 +734,24 @@ struct ScenarioCurriculum: Codable, Hashable {
     var progress: Double {
         totalCount == 0 ? 0 : Double(masteredCount) / Double(totalCount)
     }
+
+    /// Fold a freshly generated take into this book: the new scene replaces
+    /// the playing dialogue, while study items accumulate — new ones append
+    /// (deduped by text), existing ones keep their ids, shadow attempts, and
+    /// mastery. A scenario is a reusable template; each watch writes a new
+    /// take, but the book keeps everything the takes have taught.
+    mutating func absorb(_ fresh: ScenarioCurriculum) {
+        func merged(_ old: [Item], _ new: [Item]) -> [Item] {
+            var seen = Set(old.map { $0.text.lowercased() })
+            return old + new.filter { seen.insert($0.text.lowercased()).inserted }
+        }
+        words = merged(words, fresh.words)
+        expressions = merged(expressions, fresh.expressions)
+        shadowLines = merged(shadowLines, fresh.shadowLines)
+        dialogueTitle = fresh.dialogueTitle
+        dialogue = fresh.dialogue
+        generatedAt = fresh.generatedAt
+    }
 }
 
 // MARK: - Suggested Topic

@@ -5,15 +5,32 @@ import SwiftUI
 /// checklist, no book chrome; that page (`ScenarioDetailView`) belongs to
 /// Practice, where the material this watch produces is reviewed later.
 ///
-/// If the subject's scene doesn't exist yet, it generates here once (the
-/// same `ScenarioCurriculumEngine` call that fills the book), is persisted
-/// onto the scenario, then plays — so watching IS what stocks Practice.
+/// A scenario is a reusable TEMPLATE: opened with `freshTake` (Watch's "Your
+/// scenarios"), this writes a NEW take of the situation every time — replaying
+/// what a past take produced is Practice's job, not Watch's. The new take's
+/// study material is absorbed into the scenario's book (mastery preserved),
+/// so watching IS what stocks Practice. Without `freshTake` (first watch of a
+/// just-minted scenario) it generates once and plays.
 struct SceneWatchView: View {
     @EnvironmentObject private var appState: AppState
     let scenarioId: UUID
+    /// True when opened from a saved-scenario card: generate a new take even
+    /// though the book already has a scene.
+    var freshTake: Bool = false
 
     @State private var generating = false
     @State private var generationError: String?
+    /// Held until the fresh take lands so the OLD scene never flashes first.
+    @State private var awaitingFresh: Bool
+    /// One take per view instance — keeps double-tap idempotency within the
+    /// watch while making each open a distinct generation.
+    @State private var runKey = UUID().uuidString
+
+    init(scenarioId: UUID, freshTake: Bool = false) {
+        self.scenarioId = scenarioId
+        self.freshTake = freshTake
+        _awaitingFresh = State(initialValue: freshTake)
+    }
 
     private var scenario: Scenario? {
         appState.scenarios.first { $0.id == scenarioId }
@@ -21,7 +38,7 @@ struct SceneWatchView: View {
 
     var body: some View {
         Group {
-            if let s = scenario, let c = s.curriculum, !(c.dialogue ?? []).isEmpty {
+            if !awaitingFresh, let s = scenario, let c = s.curriculum, !(c.dialogue ?? []).isEmpty {
                 WatchView(counterpart: watchCounterpart(for: s),
                           savedDialogue: sceneDialogue(s, c))
                     .environmentObject(appState)
@@ -65,10 +82,12 @@ struct SceneWatchView: View {
 
     // MARK: - Scene plumbing (same rules as the book page)
 
-    /// One generation per subject — the result is persisted on the scenario,
-    /// so the book in Practice and this player share the same scene forever.
+    /// First watch generates the book's scene; a `freshTake` open generates a
+    /// NEW take of the template and absorbs it into the book — the latest
+    /// scene plays, study items accumulate, mastery survives.
     private func ensureCurriculum(force: Bool = false) async {
-        guard let s = scenario, (s.curriculum?.dialogue ?? []).isEmpty,
+        guard let s = scenario,
+              awaitingFresh || (s.curriculum?.dialogue ?? []).isEmpty,
               force || !generating else { return }
         guard !generating else { return }
         generating = true
@@ -77,6 +96,7 @@ struct SceneWatchView: View {
             let counterpart = s.counterpartId.flatMap { id in
                 appState.counterparts.first { $0.id == id }
             }
+            let hasScene = !(s.curriculum?.dialogue ?? []).isEmpty
             let curriculum = try await ScenarioCurriculumEngine.generate(
                 scenario: s,
                 persona: appState.persona,
@@ -84,12 +104,20 @@ struct SceneWatchView: View {
                 proficiency: appState.proficiency,
                 targetLanguage: appState.targetLanguage,
                 weakVocabAreas: appState.learnerProfile.weakVocabAreas,
-                recurringMistakes: appState.learnerProfile.recurringMistakes
+                recurringMistakes: appState.learnerProfile.recurringMistakes,
+                avoidTitles: hasScene ? [s.curriculum?.dialogueTitle ?? ""] : [],
+                runKey: hasScene ? runKey : nil
             )
             guard var fresh = scenario else { return }
-            fresh.curriculum = curriculum
+            if var book = fresh.curriculum, hasScene {
+                book.absorb(curriculum)
+                fresh.curriculum = book
+            } else {
+                fresh.curriculum = curriculum
+            }
             appState.saveScenario(fresh)
             appState.refreshScenarioMastery(id: scenarioId)
+            awaitingFresh = false
         } catch {
             generationError = error.localizedDescription
         }

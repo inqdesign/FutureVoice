@@ -19,7 +19,17 @@ struct WatchTab: View {
     @EnvironmentObject private var appState: AppState
 
     @State private var composer: ComposerConfig?
-    @State private var watchScene: Scenario?
+    @State private var watchScene: WatchTarget?
+
+    /// What to play + whether to write a new take. A saved scenario is a
+    /// TEMPLATE — tapping its card generates a fresh scene every time
+    /// (replaying past material is Practice's job); a just-minted scenario
+    /// from the composer generates its first scene.
+    struct WatchTarget: Identifiable, Hashable {
+        let scenario: Scenario
+        let fresh: Bool
+        var id: UUID { scenario.id }
+    }
     @State private var showingPeople = false
     @State private var showingNewVoice = false
 
@@ -60,7 +70,7 @@ struct WatchTab: View {
                                       ctaTitle: "Watch", ctaIcon: "play.fill") { scenario in
                     appState.saveScenario(scenario)
                     composer = nil
-                    watchScene = scenario
+                    watchScene = WatchTarget(scenario: scenario, fresh: false)
                 }
                 .environmentObject(appState)
             }
@@ -71,8 +81,8 @@ struct WatchTab: View {
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView().environmentObject(appState)
             }
-            .navigationDestination(item: $watchScene) { s in
-                SceneWatchView(scenarioId: s.id)
+            .navigationDestination(item: $watchScene) { t in
+                SceneWatchView(scenarioId: t.scenario.id, freshTake: t.fresh)
                     .environmentObject(appState)
             }
         }
@@ -159,7 +169,7 @@ struct WatchTab: View {
             } header: {
                 Text("Your scenarios")
             } footer: {
-                Text("The situations you've built — tap to watch the scene again.")
+                Text("The situations you've built — every watch writes a fresh take. Past takes live in Practice.")
             }
         }
     }
@@ -171,7 +181,7 @@ struct WatchTab: View {
         let partner = personaName
             ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role)
         return Button {
-            watchScene = s
+            watchScene = WatchTarget(scenario: s, fresh: true)
         } label: {
             VStack(alignment: .leading, spacing: 12) {
                 if let personaName {
