@@ -96,7 +96,7 @@ struct SetupFlowView: View {
         } header: {
             Text("How comfortable are you right now?")
         } footer: {
-            Text("This calibrates how your fluent self speaks and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.")
+            Text("You're about to build your fluent self — another you that already speaks fluent English. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.")
         }
     }
 

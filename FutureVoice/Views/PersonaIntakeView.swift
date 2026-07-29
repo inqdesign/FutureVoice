@@ -89,7 +89,7 @@ struct PersonaIntakeView: View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
                 question: "What should I call you?",
-                detail: "Your fluent self wants to know you. The more you share, the more I'll sound like a version of you — not a textbook.")
+                detail: "We're building your fluent self — it'll speak in your own voice at the end of this. The more you share, the more it'll sound like you, not a textbook.")
             VStack(spacing: 16) {
                 PhotosPicker(selection: $avatarPick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
