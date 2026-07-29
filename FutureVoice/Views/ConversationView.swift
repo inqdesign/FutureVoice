@@ -112,6 +112,21 @@ struct ConversationView: View {
     /// meter reading "voiced" forever. If the TRANSCRIPT has been still this
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
+    /// How much true silence before warming the network path. Well under the
+    /// shortest VAD tier (1.5s), so by the time the turn actually fires the
+    /// TLS handshake + auth token are already in place.
+    private static let preconnectAfterSilenceSeconds: Double = 0.8
+    /// One preconnect per listening phase — reset when the mic restarts.
+    @State private var didPreconnectThisTurn = false
+    /// Per-turn latency breadcrumbs, accumulated across the VAD → finalize →
+    /// Gemini → first-TTS-chunk pipeline and logged once when the fluent
+    /// self actually starts SPEAKING (the moment users experience as "the
+    /// answer arrived"). Keys: vad_wait_ms, finalize_ms, gemini_ms,
+    /// audio ("aac"/"wav"/"none"/KB), tts ("stream"/"buffered"/"cache"),
+    /// tts_first_ms, total_ms.
+    @State private var turnTiming: [String: String] = [:]
+    /// When the user finished speaking (endpoint fired) — anchor for total_ms.
+    @State private var turnEndedSpeakingAt: Date?
     @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -510,6 +525,13 @@ struct ConversationView: View {
                 let audioSilence = Date().timeIntervalSince(lastVoiced)
                 let sinceTextChange = lastTranscriptChangeAt.map { Date().timeIntervalSince($0) }
                     ?? .greatestFiniteMagnitude
+                // The user has plausibly finished — spend the rest of the VAD
+                // wait warming the network path (TLS + auth token) so the turn
+                // request fires onto a hot connection.
+                if audioSilence >= Self.preconnectAfterSilenceSeconds, !didPreconnectThisTurn {
+                    didPreconnectThisTurn = true
+                    GeminiClient.shared.preconnect()
+                }
                 // Primary: real audio silence for the tier duration, AND the
                 // recognizer's partial has settled (its lag would otherwise
                 // truncate the turn's tail).
@@ -519,6 +541,8 @@ struct ConversationView: View {
                 // fire on the old transcript-quiet signal as an upper bound.
                 let transcriptSettled = sinceTextChange >= Self.noisyRoomFallbackSeconds
                 guard audioSettled || transcriptSettled else { continue }
+                turnTiming = ["vad_wait_ms": String(Int(audioSilence * 1000))]
+                turnEndedSpeakingAt = Date()
                 HapticEngine.voiceSent()
                 await stopAndSend()
                 return
@@ -712,6 +736,7 @@ struct ConversationView: View {
                            captureToFile: true)   // keep the user's own audio for listen-back
             userSpeechStartedAt = Date()
             lastTranscriptChangeAt = nil
+            didPreconnectThisTurn = false
             phase = .listening
             startEndpointMonitor()
         } catch {
@@ -753,7 +778,9 @@ struct ConversationView: View {
         // for the recognizer's FINAL pass — the committed turn text is the
         // language-model-rescored version, not the last raw partial.
         phase = .thinking
+        let finalizeStarted = Date()
         let finalText = await live.stopAndFinalize()
+        turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
         let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
@@ -809,6 +836,12 @@ struct ConversationView: View {
                                       base64Data: wav.base64EncodedString())
                 }
             }
+            switch turnAudio?.mimeType {
+            case "audio/aac": turnTiming["audio"] = "aac"
+            case "audio/wav": turnTiming["audio"] = "wav"
+            default:          turnTiming["audio"] = "none"
+            }
+            let geminiStarted = Date()
             let payload: ConversationTurnPayload
             do {
                 payload = try await turnPayload(audio: turnAudio, turnId: turnId)
@@ -824,6 +857,7 @@ struct ConversationView: View {
                 turnAudio = nil
                 payload = try await turnPayload(audio: nil, turnId: turnId)
             }
+            turnTiming["gemini_ms"] = String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
             // The screen may have closed while the reply was in flight.
             guard !isTornDown else { return }
             // Upgrade the turn to what the model actually HEARD (audio is the
@@ -923,6 +957,23 @@ struct ConversationView: View {
         Task { await requestReply(forUserTurn: id) }
     }
 
+    /// Log the accumulated per-turn latency breadcrumbs exactly once, at the
+    /// moment the fluent self's voice starts (what the user experiences as
+    /// "the answer arrived"). No-op for non-turn speech (openers) — their
+    /// timing dict is empty.
+    private func logTurnTiming(tts: String, ttsFirstMs: Int? = nil) {
+        guard !turnTiming.isEmpty else { return }
+        var props = turnTiming
+        props["tts"] = tts
+        if let ttsFirstMs { props["tts_first_ms"] = String(ttsFirstMs) }
+        if let anchor = turnEndedSpeakingAt {
+            props["total_ms"] = String(Int(Date().timeIntervalSince(anchor) * 1000))
+        }
+        turnTiming = [:]
+        turnEndedSpeakingAt = nil
+        Telemetry.log("talk_turn_timing", props)
+    }
+
     private func speakAndAppend(_ text: String, voiceId: String,
                                 idempotencyKey: String? = nil) async throws {
         guard !isTornDown else { return }
@@ -931,8 +982,10 @@ struct ConversationView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
             try appendTurnAndPlay(cached, timings: timings, transcript: text)
+            logTurnTiming(tts: "cache")
             return
         }
+        let ttsStarted = Date()
 
         // Streaming-first: the fluent self starts talking on the FIRST PCM
         // chunk (~0.2s of audio) instead of after the whole file downloads.
@@ -973,6 +1026,8 @@ struct ConversationView: View {
                         ))
                         didSaveCurrentSession = false
                         phase = .speaking
+                        logTurnTiming(tts: "stream",
+                                      ttsFirstMs: Int(Date().timeIntervalSince(ttsStarted) * 1000))
                     } catch {
                         // Engine refused to start — keep collecting the PCM;
                         // we'll play the accumulated audio the buffered way.
@@ -1006,12 +1061,14 @@ struct ConversationView: View {
                     fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
+                logTurnTiming(tts: "buffered")
                 return
             case .mp3(let data) where !data.isEmpty:
                 // Older edge deploy (no streaming support) — identical to the
                 // pre-streaming behavior.
                 PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(data, timings: [], transcript: text)
+                logTurnTiming(tts: "buffered")
                 return
             default:
                 break   // empty payload → buffered fallback below
@@ -1044,6 +1101,7 @@ struct ConversationView: View {
                                       idempotencyKey: idempotencyKey)
         PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
         try appendTurnAndPlay(newAudio, timings: newTimings, transcript: text)
+        logTurnTiming(tts: "buffered")
     }
 
     /// Buffered playback path: append the fluent-self turn and play the full

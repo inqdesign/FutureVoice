@@ -63,6 +63,23 @@ final class GeminiClient {
 
     // MARK: - Public
 
+    /// Fire-and-forget connection warm-up. Called during the VAD silence
+    /// window so the TCP+TLS handshake (and a fresh cached auth token)
+    /// happens BEFORE the turn request instead of on its critical path —
+    /// on a cold cellular radio that handshake alone is 200–600ms. The
+    /// OPTIONS preflight needs no auth and bills nothing; ElevenLabs shares
+    /// the same host + session, so one warm-up covers both legs.
+    func preconnect() {
+        let url = functionsBaseURL.appendingPathComponent("gemini")
+        let session = self.session
+        Task.detached(priority: .utility) {
+            var request = URLRequest(url: url)
+            request.httpMethod = "OPTIONS"
+            _ = try? await session.data(for: request)
+            _ = try? await SupabaseProvider.shared.auth.session   // refresh token cache
+        }
+    }
+
     func send(
         system: String,
         messages: [Message],
