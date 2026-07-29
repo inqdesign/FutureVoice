@@ -1,4 +1,64 @@
 import Foundation
+import Network
+
+/// Live snapshot of the current network path, for adapting request payloads
+/// BEFORE they fail (e.g. skip the audio attachment on a constrained link
+/// instead of burning 40s discovering the uplink can't carry it).
+final class NetworkPathStatus: @unchecked Sendable {
+    static let shared = NetworkPathStatus()
+
+    private let monitor = NWPathMonitor()
+    private let lock = NSLock()
+    private var _isExpensive = false      // cellular / hotspot
+    private var _isConstrained = false    // Low Data Mode
+    private var _isSatisfied = true
+
+    private init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            guard let self else { return }
+            lock.lock()
+            _isExpensive = path.isExpensive
+            _isConstrained = path.isConstrained
+            _isSatisfied = path.status == .satisfied
+            lock.unlock()
+        }
+        monitor.start(queue: DispatchQueue(label: "network-path-status"))
+    }
+
+    var isExpensive: Bool { lock.lock(); defer { lock.unlock() }; return _isExpensive }
+    var isConstrained: Bool { lock.lock(); defer { lock.unlock() }; return _isConstrained }
+    var isSatisfied: Bool { lock.lock(); defer { lock.unlock() }; return _isSatisfied }
+
+    /// One-word label for telemetry ("wifi" / "cellular" / "constrained" / "offline").
+    var label: String {
+        if !isSatisfied { return "offline" }
+        if isConstrained { return "constrained" }
+        return isExpensive ? "cellular" : "wifi"
+    }
+}
+
+/// Fire-and-forget error breadcrumbs → `client_events` (write-only RLS).
+/// Never throws, never blocks the caller, silently drops when signed out —
+/// a telemetry failure must not become a second user-facing failure.
+enum Telemetry {
+    static func log(_ event: String, _ properties: [String: String] = [:]) {
+        Task.detached(priority: .utility) {
+            struct Row: Encodable {
+                let user_id: String
+                let event: String
+                let properties: [String: String]
+            }
+            guard let session = try? await SupabaseProvider.shared.auth.session else { return }
+            var props = properties
+            props["network"] = NetworkPathStatus.shared.label
+            try? await SupabaseProvider.shared
+                .from("client_events")
+                .insert(Row(user_id: session.user.id.uuidString,
+                            event: event, properties: props))
+                .execute()
+        }
+    }
+}
 
 /// Networking defaults for the Supabase Edge Function clients (Gemini,
 /// ElevenLabs). Two cellular-hardening pieces:

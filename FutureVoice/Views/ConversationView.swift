@@ -789,17 +789,25 @@ struct ConversationView: View {
             // Attach the user's own recorded utterance so Gemini hears what
             // was ACTUALLY said — on-device STT is the weak link for accented
             // speech; the model returns its own verbatim transcript alongside
-            // the reply. ~32 kbps AAC, so even a long turn stays small.
+            // the reply. AAC-ADTS at ~32 kbps (8–13× smaller than the old WAV
+            // path) so the upload survives weak cellular uplinks; WAV remains
+            // as the encode-failure fallback. On a constrained link (Low Data
+            // Mode / degraded path) skip the attachment entirely — a text-only
+            // turn NOW beats an audio turn that dies at the 40s timeout.
             var turnAudio: GeminiClient.Message.InlineAudio?
-            if let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
-               let url = turn.audioURL,
-               // Convert the .m4a capture to 16kHz mono WAV: the previous path
-               // shipped raw .m4a bytes mislabelled "audio/aac", so the model
-               // could ignore the audio and score grammar off the STT text.
-               let wav = AudioLoudness.wav16kMono(fromFileAt: url),
-               !wav.isEmpty, wav.count <= 3_000_000 {   // ~90s at 16kHz mono
-                turnAudio = .init(mimeType: "audio/wav",
-                                  base64Data: wav.base64EncodedString())
+            let path = NetworkPathStatus.shared
+            if path.isSatisfied, !path.isConstrained,
+               let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
+               let url = turn.audioURL {
+                if let aac = AudioLoudness.aacADTS16kMono(fromFileAt: url),
+                   !aac.isEmpty, aac.count <= 600_000 {   // ~2min at 32kbps
+                    turnAudio = .init(mimeType: "audio/aac",
+                                      base64Data: aac.base64EncodedString())
+                } else if let wav = AudioLoudness.wav16kMono(fromFileAt: url),
+                          !wav.isEmpty, wav.count <= 3_000_000 {   // ~90s at 16kHz
+                    turnAudio = .init(mimeType: "audio/wav",
+                                      base64Data: wav.base64EncodedString())
+                }
             }
             let payload: ConversationTurnPayload
             do {
@@ -810,6 +818,9 @@ struct ConversationView: View {
                 // retryable reason, silently rerun the exact pre-audio call —
                 // same idempotency key, so no second charge — instead of
                 // showing the error chip. Worst case = old behavior.
+                Telemetry.log("talk_audio_rescue", [
+                    "error": (error as NSError).domain + ":\((error as NSError).code)",
+                ])
                 turnAudio = nil
                 payload = try await turnPayload(audio: nil, turnId: turnId)
             }
@@ -840,6 +851,10 @@ struct ConversationView: View {
             // dead-end alert, so a network blip doesn't lose what they said.
             // Out-of-credits is NOT retryable — flag it so the row shows the
             // paywall instead of a retry loop that can never succeed.
+            Telemetry.log("talk_turn_error", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "out_of_credits": error.isOutOfCredits ? "1" : "0",
+            ])
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
             phase = .idle
@@ -865,7 +880,11 @@ struct ConversationView: View {
                 // Keyed to the user turn: the inline Retry button and the
                 // audio→text rescue re-run this same logical request without
                 // a second charge.
-                idempotencyKey: "turn:\(turnId.uuidString)"
+                idempotencyKey: "turn:\(turnId.uuidString)",
+                // Audio-attached calls get a short idle timeout so a stalled
+                // upload fails into the text-only rescue in seconds instead
+                // of eating the session-wide 40s window first.
+                requestTimeout: audio != nil ? 20 : nil
             )
             guard !payload.reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw GeminiError.invalidResponse
@@ -998,6 +1017,10 @@ struct ConversationView: View {
                 break   // empty payload → buffered fallback below
             }
         } catch {
+            Telemetry.log("talk_tts_stream_fallback", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "mid_stream": streamTurnId != nil ? "1" : "0",
+            ])
             if let id = streamTurnId {
                 // Audio already started, then the stream broke mid-sentence
                 // (cellular loves doing this): stop cleanly, drop the

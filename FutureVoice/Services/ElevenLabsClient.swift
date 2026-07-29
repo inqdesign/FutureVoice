@@ -191,7 +191,17 @@ final class ElevenLabsClient {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (bytes, response) = try await session.bytes(for: request)
+        // One immediate re-dial on a transient connect failure: a cellular
+        // radio blip at stream OPEN otherwise cascades straight into the
+        // buffered fallback, which doubles perceived latency for the turn.
+        // (Mid-stream breaks stay the caller's fallback to handle.)
+        var opened: (URLSession.AsyncBytes, URLResponse)
+        do {
+            opened = try await session.bytes(for: request)
+        } catch where error.isTransientNetworkError {
+            opened = try await session.bytes(for: request)
+        }
+        let (bytes, response) = opened
         guard let http = response as? HTTPURLResponse else {
             throw ElevenLabsError.invalidResponse
         }

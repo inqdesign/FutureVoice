@@ -214,6 +214,96 @@ enum AudioLoudness {
         return wavData(fromPCM16: pcm, sampleRate: 16_000, channels: 1)
     }
 
+    /// Same source → AAC-LC wrapped in an ADTS stream (`audio/aac`) at
+    /// ~32 kbps — 8–13× smaller than the WAV path, which is the difference
+    /// between a turn upload that survives a weak cellular uplink and one
+    /// that times out. ADTS is what the `audio/aac` MIME actually names (the
+    /// old bug was raw `.m4a` bytes under that label), so the model ingests
+    /// it instead of quietly falling back to the STT text. Returns nil on
+    /// any failure — callers fall back to `wav16kMono`, then to no audio.
+    static func aacADTS16kMono(fromFileAt url: URL) -> Data? {
+        // Stage 1: decode + resample to 16 kHz mono float PCM.
+        guard let inFile = try? AVAudioFile(forReading: url) else { return nil }
+        let inFormat = inFile.processingFormat
+        let frameCount = AVAudioFrameCount(inFile.length)
+        guard frameCount > 0,
+              let inBuffer = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: frameCount),
+              (try? inFile.read(into: inBuffer)) != nil,
+              inBuffer.frameLength > 0 else { return nil }
+
+        guard let pcm16k = AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                                         sampleRate: 16_000, channels: 1,
+                                         interleaved: false),
+              let down = AVAudioConverter(from: inFormat, to: pcm16k) else { return nil }
+        let ratio = 16_000.0 / inFormat.sampleRate
+        let capacity = AVAudioFrameCount(Double(inBuffer.frameLength) * ratio) + 4096
+        guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: pcm16k, frameCapacity: capacity) else { return nil }
+
+        var fedDown = false
+        var downError: NSError?
+        let downStatus = down.convert(to: pcmBuffer, error: &downError) { _, inStatus in
+            if fedDown { inStatus.pointee = .noDataNow; return nil }
+            fedDown = true
+            inStatus.pointee = .haveData
+            return inBuffer
+        }
+        guard downStatus != .error, downError == nil, pcmBuffer.frameLength > 0 else { return nil }
+
+        // Stage 2: encode AAC-LC and frame each packet with an ADTS header.
+        var aacDesc = AudioStreamBasicDescription(
+            mSampleRate: 16_000, mFormatID: kAudioFormatMPEG4AAC, mFormatFlags: 0,
+            mBytesPerPacket: 0, mFramesPerPacket: 1024, mBytesPerFrame: 0,
+            mChannelsPerFrame: 1, mBitsPerChannel: 0, mReserved: 0)
+        guard let aacFormat = AVAudioFormat(streamDescription: &aacDesc),
+              let encoder = AVAudioConverter(from: pcm16k, to: aacFormat) else { return nil }
+        encoder.bitRate = 32_000
+
+        var fedPCM = false
+        var adts = Data()
+        let maxPacket = max(encoder.maximumOutputPacketSize, 768)
+        while true {
+            let outBuf = AVAudioCompressedBuffer(format: aacFormat,
+                                                 packetCapacity: 128,
+                                                 maximumPacketSize: maxPacket)
+            var encError: NSError?
+            let status = encoder.convert(to: outBuf, error: &encError) { _, inStatus in
+                if fedPCM { inStatus.pointee = .endOfStream; return nil }
+                fedPCM = true
+                inStatus.pointee = .haveData
+                return pcmBuffer
+            }
+            guard status != .error, encError == nil else { return nil }
+            let packets = Int(outBuf.packetCount)
+            if packets > 0, let descs = outBuf.packetDescriptions {
+                for i in 0..<packets {
+                    let d = descs[i]
+                    let size = Int(d.mDataByteSize)
+                    guard size > 0 else { continue }
+                    adts.append(Self.adtsHeader(payloadSize: size))
+                    adts.append(Data(bytes: outBuf.data.advanced(by: Int(d.mStartOffset)),
+                                     count: size))
+                }
+            }
+            if status == .endOfStream || packets == 0 { break }
+        }
+        return adts.isEmpty ? nil : adts
+    }
+
+    /// 7-byte ADTS header for one AAC-LC packet: 16 kHz (sampling index 8),
+    /// mono (channel config 1), no CRC.
+    private static func adtsHeader(payloadSize: Int) -> Data {
+        let frameLength = payloadSize + 7
+        var h = [UInt8](repeating: 0, count: 7)
+        h[0] = 0xFF
+        h[1] = 0xF1
+        h[2] = 0x60                                            // AAC-LC, freq idx 8
+        h[3] = UInt8(0x40 | ((frameLength >> 11) & 0x03))      // chan cfg 1 + len hi
+        h[4] = UInt8((frameLength >> 3) & 0xFF)
+        h[5] = UInt8(((frameLength & 0x07) << 5) | 0x1F)
+        h[6] = 0xFC
+        return Data(h)
+    }
+
     /// Peak-normalizes a recorded voice-clone WAV to near full scale BEFORE it
     /// is uploaded to ElevenLabs. IVC reproduces the loudness of its sample, so
     /// a quiet phone-mic take (often -26 to -34 dBFS) yields a quiet clone that

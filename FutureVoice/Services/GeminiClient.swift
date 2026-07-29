@@ -72,7 +72,8 @@ final class GeminiClient {
         searchGrounding: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
-        jsonResponse: Bool = false
+        jsonResponse: Bool = false,
+        requestTimeout: TimeInterval? = nil
     ) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -141,6 +142,10 @@ final class GeminiClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        // Callers on a fallback ladder (audio turn → text-only rescue) pass a
+        // shorter idle timeout so the rescue engages in seconds, not after
+        // the session-wide 40s window.
+        if let requestTimeout { request.timeoutInterval = requestTimeout }
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         // A caller-supplied key makes retries of the SAME logical request
         // (e.g. the inline turn Retry button) free — the edge function's
@@ -178,7 +183,8 @@ final class GeminiClient {
         temperature: Double = 0.4,
         searchGrounding: Bool = false,
         purpose: String? = nil,
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        requestTimeout: TimeInterval? = nil
     ) async throws -> T {
         let raw = try await send(
             system: system,
@@ -189,7 +195,8 @@ final class GeminiClient {
             searchGrounding: searchGrounding,
             purpose: purpose,
             idempotencyKey: idempotencyKey,
-            jsonResponse: true
+            jsonResponse: true,
+            requestTimeout: requestTimeout
         )
         guard let jsonData = Self.extractJSON(from: raw) else {
             throw GeminiError.jsonNotFound(raw: raw)
