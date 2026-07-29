@@ -4,9 +4,11 @@ import SwiftUI
 /// onboarding (`PersonaIntakeView`). Name is typed, the relationship is a
 /// chip pick, and the relationship then TAILORS the three narrative cards
 /// (a fellow Kita parent gets asked about the kids; a manager about 1:1s).
-/// Narrative answers are speak-first with a typing fallback, parsed into a
-/// `Counterpart` draft with Gemini, and land in the form prefilled so the
-/// user can tweak + pick a voice. A straight-to-form escape stays for users
+/// Narrative cards are tap-first — common answers as chips (with free-text
+/// add) plus a speak-or-type field for what a chip can't say; picks and
+/// narration merge into one answer, parsed into a `Counterpart` draft with
+/// Gemini, and land in the form prefilled so the user can tweak + pick a
+/// voice. A straight-to-form escape stays for users
 /// who'd rather just type fields.
 struct CounterpartVoiceIntakeView: View {
     @EnvironmentObject private var appState: AppState
@@ -23,6 +25,9 @@ struct CounterpartVoiceIntakeView: View {
     @State private var kind: RelationshipKind?
     @State private var kindDetail = ""
     @State private var narrativeAnswers = ["", "", ""]
+    /// Chip picks per narrative card — joined into the answer alongside
+    /// whatever was spoken or typed.
+    @State private var narrativeChips: [[String]] = [[], [], []]
     @State private var interests: [String] = []
     @State private var styleTraits: [String] = []
     @State private var styleNotes = ""
@@ -164,10 +169,15 @@ struct CounterpartVoiceIntakeView: View {
         let card = (kind ?? .other).cards[index]
         return VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(question: card.question, detail: card.detail)
-            IntakeHints(bullets: card.hints)
+            // Tap-first: common answers as chips (+ free-text add); the
+            // speak/type field below carries anything a chip can't say.
+            ChipPickerField(
+                presets: card.chips,
+                selection: $narrativeChips[index])
             SpeakOrTypeField(
                 text: $narrativeAnswers[index],
-                locale: $locale)
+                locale: $locale,
+                placeholder: "Anything more? Type — or tap the mic and talk.")
         }
     }
 
@@ -232,15 +242,25 @@ struct CounterpartVoiceIntakeView: View {
 
         var sections = ["Their name: \(name)"]
         if !kindLabel.isEmpty { sections.append("Relationship to me: \(kindLabel)") }
-        for (card, answer) in zip(cards, narrativeAnswers) where !answer.isEmpty {
-            sections.append("Q: \(card.question)\nA: \(answer)")
+        for (i, card) in cards.enumerated() {
+            // Chip picks + whatever was spoken/typed form ONE answer.
+            var parts: [String] = []
+            if !narrativeChips[i].isEmpty {
+                parts.append(narrativeChips[i].joined(separator: ", "))
+            }
+            let typed = narrativeAnswers[i].trimmingCharacters(in: .whitespacesAndNewlines)
+            if !typed.isEmpty { parts.append(typed) }
+            if !parts.isEmpty {
+                sections.append("Q: \(card.question)\nA: \(parts.joined(separator: ". "))")
+            }
         }
         if !interests.isEmpty {
             sections.append("What they're into: \(interests.joined(separator: ", "))")
         }
         if !styleLine.isEmpty { sections.append("How they talk: \(styleLine)") }
 
-        if narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty }) {
+        if narrativeAnswers.allSatisfy({ $0.trimmingCharacters(in: .whitespaces).isEmpty })
+            && narrativeChips.allSatisfy(\.isEmpty) {
             // Nothing to extract — skip the LLM and go straight to the form.
             var draft = Counterpart.empty
             draft.name = name
@@ -285,165 +305,151 @@ private enum RelationshipKind: String, CaseIterable, Identifiable {
     struct NarrativeCard {
         let question: String
         let detail: String
-        let hints: [String]
+        /// Tappable common answers for this question — picked ones join the
+        /// narrative answer verbatim; the free-text row adds custom ones.
+        let chips: [String]
     }
 
-    private static let speakFreely = "Speak freely — your native language is fine."
+    private static let tapOrTalk = "Tap what fits, add your own — or just talk, your native language is fine."
 
     var cards: [NarrativeCard] {
         switch self {
         case .friend: return [
             .init(question: "How did you two meet?",
-                  detail: Self.speakFreely,
-                  hints: ["Where and when you met",
-                          "How long you've been friends",
-                          "How often you talk these days"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["From school", "From work", "Through friends",
+                          "Online", "Childhood friends", "Met recently"]),
             .init(question: "What's their life like right now?",
                   detail: "",
-                  hints: ["What they do",
-                          "Where they live",
-                          "Big things going on for them lately"]),
+                  chips: ["Works full-time", "Studying", "Recently moved",
+                          "Raising kids", "Lives nearby", "Lives abroad"]),
             .init(question: "What's just between you two?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Inside jokes and running topics",
-                          "Recent events in their life",
-                          "What they know (and don't) about your life"])
+                  chips: ["Inside jokes", "We tease each other", "Deep talks",
+                          "Mostly banter", "Shared hobby",
+                          "They know everything about me"])
         ]
         case .family: return [
             .init(question: "Who are they in your family?",
-                  detail: Self.speakFreely,
-                  hints: ["Sibling, parent, cousin — and what you call them",
-                          "Where they live now",
-                          "How often you talk or visit"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Older sibling", "Younger sibling", "Parent",
+                          "Grandparent", "Cousin", "In-law"]),
             .init(question: "What's going on in their life?",
                   detail: "",
-                  hints: ["Work, health, hobbies",
-                          "Recent family events",
-                          "What they're busy with lately"]),
+                  chips: ["Busy with work", "Retired", "New hobby",
+                          "Just moved", "Raising kids", "Health ups and downs"]),
             .init(question: "What do you two usually talk about?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Topics that always come up",
-                          "Family running jokes",
-                          "What they nag or ask you about"])
+                  chips: ["Family news", "Food and recipes", "Health",
+                          "Old memories", "Money and plans",
+                          "They nag me lovingly"])
         ]
         case .partner: return [
             .init(question: "How did your story start?",
-                  detail: Self.speakFreely,
-                  hints: ["How long you've been together",
-                          "How you met",
-                          "Living together or apart?"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Together for years", "Newly dating", "Met through friends",
+                          "Met online", "Living together", "Long distance"]),
             .init(question: "What fills your conversations these days?",
                   detail: "",
-                  hints: ["Daily routines you share",
-                          "Plans you're making together",
-                          "What you did last weekend"]),
+                  chips: ["Daily logistics", "Future plans", "Food and cooking",
+                          "Travel plans", "Work stories", "Our pets"]),
             .init(question: "What's your dynamic like?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["How you tease each other",
-                          "Pet names or running jokes",
-                          "What they always call you out on"])
+                  chips: ["Playful teasing", "Pet names", "Lots of inside jokes",
+                          "Calm and cozy", "We debate everything",
+                          "They call me out"])
         ]
         case .coworker: return [
             .init(question: "How do you work together?",
-                  detail: Self.speakFreely,
-                  hints: ["Same team or cross-team — your roles",
-                          "How long you've worked together",
-                          "Projects you share"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Same team", "Cross-team", "We share projects",
+                          "Desk neighbors", "Worked together for years",
+                          "They're new"]),
             .init(question: "What do your work chats look like?",
                   detail: "",
-                  hints: ["Standups, reviews, lunch talk?",
-                          "Topics that come up daily",
-                          "Formal or casual between you two?"]),
+                  chips: ["Daily standups", "Reviews", "Lunch together",
+                          "Coffee breaks", "Mostly chat apps", "Casual between us"]),
             .init(question: "What's the context around you two?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Current projects or deadlines",
-                          "Office running jokes",
-                          "What's happening at the company lately"])
+                  chips: ["Deadline crunch", "Office jokes", "New project starting",
+                          "We vent together", "After-work drinks",
+                          "Company changes going on"])
         ]
         case .manager: return [
             .init(question: "What's your working relationship?",
-                  detail: Self.speakFreely,
-                  hints: ["Their role and yours",
-                          "How long they've been your manager",
-                          "1:1s, reviews — how often you talk"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["My direct manager", "Weekly 1:1s", "Manager for years",
+                          "New to me", "Skip-level", "We talk daily"]),
             .init(question: "What do you usually discuss?",
                   detail: "",
-                  hints: ["Projects, feedback, career talk",
-                          "How formal your conversations are",
-                          "What they care about most"]),
+                  chips: ["Project updates", "Feedback", "Career growth",
+                          "Priorities", "Pretty formal", "Fairly casual"]),
             .init(question: "What else should I know about them?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Their management style",
-                          "Recent team events",
-                          "What they know about your life outside work"])
+                  chips: ["Direct style", "Supportive", "Detail-oriented",
+                          "Big-picture person", "Busy calendar",
+                          "Knows my life a bit"])
         ]
         case .fellowParent: return [
             .init(question: "How are your families connected?",
-                  detail: Self.speakFreely,
-                  hints: ["Your kids' names and ages",
-                          "Same Kita, school, or playground?",
-                          "How long you've known each other"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Same Kita", "Same school", "Same class",
+                          "Playground friends", "Kids are best friends",
+                          "Known for years"]),
             .init(question: "Where do you usually run into each other?",
                   detail: "",
-                  hints: ["Drop-off, pick-up, playdates",
-                          "Birthday parties, school events",
-                          "How often you end up chatting"]),
+                  chips: ["Drop-off", "Pick-up", "Playdates",
+                          "Birthday parties", "School events", "The playground"]),
             .init(question: "What do you two talk about?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["The kids, obviously — what else?",
-                          "School news and logistics",
-                          "What you know about their family"])
+                  chips: ["The kids", "School news", "Logistics and schedules",
+                          "Weekend plans", "Parenting tips", "Neighborhood news"])
         ]
         case .neighbor: return [
             .init(question: "How did you become neighbors?",
-                  detail: Self.speakFreely,
-                  hints: ["Next door, same building, same street?",
-                          "How long you've lived nearby",
-                          "How you first got talking"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Next door", "Same building", "Same street",
+                          "Neighbors for years", "I moved in recently",
+                          "They moved in recently"]),
             .init(question: "Where do your chats happen?",
                   detail: "",
-                  hints: ["Hallway, elevator, garden",
-                          "Neighborhood events",
-                          "How often you bump into each other"]),
+                  chips: ["Hallway", "Elevator", "Garden or yard",
+                          "On the street", "Neighborhood events",
+                          "Walking the dog"]),
             .init(question: "What do you usually talk about?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Neighborhood news",
-                          "Their family, pets, projects",
-                          "Favors you've traded"])
+                  chips: ["Neighborhood news", "The weather", "Their family",
+                          "Pets", "Home projects", "We trade favors"])
         ]
         case .teacher: return [
             .init(question: "Whose teacher — and of what?",
-                  detail: Self.speakFreely,
-                  hints: ["Your teacher, or your kid's?",
-                          "What they teach",
-                          "How long you've known them"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["My teacher", "My kid's teacher", "Language teacher",
+                          "Music teacher", "Sports coach", "Known for a while"]),
             .init(question: "When do you talk with them?",
                   detail: "",
-                  hints: ["Class, office hours, parent meetings",
-                          "How formal it is between you",
-                          "In person or over messages?"]),
+                  chips: ["In class", "Office hours", "Parent meetings",
+                          "Over messages", "Pretty formal", "Fairly relaxed"]),
             .init(question: "What else should I know about them?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Their style in class or meetings",
-                          "Recent school events",
-                          "What you wish you could discuss more easily"])
+                  chips: ["Strict but fair", "Encouraging", "Patient",
+                          "Talks fast", "Recent school events",
+                          "I want to ask more questions"])
         ]
         case .other: return [
             .init(question: "How do you know each other?",
-                  detail: Self.speakFreely,
-                  hints: ["Where and when you met",
-                          "How long you've known each other",
-                          "How often you talk"]),
+                  detail: Self.tapOrTalk,
+                  chips: ["Through friends", "From work", "From a hobby",
+                          "From the neighborhood", "Online", "Met recently"]),
             .init(question: "What's their life like?",
                   detail: "",
-                  hints: ["What they do",
-                          "Where they live",
-                          "Big things going on for them lately"]),
+                  chips: ["Works full-time", "Studying", "Raising kids",
+                          "Lives nearby", "Lives abroad", "Busy lately"]),
             .init(question: "What's the context between you?",
                   detail: "This is what makes the dialogues feel real.",
-                  hints: ["Recurring topics, inside jokes",
-                          "Recent events",
-                          "What they know about your life"])
+                  chips: ["Recurring topics", "Inside jokes", "We meet regularly",
+                          "Mostly texting", "They know my life well",
+                          "Still getting to know each other"])
         ]
         }
     }
