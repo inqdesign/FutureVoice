@@ -20,6 +20,8 @@ enum StudyWidgetRefresher {
         StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")
         refreshWords()
         refreshExpressions()
+        refreshProgress()
+        refreshBook()
         // The Free Talk widget has no data snapshot, but it wears the theme too
         // — reload it so a theme change repaints it like the others.
         WidgetCenter.shared.reloadTimelines(ofKind: freeTalkWidgetKind)
@@ -68,6 +70,85 @@ enum StudyWidgetRefresher {
             StudyWidgetSnapshot(updatedAt: Date(), total: keys.count, items: Array(items)),
             for: .expressions)
         WidgetCenter.shared.reloadTimelines(ofKind: StudyWidgetSection.expressions.widgetKind)
+    }
+
+    // MARK: - Progress widget
+
+    /// Today's goal + streak + review/study counts — the same deterministic
+    /// numbers the home dashboard shows, mirrored to the App Group so the
+    /// progress widget can render them without touching the stores directly.
+    @MainActor
+    private static func refreshProgress() {
+        let cal = Calendar.current
+        let todayStart = cal.startOfDay(for: Date())
+        let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
+        var todayMs = 0
+        for session in sessions where (session.endedAt ?? session.startedAt) >= todayStart {
+            for turn in session.turns where turn.role == .user {
+                todayMs += turn.durationMs
+            }
+        }
+        let goal = UserDefaults.standard.integer(forKey: "futurevoice.dailyGoalMinutes")
+        let vocab = VocabStore.shared
+        let snapshot = StudyProgressSnapshot(
+            updatedAt: Date(),
+            todaySeconds: todayMs / 1000,
+            goalMinutes: goal > 0 ? goal : 10,
+            streakDays: PracticeStats.snapshot().streakDays,
+            dueCount: DrillStore.shared.dueCount(),
+            studyingWords: vocab.studying.count,
+            studyingExpressions: vocab.studyingExpressions.count)
+        StudyWidgetSnapshotStore.saveProgress(snapshot)
+        WidgetCenter.shared.reloadTimelines(ofKind: progressWidgetKind)
+    }
+
+    // MARK: - Continue widget (one in-progress book → its detail page)
+
+    /// The single most-recently-studied book that's started but not mastered,
+    /// across Talk and Watch. Mirrors PracticeTab's "Studying" grid logic so
+    /// the widget points at the same book the app would. Progress is derived
+    /// deterministically (no LLM) — TalkCurriculum for talks, the scenario's
+    /// own curriculum for watch books.
+    @MainActor
+    private static func refreshBook() {
+        struct Candidate { var date: Date; var snapshot: StudyBookSnapshot }
+        var candidates: [Candidate] = []
+
+        // Talk books — started, not yet fully mastered.
+        let proficiency = CEFRLevel(rawValue:
+            UserDefaults.standard.string(forKey: "futurevoice.proficiency") ?? "") ?? .b1
+        let shadowAttempts = ShadowAttemptStore.shared.load()
+        let talks = SessionStore.shared.load()
+            .filter { $0.endedAt != nil && $0.archivedAt == nil }
+        for session in talks {
+            let cur = TalkCurriculum.build(session: session,
+                                           proficiency: proficiency,
+                                           shadowAttempts: shadowAttempts)
+            guard cur.masteredCount > 0, !cur.isMastered else { continue }
+            let date = cur.lastStudiedAt ?? session.endedAt ?? session.startedAt
+            candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
+                updatedAt: Date(), hasBook: true, kind: "talk",
+                id: session.id.uuidString, title: session.displayTitle,
+                subtitle: "Talk", mastered: cur.masteredCount, total: cur.totalCount)))
+        }
+
+        // Watch books — scenarios with progress that aren't archived/mastered.
+        for sc in ScenarioStore.shared.load() where !sc.isArchived && !sc.isMastered {
+            guard let cur = sc.curriculum, cur.masteredCount > 0 else { continue }
+            let masteryDate = (cur.words + cur.expressions + cur.shadowLines)
+                .compactMap(\.masteredAt).max()
+            let date = masteryDate ?? sc.lastUsedAt ?? sc.createdAt
+            let subtitle = sc.role.isEmpty ? (sc.isTopic == true ? "News topic" : "Situation")
+                                           : "with \(sc.role)"
+            candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
+                updatedAt: Date(), hasBook: true, kind: "watch",
+                id: sc.id.uuidString, title: sc.cardTitle,
+                subtitle: subtitle, mastered: cur.masteredCount, total: cur.totalCount)))
+        }
+
+        let best = candidates.max { $0.date < $1.date }?.snapshot ?? .empty
+        StudyWidgetSnapshotStore.saveBook(best)
+        WidgetCenter.shared.reloadTimelines(ofKind: bookWidgetKind)
     }
 
     /// Stored expression keys are lowercased; show with a capital first letter.

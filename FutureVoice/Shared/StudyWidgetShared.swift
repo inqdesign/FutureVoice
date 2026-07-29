@@ -94,6 +94,56 @@ enum StudyWidgetSection: String, CaseIterable {
 /// it and the app can reload it when the theme changes.
 let freeTalkWidgetKind = "FutureVoiceFreeTalkWidget"
 
+/// WidgetKit `kind` for the learning-progress widget (today's goal + streak +
+/// review/study counts). Shared so the app can reload it on any store change.
+let progressWidgetKind = "FutureVoiceProgressWidget"
+
+/// A glanceable snapshot of where the learner stands TODAY — everything the
+/// progress widget shows, written by `StudyWidgetRefresher` on every store
+/// change. All deterministic, computed in-app (no LLM).
+struct StudyProgressSnapshot: Codable {
+    var updatedAt: Date
+    var todaySeconds: Int         // seconds spoken today (user turns)
+    var goalMinutes: Int          // the daily goal (minutes)
+    var streakDays: Int           // consecutive days with ≥1 talk
+    var dueCount: Int             // SRS cards due right now
+    var studyingWords: Int        // notebook words being studied
+    var studyingExpressions: Int  // bookmarked phrases being studied
+
+    static let empty = StudyProgressSnapshot(
+        updatedAt: .distantPast, todaySeconds: 0, goalMinutes: 10,
+        streakDays: 0, dueCount: 0, studyingWords: 0, studyingExpressions: 0)
+}
+
+/// WidgetKit `kind` for the "continue studying" widget — the one book you're
+/// mid-way through, tappable straight into its detail page.
+let bookWidgetKind = "FutureVoiceBookWidget"
+
+/// The single most-recently-studied in-progress book (a Talk or a Watch book),
+/// mirrored to the App Group so the Continue widget can render its title +
+/// mastery progress and deep-link to its detail page.
+struct StudyBookSnapshot: Codable {
+    var updatedAt: Date
+    var hasBook: Bool
+    var kind: String        // "talk" | "watch"
+    var id: String          // the book's UUID string, for the deep link
+    var title: String
+    var subtitle: String    // short context: source / partner / "Talk"
+    var mastered: Int
+    var total: Int
+
+    static let empty = StudyBookSnapshot(
+        updatedAt: .distantPast, hasBook: false, kind: "talk",
+        id: "", title: "", subtitle: "", mastered: 0, total: 0)
+
+    /// Deep link to this book's detail page; falls back to the Studying shelf
+    /// when there's no in-progress book.
+    var deepLink: URL? {
+        guard hasBook, !id.isEmpty else { return URL(string: "futurevoice://practice") }
+        return URL(string: "futurevoice://book?type=\(kind)&id=\(id)")
+    }
+}
+
 enum StudyWidgetSnapshotStore {
     static let appGroupID = "group.com.roro.futurevoice"
 
@@ -138,6 +188,52 @@ enum StudyWidgetSnapshotStore {
 
     static func save(_ snapshot: StudyWidgetSnapshot, for section: StudyWidgetSection) {
         guard let url = fileURL(for: section),
+              let data = try? encoder.encode(snapshot) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    // MARK: Progress snapshot (its own file, one per install)
+
+    private static var progressURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("widget_progress.json")
+    }
+
+    static func loadProgress() -> StudyProgressSnapshot {
+        guard let url = progressURL,
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? decoder.decode(StudyProgressSnapshot.self, from: data) else {
+            return .empty
+        }
+        return snapshot
+    }
+
+    static func saveProgress(_ snapshot: StudyProgressSnapshot) {
+        guard let url = progressURL,
+              let data = try? encoder.encode(snapshot) else { return }
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    // MARK: Recent-book snapshot (its own file)
+
+    private static var bookURL: URL? {
+        FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+            .appendingPathComponent("widget_book.json")
+    }
+
+    static func loadBook() -> StudyBookSnapshot {
+        guard let url = bookURL,
+              let data = try? Data(contentsOf: url),
+              let snapshot = try? decoder.decode(StudyBookSnapshot.self, from: data) else {
+            return .empty
+        }
+        return snapshot
+    }
+
+    static func saveBook(_ snapshot: StudyBookSnapshot) {
+        guard let url = bookURL,
               let data = try? encoder.encode(snapshot) else { return }
         try? data.write(to: url, options: [.atomic])
     }
@@ -196,7 +292,11 @@ enum WidgetTheme {
     /// The frame tone — the accent, dimmed a notch so the bezel reads as a
     /// darker shade of the same hue, not the full-bright accent.
     static func frame(_ i: Int) -> Color {
-        let v = vividC[((i % vividC.count) + vividC.count) % vividC.count]
+        let idx = ((i % vividC.count) + vividC.count) % vividC.count
+        // Mono's vivid is near-white, so the usual dim would give a glaring
+        // grey frame on the charcoal ground — use a near-black bezel instead.
+        if idx == 1 { return Color(red: 0.14, green: 0.14, blue: 0.15) }
+        let v = vividC[idx]
         let f = 0.68
         return Color(red: v.0 * f, green: v.1 * f, blue: v.2 * f)
     }
@@ -337,5 +437,215 @@ struct StudyCard<Prev: View, Next: View>: View {
             .padding(.horizontal, compact ? 4 : 10)
             .frame(maxWidth: .infinity)
         }
+    }
+}
+
+// MARK: - Progress card (goal ring + streak / review / study counts), shared
+
+/// The learning-progress surface: today's goal ring anchors it, with streak,
+/// review-due, and study counts alongside — all on the same themed grid the
+/// word widgets wear. Deterministic numbers only; tapping opens Practice →
+/// Studying. Shared so the app's design-review gallery renders it identically.
+struct ProgressCard: View {
+    var theme: Int = 0
+    var todaySeconds: Int = 0
+    var goalMinutes: Int = 10
+    var streakDays: Int = 0
+    var dueCount: Int = 0
+    var studyingWords: Int = 0
+    var studyingExpressions: Int = 0
+    var compact: Bool = false
+
+    private var vivid: Color { WidgetTheme.vivid(theme) }
+    private var minutes: Int { todaySeconds / 60 }
+    private var progress: Double {
+        min(1, Double(todaySeconds) / Double(max(1, goalMinutes * 60)))
+    }
+
+    var body: some View {
+        VStack(alignment: compact ? .center : .leading, spacing: compact ? 8 : 10) {
+            Text("Studying")
+                .font(pixelFont(compact ? 11 : 13))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(maxWidth: .infinity)
+            if compact { compactBody } else { mediumBody }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(compact ? 12 : 15)
+    }
+
+    // MARK: Goal ring
+
+    private func ring(size: CGFloat, lineWidth: CGFloat) -> some View {
+        ZStack {
+            Circle().stroke(Color.white.opacity(0.12), lineWidth: lineWidth)
+            Circle()
+                .trim(from: 0, to: max(0.001, progress))
+                .stroke(vivid, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 1) {
+                Text("\(minutes)")
+                    .font(pixelFont(size * 0.36))
+                    .foregroundStyle(vivid)
+                Text("/ \(goalMinutes)m")
+                    .font(pixelFont(size * 0.13))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+
+    // MARK: Medium — ring + three stat rows
+
+    private var mediumBody: some View {
+        HStack(spacing: 16) {
+            ring(size: 92, lineWidth: 9)
+            VStack(alignment: .leading, spacing: 11) {
+                statRow("flame.fill", "\(streakDays)", "day streak",
+                        tint: streakDays > 0 ? .orange : .white.opacity(0.4))
+                statRow("checklist", "\(dueCount)", "to review",
+                        tint: dueCount > 0 ? vivid : .white.opacity(0.4))
+                studyRow
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    private func statRow(_ icon: String, _ value: String, _ label: String, tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 17)
+            Text(value).font(pixelFont(17)).foregroundStyle(.white)
+            Text(label).font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var studyRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "book.closed.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(width: 17)
+            Text("\(studyingWords)").font(pixelFont(17)).foregroundStyle(.white)
+            Text("words").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+            Text("\(studyingExpressions)").font(pixelFont(17)).foregroundStyle(.white)
+            Text("phrases").font(.system(size: 12)).foregroundStyle(.white.opacity(0.55))
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: Small — ring + two mini stats
+
+    private var compactBody: some View {
+        VStack(spacing: 9) {
+            ring(size: 72, lineWidth: 8)
+            HStack(spacing: 14) {
+                miniStat("flame.fill", "\(streakDays)", streakDays > 0 ? .orange : .white.opacity(0.4))
+                miniStat("checklist", "\(dueCount)", dueCount > 0 ? vivid : .white.opacity(0.4))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func miniStat(_ icon: String, _ value: String, _ tint: Color) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(tint)
+            Text(value).font(pixelFont(15)).foregroundStyle(.white)
+        }
+    }
+}
+
+// MARK: - Continue card (one in-progress book → its detail page), shared
+
+/// The book you're mid-way through — its title, a mastery progress bar, and a
+/// "Continue" affordance, on the themed grid. Tapping opens the book's detail
+/// page (Talk → the conversation, Watch → the scenario). Titles use a readable
+/// system face (they're full phrases); only the counts stay pixel, matching
+/// the other widgets' accent treatment.
+struct BookCard: View {
+    var theme: Int = 0
+    var hasBook: Bool = true
+    var kind: String = "talk"      // "talk" | "watch"
+    var title: String = ""
+    var subtitle: String = ""
+    var mastered: Int = 0
+    var total: Int = 0
+    var compact: Bool = false
+
+    private var vivid: Color { WidgetTheme.vivid(theme) }
+    private var progress: Double { total == 0 ? 0 : min(1, Double(mastered) / Double(total)) }
+
+    var body: some View {
+        VStack(spacing: compact ? 7 : 9) {
+            Text("Studying")
+                .font(pixelFont(compact ? 11 : 13))
+                .foregroundStyle(.white.opacity(0.85))
+                .frame(maxWidth: .infinity)
+            if hasBook { bookBody } else { emptyBody }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(compact ? 12 : 15)
+    }
+
+    private var bookBody: some View {
+        VStack(spacing: compact ? 6 : 8) {
+            Spacer(minLength: 0)
+            Text(title)
+                .font(.system(size: compact ? 16 : 21, weight: .semibold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity)
+            if !compact && !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            progressRow
+        }
+    }
+
+    private var progressRow: some View {
+        VStack(spacing: 5) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.white.opacity(0.14))
+                    Capsule().fill(vivid)
+                        .frame(width: max(4, geo.size.width * progress))
+                }
+            }
+            .frame(height: 6)
+            HStack(spacing: 5) {
+                Text("\(mastered)/\(total)")
+                    .font(pixelFont(compact ? 12 : 14))
+                    .foregroundStyle(vivid)
+                Text("mastered")
+                    .font(.system(size: compact ? 11 : 12))
+                    .foregroundStyle(.white.opacity(0.55))
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var emptyBody: some View {
+        VStack(spacing: 8) {
+            Spacer(minLength: 0)
+            Image(systemName: "books.vertical.fill")
+                .font(.system(size: compact ? 24 : 30))
+                .foregroundStyle(vivid.opacity(0.85))
+            Text("Nothing in progress")
+                .font(.system(size: compact ? 12 : 14))
+                .foregroundStyle(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

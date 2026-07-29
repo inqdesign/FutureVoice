@@ -8,6 +8,136 @@ struct FutureVoiceWidgetBundle: WidgetBundle {
         VocabularyWidget()
         ExpressionsWidget()
         FreeTalkWidget()
+        ProgressWidget()
+        BookWidget()
+    }
+}
+
+// MARK: - Continue widget — the book you're mid-way through, opens its detail
+
+/// Shows the single most-recently-studied in-progress book (Talk or Watch) with
+/// its mastery progress, and taps straight into that book's detail page. Static
+/// snapshot — the app rewrites it on every store change.
+struct BookWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: bookWidgetKind,
+                            provider: BookProvider()) { entry in
+            BookWidgetView(entry: entry)
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+        }
+        .configurationDisplayName("Continue studying")
+        .description("Jump back into the book you're working through.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+struct BookEntry: TimelineEntry {
+    let date: Date
+    let snapshot: StudyBookSnapshot
+    let theme: Int
+}
+
+struct BookProvider: TimelineProvider {
+    func placeholder(in context: Context) -> BookEntry {
+        BookEntry(date: Date(), snapshot: Self.sample, theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+    func getSnapshot(in context: Context, completion: @escaping (BookEntry) -> Void) {
+        let snap = context.isPreview ? Self.sample : StudyWidgetSnapshotStore.loadBook()
+        completion(BookEntry(date: Date(), snapshot: snap, theme: StudyWidgetSnapshotStore.themeIndex))
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<BookEntry>) -> Void) {
+        let entry = BookEntry(date: Date(),
+                              snapshot: StudyWidgetSnapshotStore.loadBook(),
+                              theme: StudyWidgetSnapshotStore.themeIndex)
+        completion(Timeline(entries: [entry], policy: .never))
+    }
+
+    static let sample = StudyBookSnapshot(
+        updatedAt: Date(), hasBook: true, kind: "watch", id: "",
+        title: "Ordering at a busy café", subtitle: "with Barista",
+        mastered: 3, total: 8)
+}
+
+struct BookWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: BookEntry
+
+    var body: some View {
+        let s = entry.snapshot
+        BookCard(theme: entry.theme,
+                 hasBook: s.hasBook,
+                 kind: s.kind,
+                 title: s.title,
+                 subtitle: s.subtitle,
+                 mastered: s.mastered,
+                 total: s.total,
+                 compact: family == .systemSmall)
+            .widgetURL(s.deepLink)
+    }
+}
+
+// MARK: - Progress widget — today's goal + study counts, opens Studying
+
+/// A glance at where the learner stands today: the goal ring, streak, review
+/// backlog, and study counts. Tap opens the app on Practice → Studying. Wears
+/// the same themed grid surface as the other widgets. Static snapshot — the
+/// app rewrites it on every store change.
+struct ProgressWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: progressWidgetKind,
+                            provider: ProgressProvider()) { entry in
+            ProgressWidgetView(entry: entry)
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+        }
+        .configurationDisplayName("Progress")
+        .description("Today's goal, streak, and what's left to study.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+struct ProgressEntry: TimelineEntry {
+    let date: Date
+    let snapshot: StudyProgressSnapshot
+    let theme: Int
+}
+
+struct ProgressProvider: TimelineProvider {
+    func placeholder(in context: Context) -> ProgressEntry {
+        ProgressEntry(date: Date(), snapshot: Self.sample, theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+    func getSnapshot(in context: Context, completion: @escaping (ProgressEntry) -> Void) {
+        let snap = context.isPreview ? Self.sample : StudyWidgetSnapshotStore.loadProgress()
+        completion(ProgressEntry(date: Date(), snapshot: snap, theme: StudyWidgetSnapshotStore.themeIndex))
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<ProgressEntry>) -> Void) {
+        let entry = ProgressEntry(date: Date(),
+                                  snapshot: StudyWidgetSnapshotStore.loadProgress(),
+                                  theme: StudyWidgetSnapshotStore.themeIndex)
+        completion(Timeline(entries: [entry], policy: .never))
+    }
+
+    static let sample = StudyProgressSnapshot(
+        updatedAt: Date(), todaySeconds: 7 * 60, goalMinutes: 10,
+        streakDays: 4, dueCount: 12, studyingWords: 18, studyingExpressions: 6)
+}
+
+struct ProgressWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: ProgressEntry
+
+    var body: some View {
+        let s = entry.snapshot
+        ProgressCard(theme: entry.theme,
+                     todaySeconds: s.todaySeconds,
+                     goalMinutes: s.goalMinutes,
+                     streakDays: s.streakDays,
+                     dueCount: s.dueCount,
+                     studyingWords: s.studyingWords,
+                     studyingExpressions: s.studyingExpressions,
+                     compact: family == .systemSmall)
+            .widgetURL(URL(string: "futurevoice://practice"))
     }
 }
 

@@ -127,10 +127,16 @@ enum DebugCapture {
             // render rounded HERE — the real widget target has no such
             // ancestor, so on the home screen it shows GeistPixel as designed.
             return AnyView(WidgetGallery().fontDesign(nil))
+        case "widget-progress":
+            // Just the progress widget (small + medium), for design review.
+            return AnyView(ProgressWidgetGallery().fontDesign(nil))
+        case "widget-book":
+            // Just the Continue widget (small + medium), for design review.
+            return AnyView(BookWidgetGallery().fontDesign(nil))
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.
-            once("tabs") { seedVocab(); seedSessions(); seedScenarios(into: appState) }
+            once("tabs") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(RootTabView())
         case "talkdetail", "talkdetail-mid", "talkdetail-low":
             // The ONE session detail page in post-talk mode — exactly what
@@ -464,6 +470,10 @@ private struct WidgetGallery: View {
                      size: CGSize(width: 338, height: 158), compact: false)
                 card(.words, word: "Meticulous", note: "C1", theme: 4,
                      size: CGSize(width: 338, height: 354), compact: false)
+                HStack(alignment: .top, spacing: 18) {
+                    progressCard(theme: 5, size: CGSize(width: 158, height: 158), compact: true)
+                    progressCard(theme: 0, size: CGSize(width: 338, height: 158), compact: false)
+                }
             }
             .padding(24)
         }
@@ -484,6 +494,17 @@ private struct WidgetGallery: View {
         .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }
 
+    fileprivate func progressCard(theme: Int, size: CGSize, compact: Bool) -> some View {
+        ProgressCard(theme: theme, todaySeconds: 7 * 60, goalMinutes: 10,
+                     streakDays: 4, dueCount: 12, studyingWords: 18, studyingExpressions: 6,
+                     compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+
     private func card(_ section: StudyWidgetSection, word: String, note: String, theme: Int,
                       size: CGSize, compact: Bool) -> some View {
         let nav: CGFloat = compact ? 30 : 38
@@ -500,6 +521,77 @@ private struct WidgetGallery: View {
                                shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The progress widget alone, small + medium, across a couple of themes.
+private struct ProgressWidgetGallery: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 26) {
+                HStack(alignment: .top, spacing: 18) {
+                    tile(theme: 0, size: CGSize(width: 158, height: 158), compact: true)
+                    tile(theme: 5, size: CGSize(width: 158, height: 158), compact: true)
+                }
+                tile(theme: 0, size: CGSize(width: 338, height: 158), compact: false)
+                tile(theme: 3, size: CGSize(width: 338, height: 158), compact: false)
+                tile(theme: 2, size: CGSize(width: 338, height: 158), compact: false)
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func tile(theme: Int, size: CGSize, compact: Bool) -> some View {
+        ProgressCard(theme: theme, todaySeconds: 7 * 60, goalMinutes: 10,
+                     streakDays: 4, dueCount: 12, studyingWords: 18, studyingExpressions: 6,
+                     compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The Continue widget alone — small + medium, a couple themes, plus the empty
+/// state, for design review.
+private struct BookWidgetGallery: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 26) {
+                HStack(alignment: .top, spacing: 18) {
+                    tile(theme: 3, size: CGSize(width: 158, height: 158), compact: true,
+                         kind: "watch", title: "Ordering at a café", subtitle: "with Barista",
+                         mastered: 3, total: 8, hasBook: true)
+                    tile(theme: 1, size: CGSize(width: 158, height: 158), compact: true,
+                         kind: "talk", title: "Weekend plans", subtitle: "Talk",
+                         mastered: 5, total: 6, hasBook: true)
+                }
+                tile(theme: 0, size: CGSize(width: 338, height: 158), compact: false,
+                     kind: "watch", title: "Ordering at a busy café", subtitle: "with Barista",
+                     mastered: 3, total: 8, hasBook: true)
+                tile(theme: 2, size: CGSize(width: 338, height: 158), compact: false,
+                     kind: "talk", title: "How the product launch went", subtitle: "Talk",
+                     mastered: 7, total: 9, hasBook: true)
+                tile(theme: 4, size: CGSize(width: 338, height: 158), compact: false,
+                     kind: "talk", title: "", subtitle: "", mastered: 0, total: 0, hasBook: false)
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func tile(theme: Int, size: CGSize, compact: Bool, kind: String,
+                      title: String, subtitle: String, mastered: Int, total: Int,
+                      hasBook: Bool) -> some View {
+        BookCard(theme: theme, hasBook: hasBook, kind: kind, title: title,
+                 subtitle: subtitle, mastered: mastered, total: total, compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }
 }
 #endif

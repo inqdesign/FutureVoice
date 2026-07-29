@@ -56,8 +56,10 @@ final class AppState: ObservableObject {
     /// A specific word/phrase (from a widget note tap) opens that item's page;
     /// nil opens the plain list (header tap, or the small widget).
     enum PracticeRoute: Equatable {
+        case studying
         case vocabulary(word: String? = nil)
         case expressions(phrase: String? = nil)
+        case book(kind: String, id: UUID)   // Continue widget → a book's detail page
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 

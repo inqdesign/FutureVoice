@@ -35,6 +35,15 @@ struct PracticeTab: View {
         _shelf = State(initialValue: initialShelf)
     }
     @State private var openScenario: Scenario?
+    /// Continue widget → a talk book's detail page (watch books use openScenario).
+    /// Wrapped because `Session` isn't Hashable; identity/equality ride on the id.
+    private struct OpenTalk: Identifiable, Hashable {
+        let session: Session
+        var id: UUID { session.id }
+        static func == (l: OpenTalk, r: OpenTalk) -> Bool { l.id == r.id }
+        func hash(into h: inout Hasher) { h.combine(id) }
+    }
+    @State private var openTalkSession: OpenTalk?
     @State private var talkLaunch: Scenario?
     @State private var talks: [Session] = []
     @State private var archivedTalks: [Session] = []
@@ -131,6 +140,10 @@ struct PracticeTab: View {
                 ScenarioDetailView(scenarioId: s.id)
                     .environmentObject(appState)
             }
+            .navigationDestination(item: $openTalkSession) { talk in
+                ConversationDetailView(session: talk.session)
+                    .environmentObject(appState)
+            }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
                     .environmentObject(appState)
@@ -146,12 +159,32 @@ struct PracticeTab: View {
         // appState.focusWord/focusPhrase (observed by the page even if it's
         // already on screen).
         switch appState.pendingPracticeRoute {
+        case .studying:
+            appState.pendingPracticeRoute = nil
+            // Progress-widget tap: pop any pushed page and show the Studying shelf.
+            showingVocabulary = false
+            showingExpressions = false
+            withAnimation { shelf = .studying }
         case .vocabulary:
             appState.pendingPracticeRoute = nil
             showingVocabulary = true
         case .expressions:
             appState.pendingPracticeRoute = nil
             showingExpressions = true
+        case let .book(kind, id):
+            appState.pendingPracticeRoute = nil
+            // Land on Studying, then push the requested book's detail page.
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            if kind == "watch" {
+                openTalkSession = nil
+                openScenario = appState.scenarios.first { $0.id == id }
+            } else {
+                openScenario = nil
+                openTalkSession = SessionStore.shared.load()
+                    .first { $0.id == id }.map(OpenTalk.init)
+            }
         case nil:
             break
         }
