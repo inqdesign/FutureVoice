@@ -1165,24 +1165,36 @@ struct ProgressTab: View {
             let span = max((values.max() ?? 1) - (values.min() ?? 0), 1)
             let lo = max(0, (values.min() ?? 0) - span * 0.25)
             let hi = (values.max() ?? 1) + span * 0.25
+            // Zones clipped to the visible domain. Labels sit on the LEADING
+            // edge (the numeric y-axis owns the trailing edge) and are
+            // dropped for slivers too thin to hold a caption without
+            // colliding with the neighbor's.
+            let visibleBands: [(label: String, lo: Double, hi: Double, labeled: Bool)] =
+                bands.compactMap { band in
+                    let bLo = max(band.range.lowerBound, lo)
+                    let bHi = min(band.range.upperBound, hi)
+                    guard bLo < bHi else { return nil }
+                    return (band.level.rawValue.uppercased(), bLo, bHi,
+                            (bHi - bLo) / (hi - lo) >= 0.14)
+                }
             panel {
                 Text("Trend").font(.headline)
                 Chart {
                     // CEFR zones behind the curve — same edges as the ≈band
                     // mapping (one shared table per skill).
-                    ForEach(Array(bands.enumerated()), id: \.offset) { i, band in
-                        if band.range.lowerBound < hi && band.range.upperBound > lo {
-                            RectangleMark(
-                                yStart: .value(unit, max(band.range.lowerBound, lo)),
-                                yEnd: .value(unit, min(band.range.upperBound, hi))
-                            )
-                            .foregroundStyle(Color(.secondarySystemFill)
-                                .opacity(i.isMultiple(of: 2) ? 0.55 : 0.25))
-                            .annotation(position: .overlay, alignment: .topTrailing) {
-                                Text(band.level.rawValue.uppercased())
+                    ForEach(Array(visibleBands.enumerated()), id: \.offset) { i, band in
+                        RectangleMark(
+                            yStart: .value(unit, band.lo),
+                            yEnd: .value(unit, band.hi)
+                        )
+                        .foregroundStyle(Color(.secondarySystemFill)
+                            .opacity(i.isMultiple(of: 2) ? 0.55 : 0.25))
+                        .annotation(position: .overlay, alignment: .topLeading) {
+                            if band.labeled {
+                                Text(band.label)
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
-                                    .padding(.trailing, 4)
+                                    .padding(.leading, 4)
                                     .padding(.top, 1)
                             }
                         }
