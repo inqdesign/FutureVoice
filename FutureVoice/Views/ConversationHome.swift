@@ -19,9 +19,11 @@ struct ConversationHome: View {
     @State private var todaySpokenSeconds = 0
     /// Talks finished TODAY — the Today card counts the day, never lifetime.
     @State private var todayTalks = 0
-    /// Today's next actions: review cards due now + the book to pick back up.
-    @State private var dueDrillCount = 0
+    /// Today's next actions: the book to pick back up, plus the whole-library
+    /// mastery aggregate behind the Practice row (async — see reload()).
     @State private var continueBook: Scenario?
+    @State private var overallMastered = 0
+    @State private var overallTotal = 0
     @State private var openBook: Scenario?
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     /// Presenting the call via an item (not a Bool) gives every presentation
@@ -31,13 +33,16 @@ struct ConversationHome: View {
     @State private var callLaunch: CallLaunch?
     @State private var showingProfile = false
     @State private var showingBuilder = false
+    /// The post-first-talk "tell me more about you" bottom sheet. Auto-shown
+    /// ONCE (flag below) right after the first conversation ends; afterwards
+    /// the deepenRow re-opens it while the narrative fields stay empty.
+    @State private var showingDeepen = false
+    @AppStorage("futurevoice.personaDeepenPrompted") private var deepenPrompted = false
     /// Today card → activity calendar (Button-driven so the row shows no
     /// disclosure chevron).
     @State private var showingActivity = false
     /// Discover rail's "All scenarios" card → the full collection page.
     @State private var showingAllScenarios = false
-    /// Today's "Review N cards" → the SRS review session itself.
-    @State private var showingDrills = false
 
     private struct CallLaunch: Identifiable {
         let id = UUID()
@@ -71,6 +76,9 @@ struct ConversationHome: View {
                         .padding(.horizontal, 20)
                     if sessionCount == 0 {
                         firstRunCard
+                            .padding(.horizontal, 20)
+                    } else if personaNeedsDepth {
+                        deepenRow
                             .padding(.horizontal, 20)
                     }
                     DiscoverSection(
@@ -119,6 +127,9 @@ struct ConversationHome: View {
             .sheet(isPresented: $showingProfile) {
                 MeTab().environmentObject(appState).environmentObject(auth)
             }
+            .sheet(isPresented: $showingDeepen) {
+                PersonaDeepenSheet().environmentObject(appState)
+            }
             .sheet(isPresented: $showingBuilder) {
                 ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { newScenario in
                     appState.saveScenario(newScenario)
@@ -138,10 +149,10 @@ struct ConversationHome: View {
                 ScenarioDetailView(scenarioId: book.id)
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingDrills, onDismiss: reload) {
-                DrillSheet().environmentObject(appState)
-            }
-            .fullScreenCover(item: $callLaunch, onDismiss: reload) { launch in
+            .fullScreenCover(item: $callLaunch, onDismiss: {
+                reload()
+                maybePromptDeepen()
+            }) { launch in
                 ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
                                  initialIsNews: launch.isNews,
                                  initialOrigin: launch.origin,
@@ -209,15 +220,12 @@ struct ConversationHome: View {
             .accessibilityLabel("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) minutes today, \(todayTalks) talks today, \(snapshot.streakDays) day streak. Opens activity calendar.")
 
             // Next actions — one full-width row each, so nothing truncates
-            // into garbage. Reviews due now START the review session directly
-            // (not a generic tab hop); the book you're mid-way through opens.
-            if dueDrillCount > 0 {
+            // into garbage. The whole-library mastery bar nudges toward
+            // Practice (SRS review itself now lives there, on Studying);
+            // the book you're mid-way through opens directly.
+            if overallTotal > 0 {
                 Divider().padding(.leading, 16)
-                todayActionRow(icon: "rectangle.stack",
-                               title: dueDrillCount == 1 ? "Review 1 card"
-                                                         : "Review \(dueDrillCount) cards") {
-                    showingDrills = true
-                }
+                practiceProgressRow
             }
             if let book = continueBook {
                 Divider().padding(.leading, 16)
@@ -265,6 +273,42 @@ struct ConversationHome: View {
     /// A Today action row. With `subtitle`, the title becomes the ACTION
     /// label and the subtitle the target on a second line (so a long book
     /// name wraps instead of truncating into "…").
+    /// "연습하라" — how much of ALL the material your talks/watches generated
+    /// is mastered, as a bar. Tap hops to Practice (Studying), where the books
+    /// and the SRS review live.
+    private var practiceProgressRow: some View {
+        Button {
+            openURL(URL(string: "futurevoice://practice")!)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "books.vertical")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Text("Practice")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text("\(overallMastered) of \(overallTotal) mastered")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(overallMastered), total: Double(max(overallTotal, 1)))
+                        .tint(overallMastered == overallTotal ? .green : .accentColor)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
     private func todayActionRow(icon: String, title: String, subtitle: String? = nil,
                                 action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -400,6 +444,59 @@ struct ConversationHome: View {
         .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
     }
 
+    // MARK: - Persona deepening (post-first-talk)
+
+    /// True while the persona's narrative fields are still blank — the ones
+    /// onboarding deliberately skips and `PersonaDeepenSheet` collects.
+    private var personaNeedsDepth: Bool {
+        guard let p = appState.persona else { return false }
+        return [p.occupation, p.household, p.freeNotes]
+            .allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    /// Auto-present the deepen sheet exactly once, right after the first talk
+    /// ends — the moment the "richer persona = more real talks" pitch has
+    /// lived evidence behind it. The delay lets the call's fullScreenCover
+    /// dismissal settle before a new sheet comes up.
+    private func maybePromptDeepen() {
+        guard !deepenPrompted, sessionCount > 0, personaNeedsDepth else { return }
+        deepenPrompted = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            showingDeepen = true
+        }
+    }
+
+    /// Persistent re-entry under Today once the auto-prompt has passed —
+    /// visible only while the narrative fields stay empty.
+    private var deepenRow: some View {
+        Button {
+            showingDeepen = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tell me more about you")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Talks get more real when I know your life.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
+            .contentShape(RoundedRectangle(cornerRadius: 20))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Logic
 
     private func reload() {
@@ -424,12 +521,33 @@ struct ConversationHome: View {
         todaySpokenSeconds = todayMs / 1000
         todayTalks = todayCount
 
-        // Today's next actions — reviews due right now, and the most recently
-        // studied unfinished book (progress started, not yet mastered).
-        dueDrillCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
+        // Today's next actions — the most recently studied unfinished book
+        // (progress started, not yet mastered).
         continueBook = appState.scenarios
             .filter { !$0.isArchived && !$0.isMastered && ($0.curriculum?.masteredCount ?? 0) > 0 }
             .max { bookLastStudied($0) < bookLastStudied($1) }
+
+        // Whole-library mastery for the Practice row — same aggregate as
+        // Practice's Studying header. Deferred: TalkCurriculum.build's
+        // pickup-word extraction is too heavy for first paint.
+        Task { @MainActor in
+            var mastered = 0, total = 0
+            for s in sessions {
+                let snap = TalkCurriculum.build(session: s,
+                                                proficiency: appState.proficiency,
+                                                shadowAttempts: appState.shadowAttempts)
+                mastered += snap.masteredCount
+                total += snap.totalCount
+            }
+            for sc in appState.scenarios {
+                if let c = sc.curriculum {
+                    mastered += c.masteredCount
+                    total += c.totalCount
+                }
+            }
+            overallMastered = mastered
+            overallTotal = total
+        }
     }
 }
 

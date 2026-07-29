@@ -45,6 +45,10 @@ struct PracticeTab: View {
     }
     @State private var openTalkSession: OpenTalk?
     @State private var talkLaunch: Scenario?
+    /// SRS review (rehomed from the home Today card): cards due now + the
+    /// review sheet itself.
+    @State private var dueDrillCount = 0
+    @State private var showingDrills = false
     @State private var talks: [Session] = []
     @State private var archivedTalks: [Session] = []
     /// Derived talk-book progress, filled in a follow-up pass (pickup-word
@@ -145,8 +149,12 @@ struct PracticeTab: View {
                     .environmentObject(appState)
             }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
-                ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
+                ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
+                                 initialOrigin: .scenario, initialScenarioId: s.id)
                     .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingDrills, onDismiss: reload) {
+                DrillSheet().environmentObject(appState)
             }
         }
     }
@@ -336,9 +344,38 @@ struct PracticeTab: View {
         }
     }
 
+    /// SRS review entry — rehomed here from the home Today card (whose slot
+    /// now shows the whole-library mastery bar). Only when cards are due.
+    @ViewBuilder
+    private var reviewRow: some View {
+        if dueDrillCount > 0 {
+            Button { showingDrills = true } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "rectangle.stack")
+                        .font(.body)
+                        .foregroundStyle(.tint)
+                        .frame(width: 28)
+                    Text(dueDrillCount == 1 ? "Review 1 card" : "Review \(dueDrillCount) cards")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     private var studyingPage: some View {
         VStack(alignment: .leading, spacing: 16) {
             overallCard
+            reviewRow
             practiceShortcuts
             if studyingBooks.isEmpty {
                 shelfHint("Nothing in progress yet. Open a book on a shelf and master your first word or line — it shows up here until the whole book is done.")
@@ -602,6 +639,7 @@ struct PracticeTab: View {
 
     private func reload() {
         vocab.backfillFromSessions()
+        dueDrillCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
 
         let finished = SessionStore.shared.load()
             .filter { $0.endedAt != nil }
