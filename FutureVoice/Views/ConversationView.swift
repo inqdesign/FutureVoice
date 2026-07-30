@@ -622,8 +622,8 @@ struct ConversationView: View {
         }
         do {
             let opener: String
-            if topicIsNews, let grounded = await openNewsConversation() {
-                opener = grounded
+            if topicIsNews, let fromPool = openNewsConversation() {
+                opener = fromPool
             } else if topic.isEmpty,
                       let canned = FreeTalkOpeners.shared.next(
                           language: appState.targetLanguage,
@@ -694,29 +694,19 @@ struct ConversationView: View {
         }
     }
 
-    /// News topic: one search-grounded call reads the ACTUAL coverage and
-    /// returns real facts + the opening line. The facts persist in
-    /// `newsFacts` → every later turn's system prompt, so the future self
-    /// discusses what happened instead of vamping around a one-line blurb.
-    /// Returns nil on any failure — caller falls back to the plain opener.
-    private func openNewsConversation() async -> String? {
-        do {
-            let payload: NewsOpenerPayload = try await GeminiClient.shared.sendJSON(
-                system: systemPrompt()
-                    + "\n\n" + ConversationEngine.newsOpenerInstruction(targetLanguage: appState.targetLanguage),
-                messages: [GeminiClient.Message(role: .user, content: "Start the conversation.")],
-                maxTokens: 900,
-                searchGrounding: true,
-                purpose: "opener",
-                idempotencyKey: "opener:\(sessionId.uuidString)"
-            )
-            let opener = payload.opener.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !opener.isEmpty else { return nil }
-            newsFacts = payload.facts.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
-            return opener
-        } catch {
-            return nil
-        }
+    /// News topic: ZERO LLM calls. The platform news pool already generated
+    /// this story once for everyone — the title is phrased as a friend
+    /// bringing it up (that IS the opener) and the blurb is plain facts from
+    /// the grounded pool generation. Day-old facts are fine for a practice
+    /// talk; the per-user search-grounded opener this replaces was the single
+    /// most expensive call in the app. Returns nil when there's nothing to
+    /// speak — caller falls back to the plain opener.
+    private func openNewsConversation() -> String? {
+        let opener = topic.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !opener.isEmpty else { return nil }
+        let fact = topicBlurb.trimmingCharacters(in: .whitespacesAndNewlines)
+        newsFacts = fact.isEmpty ? [] : [fact]
+        return opener
     }
 
     private func startRecording() async {

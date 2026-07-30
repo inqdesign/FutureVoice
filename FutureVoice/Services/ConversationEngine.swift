@@ -254,7 +254,12 @@ enum ConversationEngine {
           was actually about — "Weekend plans with Boram", "Arguing about
           coffee prices". Concrete and specific, never generic ("Conversation",
           "Practice session" are failures).
-        - Max 5 phrases_used. Pick the most teachable ones.
+        - Max 5 phrases_used. Pick the most teachable ones. Both "user_said"
+          and "fluent_alternative" are ONE sentence (≤ 15 words) — quote and
+          fix only the sentence containing the slip, never a whole
+          multi-sentence turn. Same rule for "mistake"/"correction" in
+          new_patterns_detected. These become flashcards; a paragraph on a
+          flashcard is a failure.
         - suggested_drills: 3-4 phrases the learner should PRACTICE NEXT to
           GROW — not more corrections of what they already said. Aim slightly
           ABOVE their current level (see proficiencyLevel in the profile):
@@ -364,29 +369,6 @@ enum ConversationEngine {
         """
     }
 
-    /// Grounded opener for a news-topic conversation. One search-grounded
-    /// call collects real facts (kept for every later turn's system prompt)
-    /// AND produces the opening line, so the future self actually knows the
-    /// story instead of vamping around a one-line blurb.
-    static func newsOpenerInstruction(targetLanguage: String) -> String {
-        let languageName = LanguageCatalog.englishName(targetLanguage)
-        return """
-        The starting context is a REAL recent news story. Use web search to \
-        read the actual coverage before answering.
-
-        Return STRICT JSON only — no prose, no code fences:
-        { "facts": ["...", "..."], "opener": "..." }
-
-        - facts: 5-8 short plain-language facts from the coverage — what \
-          happened, who, when, key numbers, notable reactions. Facts only, \
-          nothing invented. Each ≤ 20 words, in \(languageName).
-        - opener: ONE natural spoken line in \(languageName) bringing the \
-          story up the way a friend would — mention ONE concrete detail from \
-          the facts, then make it easy for the user to react. Follow every \
-          speaking rule above.
-        """
-    }
-
     /// Output-format block appended to the conversation system prompt for
     /// in-call turns. One structured call returns both the spoken reply and
     /// an optional "say it more naturally" suggestion for the user's last
@@ -426,6 +408,11 @@ enum ConversationEngine {
           natural as spoken. Don't invent a change for a line that was fine.
         - "alternative" must be a CONCRETE full utterance the user could say
           out loud (their corrected sentence), never a rule or category.
+        - "alternative" rewrites ONE sentence only — the single sentence with
+          the most teachable slip. NEVER the whole turn: when the user speaks
+          several sentences, pick the one worth fixing and ignore the rest,
+          even if they also had minor slips. Target ≤ 15 words; a learner
+          drills this line later, and a paragraph is un-drillable.
         - "reason": ≤ 12 words on why it's better.
         - The suggestion is shown silently as text — never mention it in "reply",
           never correct the user out loud.
@@ -482,13 +469,6 @@ enum ConversationEngine {
             return GeminiClient.Message(role: .model, content: json ?? turn.transcript)
         }
     }
-}
-
-/// JSON shape returned by the grounded news opener call — see
-/// `ConversationEngine.newsOpenerInstruction`.
-struct NewsOpenerPayload: Decodable {
-    let facts: [String]
-    let opener: String
 }
 
 /// JSON shape returned by Gemini for one in-call conversation turn —
