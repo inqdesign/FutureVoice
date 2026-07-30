@@ -49,3 +49,4 @@ fastlane/AuthKey*.p8
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/README.md
+fastlane/screenshots/_raw/
