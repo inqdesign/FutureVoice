@@ -625,6 +625,12 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// Set when the user shelves a mastered (or abandoned) scenario. Archived
     /// scenarios drop out of the main grid into the Archive section.
     var archivedAt: Date? = nil
+    /// Opening lines for talks on this scenario — a small pool generated in
+    /// ONE Gemini call on the first talk, then rotated (`openerCursor`) so
+    /// every later talk starts instantly and free (and each line's TTS hits
+    /// the phrase cache after its first play). Optional so old rows decode.
+    var openers: [String]? = nil
+    var openerCursor: Int? = nil
     /// True for topic books — scenarios born from a news story (Home's Watch
     /// verb on a News ingredient) rather than a built situation. Same
     /// curriculum mechanics; drives Practice's "Topics" shelf and a

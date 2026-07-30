@@ -371,6 +371,27 @@ final class AppState: ObservableObject {
         if isNew { Analytics.capture("scenario_created", ["is_topic": s.isTopic == true]) }
     }
 
+    /// Rotate the stored opener pool for a scenario talk. nil when no pool
+    /// exists yet — the caller generates one (ONE call) and stores it via
+    /// `storeScenarioOpeners`, so every later talk on this scenario starts
+    /// instantly and free.
+    func nextScenarioOpener(for id: UUID) -> String? {
+        guard var s = scenarios.first(where: { $0.id == id }),
+              let pool = s.openers, !pool.isEmpty else { return nil }
+        let cursor = (s.openerCursor ?? 0) % pool.count
+        s.openerCursor = (cursor + 1) % pool.count
+        saveScenario(s)
+        return pool[cursor]
+    }
+
+    func storeScenarioOpeners(_ pool: [String], for id: UUID) {
+        guard var s = scenarios.first(where: { $0.id == id }), !pool.isEmpty else { return }
+        s.openers = pool
+        // The first line is being spoken right now — next talk starts at 1.
+        s.openerCursor = 1 % pool.count
+        saveScenario(s)
+    }
+
     func deleteScenario(id: UUID) {
         ScenarioStore.shared.delete(id: id)
         scenarios = ScenarioStore.shared.load()

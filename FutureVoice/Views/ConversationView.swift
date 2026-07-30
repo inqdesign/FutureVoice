@@ -643,20 +643,14 @@ struct ConversationView: View {
                 // First free talk (or language/persona changed): ONE call
                 // writes the whole pool; later sessions rotate through it.
                 opener = generated
+            } else if let sid = sessionScenarioId,
+                      let stored = appState.nextScenarioOpener(for: sid) {
+                // Scenario talk with a stored opener pool: rotate — instant
+                // start, no Gemini call, and the line's TTS is already in the
+                // phrase cache after its first play.
+                opener = stored
             } else {
-                opener = try await GeminiClient.shared.send(
-                    system: systemPrompt(),
-                    messages: [GeminiClient.Message(
-                        role: .user,
-                        content: """
-                        Open this conversation with ONE natural opening line in \(LanguageCatalog.englishName(appState.targetLanguage)).
-                        Be IN the scenario — don't summarize it, don't explain it. Just say the first
-                        thing you'd say if this were really happening, in a way the user can respond to.
-                        """
-                    )],
-                    purpose: "opener",
-                    idempotencyKey: "opener:\(sessionId.uuidString)"
-                )
+                opener = try await generateOpener()
             }
             // The screen may have closed while the opener was being fetched.
             guard !isTornDown else { return }
@@ -703,6 +697,55 @@ struct ConversationView: View {
     /// talk; the per-user search-grounded opener this replaces was the single
     /// most expensive call in the app. Returns nil when there's nothing to
     /// speak — caller falls back to the plain opener.
+    /// Topic/scenario opener. Scenario-backed talks generate a THREE-line
+    /// pool in ONE call (same cost as the old single line) and store it on
+    /// the scenario — every later talk rotates the pool for free. Custom
+    /// topics (no scenario id) keep the single-line call.
+    private func generateOpener() async throws -> String {
+        let languageName = LanguageCatalog.englishName(appState.targetLanguage)
+        if let sid = sessionScenarioId {
+            struct OpenerPool: Decodable { let openers: [String] }
+            let payload: OpenerPool? = try? await GeminiClient.shared.sendJSON(
+                system: systemPrompt(),
+                messages: [GeminiClient.Message(
+                    role: .user,
+                    content: """
+                    Write THREE different natural opening lines in \(languageName) for this conversation.
+                    Be IN the scenario — don't summarize it, don't explain it. Each line is the first
+                    thing you'd say if this were really happening, in a way the user can respond to.
+                    Make the three genuinely different angles, not rephrasings.
+                    Return STRICT JSON only — no prose: { "openers": ["...", "...", "..."] }
+                    """
+                )],
+                maxTokens: 500,
+                purpose: "opener",
+                idempotencyKey: "opener:\(sessionId.uuidString)"
+            )
+            let pool = (payload?.openers ?? [])
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            if let first = pool.first {
+                appState.storeScenarioOpeners(pool, for: sid)
+                return first
+            }
+            // Pool call failed → fall through to the single-line opener
+            // (same idempotency key: one logical opener, one charge).
+        }
+        return try await GeminiClient.shared.send(
+            system: systemPrompt(),
+            messages: [GeminiClient.Message(
+                role: .user,
+                content: """
+                Open this conversation with ONE natural opening line in \(languageName).
+                Be IN the scenario — don't summarize it, don't explain it. Just say the first
+                thing you'd say if this were really happening, in a way the user can respond to.
+                """
+            )],
+            purpose: "opener",
+            idempotencyKey: "opener:\(sessionId.uuidString)"
+        )
+    }
+
     private func openNewsConversation() -> String? {
         let opener = topic.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !opener.isEmpty else { return nil }

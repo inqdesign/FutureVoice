@@ -19,6 +19,13 @@ struct ShadowDrillView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var recorder = AudioRecorder()
     @StateObject private var player = AudioPlayer()
+    /// Separate player for the learner's own attempt recordings. The shared
+    /// `player` is the TIMELINE's ground truth — its duration/currentTime
+    /// drive the trimmer track and karaoke highlight — so loading a 30s mic
+    /// recording into it squished the word band to the left of a mostly-empty
+    /// track (the "tail") and made the timeline's play button replay the
+    /// attempt instead of the target line.
+    @StateObject private var attemptPlayer = AudioPlayer()
     @StateObject private var live = LiveTranscriber()
 
     @State private var phase: Phase = .idle
@@ -613,7 +620,7 @@ struct ShadowDrillView: View {
             self.error = "Recording file missing."
             return
         }
-        playSafely(data)
+        playAttempt(data)
     }
 
     private var playbackRow: some View {
@@ -646,7 +653,7 @@ struct ShadowDrillView: View {
             self.error = "Recording isn't available."
             return
         }
-        playSafely(data)
+        playAttempt(data)
     }
 
     private var diffSection: some View {
@@ -873,7 +880,20 @@ struct ShadowDrillView: View {
             // audio session in .measurement mode, which makes subsequent
             // .playback noticeably quieter. Force-cycle the session so the
             // preview plays at full speaker volume.
+            attemptPlayer.stop()
             try player.play(data, source: "shadow", forceSessionReset: true)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    /// Attempt recordings go through `attemptPlayer`, never the shared
+    /// `player` (see its declaration for why). Target playback is paused
+    /// first so the two can't overlap.
+    private func playAttempt(_ data: Data) {
+        do {
+            player.pause()
+            try attemptPlayer.play(data, source: "shadow", forceSessionReset: true)
         } catch {
             self.error = error.localizedDescription
         }
@@ -906,6 +926,7 @@ struct ShadowDrillView: View {
         // Stop any loop/preview playback before recording so the speaker audio
         // doesn't bleed into the mic.
         player.stop()
+        attemptPlayer.stop()
         // Kill the background timing-recovery recognizer FIRST — a second
         // speech recognizer running against the file collides with the live
         // mic recognizer and truncates the recording after the first line.
@@ -1086,31 +1107,40 @@ struct ShadowDrillView: View {
         // The deterministic score + diff are already computed. The Gemini
         // bullets are garnish — a network failure must not throw away the
         // attempt (score, diff, recording) with it.
+        //
+        // Coach bullets only when there's something to coach: at ≥90 the
+        // diff highlights already tell the story, and heavy shadowers repeat
+        // lines many times — charging a call per near-perfect rep added cost
+        // without adding signal.
         var payload: ShadowEngine.Payload?
-        do {
-            payload = try await GeminiClient.shared.sendJSON(
-                system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage),
-                messages: [GeminiClient.Message(
-                    role: .user,
-                    content: ShadowEngine.userMessage(
-                        targetText: attemptTargetText,
-                        learnerText: scoredText,
-                        targetDurationMs: attemptTargetDurationMs,
-                        learnerDurationMs: learnerDurMs,
-                        diffSteps: analysis.steps,
-                        rhythm: rhythm
-                    )
-                )],
-                maxTokens: 300,
-                purpose: "shadow"
-            )
-        } catch {
-            payload = nil
+        if analysis.score < 90 {
+            do {
+                payload = try await GeminiClient.shared.sendJSON(
+                    system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage),
+                    messages: [GeminiClient.Message(
+                        role: .user,
+                        content: ShadowEngine.userMessage(
+                            targetText: attemptTargetText,
+                            learnerText: scoredText,
+                            targetDurationMs: attemptTargetDurationMs,
+                            learnerDurationMs: learnerDurMs,
+                            diffSteps: analysis.steps,
+                            rhythm: rhythm
+                        )
+                    )],
+                    maxTokens: 300,
+                    purpose: "shadow"
+                )
+            } catch {
+                payload = nil
+            }
         }
 
         feedback = ShadowFeedback(
             pronunciation: payload?.pronunciation
-                ?? "Coach comments couldn't load — the score and highlighted words above are still accurate.",
+                ?? (analysis.score >= 90
+                    ? "Nailed it — matched the line almost word for word."
+                    : "Coach comments couldn't load — the score and highlighted words above are still accurate."),
             pacing: payload?.pacing ?? "",
             fix: payload?.fix ?? "",
             matchScore: analysis.score
