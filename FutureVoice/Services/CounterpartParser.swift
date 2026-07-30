@@ -31,7 +31,8 @@ enum CounterpartParser {
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
             model: .flashLite31,
-            maxTokens: 600
+            maxTokens: 600,
+            purpose: "parse"
         )
 
         return Counterpart(

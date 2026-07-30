@@ -119,7 +119,8 @@ final class ElevenLabsClient {
         voiceId: String,
         text: String,
         modelId: String = "eleven_turbo_v2_5",
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        purpose: String? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -135,12 +136,15 @@ final class ElevenLabsClient {
         // Voice settings are now fixed inside the Edge Function — keeping
         // them server-side means we can tune stability/similarity without
         // shipping a new app version.
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
             "model_id": modelId,
             "with_timestamps": false,
         ]
+        // Feature tag for the usage ledger (spend attribution) — the edge
+        // function records it in metadata, never forwards it upstream.
+        if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)
@@ -172,6 +176,7 @@ final class ElevenLabsClient {
         text: String,
         modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
+        purpose: String? = nil,
         onPCMChunk: @MainActor @escaping (Data) -> Void
     ) async throws -> StreamedAudio {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
@@ -182,13 +187,14 @@ final class ElevenLabsClient {
         request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
             "model_id": modelId,
             "with_timestamps": false,
             "stream": true,
         ]
+        if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         // One immediate re-dial on a transient connect failure: a cellular
@@ -265,16 +271,19 @@ final class ElevenLabsClient {
         voiceId: String,
         text: String,
         modelId: String = "eleven_turbo_v2_5",
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        purpose: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         do {
             return try await synthesizeWithTimestampsInner(
-                voiceId: voiceId, text: text, modelId: modelId, idempotencyKey: idempotencyKey)
+                voiceId: voiceId, text: text, modelId: modelId,
+                idempotencyKey: idempotencyKey, purpose: purpose)
         } catch {
             // Fallback: at least play audio without karaoke. Reuses the same
             // idempotency key — one logical synthesis, one charge.
             let audio = try await synthesize(
-                voiceId: voiceId, text: text, modelId: modelId, idempotencyKey: idempotencyKey)
+                voiceId: voiceId, text: text, modelId: modelId,
+                idempotencyKey: idempotencyKey, purpose: purpose)
             return (audio, [])
         }
     }
@@ -283,7 +292,8 @@ final class ElevenLabsClient {
         voiceId: String,
         text: String,
         modelId: String,
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        purpose: String? = nil
     ) async throws -> (Data, [WordTiming]) {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -294,12 +304,13 @@ final class ElevenLabsClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        let body: [String: Any] = [
+        var body: [String: Any] = [
             "voice_id": voiceId,
             "text": text,
             "model_id": modelId,
             "with_timestamps": true,
         ]
+        if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)

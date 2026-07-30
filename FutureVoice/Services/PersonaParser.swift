@@ -35,7 +35,8 @@ enum PersonaParser {
         return try await GeminiClient.shared.sendJSON(
             system: systemPrompt(),
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 500
+            maxTokens: 500,
+            purpose: "parse"
         )
     }
 

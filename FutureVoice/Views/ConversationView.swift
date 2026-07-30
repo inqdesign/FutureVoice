@@ -652,6 +652,7 @@ struct ConversationView: View {
                         thing you'd say if this were really happening, in a way the user can respond to.
                         """
                     )],
+                    purpose: "opener",
                     idempotencyKey: "opener:\(sessionId.uuidString)"
                 )
             }
@@ -706,6 +707,7 @@ struct ConversationView: View {
                 messages: [GeminiClient.Message(role: .user, content: "Start the conversation.")],
                 maxTokens: 900,
                 searchGrounding: true,
+                purpose: "opener",
                 idempotencyKey: "opener:\(sessionId.uuidString)"
             )
             let opener = payload.opener.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -915,6 +917,7 @@ struct ConversationView: View {
                 // truncation shows up here as a DecodingError-failed turn.
                 maxTokens: 1024,
                 temperature: 0.7,
+                purpose: "turn",
                 // Keyed to the user turn: the inline Retry button and the
                 // audio→text rescue re-run this same logical request without
                 // a second charge.
@@ -1001,7 +1004,8 @@ struct ConversationView: View {
             let result = try await ElevenLabsClient.shared.synthesizeStreaming(
                 voiceId: voiceId, text: text,
                 modelId: ElevenLabsClient.conversationModelId,
-                idempotencyKey: idempotencyKey
+                idempotencyKey: idempotencyKey,
+                purpose: "turn"
             ) { chunk in
                 // Closed mid-stream: swallow the chunks — never (re)start
                 // playback on a dead screen.
@@ -1102,7 +1106,8 @@ struct ConversationView: View {
         let (newAudio, newTimings) = try await ElevenLabsClient.shared
             .synthesizeWithTimestamps(voiceId: voiceId, text: text,
                                       modelId: ElevenLabsClient.conversationModelId,
-                                      idempotencyKey: idempotencyKey)
+                                      idempotencyKey: idempotencyKey,
+                                      purpose: "turn")
         PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
         try appendTurnAndPlay(newAudio, timings: newTimings, transcript: text)
         logTurnTiming(tts: "buffered")

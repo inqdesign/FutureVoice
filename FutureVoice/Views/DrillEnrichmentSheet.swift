@@ -210,7 +210,7 @@ struct DrillEnrichmentSheet: View {
             return
         }
         do {
-            let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text)
+            let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "drill")
             PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
             playingExample = idx
             try player.play(audio) {

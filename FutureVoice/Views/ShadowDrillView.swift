@@ -1101,7 +1101,8 @@ struct ShadowDrillView: View {
                         rhythm: rhythm
                     )
                 )],
-                maxTokens: 300
+                maxTokens: 300,
+                purpose: "shadow"
             )
         } catch {
             payload = nil
@@ -1230,7 +1231,7 @@ struct ShadowDrillView: View {
         phase = .loadingAudio
         do {
             let (data, newTimings) = try await ElevenLabsClient.shared
-                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
+                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript, purpose: "shadow")
             PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
             let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
             cachedAudioURL = saved

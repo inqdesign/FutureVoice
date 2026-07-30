@@ -53,7 +53,8 @@ enum DialogueEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 1500
+            maxTokens: 1500,
+            purpose: "scene"
         )
         let turns = payload.turns.compactMap { item -> Turn? in
             guard let speaker = Speaker(rawValue: item.speaker.lowercased()) else { return nil }

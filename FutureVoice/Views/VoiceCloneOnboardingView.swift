@@ -873,7 +873,7 @@ struct VoiceCloneOnboardingView: View {
                 // synthesis never blocks the flow — the act just opens silent.
                 if let voiceId = appState.voiceCloneId {
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
-                        voiceId: voiceId, text: Self.greetingLine)
+                        voiceId: voiceId, text: Self.greetingLine, purpose: "greeting")
                 }
                 HapticEngine.success()
                 status = .meet

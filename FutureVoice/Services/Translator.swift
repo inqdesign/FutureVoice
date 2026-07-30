@@ -34,7 +34,8 @@ enum Translator {
                 messages: [GeminiClient.Message(role: .user, content: text)],
                 model: .flashLite31,
                 maxTokens: 400,
-                temperature: 0.2
+                temperature: 0.2,
+                purpose: "translate"
             )
             let t = out.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !t.isEmpty else { return nil }
@@ -79,7 +80,8 @@ enum Translator {
                     role: .user,
                     content: "Learner said: \(original)\nMore natural: \(alternative)")],
                 maxTokens: 500,
-                temperature: 0.3
+                temperature: 0.3,
+                purpose: "translate"
             )
             let t = out.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !t.isEmpty else { return nil }

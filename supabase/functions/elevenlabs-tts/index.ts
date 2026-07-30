@@ -39,6 +39,10 @@ Deno.serve(async (req) => {
     model_id?: string
     with_timestamps?: boolean
     stream?: boolean
+    // Client-supplied feature tag ("turn" | "scene" | "shadow" | "drill" |
+    // "library" | "greeting" …) — recorded in the ledger metadata so spend
+    // can be attributed per feature. Never forwarded upstream, never priced.
+    purpose?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -55,7 +59,7 @@ Deno.serve(async (req) => {
   const ch = await charge({
     supabase, userId: user.id, action, amount,
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { chars: body.text.length, voice_id: body.voice_id },
+    metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
   })
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {

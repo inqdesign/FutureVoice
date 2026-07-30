@@ -555,7 +555,7 @@ struct WatchView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             return cached
         }
-        let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text)
+        let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "scene")
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
     }

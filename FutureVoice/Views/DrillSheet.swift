@@ -513,7 +513,8 @@ private extension DrillView {
         do {
             let audio = try await ElevenLabsClient.shared.synthesize(
                 voiceId: voiceId,
-                text: card.targetPhrase
+                text: card.targetPhrase,
+                purpose: "drill"
             )
             PhraseAudioStore.shared.save(audio, text: card.targetPhrase, voiceId: voiceId)
             try player.play(audio, source: "drill", forceSessionReset: true)

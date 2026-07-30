@@ -410,7 +410,7 @@ struct ExpressionCard: View {
         speaking = true
         defer { speaking = false }
         do {
-            let data = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: phrase)
+            let data = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: phrase, purpose: "library")
             PhraseAudioStore.shared.save(data, text: phrase, voiceId: voiceId)
             try? player.play(data, forceSessionReset: true)
         } catch {

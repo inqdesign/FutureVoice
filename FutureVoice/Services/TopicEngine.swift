@@ -29,7 +29,8 @@ enum TopicEngine {
             let payload: Payload = try await GeminiClient.shared.sendJSON(
                 system: system,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
-                maxTokens: 800
+                maxTokens: 800,
+                purpose: "topics"
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
         } catch {
@@ -117,7 +118,8 @@ enum TopicEngine {
             let payload: Payload = try await GeminiClient.shared.sendJSON(
                 system: system,
                 messages: [GeminiClient.Message(role: .user, content: userMsg)],
-                maxTokens: 900
+                maxTokens: 900,
+                purpose: "topics"
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
         } catch {
@@ -223,7 +225,8 @@ enum TopicEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 900
+            maxTokens: 900,
+            purpose: "topics"
         )
         return payload.topics.map {
             SuggestedTopic(title: $0.title, blurb: $0.blurb, category: category)
@@ -272,7 +275,8 @@ enum TopicEngine {
         return try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: "scenario: \(text)")],
-            maxTokens: 160
+            maxTokens: 160,
+            purpose: "topics"
         )
     }
 
@@ -308,7 +312,8 @@ enum TopicEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
-            maxTokens: 900
+            maxTokens: 900,
+            purpose: "topics"
         )
         return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
     }
