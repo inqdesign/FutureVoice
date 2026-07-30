@@ -1690,7 +1690,7 @@ private struct TopicPickerSheet: View {
 /// Two personalities: a network/Gemini/TTS blip gets a Retry; running out of
 /// credits gets the paywall — retrying a 402 can never succeed, so offering
 /// only Retry there reads as "the app is broken".
-private struct RetryReplyRow: View {
+struct RetryReplyRow: View {   // internal: DebugCaptureHarness renders it
     var outOfCredits: Bool = false
     let onRetry: () -> Void
     var onGetCredits: () -> Void = {}

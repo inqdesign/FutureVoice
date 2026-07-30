@@ -79,6 +79,22 @@ enum DebugCapture {
             once("deepen") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(DeepenCaptureHost(expanded: name == "deepen-full")
                 .environmentObject(appState))
+        case "paywall":
+            // The out-of-credits paywall (no trial pitch), as presented from
+            // a 402 failure.
+            return AnyView(PaywallView(offerTrial: false).environmentObject(appState))
+        case "credits-out":
+            // The in-call recovery row for a 402 — what the user sees when
+            // the fluent self can't reply because credits ran out.
+            return AnyView(VStack(alignment: .leading, spacing: 18) {
+                DialogueLine(speaker: .user, name: "You") {
+                    Text("Honestly, it went really well. I felt prepared.")
+                }
+                RetryReplyRow(outOfCredits: true, onRetry: {})
+                Spacer()
+            }
+            .padding(20)
+            .background(Color(.systemBackground)))
         case "builder":
             // Renders the sheet's content full-screen (no host to present it).
             return AnyView(SituationBuilderSheet(root: WatchTab.situationTree[0]) { _ in })
