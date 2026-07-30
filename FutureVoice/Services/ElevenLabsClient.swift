@@ -261,16 +261,21 @@ final class ElevenLabsClient {
     /// unexpected JSON shape) we transparently fall back to plain `synthesize`
     /// and return empty timings — keeps audio working even when karaoke is
     /// unavailable.
+    /// Set `fallbackToPlain: false` when the caller already has playable audio
+    /// and only wants timings — the plain-`synthesize` fallback can't produce
+    /// timings, so it would be a second paid generation for nothing.
     func synthesizeWithTimestamps(
         voiceId: String,
         text: String,
         modelId: String = "eleven_turbo_v2_5",
-        idempotencyKey: String? = nil
+        idempotencyKey: String? = nil,
+        fallbackToPlain: Bool = true
     ) async throws -> (Data, [WordTiming]) {
         do {
             return try await synthesizeWithTimestampsInner(
                 voiceId: voiceId, text: text, modelId: modelId, idempotencyKey: idempotencyKey)
         } catch {
+            guard fallbackToPlain else { throw error }
             // Fallback: at least play audio without karaoke. Reuses the same
             // idempotency key — one logical synthesis, one charge.
             let audio = try await synthesize(

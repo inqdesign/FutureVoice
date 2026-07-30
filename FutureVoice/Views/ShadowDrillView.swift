@@ -1204,9 +1204,11 @@ struct ShadowDrillView: View {
             }
         }
 
-        let loadedTimings = TurnAudioStore.shared.timings(for: turn.id)
+        // nil = timings recovery never attempted for this line; an EMPTY array
+        // means a paid attempt already ran and produced nothing — a stored []
+        // is what caps the paid re-synth below at once per line.
+        let storedTimings = TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
-            ?? []
 
         // Audio already on disk → make the UI usable IMMEDIATELY. The trimmer
         // and mic work with time-based looping even without word timings, so
@@ -1217,14 +1219,17 @@ struct ShadowDrillView: View {
         if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
             cachedAudioURL = ready
             targetDurationMs = Self.durationMs(of: ready)
-            timings = loadedTimings
+            timings = storedTimings ?? []
             phase = .idle
-            if loadedTimings.isEmpty {
+            if timings.isEmpty {
                 // Cancellable + off the critical path: the UI is already live,
                 // and this MUST be cancellable so it doesn't run alongside the
                 // mic recognizer.
                 recoverTask?.cancel()
-                recoverTask = Task { await recoverTimings(url: ready, voiceId: voiceId) }
+                recoverTask = Task {
+                    await recoverTimings(url: ready, voiceId: voiceId,
+                                         allowPaidResynth: storedTimings == nil)
+                }
             }
             return
         }
@@ -1236,7 +1241,11 @@ struct ShadowDrillView: View {
             let (data, newTimings) = try await ElevenLabsClient.shared
                 .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
             PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
-            let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
+            let saved = TurnAudioStore.shared.save(data, turnId: turn.id)
+            // Written even when empty: a stored [] records "with-timestamps
+            // already ran for this line", so later opens don't re-bill trying
+            // to recover karaoke that this synthesis couldn't produce.
+            TurnAudioStore.shared.saveTimings(newTimings, for: turn.id)
             cachedAudioURL = saved
             if let saved { targetDurationMs = Self.durationMs(of: saved) }
             timings = newTimings
@@ -1252,9 +1261,14 @@ struct ShadowDrillView: View {
 
     /// Recover karaoke word-timings in the BACKGROUND (never blocks the UI):
     /// the free on-device alignment first, then — only if that can't match the
-    /// line — a paid re-synth. Any failure just leaves karaoke off; the
-    /// trimmer's time-based looping already works.
-    private func recoverTimings(url: URL, voiceId: String) async {
+    /// line AND `allowPaidResynth` — a paid re-synth. The paid attempt runs at
+    /// most ONCE per line ever: its result is persisted even when empty, and
+    /// the caller passes `allowPaidResynth: false` once anything is stored.
+    /// (Before this cap, every open of a timing-less line billed a fresh
+    /// synthesis — the free alignment retry is the only part that repeats.)
+    /// Any failure just leaves karaoke off; the trimmer's time-based looping
+    /// already works.
+    private func recoverTimings(url: URL, voiceId: String, allowPaidResynth: Bool) async {
         let local = await LocalAlignment.wordTimings(
             audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript)
         if Task.isCancelled { return }
@@ -1263,11 +1277,18 @@ struct ShadowDrillView: View {
             timings = local
             return
         }
+        guard allowPaidResynth else { return }
         do {
+            // No plain-synthesize fallback here: the audio already plays from
+            // cache, so a generation without timings would buy nothing.
             let (data, newTimings) = try await ElevenLabsClient.shared
-                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
+                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript,
+                                          fallbackToPlain: false)
             PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
-            _ = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
+            _ = TurnAudioStore.shared.save(data, turnId: turn.id)
+            // Even an empty result is written — it's the "already attempted"
+            // marker that stops the next open from billing again.
+            TurnAudioStore.shared.saveTimings(newTimings, for: turn.id)
             if !newTimings.isEmpty { timings = newTimings }
         } catch {
             // The audio already plays; only karaoke is affected. A credit
