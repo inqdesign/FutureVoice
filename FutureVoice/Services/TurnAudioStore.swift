@@ -51,10 +51,6 @@ final class TurnAudioStore {
 
     // MARK: - Word timings
 
-    /// nil = no timings file (recovery never ran). An empty array is a real,
-    /// stored result: "recovery ran and produced nothing" — ShadowDrillView
-    /// uses that distinction to cap paid timing recovery at once per line, so
-    /// don't collapse [] into nil here.
     func timings(for turnId: UUID) -> [WordTiming]? {
         let url = timingsURL(for: turnId)
         guard let data = try? Data(contentsOf: url) else { return nil }

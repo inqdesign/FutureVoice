@@ -40,9 +40,6 @@ struct ShadowDrillView: View {
     /// The last failure was the 402 credit gate — the error alert then leads
     /// with the paywall instead of a dead-end OK.
     @State private var outOfCredits = false
-    /// Non-blocking notice when karaoke timings couldn't be synthesized but
-    /// cached audio still lets practice continue (e.g. out of credits).
-    @State private var timingNote: String?
     @State private var showingPaywall = false
     @State private var targetDurationMs: Int = 0
     @State private var lastAttemptDurationMs: Int = 0
@@ -186,11 +183,6 @@ struct ShadowDrillView: View {
                                         paused: !karaokeAnimating)) { _ in
                     karaokeWords
                 }
-            }
-            if let note = timingNote {
-                Label(note, systemImage: "info.circle")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -1204,51 +1196,48 @@ struct ShadowDrillView: View {
             }
         }
 
-        // nil = timings recovery never attempted for this line; an EMPTY array
-        // means a paid attempt already ran and produced nothing — a stored []
-        // is what caps the paid re-synth below at once per line.
         let storedTimings = TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
+            ?? []
 
-        // Audio already on disk → make the UI usable IMMEDIATELY. The trimmer
-        // and mic work with time-based looping even without word timings, so
-        // recovering karaoke timings — a possibly multi-second on-device
-        // alignment, or a paid re-synth — must NOT block practice behind a
-        // "Loading…" state. It runs in the background; karaoke just lights up
-        // if/when the timings land.
+        // Audio already on disk → make the UI usable IMMEDIATELY, and karaoke
+        // ALWAYS lights up: real timings when stored, otherwise an instant
+        // duration-proportional estimate while the free on-device alignment
+        // runs in the background. Audio that was already synthesized is NEVER
+        // re-billed for shadowing — timings come from stored data, local
+        // alignment, or the estimate; there is no paid recovery path.
         if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
             cachedAudioURL = ready
             targetDurationMs = Self.durationMs(of: ready)
-            timings = storedTimings ?? []
+            timings = storedTimings
             phase = .idle
             if timings.isEmpty {
+                timings = Self.estimatedTimings(for: turn.transcript,
+                                                durationMs: targetDurationMs)
                 // Cancellable + off the critical path: the UI is already live,
                 // and this MUST be cancellable so it doesn't run alongside the
                 // mic recognizer.
                 recoverTask?.cancel()
-                recoverTask = Task {
-                    await recoverTimings(url: ready, voiceId: voiceId,
-                                         allowPaidResynth: storedTimings == nil)
-                }
+                recoverTask = Task { await recoverTimings(url: ready, voiceId: voiceId) }
             }
             return
         }
 
         // No cached audio at all — synthesizing it IS the blocking step, since
-        // nothing is playable until it lands.
+        // nothing is playable until it lands. This is the FIRST synthesis of
+        // this audio (nothing existed to reuse), so it's the one place a
+        // shadow open may bill — and it fetches timings in the same call.
         phase = .loadingAudio
         do {
             let (data, newTimings) = try await ElevenLabsClient.shared
                 .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript)
             PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
-            let saved = TurnAudioStore.shared.save(data, turnId: turn.id)
-            // Written even when empty: a stored [] records "with-timestamps
-            // already ran for this line", so later opens don't re-bill trying
-            // to recover karaoke that this synthesis couldn't produce.
-            TurnAudioStore.shared.saveTimings(newTimings, for: turn.id)
+            let saved = TurnAudioStore.shared.save(data, turnId: turn.id, timings: newTimings)
             cachedAudioURL = saved
             if let saved { targetDurationMs = Self.durationMs(of: saved) }
-            timings = newTimings
+            timings = newTimings.isEmpty
+                ? Self.estimatedTimings(for: turn.transcript, durationMs: targetDurationMs)
+                : newTimings
             phase = .idle
         } catch {
             outOfCredits = error.isOutOfCredits
@@ -1259,43 +1248,37 @@ struct ShadowDrillView: View {
         }
     }
 
-    /// Recover karaoke word-timings in the BACKGROUND (never blocks the UI):
-    /// the free on-device alignment first, then — only if that can't match the
-    /// line AND `allowPaidResynth` — a paid re-synth. The paid attempt runs at
-    /// most ONCE per line ever: its result is persisted even when empty, and
-    /// the caller passes `allowPaidResynth: false` once anything is stored.
-    /// (Before this cap, every open of a timing-less line billed a fresh
-    /// synthesis — the free alignment retry is the only part that repeats.)
-    /// Any failure just leaves karaoke off; the trimmer's time-based looping
-    /// already works.
-    private func recoverTimings(url: URL, voiceId: String, allowPaidResynth: Bool) async {
+    /// Upgrade karaoke word-timings in the BACKGROUND (never blocks the UI)
+    /// via the FREE on-device alignment. On success the real timings replace
+    /// the duration-proportional estimate and persist; on failure the estimate
+    /// simply stays — estimates are deliberately NOT persisted so alignment
+    /// gets another free try on the next open. This path must never call
+    /// ElevenLabs: re-billing audio the user already paid for, just to
+    /// recover timings, is what caused runaway duplicate generations.
+    private func recoverTimings(url: URL, voiceId: String) async {
         let local = await LocalAlignment.wordTimings(
             audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript)
-        if Task.isCancelled { return }
-        if !local.isEmpty {
-            TurnAudioStore.shared.saveTimings(local, for: turn.id)
-            timings = local
-            return
-        }
-        guard allowPaidResynth else { return }
-        do {
-            // No plain-synthesize fallback here: the audio already plays from
-            // cache, so a generation without timings would buy nothing.
-            let (data, newTimings) = try await ElevenLabsClient.shared
-                .synthesizeWithTimestamps(voiceId: voiceId, text: turn.transcript,
-                                          fallbackToPlain: false)
-            PhraseAudioStore.shared.save(data, text: turn.transcript, voiceId: voiceId, timings: newTimings)
-            _ = TurnAudioStore.shared.save(data, turnId: turn.id)
-            // Even an empty result is written — it's the "already attempted"
-            // marker that stops the next open from billing again.
-            TurnAudioStore.shared.saveTimings(newTimings, for: turn.id)
-            if !newTimings.isEmpty { timings = newTimings }
-        } catch {
-            // The audio already plays; only karaoke is affected. A credit
-            // gate gets a quiet inline note, other failures stay silent.
-            if error.isOutOfCredits {
-                timingNote = "Word timings need credits — karaoke highlighting is off, but you can still loop any part by dragging on the timeline."
-            }
+        if Task.isCancelled || local.isEmpty { return }
+        TurnAudioStore.shared.saveTimings(local, for: turn.id)
+        timings = local
+    }
+
+    /// Karaoke fallback when no real alignment exists yet: spread the audio
+    /// duration across the words proportionally to their character counts.
+    /// Approximate, but it keeps the highlight moving with the audio — the
+    /// product rule is that karaoke always works, at zero synthesis cost.
+    static func estimatedTimings(for text: String, durationMs: Int) -> [WordTiming] {
+        let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        guard !words.isEmpty, durationMs > 0 else { return [] }
+        let totalChars = words.reduce(0) { $0 + max($1.count, 1) }
+        let msPerChar = Double(durationMs) / Double(totalChars)
+        var cursor = 0.0
+        return words.map { w in
+            let start = cursor
+            cursor += msPerChar * Double(max(w.count, 1))
+            // Small trailing gap so adjacent highlights read as distinct words.
+            return WordTiming(word: w, startMs: Int(start),
+                              endMs: max(Int(start) + 1, Int(cursor) - 20))
         }
     }
 
