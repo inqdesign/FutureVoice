@@ -18,6 +18,9 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: "2.24.0"
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios
+    from: "3.0.0"
 
 targets:
   FutureVoice:
@@ -30,6 +33,8 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
+      - package: PostHog
+        product: PostHog
       - target: FutureVoiceWidget
     entitlements:
       path: FutureVoice/Resources/FutureVoice.entitlements

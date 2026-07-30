@@ -23,6 +23,10 @@ struct FutureVoiceApp: App {
     @StateObject private var auth = AuthService()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        Analytics.start()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -95,7 +99,10 @@ final class AppState: ObservableObject {
     /// clone actually needs the server. Persisted so a relaunch resumes the
     /// flow instead of bouncing back to Welcome.
     @Published var onboardingStarted: Bool = false {
-        didSet { UserDefaults.standard.set(onboardingStarted, forKey: Self.onboardingStartedKey) }
+        didSet {
+            UserDefaults.standard.set(onboardingStarted, forKey: Self.onboardingStartedKey)
+            if onboardingStarted && !oldValue { Analytics.capture("onboarding_started") }
+        }
     }
     @Published var nativeLanguage: String = "ko" {
         didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
@@ -122,7 +129,15 @@ final class AppState: ObservableObject {
     /// Distinct from `voiceCloneId`/`persona` so we can ask the quick-answer
     /// questions up front, before the heavier voice-clone recording.
     @Published var setupComplete: Bool = false {
-        didSet { UserDefaults.standard.set(setupComplete, forKey: Self.setupCompleteKey) }
+        didSet {
+            UserDefaults.standard.set(setupComplete, forKey: Self.setupCompleteKey)
+            if setupComplete && !oldValue {
+                Analytics.capture("setup_completed", [
+                    "target_language": targetLanguage,
+                    "level": proficiency.rawValue
+                ])
+            }
+        }
     }
     /// Long-term learner memory for the current target language. Grows after
     /// every ended session via `recordSessionOutcome` and feeds the next
@@ -270,7 +285,9 @@ final class AppState: ObservableObject {
     /// one piece of data that's expensive to lose on reinstall.
     private func observeAuth() async {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
-            guard change.session != nil else { continue }
+            guard let session = change.session else { continue }
+            // distinct_id = Supabase user UUID (a random account id, not PII).
+            Analytics.identify(userId: session.user.id.uuidString)
             await self.restoreVoiceCloneFromCloud()
         }
     }
@@ -535,13 +552,22 @@ final class AppState: ObservableObject {
     /// cleans up the previous clone. Shared by first-run onboarding and the
     /// Settings "regenerate from saved recording" action.
     func regenerateVoiceClone(fromSampleAt sampleURL: URL) async throws {
+        let isFirstClone = voiceCloneId == nil
+        Analytics.capture("voice_clone_started", ["first_time": isFirstClone])
         let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
-        let newId = try await ElevenLabsClient.shared.cloneVoice(
-            name: "Future Self — \(targetLanguage.uppercased())",
-            sampleAudioURLs: [normalized]
-        )
+        let newId: String
+        do {
+            newId = try await ElevenLabsClient.shared.cloneVoice(
+                name: "Future Self — \(targetLanguage.uppercased())",
+                sampleAudioURLs: [normalized]
+            )
+        } catch {
+            Analytics.capture("voice_clone_failed", ["first_time": isFirstClone])
+            throw error
+        }
         if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
         voiceCloneId = newId
+        Analytics.capture("voice_clone_succeeded", ["first_time": isFirstClone])
         await cleanupPreviousVoiceClone()
     }
 
@@ -563,5 +589,9 @@ final class AppState: ObservableObject {
             .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
         learnerProfile.absorb(summary: summary, speakingSeconds: speakingSeconds)
         ProfileStore.shared.save(learnerProfile)
+        Analytics.capture("conversation_ended", [
+            "user_turns": turns.filter { $0.role == .user }.count,
+            "speaking_seconds": Int(speakingSeconds.rounded())
+        ])
     }
 }

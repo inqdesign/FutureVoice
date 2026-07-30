@@ -146,6 +146,7 @@ final class AuthService: NSObject, ObservableObject {
     func signOut() async {
         try? await SupabaseProvider.shared.auth.signOut()
         session = nil
+        Analytics.reset()   // drop identity so the next user isn't merged in
     }
 
     /// Server-side account deletion (Apple Guideline 5.1.1(v)). The Edge
@@ -160,6 +161,7 @@ final class AuthService: NSObject, ObservableObject {
         try await SupabaseProvider.shared.functions.invoke("account-delete")
         try? await SupabaseProvider.shared.auth.signOut(scope: .local)
         session = nil
+        Analytics.reset()   // drop identity on account deletion
     }
 
     // MARK: - Nonce helpers (Apple-recommended boilerplate)

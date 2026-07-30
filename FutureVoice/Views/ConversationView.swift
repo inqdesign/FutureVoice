@@ -188,6 +188,10 @@ struct ConversationView: View {
                 didAutoStart = true
                 phoneCallActive = true
                 HapticEngine.phoneCallStarted()
+                Analytics.capture("conversation_started", [
+                    "origin": sessionOrigin.rawValue,
+                    "resumed": isResuming
+                ])
                 if isResuming {
                     // Continue from the loaded transcript — open the mic so the
                     // user picks up where they left off (Gemini already has the

@@ -376,7 +376,7 @@ footer a:hover { color: var(--tx-d); }
   // Never track local dev (file://, localhost) or opted-out browsers (nawana.app/?ph=off).
   var _opt=(location.protocol==='file:')||/^(localhost|127\.|0\.0\.0\.0|\[?::1)/.test(location.hostname);
   try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
-  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); }
+  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
 </script>
 </head>
 <body>
