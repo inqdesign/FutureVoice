@@ -881,7 +881,7 @@ struct ShadowDrillView: View {
             // audio session in .measurement mode, which makes subsequent
             // .playback noticeably quieter. Force-cycle the session so the
             // preview plays at full speaker volume.
-            try player.play(data, forceSessionReset: true)
+            try player.play(data, source: "shadow", forceSessionReset: true)
         } catch {
             self.error = error.localizedDescription
         }

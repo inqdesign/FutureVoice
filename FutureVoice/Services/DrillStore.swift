@@ -104,6 +104,7 @@ final class DrillStore {
         c.box = min(c.box + 1, Self.maxBox)
         c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
         save(c)
+        Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])
     }
 
     /// Demote and reschedule for soon.
@@ -114,6 +115,7 @@ final class DrillStore {
         c.box = max(c.box - 1, 0)
         c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
         save(c)
+        Analytics.capture("drill_reviewed", ["correct": false, "box": c.box])
     }
 
     // MARK: - Ingest

@@ -41,6 +41,16 @@ struct RootTabView: View {
         case home, watch, practice, progress
     }
 
+    /// Analytics label for a tab (see `screen_viewed`).
+    private static func screenName(_ tab: Tab) -> String {
+        switch tab {
+        case .home:     return "talk"
+        case .watch:    return "watch"
+        case .practice: return "practice"
+        case .progress: return "progress"
+        }
+    }
+
     var body: some View {
         ZStack {
             TabView(selection: $selection) {
@@ -97,6 +107,11 @@ struct RootTabView: View {
             // publish a fresh snapshot.
             StudyWidgetRefresher.refresh()
             consumeFreeTalk()   // cold launch from the Free Talk widget
+            Analytics.capture("screen_viewed", ["screen": Self.screenName(selection)])
+        }
+        // Feature usage: which tab the user is on.
+        .onChange(of: selection) { _, tab in
+            Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
         }
         // Free Talk widget tap while the app is already up.
         .onChange(of: appState.pendingFreeTalk) { _, _ in consumeFreeTalk() }
@@ -107,6 +122,7 @@ struct RootTabView: View {
         // never reach here.
         .onOpenURL { url in
             guard url.scheme == "futurevoice" else { return }
+            Analytics.capture("widget_opened", ["kind": url.host ?? "unknown"])
             // A tapped widget note carries its item as ?q=… so we open that
             // exact word/phrase; absent, we open the plain list.
             let q = URLComponents(url: url, resolvingAgainstBaseURL: false)?

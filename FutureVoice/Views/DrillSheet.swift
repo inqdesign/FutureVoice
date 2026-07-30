@@ -492,7 +492,7 @@ private extension DrillView {
     private func playUserRecording(_ turnId: UUID) {
         guard let data = TurnAudioStore.shared.data(for: turnId) else { return }
         do {
-            try player.play(data, forceSessionReset: true)
+            try player.play(data, source: "drill", forceSessionReset: true)
             playingTurnId = turnId
         } catch {
             self.error = error.localizedDescription
@@ -505,7 +505,7 @@ private extension DrillView {
         // audio session in .measurement mode (same fix as ShadowDrillView).
         playingTurnId = nil
         if let cached = PhraseAudioStore.shared.data(text: card.targetPhrase, voiceId: voiceId) {
-            do { try player.play(cached, forceSessionReset: true) } catch { self.error = error.localizedDescription }
+            do { try player.play(cached, source: "drill", forceSessionReset: true) } catch { self.error = error.localizedDescription }
             return
         }
         isLoadingAudio = true
@@ -516,7 +516,7 @@ private extension DrillView {
                 text: card.targetPhrase
             )
             PhraseAudioStore.shared.save(audio, text: card.targetPhrase, voiceId: voiceId)
-            try player.play(audio, forceSessionReset: true)
+            try player.play(audio, source: "drill", forceSessionReset: true)
         } catch {
             // Out of credits: only HEARING a never-synthesized line is
             // blocked — grading itself is on-device and stays free. Say so,

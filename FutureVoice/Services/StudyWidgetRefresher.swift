@@ -158,7 +158,7 @@ enum StudyWidgetRefresher {
     }
 }
 
-private extension VocabStore {
+extension VocabStore {
     /// Compact CEFR tag for a notebook word ("B1"), empty when the word isn't
     /// in the core list (proper nouns, tapped transcript words). Rendered as
     /// the trailing caption of a widget list row.

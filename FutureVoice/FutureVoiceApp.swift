@@ -356,6 +356,7 @@ final class AppState: ObservableObject {
     func saveShadowAttempt(_ a: ShadowAttempt) {
         ShadowAttemptStore.shared.save(a)
         shadowAttempts = ShadowAttemptStore.shared.load()
+        Analytics.capture("shadow_attempted", ["score": a.matchScore])
     }
 
     func deleteShadowAttempt(id: UUID) {
@@ -364,8 +365,10 @@ final class AppState: ObservableObject {
     }
 
     func saveScenario(_ s: Scenario) {
+        let isNew = !scenarios.contains { $0.id == s.id }
         ScenarioStore.shared.save(s)
         scenarios = ScenarioStore.shared.load()
+        if isNew { Analytics.capture("scenario_created", ["is_topic": s.isTopic == true]) }
     }
 
     func deleteScenario(id: UUID) {

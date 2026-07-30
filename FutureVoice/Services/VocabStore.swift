@@ -56,6 +56,7 @@ final class VocabStore: ObservableObject {
         guard !studying.contains(word) else { return }
         studying.insert(word, at: 0)   // newest first
         saveStudying()
+        Analytics.capture("word_saved", ["cefr": VocabStore.coreLevelLabel(for: word)])
     }
 
     func removeStudying(_ word: String) {
@@ -82,6 +83,7 @@ final class VocabStore: ObservableObject {
         if studying {
             guard !studyingExpressions.contains(k) else { return }
             studyingExpressions.insert(k, at: 0)
+            Analytics.capture("expression_bookmarked")
             if expressionRecords[k] == nil {
                 expressionRecords[k] = Record(state: .used, firstAt: Date(), lastAt: Date(), count: 0)
                 saveExpressions()
@@ -297,6 +299,7 @@ final class VocabStore: ObservableObject {
             save()
         }
         removeStudying(lemma)
+        Analytics.capture("word_known", ["cefr": VocabStore.coreLevelLabel(for: lemma)])
     }
 
     func unmark(_ lemma: String) {

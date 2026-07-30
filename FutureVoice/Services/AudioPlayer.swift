@@ -62,9 +62,16 @@ final class AudioPlayer: NSObject, ObservableObject {
     ///   into the next `.playback` call, which manifests as quiet preview
     ///   audio. Force-reset clears that.
     func play(_ data: Data,
+              source: String = "replay",
               configureSession: Bool = true,
               forceSessionReset: Bool = false,
               completion: (() -> Void)? = nil) throws {
+        // Product analytics — deliberate playbacks only. The conversation's
+        // per-turn auto-play passes source "conversation" and is skipped
+        // (conversation_started/ended already covers that).
+        if source != "conversation" {
+            Analytics.capture("audio_played", ["source": source])
+        }
         if configureSession {
             configureForPlayback(forceSessionReset: forceSessionReset)
         }

@@ -1128,7 +1128,7 @@ struct ConversationView: View {
         // (set up by LiveTranscriber) instead of switching to .playback and
         // back. Each switch costs 200–500ms — meaningful in a phone-call
         // loop. Speaker output still works because of .defaultToSpeaker.
-        try player.play(audio, configureSession: false) {
+        try player.play(audio, source: "conversation", configureSession: false) {
             Task { @MainActor in
                 guard phase == .speaking else { return }
                 phase = .idle

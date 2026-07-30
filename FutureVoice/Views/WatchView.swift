@@ -563,7 +563,7 @@ struct WatchView: View {
     private func playAndWait(_ data: Data) async throws {
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             do {
-                try player.play(data) {
+                try player.play(data, source: "scene") {
                     cont.resume(returning: ())
                 }
             } catch {
