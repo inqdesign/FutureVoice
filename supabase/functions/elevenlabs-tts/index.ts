@@ -17,7 +17,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { priceFor, charge, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+import { chargePooledTTS, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-tts"
 
@@ -54,13 +54,21 @@ Deno.serve(async (req) => {
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
   const action = body.with_timestamps ? "tts_timestamps" : "tts"
-  const amount = priceFor(action, { chars: body.text.length })
+  // Onboarding greeting is free: it's the clone's first words, part of the
+  // product's entry experience — not usage. Length-capped so the tag can't
+  // be abused to smuggle real synthesis for free.
+  const isFreeGreeting = body.purpose === "greeting" && body.text.length <= 120
 
-  const ch = await charge({
-    supabase, userId: user.id, action, amount,
-    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
-  })
+  // Daily character pooling — credits debit only when the day's running
+  // char total crosses a 100-char boundary, so short lines stop costing a
+  // full minimum credit each. `ch.charged` is this call's exact debit.
+  const ch = isFreeGreeting
+    ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
+    : await chargePooledTTS({
+        supabase, userId: user.id, action, chars: body.text.length,
+        sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+        metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
+      })
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
       return insufficientCreditsResponse(cors())
@@ -98,12 +106,16 @@ Deno.serve(async (req) => {
   })
 
   if (!upstream.ok) {
-    // Roll back the charge — user didn't actually get audio.
-    await refund({
-      supabase, userId: user.id, amount,
-      action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
-      metadata: { reason: "upstream_error", status: upstream.status },
-    })
+    // Roll back this call's exact debit — user didn't actually get audio.
+    // (The pooled chars stay accumulated; a rare failed call's characters
+    // at most pull the next boundary crossing slightly earlier.)
+    if (ch.charged > 0) {
+      await refund({
+        supabase, userId: user.id, amount: ch.charged,
+        action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+        metadata: { reason: "upstream_error", status: upstream.status },
+      })
+    }
     const detail = await upstream.text()
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }

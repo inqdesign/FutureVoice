@@ -116,6 +116,52 @@ export async function charge(opts: {
 }
 
 /**
+ * TTS charge with daily character pooling (the `charge_tts_pooled` SQL
+ * function): characters accumulate per (user, day, action) and credits are
+ * debited only when the running total crosses each 100-char boundary — same
+ * long-run price as priceFor(), without the per-call ceil + 1-credit
+ * minimum that overcharged short lines. `charged` in the result is exactly
+ * what THIS call debited (possibly 0) — refund that amount if upstream
+ * fails.
+ */
+export async function chargePooledTTS(opts: {
+  supabase: SupabaseClient
+  userId: string
+  action: "tts" | "tts_timestamps"
+  chars: number
+  sourceFn: string
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<ChargeResult | ChargeError> {
+  const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
+  const { data, error } = await supabase.rpc("charge_tts_pooled", {
+    p_user_id: userId,
+    p_chars: chars,
+    p_action: action,
+    p_source_fn: sourceFn,
+    p_idempotency_key: idempotencyKey,
+    p_metadata: metadata ?? null,
+  })
+  if (error) {
+    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
+      await recordDepletion(userId, sourceFn)
+      return { ok: false, reason: "insufficient_credits", detail: error.message }
+    }
+    if (error.message?.includes("NO_CREDIT_ROW")) {
+      return { ok: false, reason: "no_credit_row", detail: error.message }
+    }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  const parsed = data as { balance?: number; charged?: number }
+  return {
+    ok: true,
+    balanceAfter: parsed?.balance ?? -1,
+    charged: parsed?.charged ?? 0,
+    idempotencyKey,
+  }
+}
+
+/**
  * Reverse a previous charge when the upstream call failed AFTER we debited.
  * Uses a derived idempotency key so a single charge can be cleanly refunded
  * exactly once.

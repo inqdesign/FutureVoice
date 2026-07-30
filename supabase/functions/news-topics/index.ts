@@ -178,8 +178,11 @@ async function generateTopics(
     `in ${language}. Facts only, nothing invented; these ground a whole ` +
     `conversation about the story, so cover its distinct angles.` + avoidBlock
 
+  // gemini-3.6-flash: the 2.5 family retires 2026-10-16. Gen-3 takes
+  // thinkingLevel (not thinkingBudget) and prefers default sampling — no
+  // temperature (mirrors the app's GeminiClient).
   const upstream = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -188,10 +191,9 @@ async function generateTopics(
         contents: [{ role: "user", parts: [{ text: `Today is ${today}.` }] }],
         tools: [{ google_search: {} }],
         generationConfig: {
-          temperature: 0.4,
           // Room for 3 topics × (title + blurb + 5-7 facts).
           maxOutputTokens: 2200,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: { thinkingLevel: "low" },
         },
       }),
     },
