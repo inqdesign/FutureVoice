@@ -35,7 +35,18 @@ final class DrillStore {
         // tighter summary prompt + ingestion safety net landed. Read-time
         // filter only — we don't rewrite the JSON, so this is a no-op once
         // the bad rows roll off naturally.
-        return cards.filter { !Self.looksLikeMetaRule($0.targetPhrase) }
+        // Also trim multi-sentence targets down to their core sentence —
+        // cards ingested before the one-sentence prompt rule carry whole-turn
+        // rewrites. Read-time so the backlog is fixed everywhere at once
+        // (card UI, TTS, shadow, widget) without a disk migration.
+        return cards
+            .filter { !Self.looksLikeMetaRule($0.targetPhrase) }
+            .map { card in
+                var c = card
+                c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
+                                                   pairedWith: c.sourcePhrase)
+                return c
+            }
     }
 
     func save(_ card: DrillCard) {
@@ -142,6 +153,9 @@ final class DrillStore {
         }
 
         func add(source: String, target: String, reason: String, turnId: UUID? = nil) {
+            // Safety net mirroring the read-time trim: never persist a
+            // multi-sentence whole-turn rewrite as a drill target.
+            let target = Self.coreSentence(of: target, pairedWith: source)
             let key = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
             // Safety net: even with the tightened summary prompt, Gemini
@@ -236,6 +250,35 @@ final class DrillStore {
             return best.count > maxChars ? best.prefix(maxChars) + "…" : best
         }
         return trimmed.prefix(maxChars) + "…"
+    }
+
+    /// Target-side twin of `relevantFragment`. Gemini sometimes rewrites a
+    /// user's WHOLE multi-sentence turn as the "fluent alternative" — a
+    /// paragraph is un-drillable (unreadable card, minute-long TTS, hopeless
+    /// shadow). Keep the ONE sentence that corresponds to the correction:
+    /// the corrected sentence shares most of its words with what the user
+    /// actually said, so highest overlap with the source wins. Unlike the
+    /// source fragment this is never ellipsis-cut — the result gets spoken
+    /// by TTS and shadowed, so it must stay a complete utterance.
+    static func coreSentence(of target: String, pairedWith source: String,
+                             maxChars: Int = 140) -> String {
+        let trimmed = target.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxChars else { return trimmed }
+        let sentences = trimmed
+            .split(whereSeparator: { ".!?\n".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        let sourceWords = Set(normalizedForMatch(source).split(separator: " "))
+        guard sentences.count > 1, !sourceWords.isEmpty,
+              let best = sentences.max(by: { overlap($0, sourceWords) < overlap($1, sourceWords) }),
+              overlap(best, sourceWords) > 0 else { return trimmed }
+        // Splitting ate the terminal punctuation — restore it so TTS keeps
+        // the sentence's intonation (a dropped "?" flattens a question).
+        if let range = trimmed.range(of: best), range.upperBound < trimmed.endIndex,
+           ".!?".contains(trimmed[range.upperBound]) {
+            return best + String(trimmed[range.upperBound])
+        }
+        return best
     }
 
     private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
