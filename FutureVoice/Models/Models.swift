@@ -766,6 +766,10 @@ struct SuggestedTopic: Codable, Identifiable, Hashable {
     /// The interest/category this story was matched from (news topics only).
     /// Optional so persona scenarios and rows saved before this decode fine.
     var category: String? = nil
+    /// Grounded facts collected ONCE at platform pool generation (news topics
+    /// only) — seeds the conversation's `newsFacts` so a talk isn't limited
+    /// to the one-line blurb. Optional so older cached pools decode fine.
+    var facts: [String]? = nil
 }
 
 // MARK: - Saved Line (user's personal shadow archive)

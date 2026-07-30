@@ -11,6 +11,8 @@ enum NewsTopicEngine {
         let category: String
         let title: String
         let blurb: String
+        /// Absent from pool rows cached before the facts field shipped.
+        let facts: [String]?
     }
     private struct RequestPayload: Encodable {
         let categories: [String]
@@ -61,7 +63,8 @@ enum NewsTopicEngine {
             for category in order {
                 guard let list = byCategory[category], round < list.count else { continue }
                 out.append(SuggestedTopic(title: list[round].title, blurb: list[round].blurb,
-                                          category: list[round].category))
+                                          category: list[round].category,
+                                          facts: list[round].facts))
                 added = true
                 if out.count >= cap { break }
             }

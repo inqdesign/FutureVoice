@@ -60,7 +60,8 @@ struct ConversationView: View {
     /// like placing a phone call.
     init(initialTopic: String = "", initialBlurb: String = "",
          initialIsNews: Bool = false, initialOrigin: SessionOrigin = .free,
-         initialScenarioId: UUID? = nil, resumeSession: Session? = nil,
+         initialScenarioId: UUID? = nil, initialNewsFacts: [String] = [],
+         resumeSession: Session? = nil,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
         if let s = resumeSession {
@@ -80,6 +81,7 @@ struct ConversationView: View {
             _topicIsNews = State(initialValue: initialIsNews)
             _sessionOrigin = State(initialValue: initialOrigin)
             _sessionScenarioId = State(initialValue: initialScenarioId)
+            _newsFacts = State(initialValue: initialNewsFacts)
         }
     }
 
@@ -704,8 +706,12 @@ struct ConversationView: View {
     private func openNewsConversation() -> String? {
         let opener = topic.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !opener.isEmpty else { return nil }
-        let fact = topicBlurb.trimmingCharacters(in: .whitespacesAndNewlines)
-        newsFacts = fact.isEmpty ? [] : [fact]
+        // Pool facts (seeded via init) win; a pre-facts pool row falls back
+        // to the blurb so the talk is never fact-free.
+        if newsFacts.isEmpty {
+            let fact = topicBlurb.trimmingCharacters(in: .whitespacesAndNewlines)
+            newsFacts = fact.isEmpty ? [] : [fact]
+        }
         return opener
     }
 

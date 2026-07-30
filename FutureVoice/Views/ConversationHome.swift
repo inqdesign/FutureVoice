@@ -51,6 +51,8 @@ struct ConversationHome: View {
         var isNews = false
         var origin: SessionOrigin = .free
         var scenarioId: UUID? = nil
+        /// Pool-grounded facts for a news talk — seeds `newsFacts`.
+        var newsFacts: [String] = []
     }
     /// Server-side account/billing snapshot — drives the credit chip. Credits
     /// live WITH the plan (not as a bare stat) so tapping goes to the
@@ -156,7 +158,8 @@ struct ConversationHome: View {
                 ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
                                  initialIsNews: launch.isNews,
                                  initialOrigin: launch.origin,
-                                 initialScenarioId: launch.scenarioId)
+                                 initialScenarioId: launch.scenarioId,
+                                 initialNewsFacts: launch.newsFacts)
                     .environmentObject(appState)
             }
         }
@@ -370,7 +373,8 @@ struct ConversationHome: View {
             topic: t.title,
             blurb: "Recent news to discuss (facts from coverage): \(t.blurb)",
             isNews: true,
-            origin: .news
+            origin: .news,
+            newsFacts: t.facts ?? []
         )
     }
 

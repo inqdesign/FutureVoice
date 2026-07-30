@@ -118,15 +118,20 @@ Deno.serve(async (req) => {
     .in("category", categories)
   if (error) return errorResponse(500, "read failed", error.message)
 
-  const out: { category: string; title: string; blurb: string }[] = []
+  const out: { category: string; title: string; blurb: string; facts: string[] }[] = []
   const seenTitles = new Set<string>()
   for (const row of rows ?? []) {
-    for (const t of row.topics as { title: string; blurb: string }[]) {
+    for (const t of row.topics as { title: string; blurb: string; facts?: string[] }[]) {
       if (!t?.title) continue
       const key = `${row.category}|${t.title.toLowerCase()}`
       if (seenTitles.has(key)) continue
       seenTitles.add(key)
-      out.push({ category: row.category, title: t.title, blurb: t.blurb ?? "" })
+      out.push({
+        category: row.category, title: t.title, blurb: t.blurb ?? "",
+        // Rows cached before the facts field existed simply send [] — the
+        // client falls back to the blurb.
+        facts: Array.isArray(t.facts) ? t.facts : [],
+      })
     }
   }
   return jsonResponse({ topics: out })
@@ -152,7 +157,7 @@ async function generateTopics(
   language: string,
   apiKey: string,
   avoidTitles: string[] = [],
-): Promise<{ title: string; blurb: string }[]> {
+): Promise<{ title: string; blurb: string; facts: string[] }[]> {
   const today = new Date().toISOString().slice(0, 10)
   const avoidBlock = avoidTitles.length === 0 ? "" :
     `\n\nAlready covered today — find DIFFERENT stories, do not repeat these:\n` +
@@ -162,12 +167,16 @@ async function generateTopics(
     `(published within the last 7 days, each from a different story) about: ${category}. ` +
     `They will be used as conversation-practice topics for ${language} learners.\n\n` +
     `Return STRICT JSON only — no prose, no code fences:\n` +
-    `{ "topics": [ { "title": "...", "blurb": "..." } ] }\n\n` +
+    `{ "topics": [ { "title": "...", "blurb": "...", "facts": ["...", "..."] } ] }\n\n` +
     `- title: how a friend would bring the story up in ${language}, ` +
     `10 words or fewer ("Did you see the news about ..." energy, not a headline).\n` +
     `- blurb: 1-2 sentences of plain facts from the search results — what ` +
     `happened, who, when. Nothing that isn't in the sources: no speculation, ` +
-    `no color, no invented details.` + avoidBlock
+    `no color, no invented details.\n` +
+    `- facts: 5-7 short plain-language facts from the coverage — what ` +
+    `happened, who, when, key numbers, notable reactions. Each ≤ 20 words, ` +
+    `in ${language}. Facts only, nothing invented; these ground a whole ` +
+    `conversation about the story, so cover its distinct angles.` + avoidBlock
 
   const upstream = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -180,7 +189,8 @@ async function generateTopics(
         tools: [{ google_search: {} }],
         generationConfig: {
           temperature: 0.4,
-          maxOutputTokens: 1200,
+          // Room for 3 topics × (title + blurb + 5-7 facts).
+          maxOutputTokens: 2200,
           thinkingConfig: { thinkingBudget: 0 },
         },
       }),
@@ -200,9 +210,12 @@ async function generateTopics(
   return topics
     .filter((t: { title?: string }) => typeof t?.title === "string" && t.title.trim())
     .slice(0, TOPICS_PER_CATEGORY)
-    .map((t: { title: string; blurb?: string }) => ({
+    .map((t: { title: string; blurb?: string; facts?: unknown }) => ({
       title: t.title.trim(),
       blurb: (t.blurb ?? "").trim(),
+      facts: Array.isArray(t.facts)
+        ? t.facts.filter((f: unknown) => typeof f === "string" && f.trim()).slice(0, 8)
+        : [],
     }))
 }
 
