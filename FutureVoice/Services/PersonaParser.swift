@@ -35,6 +35,8 @@ enum PersonaParser {
         return try await GeminiClient.shared.sendJSON(
             system: systemPrompt(),
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
+            // Pure transcript cleanup — utility tier, like CounterpartParser.
+            model: .flashLite31,
             maxTokens: 500,
             purpose: "parse"
         )

@@ -41,7 +41,12 @@ struct ScenarioComposerSheet: View {
     @State private var options: [SuggestedTopic] = []
     @State private var loadingOptions = false
     @State private var optionsError: String?
-    @State private var optionsCache: [String: [SuggestedTopic]] = [:]
+    /// App-lifetime idea cache (static, NOT @State): the same category path
+    /// asks Gemini once per launch, not once per sheet open — reopening the
+    /// composer on "Cafe" was silently re-billing the identical topics call
+    /// every time. Keyed by person too, so ideas scoped to someone never
+    /// leak into the blank composer. "More" (force) still refreshes.
+    private static var optionsCache: [String: [SuggestedTopic]] = [:]
 
     // Custom category creation (keyword title + icon or emoji)
     @State private var addingCustom = false
@@ -507,8 +512,8 @@ struct ScenarioComposerSheet: View {
     private func refreshOptions(force: Bool = false) async {
         guard canDrillDeeper else { options = []; return }
         let labels = path.map(\.label)
-        let key = labels.joined(separator: "›")
-        if !force, let cached = optionsCache[key] { options = cached; return }
+        let key = (person?.id.uuidString ?? "-") + "|" + labels.joined(separator: "›")
+        if !force, let cached = Self.optionsCache[key] { options = cached; return }
         loadingOptions = true
         optionsError = nil
         options = []            // → skeleton
@@ -517,7 +522,7 @@ struct ScenarioComposerSheet: View {
             let result = try await TopicEngine.suggestForPath(
                 path: labels, persona: appState.persona, counterpart: person,
                 targetLanguage: appState.targetLanguage)
-            optionsCache[key] = result
+            Self.optionsCache[key] = result
             // Guard against a stale response (user navigated during the await).
             if path.map(\.label) == labels { options = result }
         } catch {

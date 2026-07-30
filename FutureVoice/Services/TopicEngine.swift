@@ -275,6 +275,9 @@ enum TopicEngine {
         return try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: "scenario: \(text)")],
+            // Pure classification (category + icon + short label) — utility
+            // tier; the learner-facing idea GENERATION stays on the default.
+            model: .flashLite31,
             maxTokens: 160,
             purpose: "topics"
         )
