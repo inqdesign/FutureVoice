@@ -92,14 +92,27 @@ enum LanguageScope {
         "vocab_studying_expressions.json",
     ]
 
-    /// Moves the pre-multi-language flat layout into `lang/<active>/`. MUST
+    /// Mirrors the pre-multi-language flat layout into `lang/<active>/`. MUST
     /// run before any store singleton is touched (FutureVoiceApp.init) —
     /// store inits resolve their paths against the scoped directory.
     ///
-    /// Per file: copy → verify size → delete source, so a crash mid-way
-    /// re-runs safely (a finished file is gone from the root and skipped; a
-    /// half-copied destination is overwritten). The done-flag is only set
-    /// once the root holds no scoped file at all.
+    /// **Copies. Never deletes the original.** An older build reads only the
+    /// Documents root, so moving the files makes a downgrade — a TestFlight
+    /// tester rolling back a build, a developer switching branches — look
+    /// exactly like total data loss. Leaving the originals in place lets the
+    /// two layouts coexist: the old build still finds everything where it
+    /// left it. The cost is one duplicate of a handful of small JSON files.
+    ///
+    /// Deliberately NOT re-synced afterwards. Once migrated, this build owns
+    /// `lang/<code>/` and the root copy freezes as the old build's view. A
+    /// "copy whichever side is newer" rule would look smarter and would be a
+    /// trap: a week spent on the old build would silently overwrite a month
+    /// made on the new one. Frozen means a rollback can hide recent work from
+    /// one side, but nothing is ever destroyed.
+    ///
+    /// Per file: copy → verify size. The done-flag is set only if every file
+    /// present at the root copied cleanly, so a crash mid-way retries on the
+    /// next launch (a half-written destination is replaced, not appended to).
     static func migrateIfNeeded() {
         let defaults = UserDefaults.standard
         guard !defaults.bool(forKey: migratedKey) else { return }
@@ -108,20 +121,19 @@ enum LanguageScope {
         let docs = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let dest = activeDirectory   // pre-existing data belongs to the current target
 
+        var allCopied = true
         for name in scopedFilenames {
             let src = docs.appendingPathComponent(name)
             guard fm.fileExists(atPath: src.path) else { continue }
             let dst = dest.appendingPathComponent(name)
             try? fm.removeItem(at: dst)   // stale partial copy from a crashed run
             guard (try? fm.copyItem(at: src, to: dst)) != nil,
-                  fileSize(src) == fileSize(dst) else { continue }
-            try? fm.removeItem(at: src)
+                  fileSize(src) == fileSize(dst) else {
+                allCopied = false
+                continue
+            }
         }
-
-        let leftover = scopedFilenames.contains {
-            fm.fileExists(atPath: docs.appendingPathComponent($0).path)
-        }
-        if !leftover { defaults.set(true, forKey: migratedKey) }
+        if allCopied { defaults.set(true, forKey: migratedKey) }
     }
 
     private static func fileSize(_ url: URL) -> Int? {
