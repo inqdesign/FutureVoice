@@ -33,6 +33,7 @@ struct ConversationHome: View {
     @State private var callLaunch: CallLaunch?
     @State private var showingProfile = false
     @State private var showingBuilder = false
+    @State private var showingAddLanguage = false
     /// The post-first-talk "tell me more about you" bottom sheet. Auto-shown
     /// ONCE (flag below) right after the first conversation ends; afterwards
     /// the deepenRow re-opens it while the narrative fields stay empty.
@@ -104,11 +105,20 @@ struct ConversationHome: View {
             // share the inline row and truncate "Good afternoon".
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                // Language chip on the leading edge — the one-tap switch
+                // between enrolled languages and the discoverable entry point
+                // for adding one (docs/multi-language-plan.md).
+                ToolbarItem(placement: .topBarLeading) {
+                    languageSwitcher
+                }
                 // ONE header control: credits + avatar as a single unit —
                 // account things live together up here, out of the Today card.
                 ToolbarItem(placement: .topBarTrailing) {
                     headerControl
                 }
+            }
+            .sheet(isPresented: $showingAddLanguage) {
+                AddLanguageSheet().environmentObject(appState)
             }
             .onAppear(perform: reload)
             // Warm the free-talk opener pool while the user is still on the
@@ -379,6 +389,39 @@ struct ConversationHome: View {
     }
 
     // MARK: - Chrome
+
+    /// The practice-language chip. Tapping lists enrolled languages (switch
+    /// is one tap, whole app follows) plus "Add a language". Always visible
+    /// even with a single language — it's how multi-language is discovered.
+    private var languageSwitcher: some View {
+        Menu {
+            ForEach(appState.enrolledLanguages, id: \.self) { code in
+                Button {
+                    appState.switchLanguage(to: code)
+                } label: {
+                    if code == appState.targetLanguage {
+                        Label(LanguageCatalog.endonym(code), systemImage: "checkmark")
+                    } else {
+                        Text(LanguageCatalog.endonym(code))
+                    }
+                }
+            }
+            Divider()
+            Button {
+                showingAddLanguage = true
+            } label: {
+                Label("Add a language", systemImage: "plus")
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "globe")
+                    .font(.caption2.weight(.bold))
+                Text(appState.targetLanguage.uppercased())
+                    .font(.footnote.weight(.semibold))
+            }
+        }
+        .accessibilityLabel("Practice language: \(LanguageCatalog.englishName(appState.targetLanguage))")
+    }
 
     /// Profile + credits fused into one header unit — credits ALWAYS visible
     /// (∞ on unlimited), account things live together up here. Each half

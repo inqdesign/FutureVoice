@@ -638,6 +638,22 @@ final class AppState: ObservableObject {
 
     // MARK: - Language enrollment & switching (docs/multi-language-plan.md)
 
+    /// First-run setup: the chosen target REPLACES the default enrollment
+    /// (a fresh install self-enrolls in "en" before setup has asked anything).
+    /// Repoints stores when the choice differs from the default so the very
+    /// first session writes into the right lang/<code>/ directory.
+    func completeSetup(target: String, native: String, level: CEFRLevel) {
+        nativeLanguage = native
+        enrolledLanguages = [target]
+        if targetLanguage != target {
+            targetLanguage = target
+            LanguageScope.repointStores()
+            reloadLanguageScopedState()
+        }
+        proficiency = level        // didSet syncs the profile
+        setupComplete = true
+    }
+
     /// Switch the active practice language. Order matters: persist the
     /// pointer first (store path resolution reads the same defaults key),
     /// then repoint every scoped store, then reload the published state those

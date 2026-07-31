@@ -4,16 +4,15 @@ import SwiftUI
 /// user answers a few things so the app knows what to teach and how to
 /// calibrate, BEFORE the heavier voice-clone recording step.
 ///
-/// Two cards, one tap each:
+/// Three cards, one tap each:
 ///   1. Native language   ← explanations/translations speak this
-///   2. Level             ← CEFR self-rating; calibrates every conversation
+///   2. Target language   ← what the fluent self speaks (multi-language:
+///                          more can be enrolled later from the Talk header)
+///   3. Level             ← CEFR self-rating; calibrates every conversation
 ///
 /// Native language leads — it's a plain fact with an obvious answer, so the
-/// very first question never reads like a test. The level self-rating comes
-/// second, once the user is already moving.
-///
-/// The practice target is fixed to English — the multi-language engine stays
-/// in `LanguageCatalog`, it's just not offered as a choice here.
+/// very first question never reads like a test. The target comes next (it
+/// scopes the level labels, e.g. TOPIK for Korean), the self-rating last.
 ///
 /// Flips `appState.setupComplete` on finish; RootView then routes to the
 /// persona cards (voice clone comes last).
@@ -23,19 +22,20 @@ struct SetupFlowView: View {
     @State private var step: Int = 0
     @State private var level: CEFRLevel = .b1
     @State private var nativeLanguage: String = "ko"
+    @State private var targetLanguage: String = "en"
     /// Backing out of step one crosses the auth boundary (Welcome lives
     /// before sign-in), so it asks first instead of silently signing out.
     @State private var confirmingSignOut = false
 
-    /// The one language the fluent self speaks. Fixed to English; the catalog
-    /// still supports others, they're just not user-selectable.
-    private let targetLanguage = "en"
+    /// Practice targets on offer — everything the catalog supports except
+    /// the chosen native language.
+    private var targetChoices: [String] {
+        LanguageCatalog.targets.map(\.code).filter { $0 != nativeLanguage }
+    }
 
-    /// Languages offered as a native language — the catalog's wide native
-    /// list, minus the (fixed) English target for safety.
-    private static let nativeChoices = LanguageCatalog.nativeLanguages.filter { $0 != "en" }
+    private static let nativeChoices = LanguageCatalog.nativeLanguages
 
-    private static let totalSteps = 2
+    private static let totalSteps = 3
 
     var body: some View {
         NavigationStack {
@@ -46,6 +46,7 @@ struct SetupFlowView: View {
                 Form {
                     switch step {
                     case 0: nativeStep
+                    case 1: targetStep
                     default: levelStep
                     }
                 }
@@ -57,11 +58,13 @@ struct SetupFlowView: View {
         }
         .onAppear {
             nativeLanguage = appState.nativeLanguage
+            targetLanguage = appState.targetLanguage
             level = appState.proficiency
-            // English can't be a native choice (it's the fixed target), so a
-            // legacy "en" native default would leave no row checked — flip it
-            // to the most common answer instead.
-            if nativeLanguage == targetLanguage { nativeLanguage = "ko" }
+            // Native and target can't coincide; targets step re-checks after
+            // the native pick too (see advance()).
+            if targetLanguage == nativeLanguage {
+                targetLanguage = targetChoices.first ?? "en"
+            }
             #if DEBUG
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
             if UserDefaults.standard.object(forKey: "onboardingStep") != nil {
@@ -74,7 +77,29 @@ struct SetupFlowView: View {
     private var title: String {
         switch step {
         case 0: return "Your language?"
+        case 1: return "Learn which language?"
         default: return "Your level?"
+        }
+    }
+
+    // MARK: - Step 2 · Target language
+
+    /// What the fluent self will speak. One row per supported target; more
+    /// languages can be enrolled later from the Talk header — this picks the
+    /// first one.
+    private var targetStep: some View {
+        Section {
+            ForEach(targetChoices, id: \.self) { code in
+                pickRow(
+                    title: Self.endonym(code),
+                    subtitle: Self.englishName(code),
+                    selected: targetLanguage == code
+                ) { targetLanguage = code }
+            }
+        } header: {
+            Text("Which language do you want to speak?")
+        } footer: {
+            Text("Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.")
         }
     }
 
@@ -96,7 +121,7 @@ struct SetupFlowView: View {
         } header: {
             Text("How comfortable are you right now?")
         } footer: {
-            Text("You're about to build your fluent self — another you that already speaks fluent English. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.")
+            Text("You're about to build your fluent self — another you that already speaks fluent \(Self.englishName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.")
         }
     }
 
@@ -229,6 +254,10 @@ struct SetupFlowView: View {
 
     private func advance() {
         if step < Self.totalSteps - 1 {
+            // The native pick may have collided with the pre-selected target.
+            if targetLanguage == nativeLanguage {
+                targetLanguage = targetChoices.first ?? "en"
+            }
             step += 1
         } else {
             finish()
@@ -236,12 +265,11 @@ struct SetupFlowView: View {
     }
 
     private func finish() {
-        // Persist the answers, then open the gate so RootView moves on to
-        // the persona cards (the clone, recorded later, is named after this
-        // language).
-        appState.targetLanguage = targetLanguage
-        appState.nativeLanguage = nativeLanguage
-        appState.proficiency = level
-        appState.setupComplete = true
+        // Persist the answers and enroll the chosen target as the ONLY
+        // language (replacing the fresh install's default enrollment), then
+        // open the gate so RootView moves on to the persona cards.
+        appState.completeSetup(target: targetLanguage,
+                               native: nativeLanguage,
+                               level: level)
     }
 }
