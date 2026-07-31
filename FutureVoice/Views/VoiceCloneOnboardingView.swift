@@ -645,15 +645,27 @@ struct VoiceCloneOnboardingView: View {
                 }
 
             case .recording:
-                Button(action: stopAndReview) {
-                    Label(elapsedSeconds >= Self.minSeconds ? "Stop & review" : "Stop (early)",
-                          systemImage: "stop.fill")
-                        .frame(maxWidth: .infinity)
+                // No early submit: every beta take that stopped short of the
+                // minimum produced a "doesn't sound like me" clone. Before
+                // minSeconds the only exit is starting over — a flubbed take
+                // never traps the user, but a short one can't proceed either.
+                if elapsedSeconds >= Self.minSeconds {
+                    Button(action: stopAndReview) {
+                        Label("Stop & review", systemImage: "stop.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .tint(elapsedSeconds >= Self.recommendedSeconds ? .green : .red)
+                } else {
+                    Button(action: abortRecording) {
+                        Label("Start over", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(elapsedSeconds < 1)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .tint(elapsedSeconds >= Self.recommendedSeconds ? .green : .red)
-                .disabled(elapsedSeconds < 1)
 
                 recordingFooter
 
@@ -921,6 +933,16 @@ struct VoiceCloneOnboardingView: View {
     private func finishMeet() {
         player.stop()
         appState.holdVoiceOnboarding = false   // RootView moves on to the tabs
+    }
+
+    /// Abandon the take mid-recording (before the minimum) and return to the
+    /// script step. The partial file is discarded — it must never reach review.
+    private func abortRecording() {
+        stopTicker()
+        if let url = recorder.stop() { try? FileManager.default.removeItem(at: url) }
+        elapsedSeconds = 0
+        error = nil
+        status = .script
     }
 
     private func reRecord() {
