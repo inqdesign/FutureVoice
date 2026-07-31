@@ -1025,8 +1025,13 @@ struct ConversationView: View {
         guard !isTornDown else { return }
         // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
         // fluent-self lines (greetings, short acknowledgements, etc.).
-        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
-            let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
+        // `allowLineage: false` — a LIVE call must sound like one take, so an
+        // older clone's recording is never spliced in mid-conversation. Review
+        // surfaces (scenes, drills, shadow) do accept it.
+        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId,
+                                                    allowLineage: false) {
+            let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId,
+                                                          allowLineage: false) ?? []
             try appendTurnAndPlay(cached, timings: timings, transcript: text)
             logTurnTiming(tts: "cache")
             return

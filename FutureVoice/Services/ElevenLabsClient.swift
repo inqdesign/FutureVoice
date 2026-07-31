@@ -102,6 +102,23 @@ final class ElevenLabsClient {
         try Self.validate(response: response, data: data)
     }
 
+    /// Renames an EXISTING clone upstream. The name is otherwise fixed at
+    /// creation time, so without this a rename would only show up after the
+    /// user's next re-record. Free — no credits are charged.
+    func renameVoice(voiceId: String, name: String) async throws {
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-rename")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: ["voice_id": voiceId, "name": name])
+
+        let (data, response) = try await session.dataWithRetry(for: request)
+        try Self.validate(response: response, data: data)
+    }
+
     // MARK: - Text-to-Speech
 
     /// Model for live conversation turns (Talk): Flash trades a little
@@ -431,9 +448,35 @@ enum ElevenLabsError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidResponse: return "ElevenLabs: invalid response"
-        case .httpError(let status, let body): return "ElevenLabs HTTP \(status): \(body)"
+        case .httpError(let status, let body):
+            // The voice-slot ceiling is OUR capacity problem, not something the
+            // user did — don't hand them a wall of upstream JSON they can't act
+            // on. Everything else keeps the raw body: it's the only diagnostic
+            // a beta tester can screenshot.
+            if Self.isVoiceLimitBody(body) {
+                return "We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later."
+            }
+            return "ElevenLabs HTTP \(status): \(body)"
         case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
         }
+    }
+
+    /// True when the account's custom-voice slots are full. The upstream error
+    /// arrives as a 400 with `voice_limit_reached` nested in the body.
+    var isVoiceLimitReached: Bool {
+        if case .httpError(_, let body) = self { return Self.isVoiceLimitBody(body) }
+        return false
+    }
+
+    private static func isVoiceLimitBody(_ body: String) -> Bool {
+        body.contains("voice_limit_reached")
+    }
+}
+
+extension Error {
+    /// Convenience for call sites that only hold an `Error`.
+    var isVoiceLimitReached: Bool {
+        (self as? ElevenLabsError)?.isVoiceLimitReached ?? false
     }
 }
 
