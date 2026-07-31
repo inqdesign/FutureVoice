@@ -3,7 +3,7 @@ import Foundation
 /// Daily cache for news-grounded topics (`Documents/news_topics.json`).
 /// Search-grounded Gemini calls cost more than plain ones, so we keep one
 /// batch per day and invalidate when the user's interests change.
-final class NewsTopicStore {
+final class NewsTopicStore: LanguageScopedStore {
     static let shared = NewsTopicStore()
 
     struct Cached: Codable {
@@ -17,13 +17,14 @@ final class NewsTopicStore {
 
     static let maxAge: TimeInterval = 24 * 60 * 60
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "news_topics.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -33,6 +34,10 @@ final class NewsTopicStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     /// Order- and case-insensitive fingerprint of the interest list.

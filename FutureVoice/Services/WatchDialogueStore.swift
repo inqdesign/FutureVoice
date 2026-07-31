@@ -3,16 +3,17 @@ import Foundation
 /// JSON-on-disk store for saved Watch-mode dialogues so the user can replay
 /// past scenarios with each counterpart instead of regenerating every time.
 /// Same pattern as `SessionStore` / `DrillStore` / `CounterpartStore`.
-final class WatchDialogueStore {
+final class WatchDialogueStore: LanguageScopedStore {
     static let shared = WatchDialogueStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "watch-dialogues.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -22,6 +23,10 @@ final class WatchDialogueStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     func load() -> [WatchDialogue] {

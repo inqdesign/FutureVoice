@@ -4,16 +4,17 @@ import Foundation
 /// `TopicStore` (auto-suggested topics) — those felt stale because they only
 /// regenerated on explicit refresh. A user-curated library is fresher because
 /// it reflects what they ACTUALLY practice with.
-final class ScenarioStore {
+final class ScenarioStore: LanguageScopedStore {
     static let shared = ScenarioStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "scenarios.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -23,6 +24,10 @@ final class ScenarioStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     func load() -> [Scenario] {

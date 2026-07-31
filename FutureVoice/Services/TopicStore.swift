@@ -3,16 +3,17 @@ import Foundation
 /// On-disk cache for the persona-grounded topic suggestions. The picker reads
 /// from here on every open — only the explicit Refresh button (or a persona
 /// change) triggers a fresh Gemini call. Avoids burning a generation per tap.
-final class TopicStore {
+final class TopicStore: LanguageScopedStore {
     static let shared = TopicStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "topics.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -22,6 +23,10 @@ final class TopicStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     func load() -> [SuggestedTopic] {

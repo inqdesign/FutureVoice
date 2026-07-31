@@ -3,16 +3,17 @@ import Foundation
 /// JSON-on-disk store for saved shadow attempts. Lets the user revisit past
 /// attempts, hear their old recordings, compare scores over time. Same
 /// pattern as the other stores — Phase 2 will move to Supabase.
-final class ShadowAttemptStore {
+final class ShadowAttemptStore: LanguageScopedStore {
     static let shared = ShadowAttemptStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "shadow-attempts.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -22,6 +23,13 @@ final class ShadowAttemptStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    // Attempt records are language-scoped; the recordings they name stay in
+    // the global Documents/Recordings/ (audio blobs are per-user assets,
+    // like PhraseAudio/TurnAudio — the JSON provides the language split).
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     func load() -> [ShadowAttempt] {

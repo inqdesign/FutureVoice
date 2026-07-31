@@ -8,19 +8,44 @@ import Foundation
 /// are already lemmas, so they match the lemmatized user speech directly.
 ///
 /// Languages without a bundled list yet get an EMPTY pool — vocab tracking
-/// honestly shows nothing rather than grading against English words. Loaded
-/// once per launch; a target-language switch applies on the next launch.
+/// honestly shows nothing rather than grading against English words. Pools
+/// are cached per language, so a target-language switch swaps pools
+/// immediately (pre-multi-language this loaded once per launch).
 enum CoreVocabulary {
     struct Entry: Identifiable { let word: String; let level: CEFRLevel; var id: String { word } }
 
-    static let entries: [Entry] = load()
-    static let set: Set<String> = Set(entries.map { $0.word })
-    static var total: Int { entries.count }
+    private struct Pool {
+        let entries: [Entry]
+        let set: Set<String>
+        let levelByWord: [String: CEFRLevel]
+        let countByLevel: [CEFRLevel: Int]
+    }
 
-    private static let levelByWord: [String: CEFRLevel] =
-        Dictionary(entries.map { ($0.word, $0.level) }, uniquingKeysWith: { a, _ in a })
+    private static var pools: [String: Pool] = [:]
+    private static let lock = NSLock()
 
-    static func level(of word: String) -> CEFRLevel? { levelByWord[word] }
+    private static var current: Pool { pool(for: LanguageScope.active) }
+
+    private static func pool(for code: String) -> Pool {
+        lock.lock(); defer { lock.unlock() }
+        if let cached = pools[code] { return cached }
+        let entries = loadEntries(for: code)
+        let pool = Pool(
+            entries: entries,
+            set: Set(entries.map(\.word)),
+            levelByWord: Dictionary(entries.map { ($0.word, $0.level) },
+                                    uniquingKeysWith: { a, _ in a }),
+            countByLevel: Dictionary(entries.map { ($0.level, 1) }, uniquingKeysWith: +)
+        )
+        pools[code] = pool
+        return pool
+    }
+
+    static var entries: [Entry] { current.entries }
+    static var set: Set<String> { current.set }
+    static var total: Int { current.entries.count }
+
+    static func level(of word: String) -> CEFRLevel? { current.levelByWord[word] }
 
     /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
     /// is a direct lookup; Korean surface forms carry particles/conjugation,
@@ -28,30 +53,25 @@ enum CoreVocabulary {
     static func level(ofSurface token: String) -> CEFRLevel? {
         if isKorean {
             guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
-            return levelByWord[head]
+            return level(of: head)
         }
-        return levelByWord[token]
+        return level(of: token)
     }
 
-    private static let isKorean: Bool = {
-        let target = UserDefaults.standard
-            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
-        return LanguageCatalog.language(target)?.code == "ko"
-    }()
+    private static var isKorean: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "ko"
+    }
 
-    /// Words per CEFR level, computed once — for filter-scoped counts in the UI.
-    static let countByLevel: [CEFRLevel: Int] =
-        Dictionary(entries.map { ($0.level, 1) }, uniquingKeysWith: +)
+    /// Words per CEFR level — for filter-scoped counts in the UI.
+    static var countByLevel: [CEFRLevel: Int] { current.countByLevel }
     static func total(at level: CEFRLevel) -> Int { countByLevel[level] ?? 0 }
 
     static func levelRank(_ l: CEFRLevel) -> Int {
         CEFRLevel.allCases.firstIndex(of: l) ?? 0
     }
 
-    private static func load() -> [Entry] {
-        let target = UserDefaults.standard
-            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
-        guard let resource = LanguageCatalog.language(target)?.wordlistResource else {
+    private static func loadEntries(for code: String) -> [Entry] {
+        guard let resource = LanguageCatalog.language(code)?.wordlistResource else {
             return []
         }
         guard let url = Bundle.main.url(forResource: resource, withExtension: "tsv"),

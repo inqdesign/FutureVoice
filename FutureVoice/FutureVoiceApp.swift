@@ -24,6 +24,9 @@ struct FutureVoiceApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
+        // Layout migration must precede AppState creation — store singletons
+        // resolve their paths against the scoped directory on first touch.
+        LanguageScope.migrateIfNeeded()
         Analytics.start()
     }
 
@@ -110,6 +113,12 @@ final class AppState: ObservableObject {
     @Published var targetLanguage: String = "en" {
         didSet { UserDefaults.standard.set(targetLanguage, forKey: Self.targetLanguageKey) }
     }
+    /// Target languages the user has enrolled in, enrollment order. The
+    /// active one is `targetLanguage`; switching swaps the entire language-
+    /// scoped store set (docs/multi-language-plan.md).
+    @Published var enrolledLanguages: [String] = ["en"] {
+        didSet { UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey) }
+    }
     @Published var proficiency: CEFRLevel = .b1 {
         didSet {
             UserDefaults.standard.set(proficiency.rawValue, forKey: Self.proficiencyKey)
@@ -171,6 +180,10 @@ final class AppState: ObservableObject {
         learnerProfile = ProfileStore.shared.load(targetLanguage: storedTarget, proficiency: storedLevel)
         nativeLanguage = storedNative
         targetLanguage = storedTarget
+        let storedEnrolled = UserDefaults.standard.stringArray(forKey: LanguageScope.enrolledDefaultsKey) ?? []
+        enrolledLanguages = storedEnrolled.contains(storedTarget)
+            ? storedEnrolled
+            : storedEnrolled + [storedTarget]   // pre-multi-language install self-heals
         proficiency = storedLevel
         appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
@@ -554,6 +567,10 @@ final class AppState: ObservableObject {
         for key in defaults.dictionaryRepresentation().keys where key.hasPrefix("futurevoice.") {
             defaults.removeObject(forKey: key)
         }
+        // The lang/ tree is gone — recreate the active directory and flush
+        // every scoped store's cache so post-wipe writes land somewhere real.
+        LanguageScope.repointStores()
+        enrolledLanguages = [targetLanguage]
         // Published state — the didSet observers re-persist the fresh values,
         // which is exactly what a first-run install would look like.
         voiceCloneId = nil
@@ -582,7 +599,7 @@ final class AppState: ObservableObject {
         let newId: String
         do {
             newId = try await ElevenLabsClient.shared.cloneVoice(
-                name: "Future Self — \(targetLanguage.uppercased())",
+                name: "Future Self",   // one clone speaks every language — no language in the name
                 sampleAudioURLs: [normalized]
             )
         } catch {
@@ -617,5 +634,61 @@ final class AppState: ObservableObject {
             "user_turns": turns.filter { $0.role == .user }.count,
             "speaking_seconds": Int(speakingSeconds.rounded())
         ])
+    }
+
+    // MARK: - Language enrollment & switching (docs/multi-language-plan.md)
+
+    /// Switch the active practice language. Order matters: persist the
+    /// pointer first (store path resolution reads the same defaults key),
+    /// then repoint every scoped store, then reload the published state those
+    /// stores back. The switcher UI is only reachable from the Talk root, so
+    /// a switch can't land mid-conversation.
+    func switchLanguage(to code: String) {
+        guard code != targetLanguage, enrolledLanguages.contains(code) else { return }
+        targetLanguage = code                    // didSet persists the pointer
+        LanguageScope.repointStores()
+        reloadLanguageScopedState()
+        StudyWidgetRefresher.refresh()
+        Analytics.capture("language_switched", ["language": code])
+    }
+
+    /// Enroll a new practice language and switch to it. Deliberately leaves
+    /// the voice clone alone — one cloned voice speaks every language.
+    func addLanguage(_ code: String, level: CEFRLevel) {
+        guard LanguageCatalog.language(code) != nil else { return }
+        if !enrolledLanguages.contains(code) {
+            enrolledLanguages.append(code)
+            Analytics.capture("language_added", ["language": code, "level": level.rawValue])
+        }
+        // Seed the profile at the chosen level so the first conversation is
+        // calibrated before any session evidence exists.
+        var seeded = ProfileStore.shared.load(targetLanguage: code, proficiency: level)
+        seeded.proficiencyLevel = level
+        ProfileStore.shared.save(seeded)
+        switchLanguage(to: code)
+    }
+
+    /// Unenroll a language. On-disk data (lang/<code>/ and its profile row)
+    /// is kept so re-adding restores all progress; only the enrollment goes.
+    func removeLanguage(_ code: String) {
+        guard enrolledLanguages.count > 1, enrolledLanguages.contains(code) else { return }
+        if targetLanguage == code,
+           let fallback = enrolledLanguages.first(where: { $0 != code }) {
+            switchLanguage(to: fallback)
+        }
+        enrolledLanguages.removeAll { $0 == code }
+    }
+
+    /// Everything published that a language-scoped store backs. Persona and
+    /// counterparts are global — a switch leaves them alone.
+    private func reloadLanguageScopedState() {
+        learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
+        proficiency = learnerProfile.proficiencyLevel
+        topicSuggestions = TopicStore.shared.load()
+        watchDialogues = WatchDialogueStore.shared.load()
+        scenarios = ScenarioStore.shared.load()
+        shadowAttempts = ShadowAttemptStore.shared.load()
+        savedLines = SavedLineStore.shared.load()
+        weeklyReports = WeeklyReportStore.shared.load()
     }
 }

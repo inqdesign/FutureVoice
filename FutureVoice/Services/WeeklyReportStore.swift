@@ -7,16 +7,17 @@ import Foundation
 ///
 /// Phase 2 should migrate this to Supabase too so the trend chart survives
 /// reinstall; for the first TestFlight we keep it local.
-final class WeeklyReportStore {
+final class WeeklyReportStore: LanguageScopedStore {
     static let shared = WeeklyReportStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "weekly-reports.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -26,6 +27,10 @@ final class WeeklyReportStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     func load() -> [WeeklyReport] {
