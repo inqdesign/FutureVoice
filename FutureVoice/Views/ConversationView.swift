@@ -1113,9 +1113,6 @@ struct ConversationView: View {
             switch result {
             case .pcm22050(let fullPCM) where streamTurnId != nil && !fullPCM.isEmpty:
                 player.finishPCMStream()
-                // Persist as WAV so replay, the phrase cache, and shadow all
-                // keep working (AVAudioPlayer sniffs the container). No word
-                // timings on this path — shadow re-synthesizes them on demand.
                 let wav = AudioLoudness.wavData(
                     fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
                 let durationMs = Int(Double(fullPCM.count / 2)
@@ -1126,21 +1123,68 @@ struct ConversationView: View {
                     turns[idx].audioURL = savedURL
                     turns[idx].durationMs = durationMs
                 }
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
+                            TurnAudioStore.shared.saveTimings(timings, for: streamTurnId!)
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already cached, karaoke will use estimate
+                    }
+                }
                 return
             case .pcm22050(let fullPCM) where !fullPCM.isEmpty:
-                // Stream arrived but the local engine couldn't start —
-                // play the accumulated PCM the classic way. Already paid for.
                 let wav = AudioLoudness.wavData(
                     fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
+                            let turnId = turns.last(where: { $0.transcript == text })?.id
+                            if let id = turnId {
+                                TurnAudioStore.shared.saveTimings(timings, for: id)
+                            }
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already playing, karaoke will use estimate
+                    }
+                }
                 logTurnTiming(tts: "buffered")
                 return
             case .mp3(let data) where !data.isEmpty:
-                // Older edge deploy (no streaming support) — identical to the
-                // pre-streaming behavior.
                 PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(data, timings: [], transcript: text)
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: timings)
+                            let turnId = turns.last(where: { $0.transcript == text })?.id
+                            if let id = turnId {
+                                TurnAudioStore.shared.saveTimings(timings, for: id)
+                            }
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already playing, karaoke will use estimate
+                    }
+                }
                 logTurnTiming(tts: "buffered")
                 return
             default:
