@@ -45,13 +45,23 @@ targets:
           - group.com.roro.futurevoice
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_NAME: FutureVoice
         INFOPLIST_FILE: FutureVoice/Resources/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_OBJC_BRIDGING_HEADER: ""
         ENABLE_PREVIEWS: "YES"
+      # Debug installs BESIDE the shipped app (its own bundle id → its own
+      # data container), so a dev build can never migrate or overwrite the
+      # TestFlight build's local stores. Release is untouched, so merging
+      # this branch can't change what ships.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.dev
+          APP_DISPLAY_NAME: nawana dev
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice
+          APP_DISPLAY_NAME: nawana
     configFiles:
       Debug: Config/FutureVoice.xcconfig
       Release: Config/FutureVoice.xcconfig
@@ -76,11 +86,16 @@ targets:
           - group.com.roro.futurevoice
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.widget
         PRODUCT_NAME: FutureVoiceWidget
         INFOPLIST_FILE: FutureVoiceWidget/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         SKIP_INSTALL: YES
+      # Must stay nested under the host app's id in BOTH configs.
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.dev.widget
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.widget
 
   FutureVoiceTests:
     type: bundle.unit-test
