@@ -59,6 +59,10 @@ struct ScenarioComposerSheet: View {
     @State private var attachedPersonId: UUID?
     @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
     @FocusState private var situationFocused: Bool
+    /// Dictation language for the speak-or-type field — seeded from the
+    /// user's native language on appear (describing a situation comes out
+    /// most naturally in your own language; the LLM handles either).
+    @State private var dictationLocale = "ko"
 
     /// True once the user has TYPED their own scenario (vs building via chips).
     /// In custom mode the chip grid hides and the category is DERIVED from the
@@ -123,6 +127,7 @@ struct ScenarioComposerSheet: View {
                 // the first real ideas call isn't also paying for a cold radio.
                 GeminiClient.shared.preconnect()
                 if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
+                dictationLocale = appState.nativeLanguage
             }
             #if DEBUG
             .onAppear {
@@ -156,9 +161,25 @@ struct ScenarioComposerSheet: View {
     private var overviewSection: some View {
         Section {
             if !path.isEmpty { breadcrumb }
-            TextField("Describe the scenario", text: $situation, axis: .vertical)
-                .lineLimit(2...4)
-                .focused($situationFocused)
+            // Same speak-or-type field as the persona intake: type, or tap
+            // the mic and just say the situation — dictation streams into
+            // the field live. The field draws its own card, so the row
+            // sheds the Form's inset/background to avoid a double box.
+            // No locale toggle here: on-device STT can't auto-detect the
+            // spoken language, so dictation is pinned to the user's native
+            // language (how situations get described anyway). Typing is
+            // language-agnostic regardless.
+            SpeakOrTypeField(text: $situation,
+                             locale: $dictationLocale,
+                             placeholder: "Describe the scenario — or tap the mic and say it",
+                             showsLocalePicker: false,
+                             lineRange: 2...6,
+                             externalFocus: $situationFocused,
+                             // Grouped-row white/elevated fill — the default
+                             // card gray vanishes against the Form background.
+                             cardBackground: Color(.secondarySystemGroupedBackground))
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
                 .onChange(of: situation) { _, _ in
                     // Ignore our own writes (chip picks); a real keystroke means
                     // the user is writing their own — detach the stale category
@@ -190,7 +211,7 @@ struct ScenarioComposerSheet: View {
         } header: {
             Text("Your scenario")
         } footer: {
-            Text("Build it from a category below, or just type it — then \(ctaTitle) it.")
+            Text("Build it from a category below, type it, or say it with the mic — then \(ctaTitle) it.")
         }
     }
 
@@ -585,6 +606,18 @@ struct TalkingWithSection: View {
         Section {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
                       alignment: .leading, spacing: 8) {
+                // Saved people lead — they're the user's own cast, so they
+                // outrank the generic voices visually. Selection still
+                // DEFAULTS to a voice; leading placement is not a pre-pick.
+                ForEach(counterparts) { c in
+                    let on = attachedPersonId == c.id
+                    Button {
+                        attachedPersonId = c.id
+                    } label: {
+                        chip(c.name, icon: "person.fill", on: on)
+                    }
+                    .buttonStyle(.plain)
+                }
                 ForEach(VoicePreset.catalog) { preset in
                     let on = attachedPersonId == nil && selectedVoiceId == preset.id
                     Button {
@@ -593,15 +626,6 @@ struct TalkingWithSection: View {
                     } label: {
                         chip("\(preset.displayName) · \(preset.accent == "British" ? "UK" : "US")",
                              icon: "waveform", on: on)
-                    }
-                    .buttonStyle(.plain)
-                }
-                ForEach(counterparts) { c in
-                    let on = attachedPersonId == c.id
-                    Button {
-                        attachedPersonId = c.id
-                    } label: {
-                        chip(c.name, icon: "person.fill", on: on)
                     }
                     .buttonStyle(.plain)
                 }

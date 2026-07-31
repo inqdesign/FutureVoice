@@ -55,14 +55,12 @@ struct VoiceCloneOnboardingView: View {
     @State private var meetBurst = false
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
 
-    /// ElevenLabs IVC quality climbs steeply up to ~60-90 seconds of speech.
-    /// The countdown targets 60s (usable), 75s is the sweet spot, 90s
-    /// auto-stops.
+    /// ElevenLabs IVC quality climbs steeply up to 60 seconds of speech.
+    /// The countdown targets 60s for quality and brevity.
     private static let minSeconds: Double = 60
-    private static let recommendedSeconds: Double = 75
-    /// Hard cap — auto-stop here. Well past the 75s sweet spot and far under
-    /// ElevenLabs' 11 MB upload limit (~130s at 16-bit/44.1k mono).
-    private static let maxSeconds: Double = 90
+    private static let recommendedSeconds: Double = 60
+    /// Hard cap — auto-stop here at 60 seconds.
+    private static let maxSeconds: Double = 60
 
     /// Filename of a take that reached review but was never cloned — if the
     /// app dies there, the next launch reopens review instead of making the
@@ -465,7 +463,7 @@ struct VoiceCloneOnboardingView: View {
             }
             .mask(softEdges)
 
-            Text("60–90 seconds. Vary your pitch a little.")
+            Text("1 minute. Vary your pitch a little.")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -594,8 +592,10 @@ struct VoiceCloneOnboardingView: View {
                                 .font(.caption2)
                                 .foregroundStyle(selected ? .primary : .secondary)
                         }
+                        .frame(minHeight: 70)
                     }
                     .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                     .accessibilityLabel(Text("\(theme.label) theme"))
                     .accessibilityAddTraits(selected ? .isSelected : [])
                 }

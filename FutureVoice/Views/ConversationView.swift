@@ -137,6 +137,8 @@ struct ConversationView: View {
     @State private var sessionId = UUID()
     @State private var sessionStartedAt = Date()
     @State private var didSaveCurrentSession = false
+    /// ✕ tapped with unsaved turns — asks save vs. discard before leaving.
+    @State private var confirmingDiscard = false
     @State private var userSpeechStartedAt: Date?
     /// Last time the live STT partial changed — the endpoint monitor waits
     /// for BOTH audio silence and a settled transcript before sending.
@@ -215,6 +217,18 @@ struct ConversationView: View {
                              onDone: endAndClose, onStartNew: startNewSession)
                     .environmentObject(appState)
             }
+            .confirmationDialog("This conversation isn't saved yet",
+                                isPresented: $confirmingDiscard,
+                                titleVisibility: .visible) {
+                Button("Save conversation") {
+                    Task { await endSession() }
+                }
+                Button("Close without saving", role: .destructive) {
+                    close()
+                }
+            } message: {
+                Text("Saving wraps up the talk and keeps the transcript, feedback, and drills.")
+            }
             .alert("Something went wrong", isPresented: errorBinding) {
                 if outOfCredits {
                     Button("See plans") { error = nil; showingPaywall = true }
@@ -272,7 +286,14 @@ struct ConversationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                close()
+                // A talk with unsaved turns doesn't just vanish on a stray ✕
+                // tap — closing is gated behind an explicit choice between
+                // saving (the End flow: summary + drills) and discarding.
+                if !turns.isEmpty && !didSaveCurrentSession {
+                    confirmingDiscard = true
+                } else {
+                    close()
+                }
             } label: {
                 Label("Close", systemImage: "xmark")
             }
