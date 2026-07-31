@@ -142,13 +142,14 @@ struct ChipPickerField: View {
 /// mic button's color/icon and the caption text, never the geometry, so
 /// nothing jumps when recording starts or stops.
 struct SpeakOrTypeField: View {
+    @EnvironmentObject private var appState: AppState
     @Binding var text: String
     @Binding var locale: String
     /// Flips true once any dictation lands in `text` — callers use it to
     /// decide whether the answer needs an LLM cleanup pass on finish.
     var usedVoice: Binding<Bool>? = nil
     var placeholder: String = "Type here — or tap the mic and just talk. I'll sort it out."
-    /// Hide the per-field 한국어/English segmented control when the host puts
+    /// Hide the per-field native/target segmented control when the host puts
     /// ONE shared toggle above several stacked fields (PersonaDeepenSheet) —
     /// three copies of the same picker read as clutter.
     var showsLocalePicker = true
@@ -184,8 +185,10 @@ struct SpeakOrTypeField: View {
                         .foregroundStyle(.secondary)
                     } else if showsLocalePicker {
                         Picker("Language", selection: $locale) {
-                            Text("한국어").tag("ko")
-                            Text("English").tag("en")
+                            Text(LanguageCatalog.endonym(appState.nativeLanguage))
+                                .tag(appState.nativeLanguage)
+                            Text(LanguageCatalog.endonym(appState.targetLanguage))
+                                .tag(appState.targetLanguage)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 150)

@@ -79,26 +79,18 @@ struct VoiceCloneOnboardingView: View {
         case meet        // clone landed; greeting + theme pick
     }
 
-    /// Phonetically varied so the clone has range — short and long vowels,
-    /// hard consonants, rising and falling intonation. Read it like you mean
-    /// it, not like a school recital.
-    // Sized so a natural read lands in the 60–90s window: ~180 words at a
-    // careful read-aloud pace ≈ 75–80s. The previous ~115-word script ran out
-    // near 50s, and users understandably tapped "Stop (early)" — every early
-    // sample hurts clone quality more than any prompt tweak can win back.
-    private static let scriptParagraphs = [
-        "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",
-        "Let me describe a moment from this week. The weather turned cooler than I expected. I was walking and caught myself thinking in two languages at once — one for what I saw, one for what I felt. Funny how that works.",
-        "Here's a quick list, just to stretch the sounds: Monday morning, Wednesday afternoon, Friday night. Three, thirteen, thirty-three. A double espresso, a glass of water, and a window seat if you have one, please.",
-        "Now a few different shapes: \"Could you actually repeat that?\" \"Wait — that's not quite right.\" \"Honestly, I'm not sure yet, but here's what I think.\" \"Oh, that's brilliant — say more.\"",
-        "One more, a little slower this time. When I speak this language a year from now, I want it to feel easy. Not perfect — easy. Like I'm not translating anymore, just talking.",
-        "Okay. I think that's enough of my voice for now. If this worked, the next voice you hear should sound a lot like me. Talk to me soon.",
-    ]
+    /// The read-aloud script, in the user's TARGET language — see
+    /// `VoiceCloneScript` for why the sample must match what the clone will
+    /// speak, and for the six-beat shape every language's script follows.
+    private var scriptParagraphs: [String] {
+        VoiceCloneScript.paragraphs(for: appState.targetLanguage)
+    }
 
     /// The clone's first words — spoken in the user's own voice the moment it
     /// exists. Short on purpose (one TTS call per onboarding).
-    private static let greetingLine =
-        "Hey — it's you. Just more fluent. Pick a color that feels like us."
+    private var greetingLine: String {
+        VoiceCloneScript.greeting(for: appState.targetLanguage)
+    }
 
     /// Staged narration for the cloning wait. Honest theater — no fake
     /// percentages, just what the process is genuinely about.
@@ -331,7 +323,7 @@ struct VoiceCloneOnboardingView: View {
     // Step 1 — the narrative. One thought, nothing else.
     private var introContent: some View {
         stepHeader("Another you.\nAlready fluent.",
-                   "It speaks perfect English in your own voice. From here, you just follow.")
+                   "It speaks perfect \(LanguageCatalog.englishName(appState.targetLanguage)) in your own voice. From here, you just follow.")
             .transition(.opacity)
     }
 
@@ -453,7 +445,7 @@ struct VoiceCloneOnboardingView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                    ForEach(Array(scriptParagraphs.enumerated()), id: \.offset) { _, para in
                         Text(para)
                             .font(.title3.weight(.medium))
                             .lineSpacing(5)
@@ -477,7 +469,7 @@ struct VoiceCloneOnboardingView: View {
         VStack(spacing: 8) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                    ForEach(Array(scriptParagraphs.enumerated()), id: \.offset) { _, para in
                         Text(para)
                             .font(.title3.weight(.medium))
                             .lineSpacing(5)
@@ -891,7 +883,7 @@ struct VoiceCloneOnboardingView: View {
                 // synthesis never blocks the flow — the act just opens silent.
                 if let voiceId = appState.voiceCloneId {
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
-                        voiceId: voiceId, text: Self.greetingLine, purpose: "greeting")
+                        voiceId: voiceId, text: greetingLine, purpose: "greeting")
                 }
                 HapticEngine.success()
                 status = .meet
