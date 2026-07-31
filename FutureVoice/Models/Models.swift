@@ -715,7 +715,8 @@ struct ScenarioCurriculum: Codable, Hashable {
         var id: UUID = UUID()
         var text: String
         /// One-line usage hint ("when the nurse asks about symptoms").
-        var note: String
+        /// Default empty string so items saved before this field was added still decode.
+        var note: String = ""
         /// For words/expressions: a natural first-person sentence using the
         /// item in this scenario's context. nil for shadow lines (text IS
         /// the sentence) and for curricula generated before this existed.
