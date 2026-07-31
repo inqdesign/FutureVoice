@@ -34,7 +34,7 @@ enum TopicEngine {
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
         } catch {
-            return fallback(persona: persona)
+            return fallback(persona: persona, targetLanguage: targetLanguage)
         }
     }
 
@@ -57,8 +57,8 @@ enum TopicEngine {
            the new schedule — vent and bond"
         - "Catching up with a startup friend who just shipped their first paying
            customer — celebrate without humble-bragging about your own thing"
-        - "Talking to your Bavarian dentist's new English-speaking hygienist
-           about why your jaw clicks when you chew"
+        - "Explaining to the new hygienist at your dentist's why your jaw
+           clicks when you chew"
 
         BAD examples:
         - "Talking to a parent" (too vague)
@@ -75,7 +75,9 @@ enum TopicEngine {
         - title: ≤ 60 chars. The single sentence the user reads in the picker.
         - blurb: ≤ 140 chars. One-line extra context that doubles as the seed
           the avatar will use to open the conversation.
-        - Both in English (it's a target-language app).
+        - Write BOTH in \(LanguageCatalog.englishName(targetLanguage)) — this is
+          the language being practiced, and the blurb is fed straight to the
+          avatar as its opening seed.
         """
     }
 
@@ -123,7 +125,7 @@ enum TopicEngine {
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
         } catch {
-            return counterpartFallback(counterpart: counterpart)
+            return counterpartFallback(counterpart: counterpart, targetLanguage: targetLanguage)
         }
     }
 
@@ -150,9 +152,11 @@ enum TopicEngine {
         { "topics": [ { "title": "...", "blurb": "..." } ] }
 
         Rules:
-        - title: ≤ 60 chars in English. Concrete moment with a hook.
-        - blurb: ≤ 140 chars in English. One line of context that the avatar
-          can use as a seed for the opening of the dialogue.
+        - title: ≤ 60 chars, in \(LanguageCatalog.englishName(targetLanguage)).
+          Concrete moment with a hook.
+        - blurb: ≤ 140 chars, in \(LanguageCatalog.englishName(targetLanguage)).
+          One line of context that the avatar can use as a seed for the opening
+          of the dialogue.
         - Vary scenarios across the relationship's natural surfaces — don't
           have three about the same setting.
         """
@@ -199,12 +203,12 @@ enum TopicEngine {
         return lines.joined(separator: "\n")
     }
 
-    private static func counterpartFallback(counterpart: Counterpart) -> [SuggestedTopic] {
-        [
-            SuggestedTopic(title: "A quick catch-up with \(counterpart.name)",
-                           blurb: "Open with what's been on your mind lately."),
-            SuggestedTopic(title: "Something on your mind you've been meaning to bring up",
-                           blurb: "Pick a real-life thing you'd actually want their take on.")
+    private static func counterpartFallback(counterpart: Counterpart,
+                                            targetLanguage: String) -> [SuggestedTopic] {
+        let t = FallbackText.forLanguage(targetLanguage)
+        return [
+            SuggestedTopic(title: t.catchUpWith(counterpart.name), blurb: t.catchUpBlurb),
+            SuggestedTopic(title: t.onYourMind, blurb: t.onYourMindBlurb)
         ]
     }
 
@@ -362,7 +366,8 @@ enum TopicEngine {
         - title: a SHORT chip label, 2–4 words, no trailing punctuation.
         - blurb: ONE first-person sentence usable AS the scenario if the learner
           stops here — as specific as the current depth allows. ≤ 160 chars.
-        - English. Maximize variety; no two nearly identical.
+        - Write both in \(LanguageCatalog.englishName(targetLanguage)).
+          Maximize variety; no two nearly identical.
         """
     }
 
@@ -392,7 +397,8 @@ enum TopicEngine {
         - blurb: ONE full first-person sentence that becomes the scenario when
           tapped ("At a cafe: my order came out wrong and I want to point it
           out politely and get it fixed."). ≤ 160 chars.
-        - Both in English. Maximize variety across the \(count).
+        - Write both in \(LanguageCatalog.englishName(targetLanguage)).
+          Maximize variety across the \(count).
         """
     }
 
@@ -410,15 +416,85 @@ enum TopicEngine {
 
     // MARK: - Fallback
 
-    private static func fallback(persona: UserPersona?) -> [SuggestedTopic] {
-        let city = persona?.city.isEmpty == false ? persona!.city : "your city"
+    private static func fallback(persona: UserPersona?,
+                                 targetLanguage: String) -> [SuggestedTopic] {
+        let t = FallbackText.forLanguage(targetLanguage)
+        let city = persona?.city.isEmpty == false ? persona!.city : t.yourCity
         return [
-            SuggestedTopic(title: "Catching up — a friend asks how your week's been",
-                           blurb: "Open with what you actually did, not stock phrases."),
-            SuggestedTopic(title: "Explaining what you do to someone you just met in \(city)",
-                           blurb: "They're curious. Avoid jargon, find the human angle."),
-            SuggestedTopic(title: "A small problem you need to politely raise",
-                           blurb: "Something at work or in your neighborhood that bugs you.")
+            SuggestedTopic(title: t.weekCatchUp, blurb: t.weekCatchUpBlurb),
+            SuggestedTopic(title: t.explainWork(city), blurb: t.explainWorkBlurb),
+            SuggestedTopic(title: t.smallProblem, blurb: t.smallProblemBlurb)
         ]
     }
+}
+
+/// Offline seeds for the topic pickers — what shows when generation fails.
+/// They are read by the learner AND fed to the avatar as an opening seed, so
+/// they must be in the language being practiced; an English seed would make
+/// the fluent self open in the wrong language. Only the shippable targets
+/// (`LanguageCatalog.selectableTargets`) need entries; anything else falls
+/// back to English, same as the rest of the language-keyed content.
+private struct FallbackText {
+    let yourCity: String
+    let weekCatchUp: String
+    let weekCatchUpBlurb: String
+    let explainWorkFormat: String     // one %@ — the city
+    let explainWorkBlurb: String
+    let smallProblem: String
+    let smallProblemBlurb: String
+    let catchUpWithFormat: String     // one %@ — the person's name
+    let catchUpBlurb: String
+    let onYourMind: String
+    let onYourMindBlurb: String
+
+    func explainWork(_ city: String) -> String {
+        String(format: explainWorkFormat, city)
+    }
+    func catchUpWith(_ name: String) -> String {
+        String(format: catchUpWithFormat, name)
+    }
+
+    static func forLanguage(_ code: String) -> FallbackText {
+        let key = LanguageCatalog.language(code)?.code ?? "en"
+        return byLanguage[key] ?? byLanguage["en"]!
+    }
+
+    private static let byLanguage: [String: FallbackText] = [
+        "en": FallbackText(
+            yourCity: "your city",
+            weekCatchUp: "Catching up — a friend asks how your week's been",
+            weekCatchUpBlurb: "Open with what you actually did, not stock phrases.",
+            explainWorkFormat: "Explaining what you do to someone you just met in %@",
+            explainWorkBlurb: "They're curious. Avoid jargon, find the human angle.",
+            smallProblem: "A small problem you need to politely raise",
+            smallProblemBlurb: "Something at work or in your neighborhood that bugs you.",
+            catchUpWithFormat: "A quick catch-up with %@",
+            catchUpBlurb: "Open with what's been on your mind lately.",
+            onYourMind: "Something on your mind you've been meaning to bring up",
+            onYourMindBlurb: "Pick a real-life thing you'd actually want their take on."),
+        "de": FallbackText(
+            yourCity: "deiner Stadt",
+            weekCatchUp: "Kurz austauschen — jemand fragt, wie deine Woche war",
+            weekCatchUpBlurb: "Fang mit dem an, was du wirklich gemacht hast, nicht mit Floskeln.",
+            explainWorkFormat: "Jemandem in %@, den du gerade kennengelernt hast, erklären, was du machst",
+            explainWorkBlurb: "Die Person ist neugierig. Kein Fachjargon — finde den menschlichen Kern.",
+            smallProblem: "Eine Kleinigkeit, die du höflich ansprechen musst",
+            smallProblemBlurb: "Etwas bei der Arbeit oder in deiner Nachbarschaft, das dich stört.",
+            catchUpWithFormat: "Kurz mit %@ auf den neuesten Stand kommen",
+            catchUpBlurb: "Fang damit an, was dir in letzter Zeit im Kopf herumgeht.",
+            onYourMind: "Etwas, das dir auf der Seele liegt und das du ansprechen wolltest",
+            onYourMindBlurb: "Nimm etwas Echtes, wozu du wirklich ihre Meinung hören willst."),
+        "ko": FallbackText(
+            yourCity: "당신이 사는 도시",
+            weekCatchUp: "안부 나누기 — 친구가 이번 주 어땠냐고 묻는다",
+            weekCatchUpBlurb: "상투적인 표현 말고, 실제로 한 일부터 꺼내보세요.",
+            explainWorkFormat: "%@에서 막 알게 된 사람에게 무슨 일을 하는지 설명하기",
+            explainWorkBlurb: "상대가 궁금해합니다. 전문 용어는 빼고 사람 사는 이야기로.",
+            smallProblem: "정중하게 꺼내야 하는 작은 문제",
+            smallProblemBlurb: "직장이나 동네에서 신경 쓰이는 일 하나.",
+            catchUpWithFormat: "%@와 짧게 근황 나누기",
+            catchUpBlurb: "요즘 마음에 걸리던 것부터 꺼내보세요.",
+            onYourMind: "말하려고 벼르던, 마음에 걸리는 이야기",
+            onYourMindBlurb: "상대의 의견이 진짜 궁금한 실제 일을 골라보세요."),
+    ]
 }
