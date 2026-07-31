@@ -558,8 +558,8 @@ struct SituationComposerSheet: View {
 
     private func loadIdeasIfNeeded() async {
         guard let p = person, ideas.isEmpty else { return }
-        if !p.savedScenarios.isEmpty {
-            ideas = p.savedScenarios
+        if !p.savedScenarios(in: appState.targetLanguage).isEmpty {
+            ideas = p.savedScenarios(in: appState.targetLanguage)
         } else {
             await regenerateIdeas()
         }
@@ -579,7 +579,7 @@ struct SituationComposerSheet: View {
             ideas = fresh
             // Persist onto the counterpart so the next open is instant + free.
             var updated = p
-            updated.savedScenarios = fresh
+            updated.setSavedScenarios(fresh, in: appState.targetLanguage)
             appState.saveCounterpart(updated)
         } catch {
             ideasError = error.localizedDescription

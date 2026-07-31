@@ -127,8 +127,8 @@ struct WatchSetupSheet: View {
                     // First load: prefer the counterpart's saved library so
                     // we don't re-bill Gemini every time the user comes back
                     // for this same person. Refresh button explicitly regens.
-                    if !counterpart.savedScenarios.isEmpty {
-                        suggestions = counterpart.savedScenarios
+                    if !counterpart.savedScenarios(in: appState.targetLanguage).isEmpty {
+                        suggestions = counterpart.savedScenarios(in: appState.targetLanguage)
                     } else {
                         await regenerate()
                     }
@@ -155,7 +155,7 @@ struct WatchSetupSheet: View {
             // Persist the fresh library onto the counterpart so subsequent
             // opens are instant + free.
             var updated = counterpart
-            updated.savedScenarios = fresh
+            updated.setSavedScenarios(fresh, in: appState.targetLanguage)
             appState.saveCounterpart(updated)
             return
         } catch {
