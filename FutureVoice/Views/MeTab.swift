@@ -49,8 +49,12 @@ struct MeTab: View {
 
                 Section {
                     HStack {
+                        // balanceLabel, not the raw number — an admin account
+                        // never spends, so its stored balance is cosmetic and
+                        // reads as "Unlimited" (the header chip already does
+                        // this; this row was showing the bare figure).
                         row(icon: "bolt.fill",
-                            title: "\(account.creditBalance) credits",
+                            title: "\(account.balanceLabel) credits",
                             subtitle: account.planLabel)
                         Spacer()
                     }
@@ -214,7 +218,16 @@ struct MeTab: View {
             .alert("Sign out?", isPresented: $confirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign out", role: .destructive) {
-                    Task { await auth.signOut() }
+                    Task {
+                        await auth.signOut()
+                        // RootView's Welcome gate is "has the journey begun",
+                        // not "is there a session" — leaving this set drops a
+                        // signed-out user straight back into the tabs (setup,
+                        // persona and clone all still read complete), so the
+                        // button looked like it did nothing. Same reset
+                        // SetupFlowView does on its way back to Welcome.
+                        appState.onboardingStarted = false
+                    }
                 }
             } message: {
                 Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
