@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Supabase
 
@@ -110,6 +111,29 @@ final class ElevenLabsClient {
     /// as turbo.
     static let conversationModelId = "eleven_flash_v2_5"
 
+    /// Deterministic fallback idempotency key for callers that don't pass
+    /// one (drill / library / shadow / scene plays): the same (text, voice)
+    /// from this install always sends the same key, so a double-fired play
+    /// or retry race dedupes to ONE charge server-side. Salted per install
+    /// so keys can never collide across users on shared preset voices; a
+    /// reinstall (which also loses the audio cache) simply starts fresh.
+    private static let installSalt: String = {
+        let key = "futurevoice.ttsIdemSalt"
+        if let s = UserDefaults.standard.string(forKey: key) { return s }
+        let s = UUID().uuidString
+        UserDefaults.standard.set(s, forKey: key)
+        return s
+    }()
+
+    private static func deterministicKey(text: String, voiceId: String,
+                                         timestamps: Bool) -> String {
+        // Timestamps flag included: plain and karaoke syntheses are separate
+        // billable actions and must not dedupe against each other.
+        let digest = SHA256.hash(data: Data("\(voiceId)|\(timestamps)|\(text)".utf8))
+        let hex = digest.prefix(12).map { String(format: "%02x", $0) }.joined()
+        return "tts:\(installSalt):\(hex)"
+    }
+
     /// Synthesizes speech in the cloned voice and returns MP3 data.
     /// - Parameters:
     ///   - voiceId: ElevenLabs voice id from `cloneVoice`
@@ -129,7 +153,8 @@ final class ElevenLabsClient {
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         // Caller-supplied key = retries of the same logical synthesis are
         // charge-deduped by the edge function's usage ledger.
-        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId, timestamps: false),
+                         forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("audio/mpeg", forHTTPHeaderField: "Accept")
 
@@ -184,7 +209,8 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId, timestamps: false),
+                         forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
         var body: [String: Any] = [
@@ -300,7 +326,8 @@ final class ElevenLabsClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
-        request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue(idempotencyKey ?? Self.deterministicKey(text: text, voiceId: voiceId, timestamps: true),
+                         forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 

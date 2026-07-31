@@ -13,6 +13,9 @@ struct DrillEnrichmentSheet: View {
     @State private var loading = false
     @State private var error: String?
     @State private var playingExample: Int?
+    /// In-flight synthesis marker — a second tap while one line is still
+    /// synthesizing must not fire a concurrent duplicate request.
+    @State private var synthesizingExample = false
 
     var body: some View {
         NavigationStack {
@@ -209,6 +212,9 @@ struct DrillEnrichmentSheet: View {
             }
             return
         }
+        guard !synthesizingExample else { return }
+        synthesizingExample = true
+        defer { synthesizingExample = false }
         do {
             let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "drill")
             PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
