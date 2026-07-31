@@ -50,3 +50,6 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/README.md
 fastlane/screenshots/_raw/
+
+# Nested git worktrees (parallel version development)
+.worktrees/

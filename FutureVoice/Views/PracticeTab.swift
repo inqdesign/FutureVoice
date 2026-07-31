@@ -247,18 +247,22 @@ struct PracticeTab: View {
                             // fills with its category color (white text works
                             // on all three hues in both appearances);
                             // Studying keeps the monochrome label fill.
-                            HStack(spacing: 5) {
+                            // Superscript-style count: top-aligned and small,
+                            // so the number reads as a badge on the title
+                            // instead of a second word at title size.
+                            HStack(alignment: .top, spacing: 4) {
                                 Text(s.title)
+                                    .font(.body.weight(.medium))
                                 // How many books live behind this chip, so an
                                 // empty-looking page still says the material
                                 // exists ("Talk 1 · Watch 1" after a first watch).
                                 if let n = shelfCount(s) {
                                     Text("\(n)")
+                                        .font(.caption2.weight(.semibold))
                                         .monospacedDigit()
                                         .opacity(0.55)
                                 }
                             }
-                            .font(.body.weight(.medium))
                             .padding(.horizontal, 16).padding(.vertical, 9)
                             .background(Capsule().fill(shelf == s ? (s.color ?? Color(.label)) : Color(.secondarySystemGroupedBackground)))
                             .foregroundStyle(shelf == s ? (s.color != nil ? Color.white : Color(.systemBackground)) : Color.primary)

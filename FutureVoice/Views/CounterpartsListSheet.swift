@@ -57,18 +57,17 @@ struct CounterpartFormView: View {
                 }
 
                 Section("Voice") {
-                    Picker("Voice", selection: $draft.voicePresetId) {
-                        ForEach(VoicePreset.catalog) { preset in
-                            VStack(alignment: .leading) {
-                                Text(preset.displayName)
-                                Text("\(preset.gender) · \(preset.accent) · \(preset.description)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .tag(preset.id)
+                    NavigationLink {
+                        VoicePresetPickerView(selection: $draft.voicePresetId)
+                            .environmentObject(appState)
+                    } label: {
+                        HStack {
+                            Text("Voice")
+                            Spacer()
+                            Text(VoicePreset.by(id: draft.voicePresetId).displayName)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                    .pickerStyle(.navigationLink)
                 }
 
                 Section("Anything else") {
@@ -91,6 +90,130 @@ struct CounterpartFormView: View {
                     .disabled(!draft.isMinimallyComplete)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Voice picker with preview
+
+/// Voice list where every row can be HEARD before it's chosen. The preview
+/// line is spoken in the user's target language (that's what the counterpart
+/// will actually speak) and cached in `PhraseAudioStore` per voice+text, so
+/// each voice costs at most one synthesis ever — repeat listens are free.
+struct VoicePresetPickerView: View {
+    @Binding var selection: String
+    @EnvironmentObject private var appState: AppState
+    @StateObject private var player = AudioPlayer()
+    @State private var loadingId: String?
+    @State private var playingId: String?
+    @State private var error: String?
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(VoicePreset.catalog) { preset in
+                    row(preset)
+                }
+            } footer: {
+                if let error {
+                    Label(error, systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.red)
+                } else {
+                    Text("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage)).")
+                }
+            }
+        }
+        .navigationTitle("Voice")
+        .navigationBarTitleDisplayMode(.inline)
+        .onDisappear { player.stop() }
+    }
+
+    private func row(_ preset: VoicePreset) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                Task { await preview(preset) }
+            } label: {
+                if loadingId == preset.id {
+                    ProgressView()
+                        .frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: playingId == preset.id && player.isPlaying
+                          ? "stop.circle.fill" : "play.circle")
+                        .font(.title2)
+                        .foregroundStyle(.tint)
+                        .frame(width: 28, height: 28)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(playingId == preset.id && player.isPlaying
+                                ? "Stop preview" : "Preview \(preset.displayName)")
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(preset.displayName)
+                Text("\(preset.gender) · \(preset.accent) · \(preset.description)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if selection == preset.id {
+                Image(systemName: "checkmark")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tint)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { selection = preset.id }
+    }
+
+    private func preview(_ preset: VoicePreset) async {
+        // Second tap on the playing row = stop.
+        if playingId == preset.id, player.isPlaying {
+            player.stop()
+            playingId = nil
+            return
+        }
+        player.stop()
+        playingId = nil
+        error = nil
+
+        let text = Self.previewLine(for: appState.targetLanguage)
+        loadingId = preset.id
+        defer { loadingId = nil }
+        do {
+            let data: Data
+            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: preset.id) {
+                data = cached
+            } else {
+                data = try await ElevenLabsClient.shared.synthesize(
+                    voiceId: preset.id, text: text, purpose: "voice_preview")
+                _ = PhraseAudioStore.shared.save(data, text: text, voiceId: preset.id)
+            }
+            playingId = preset.id
+            try player.play(data, source: "voice_preview") {
+                playingId = nil
+            }
+        } catch {
+            self.error = "Couldn't play the sample. Check your connection."
+            playingId = nil
+        }
+    }
+
+    /// One neutral greeting per target language — phrasings chosen to avoid
+    /// speaker-gender agreement so any voice can say them naturally.
+    static func previewLine(for languageCode: String) -> String {
+        switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
+        case "es": return "¡Hola! Qué alegría verte. ¿Empezamos?"
+        case "de": return "Hallo! Schön, dich zu sehen. Sollen wir anfangen?"
+        case "fr": return "Bonjour ! Ça me fait plaisir de te voir. On commence ?"
+        case "it": return "Ciao! Che bello vederti. Iniziamo?"
+        case "pt": return "Oi! Que bom te ver. Vamos começar?"
+        case "ja": return "こんにちは！会えてうれしいです。始めましょうか？"
+        case "ko": return "안녕하세요! 만나서 반가워요. 시작해 볼까요?"
+        case "zh": return "你好！很高兴见到你。我们开始吧？"
+        default:   return "Hi! It's good to see you. Shall we get started?"
         }
     }
 }

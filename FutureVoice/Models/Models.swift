@@ -567,35 +567,40 @@ struct VoicePreset: Hashable, Identifiable {
     let accent: String
     let description: String
 
+    // Four voices, hand-picked from the ElevenLabs library (2026-07): one
+    // female + one male per accent, chosen for conversation. All four IDs
+    // are verified synthesizable with the production API key. The two
+    // British voices are library (shared) voices whose upstream names the
+    // voices API doesn't expose — display names for those are ours. Old
+    // stored IDs from the retired 8-voice premade list keep synthesizing
+    // fine but fall back to catalog[0] for display.
     static let catalog: [VoicePreset] = [
-        VoicePreset(id: "21m00Tcm4TlvDq8ikWAM",
-                    displayName: "Rachel", gender: "Female", accent: "American",
-                    description: "Calm, conversational"),
-        VoicePreset(id: "EXAVITQu4vr4xnSDxMaL",
-                    displayName: "Bella", gender: "Female", accent: "American",
-                    description: "Soft, friendly"),
-        VoicePreset(id: "AZnzlk1XvdvUeBnXmlld",
-                    displayName: "Domi", gender: "Female", accent: "American",
-                    description: "Strong, confident"),
-        VoicePreset(id: "MF3mGyEYCl7XYWbV9V6O",
-                    displayName: "Elli", gender: "Female", accent: "American",
-                    description: "Emotional, youthful"),
-        VoicePreset(id: "ErXwobaYiN019PkySvjV",
-                    displayName: "Antoni", gender: "Male", accent: "American",
-                    description: "Well-rounded narrator"),
-        VoicePreset(id: "VR6AewLTigWG4xSOukaG",
-                    displayName: "Arnold", gender: "Male", accent: "American",
-                    description: "Crisp, mature"),
-        VoicePreset(id: "TxGEqnHWrfWFTfGW9XjX",
-                    displayName: "Josh", gender: "Male", accent: "American",
-                    description: "Deep, casual"),
-        VoicePreset(id: "pNInz6obpgDQGcFmaJgB",
-                    displayName: "Adam", gender: "Male", accent: "American",
-                    description: "Deep, narration"),
+        VoicePreset(id: "NDTYOmYEjbDIVCKB35i3",
+                    displayName: "Paige", gender: "Female", accent: "American",
+                    description: "Engaging, natural"),
+        VoicePreset(id: "UgBBYS2sOqTuMpoF3BR0",
+                    displayName: "Mark", gender: "Male", accent: "American",
+                    description: "Natural, conversational"),
+        VoicePreset(id: "FF59babHL8N8gfTgtBMT",
+                    displayName: "Emma", gender: "Female", accent: "British",
+                    description: "Clear, friendly"),
+        VoicePreset(id: "L0Dsvb3SLTyegXwtm47J",
+                    displayName: "James", gender: "Male", accent: "British",
+                    description: "Warm, easygoing"),
     ]
 
     static func by(id: String) -> VoicePreset {
         catalog.first(where: { $0.id == id }) ?? catalog[0]
+    }
+
+    /// UserDefaults key for the fallback voice of Watch scenes that have no
+    /// linked persona ("Make your own situation", likely-situation leaves).
+    /// Personas keep their own per-person `voicePresetId`; this only covers
+    /// the synthetic counterpart. Set in Me → Voice → Scene partner voice.
+    static let sceneDefaultKey = "futurevoice.defaultSceneVoice"
+
+    static var sceneDefault: VoicePreset {
+        by(id: UserDefaults.standard.string(forKey: sceneDefaultKey) ?? catalog[0].id)
     }
 }
 
@@ -617,6 +622,11 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// scenario uses the persona's real voice/identity instead of a generic
     /// preset. Optional so scenarios saved before this decode unchanged.
     var counterpartId: UUID? = nil
+    /// Voice for the scene's counterpart when NO persona is linked — picked
+    /// in the composer's "Talking with" section. nil = the user's default
+    /// scene voice (`VoicePreset.sceneDefault`). Optional so scenarios saved
+    /// before this decode unchanged.
+    var voicePresetId: String? = nil
     /// The scenario's course content — words, expressions, and shadow lines
     /// to master. Generated once on first open of the scenario page and
     /// persisted here. nil for scenarios that haven't been opened yet
