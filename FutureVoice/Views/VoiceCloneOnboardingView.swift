@@ -82,11 +82,17 @@ struct VoiceCloneOnboardingView: View {
     /// Phonetically varied so the clone has range — short and long vowels,
     /// hard consonants, rising and falling intonation. Read it like you mean
     /// it, not like a school recital.
+    // Sized so a natural read lands in the 60–90s window: ~180 words at a
+    // careful read-aloud pace ≈ 75–80s. The previous ~115-word script ran out
+    // near 50s, and users understandably tapped "Stop (early)" — every early
+    // sample hurts clone quality more than any prompt tweak can win back.
     private static let scriptParagraphs = [
         "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",
         "Let me describe a moment from this week. The weather turned cooler than I expected. I was walking and caught myself thinking in two languages at once — one for what I saw, one for what I felt. Funny how that works.",
+        "Here's a quick list, just to stretch the sounds: Monday morning, Wednesday afternoon, Friday night. Three, thirteen, thirty-three. A double espresso, a glass of water, and a window seat if you have one, please.",
         "Now a few different shapes: \"Could you actually repeat that?\" \"Wait — that's not quite right.\" \"Honestly, I'm not sure yet, but here's what I think.\" \"Oh, that's brilliant — say more.\"",
-        "Okay. That should be enough. Talk to me soon.",
+        "One more, a little slower this time. When I speak this language a year from now, I want it to feel easy. Not perfect — easy. Like I'm not translating anymore, just talking.",
+        "Okay. I think that's enough of my voice for now. If this worked, the next voice you hear should sound a lot like me. Talk to me soon.",
     ]
 
     /// The clone's first words — spoken in the user's own voice the moment it
