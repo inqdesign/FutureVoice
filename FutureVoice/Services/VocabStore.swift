@@ -385,7 +385,7 @@ final class VocabStore: ObservableObject {
         }
         let tagger = NLTagger(tagSchemes: [.lemma])
         tagger.string = w
-        tagger.setLanguage(.english, range: w.startIndex..<w.endIndex)
+        tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
         let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
         if let lemma, CoreVocabulary.set.contains(lemma) { return lemma }
         return w
@@ -402,18 +402,28 @@ final class VocabStore: ObservableObject {
         LanguageCatalog.language(LanguageScope.active)?.code == "ko"
     }
 
+    /// NLTagger language for the current target. NLLanguage raw values ARE
+    /// bare BCP-47 codes ("en", "de"), so the active code maps directly;
+    /// an unsupported code just yields nil tags → surface-token fallback.
+    nonisolated private static var taggerLanguage: NLLanguage {
+        NLLanguage(rawValue: LanguageScope.active)
+    }
+
     private func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
+        let language = Self.taggerLanguage
         var out = Set<String>()
         let tagger = NLTagger(tagSchemes: [.lemma])
         for text in texts {
-            let lower = text.lowercased()
-            tagger.string = lower
-            tagger.setLanguage(.english, range: lower.startIndex..<lower.endIndex)
-            tagger.enumerateTags(in: lower.startIndex..<lower.endIndex,
+            // Original casing IN, lowercase OUT: German lemmatization reads
+            // noun capitalization as a signal, while pool keys stay lowercase
+            // (CoreVocabulary matches case-insensitively).
+            tagger.string = text
+            tagger.setLanguage(language, range: text.startIndex..<text.endIndex)
+            tagger.enumerateTags(in: text.startIndex..<text.endIndex,
                                  unit: .word, scheme: .lemma,
                                  options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
-                let lemma = (tag?.rawValue ?? String(lower[range])).lowercased()
+                let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
                 if lemma.count > 1 { out.insert(lemma) }
                 return true
             }

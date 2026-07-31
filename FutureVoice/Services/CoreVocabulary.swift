@@ -30,10 +30,12 @@ enum CoreVocabulary {
         lock.lock(); defer { lock.unlock() }
         if let cached = pools[code] { return cached }
         let entries = loadEntries(for: code)
+        // Match keys are lowercased so cased headwords (German nouns stay
+        // "Haus" for display) still hit the lowercase lemma pipeline.
         let pool = Pool(
             entries: entries,
-            set: Set(entries.map(\.word)),
-            levelByWord: Dictionary(entries.map { ($0.word, $0.level) },
+            set: Set(entries.map { $0.word.lowercased() }),
+            levelByWord: Dictionary(entries.map { ($0.word.lowercased(), $0.level) },
                                     uniquingKeysWith: { a, _ in a }),
             countByLevel: Dictionary(entries.map { ($0.level, 1) }, uniquingKeysWith: +)
         )
@@ -45,7 +47,7 @@ enum CoreVocabulary {
     static var set: Set<String> { current.set }
     static var total: Int { current.entries.count }
 
-    static func level(of word: String) -> CEFRLevel? { current.levelByWord[word] }
+    static func level(of word: String) -> CEFRLevel? { current.levelByWord[word.lowercased()] }
 
     /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
     /// is a direct lookup; Korean surface forms carry particles/conjugation,

@@ -32,7 +32,10 @@ enum LanguageCatalog {
     static let targets: [Language] = [
         Language(code: "en", sttLocale: "en-US", tokenStyle: .word, wordlistResource: "cefr_words"),
         Language(code: "es", sttLocale: "es-ES", tokenStyle: .word, wordlistResource: nil),
-        Language(code: "de", sttLocale: "de-DE", tokenStyle: .word, wordlistResource: nil),
+        // German wordlist: Goethe-Institut A1–B1 vocabulary (content words)
+        // plus curated B2–C2 — cased headwords (nouns capitalized), matched
+        // case-insensitively by CoreVocabulary.
+        Language(code: "de", sttLocale: "de-DE", tokenStyle: .word, wordlistResource: "cefr_words_de"),
         Language(code: "fr", sttLocale: "fr-FR", tokenStyle: .word, wordlistResource: nil),
         Language(code: "it", sttLocale: "it-IT", tokenStyle: .word, wordlistResource: nil),
         Language(code: "pt", sttLocale: "pt-BR", tokenStyle: .word, wordlistResource: nil),
