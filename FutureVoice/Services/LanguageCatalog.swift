@@ -78,6 +78,18 @@ enum LanguageCatalog {
         return targets.first { $0.code == base }
     }
 
+    /// Targets a user may actually PICK. A target without a graded wordlist
+    /// still talks, corrects, drills and shadows perfectly — but its whole
+    /// vocabulary layer comes up empty (nothing is ever collected from a
+    /// talk, the CEFR filter has nothing to filter, pickup words and the word
+    /// widget stay blank), and that reads as a bug, not as a missing extra.
+    /// So the picker only offers what the app can deliver end to end; the
+    /// rest stay in `targets` — already wired for STT, scoring and the clone
+    /// script — and return on their own the moment a list ships for them.
+    static var selectableTargets: [Language] {
+        targets.filter { $0.wordlistResource != nil }
+    }
+
     /// English display name — for prompts ("Reply in Korean only") and UI
     /// copy ("Your Korean"). Never feed a bare code into a prompt: models
     /// treat "en" and "English" differently.

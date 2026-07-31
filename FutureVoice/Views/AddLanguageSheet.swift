@@ -11,10 +11,11 @@ struct AddLanguageSheet: View {
     @State private var code: String?
     @State private var level: CEFRLevel = .a2
 
-    /// Targets still open to this user: not their native language, not
-    /// already enrolled.
+    /// Targets still open to this user: shippable (see
+    /// `LanguageCatalog.selectableTargets`), not their native language, and
+    /// not already enrolled.
     private var choices: [String] {
-        LanguageCatalog.targets.map(\.code).filter {
+        LanguageCatalog.selectableTargets.map(\.code).filter {
             $0 != appState.nativeLanguage && !appState.enrolledLanguages.contains($0)
         }
     }
@@ -46,6 +47,13 @@ struct AddLanguageSheet: View {
                     }
                 } header: {
                     Text("Which language next?")
+                } footer: {
+                    // Reachable: a learner enrolled in everything the app can
+                    // deliver today. Say so plainly instead of showing a bare
+                    // empty list.
+                    if choices.isEmpty {
+                        Text("You're already learning every language we support today. More are on the way.")
+                    }
                 }
                 if let code {
                     Section {

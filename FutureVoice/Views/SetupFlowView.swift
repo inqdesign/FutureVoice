@@ -27,10 +27,10 @@ struct SetupFlowView: View {
     /// before sign-in), so it asks first instead of silently signing out.
     @State private var confirmingSignOut = false
 
-    /// Practice targets on offer — everything the catalog supports except
-    /// the chosen native language.
+    /// Practice targets on offer — everything the app can deliver end to end
+    /// (`LanguageCatalog.selectableTargets`) except the chosen native language.
     private var targetChoices: [String] {
-        LanguageCatalog.targets.map(\.code).filter { $0 != nativeLanguage }
+        LanguageCatalog.selectableTargets.map(\.code).filter { $0 != nativeLanguage }
     }
 
     private static let nativeChoices = LanguageCatalog.nativeLanguages
