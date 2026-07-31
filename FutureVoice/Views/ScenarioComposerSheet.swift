@@ -41,12 +41,10 @@ struct ScenarioComposerSheet: View {
     @State private var options: [SuggestedTopic] = []
     @State private var loadingOptions = false
     @State private var optionsError: String?
-    /// App-lifetime idea cache (static, NOT @State): the same category path
-    /// asks Gemini once per launch, not once per sheet open — reopening the
-    /// composer on "Cafe" was silently re-billing the identical topics call
-    /// every time. Keyed by person too, so ideas scoped to someone never
+    /// Idea cache — the same category path asks Gemini ONCE, not once per
+    /// sheet open, and now not once per launch either (`ScenarioIdeaCache`
+    /// persists it). Keyed by person too, so ideas scoped to someone never
     /// leak into the blank composer. "More" (force) still refreshes.
-    private static var optionsCache: [String: [SuggestedTopic]] = [:]
 
     // Custom category creation (keyword title + icon or emoji)
     @State private var addingCustom = false
@@ -55,8 +53,11 @@ struct ScenarioComposerSheet: View {
     @State private var customEmoji = ""
     @State private var customCategories: [Category] = []
 
-    // Optional person attach
+    // Who the user talks to — ALWAYS set. Either one of the preset voices
+    // (a nameless counterpart the scene infers) or a saved person. Defaults
+    // to the user's scene voice from Me → Voice.
     @State private var attachedPersonId: UUID?
+    @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
     @FocusState private var situationFocused: Bool
 
     /// True once the user has TYPED their own scenario (vs building via chips).
@@ -118,6 +119,9 @@ struct ScenarioComposerSheet: View {
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
             .onAppear {
+                // TLS handshake + auth-token refresh off the critical path, so
+                // the first real ideas call isn't also paying for a cold radio.
+                GeminiClient.shared.preconnect()
                 if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
             }
             #if DEBUG
@@ -265,8 +269,11 @@ struct ScenarioComposerSheet: View {
             LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 8) {
                 if loadingOptions && options.isEmpty {
                     // Skeleton chips keep the grid the SAME shape while loading,
-                    // so nothing jumps and no empty gap opens up.
-                    ForEach(0..<6, id: \.self) { _ in skeletonCard }
+                    // so nothing jumps and no empty gap opens up — and they
+                    // shimmer, so the wait reads as "writing" not "broken".
+                    ForEach(0..<6, id: \.self) { i in
+                        SkeletonChip(lineFraction: Self.skeletonWidths[i], delay: Double(i) * 0.1)
+                    }
                 } else {
                     ForEach(options) { o in
                         choiceCard(title: o.title, icon: nil) { pickOption(o) }
@@ -328,12 +335,9 @@ struct ScenarioComposerSheet: View {
         .buttonStyle(.plain)
     }
 
-    private var skeletonCard: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color(.tertiarySystemFill).opacity(0.6))
-            .frame(height: 42)
-            .redacted(reason: .placeholder)
-    }
+    /// Uneven placeholder line widths — a column of identical bars reads as a
+    /// broken layout; ragged ones read as text that hasn't arrived yet.
+    private static let skeletonWidths: [CGFloat] = [0.72, 0.48, 0.63, 0.80, 0.55, 0.68]
 
     /// SF Symbol name → Image; a single emoji → Text. Lets custom categories
     /// use any emoji when no symbol fits.
@@ -416,31 +420,9 @@ struct ScenarioComposerSheet: View {
     }
 
     private var attachSection: some View {
-        Section {
-            if appState.counterparts.isEmpty {
-                Text("Add people under Watch to have them play a scene in their own voice.")
-                    .font(.caption).foregroundStyle(.secondary)
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
-                          alignment: .leading, spacing: 8) {
-                    ForEach(appState.counterparts) { c in
-                        let on = attachedPersonId == c.id
-                        Button {
-                            attachedPersonId = on ? nil : c.id
-                        } label: {
-                            Text(c.name).font(.subheadline)
-                                .padding(.horizontal, 12).padding(.vertical, 6)
-                                .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
-                                .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-        } header: {
-            Text("With someone? (optional)")
-        }
+        TalkingWithSection(selectedVoiceId: $selectedVoiceId,
+                           attachedPersonId: $attachedPersonId,
+                           counterparts: appState.counterparts)
     }
 
     // MARK: - Navigation / drill
@@ -513,18 +495,35 @@ struct ScenarioComposerSheet: View {
         guard canDrillDeeper else { options = []; return }
         let labels = path.map(\.label)
         let key = (person?.id.uuidString ?? "-") + "|" + labels.joined(separator: "›")
-        if !force, let cached = Self.optionsCache[key] { options = cached; return }
+        if !force, let cached = ScenarioIdeaCache.shared.topics(for: key) {
+            options = cached
+            return
+        }
+        // Level 1 of a preset category: shipped seeds, zero round-trip. The
+        // sub-areas of "Cafe" are the same for everyone — waiting on the model
+        // for them bought nothing and cost the learner the whole pause right
+        // after their first tap. Persona-tilted specifics still come from the
+        // model one level down, and "More" (force) asks it here too.
+        if !force, person == nil, labels.count == 1,
+           let seed = TopicEngine.seedSubAreas(for: labels[0]) {
+            options = seed
+            // Warm the connection now — the NEXT tap is a real model call.
+            GeminiClient.shared.preconnect()
+            return
+        }
         loadingOptions = true
         optionsError = nil
-        options = []            // → skeleton
+        options = []            // → shimmering skeleton
         defer { loadingOptions = false }
         do {
             let result = try await TopicEngine.suggestForPath(
                 path: labels, persona: appState.persona, counterpart: person,
                 targetLanguage: appState.targetLanguage)
-            Self.optionsCache[key] = result
+            ScenarioIdeaCache.shared.store(result, for: key)
             // Guard against a stale response (user navigated during the await).
-            if path.map(\.label) == labels { options = result }
+            if path.map(\.label) == labels {
+                withAnimation(.easeOut(duration: 0.2)) { options = result }
+            }
         } catch {
             optionsError = "Couldn't fetch ideas — type your own, or tap More to retry."
         }
@@ -558,11 +557,120 @@ struct ScenarioComposerSheet: View {
                 notes: ""
             )
             s.counterpartId = who?.id
+            // No persona → carry the picked preset voice into every future
+            // watch of this scenario.
+            s.voicePresetId = who == nil ? selectedVoiceId : nil
             s.category = categoryName
             s.categoryIcon = icon
             s.summary = sum.isEmpty ? nil : sum
             onCommit(s)
             dismiss()
         }
+    }
+}
+
+// MARK: - "Talking with" picker (shared by both composers)
+
+/// Always-set counterpart picker: one chip — a preset voice OR a saved
+/// person — is selected at all times. Voices leave the scene free to infer
+/// the counterpart's identity (the chip only decides who it SOUNDS like);
+/// a person chip casts that person, in their own voice. Used by the
+/// scenario builder and Watch's situation composer.
+struct TalkingWithSection: View {
+    @Binding var selectedVoiceId: String
+    @Binding var attachedPersonId: UUID?
+    let counterparts: [Counterpart]
+
+    var body: some View {
+        Section {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
+                      alignment: .leading, spacing: 8) {
+                ForEach(VoicePreset.catalog) { preset in
+                    let on = attachedPersonId == nil && selectedVoiceId == preset.id
+                    Button {
+                        attachedPersonId = nil
+                        selectedVoiceId = preset.id
+                    } label: {
+                        chip("\(preset.displayName) · \(preset.accent == "British" ? "UK" : "US")",
+                             icon: "waveform", on: on)
+                    }
+                    .buttonStyle(.plain)
+                }
+                ForEach(counterparts) { c in
+                    let on = attachedPersonId == c.id
+                    Button {
+                        attachedPersonId = c.id
+                    } label: {
+                        chip(c.name, icon: "person.fill", on: on)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 2)
+        } header: {
+            Text("Talking with")
+        } footer: {
+            Text(counterparts.isEmpty
+                 ? "A voice for the other person. Add people under Watch to have someone specific play the scene."
+                 : "Pick a voice, or one of your people to have them play the scene as themselves.")
+        }
+    }
+
+    private func chip(_ text: String, icon: String, on: Bool) -> some View {
+        Label(text, systemImage: icon)
+            .font(.subheadline)
+            .labelStyle(.titleAndIcon)
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
+            .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+    }
+}
+
+// MARK: - Shimmering placeholder chip
+
+/// A chip-shaped placeholder with a light sweep across it, used while the
+/// model writes the next level of choices. Same geometry as a real chip so
+/// nothing moves when the text lands; the sweep is the only motion, and it
+/// stops entirely under Reduce Motion.
+private struct SkeletonChip: View {
+    /// How much of the chip the placeholder "text line" fills.
+    var lineFraction: CGFloat = 0.7
+    /// Staggers the sweep so the grid ripples instead of pulsing as one block.
+    var delay: Double = 0
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sweeping = false
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Color(.tertiarySystemFill))
+            .frame(height: 42)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(Color(.systemFill))
+                        .frame(width: max(24, (geo.size.width - 24) * lineFraction), height: 9)
+                        .padding(.leading, 12)
+                        .frame(height: geo.size.height, alignment: .center)
+                }
+            }
+            .overlay {
+                GeometryReader { geo in
+                    LinearGradient(colors: [.clear,
+                                            Color.primary.opacity(0.10),
+                                            .clear],
+                                   startPoint: .leading, endPoint: .trailing)
+                        .frame(width: geo.size.width * 0.55)
+                        .offset(x: sweeping ? geo.size.width : -geo.size.width * 0.55)
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.linear(duration: 1.15).delay(delay).repeatForever(autoreverses: false)) {
+                    sweeping = true
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

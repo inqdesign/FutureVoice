@@ -292,7 +292,7 @@ enum TopicEngine {
         persona: UserPersona?,
         counterpart: Counterpart? = nil,
         targetLanguage: String,
-        count: Int = 8
+        count: Int = 6
     ) async throws -> [SuggestedTopic] {
         let system = pathSystemPrompt(targetLanguage: targetLanguage, count: count,
                                       depth: path.count, counterpart: counterpart)
@@ -315,11 +315,97 @@ enum TopicEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
-            maxTokens: 900,
+            // Chips are short. Output length IS the latency here — the learner
+            // is staring at skeletons until the last token lands, so keep the
+            // ceiling tight instead of letting the model ramble.
+            maxTokens: 600,
             purpose: "topics"
         )
         return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
     }
+
+    // MARK: - Instant seeds (level 1 of the preset categories)
+
+    /// Broad sub-areas for the built-in categories, shipped in the binary.
+    ///
+    /// Level 1 of the drill-down is generic by nature ("at the hotel", "at the
+    /// checkout") — asking Gemini for it bought no personalization but cost
+    /// every learner a multi-second wait right after their first tap. These
+    /// render instantly; the model still writes level 2 (where the specific,
+    /// persona-tilted moments live), and "More" re-asks it here too.
+    ///
+    /// Returns nil for anything not in the preset list (custom categories,
+    /// counterpart-scoped paths) — those still go to the model.
+    static func seedSubAreas(for category: String) -> [SuggestedTopic]? {
+        seeds[category.lowercased()]
+    }
+
+    private static let seeds: [String: [SuggestedTopic]] = [
+        "cafe": [
+            .init(title: "ordering", blurb: "At a cafe: ordering what I actually want, with the changes I want, without pointing at the menu."),
+            .init(title: "paying", blurb: "At a cafe: paying at the register when something about the payment doesn't go smoothly."),
+            .init(title: "something's wrong", blurb: "At a cafe: my order isn't what I asked for and I want it fixed without making it awkward."),
+            .init(title: "finding a seat", blurb: "At a cafe: it's packed and I have to ask about a free seat or share a table with someone."),
+            .init(title: "chatting with staff", blurb: "At a cafe: a bit of real small talk with the barista while my drink is being made."),
+            .init(title: "working from here", blurb: "At a cafe: asking about the wifi, a plug, or staying a while at my table.")
+        ],
+        "travel": [
+            .init(title: "at the airport", blurb: "At the airport: check-in, security, or the gate — and a question I need answered fast."),
+            .init(title: "at the hotel", blurb: "At the hotel front desk: sorting out my room, my stay, or something that isn't right."),
+            .init(title: "getting around", blurb: "Getting around a city I don't know: tickets, directions, and the wrong stop."),
+            .init(title: "eating out abroad", blurb: "Eating out in a place where I don't know the menu, the customs, or how ordering works."),
+            .init(title: "border control", blurb: "At immigration: answering the officer's questions about my trip, calmly and clearly."),
+            .init(title: "when it goes wrong", blurb: "Travel gone wrong: a delay, a lost bag, or a booking that doesn't exist.")
+        ],
+        "work": [
+            .init(title: "in a meeting", blurb: "In a team meeting: making my point, answering questions, and handling pushback."),
+            .init(title: "with my manager", blurb: "A one-on-one with my manager about something I actually need from them."),
+            .init(title: "interviews", blurb: "An interview: walking through my experience and why I want this role."),
+            .init(title: "with a client", blurb: "A call with a client: setting expectations and handling what they ask for."),
+            .init(title: "small talk at work", blurb: "The unplanned work talk — kitchen, hallway, before the meeting starts."),
+            .init(title: "difficult conversations", blurb: "At work: raising something uncomfortable with a colleague, professionally.")
+        ],
+        "health": [
+            .init(title: "at the doctor", blurb: "At the doctor's office: describing what's wrong and answering their questions."),
+            .init(title: "booking an appointment", blurb: "Booking a medical appointment and explaining how urgent it is."),
+            .init(title: "at the pharmacy", blurb: "At the pharmacy: asking what to take, how to take it, and what's covered."),
+            .init(title: "at the dentist", blurb: "At the dentist: describing the pain and understanding what they want to do."),
+            .init(title: "insurance & paperwork", blurb: "Sorting out health insurance or a form nobody explains properly."),
+            .init(title: "something urgent", blurb: "An urgent health moment where I have to explain the situation fast.")
+        ],
+        "shopping": [
+            .init(title: "asking for help", blurb: "In a store: asking staff to help me find or choose the right thing."),
+            .init(title: "trying things on", blurb: "In a store: sizes, fit, and asking for something different."),
+            .init(title: "returns & refunds", blurb: "Returning something and dealing with a clerk who isn't keen to take it back."),
+            .init(title: "at the checkout", blurb: "At the checkout: prices, discounts, or something ringing up wrong."),
+            .init(title: "an online order", blurb: "An online order that arrived late, wrong, or damaged — and getting it sorted."),
+            .init(title: "at the market", blurb: "At a market stall: asking what's good today and buying the right amount.")
+        ],
+        "social": [
+            .init(title: "meeting someone new", blurb: "Meeting someone for the first time and getting past the opening two minutes."),
+            .init(title: "catching up", blurb: "Catching up with someone I haven't seen in a while."),
+            .init(title: "at a party", blurb: "At a party where I barely know anyone and have to join a conversation."),
+            .init(title: "making plans", blurb: "Making plans with someone: suggesting, negotiating, and pinning down a time."),
+            .init(title: "saying no", blurb: "Turning down an invitation or a favor without it getting weird."),
+            .init(title: "something personal", blurb: "A conversation about something that actually matters to one of us.")
+        ],
+        "school": [
+            .init(title: "in class", blurb: "In class: asking a question or saying I didn't follow something."),
+            .init(title: "with a teacher", blurb: "Talking to a teacher one-on-one about my work or a problem I have."),
+            .init(title: "group work", blurb: "Group work: dividing up the work and dealing with someone not pulling their weight."),
+            .init(title: "admin & enrollment", blurb: "At the school office: enrollment, documents, or a deadline I need moved."),
+            .init(title: "exams & deadlines", blurb: "Asking about an exam, a grade, or an extension I need."),
+            .init(title: "around campus", blurb: "The everyday campus talk — before class, in the hallway, at lunch.")
+        ],
+        "phone": [
+            .init(title: "booking something", blurb: "On the phone: booking an appointment or a table and confirming the details."),
+            .init(title: "customer service", blurb: "On the phone with customer service about a problem they keep not fixing."),
+            .init(title: "a bad connection", blurb: "On a call where I can't hear well and have to ask them to repeat things."),
+            .init(title: "leaving a message", blurb: "Leaving a clear voicemail with everything they need to call me back."),
+            .init(title: "canceling something", blurb: "Calling to cancel a contract or subscription while they talk me out of it."),
+            .init(title: "an official call", blurb: "Calling an office, landlord, or utility about something I need resolved.")
+        ]
+    ]
 
     private static func pathSystemPrompt(targetLanguage: String, count: Int, depth: Int,
                                          counterpart: Counterpart? = nil) -> String {
