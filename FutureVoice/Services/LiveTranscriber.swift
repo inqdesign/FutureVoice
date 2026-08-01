@@ -45,6 +45,25 @@ final class LiveTranscriber: ObservableObject {
         var duration: Double
     }
 
+    /// What the most recent `stopAndFinalize()` actually did. The rescored
+    /// FINAL pass either lands before the turn is sent or it doesn't, and until
+    /// this existed nothing recorded which — so a turn shipped with the
+    /// recognizer's worst hypothesis looked identical to a clean one.
+    struct FinalizeWait {
+        /// How long the final pass was waited for, in ms.
+        var waitedMs: Int
+        /// Rotated segments still holding a partial when the turn ended.
+        var pendingSegments: Int
+        /// True when the deadline hit first — the turn shipped unrescored text.
+        var timedOut: Bool
+        /// True when waiting actually changed the transcript, i.e. the wait
+        /// earned its latency.
+        var upgradedText: Bool
+    }
+
+    /// Diagnostics from the last `stopAndFinalize()`; nil until one has run.
+    private(set) var lastFinalizeWait: FinalizeWait?
+
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -58,6 +77,15 @@ final class LiveTranscriber: ObservableObject {
     /// Set while `stopAndFinalize()` waits for the last segment's final pass;
     /// cleared when it arrives (or the wait times out).
     private var finalizingGen: Int?
+    /// Generations whose chunk was frozen by the quiet watcher and is STILL
+    /// holding a partial hypothesis, waiting for its rescored final to land.
+    ///
+    /// Without this, `stopAndFinalize` only ever knew about the live segment —
+    /// and the quiet watcher (1.5s) always rotates before the turn-taking VAD
+    /// (3s/5s) fires, so on those turns the live segment was empty, the wait
+    /// was skipped entirely, and whether the turn shipped rescored or partial
+    /// text came down to an unobserved race.
+    private var pendingFinalGens: Set<Int> = []
     private var lastSegmentText = ""
     private var lastChangeTime = Date()
     private var quietWatcher: Task<Void, Never>?
@@ -187,6 +215,8 @@ final class LiveTranscriber: ObservableObject {
         self.recognizer = rec
         self.chunks = []
         self.finalizingGen = nil
+        self.pendingFinalGens = []
+        self.lastFinalizeWait = nil
         self.transcript = ""
         self.lastSegmentText = ""
         self.lastChangeTime = Date()
@@ -213,6 +243,7 @@ final class LiveTranscriber: ObservableObject {
         currentTask = nil
         recognizer = nil
         finalizingGen = nil
+        pendingFinalGens.removeAll()
         level = 0
         return transcript
     }
@@ -234,20 +265,32 @@ final class LiveTranscriber: ObservableObject {
         engine = nil
         level = 0
 
-        if lastSegmentText.isEmpty {
-            // Nothing pending in the live segment — no final to wait for.
-            currentRequest?.endAudio()
-            currentTask?.finish()
-        } else {
-            finalizingGen = taskGeneration
-            currentRequest?.endAudio()
-            let deadline = Date().addingTimeInterval(timeout)
-            while finalizingGen != nil && Date() < deadline {
-                try? await Task.sleep(nanoseconds: 60_000_000)
-            }
-            finalizingGen = nil
-            currentTask?.cancel()
+        // The live segment is worth waiting on only if it holds text. Rotated
+        // segments always are: their chunk is frozen at a partial until the
+        // final lands. Waiting on BOTH is the whole point — on a 3s/5s-tier
+        // turn the live segment is empty and the rotated one is the only place
+        // the user's last words live.
+        if !lastSegmentText.isEmpty { finalizingGen = taskGeneration }
+        currentRequest?.endAudio()
+
+        let startedWaiting = Date()
+        let pendingAtStop = pendingFinalGens.count
+        let textBefore = transcript
+        let deadline = startedWaiting.addingTimeInterval(timeout)
+        while finalizingGen != nil || !pendingFinalGens.isEmpty {
+            if Date() >= deadline { break }
+            try? await Task.sleep(nanoseconds: 60_000_000)
         }
+        lastFinalizeWait = FinalizeWait(
+            waitedMs: Int(Date().timeIntervalSince(startedWaiting) * 1000),
+            pendingSegments: pendingAtStop,
+            timedOut: finalizingGen != nil || !pendingFinalGens.isEmpty,
+            upgradedText: transcript != textBefore
+        )
+
+        finalizingGen = nil
+        pendingFinalGens.removeAll()
+        currentTask?.cancel()
         currentRequest = nil
         currentTask = nil
         recognizer = nil
@@ -290,12 +333,19 @@ final class LiveTranscriber: ObservableObject {
         }
     }
 
-    private func commitAndRestart() {
+    /// - Parameter awaitingFinal: whether this segment's rescored FINAL is
+    ///   still to come. True for the quiet watcher, which freezes a PARTIAL and
+    ///   relies on the late-final upgrade. False when the final already arrived
+    ///   (`result.isFinal`) or never will (error path) — marking those as
+    ///   pending would strand `stopAndFinalize` until its deadline waiting for
+    ///   a result that is already in hand or gone for good.
+    private func commitAndRestart(awaitingFinal: Bool) {
         guard isRunning else { return }
         // What the user has seen becomes this segment's chunk; the next
         // recognition segment starts empty so further partials append.
         if !lastSegmentText.isEmpty {
             chunks.append((gen: taskGeneration, text: lastSegmentText))
+            if awaitingFinal { pendingFinalGens.insert(taskGeneration) }
         }
         lastSegmentText = ""
         lastChangeTime = Date()
@@ -327,7 +377,8 @@ final class LiveTranscriber: ObservableObject {
                 guard !self.lastSegmentText.isEmpty else { continue }
                 let quietFor = Date().timeIntervalSince(self.lastChangeTime)
                 if quietFor > Self.quietCommitThreshold {
-                    self.commitAndRestart()
+                    // Freezes a partial — its final is still owed.
+                    self.commitAndRestart(awaitingFinal: true)
                 }
             }
         }
@@ -339,11 +390,17 @@ final class LiveTranscriber: ObservableObject {
         // still want from it is the FINAL, language-model-rescored text —
         // strictly better than the partial its chunk was frozen with.
         guard myGen == taskGeneration else {
-            if let result, result.isFinal,
-               let idx = chunks.firstIndex(where: { $0.gen == myGen }) {
-                let finalText = result.bestTranscription.formattedString
-                if !finalText.isEmpty { chunks[idx].text = finalText }
-                rebuildTranscript()
+            if let result, result.isFinal {
+                if let idx = chunks.firstIndex(where: { $0.gen == myGen }) {
+                    let finalText = result.bestTranscription.formattedString
+                    if !finalText.isEmpty { chunks[idx].text = finalText }
+                    rebuildTranscript()
+                }
+                pendingFinalGens.remove(myGen)
+            } else if error != nil {
+                // Nothing more is coming for this segment; release the wait
+                // rather than let it burn the full deadline.
+                pendingFinalGens.remove(myGen)
             }
             return
         }
@@ -396,14 +453,16 @@ final class LiveTranscriber: ObservableObject {
                 )
             }
             if result.isFinal {
-                commitAndRestart()
+                // This IS the final — nothing further to wait for.
+                commitAndRestart(awaitingFinal: false)
             }
             return
         }
 
-        // Error path: preserve whatever we already showed, then resume.
+        // Error path: preserve whatever we already showed, then resume. No
+        // final will follow an error, so this chunk stays as-is.
         if error != nil {
-            commitAndRestart()
+            commitAndRestart(awaitingFinal: false)
         }
     }
 

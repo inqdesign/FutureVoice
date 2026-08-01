@@ -847,6 +847,15 @@ struct ConversationView: View {
         let finalizeStarted = Date()
         let finalText = await live.stopAndFinalize()
         turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
+        // Whether the rescored FINAL pass actually landed before the turn
+        // shipped. `final_timeout=1` means the user's words went out as the
+        // recognizer's un-rescored partial — previously unobservable, and the
+        // only way to tell if `quietCommitThreshold` needs retuning next.
+        if let w = live.lastFinalizeWait {
+            turnTiming["final_pending"] = String(w.pendingSegments)
+            turnTiming["final_timeout"] = w.timedOut ? "1" : "0"
+            turnTiming["final_upgraded"] = w.upgradedText ? "1" : "0"
+        }
         let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
