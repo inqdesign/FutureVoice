@@ -368,63 +368,75 @@ struct PracticeTab: View {
         return (mastered, total)
     }
 
-    /// The whole-library progress card topping the Studying page: big percent
-    /// in the display face, the bar, and the raw count.
-    @ViewBuilder
-    private var overallCard: some View {
+    /// Everything that answers "where do I stand, and what can I open right
+    /// now" — whole-library mastery, the due-cards entry, and the three
+    /// practice-type shortcuts — in ONE grouped card. They were three separate
+    /// floating panels (five rects with the shortcuts), which read as clutter
+    /// above the book grid; the books below are the page's actual content, so
+    /// the status strip has to be a single object. Sections are separated by
+    /// hairlines the way a grouped List separates rows.
+    private var studyCard: some View {
         let p = overallProgress
-        if p.total > 0 {
-            let done = p.mastered == p.total
-            HStack(alignment: .center, spacing: 14) {
-                Text("\(Int((Double(p.mastered) / Double(p.total) * 100).rounded()))%")
-                    .geistPixel(30)
-                    .foregroundStyle(done ? .green : .primary)
-                VStack(alignment: .leading, spacing: 5) {
-                    ProgressView(value: Double(p.mastered), total: Double(p.total))
-                        .tint(done ? .green : .accentColor)
-                    Text("\(p.mastered) of \(p.total) mastered · everything from your talks and watches")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
+        return VStack(spacing: 0) {
+            if p.total > 0 {
+                overallSummary(mastered: p.mastered, total: p.total)
+                Divider().padding(.leading, 14)
             }
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+            if dueDrillCount > 0 {
+                reviewRow
+                Divider().padding(.leading, 14)
+            }
+            practiceShortcuts
         }
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    /// The whole-library progress section: big percent in the display face,
+    /// the bar, and the raw count.
+    private func overallSummary(mastered: Int, total: Int) -> some View {
+        let done = mastered == total
+        return HStack(alignment: .center, spacing: 14) {
+            Text("\(Int((Double(mastered) / Double(total) * 100).rounded()))%")
+                .geistPixel(30)
+                .foregroundStyle(done ? .green : .primary)
+            VStack(alignment: .leading, spacing: 5) {
+                ProgressView(value: Double(mastered), total: Double(total))
+                    .tint(done ? .green : .accentColor)
+                Text("\(mastered) of \(total) mastered · everything from your talks and watches")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(14)
     }
 
     /// SRS review entry — rehomed here from the home Today card (whose slot
     /// now shows the whole-library mastery bar). Only when cards are due.
-    @ViewBuilder
     private var reviewRow: some View {
-        if dueDrillCount > 0 {
-            Button { showingDrills = true } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "rectangle.stack")
-                        .font(.body)
-                        .foregroundStyle(.tint)
-                        .frame(width: 28)
-                    Text(dueDrillCount == 1 ? "Review 1 card" : "Review \(dueDrillCount) cards")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.primary)
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 13)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-                .contentShape(RoundedRectangle(cornerRadius: 16))
+        Button { showingDrills = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "rectangle.stack")
+                    .font(.body)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                Text(dueDrillCount == 1 ? "Review 1 card" : "Review \(dueDrillCount) cards")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private var studyingPage: some View {
         VStack(alignment: .leading, spacing: 16) {
-            overallCard
-            reviewRow
-            practiceShortcuts
+            studyCard
             if !studyingBooks.isEmpty {
                 LazyVGrid(columns: columns, spacing: 14) {
                     ForEach(studyingBooks) { book in
@@ -458,18 +470,22 @@ struct PracticeTab: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// The three dictionaries, as the bottom band of `studyCard` — segments
+    /// divided by hairlines rather than three standalone tiles.
     private var practiceShortcuts: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 0) {
             shortcut(icon: "text.book.closed.fill", title: "Words",
                      count: vocab.studying.count) {
                 VocabularyView()
             }
+            shortcutDivider
             shortcut(icon: "waveform.badge.mic", title: "Shadowing",
                      count: appState.savedLines.count) {
                 ShadowBrowserView()
                     .navigationTitle("Shadowing")
                     .navigationBarTitleDisplayMode(.inline)
             }
+            shortcutDivider
             shortcut(icon: "quote.bubble.fill", title: "Expressions",
                      count: vocab.expressionEntries().count) {
                 ExpressionsView()
@@ -477,6 +493,12 @@ struct PracticeTab: View {
                     .navigationBarTitleDisplayMode(.inline)
             }
         }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Vertical hairline between shortcut segments, inset from the card edges.
+    private var shortcutDivider: some View {
+        Divider().padding(.vertical, 10)
     }
 
     private func shortcut<D: View>(icon: String, title: String, count: Int,
@@ -495,8 +517,7 @@ struct PracticeTab: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(RoundedRectangle(cornerRadius: 16))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

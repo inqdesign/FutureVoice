@@ -120,6 +120,7 @@ struct ConversationHome: View {
                     personaName: appState.persona?.displayName,
                     proficiency: appState.proficiency
                 )
+                await prewarmFreeTalkOpenerAudio()
             }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 // Only pitch the trial to someone who still has free credits;
@@ -356,6 +357,35 @@ struct ConversationHome: View {
             ($0.words + $0.expressions + $0.shadowLines).compactMap(\.masteredAt).max()
         }
         return mastery ?? s.lastUsedAt ?? s.createdAt
+    }
+
+    /// Synthesize the NEXT free-talk greeting while the user is still looking
+    /// at the launcher, so tapping "Let's talk" opens on cached audio instead
+    /// of waiting out an ElevenLabs round trip — the wait that made the start
+    /// of a call feel slow. Deliberately does NOT touch the rotation: the
+    /// greeting still differs every call (that variety is the point), only its
+    /// audio is ready early.
+    ///
+    /// Costs nothing extra in the normal case — it synthesizes exactly the
+    /// line the call was about to synthesize anyway, under the same
+    /// (text, voiceId) cache key and the same model, and no-ops once cached.
+    /// The one wasteful case is a user who opens Talk and never calls; that is
+    /// bounded at one line per rotation position.
+    private func prewarmFreeTalkOpenerAudio() async {
+        guard let voiceId = appState.voiceCloneId,
+              let line = FreeTalkOpeners.shared.peek(
+                  language: appState.targetLanguage,
+                  personaName: appState.persona?.displayName),
+              // `allowLineage: false` mirrors the live call's lookup — warming
+              // a line the call would still consider a miss is pointless.
+              PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
+                                           allowLineage: false) == nil,
+              let audio = try? await ElevenLabsClient.shared.synthesize(
+                  voiceId: voiceId, text: line,
+                  modelId: ElevenLabsClient.conversationModelId,
+                  purpose: "turn")
+        else { return }
+        PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
     }
 
     // MARK: - Actions (tap = start the call)
