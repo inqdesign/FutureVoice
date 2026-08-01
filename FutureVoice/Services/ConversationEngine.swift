@@ -380,18 +380,25 @@ enum ConversationEngine {
 
         OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
         Return STRICT JSON only — no prose, no code fences:
-        { "transcript": "..." , "reply": "...", "suggestion": { "alternative": "...", "reason": "..." } }
+        { "reply": "...", "suggestion": { "alternative": "...", "reason": "..." }, "transcript": "..." }
 
-        - "transcript": the user's latest message may include their recorded
-          AUDIO. The audio is the ground truth of what they said; the text in
-          that message is only an automatic speech-recognition guess and may
-          contain misheard words. Listen to the audio and write down VERBATIM
-          what the user actually said, in \(LanguageCatalog.englishName(targetLanguage)). Keep their exact
-          wording INCLUDING any grammar mistakes (corrections belong in
-          "suggestion", never here); skip filler sounds (uh, um). If no audio
-          is attached, set "transcript" to null.
-        - Base "reply" and "suggestion" on what the user ACTUALLY said per
-          the audio — not on the recognition guess.
+        - FIELD ORDER IS FIXED: "reply" FIRST, then "suggestion", then
+          "transcript". The app starts speaking the reply the instant its
+          closing quote arrives, while you are still writing the rest — every
+          character emitted before "reply" is silence the user sits through.
+          Never reorder, never add a field before "reply".
+        - "reply": your spoken conversational turn in \(LanguageCatalog.englishName(targetLanguage)), following
+          every speaking rule above. This is the ONLY part the user hears.
+        - The user's latest message may include their recorded AUDIO. The audio
+          is the ground truth of what they said; the text in that message is
+          only an automatic speech-recognition guess and may contain misheard
+          words. LISTEN to the audio before you write anything, and base
+          "reply", "suggestion" and "transcript" on what the user ACTUALLY
+          said — not on the recognition guess.
+        - "transcript": VERBATIM what the user actually said per the audio, in
+          \(LanguageCatalog.englishName(targetLanguage)). Keep their exact wording INCLUDING any grammar
+          mistakes (corrections belong in "suggestion", never here); skip
+          filler sounds (uh, um). If no audio is attached, set it to null.
         - ASR DROP GUARD: on-device recognition very often clips a short
           function word the speaker clearly said — most of all a
           sentence-initial subject pronoun ("I", "he", "we"). If the audio
@@ -400,8 +407,6 @@ enum ConversationEngine {
           "can do it" → "I can do it" when the audio has the "I": that is a
           transcription artifact, not the learner's error. (Genuinely dropped
           ARTICLES you can HEAR are missing stay fair game.)
-        - "reply": your spoken conversational turn in \(LanguageCatalog.englishName(targetLanguage)), following
-          every speaking rule above. This is the ONLY part the user hears.
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already

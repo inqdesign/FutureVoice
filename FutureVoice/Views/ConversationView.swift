@@ -917,9 +917,27 @@ struct ConversationView: View {
             default:          turnTiming["audio"] = "none"
             }
             let geminiStarted = Date()
+            // The reply is the FIRST field of the streamed turn JSON, so TTS
+            // starts the instant it closes — the suggestion and the verbatim
+            // transcript that follow it are written while the voice is already
+            // loading, instead of ahead of the first sound.
+            var speakTask: Task<Void, Error>?
+            let speakEarly: @MainActor (String) -> Void = { reply in
+                guard speakTask == nil, !isTornDown else { return }
+                let text = Self.stripLeakedSchemaTail(reply)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                turnTiming["gemini_first_ms"] =
+                    String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
+                speakTask = Task { @MainActor in
+                    try await speakAndAppend(text, voiceId: voiceId,
+                                             idempotencyKey: "tts-turn:\(turnId.uuidString)")
+                }
+            }
             let payload: ConversationTurnPayload
             do {
-                payload = try await turnPayload(audio: turnAudio, turnId: turnId)
+                payload = try await turnPayload(audio: turnAudio, turnId: turnId,
+                                                onReply: speakEarly)
             } catch where turnAudio != nil && !error.isOutOfCredits {
                 // The audio-attached call is the NEW, riskier path (bigger
                 // upload, audio ingestion, longer JSON). If it fails for any
@@ -930,7 +948,8 @@ struct ConversationView: View {
                     "error": (error as NSError).domain + ":\((error as NSError).code)",
                 ])
                 turnAudio = nil
-                payload = try await turnPayload(audio: nil, turnId: turnId)
+                payload = try await turnPayload(audio: nil, turnId: turnId,
+                                                onReply: speakEarly)
             }
             turnTiming["gemini_ms"] = String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
             // The screen may have closed while the reply was in flight.
@@ -950,8 +969,15 @@ struct ConversationView: View {
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
             }
-            try await speakAndAppend(replyText, voiceId: voiceId,
-                                     idempotencyKey: "tts-turn:\(turnId.uuidString)")
+            // Already speaking from the stream callback: adopt its result so a
+            // TTS failure still reaches the catch below and offers Retry.
+            // Otherwise (no early fire — buffered fallback) speak now.
+            if let speakTask {
+                try await speakTask.value
+            } else {
+                try await speakAndAppend(replyText, voiceId: voiceId,
+                                         idempotencyKey: "tts-turn:\(turnId.uuidString)")
+            }
             // DO NOT set phase = .idle here. speakAndAppend kicks off audio
             // playback (non-blocking) whose completion flips phase back to
             // .idle AND auto-restarts listening for phone-call mode.
@@ -976,9 +1002,11 @@ struct ConversationView: View {
     /// reply so the caller's audio→text rescue (and the Retry chip) engage
     /// instead of silently dead-ending the turn.
     private func turnPayload(audio: GeminiClient.Message.InlineAudio?,
-                             turnId: UUID) async throws -> ConversationTurnPayload {
+                             turnId: UUID,
+                             onReply: @MainActor @escaping (String) -> Void)
+    async throws -> ConversationTurnPayload {
         do {
-            let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSON(
+            let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSONStream(
                 system: systemPrompt()
                     + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
                 messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
@@ -1001,7 +1029,14 @@ struct ConversationView: View {
                 // Audio-attached calls get a short idle timeout so a stalled
                 // upload fails into the text-only rescue in seconds instead
                 // of eating the session-wide 40s window first.
-                requestTimeout: audio != nil ? 20 : nil
+                requestTimeout: audio != nil ? 20 : nil,
+                // Speak as soon as "reply" closes; everything after it in the
+                // JSON (suggestion, transcript) lands while the voice loads.
+                earlyField: "reply",
+                onEarlyField: onReply,
+                // Stream cut after the reply shipped: keep the turn the user
+                // already heard, minus the correction.
+                fallbackFromEarly: { ConversationTurnPayload(reply: $0, suggestion: nil) }
             )
             guard !payload.reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw GeminiError.invalidResponse
