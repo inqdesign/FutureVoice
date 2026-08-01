@@ -228,11 +228,11 @@ struct ConversationHome: View {
             // Practice (SRS review itself now lives there, on Studying);
             // the book you're mid-way through opens directly.
             if overallTotal > 0 {
-                Divider().padding(.leading, 16)
+                CardDivider()
                 practiceProgressRow
             }
             if let book = continueBook {
-                Divider().padding(.leading, 16)
+                CardDivider()
                 todayActionRow(icon: "book",
                                title: "Continue studying",
                                subtitle: book.environment) {

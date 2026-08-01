@@ -380,11 +380,11 @@ struct PracticeTab: View {
         return VStack(spacing: 0) {
             if p.total > 0 {
                 overallSummary(mastered: p.mastered, total: p.total)
-                Divider().padding(.leading, 14)
+                CardDivider(inset: 14)
             }
             if dueDrillCount > 0 {
                 reviewRow
-                Divider().padding(.leading, 14)
+                CardDivider(inset: 14)
             }
             practiceShortcuts
         }
@@ -434,40 +434,79 @@ struct PracticeTab: View {
         .buttonStyle(.plain)
     }
 
+    /// The talk books this page carries: in progress first, then the fresh
+    /// 0%-ones. A single flat mixed grid made the page read as a pile, so the
+    /// books are split BY ACTIVITY, one horizontal row each.
+    private var talkRow: [Session] {
+        (studyingBooks + unstartedBooks).compactMap {
+            if case .talk(let s) = $0 { return s } else { return nil }
+        }
+    }
+    private var watchRow: [Scenario] {
+        (studyingBooks + unstartedBooks).compactMap {
+            if case .scenario(let s) = $0 { return s } else { return nil }
+        }
+    }
+
     private var studyingPage: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
             studyCard
-            if !studyingBooks.isEmpty {
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(studyingBooks) { book in
-                        switch book {
-                        case .talk(let session):     talkCard(session, showActivity: true)
-                        case .scenario(let s):       scenarioCard(s, showActivity: true)
-                        }
+            if !talkRow.isEmpty {
+                bookRow(title: "Talk", shelf: .talk, count: talkRow.count) {
+                    ForEach(talkRow) { session in
+                        talkCard(session).frame(width: Self.rowCardWidth)
                     }
                 }
             }
-            // Fresh 0%-books CTA — the first watch/talk lands HERE, so a brand
-            // new user sees their material immediately instead of an empty page.
-            if !unstartedBooks.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Start next")
-                        .font(.headline)
-                    LazyVGrid(columns: columns, spacing: 14) {
-                        ForEach(unstartedBooks) { book in
-                            switch book {
-                            case .talk(let session):     talkCard(session, showActivity: true)
-                            case .scenario(let s):       scenarioCard(s, showActivity: true)
-                            }
-                        }
+            if !watchRow.isEmpty {
+                bookRow(title: "Watch", shelf: .watch, count: watchRow.count) {
+                    ForEach(watchRow) { s in
+                        scenarioCard(s).frame(width: Self.rowCardWidth)
                     }
                 }
             }
-            if studyingBooks.isEmpty && unstartedBooks.isEmpty {
+            if talkRow.isEmpty && watchRow.isEmpty {
                 shelfHint("Nothing here yet. Have a talk or watch a scene on Home — the material it generates becomes books here; open one and master your first word or line.")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Wide enough that a second card and the edge of a third are visible, so
+    /// the row reads as scrollable without an affordance.
+    private static let rowCardWidth: CGFloat = 190
+
+    /// One activity's in-progress shelf: a header naming the activity (tap to
+    /// jump to its full shelf) over a horizontally scrolling row of books.
+    /// The row bleeds to the screen edges — the negative inset cancels the
+    /// page's 18pt gutter, which the LazyHStack re-applies to its content so
+    /// the first card still lines up with everything above it.
+    private func bookRow<C: View>(title: String, shelf target: Shelf, count: Int,
+                                  @ViewBuilder _ cards: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button { withAnimation { shelf = target } } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(title).font(.headline).foregroundStyle(.primary)
+                    Text("\(count)")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(alignment: .top, spacing: 14) {
+                    cards()
+                }
+                .padding(.horizontal, 18)
+                .scrollTargetLayout()
+            }
+            .scrollTargetBehavior(.viewAligned)
+            .padding(.horizontal, -18)
+        }
     }
 
     /// The three dictionaries, as the bottom band of `studyCard` — segments
@@ -498,7 +537,7 @@ struct PracticeTab: View {
 
     /// Vertical hairline between shortcut segments, inset from the card edges.
     private var shortcutDivider: some View {
-        Divider().padding(.vertical, 10)
+        CardDivider(inset: 10, axis: .vertical)
     }
 
     private func shortcut<D: View>(icon: String, title: String, count: Int,

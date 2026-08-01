@@ -112,6 +112,10 @@ final class LiveTranscriber: ObservableObject {
     /// last changed", which lags real speech by an unpredictable amount.
     var lastVoicedAt: Date? { fluency.lastVoicedTime() }
 
+    /// Ambient noise estimate the endpointer is currently working against
+    /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
+    var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
+
     private static let quietCommitThreshold: TimeInterval = 1.5
 
     enum LiveError: Error, LocalizedError {
@@ -518,7 +522,31 @@ private final class FluencyMeter: @unchecked Sendable {
     private var longestPause = 0.0
     private var lastVoicedAt: Date?
 
-    private let voicedThreshold: Float = 0.35   // normalized 0…1 level from rms()
+    /// Absolute "this is speech" floor — 0.35 on the `rms()` curve is
+    /// −32.5 dBFS. A quiet room's ambient sits far below it, so there this
+    /// always wins and behavior is exactly what it was before adaptation.
+    private let baseVoicedThreshold: Float = 0.35
+    /// How far above the measured noise floor a frame must sit to count as
+    /// speech. 0.12 on the 0…1 curve ≈ 6 dB.
+    private let noiseMargin: Float = 0.12
+    /// Decaying-minimum noise estimate (classic "minimum statistics"): snaps
+    /// DOWN to any quieter frame, creeps UP slowly. Speech cannot drag it up —
+    /// even continuous speech has low-energy frames between words — but a room
+    /// that genuinely got louder is tracked within a few seconds.
+    ///
+    /// Why this exists: outdoors and in cafés ambient runs −40…−25 dBFS, i.e.
+    /// ABOVE the fixed 0.35 bar. Every frame then read as "the user is still
+    /// talking", `lastVoicedAt` never went stale, and the energy-based
+    /// endpointing never fired — turns fell through to the 6s transcript-quiet
+    /// fallback, which is the "slow outside" the user felt. It also inflated
+    /// speakingSeconds/pause stats by counting street noise as speech.
+    private var noiseFloor: Float = 0
+    private var hasNoiseFloor = false
+    private let noiseRisePerSecond: Float = 0.03   // ≈1.5 dB/s
+
+    private var voicedThreshold: Float {
+        max(baseVoicedThreshold, noiseFloor + noiseMargin)
+    }
     private let minPause = 0.35                  // seconds of silence = one pause
 
     func reset() {
@@ -526,6 +554,7 @@ private final class FluencyMeter: @unchecked Sendable {
         total = 0; voiced = 0; started = false; silenceRun = 0
         pauseCount = 0; pauseSeconds = 0; longestPause = 0
         lastVoicedAt = nil
+        noiseFloor = 0; hasNoiseFloor = false
     }
 
     func lastVoicedTime() -> Date? {
@@ -533,10 +562,30 @@ private final class FluencyMeter: @unchecked Sendable {
         return lastVoicedAt
     }
 
+    /// Current ambient estimate (0…1 on the `rms()` curve) — telemetry only,
+    /// so a "slow turn-taking" report can be read against how loud it actually
+    /// was where the user stood.
+    func noiseFloorLevel() -> Float {
+        lock.lock(); defer { lock.unlock() }
+        return noiseFloor
+    }
+
     func feed(level: Float, seconds: Double) {
         guard seconds > 0 else { return }
         lock.lock(); defer { lock.unlock() }
         total += seconds
+        // Seed from the first frame (the mic opens before the user starts, so
+        // it is normally ambient) — but never ABOVE the old fixed bar. If that
+        // frame happens to catch speech, an unclamped seed would push the
+        // threshold above the user's own voice and read them as silent. With
+        // the clamp the worst case is exactly the pre-adaptation behavior,
+        // and the decaying minimum corrects within a few frames.
+        if hasNoiseFloor {
+            noiseFloor = min(level, noiseFloor + noiseRisePerSecond * Float(seconds))
+        } else {
+            noiseFloor = min(level, baseVoicedThreshold)
+            hasNoiseFloor = true
+        }
         if level >= voicedThreshold {
             // Voiced again — close any qualifying mid-speech silence.
             if started, silenceRun >= minPause {

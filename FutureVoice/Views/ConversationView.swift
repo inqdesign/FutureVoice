@@ -583,7 +583,17 @@ struct ConversationView: View {
                 // fire on the old transcript-quiet signal as an upper bound.
                 let transcriptSettled = sinceTextChange >= Self.noisyRoomFallbackSeconds
                 guard audioSettled || transcriptSettled else { continue }
-                turnTiming = ["vad_wait_ms": String(Int(audioSilence * 1000))]
+                // `vad_wait_ms` alone hid the worst case: on the noisy fallback
+                // the energy meter never saw silence, so it logs a TINY audio
+                // gap for a turn that actually sat out the 6s transcript wait.
+                // Record which condition fired, the transcript-quiet duration,
+                // and how loud the room was, so "slow outside" is readable.
+                turnTiming = [
+                    "vad_wait_ms": String(Int(audioSilence * 1000)),
+                    "vad_path": audioSettled ? "audio" : "noisy",
+                    "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
+                    "noise": String(format: "%.2f", live.ambientNoiseLevel),
+                ]
                 turnEndedSpeakingAt = Date()
                 HapticEngine.voiceSent()
                 await stopAndSend()
