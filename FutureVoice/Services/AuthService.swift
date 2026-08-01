@@ -143,8 +143,21 @@ final class AuthService: NSObject, ObservableObject {
     /// balance, so the app can confirm "invite applied" after onboarding.
     @Published var redeemedInviteBalance: Int?
 
+    /// Signs THIS install out. Scope is `.local` on purpose.
+    ///
+    /// supabase-swift defaults `signOut()` to `.global`, which revokes every
+    /// refresh token the user holds — including other installs (the `.dev`
+    /// build sitting beside the TestFlight one). Those installs are then stuck:
+    /// they still hold a stored session so the UI says "signed in", but the
+    /// token can no longer refresh, so every request 401s, `user_credits` reads
+    /// back empty and renders as a 0 balance, and their own sign-out button
+    /// needs the very token that was revoked — leaving no in-app way out.
+    /// A sign-out here must only affect the install the user tapped it in.
+    ///
+    /// `.local` also cannot fail on a dead token: the session is cleared even
+    /// offline, so the button always works.
     func signOut() async {
-        try? await SupabaseProvider.shared.auth.signOut()
+        try? await SupabaseProvider.shared.auth.signOut(scope: .local)
         session = nil
         Analytics.reset()   // drop identity so the next user isn't merged in
     }
