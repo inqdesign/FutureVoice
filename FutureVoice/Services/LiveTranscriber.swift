@@ -81,10 +81,14 @@ final class LiveTranscriber: ObservableObject {
     /// holding a partial hypothesis, waiting for its rescored final to land.
     ///
     /// Without this, `stopAndFinalize` only ever knew about the live segment —
-    /// and the quiet watcher (1.5s) always rotates before the turn-taking VAD
-    /// (3s/5s) fires, so on those turns the live segment was empty, the wait
-    /// was skipped entirely, and whether the turn shipped rescored or partial
-    /// text came down to an unobserved race.
+    /// and the quiet watcher (1.5s) rotates before the turn-taking VAD on its
+    /// default/long tiers (2.2s/5s), so on those turns the live segment was
+    /// empty, the wait was skipped entirely, and whether the turn shipped
+    /// rescored or partial text came down to an unobserved race. (Since the
+    /// 2026-08 VAD retune the SHORT tier at 1.2s can now fire ahead of a
+    /// rotation, putting the live segment back in play — `finalizingGen`
+    /// covers that half, this set covers the rotated half, and a turn can
+    /// legitimately be waiting on both.)
     private var pendingFinalGens: Set<Int> = []
     private var lastSegmentText = ""
     private var lastChangeTime = Date()

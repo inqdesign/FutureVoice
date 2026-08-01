@@ -102,8 +102,17 @@ struct ConversationView: View {
     // without recreating that bug. `sttSettleSeconds` additionally holds fire
     // while the partial transcript is still moving, so a lagging recognizer
     // never gets its tail truncated.
-    private static let vadShortSeconds: Double   = 1.5
-    private static let vadDefaultSeconds: Double = 3.0
+    // 2026-08 retune: `talk_turn_timing` says the DEFAULT tier fires 53% of
+    // turns (95/179) and the short tier 27%, i.e. this wait is the single
+    // biggest slice of the silence between "user stops" and "fluent self
+    // speaks" — bigger than the whole Gemini call. Every `final_timeout` seen
+    // so far is 0 (the rescored FINAL pass always landed with room to spare),
+    // so the padding buys nothing. Default 3.0 → 2.2, short 1.5 → 1.2. The
+    // LONG tier stays at 5s: it only fires on a hanging conjunction or filler,
+    // where cutting in is exactly the failure mode this whole scheme exists to
+    // avoid. Roll back if `final_timeout=1` starts appearing in telemetry.
+    private static let vadShortSeconds: Double   = 1.2
+    private static let vadDefaultSeconds: Double = 2.2
     private static let vadLongSeconds: Double    = 5.0
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
@@ -115,9 +124,9 @@ struct ConversationView: View {
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
     /// How much true silence before warming the network path. Well under the
-    /// shortest VAD tier (1.5s), so by the time the turn actually fires the
+    /// shortest VAD tier (1.2s), so by the time the turn actually fires the
     /// TLS handshake + auth token are already in place.
-    private static let preconnectAfterSilenceSeconds: Double = 0.8
+    private static let preconnectAfterSilenceSeconds: Double = 0.6
     /// One preconnect per listening phase — reset when the mic restarts.
     @State private var didPreconnectThisTurn = false
     /// Per-turn latency breadcrumbs, accumulated across the VAD → finalize →
@@ -580,8 +589,8 @@ struct ConversationView: View {
     /// Inspect the latest STT transcript and pick a REQUIRED TRUE-SILENCE
     /// duration (seconds since the mic last heard voiced audio):
     ///   • 5.0s — clearly mid-thought (filler / hanging conjunction / stub).
-    ///   • 1.5s — wrapped up cleanly (terminal punctuation .!?).
-    ///   • 3.0s — anything in between.
+    ///   • 1.2s — wrapped up cleanly (terminal punctuation .!?).
+    ///   • 2.2s — anything in between.
     private func currentVadWaitSeconds() -> Double {
         let trimmed = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         if Self.isLikelyIncomplete(trimmed) {
