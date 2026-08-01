@@ -226,18 +226,6 @@ struct ConversationView: View {
                              onDone: endAndClose, onStartNew: startNewSession)
                     .environmentObject(appState)
             }
-            .confirmationDialog("This conversation isn't saved yet",
-                                isPresented: $confirmingDiscard,
-                                titleVisibility: .visible) {
-                Button("Save conversation") {
-                    Task { await endSession() }
-                }
-                Button("Close without saving", role: .destructive) {
-                    close()
-                }
-            } message: {
-                Text("Saving wraps up the talk and keeps the transcript, feedback, and drills.")
-            }
             .alert("Something went wrong", isPresented: errorBinding) {
                 if outOfCredits {
                     Button("See plans") { error = nil; showingPaywall = true }
@@ -305,6 +293,24 @@ struct ConversationView: View {
                 }
             } label: {
                 Label("Close", systemImage: "xmark")
+            }
+            // Anchored on the ✕ itself, not on the screen: iOS presents a
+            // confirmation dialog as a popover that emerges from the view the
+            // modifier hangs off. Attached to the root container it pointed at
+            // the bottom-center mic pill — the one control it has nothing to
+            // do with. Keep it here so the sheet grows out of the button the
+            // user actually tapped.
+            .confirmationDialog("This conversation isn't saved yet",
+                                isPresented: $confirmingDiscard,
+                                titleVisibility: .visible) {
+                Button("Save conversation") {
+                    Task { await endSession() }
+                }
+                Button("Close without saving", role: .destructive) {
+                    close()
+                }
+            } message: {
+                Text("Saving wraps up the talk and keeps the transcript, feedback, and drills.")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
