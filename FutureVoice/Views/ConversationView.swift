@@ -984,7 +984,14 @@ struct ConversationView: View {
                 messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
                 // Headroom for transcript + reply + suggestion: a MAX_TOKENS
                 // truncation shows up here as a DecodingError-failed turn.
-                maxTokens: 1024,
+                // gen-3 counts THINKING tokens against this ceiling too, so the
+                // budget is shared with reasoning the user never sees — and the
+                // transcript field scales with how long the user just spoke.
+                // At 1024 that combination truncated ~8% of turns into a dead
+                // Retry chip (evenly split across wifi/cellular, i.e. not a
+                // network fault). The ceiling is not billed, only tokens
+                // actually produced, so the headroom is free.
+                maxTokens: 2048,
                 temperature: 0.7,
                 purpose: "turn",
                 // Keyed to the user turn: the inline Retry button and the

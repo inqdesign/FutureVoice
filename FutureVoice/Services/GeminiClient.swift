@@ -92,6 +92,32 @@ final class GeminiClient {
         jsonResponse: Bool = false,
         requestTimeout: TimeInterval? = nil
     ) async throws -> String {
+        try await sendRaw(
+            system: system, messages: messages, model: model, maxTokens: maxTokens,
+            temperature: temperature, searchGrounding: searchGrounding,
+            purpose: purpose, idempotencyKey: idempotencyKey,
+            jsonResponse: jsonResponse, requestTimeout: requestTimeout
+        ).text
+    }
+
+    /// Same request as `send`, but also surfaces the candidate's
+    /// `finishReason`. `sendJSON` needs it to tell a genuinely malformed reply
+    /// apart from one the token ceiling cut in half: after decoding fails the
+    /// two are indistinguishable, yet only the latter is fixed by raising
+    /// `maxTokens`. Keeping them separate in telemetry is the only way to know
+    /// whether a ceiling bump actually landed.
+    private func sendRaw(
+        system: String,
+        messages: [Message],
+        model: Model = .flash36,
+        maxTokens: Int = 512,
+        temperature: Double = 0.7,
+        searchGrounding: Bool = false,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil,
+        jsonResponse: Bool = false,
+        requestTimeout: TimeInterval? = nil
+    ) async throws -> (text: String, finishReason: String?) {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
         // Optionals encode via encodeIfPresent, so a text part carries no
@@ -181,12 +207,14 @@ final class GeminiClient {
                     let parts: [PartR]?
                 }
                 let content: ContentR?
+                let finishReason: String?
             }
             let candidates: [Candidate]?
         }
         let decoded = try JSONDecoder().decode(APIResponse.self, from: data)
-        let text = decoded.candidates?.first?.content?.parts?.compactMap { $0.text }.joined() ?? ""
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let candidate = decoded.candidates?.first
+        let text = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), candidate?.finishReason)
     }
 
     /// One-shot JSON request. Caller specifies the expected `Decodable` shape.
@@ -203,7 +231,7 @@ final class GeminiClient {
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil
     ) async throws -> T {
-        let raw = try await send(
+        let (raw, finishReason) = try await sendRaw(
             system: system,
             messages: messages,
             model: model,
@@ -215,10 +243,18 @@ final class GeminiClient {
             jsonResponse: true,
             requestTimeout: requestTimeout
         )
+        // Reclassify ONLY after parsing has actually failed — never on the
+        // flag alone, so a response that happens to be complete is still used.
+        let truncated = finishReason == "MAX_TOKENS"
         guard let jsonData = Self.extractJSON(from: raw) else {
-            throw GeminiError.jsonNotFound(raw: raw)
+            throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: raw)
         }
-        return try JSONDecoder().decode(T.self, from: jsonData)
+        do {
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        } catch {
+            if truncated { throw GeminiError.truncated }
+            throw error
+        }
     }
 
     // MARK: - Helpers
@@ -247,6 +283,10 @@ enum GeminiError: Error, LocalizedError {
     case httpError(status: Int, body: String)
     case jsonNotFound(raw: String)
     case insufficientCredits
+    // Append-only: telemetry logs the bridged NSError code, which is the case
+    // INDEX. Reordering these silently rewrites history (insufficientCredits
+    // must stay 3).
+    case truncated
 
     var errorDescription: String? {
         switch self {
@@ -254,6 +294,7 @@ enum GeminiError: Error, LocalizedError {
         case .httpError(let status, let body): return "Gemini HTTP \(status): \(body)"
         case .jsonNotFound(let raw):         return "Gemini: no JSON found in reply: \(raw.prefix(200))"
         case .insufficientCredits:           return "You're out of credits. Check your plan under Me → Account."
+        case .truncated:                     return "Gemini: reply hit the token ceiling before it finished"
         }
     }
 }
