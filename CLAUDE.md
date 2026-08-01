@@ -79,7 +79,12 @@ SourceKit diagnostics commonly show ghost errors ("Cannot find type …") for ne
 - Utility calls (Translator's pure translation, CounterpartParser, FreeTalkOpeners) run on `gemini-3.1-flash-lite`. Learner-facing coaching text stays on the default model.
 - `gemini-2.5-flash` remains in the enum as a rollback hatch only — the 2.5 family retires 2026-10-16.
 - Conversation turns: structured JSON `{reply, suggestion}`; analysis calls (summary, shadow bullets, weekly report) via `sendJSON`. Temperature args still exist on the API for 2.5-era callers but are ignored on gen-3.
-- TTS: Talk conversation turns use `eleven_flash_v2_5` (`ElevenLabsClient.conversationModelId`); Shadow/Watch/everything else stays on `eleven_turbo_v2_5`.
+- TTS: **speaker similarity is the product** — the user must believe the voice is theirs. Model choice ranks `eleven_multilingual_v2` > `eleven_turbo_v2_5` > `eleven_flash_v2_5` on similarity, and exactly the reverse on latency. Defaults:
+  - Talk conversation turns → `eleven_turbo_v2_5` (`ElevenLabsClient.conversationModelId`). Flash was tried here and reverted: it costs the same but sounds less like the user, on the app's highest-exposure surface.
+  - Watch scenes (the user's OWN voice only) + the onboarding greeting → `eleven_multilingual_v2` (`ElevenLabsClient.fidelityModelId`).
+  - Everything else — Shadow, drills, library, counterpart preset voices → `eleven_turbo_v2_5`.
+  - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
+  - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
 
 ## Audio format
 

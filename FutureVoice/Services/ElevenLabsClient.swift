@@ -50,8 +50,12 @@ final class ElevenLabsClient {
     ///   - name: display name for the voice (e.g. "Eunggyu — Future Self")
     ///   - sampleAudioURLs: one or more WAV/MP3 files. Total 30–60s recommended.
     ///   - description: optional human description
+    ///   - removeBackgroundNoise: run ElevenLabs' denoiser on the sample
+    ///     before cloning. Only pass `true` for a genuinely noisy take — see
+    ///     the call site in `AppState.regenerateVoiceClone`.
     /// - Returns: ElevenLabs `voice_id`.
-    func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil) async throws -> String {
+    func cloneVoice(name: String, sampleAudioURLs: [URL], description: String? = nil,
+                    removeBackgroundNoise: Bool) async throws -> String {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-clone")
         let boundary = "Boundary-\(UUID().uuidString)"
 
@@ -66,10 +70,15 @@ final class ElevenLabsClient {
         if let description {
             body.appendFormField(name: "description", value: description, boundary: boundary)
         }
-        // Ask ElevenLabs to denoise the sample before clone — handles AC hum,
-        // distant traffic, keyboard taps, etc. Improves IVC quality noticeably
-        // even when the user thinks the room is "quiet enough".
-        body.appendFormField(name: "remove_background_noise", value: "true", boundary: boundary)
+        // Denoise handles AC hum, distant traffic, keyboard taps — a clear win
+        // on a noisy take. But it is NOT free on a clean one: the denoiser
+        // also shaves breath, sibilance and high-end texture, i.e. the cues
+        // that make a clone recognizable as a specific person. This used to be
+        // hardcoded `true`, which meant the quiet-spot finder's whole job was
+        // to produce a clean sample that we then degraded anyway. Now the
+        // caller decides from the measured SNR.
+        body.appendFormField(name: "remove_background_noise",
+                             value: removeBackgroundNoise ? "true" : "false", boundary: boundary)
         for url in sampleAudioURLs {
             let data = try Data(contentsOf: url)
             let filename = url.lastPathComponent
@@ -121,12 +130,39 @@ final class ElevenLabsClient {
 
     // MARK: - Text-to-Speech
 
-    /// Model for live conversation turns (Talk): Flash trades a little
-    /// expressiveness for ~200ms lower time-to-first-audio — the right side of
-    /// that trade in a phone-call loop, but not for Shadow/Watch, where the
-    /// audio IS the study material and fidelity wins. Same per-character price
-    /// as turbo.
-    static let conversationModelId = "eleven_flash_v2_5"
+    /// Model for live conversation turns (Talk).
+    ///
+    /// This was Flash v2.5 for a while, on the reasoning that ~200ms lower
+    /// time-to-first-audio is the right trade in a phone-call loop. Reverted,
+    /// because that trade priced the wrong thing: Flash buys its latency by
+    /// cutting speaker similarity below turbo, and Talk is where users hear
+    /// their own cloned voice FAR more than anywhere else in the app — so the
+    /// tab with the most exposure was running the least similar model, and
+    /// users told us the clone didn't sound like them.
+    ///
+    /// Turbo costs the SAME per character as Flash, so this reverts for free:
+    /// the only thing we give back is the ~200ms, against a turn whose STT +
+    /// Gemini legs already dominate the wait. (Fidelity beyond turbo is a
+    /// different trade — see `fidelityModelId`, which is NOT free.)
+    static let conversationModelId = "eleven_turbo_v2_5"
+
+    /// Model for material the user LISTENS to as their own voice, where
+    /// speaker similarity is the product (Watch scenes today).
+    ///
+    /// flash/turbo v2.5 are the latency tier — they trade speaker similarity
+    /// for time-to-first-audio. multilingual_v2 is the fidelity tier, and it
+    /// is also markedly better at cross-lingual transfer (a clone recorded in
+    /// one language speaking another), which is exactly what this app does.
+    ///
+    /// COST: multilingual_v2 bills ~2x per character upstream vs flash/turbo
+    /// v2.5, and `priceFor("tts")` in the edge function is character-based and
+    /// model-BLIND — the user is charged identically either way, so every
+    /// call on this model is margin we absorb. Only put a path on it when
+    /// `PhraseAudioStore` caches the result, which makes that 2x a ONE-TIME
+    /// cost per unique line rather than a per-play one. Never use it for live
+    /// conversation turns: those are new text every time, so nothing caches
+    /// and the 2x repeats forever (on top of being too slow for a call).
+    static let fidelityModelId = "eleven_multilingual_v2"
 
     /// Deterministic fallback idempotency key for callers that don't pass
     /// one (drill / library / shadow / scene plays): the same (text, voice)

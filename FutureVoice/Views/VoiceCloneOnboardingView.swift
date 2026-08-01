@@ -55,12 +55,18 @@ struct VoiceCloneOnboardingView: View {
     @State private var meetBurst = false
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
 
-    /// ElevenLabs IVC quality climbs steeply up to 60 seconds of speech.
-    /// The countdown targets 60s for quality and brevity.
+    /// ElevenLabs IVC quality climbs steeply to ~60s and keeps improving to
+    /// ~90s. These three had all been collapsed to 60, which broke the flow in
+    /// two ways: the script below needs ~75-80s to read, so it was ALWAYS cut
+    /// off mid-sentence (and a cut-off take is a worse clone); and with
+    /// min == max the "Stop" affordance and the "Xs more for the cleanest
+    /// clone" hint were both unreachable. Back to a real spread — 60s is a
+    /// usable clone, 75s is the target, 90s is the ceiling. AudioSampleQuality
+    /// has told the user "aim for 60-90s" the whole time; now that's true.
     private static let minSeconds: Double = 60
-    private static let recommendedSeconds: Double = 60
-    /// Hard cap — auto-stop here at 60 seconds.
-    private static let maxSeconds: Double = 60
+    private static let recommendedSeconds: Double = 75
+    /// Hard cap — auto-stop here.
+    private static let maxSeconds: Double = 90
 
     /// Filename of a take that reached review but was never cloned — if the
     /// app dies there, the next launch reopens review instead of making the
@@ -890,8 +896,16 @@ struct VoiceCloneOnboardingView: View {
                 // First words in the user's own voice. Best-effort: a failed
                 // synthesis never blocks the flow — the act just opens silent.
                 if let voiceId = appState.voiceCloneId {
+                    // Fidelity model, deliberately, even though this line is
+                    // never cached: it fires ONCE per user in their lifetime,
+                    // it's the free greeting, and it is the single moment the
+                    // user decides whether the clone sounds like them. The 2x
+                    // character cost of one short line is the cheapest thing
+                    // we spend money on. The extra latency lands inside the
+                    // "Becoming…" act, which is already a wait.
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
-                        voiceId: voiceId, text: Self.greetingLine, purpose: "greeting")
+                        voiceId: voiceId, text: Self.greetingLine,
+                        modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
                 }
                 HapticEngine.success()
                 status = .meet

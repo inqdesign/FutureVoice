@@ -655,13 +655,25 @@ final class AppState: ObservableObject {
         let isFirstClone = voiceCloneId == nil
         Analytics.capture("voice_clone_started", ["first_time": isFirstClone])
         let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
+        // Denoise only a take that actually needs it. The threshold matches
+        // AudioSampleQuality's own "some background noise" line, so anything
+        // it would flag to the user still gets cleaned, and only a take it
+        // calls clean is passed through untouched (where the denoiser could
+        // only strip voice texture). Measured here rather than in the view so
+        // the Settings → Voice regeneration path gets the same decision.
+        // Unreadable sample → denoise, matching the previous behaviour.
+        let snr = AudioSampleQuality.analyze(url: normalized)?.estimatedSNRdB
+        let denoise = (snr ?? 0) < 22
+        Analytics.capture("voice_clone_denoise", ["applied": denoise,
+                                                  "snr_db": Int(snr ?? -1)])
         let newId: String
         do {
             newId = try await ElevenLabsClient.shared.cloneVoice(
                 // The user's chosen name (or the persona-derived default) —
                 // every clone used to land upstream as the same "Future Self".
                 name: voiceDisplayName,
-                sampleAudioURLs: [normalized]
+                sampleAudioURLs: [normalized],
+                removeBackgroundNoise: denoise
             )
         } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
             // The account's voice slots are full AND this user is re-recording,
@@ -673,7 +685,8 @@ final class AppState: ObservableObject {
             await cleanupPreviousVoiceClone()
             do {
                 newId = try await ElevenLabsClient.shared.cloneVoice(
-                    name: voiceDisplayName, sampleAudioURLs: [normalized])
+                    name: voiceDisplayName, sampleAudioURLs: [normalized],
+                    removeBackgroundNoise: denoise)
             } catch {
                 reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: true)
                 throw error

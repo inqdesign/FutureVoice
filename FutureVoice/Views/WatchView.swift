@@ -555,7 +555,17 @@ struct WatchView: View {
         if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
             return cached
         }
-        let audio = try await ElevenLabsClient.shared.synthesize(voiceId: voiceId, text: text, purpose: "scene")
+        // The fluent self gets the fidelity model — this is the screen where
+        // the user listens hardest for "is that me?", and PhraseAudioStore
+        // caches by (voiceId, text), so the pricier synthesis happens once per
+        // line, ever. Counterpart preset voices stay on turbo: they're not the
+        // user's voice, so similarity buys nothing there, and paying 2x for
+        // every other line of every scene is not worth it.
+        let isOwnVoice = voiceId == appState.voiceCloneId
+        let audio = try await ElevenLabsClient.shared.synthesize(
+            voiceId: voiceId, text: text,
+            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            purpose: "scene")
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
     }
