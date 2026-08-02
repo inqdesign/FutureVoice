@@ -77,6 +77,7 @@ struct ProgressTab: View {
     @State private var daysActiveThisWeek = 0
     @State private var avgShadowScore = 0
     @State private var shadowTrend: PracticeStats.ShadowTrend?
+    @State private var carryover = PracticeStats.CarryoverSummary()
     /// CEFR level of each weekly read, oldest first — the level's history.
     @State private var levelHistory: [LevelPoint] = []
     /// Same key Home's goal ring uses — the dashed line in the time chart.
@@ -328,7 +329,7 @@ struct ProgressTab: View {
                     Text("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.")
                         .font(.caption2).foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
-                    Divider()
+                    CardDivider(inset: 0)
                     buildingStatus
                 }
                 Button { showingHowAssessed = true } label: {
@@ -387,6 +388,8 @@ struct ProgressTab: View {
             if dailyEffort.contains(where: { $0.talkMinutes > 0 }) {
                 studyTimePanel
             }
+
+            carryoverPanel
 
             if dailyEffort.contains(where: { $0.totalReps > 0 }) {
                 activityPanel
@@ -582,6 +585,67 @@ struct ProgressTab: View {
         }
     }
 
+    // MARK: - Transfer (studied → said)
+
+    /// Effort is the panel below; this one is whether the effort LANDED.
+    /// Deliberately a count and not a percentage: a rate would need a
+    /// denominator of "everything you were studying at the time", which
+    /// changes every day and would quietly punish anyone who adds material
+    /// faster than they use it. The count only ever goes up, and every entry
+    /// is backed by a sentence the learner actually said.
+    @ViewBuilder
+    private var carryoverPanel: some View {
+        if carryover.total > 0 {
+            panel {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Studied, then said").font(.headline)
+                    Spacer()
+                    if carryover.thisWeek > 0 {
+                        Label("+\(carryover.thisWeek) this week", systemImage: "arrow.up.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.green)
+                    }
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(carryover.total)")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text(carryover.total == 1
+                         ? "thing you studied has come out of your mouth in a real conversation"
+                         : "things you studied have come out of your mouth in a real conversation")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                CardDivider(inset: 0)
+                FlowLayout(spacing: 8) {
+                    ForEach(Carryover.Source.displayOrder, id: \.self) { source in
+                        if let count = carryover.bySource[source], count > 0 {
+                            Label("\(source.label) \(count)", systemImage: source.icon)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(Capsule().fill(Color(.tertiarySystemFill)))
+                        }
+                    }
+                }
+                if !carryover.recent.isEmpty {
+                    CardDivider(inset: 0)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(carryover.recent) { c in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(c.item).font(.subheadline.weight(.medium))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Text("“\(c.quote)”")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Activity (effort made visible — moved from Practice)
 
     /// One (day, kind) slice for the stacked mix chart. Fixed kind order —
@@ -638,7 +702,7 @@ struct ProgressTab: View {
             Text("What each day was made of — talk turns, shadow takes, drill reviews.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Divider()
+            CardDivider(inset: 0)
             HStack(spacing: 16) {
                 activityStat(value: "\(weekReps)", label: weekReps == 1 ? "rep this week" : "reps this week")
                 activityStat(value: "\(daysActiveThisWeek)", label: daysActiveThisWeek == 1 ? "day active" : "days active")
@@ -811,7 +875,7 @@ struct ProgressTab: View {
     /// exactly how much more talk gets you there — the "keep going" hook.
     @ViewBuilder
     private var nextAssessmentStatus: some View {
-        Divider()
+        CardDivider(inset: 0)
         if appState.weeklyReportGenerating {
             HStack(spacing: 10) {
                 ProgressView()
@@ -1378,6 +1442,7 @@ struct ProgressTab: View {
         let effortNow = Date()
         let todayStart = effortCal.startOfDay(for: effortNow)
         let allEnded = SessionStore.shared.load().filter { $0.endedAt != nil }
+        carryover = PracticeStats.carryoverSummary(sessions: allEnded)
         var effort: [DayEffort] = []
         for offset in (0..<14).reversed() {
             guard let d = effortCal.date(byAdding: .day, value: -offset, to: todayStart) else { continue }

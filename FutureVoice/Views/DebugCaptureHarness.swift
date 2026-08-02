@@ -17,6 +17,10 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the drill bin tray: `DrillView` opens already
+    /// revealed and "mid-drag" so the drop targets are on screen.
+    static var previewDrillTray = false
+
     /// True while capturing the scenario composer: it pre-selects a category
     /// and injects sample AI chips so the layout renders offline.
     static var composerPreview = false
@@ -67,6 +71,12 @@ enum DebugCapture {
             // The SRS review sheet, incl. a legacy card whose source is a whole
             // rambling turn — verifies the render-time fragment trim.
             once("drills") { seedVocab() }
+            return AnyView(DrillSheet().environmentObject(appState))
+        case "drills-tray":
+            // Same deck, frozen mid-drag: the bin tray is a drag-only surface,
+            // so a screenshot can't reach it without this.
+            once("drills") { seedVocab() }
+            previewDrillTray = true
             return AnyView(DrillSheet().environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }

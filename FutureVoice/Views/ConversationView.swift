@@ -1424,6 +1424,18 @@ struct ConversationView: View {
                     && needle != normalized($0.correction)
             }
 
+            // Did anything they'd been studying actually come out of their
+            // mouth? Runs against the drill cards as they stood BEFORE this
+            // session's own corrections are ingested below, so a card minted
+            // tonight can't be credited as carried into tonight.
+            let carryovers = CarryoverDetector.detect(
+                in: turns, cards: DrillStore.shared.load(),
+                curriculumItems: appState.openCurriculumItems,
+                studyingExpressions: VocabStore.shared.studyingExpressions,
+                studyingWords: VocabStore.shared.studying,
+                sessionId: sessionId, sessionStartedAt: sessionStartedAt)
+            computed.carryovers = carryovers
+
             summary = computed
             phase = .idle
 
@@ -1450,6 +1462,21 @@ struct ConversationView: View {
             // re-summarizes the whole thing) so they don't pile up.
             DrillStore.shared.deleteForSession(sessionId)
             DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
+            // Producing a card's phrase live outranks any flashcard tap —
+            // credit it against the SRS schedule, not just the wrap-up.
+            DrillStore.shared.markUsedInConversation(
+                ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
+            // Same principle for book material: producing it live masters it,
+            // wherever the book lives.
+            appState.markCurriculumItemsUsedInConversation(
+                itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
+            if !carryovers.isEmpty {
+                Analytics.capture("carryovers_detected", [
+                    "count": carryovers.count,
+                    "from_cards": carryovers.filter { $0.source == .drillCard }.count,
+                    "from_suggestions": carryovers.filter { $0.source == .suggestion }.count,
+                ])
+            }
             // Grow the long-term learner profile — the next conversation's
             // system prompt picks these patterns up.
             appState.recordSessionOutcome(summary: computed, turns: turns)

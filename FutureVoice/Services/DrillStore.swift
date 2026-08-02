@@ -129,6 +129,49 @@ final class DrillStore {
         Analytics.capture("drill_reviewed", ["correct": false, "box": c.box])
     }
 
+    /// The learner picked WHEN to meet this card again (the drill deck's bin
+    /// tray) instead of letting the ladder decide.
+    ///
+    /// The chosen delay also sets the box — 10 min ≈ box 0, tomorrow ≈ box 1,
+    /// three days ≈ box 2 — so the manual pick doesn't strand the card off the
+    /// ladder: from the NEXT review on, normal Leitner promotion resumes from
+    /// wherever the learner parked it. Never counted as correct; asking to see
+    /// a card again is the opposite of recalling it.
+    func snooze(_ card: DrillCard, box: Int, until date: Date, at now: Date = Date()) {
+        var c = card
+        c.timesSeen += 1
+        c.lastReviewedAt = now
+        c.box = min(max(box, 0), Self.maxBox)
+        c.nextReviewAt = date
+        save(c)
+        Analytics.capture("drill_snoozed", [
+            "box": c.box,
+            "delay_min": Int(date.timeIntervalSince(now) / 60)
+        ])
+    }
+
+    /// Credit cards the learner produced unprompted in a real conversation
+    /// (`CarryoverDetector`). Saying it live, with no card on screen, is
+    /// stronger evidence of retention than any flashcard tap — so it jumps two
+    /// boxes and lands no lower than box 3 instead of stepping one at a time.
+    /// Cards already past that keep their schedule.
+    func markUsedInConversation(ids: [UUID], at now: Date = Date()) {
+        guard !ids.isEmpty else { return }
+        let wanted = Set(ids)
+        var all = load()
+        var touched = false
+        for index in all.indices where wanted.contains(all[index].id) {
+            let promoted = min(max(all[index].box + 2, 3), Self.maxBox)
+            guard promoted > all[index].box else { continue }
+            all[index].box = promoted
+            all[index].lastReviewedAt = now
+            all[index].nextReviewAt = now.addingTimeInterval(Self.interval(for: promoted))
+            touched = true
+            Analytics.capture("drill_used_in_conversation", ["box": promoted])
+        }
+        if touched { write(all) }
+    }
+
     // MARK: - Ingest
 
     /// Create new drill cards from a freshly-saved session — per-turn suggestions,

@@ -67,6 +67,7 @@ struct ConversationDetailView: View {
             if curriculum.isMastered && archivedAt == nil { masteredBanner }
             if let sc = session.summary?.scorecard { scoreSection(sc) }
             if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
+            carryoverSection
             freshShadowSection
             newWordsSection
             expressionsSection
@@ -216,7 +217,11 @@ struct ConversationDetailView: View {
     /// your relationship to the word (known / studying / untouched).
     @ViewBuilder
     private var newWordsSection: some View {
-        let mine = session.summary?.newWordsUsed ?? []
+        // A notebook word used for the first time is also a first-time word —
+        // it's already told as the bigger story above, so don't repeat it here.
+        let credited = creditedItems
+        let mine = (session.summary?.newWordsUsed ?? [])
+            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
         let theirs = curriculum.words.map(\.text)
         if !mine.isEmpty || !theirs.isEmpty {
             let tab: WordsTab = mine.isEmpty ? .futureSelf : (theirs.isEmpty ? .you : wordsTab)
@@ -245,11 +250,42 @@ struct ConversationDetailView: View {
         }
     }
 
+    /// The one thing a learner cannot notice about themselves: material they'd
+    /// already been given — a correction card from an earlier talk, a
+    /// suggestion a few turns back — that they then produced unprompted.
+    ///
+    /// Shown as evidence, never as a claim: their own sentence is quoted, and
+    /// their own recording is one tap away. Nothing is asserted that the
+    /// transcript can't back up.
+    /// Normalized text of everything the carryover section already claims —
+    /// the sections below filter against it so one fact is told once, in the
+    /// place where it means the most.
+    private var creditedItems: Set<String> {
+        Set((session.summary?.carryovers ?? []).map { CarryoverDetector.normalized($0.item) })
+    }
+
+    @ViewBuilder
+    private var carryoverSection: some View {
+        let hits = session.summary?.carryovers ?? []
+        if !hits.isEmpty {
+            Section {
+                ForEach(hits) { CarryoverRow(carryover: $0) }
+            } header: {
+                Label("You used what you practiced", systemImage: "target")
+            } footer: {
+                Text("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.")
+            }
+        }
+    }
+
     @ViewBuilder
     private var expressionsSection: some View {
-        if let sum = session.summary, !sum.expressionsUsed.isEmpty {
+        let credited = creditedItems
+        let expressions = (session.summary?.expressionsUsed ?? [])
+            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
+        if !expressions.isEmpty {
             Section {
-                ForEach(sum.expressionsUsed, id: \.self) { e in
+                ForEach(expressions, id: \.self) { e in
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "checkmark")
                             .font(.caption.weight(.semibold))
@@ -1190,4 +1226,61 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
         if idx < altWords.count - 1 { out += AttributedString(" ") }
     }
     return out
+}
+
+// MARK: - Carryover row (studied material, produced live)
+
+/// One "you actually said it" hit. The item on top, the learner's own words
+/// underneath as proof, and — when the recording survived — a play button, so
+/// the claim is auditable by ear and not just by transcript.
+private struct CarryoverRow: View {
+    let carryover: Carryover
+    @StateObject private var player = AudioPlayer()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.green)
+                Text(carryover.item)
+                    .font(.subheadline.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text("“\(carryover.quote)”")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 26)
+            HStack(spacing: 10) {
+                Label(originText, systemImage: originIcon)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                if hasAudio {
+                    Button {
+                        player.isPlaying ? player.stop() : play()
+                    } label: {
+                        Label(player.isPlaying ? "Stop" : "Hear yourself",
+                              systemImage: player.isPlaying ? "stop.fill" : "play.fill")
+                            .font(.caption2)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            .padding(.leading, 26)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var originText: String { carryover.source.label }
+    private var originIcon: String { carryover.source.icon }
+
+    private var hasAudio: Bool {
+        TurnAudioStore.shared.url(for: carryover.turnId) != nil
+    }
+
+    private func play() {
+        guard let data = TurnAudioStore.shared.data(for: carryover.turnId) else { return }
+        try? player.play(data, source: "carryover", forceSessionReset: true)
+    }
 }

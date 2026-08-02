@@ -489,6 +489,45 @@ final class AppState: ObservableObject {
         saveScenario(s)
     }
 
+    /// Every un-mastered study item across the learner's live books, flattened
+    /// for `CarryoverDetector`. Archived books are done with — nothing there
+    /// is still being studied.
+    var openCurriculumItems: [CarryoverDetector.CurriculumItem] {
+        scenarios.filter { $0.archivedAt == nil }.flatMap { scenario -> [CarryoverDetector.CurriculumItem] in
+            guard let c = scenario.curriculum else { return [] }
+            let words = c.words.filter { $0.masteredAt == nil }
+                .map { CarryoverDetector.CurriculumItem(id: $0.id, text: $0.text, isWord: true) }
+            let phrases = (c.expressions + c.shadowLines).filter { $0.masteredAt == nil }
+                .map { CarryoverDetector.CurriculumItem(id: $0.id, text: $0.text, isWord: false) }
+            return words + phrases
+        }
+    }
+
+    /// Master the book items the learner PRODUCED in a real conversation.
+    /// Saying it live in an unrelated talk is the strongest form of the
+    /// "used in a real talk" rule `refreshScenarioMastery` documents — that
+    /// pass just can't see it, because it only reads talks whose topic matches
+    /// the book's title.
+    func markCurriculumItemsUsedInConversation(itemIds: [UUID]) {
+        guard !itemIds.isEmpty else { return }
+        let wanted = Set(itemIds)
+        for var scenario in scenarios {
+            guard var c = scenario.curriculum else { continue }
+            var changed = false
+            for path in [\ScenarioCurriculum.words, \.expressions, \.shadowLines] {
+                for i in c[keyPath: path].indices
+                where c[keyPath: path][i].masteredAt == nil
+                    && wanted.contains(c[keyPath: path][i].id) {
+                    c[keyPath: path][i].masteredAt = Date()
+                    changed = true
+                }
+            }
+            guard changed else { continue }
+            scenario.curriculum = c
+            saveScenario(scenario)
+        }
+    }
+
     /// Recompute mastery for one scenario's curriculum from what the user has
     /// ACTUALLY done. Deterministic, no LLM, and it reads the app's existing
     /// learning records instead of keeping a parallel one:

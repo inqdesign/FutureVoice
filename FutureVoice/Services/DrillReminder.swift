@@ -84,6 +84,13 @@ enum DrillReminder {
             return nil
         }
 
+        // A due time inside the next 12 hours can only have come from the
+        // learner picking one in the bin tray — every ladder interval is a
+        // day or longer, and box 0 is "due now" (handled above). They asked
+        // for it, at an hour they were awake to ask: fire exactly then rather
+        // than parking a 10-minute snooze until 9am.
+        if candidate.timeIntervalSince(now) < 12 * 60 * 60 { return candidate }
+
         let hour = calendar.component(.hour, from: candidate)
         if hour < dayStartHour {
             return calendar.date(bySettingHour: dayStartHour, minute: 0, second: 0, of: candidate)

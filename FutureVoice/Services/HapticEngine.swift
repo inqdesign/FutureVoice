@@ -37,6 +37,14 @@ enum HapticEngine {
         UINotificationFeedbackGenerator().notificationOccurred(.error)
     }
 
+    /// The system "a picker moved to a new value" tick. Use this — not
+    /// `light()` — whenever a continuous gesture crosses into a new discrete
+    /// choice; it's quieter than an impact and doesn't fatigue when it fires
+    /// many times inside one drag.
+    static func selection() {
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
     // MARK: - Semantic events (use these from views)
 
     /// Phone-call mode just activated (mic listening).
@@ -53,6 +61,18 @@ enum HapticEngine {
 
     /// SRS drill swipe committed as "Try again".
     static func drillIncorrect() { warning() }
+
+    /// Dragging a drill card crossed into a different bin — one tick per
+    /// crossing, so the learner can feel the target change without looking
+    /// down at the tray.
+    static func drillBinChanged() { selection() }
+
+    /// A drill card was released into a bin. "Got it" gets the success
+    /// notification it always had; picking a re-study time is a plain, quieter
+    /// commit — it isn't an achievement.
+    static func drillBinned(mastered: Bool) {
+        if mastered { success() } else { rigid() }
+    }
 
     /// Shadow countdown 3 / 2 / 1 tick.
     static func countdownTick() { light() }

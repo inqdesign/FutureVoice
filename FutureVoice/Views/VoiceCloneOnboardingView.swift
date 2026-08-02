@@ -369,7 +369,8 @@ struct VoiceCloneOnboardingView: View {
                     gateRow(symbol: "waveform", title: "Noise",
                             value: String(format: "%.0f dB", recorder.ambientDBFS),
                             state: noiseGate.state, tint: noiseGate.tint)
-                    Divider().padding(.leading, 44)
+                    // inset 0 — the card itself already pads 14 on both sides.
+                    CardDivider(inset: 0)
                     gateRow(symbol: echoGate.symbol, title: "Echo",
                             value: recorder.echoTailMs.map { String(format: "%.0f ms", $0) },
                             state: echoGate.state, tint: echoGate.tint)

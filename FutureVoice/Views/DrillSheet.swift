@@ -7,10 +7,15 @@ import SwiftUI
 /// Shadow practice lives in its own sheet (`ShadowBrowserSheet`); the two are
 /// surfaced from separate toolbar entries so the home dashboard can track each
 /// independently.
-/// Card-deck SRS practice. Swipe right = Got it, left = Try again. Tap to
-/// hear it. No bottom button bar — important under a tab bar so the controls
-/// don't visually merge with system chrome. A faint "next card" preview sits
-/// behind the active card for the deck-of-cards feel.
+/// Card-deck SRS practice. Tap to reveal, then DRAG the card into one of four
+/// bins that rise under the deck — 10 min · Tomorrow · 3 days · Got it. The
+/// three delays are the learner saying when they want to meet the phrase
+/// again; "Got it" hands the card back to the Leitner ladder. Each bin the
+/// card crosses ticks a selection haptic, so the target is feelable without
+/// looking down, and the released card is swallowed by the bin it lands on.
+/// No bottom button bar — important under a tab bar so the controls don't
+/// visually merge with system chrome. A faint "next card" preview sits behind
+/// the active card for the deck-of-cards feel.
 struct DrillView: View {
     /// Optional filter. `.due` (default) = the Leitner-scheduled queue.
     /// `.session(id)` = every card whose source matches the given session,
@@ -44,6 +49,17 @@ struct DrillView: View {
     @State private var isLoadingAudio = false
     @State private var error: String?
     @State private var dragOffset: CGSize = .zero
+    /// Bin tray state. The tray only exists during a drag — at rest the deck
+    /// is just a card, so nothing competes with the phrase being recalled.
+    @State private var isDragging = false
+    @State private var activeBin: DrillBin?
+    /// Measured in the "drilldeck" coordinate space so the released card can
+    /// fly to the exact bin it was dropped on.
+    @State private var binFrames: [DrillBin: CGRect] = [:]
+    @State private var deckFrame: CGRect = .zero
+    /// Shrink + fade applied while the card is being swallowed by a bin.
+    @State private var flyScale: CGFloat = 1
+    @State private var flyOpacity: Double = 1
     @State private var showingEnrichmentFor: DrillCard?
     @State private var shadowingCard: DrillCard?
     /// Active-recall gate: when the top card has a sourcePhrase, the target
@@ -52,7 +68,15 @@ struct DrillView: View {
     /// are disabled until revealed, so "Got it" always means actual recall.
     @State private var topCardRevealed = false
 
-    private static let swipeThreshold: CGFloat = 100
+    /// How far the card must travel before a release counts as a drop rather
+    /// than a fumble. Below this the card springs home and nothing is graded.
+    private static let commitThreshold: CGFloat = 64
+    /// Dead zone before any bin lights up — without it the card starts life
+    /// straddling two bins and the first millimetre of movement buzzes.
+    private static let binDeadZone: CGFloat = 28
+    /// A new bin has to be this much closer than the current one to steal the
+    /// highlight, so a finger resting on a boundary doesn't rattle.
+    private static let binHysteresis: CGFloat = 14
 
     var body: some View {
         Group {
@@ -90,12 +114,45 @@ struct DrillView: View {
             )
             .environmentObject(appState)
         }
-        .onAppear(perform: loadQueue)
+        .onAppear {
+            loadQueue()
+            #if DEBUG
+            if DebugCapture.previewDrillTray {
+                topCardRevealed = true
+                isDragging = true
+                activeBin = .tomorrow
+            }
+            #endif
+        }
         // Clear the play-button state the moment playback naturally ends.
         .onChange(of: player.isPlaying) { _, playing in
             if !playing { playingTurnId = nil }
         }
-        .onDisappear { player.stop() }
+        .onDisappear {
+            player.stop()
+            // The queue just changed shape — every card graded here moved its
+            // due date. Without this the pending notification keeps whatever
+            // the last app launch computed, and a 10-minute snooze never
+            // fires at all.
+            Task { await DrillReminder.reschedule() }
+        }
+    }
+
+    // MARK: - Geometry plumbing for the bin tray
+
+    private struct DeckFrameKey: PreferenceKey {
+        static var defaultValue: CGRect { .zero }
+        static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+            let next = nextValue()
+            if next != .zero { value = next }
+        }
+    }
+
+    private struct BinFramesKey: PreferenceKey {
+        static var defaultValue: [DrillBin: CGRect] { [:] }
+        static func reduce(value: inout [DrillBin: CGRect], nextValue: () -> [DrillBin: CGRect]) {
+            value.merge(nextValue()) { _, new in new }
+        }
     }
 
     /// After dismissing the enrichment sheet, the top card may have had its
@@ -112,6 +169,29 @@ struct DrillView: View {
     private var cardDeck: some View {
         VStack(spacing: 12) {
             counterRow
+            ZStack(alignment: .bottom) {
+                deck
+                // The tray FLOATS over the bottom of the deck rather than
+                // sitting under it in the stack: reserving its height left a
+                // dead band at rest, and letting it push the card would move
+                // the card out from under the finger the moment the drag —
+                // and with it the drop targets — began.
+                if isDragging {
+                    binTray
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            binHintRow
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .coordinateSpace(name: Self.deckSpace)
+        .onPreferenceChange(DeckFrameKey.self) { deckFrame = $0 }
+        .onPreferenceChange(BinFramesKey.self) { binFrames = $0 }
+    }
+
+    private var deck: some View {
+        Group {
             ZStack {
                 // Peek of the next card so the user feels there's a deck.
                 // Recall cards stay concealed in the peek so the upcoming
@@ -123,12 +203,13 @@ struct DrillView: View {
                         .offset(y: 14)
                 }
                 cardSurface(queue[0], revealed: isTopRevealed, isTop: true)
-                    .overlay(swipeIndicator)
+                    .scaleEffect(flyScale)
+                    .opacity(flyOpacity)
                     .offset(dragOffset)
                     .rotationEffect(.degrees(Double(dragOffset.width / 20)))
                     .gesture(
                         DragGesture()
-                            .onChanged { dragOffset = isTopRevealed ? $0.translation : .zero }
+                            .onChanged { handleDragChanged($0) }
                             .onEnded { handleDragEnded($0) }
                     )
                     .onTapGesture {
@@ -136,12 +217,77 @@ struct DrillView: View {
                         HapticEngine.drillCorrect()
                         withAnimation(.easeOut(duration: 0.2)) { topCardRevealed = true }
                     }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityActions { binAccessibilityActions }
             }
             .padding(.horizontal, 16)
-            hintRow
+            .background {
+                GeometryReader { g in
+                    Color.clear.preference(key: DeckFrameKey.self,
+                                           value: g.frame(in: .named(Self.deckSpace)))
+                }
+            }
         }
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+    }
+
+    private static let deckSpace = "drilldeck"
+
+    /// The drop targets. They exist only mid-drag: the tray answers "where do
+    /// I let go?", a question that doesn't exist until the card is moving.
+    private var binTray: some View {
+        HStack(spacing: 8) {
+            ForEach(DrillBin.allCases) { bin in
+                binSlot(bin)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+        .allowsHitTesting(false)
+    }
+
+    private func binSlot(_ bin: DrillBin) -> some View {
+        let active = activeBin == bin && isDragging
+        return VStack(spacing: 5) {
+            Image(systemName: bin.icon)
+                .font(.title3)
+            Text(bin.title)
+                .font(.caption2.weight(.medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .foregroundStyle(active ? Color.white : Color.secondary)
+        .background {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(active ? bin.tint : Color(.secondarySystemBackground))
+        }
+        .overlay {
+            // A dashed rim at rest reads as "drop something here"; the active
+            // bin drops it, having become a solid filled target instead.
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
+                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        }
+        .scaleEffect(active ? 1.08 : 1)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)
+        .background {
+            GeometryReader { g in
+                Color.clear.preference(key: BinFramesKey.self,
+                                       value: [bin: g.frame(in: .named(Self.deckSpace))])
+            }
+        }
+    }
+
+    /// VoiceOver can't drag. Same four outcomes, as rotor actions.
+    @ViewBuilder
+    private var binAccessibilityActions: some View {
+        ForEach(DrillBin.allCases) { bin in
+            Button(bin.accessibilityTitle) {
+                guard isTopRevealed else { return }
+                apply(bin)
+            }
+        }
     }
 
     private var counterRow: some View {
@@ -151,30 +297,6 @@ struct DrillView: View {
             .monospacedDigit()
     }
 
-    @ViewBuilder
-    private var swipeIndicator: some View {
-        Group {
-            if dragOffset.width > 20 {
-                Label("Got it", systemImage: "checkmark")
-                    .font(.title2.weight(.bold))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.green))
-                    .foregroundStyle(.white)
-                    .rotationEffect(.degrees(-12))
-                    .opacity(min(1.0, Double(dragOffset.width) / 120.0))
-            } else if dragOffset.width < -20 {
-                Label("Try again", systemImage: "arrow.counterclockwise")
-                    .font(.title2.weight(.bold))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 10)
-                    .background(Capsule().fill(Color.red))
-                    .foregroundStyle(.white)
-                    .rotationEffect(.degrees(12))
-                    .opacity(min(1.0, Double(-dragOffset.width) / 120.0))
-            }
-        }
-    }
 
     /// Recall cards (those with a sourcePhrase) start concealed.
     private func needsReveal(_ card: DrillCard) -> Bool {
@@ -187,22 +309,17 @@ struct DrillView: View {
     }
 
     @ViewBuilder
-    private var hintRow: some View {
+    private var binHintRow: some View {
         if isTopRevealed {
-            HStack(spacing: 14) {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.left").foregroundStyle(.red)
-                    Text("Try again")
-                }
-                Text("·").foregroundStyle(.tertiary)
-                HStack(spacing: 4) {
-                    Text("Got it")
-                    Image(systemName: "arrow.right").foregroundStyle(.green)
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .padding(.vertical, 6)
+            Label(isDragging
+                  ? (activeBin?.dropHint ?? "Drop it on a folder")
+                  : "Drag the card into a folder",
+                  systemImage: isDragging ? "hand.point.down" : "hand.draw")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 6)
+                .contentTransition(.opacity)
+                .animation(.easeOut(duration: 0.15), value: activeBin)
         } else {
             Label("Say it out loud, then tap the card to check", systemImage: "hand.tap")
                 .font(.caption)
@@ -211,37 +328,146 @@ struct DrillView: View {
         }
     }
 
-    private func handleDragEnded(_ value: DragGesture.Value) {
-        // No grading before recall — spring back until the card is revealed.
-        guard isTopRevealed else {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                dragOffset = .zero
-            }
+    // MARK: - Drag → bin
+
+    private func handleDragChanged(_ value: DragGesture.Value) {
+        // No grading before recall — the card doesn't move until revealed.
+        guard isTopRevealed else { dragOffset = .zero; return }
+        if !isDragging {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { isDragging = true }
+        }
+        dragOffset = value.translation
+        updateActiveBin(for: value.translation)
+    }
+
+    /// Which bin the card is currently over. Nearest-centre rather than
+    /// containment, so the gap between bins (and the space above the tray,
+    /// where the card actually is) still resolves to a target.
+    private func updateActiveBin(for translation: CGSize) {
+        let travelled = hypot(translation.width, translation.height)
+        guard travelled > Self.binDeadZone, !binFrames.isEmpty else {
+            if activeBin != nil { activeBin = nil }
             return
         }
-        let width = value.translation.width
-        if width > Self.swipeThreshold {
-            HapticEngine.drillCorrect()
-            withAnimation(.easeOut(duration: 0.25)) {
-                dragOffset = CGSize(width: 600, height: value.translation.height)
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                markCorrect()
-                dragOffset = .zero
-            }
-        } else if width < -Self.swipeThreshold {
-            HapticEngine.drillIncorrect()
-            withAnimation(.easeOut(duration: 0.25)) {
-                dragOffset = CGSize(width: -600, height: value.translation.height)
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                markIncorrect()
-                dragOffset = .zero
-            }
-        } else {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                dragOffset = .zero
-            }
+        let x = deckFrame.midX + translation.width
+        let candidate = binFrames
+            .min { abs($0.value.midX - x) < abs($1.value.midX - x) }
+            .map(\.key)
+        guard let candidate, candidate != activeBin else { return }
+        if let current = activeBin, let currentFrame = binFrames[current],
+           let candidateFrame = binFrames[candidate] {
+            let gain = abs(currentFrame.midX - x) - abs(candidateFrame.midX - x)
+            guard gain > Self.binHysteresis else { return }
+        }
+        activeBin = candidate
+        HapticEngine.drillBinChanged()
+    }
+
+    private func handleDragEnded(_ value: DragGesture.Value) {
+        let travelled = hypot(value.translation.width, value.translation.height)
+        guard isTopRevealed, travelled > Self.commitThreshold, let bin = activeBin else {
+            springBack()
+            return
+        }
+        drop(into: bin)
+    }
+
+    private func springBack() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+            dragOffset = .zero
+            isDragging = false
+        }
+        activeBin = nil
+    }
+
+    /// The card gets swallowed: it flies to the bin's centre while shrinking
+    /// out of existence, and only then is the schedule written and the queue
+    /// advanced — so the next card never appears under a card still in flight.
+    private func drop(into bin: DrillBin) {
+        HapticEngine.drillBinned(mastered: bin == .gotIt)
+        let target = binFrames[bin].map {
+            CGSize(width: $0.midX - deckFrame.midX, height: $0.midY - deckFrame.midY)
+        } ?? .zero
+        withAnimation(.easeIn(duration: 0.28)) {
+            dragOffset = target
+            flyScale = 0.12
+            flyOpacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            apply(bin)
+            dragOffset = .zero
+            flyScale = 1
+            flyOpacity = 1
+            withAnimation(.easeOut(duration: 0.2)) { isDragging = false }
+            activeBin = nil
+        }
+    }
+}
+
+/// Where a drilled card goes when the learner lets go of it: three explicit
+/// "show me this again in…" delays plus the automatic promotion.
+///
+/// The three delays double as Leitner boxes (see `DrillStore.snooze`), so
+/// picking one parks the card on a rung of the same ladder rather than off it.
+enum DrillBin: String, CaseIterable, Identifiable {
+    case tenMinutes, tomorrow, threeDays, gotIt
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .tenMinutes: return "10 min"
+        case .tomorrow:   return "Tomorrow"
+        case .threeDays:  return "3 days"
+        case .gotIt:      return "Got it"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .tenMinutes: return "clock"
+        case .tomorrow:   return "sunrise"
+        case .threeDays:  return "calendar"
+        case .gotIt:      return "checkmark.circle.fill"
+        }
+    }
+
+    /// Soon → later → done, read as a warm-to-cool-to-green run.
+    var tint: Color {
+        switch self {
+        case .tenMinutes: return .orange
+        case .tomorrow:   return .blue
+        case .threeDays:  return .indigo
+        case .gotIt:      return .green
+        }
+    }
+
+    /// Box + delay for the manual choices; nil for `.gotIt`, which hands the
+    /// card back to the ladder (`DrillStore.markCorrect`).
+    var manual: (box: Int, delay: TimeInterval)? {
+        switch self {
+        case .tenMinutes: return (0, 10 * 60)
+        case .tomorrow:   return (1, 24 * 60 * 60)
+        case .threeDays:  return (2, 3 * 24 * 60 * 60)
+        case .gotIt:      return nil
+        }
+    }
+
+    var dropHint: String {
+        switch self {
+        case .tenMinutes: return "Back in 10 minutes"
+        case .tomorrow:   return "Back tomorrow"
+        case .threeDays:  return "Back in 3 days"
+        case .gotIt:      return "Got it — moves up the ladder"
+        }
+    }
+
+    var accessibilityTitle: String {
+        switch self {
+        case .tenMinutes: return "Show again in 10 minutes"
+        case .tomorrow:   return "Show again tomorrow"
+        case .threeDays:  return "Show again in 3 days"
+        case .gotIt:      return "Got it"
         }
     }
 }
@@ -464,16 +690,15 @@ private extension DrillView {
         initialCount = queue.count
     }
 
-    private func markCorrect() {
+    /// Write the bin's choice to the top card and move on.
+    private func apply(_ bin: DrillBin) {
         guard let card = queue.first else { return }
-        DrillStore.shared.markCorrect(card)
-        PracticeLog.shared.record(.drill)
-        advance()
-    }
-
-    private func markIncorrect() {
-        guard let card = queue.first else { return }
-        DrillStore.shared.markIncorrect(card)
+        if let manual = bin.manual {
+            DrillStore.shared.snooze(card, box: manual.box,
+                                     until: Date().addingTimeInterval(manual.delay))
+        } else {
+            DrillStore.shared.markCorrect(card)
+        }
         PracticeLog.shared.record(.drill)
         advance()
     }

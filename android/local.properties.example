@@ -1,0 +1,11 @@
+# Copy to android/local.properties (gitignored) and fill in.
+# Mirror of iOS's Config/FutureVoice.xcconfig — only Supabase values are
+# needed; provider keys live server-side in Edge Functions.
+#
+# sdk.dir is written automatically by Android Studio; set it by hand for
+# command-line builds.
+
+sdk.dir=/Users/<you>/Library/Android/sdk
+
+SUPABASE_URL=
+SUPABASE_ANON_KEY=

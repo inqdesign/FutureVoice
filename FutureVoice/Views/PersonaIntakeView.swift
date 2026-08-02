@@ -132,11 +132,11 @@ struct PersonaIntakeView: View {
                 TextField("City", text: $persona.city)
                     .textInputAutocapitalization(.words)
                     .padding(14)
-                Divider().padding(.leading, 14)
+                CardDivider(inset: 14)
                 TextField("Country", text: $persona.country)
                     .textInputAutocapitalization(.words)
                     .padding(14)
-                Divider().padding(.leading, 14)
+                CardDivider(inset: 14)
                 TextField("How long have you been there? (optional)", text: $persona.lengthOfStay)
                     .padding(14)
             }

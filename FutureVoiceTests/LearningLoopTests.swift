@@ -320,7 +320,7 @@ final class DisplayTitleTests: XCTestCase {
 final class NewsInterleaveTests: XCTestCase {
 
     private func item(_ cat: String, _ title: String) -> NewsTopicEngine.ServerTopic {
-        NewsTopicEngine.ServerTopic(category: cat, title: title, blurb: "")
+        NewsTopicEngine.ServerTopic(category: cat, title: title, blurb: "", facts: nil)
     }
 
     func testRoundRobinAcrossCategories() {

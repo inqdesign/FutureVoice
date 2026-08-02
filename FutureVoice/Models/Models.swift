@@ -254,6 +254,77 @@ struct SessionSummary: Codable {
     /// in the user's turns before being stored (hallucination-guarded, same
     /// policy as `expressionsUsed`).
     var grammarIssues: [GrammarIssue] = []
+    /// Things the learner had already been given — a review card, or a
+    /// suggestion earlier in this same call — that they then PRODUCED
+    /// unprompted. Filled in deterministically by `CarryoverDetector`; no LLM.
+    var carryovers: [Carryover] = []
+}
+
+/// One piece of studied material the learner actually said in a real
+/// conversation. The app's strongest evidence of learning, and the one thing
+/// the learner cannot notice about themselves — you don't feel yourself
+/// reaching for a phrase you were corrected on last week.
+///
+/// Always carries the learner's OWN sentence (`quote`) and the turn it came
+/// from, so the achievement is shown as evidence — with their own recording
+/// one tap away — rather than as a claim.
+struct Carryover: Codable, Identifiable, Hashable {
+    /// Where the studied item came from. Ordered by how much it took to
+    /// produce: a card from a past talk is a bigger win than applying a
+    /// suggestion still fresh on screen.
+    enum Source: String, Codable {
+        case drillCard            // a correction card minted in an earlier talk
+        case curriculumItem       // study material from a Watch book
+        case studyingExpression   // a phrase they'd bookmarked in their notebook
+        case suggestion           // a suggestion given earlier in THIS call
+        case studyingWord         // a word they'd collected into their notebook
+    }
+
+    var id: UUID = UUID()
+    var sessionId: UUID
+    var source: Source
+    /// The studied item, verbatim as it was being practiced.
+    var item: String
+    /// The learner's own words that prove it — always from a user turn.
+    var quote: String
+    /// Turn `quote` came from, so the receipt can play their own recording.
+    var turnId: UUID
+    /// The `DrillCard` (for `.drillCard`) or the suggestion's originating
+    /// user turn (for `.suggestion`).
+    var sourceId: UUID?
+    var detectedAt: Date
+}
+
+extension Carryover.Source {
+    /// Where the learner met this item, in their words. Lives on the type so
+    /// the wrap-up and Progress can't drift into describing the same source
+    /// two different ways. (Plain strings — no UI framework involved; the
+    /// icon is just an SF Symbol name.)
+    var label: String {
+        switch self {
+        case .drillCard:          return "Review cards"
+        case .curriculumItem:     return "Your books"
+        case .studyingExpression: return "Expression notebook"
+        case .studyingWord:       return "Word notebook"
+        case .suggestion:         return "In-call suggestions"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .drillCard:          return "rectangle.stack"
+        case .curriculumItem:     return "book"
+        case .studyingExpression: return "bookmark"
+        case .studyingWord:       return "text.book.closed"
+        case .suggestion:         return "lightbulb"
+        }
+    }
+
+    /// Fixed display order — heaviest evidence first, so the breakdown reads
+    /// the same everywhere and never reshuffles between reloads.
+    static let displayOrder: [Carryover.Source] = [
+        .drillCard, .curriculumItem, .studyingExpression, .studyingWord, .suggestion,
+    ]
 }
 
 /// One concrete grammar slip from this session: the user's sentence verbatim,
@@ -271,7 +342,7 @@ extension SessionSummary {
     enum CodingKeys: String, CodingKey {
         case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
         case scorecard, newWordsUsed, expressionsUsed, weakVocabAreas
-        case grammarIssues
+        case grammarIssues, carryovers
     }
 
     // Custom decode so sessions saved BEFORE newWordsUsed/expressionsUsed
@@ -289,6 +360,7 @@ extension SessionSummary {
         expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
         weakVocabAreas = try c.decodeIfPresent([String].self, forKey: .weakVocabAreas) ?? []
         grammarIssues = try c.decodeIfPresent([GrammarIssue].self, forKey: .grammarIssues) ?? []
+        carryovers = try c.decodeIfPresent([Carryover].self, forKey: .carryovers) ?? []
     }
 }
 
