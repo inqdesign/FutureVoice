@@ -63,7 +63,11 @@ struct ScenarioDetailView: View {
             // audio content-cache holds every line).
             if let s = scenario, let c = s.curriculum {
                 WatchView(counterpart: watchCounterpart(for: s),
-                          savedDialogue: sceneDialogue(s, c))
+                          savedDialogue: sceneDialogue(s, c),
+                          // Already ON the book — pushing it again would
+                          // stack the same page twice, so pop back to it.
+                          handoff: .init(title: "Back to the book",
+                                         action: { watchPresented = false }))
                     .environmentObject(appState)
             }
         }

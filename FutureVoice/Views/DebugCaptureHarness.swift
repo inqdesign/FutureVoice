@@ -17,6 +17,10 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the end of a Watch scene: the controls render
+    /// their finished state (Watch again + the study handoff).
+    static var previewSceneFinished = false
+
     /// True while capturing the expanded word card: `VocabularyView` opens
     /// its notebook sheet at full height instead of the peek.
     static var previewWordCard = false
@@ -61,6 +65,30 @@ enum DebugCapture {
             once("vocab") { seedVocab() }
             previewWordCard = true
             return AnyView(NavigationStack { VocabularyView() })
+        case "scene-end":
+            previewSceneFinished = true
+            let cp = Counterpart(name: "Barista", relationship: "at the cafe",
+                                 background: "Makes my coffee most mornings.",
+                                 conversationStyle: "friendly, quick",
+                                 voicePresetId: VoicePreset.catalog[0].id)
+            let dialogue = WatchDialogue(
+                counterpartId: cp.id,
+                scenarioTitle: "Ordering at a cafe",
+                scenarioBlurb: "My order came out wrong and I point it out politely.",
+                title: "The wrong order",
+                turns: [
+                    .init(speaker: "counterpart", text: "Hi! What can I get you today?"),
+                    .init(speaker: "user", text: "A flat white, please — for here."),
+                    .init(speaker: "counterpart", text: "Coming right up."),
+                    .init(speaker: "user", text: "Sorry, I think this is a latte, not a flat white."),
+                    .init(speaker: "counterpart", text: "Oh, you're right — let me remake that for you."),
+                ],
+                speakerName: cp.name)
+            return AnyView(NavigationStack {
+                WatchView(counterpart: cp, savedDialogue: dialogue, persist: false,
+                          handoff: .init(title: "Study this", action: {}))
+                    .environmentObject(appState)
+            })
         case "level-header":
             // The two-line conversation title in a real inline bar.
             return AnyView(NavigationStack {

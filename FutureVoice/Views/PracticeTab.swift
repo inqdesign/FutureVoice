@@ -498,18 +498,37 @@ struct PracticeTab: View {
         .buttonStyle(.plain)
     }
 
-    /// The talk books this page carries: in progress first, then the fresh
-    /// 0%-ones. A single flat mixed grid made the page read as a pile, so the
-    /// books are split BY ACTIVITY, one horizontal row each.
-    private var talkRow: [Session] {
-        (studyingBooks + unstartedBooks).compactMap {
-            if case .talk(let s) = $0 { return s } else { return nil }
+    /// When a book came into existence. The one ordering the whole tab now
+    /// uses — see `talkRow`.
+    private func created(_ book: StudyBook) -> Date {
+        switch book {
+        case .talk(let s):     return s.startedAt
+        case .scenario(let s): return s.createdAt
         }
     }
+
+    /// The books this page carries, split BY ACTIVITY into one horizontal row
+    /// each (a single flat mixed grid read as a pile).
+    ///
+    /// Ordered NEWEST FIRST, by when the book was made. These rows used to be
+    /// `studyingBooks + unstartedBooks` — every in-progress book, then every
+    /// untouched one — so the talk you just finished sat behind books you'd
+    /// started weeks ago, and the row's order changed every time you mastered
+    /// a word somewhere else. Progress belongs on the cards (each one wears
+    /// its own bar); the row's job is just "here's your stuff, newest first".
+    private var talkRow: [Session] {
+        (studyingBooks + unstartedBooks)
+            .sorted { created($0) > created($1) }
+            .compactMap {
+                if case .talk(let s) = $0 { return s } else { return nil }
+            }
+    }
     private var watchRow: [Scenario] {
-        (studyingBooks + unstartedBooks).compactMap {
-            if case .scenario(let s) = $0 { return s } else { return nil }
-        }
+        (studyingBooks + unstartedBooks)
+            .sorted { created($0) > created($1) }
+            .compactMap {
+                if case .scenario(let s) = $0 { return s } else { return nil }
+            }
     }
 
     private var studyingPage: some View {
@@ -630,13 +649,18 @@ struct PracticeTab: View {
     /// Every watched book — news topics and built situations together, one
     /// flat shelf per the Talk/Watch split; the card's origin tag names which.
     /// Most-recently-touched first.
+    /// Newest book first — by when it was MADE, not when it was last opened.
+    /// Sorting by `lastUsedAt` meant replaying a months-old scene shuffled it
+    /// back to the top, so the thing you just created wasn't where you left
+    /// it. Recency-of-use is what the Studying page sorts by; a shelf is a
+    /// shelf, and new things go on the front of it.
     private var watchBooks: [Scenario] {
         appState.scenarios.filter { !$0.isArchived }
-            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
     private var archivedWatchBooks: [Scenario] {
         appState.scenarios.filter { $0.isArchived }
-            .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 
     /// One talk book card + its navigation and management actions — shared by
@@ -830,9 +854,12 @@ struct PracticeTab: View {
         vocab.backfillFromSessions()
         dueDrillCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
 
+        // Same rule as the Watch shelf: newest talk first, by when it was
+        // STARTED. `endedAt` moves when a talk is continued, which pushed old
+        // conversations back to the top of the shelf.
         let finished = SessionStore.shared.load()
             .filter { $0.endedAt != nil }
-            .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
+            .sorted { $0.startedAt > $1.startedAt }
         talks = finished.filter { $0.archivedAt == nil }
         archivedTalks = finished.filter { $0.archivedAt != nil }
 

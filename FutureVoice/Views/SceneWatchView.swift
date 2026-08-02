@@ -32,6 +32,9 @@ struct SceneWatchView: View {
         _awaitingFresh = State(initialValue: freshTake)
     }
 
+    /// Pushed when the scene ends and the viewer takes the study handoff.
+    @State private var studyPresented = false
+
     private var scenario: Scenario? {
         appState.scenarios.first { $0.id == scenarioId }
     }
@@ -40,7 +43,11 @@ struct SceneWatchView: View {
         Group {
             if !awaitingFresh, let s = scenario, let c = s.curriculum, !(c.dialogue ?? []).isEmpty {
                 WatchView(counterpart: watchCounterpart(for: s),
-                          savedDialogue: sceneDialogue(s, c))
+                          savedDialogue: sceneDialogue(s, c),
+                          // Came from Watch, so the book is somewhere this
+                          // viewer hasn't been — push it.
+                          handoff: .init(title: "Study this",
+                                         action: { studyPresented = true }))
                     .environmentObject(appState)
             } else if let e = generationError {
                 errorState(e)
@@ -49,6 +56,10 @@ struct SceneWatchView: View {
             }
         }
         .task { await ensureCurriculum() }
+        .navigationDestination(isPresented: $studyPresented) {
+            ScenarioDetailView(scenarioId: scenarioId)
+                .environmentObject(appState)
+        }
     }
 
     // MARK: - States

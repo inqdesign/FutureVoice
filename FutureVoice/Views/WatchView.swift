@@ -181,17 +181,38 @@ struct WatchView: View {
     /// False for scenario-watch (the book already owns its scene) — those
     /// are one-shot, audio still caches for in-session replay.
     let persist: Bool
+    /// Where to go once the scene has played out. nil for callers with
+    /// nowhere to send the viewer (a one-shot Watch with no book behind it).
+    let handoff: SceneHandoff?
+
+    /// The "you've watched it — now study it" exit.
+    ///
+    /// Watch has no save prompt, and shouldn't: unlike a talk (which doesn't
+    /// exist until you press End), the scene is absorbed into its book the
+    /// moment it's generated — the book is already on the Practice shelf
+    /// while you're still watching. So there's nothing to confirm. What was
+    /// missing is the other half of Talk's ending: a clear "this is over,
+    /// here's what's next".
+    struct SceneHandoff {
+        /// "Study this" when the book is somewhere the viewer hasn't been;
+        /// "Back to the book" when they came FROM it (pushing it again would
+        /// stack the same page twice).
+        let title: String
+        let action: () -> Void
+    }
 
     init(counterpart: Counterpart,
          topic: SuggestedTopic? = nil,
          customScenario: String = "",
          savedDialogue: WatchDialogue? = nil,
-         persist: Bool = true) {
+         persist: Bool = true,
+         handoff: SceneHandoff? = nil) {
         self.counterpart = counterpart
         self.topic = topic
         self.customScenario = customScenario
         self.savedDialogue = savedDialogue
         self.persist = persist
+        self.handoff = handoff
     }
 
     @EnvironmentObject private var appState: AppState
@@ -208,6 +229,14 @@ struct WatchView: View {
     @State private var outOfCredits = false
     @State private var showingPaywall = false
     @State private var shadowTarget: Turn?
+    /// True once playback has reached the last line at least once. Drives the
+    /// controls' swap from "watch it" to "you've watched it".
+    @State private var didFinishScene = false
+    #if DEBUG
+    /// Screenshot capture only — the finished-scene controls are otherwise
+    /// reachable only by sitting through the whole dialogue.
+    private var forceFinished: Bool { DebugCapture.previewSceneFinished }
+    #endif
 
     /// We wrap a DialogueEngine.Turn into a Turn (the Models.swift one) for
     /// the shadow practice surface, since ShadowDrillView takes that type.
@@ -407,30 +436,57 @@ struct WatchView: View {
         HapticEngine.drillCorrect()
     }
 
+    /// Two states, not two extra buttons. Before the end, watching is the
+    /// only thing to do; after it, the study handoff takes the prominent slot
+    /// and replay steps back. A third permanent button would have crowded the
+    /// bar and offered the exit before it meant anything.
+    @ViewBuilder
     private var controls: some View {
         HStack(spacing: 16) {
-            Button {
-                Task { await playFrom(index: 0) }
-            } label: {
-                Label("Restart", systemImage: "backward.end.fill")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .disabled(turns.isEmpty || loading)
-
-            Button {
-                if isPlaying {
-                    pause()
-                } else {
-                    Task { await playFrom(index: currentIndex ?? 0) }
+            #if DEBUG
+            let finished = didFinishScene || forceFinished
+            #else
+            let finished = didFinishScene
+            #endif
+            if finished, let handoff {
+                Button {
+                    Task { await playFrom(index: 0) }
+                } label: {
+                    Label("Watch again", systemImage: "arrow.counterclockwise")
+                        .frame(maxWidth: .infinity)
                 }
-            } label: {
-                Label(isPlaying ? "Pause" : "Play",
-                      systemImage: isPlaying ? "pause.fill" : "play.fill")
-                    .frame(maxWidth: .infinity)
+                .buttonStyle(.bordered)
+                .disabled(loading)
+
+                Button(action: handoff.action) {
+                    Label(handoff.title, systemImage: "books.vertical.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            } else {
+                Button {
+                    Task { await playFrom(index: 0) }
+                } label: {
+                    Label("Restart", systemImage: "backward.end.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(turns.isEmpty || loading)
+
+                Button {
+                    if isPlaying {
+                        pause()
+                    } else {
+                        Task { await playFrom(index: currentIndex ?? 0) }
+                    }
+                } label: {
+                    Label(isPlaying ? "Pause" : "Play",
+                          systemImage: isPlaying ? "pause.fill" : "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(turns.isEmpty || loading)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(turns.isEmpty || loading)
         }
         .controlSize(.large)
         .padding(.horizontal, 16)
@@ -547,6 +603,11 @@ struct WatchView: View {
         }
         isPlaying = false
         currentIndex = nil
+        // Reached the last line — the scene is over, so the controls stop
+        // offering only "watch it again" and start offering the book.
+        if i >= turns.count, !didFinishScene {
+            withAnimation(.easeOut(duration: 0.25)) { didFinishScene = true }
+        }
         // Completed the whole dialogue for the first time → ask for feedback.
         if i >= turns.count && BetaFeedback.shouldShow(.firstWatch) {
             BetaFeedback.markShown(.firstWatch)
