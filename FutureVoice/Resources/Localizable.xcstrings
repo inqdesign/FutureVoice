@@ -64,6 +64,16 @@
         }
       }
     },
+    "%@ · %lld mastered · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld mastered · %3$@"
+          }
+        }
+      }
+    },
     "%@ · %lld turns spoken": {
       "localizations": {
         "en": {
@@ -80,6 +90,16 @@
           "stringUnit": {
             "state": "new",
             "value": "%1$@ · voiced by %2$@"
+          }
+        }
+      }
+    },
+    "%@. Level %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@. Level %2$@"
           }
         }
       }
@@ -128,6 +148,7 @@
         }
       }
     },
+    "%lld books finished": {},
     "%lld card%@": {
       "localizations": {
         "en": {
@@ -238,6 +259,7 @@
     "%lld turns spoken": {},
     "%lld vs last week": {},
     "%lld words": {},
+    "%lld words and lines mastered inside them": {},
     "%lld%%": {},
     "%lld-day streak": {
       "localizations": {
@@ -301,6 +323,7 @@
     "+%lld vs last week": {},
     "+1 more meaning": {},
     "/ %lldm": {},
+    "1 book finished": {},
     "1 credit ≈ 100 characters spoken in your voice.": {
       "localizations": {
         "ko": {
@@ -335,6 +358,17 @@
     "1×": {},
     "<": {},
     ">": {},
+    "A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "책 안의 단어와 문장을 전부 익히면 여기로 옵니다. 그냥 치워 둔 건 안 세고, 끝낸 것만 셉니다."
+          }
+        }
+      }
+    },
+    "A new assessment is due — it runs after your next talk.": {},
     "A quick active-recall run through this talk's saved phrases.": {
       "localizations": {
         "ko": {
@@ -506,6 +540,7 @@
     },
     "Build your first scenario": {},
     "Building scenarios for %@…": {},
+    "By level": {},
     "Can't record now? No rush — this will wait.": {},
     "Cancel": {
       "localizations": {
@@ -521,6 +556,7 @@
     "Cards done — now say it out loud": {},
     "Cards from this talk": {},
     "Category name (e.g. Landlord, Gym)": {},
+    "Change my level": {},
     "Ciao! Che bello vederti. Iniziamo?": {},
     "City": {},
     "Clear, detailed talk on many topics, including some abstract ones.": {
@@ -705,6 +741,7 @@
         }
       }
     },
+    "Drag the card into a folder": {},
     "Drill next": {},
     "Drills": {},
     "Drills appear here after you end a conversation.": {},
@@ -731,6 +768,7 @@
       }
     },
     "End": {},
+    "English": {},
     "Enter a friend's code once to get 300 bonus credits.": {
       "localizations": {
         "ko": {
@@ -822,6 +860,7 @@
     "Examples & variants": {},
     "Excluded from scoring — marked as misheard": {},
     "Explain in my language": {},
+    "Explains what this level changes": {},
     "Explanations and translations come in this language.": {
       "localizations": {
         "ko": {
@@ -871,6 +910,7 @@
         }
       }
     },
+    "Finished": {},
     "Finished books. They keep their progress — unarchive anytime.": {
       "localizations": {
         "ko": {
@@ -1015,6 +1055,16 @@
     "How long? (optional)": {},
     "How they talk": {},
     "How this is assessed": {},
+    "How this scene is written": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 장면이 어떻게 쓰이는지"
+          }
+        }
+      }
+    },
     "How to improve": {},
     "How to level up": {},
     "How was your first Watch?": {
@@ -1038,6 +1088,17 @@
       }
     },
     "How you met (and how long)": {},
+    "How your future self talks": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미래의 내가 어떻게 말하는지"
+          }
+        }
+      }
+    },
+    "How your level moves": {},
     "Ideas with %@": {},
     "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't.": {
       "localizations": {
@@ -1105,6 +1166,7 @@
       }
     },
     "Level": {},
+    "Level %@": {},
     "Likely situations": {},
     "Listen": {},
     "Listen to your recording": {},
@@ -1145,6 +1207,16 @@
       }
     },
     "Marked as known": {},
+    "Master every word and line in a book — from a talk or a scene — and it lands here for good.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서 왔든 장면에서 왔든, 책 안의 단어와 문장을 전부 익히면 여기에 영구히 남습니다."
+          }
+        }
+      }
+    },
     "Mastered": {},
     "Me": {},
     "Meaning": {},
@@ -1350,6 +1422,7 @@
       }
     },
     "Note": {},
+    "Nothing finished yet": {},
     "Nothing in progress": {},
     "Nothing to shadow yet": {},
     "Nutrition": {},
@@ -1476,6 +1549,7 @@
     "Read in": {},
     "Read it naturally. Mistakes are fine — just keep going.": {},
     "Read the full report": {},
+    "Read whichever one feels natural — we're capturing your voice, not your English.": {},
     "Read whichever one feels natural — we're capturing your voice, not your reading.": {},
     "Ready — assessing your level now…": {},
     "Ready — re-assessing your level now…": {},
@@ -1670,6 +1744,16 @@
       }
     },
     "Send": {},
+    "Sets how your future self speaks and how scenes are written. Your measured level in Progress is unaffected until the next assessment, which will overwrite this with what your talks show.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미래의 내가 어떻게 말할지, 장면이 어떻게 쓰일지를 정해요. Progress에서 측정된 레벨은 다음 평가 전까지 영향을 받지 않고, 그 평가 때 실제 대화가 보여준 값으로 덮어씁니다."
+          }
+        }
+      }
+    },
     "Setting the scene…": {},
     "Settings": {},
     "Shadow": {},
@@ -1991,6 +2075,16 @@
         }
       }
     },
+    "The same setting as Me → Level. The next assessment overwrites it with what your talks show.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me → Level과 같은 설정이에요. 다음 평가 때 실제 대화가 보여준 값으로 덮어씁니다."
+          }
+        }
+      }
+    },
     "The situation": {},
     "The situations you've built — every watch writes a fresh take. Past takes live in Practice.": {
       "localizations": {
@@ -2084,6 +2178,7 @@
         }
       }
     },
+    "Watch again": {},
     "Watch the scene, study its words and expressions, shadow your lines, then Talk it live.": {
       "localizations": {
         "ko": {
@@ -2477,6 +2572,7 @@
     "Your history together": {},
     "Your interests": {},
     "Your invite code": {},
+    "Your level": {},
     "Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after %lld minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.": {
       "localizations": {
         "ko": {
@@ -2493,6 +2589,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "레벨은 첫 평가에서 매겨져요. 세션 하나로 짐작하는 게 아니라 지금까지 말한 걸 전부 모아 한 번에 판정합니다."
+          }
+        }
+      }
+    },
+    "Your level is measured from the talks you actually have — it isn't a setting you keep in sync by hand.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레벨은 실제로 나눈 대화에서 측정돼요. 손으로 맞춰 두는 설정이 아닙니다."
           }
         }
       }
@@ -2564,6 +2670,8 @@
         }
       }
     },
+    "book finished": {},
+    "books finished": {},
     "e.g. Boram tells me she's moving back to Seoul": {},
     "e.g. Lufthansa cabin-crew interview next week — I want to rehearse it": {},
     "e.g. Running into them at the wedding and catching up": {},
@@ -2623,6 +2731,7 @@
         }
       }
     },
+    "한국어": {},
     "😀": {}
   },
   "version": "1.0"

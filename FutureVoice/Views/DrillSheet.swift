@@ -121,6 +121,9 @@ struct DrillView: View {
                 topCardRevealed = true
                 isDragging = true
                 activeBin = .tomorrow
+                // Dragged DOWN and right — the case where the card's own
+                // buttons would otherwise poke out under the tray.
+                dragOffset = CGSize(width: 40, height: 150)
             }
             #endif
         }
@@ -169,22 +172,22 @@ struct DrillView: View {
     private var cardDeck: some View {
         VStack(spacing: 12) {
             counterRow
-            ZStack(alignment: .bottom) {
-                deck
-                // The tray FLOATS over the bottom of the deck rather than
-                // sitting under it in the stack: reserving its height left a
-                // dead band at rest, and letting it push the card would move
-                // the card out from under the finger the moment the drag —
-                // and with it the drop targets — began.
-                if isDragging {
-                    binTray
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
+            deck
             binHintRow
         }
         .padding(.top, 12)
         .padding(.bottom, 8)
+        // The panel FLOATS over the bottom of the deck rather than sitting
+        // under it in the stack: reserving its height left a dead band at
+        // rest, and letting it push the card would move the card out from
+        // under the finger the moment the drag — and with it the drop
+        // targets — began.
+        .overlay(alignment: .bottom) {
+            if isDragging {
+                binPanel
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .coordinateSpace(name: Self.deckSpace)
         .onPreferenceChange(DeckFrameKey.self) { deckFrame = $0 }
         .onPreferenceChange(BinFramesKey.self) { binFrames = $0 }
@@ -232,29 +235,53 @@ struct DrillView: View {
 
     private static let deckSpace = "drilldeck"
 
-    /// The drop targets. They exist only mid-drag: the tray answers "where do
-    /// I let go?", a question that doesn't exist until the card is moving.
-    private var binTray: some View {
-        HStack(spacing: 8) {
-            ForEach(DrillBin.allCases) { bin in
-                binSlot(bin)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 20)
-        .padding(.bottom, 6)
-        // The tray sits ON the card, so whatever the card is showing down
-        // there (the Hear it / Shadow / Examples pills) would peer through the
-        // gaps between bins. Same feathered `.bar` band the Practice and
-        // Progress headers use, just anchored to the other edge.
-        .background {
-            Rectangle().fill(.bar)
-                .mask {
-                    LinearGradient(stops: [.init(color: .clear, location: 0),
-                                           .init(color: .black, location: 0.35),
-                                           .init(color: .black, location: 1)],
-                                   startPoint: .top, endPoint: .bottom)
+    /// The drop targets plus the line that names the one you're over. They
+    /// exist only mid-drag: the panel answers "where do I let go?", a question
+    /// that doesn't exist until the card is moving.
+    ///
+    /// Bins and caption share ONE blurred container. They sit ON TOP of the
+    /// card, and with only per-bin backgrounds the card's own text and buttons
+    /// read straight through the gaps — two layers of content competing at the
+    /// exact moment the learner is trying to aim. The material blurs whatever
+    /// the card is showing down there into a quiet backdrop.
+    private var binPanel: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                ForEach(DrillBin.allCases) { bin in
+                    binSlot(bin)
                 }
+            }
+            Text(activeBin?.dropHint ?? "Drop it on a folder")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .contentTransition(.opacity)
+                .animation(.easeOut(duration: 0.15), value: activeBin)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 14)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity)
+        // Rounded on top, flush to the bottom of the screen. A floating,
+        // fully-rounded panel left a gap under it, and a card dragged DOWNWARD
+        // slid its own buttons through that gap — the pills ended up sitting
+        // on top of this caption. Running the tray to the bottom edge means a
+        // card pushed low simply disappears behind it, which is also what
+        // "the folder swallows it" should look like.
+        //
+        // `.regularMaterial`, not `.ultraThin` — the card underneath is a
+        // saturated accent slab, and a thin blur lets that colour flood the
+        // tray until the unselected bins stop reading as targets.
+        .background {
+            UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0,
+                                   bottomTrailingRadius: 0, topTrailingRadius: 24,
+                                   style: .continuous)
+                .fill(.regularMaterial)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color.primary.opacity(0.06))
+                        .frame(height: 1)
+                }
+                .ignoresSafeArea(edges: .bottom)
         }
         .allowsHitTesting(false)
     }
@@ -273,8 +300,10 @@ struct DrillView: View {
         .padding(.vertical, 12)
         .foregroundStyle(active ? Color.white : Color.secondary)
         .background {
+            // A system FILL, not a background colour — it has to layer over
+            // the panel's material without reading as an opaque patch.
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(active ? bin.tint : Color(.secondarySystemBackground))
+                .fill(active ? AnyShapeStyle(bin.tint) : AnyShapeStyle(Color(.tertiarySystemFill)))
         }
         .overlay {
             // A dashed rim at rest reads as "drop something here"; the active
@@ -325,15 +354,14 @@ struct DrillView: View {
     @ViewBuilder
     private var binHintRow: some View {
         if isTopRevealed {
-            Label(isDragging
-                  ? (activeBin?.dropHint ?? "Drop it on a folder")
-                  : "Drag the card into a folder",
-                  systemImage: isDragging ? "hand.point.down" : "hand.draw")
+            // Mid-drag the panel says where the card is headed, so this row
+            // goes quiet — but keeps its height, or the deck would jump the
+            // instant a drag begins.
+            Label("Drag the card into a folder", systemImage: "hand.draw")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.vertical, 6)
-                .contentTransition(.opacity)
-                .animation(.easeOut(duration: 0.15), value: activeBin)
+                .opacity(isDragging ? 0 : 1)
         } else {
             Label("Say it out loud, then tap the card to check", systemImage: "hand.tap")
                 .font(.caption)

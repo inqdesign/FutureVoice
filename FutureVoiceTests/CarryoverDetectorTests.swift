@@ -108,6 +108,72 @@ final class CarryoverDetectorTests: XCTestCase {
         XCTAssertTrue(hits.isEmpty)
     }
 
+    // MARK: - Regressions from a real device run
+    //
+    // One talk produced three rows all quoting the SAME sentence, and the top
+    // row claimed a phrase the learner never said. Each case below is one of
+    // those rows.
+
+    func testMissingTheOneDistinguishingWordIsNotAMatch() {
+        // Card said "sweet mood"; the learner said "really good mood". The
+        // only word that made the card worth studying is the missing one.
+        let hits = detect([userTurn("I'm in a really good mood today.")],
+                          [card("I'm in a sweet mood today.")])
+        XCTAssertTrue(hits.isEmpty)
+    }
+
+    func testOneSentenceEarnsAtMostOneCredit() {
+        // Two near-duplicate cards, one utterance. Crediting both quotes the
+        // same sentence twice and reads as the app padding its own scorecard.
+        let hits = detect([userTurn("I'm in a really good mood today.")],
+                          [card("I'm in a really good mood today."),
+                           card("I am in a really good mood today.")])
+        XCTAssertEqual(hits.count, 1)
+    }
+
+    func testRepeatingYourOwnPhraseIsNotAdoptingASuggestion() {
+        // The learner was already saying this when the suggestion arrived;
+        // saying it again is repetition, not adoption.
+        let suggestion = TurnSuggestion(alternative: "I'm in a really good mood today.",
+                                        reason: "more natural")
+        let turns = [
+            userTurn("I'm in a really good mood today.", suggestion: suggestion),
+            userTurn("Yeah, I'm in a really good mood today."),
+        ]
+        XCTAssertTrue(detect(turns, []).isEmpty)
+    }
+
+    /// The device run, reconstructed: the learner leans on one phrase for the
+    /// whole talk, so earlier sessions had already minted near-duplicate cards
+    /// for it. Three rows appeared, quoting one sentence, and the top one
+    /// claimed a phrase never spoken. The right answer is exactly one credit.
+    func testLeaningOnOnePhraseAllTalkEarnsOneCredit() {
+        let suggestion = TurnSuggestion(alternative: "I'm just in a really good mood today.",
+                                        reason: "sounds more natural")
+        let turns = [
+            userTurn("I'm in a really good mood today.", suggestion: suggestion),
+            fluentTurn("Oh nice! Did something good happen?"),
+            userTurn("I'm in a really good mood today, yeah."),
+            fluentTurn("Anything in particular?"),
+            userTurn("Not really, I'm in a really good mood today."),
+        ]
+        let hits = detect(turns, [card("I'm in a sweet mood today."),
+                                  card("I'm in a really good mood today.")])
+
+        XCTAssertEqual(hits.count, 1)
+        XCTAssertEqual(hits.first?.item, "I'm in a really good mood today.")
+        XCTAssertFalse(hits.contains { $0.item.lowercased().contains("sweet") },
+                       "never claim a phrase the learner didn't say")
+    }
+
+    func testNotebookWordInsideAnAlreadyCreditedSentenceIsSkipped() {
+        let hits = detect([userTurn("Honestly I'd rather stay in tonight.")],
+                          [card("I'd rather stay in tonight.")],
+                          words: ["tonight"])
+        XCTAssertEqual(hits.count, 1)
+        XCTAssertEqual(hits.first?.source, .drillCard)
+    }
+
     func testOnlyTheLearnersOwnTurnsAreSearched() {
         let hits = detect([fluentTurn("I'd rather stay in tonight.")],
                           [card("I'd rather stay in tonight.")])

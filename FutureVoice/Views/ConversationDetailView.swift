@@ -1253,9 +1253,14 @@ private struct CarryoverRow: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.leading, 26)
             HStack(spacing: 10) {
-                Label(originText, systemImage: originIcon)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                // Plain Image+Text, NOT Label — inside a List row a Label
+                // aligns to the form's icon column and leaves a wide gap.
+                HStack(spacing: 4) {
+                    Image(systemName: originIcon)
+                    Text(originText)
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
                 if hasAudio {
                     Button {
                         player.isPlaying ? player.stop() : play()

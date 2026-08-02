@@ -186,7 +186,6 @@ struct ConversationView: View {
             }
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
-            .navigationTitle(topic.isEmpty ? "Let's talk" : topic)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .onAppear {
@@ -281,6 +280,15 @@ struct ConversationView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        // Two-line title: the topic, and the level the fluent self is speaking
+        // at. Replaces `.navigationTitle` — a principal item is the only way
+        // to get a second line into an inline bar.
+        ToolbarItem(placement: .principal) {
+            LevelHeaderTitle(title: topic.isEmpty ? "Let's talk" : topic,
+                             level: appState.proficiency,
+                             surface: .talk)
+                .environmentObject(appState)
+        }
         ToolbarItem(placement: .topBarLeading) {
             Button {
                 // A talk with unsaved turns doesn't just vanish on a stray ✕

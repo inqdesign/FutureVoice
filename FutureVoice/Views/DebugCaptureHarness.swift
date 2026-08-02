@@ -17,6 +17,10 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the end of a Watch scene: the controls render
+    /// their finished state (Watch again + the study handoff).
+    static var previewSceneFinished = false
+
     /// True while capturing the expanded word card: `VocabularyView` opens
     /// its notebook sheet at full height instead of the peek.
     static var previewWordCard = false
@@ -61,6 +65,50 @@ enum DebugCapture {
             once("vocab") { seedVocab() }
             previewWordCard = true
             return AnyView(NavigationStack { VocabularyView() })
+        case "scene-end":
+            previewSceneFinished = true
+            let cp = Counterpart(name: "Barista", relationship: "at the cafe",
+                                 background: "Makes my coffee most mornings.",
+                                 conversationStyle: "friendly, quick",
+                                 voicePresetId: VoicePreset.catalog[0].id)
+            let dialogue = WatchDialogue(
+                counterpartId: cp.id,
+                scenarioTitle: "Ordering at a cafe",
+                scenarioBlurb: "My order came out wrong and I point it out politely.",
+                title: "The wrong order",
+                turns: [
+                    .init(speaker: "counterpart", text: "Hi! What can I get you today?"),
+                    .init(speaker: "user", text: "A flat white, please — for here."),
+                    .init(speaker: "counterpart", text: "Coming right up."),
+                    .init(speaker: "user", text: "Sorry, I think this is a latte, not a flat white."),
+                    .init(speaker: "counterpart", text: "Oh, you're right — let me remake that for you."),
+                ],
+                speakerName: cp.name)
+            return AnyView(NavigationStack {
+                WatchView(counterpart: cp, savedDialogue: dialogue, persist: false,
+                          handoff: .init(title: "Study this", action: {}))
+                    .environmentObject(appState)
+            })
+        case "level-header":
+            // The two-line conversation title in a real inline bar.
+            return AnyView(NavigationStack {
+                Color(.systemBackground).ignoresSafeArea()
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .principal) {
+                            LevelHeaderTitle(title: "Ordering at a cafe",
+                                             level: .b1, surface: .watch)
+                                .environmentObject(appState)
+                        }
+                        ToolbarItem(placement: .topBarLeading) {
+                            Image(systemName: "xmark")
+                        }
+                    }
+            })
+        case "level-sheet":
+            once("level") { seedSessions() }
+            return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
+                .environmentObject(appState))
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
@@ -131,10 +179,16 @@ enum DebugCapture {
                 ConversationDetailView(session: carryoverSession ?? seedCarryoverSession())
                     .environmentObject(appState)
             })
+        case "finished":
+            // The finished-books shelf, populated — the real sheet, sample rows.
+            return AnyView(FinishedBooksSheet(books: sampleFinishedBooks)
+                .environmentObject(appState))
+        case "finished-empty":
+            return AnyView(FinishedBooksSheet(books: []).environmentObject(appState))
         case "progress":
             once("progress") {
                 seedVocab(); seedSessions(scored: true)
-                _ = seedCarryoverSession()
+                _ = seedCarryoverSession(scored: true)
                 // A pooled weekly read so the big CEFR level (not "building")
                 // renders for design capture.
                 let report = WeeklyReport(
@@ -359,6 +413,25 @@ enum DebugCapture {
 
     // MARK: - Sessions (Home stats + mission)
 
+    /// Books taken all the way to mastered, for the finished-books shelf.
+    static var sampleFinishedBooks: [FinishedBooksSheet.FinishedBook] {
+        let day = 86_400.0
+        return [
+            .init(id: UUID(), title: "Pharmacy · picking up a prescription",
+                  subtitle: "Scene · with Pharmacist", icon: "film.fill", itemCount: 14,
+                  finishedAt: Date().addingTimeInterval(-2 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Job interview", subtitle: "Talk",
+                  icon: "bubble.left.and.bubble.right.fill", itemCount: 9,
+                  finishedAt: Date().addingTimeInterval(-6 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Café · catching up", subtitle: "Scene · with Sarah",
+                  icon: "film.fill", itemCount: 14,
+                  finishedAt: Date().addingTimeInterval(-13 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Four-day work week", subtitle: "Talk",
+                  icon: "bubble.left.and.bubble.right.fill", itemCount: 11,
+                  finishedAt: Date().addingTimeInterval(-21 * day), session: nil, scenario: nil),
+        ]
+    }
+
     /// Held so the "carryover" route seeds once but can still hand the same
     /// session to the view it returns.
     static var carryoverSession: Session?
@@ -366,8 +439,10 @@ enum DebugCapture {
     /// A finished talk carrying one carryover per source. Quotes are written
     /// as the learner padding the studied item out — exactly what the matcher
     /// accepts — so what renders here is what a real hit looks like.
+    /// `scored: false` leaves the scorecard off so the carryover section lands
+    /// above the fold — this route exists to look at that section.
     @discardableResult
-    static func seedCarryoverSession() -> Session {
+    static func seedCarryoverSession(scored: Bool = false) -> Session {
         let sessionId = UUID()
         let ended = Date().addingTimeInterval(-1_800)
         let started = ended.addingTimeInterval(-720)
@@ -410,7 +485,7 @@ enum DebugCapture {
         var summary = SessionSummary(
             phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
             overallNote: "Relaxed, natural talk — and you pulled in a lot of what you'd been studying.",
-            scorecard: sampleScorecard)
+            scorecard: scored ? sampleScorecard : nil)
         summary.carryovers = carryovers
 
         let session = Session(
@@ -542,6 +617,11 @@ enum DebugCapture {
         appState.saveScenario(Scenario(environment: "Job interview · panel round",
                                        role: "Interviewer", notes: "",
                                        curriculum: curriculum(mastered: 0), isTopic: false))
+        // …and one taken all the way (14 = every item), so the finished-books
+        // shelf renders populated instead of only in its empty state.
+        appState.saveScenario(Scenario(environment: "Pharmacy · picking up a prescription",
+                                       role: "Pharmacist", notes: "",
+                                       curriculum: curriculum(mastered: 14), isTopic: false))
     }
 
     // MARK: - Shadow (karaoke line)
