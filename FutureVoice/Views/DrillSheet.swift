@@ -241,7 +241,21 @@ struct DrillView: View {
             }
         }
         .padding(.horizontal, 16)
+        .padding(.top, 20)
         .padding(.bottom, 6)
+        // The tray sits ON the card, so whatever the card is showing down
+        // there (the Hear it / Shadow / Examples pills) would peer through the
+        // gaps between bins. Same feathered `.bar` band the Practice and
+        // Progress headers use, just anchored to the other edge.
+        .background {
+            Rectangle().fill(.bar)
+                .mask {
+                    LinearGradient(stops: [.init(color: .clear, location: 0),
+                                           .init(color: .black, location: 0.35),
+                                           .init(color: .black, location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                }
+        }
         .allowsHitTesting(false)
     }
 

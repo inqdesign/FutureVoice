@@ -308,19 +308,17 @@ struct ProgressTab: View {
                     }
                     nextAssessmentStatus
                 } else {
-                    // Before the first assessment: the self-reported onboarding
-                    // level, clearly labeled — an anchor, not a measurement.
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(appState.proficiency.rawValue.uppercased())
-                            .geistPixel(52)
-                            .foregroundStyle(.secondary)
-                        Text("self-reported")
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.tertiary)
-                    }
-                    Text("Your starting point, as you set it. Your first assessment replaces it with a measured level.")
-                        .font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // Before the first assessment there is NO level on this
+                    // page — not even the self-reported one. It used to sit
+                    // here in the same 52pt type as a measured level, and a
+                    // "self-reported" chip is too quiet a distinction: from
+                    // day one the app appeared to have graded someone it had
+                    // never heard speak. What the user set in onboarding still
+                    // drives the conversation prompts; it just isn't presented
+                    // back to them as a result. `buildingStatus` below carries
+                    // the honest state instead — what it takes and how far in
+                    // they are, as a progress bar against `levelMinMinutes`.
+                    //
                     // The recipe made visible, equalizer-style: one bar per
                     // measured ingredient, lit LED blocks = that axis's CEFR
                     // band. A weak axis is a visibly shorter column.
