@@ -61,6 +61,26 @@ enum DebugCapture {
             once("vocab") { seedVocab() }
             previewWordCard = true
             return AnyView(NavigationStack { VocabularyView() })
+        case "level-header":
+            // The two-line conversation title in a real inline bar.
+            return AnyView(NavigationStack {
+                Color(.systemBackground).ignoresSafeArea()
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .principal) {
+                            LevelHeaderTitle(title: "Ordering at a cafe",
+                                             level: .b1, surface: .watch)
+                                .environmentObject(appState)
+                        }
+                        ToolbarItem(placement: .topBarLeading) {
+                            Image(systemName: "xmark")
+                        }
+                    }
+            })
+        case "level-sheet":
+            once("level") { seedSessions() }
+            return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
+                .environmentObject(appState))
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())

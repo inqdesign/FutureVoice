@@ -246,8 +246,15 @@ struct WatchView: View {
             }
         }
         .background(Color(.systemBackground))
-        .navigationTitle("Watching")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                LevelHeaderTitle(title: "Watching",
+                                 level: appState.proficiency,
+                                 surface: .watch)
+                    .environmentObject(appState)
+            }
+        }
         .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
         .sheet(item: $feedbackContext) { ctx in
