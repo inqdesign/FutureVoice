@@ -115,6 +115,12 @@ struct RootTabView: View {
         }
         // Free Talk widget tap while the app is already up.
         .onChange(of: appState.pendingFreeTalk) { _, _ in consumeFreeTalk() }
+        // In-app jumps to Practice (Home's Practice row) stage a route instead
+        // of opening a URL — see ConversationHome.practiceProgressRow. Bring
+        // the tab along; PracticeTab consumes the route once it's up.
+        .onChange(of: appState.pendingPracticeRoute) { _, route in
+            if route != nil { selection = .practice }
+        }
         // Study widget taps land in the Practice tab — futurevoice://vocab
         // additionally pushes the vocabulary notebook once the tab is up.
         // Note the transcript word links (futurevoice://word/…) are

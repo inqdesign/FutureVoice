@@ -14,7 +14,6 @@ struct ConversationHome: View {
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
         shadowableLineCount: 0
     )
-    @Environment(\.openURL) private var openURL
     @State private var sessionCount = 0
     @State private var todaySpokenSeconds = 0
     /// Talks finished TODAY — the Today card counts the day, never lifetime.
@@ -282,7 +281,14 @@ struct ConversationHome: View {
     /// and the SRS review live.
     private var practiceProgressRow: some View {
         Button {
-            openURL(URL(string: "futurevoice://practice")!)
+            // Stage the route; RootTabView switches the tab. This used to be
+            // `openURL("futurevoice://practice")` — moving between two tabs of
+            // the SAME app by asking the operating system to open a URL. The
+            // OS is free to hand that scheme to any app that claims it, and
+            // with a second build of Future Voice side-loaded it did exactly
+            // that: tapping Practice launched the other app. Deep links are
+            // for arriving from outside; in-app navigation stays in-app.
+            appState.pendingPracticeRoute = .studying
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "books.vertical")
