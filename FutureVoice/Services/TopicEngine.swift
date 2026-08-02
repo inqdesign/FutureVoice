@@ -41,8 +41,9 @@ enum TopicEngine {
     // MARK: - Prompts
 
     private static func systemPrompt(targetLanguage: String, count: Int) -> String {
-        """
-        You generate language-practice scenarios for an advanced \(LanguageCatalog.englishName(targetLanguage)) learner.
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
+        You generate language-practice scenarios for an advanced \(languageName) learner.
         Given their persona, suggest \(count) SPECIFIC, REAL-LIFE situations they'd
         actually encounter THIS WEEK in their actual life. Avoid textbook clichés
         like "ordering coffee", "asking for directions", or "job interview" unless
@@ -75,7 +76,11 @@ enum TopicEngine {
         - title: ≤ 60 chars. The single sentence the user reads in the picker.
         - blurb: ≤ 140 chars. One-line extra context that doubles as the seed
           the avatar will use to open the conversation.
-        - Both in English (it's a target-language app).
+        - Both in \(languageName). A scenario title/blurb is MATERIAL, not
+          coaching: the blurb literally becomes the scene the learner talks
+          through, and the title labels it on the shelf afterwards. See
+          `CoachingLanguage` — only text that EXPLAINS goes in the learner's
+          own language.
         """
     }
 
@@ -128,8 +133,9 @@ enum TopicEngine {
     }
 
     private static func counterpartSystemPrompt(targetLanguage: String, count: Int) -> String {
-        """
-        You generate \(count) realistic \(LanguageCatalog.englishName(targetLanguage))-language scenarios where
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
+        You generate \(count) realistic \(languageName)-language scenarios where
         the USER and a specific COUNTERPART would meet, interact, or talk —
         anchored on their actual relationship and shared life context.
 
@@ -150,8 +156,8 @@ enum TopicEngine {
         { "topics": [ { "title": "...", "blurb": "..." } ] }
 
         Rules:
-        - title: ≤ 60 chars in English. Concrete moment with a hook.
-        - blurb: ≤ 140 chars in English. One line of context that the avatar
+        - title: ≤ 60 chars in \(languageName). Concrete moment with a hook.
+        - blurb: ≤ 140 chars in \(languageName). One line of context that the avatar
           can use as a seed for the opening of the dialogue.
         - Vary scenarios across the relationship's natural surfaces — don't
           have three about the same setting.
@@ -174,6 +180,9 @@ enum TopicEngine {
         }
         lines.append("")
         lines.append("COUNTERPART persona:")
+        lines.append("(the user's own note about this person, in their native "
+                     + "language — CONTEXT ONLY: never quote it back, and never "
+                     + "let its language change the language you write in)")
         lines.append("- name: \(counterpart.name)")
         if !counterpart.relationship.isEmpty {
             lines.append("- relationship: \(counterpart.relationship)")
@@ -448,13 +457,15 @@ enum TopicEngine {
         - title: a SHORT chip label, 2–4 words, no trailing punctuation.
         - blurb: ONE first-person sentence usable AS the scenario if the learner
           stops here — as specific as the current depth allows. ≤ 160 chars.
-        - English. Maximize variety; no two nearly identical.
+        - \(LanguageCatalog.englishName(targetLanguage)). Maximize variety; no
+          two nearly identical.
         """
     }
 
     private static func categorySystemPrompt(targetLanguage: String, count: Int) -> String {
-        """
-        You generate language-practice SCENARIOS for an advanced \(LanguageCatalog.englishName(targetLanguage)) learner.
+        let languageName = LanguageCatalog.englishName(targetLanguage)
+        return """
+        You generate language-practice SCENARIOS for an advanced \(languageName) learner.
         The user picked a category (a place or theme). Suggest \(count) SPECIFIC,
         varied scenarios that realistically happen inside that category — the
         kind of moment where a 3–8 minute conversation naturally unfolds.
@@ -478,7 +489,7 @@ enum TopicEngine {
         - blurb: ONE full first-person sentence that becomes the scenario when
           tapped ("At a cafe: my order came out wrong and I want to point it
           out politely and get it fixed."). ≤ 160 chars.
-        - Both in English. Maximize variety across the \(count).
+        - Both in \(languageName). Maximize variety across the \(count).
         """
     }
 

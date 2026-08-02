@@ -194,8 +194,25 @@ enum ConversationEngine {
     }
 
     /// System prompt for generating the post-session summary as strict JSON.
-    static func summarySystemPrompt(targetLanguage: String, profile: LearnerProfile) -> String {
+    ///
+    /// Two languages come out of this call. Every quoted or drillable string —
+    /// `user_said`, `fluent_alternative`, `suggested_drills`, `expressions_used`,
+    /// `grammar_errors.quote`/`.correction` — is TARGET-language material the
+    /// learner will see on a card or hear through TTS. Every explanatory string
+    /// — the reasons, notes, `overall_note`, the scorecard commentary — is
+    /// coaching, and goes out in the learner's NATIVE language. See
+    /// `CoachingLanguage`.
+    ///
+    /// Two fields are deliberately EXEMPT and stay English: `weak_vocab_areas`
+    /// and `new_patterns_detected.context` are machine-consumed — they're
+    /// re-injected into the next conversation's system prompt via
+    /// `LearnerProfile`, never rendered on their own.
+    static func summarySystemPrompt(targetLanguage: String,
+                                    nativeLanguage: String,
+                                    profile: LearnerProfile) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
+        let contract = CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage)
         let profileJSON = (try? String(
             data: JSONEncoder().encode(profile),
             encoding: .utf8
@@ -204,6 +221,8 @@ enum ConversationEngine {
         return """
         The user just finished a conversation in \(languageName).
         You will be given the full transcript with role labels.
+
+        \(contract)
 
         Their existing learner profile:
         \(profileJSON)
@@ -237,6 +256,19 @@ enum ConversationEngine {
             "cefr_level":     "a1|a2|b1|b2|c1|c2"
           }
         }
+
+        OUTPUT LANGUAGE, FIELD BY FIELD (applies the contract above):
+        - \(languageName) — the learner reads these as material or hears them
+          spoken: title, phrases_used.user_said, phrases_used.fluent_alternative,
+          new_patterns_detected.mistake, new_patterns_detected.correction,
+          suggested_drills, expressions_used, grammar_errors.quote,
+          grammar_errors.correction.
+        - \(nativeName) — the learner reads these to
+          understand what happened: phrases_used.reason, grammar_errors.note,
+          overall_note, scorecard.*.note, scorecard.top_line.
+        - English regardless — these two are never shown to the learner, they
+          are re-injected into the next conversation's prompt and must stay
+          machine-readable: weak_vocab_areas, new_patterns_detected.context.
 
         Rules:
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
@@ -301,15 +333,19 @@ enum ConversationEngine {
           - correction: the same sentence with ONLY the grammar fixed. Keep
             their words and style; this is not the place for nicer phrasing
             (that's phrases_used).
-          - note: ≤ 6 words naming the grammar point ("missing article",
-            "past tense needed", "preposition: 'on' → 'at'").
+          - note: the grammar point, named in \(nativeName), as short as a
+            label — the \(nativeName) equivalent of "missing article", "past
+            tense needed", "preposition: 'on' → 'at'". Use the grammar words
+            \(nativeName) speakers actually use, not a literal translation of
+            the English term.
           - The same error type appearing in different sentences = separate
             entries. Empty array if the session was genuinely clean.
         - weak_vocab_areas: 0-3 SHORT topic labels (2-4 words each, e.g.
           "cooking verbs", "phone-call phrases") where the user visibly
           lacked words this session — reached for vague fillers, circumlocuted,
-          or switched to their native language. These feed the next
-          conversation's system prompt. Empty if nothing stood out.
+          or switched to their native language. ENGLISH, always — these feed
+          the next conversation's system prompt and are never displayed.
+          Empty if nothing stood out.
         - Tone: warm, never condescending.
 
         HARD RULE for phrases_used / new_patterns_detected / suggested_drills
@@ -329,7 +365,8 @@ enum ConversationEngine {
         These are pedagogical labels. They cannot be spoken back to the
         learner as a model line, and TTS on them produces nonsense audio.
 
-        GOOD — emit cards like:
+        GOOD — emit cards like (the "reason" shown here is English for
+        illustration only; write yours in \(nativeName)):
           - user_said: "I go to bank yesterday"
             fluent_alternative: "I went to the bank yesterday"
             reason: "past tense + article"
@@ -364,8 +401,13 @@ enum ConversationEngine {
             articulation_rate_wpm is 0 fall back to words_per_minute (60–120
             healthy); if both are 0, set fluency to -1 and note "no timing
             data".
-        - Each axis note ≤ 18 words, concrete (cite a metric or a phrase).
-        - top_line: one warm sentence that ties the highest + lowest axis together.
+        - Each axis note: \(nativeName), ≤ 18 words (or that length's
+          equivalent), concrete — cite a metric or quote a phrase. A quoted
+          \(languageName) phrase stays in \(languageName) inside the
+          \(nativeName) sentence.
+        - top_line: one warm sentence in \(nativeName) that ties the highest +
+          lowest axis together.
+        - overall_note: 1-2 encouraging sentences in \(nativeName).
         """
     }
 
@@ -375,8 +417,10 @@ enum ConversationEngine {
     /// line — restoring per-turn corrections WITHOUT a second Gemini call.
     /// The suggestion feeds the inline chip, the SRS drill queue, and the
     /// weekly report's repeated-mistake detection.
-    static func turnOutputInstruction(targetLanguage: String) -> String {
-        """
+    static func turnOutputInstruction(targetLanguage: String,
+                                      nativeLanguage: String) -> String {
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
+        return """
 
         OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
         Return STRICT JSON only — no prose, no code fences:
@@ -418,7 +462,12 @@ enum ConversationEngine {
           several sentences, pick the one worth fixing and ignore the rest,
           even if they also had minor slips. Target ≤ 15 words; a learner
           drills this line later, and a paragraph is un-drillable.
-        - "reason": ≤ 12 words on why it's better.
+        - "reason": ≤ 12 words on why it's better, written in \(nativeName) —
+          the learner glances at this mid-conversation and must get it without
+          decoding. Quote the \(LanguageCatalog.englishName(targetLanguage))
+          words that changed, untranslated, inside the \(nativeName) sentence.
+          "alternative" above is unaffected: it stays
+          \(LanguageCatalog.englishName(targetLanguage)) material.
         - The suggestion is shown silently as text — never mention it in "reply",
           never correct the user out loud.
         """

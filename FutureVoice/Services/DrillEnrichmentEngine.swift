@@ -23,9 +23,11 @@ enum DrillEnrichmentEngine {
     static func generate(
         card: DrillCard,
         persona: UserPersona?,
-        targetLanguage: String
+        targetLanguage: String,
+        nativeLanguage: String = LanguageCatalog.currentNative
     ) async throws -> DrillCardEnrichment {
-        let system = systemPrompt(targetLanguage: targetLanguage)
+        let system = systemPrompt(targetLanguage: targetLanguage,
+                                  nativeLanguage: nativeLanguage)
         let userMsg = userMessage(card: card, persona: persona)
 
         let payload: Payload = try await GeminiClient.shared.sendJSON(
@@ -48,9 +50,12 @@ enum DrillEnrichmentEngine {
         )
     }
 
-    private static func systemPrompt(targetLanguage: String) -> String {
+    private static func systemPrompt(targetLanguage: String,
+                                     nativeLanguage: String) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
         return """
+        \(CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage))
         The user is studying a flashcard for \(languageName) fluency. The
         card has a target phrase (the natural version) and optionally a source
         phrase (what they originally said) + reason. Generate a rich
@@ -78,17 +83,20 @@ enum DrillEnrichmentEngine {
         Rules:
         - examples: 3 short scenarios in DIFFERENT contexts from the persona's
           life, each with one line that uses the target phrase naturally.
-          situation = brief frame in English (≤ 14 words). sentence = the
+          situation = brief frame in \(nativeName) (≤ 14 words). sentence = the
           spoken line in \(languageName).
         - variants: 2-3 alternate ways to express the same intent at similar
-          fluency level. note = ≤ 14 words on when this variant fits better
-          (register, formality, mood).
-        - memory_hook: ONE sentence in English — a sensory, situational, or
-          relatable trigger that makes the phrase easy to recall later. NOT
+          fluency level. phrase = \(languageName). note = ≤ 14 words in
+          \(nativeName) on when this variant fits better (register, formality,
+          mood).
+        - memory_hook: ONE sentence in \(nativeName) — a sensory, situational,
+          or relatable trigger that makes the phrase easy to recall later. NOT
           "remember this!" — something concrete like "When you're about to
           apologize but it's not really your fault, reach for this."
-        - All "sentence" / "phrase" fields in \(languageName). Everything
-          else in English (notes, situations, hook).
+        - So: "sentence" and "phrase" in \(languageName) (the learner speaks
+          them); "situation", "note" and "memory_hook" in \(nativeName) (the
+          learner reads them to understand). A \(languageName) phrase quoted
+          inside a \(nativeName) line stays untranslated.
         """
     }
 

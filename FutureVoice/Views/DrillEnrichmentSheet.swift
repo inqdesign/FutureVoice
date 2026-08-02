@@ -187,7 +187,8 @@ struct DrillEnrichmentSheet: View {
             let fresh = try await DrillEnrichmentEngine.generate(
                 card: card,
                 persona: appState.persona,
-                targetLanguage: appState.targetLanguage
+                targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage
             )
             enrichment = fresh
             // Persist back into the card so next open is free.

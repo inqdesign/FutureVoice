@@ -22,7 +22,7 @@ struct SetupFlowView: View {
     @EnvironmentObject private var auth: AuthService
     @State private var step: Int = 0
     @State private var level: CEFRLevel = .b1
-    @State private var nativeLanguage: String = "ko"
+    @State private var nativeLanguage: String = LanguageCatalog.defaultNative
     /// Backing out of step one crosses the auth boundary (Welcome lives
     /// before sign-in), so it asks first instead of silently signing out.
     @State private var confirmingSignOut = false
@@ -60,8 +60,11 @@ struct SetupFlowView: View {
             level = appState.proficiency
             // English can't be a native choice (it's the fixed target), so a
             // legacy "en" native default would leave no row checked — flip it
-            // to the most common answer instead.
-            if nativeLanguage == targetLanguage { nativeLanguage = "ko" }
+            // to the device's language instead (Korean if that's not offered).
+            if nativeLanguage == targetLanguage {
+                nativeLanguage = LanguageCatalog.defaultNative == targetLanguage
+                    ? "ko" : LanguageCatalog.defaultNative
+            }
             #if DEBUG
             // Screenshot harness: `-onboardingStep <n>` jumps to a card.
             if UserDefaults.standard.object(forKey: "onboardingStep") != nil {

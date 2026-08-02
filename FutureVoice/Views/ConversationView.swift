@@ -1033,7 +1033,9 @@ struct ConversationView: View {
         do {
             let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSONStream(
                 system: systemPrompt()
-                    + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
+                    + ConversationEngine.turnOutputInstruction(
+                        targetLanguage: appState.targetLanguage,
+                        nativeLanguage: appState.nativeLanguage),
                 messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
                 // Headroom for transcript + reply + suggestion: a MAX_TOKENS
                 // truncation shows up here as a DecodingError-failed turn.
@@ -1363,6 +1365,7 @@ struct ConversationView: View {
         do {
             let systemP = ConversationEngine.summarySystemPrompt(
                 targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage,
                 profile: appState.learnerProfile
             )
             let transcript = ConversationEngine.formatTranscript(turns)

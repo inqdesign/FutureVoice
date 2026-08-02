@@ -200,6 +200,10 @@ enum ScenarioCurriculumEngine {
         if let c = counterpart {
             lines.append("- the other person is \(c.name) (\(c.relationship))")
             if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
+            // Dictated by the user in their own language — context, not output.
+            lines.append("  (the two lines above are the user's own note, in "
+                         + "their native language — never let it change the "
+                         + "language you write in)")
         }
         if let p = persona, p.isMinimallyComplete {
             lines.append("")

@@ -82,6 +82,7 @@ enum WeeklyReportEngine {
         endedSessions: [Session],
         lastReport: WeeklyReport?,
         targetLanguage: String,
+        nativeLanguage: String = LanguageCatalog.currentNative,
         now: Date = Date()
     ) async throws -> WeeklyReport {
         // Window: everything since the last report, or everything ever for the first.
@@ -154,6 +155,7 @@ enum WeeklyReportEngine {
 
         let response: GeminiPayload = try await GeminiClient.shared.sendJSON(
             system: systemPrompt(targetLanguage: targetLanguage,
+                                  nativeLanguage: nativeLanguage,
                                   previousSummary: lastReport?.summary),
             messages: [.init(role: .user, content: userPrompt(
                 priorCorpusLines: priorUserUtterances,
@@ -200,10 +202,16 @@ enum WeeklyReportEngine {
 
     // MARK: - Prompt
 
-    private static func systemPrompt(targetLanguage: String, previousSummary: String?) -> String {
+    private static func systemPrompt(targetLanguage: String,
+                                     nativeLanguage: String,
+                                     previousSummary: String?) -> String {
+        let targetName = LanguageCatalog.englishName(targetLanguage)
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
         var s = """
-        You analyze a learner's spoken \(LanguageCatalog.englishName(targetLanguage)) practice across many \
+        You analyze a learner's spoken \(targetName) practice across many \
         conversation sessions and produce a single concise report.
+
+        \(CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage))
 
         Output strict JSON matching this shape:
         {
@@ -220,6 +228,16 @@ enum WeeklyReportEngine {
             { "phrase": "...", "whenToUse": "short context cue", "example": "example sentence using it" }
           ]
         }
+
+        OUTPUT LANGUAGE, FIELD BY FIELD (applies the contract above):
+        - \(targetName) — material: newExpressions.phrase,
+          newExpressions.sampleSentence, repeatedMistakes.userSaid,
+          repeatedMistakes.fluentAlternative, suggestedExpressions.phrase,
+          suggestedExpressions.example.
+        - \(nativeName) — coaching the learner reads: summary,
+          level_rationale, repeatedMistakes.note, suggestedExpressions.whenToUse.
+          This report is the learner's main written feedback; in \(targetName)
+          the ones who most need it are the ones who can't read it.
 
         Hard rules:
         - cefr_level: ONE holistic CEFR estimate of the user's SPEAKING from
@@ -257,7 +275,7 @@ enum WeeklyReportEngine {
             overall unless the transcripts show meaning actually breaking
             down. State in level_rationale whether the errors you saw
             obscure meaning or not — that judgment decides the boundary.
-        - level_rationale: 2-3 plain sentences the learner will read,
+        - level_rationale: 2-3 plain \(nativeName) sentences the learner will read,
           justifying cefr_level by NAMING the concrete evidence — the pace
           number and its band, the slip density, the per-talk reads, the
           vocab profile — and, when the level sits below some evidence band,

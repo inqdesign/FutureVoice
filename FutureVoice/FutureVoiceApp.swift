@@ -109,7 +109,7 @@ final class AppState: ObservableObject {
             if onboardingStarted && !oldValue { Analytics.capture("onboarding_started") }
         }
     }
-    @Published var nativeLanguage: String = "ko" {
+    @Published var nativeLanguage: String = LanguageCatalog.defaultNative {
         didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
     }
     @Published var targetLanguage: String = "en" {
@@ -214,7 +214,7 @@ final class AppState: ObservableObject {
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
     private static let voiceNameKey = "futurevoice.voiceName"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
-    private static let nativeLanguageKey = "futurevoice.nativeLanguage"
+    private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
     private static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
@@ -222,7 +222,8 @@ final class AppState: ObservableObject {
     private static let onboardingStartedKey = "futurevoice.onboardingStarted"
 
     init() {
-        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
+        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey)
+            ?? LanguageCatalog.defaultNative
         let storedTarget = UserDefaults.standard.string(forKey: Self.targetLanguageKey) ?? "en"
         let storedLevel = UserDefaults.standard.string(forKey: Self.proficiencyKey)
             .flatMap(CEFRLevel.init(rawValue:)) ?? .b1
@@ -273,7 +274,8 @@ final class AppState: ObservableObject {
                 let report = try await WeeklyReportEngine.generate(
                     endedSessions: sessions,
                     lastReport: last,
-                    targetLanguage: self.targetLanguage
+                    targetLanguage: self.targetLanguage,
+                    nativeLanguage: self.nativeLanguage
                 )
                 await MainActor.run {
                     WeeklyReportStore.shared.save(report)

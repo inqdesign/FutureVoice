@@ -274,7 +274,8 @@ struct CounterpartVoiceIntakeView: View {
         do {
             var draft = try await CounterpartParser.parse(
                 spokenDescription: sections.joined(separator: "\n\n"),
-                languageHint: locale)
+                languageHint: locale,
+                nativeLanguage: appState.nativeLanguage)
             // What the user typed outright wins over the parse.
             draft.name = name
             prefilled = draft
