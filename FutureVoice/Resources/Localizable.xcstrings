@@ -1,2055 +1,1324 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "" : {
-
-    },
-    " " : {
-
-    },
-    "—" : {
-
-    },
-    "…" : {
-
-    },
-    "·" : {
-
-    },
-    "“%@”" : {
-
-    },
-    "(+%@)" : {
-
-    },
-    "/ %lldm" : {
-
-    },
-    "%@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@"
+  "sourceLanguage": "en",
+  "strings": {
+    "": {},
+    " ": {},
+    "%@ %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$lld"
           }
         }
       }
     },
-    "%@ · %@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$@ · %3$@"
+    "%@ / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ / %2$@"
           }
         }
       }
     },
-    "%@ · %lld turns spoken" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · %2$lld turns spoken"
+    "%@ credits / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ credits / %2$@"
           }
         }
       }
     },
-    "%@ · voiced by %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ · voiced by %2$@"
+    "%@ credits, %@ plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ credits, %2$@ plan"
           }
         }
       }
     },
-    "%@ / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ / %2$@"
+    "%@ theme": {},
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
           }
         }
       }
     },
-    "%@ %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld"
+    "%@ · %@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ · %3$@"
           }
         }
       }
     },
-    "%@ credits / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ credits / %2$@"
+    "%@ · %lld turns spoken": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld turns spoken"
           }
         }
       }
     },
-    "%@ credits, %@ plan" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ credits, %2$@ plan"
+    "%@ · voiced by %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · voiced by %2$@"
           }
         }
       }
     },
-    "%@ theme" : {
-
-    },
-    "%lld" : {
-
-    },
-    "%lld / %lld min so far." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld / %2$lld min so far."
+    "%lld": {},
+    "%lld %@ this session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld %2$@ this session"
           }
         }
       }
     },
-    "%lld / 10" : {
-
-    },
-    "%lld %@ this session" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ this session"
+    "%lld / %lld min so far.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld / %2$lld min so far."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금까지 %1$lld / %2$lld분."
           }
         }
       }
     },
-    "%lld card%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld card%2$@"
+    "%lld / 10": {},
+    "%lld card%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld card%2$@"
           }
         }
       }
     },
-    "%lld days free,\nno surprises" : {
-
-    },
-    "%lld days free. Cancel anytime." : {
-
-    },
-    "%lld expressions" : {
-
-    },
-    "%lld known" : {
-
-    },
-    "%lld min" : {
-
-    },
-    "%lld min this week" : {
-
-    },
-    "%lld of %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld"
+    "%lld days free,\nno surprises": {},
+    "%lld days free. Cancel anytime.": {},
+    "%lld expressions": {},
+    "%lld known": {},
+    "%lld min": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
           }
         }
       }
     },
-    "%lld of %lld mastered" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld mastered"
+    "%lld min this week": {},
+    "%lld of %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld"
           }
         }
       }
     },
-    "%lld of %lld mastered · everything from your talks and watches" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld mastered · everything from your talks and watches"
+    "%lld of %lld mastered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld mastered"
           }
         }
       }
     },
-    "%lld of %lld minutes today, %lld talks today, %lld day streak. Opens activity calendar." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld of %2$lld minutes today, %3$lld talks today, %4$lld day streak. Opens activity calendar."
+    "%lld of %lld mastered · everything from your talks and watches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld mastered · everything from your talks and watches"
           }
         }
       }
     },
-    "%lld phrases saved while watching" : {
-
-    },
-    "%lld sessions · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld sessions · %2$@"
+    "%lld of %lld minutes today, %lld talks today, %lld day streak. Opens activity calendar.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld minutes today, %3$lld talks today, %4$lld day streak. Opens activity calendar."
           }
         }
       }
     },
-    "%lld talks · tap for calendar" : {
-
-    },
-    "%lld talks today" : {
-
-    },
-    "%lld total" : {
-
-    },
-    "%lld turns" : {
-
-    },
-    "%lld turns spoken" : {
-
-    },
-    "%lld vs last week" : {
-
-    },
-    "%lld words" : {
-
-    },
-    "%lld-day streak" : {
-
-    },
-    "%lld/%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld"
+    "%lld phrases saved while watching": {},
+    "%lld sessions · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld sessions · %2$@"
           }
         }
       }
     },
-    "%lld/%lld mastered" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld mastered"
+    "%lld talks today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 대화 %lld회"
           }
         }
       }
     },
-    "%lld/%lld min" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld min"
+    "%lld talks · tap for calendar": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 %lld회 · 탭하면 달력"
           }
         }
       }
     },
-    "%lld/%lld min new talk" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld/%2$lld min new talk"
+    "%lld total": {},
+    "%lld turns": {},
+    "%lld turns spoken": {},
+    "%lld vs last week": {},
+    "%lld words": {},
+    "%lld%%": {},
+    "%lld-day streak": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 연속"
           }
         }
       }
     },
-    "%lld%%" : {
-
-    },
-    "•" : {
-
-    },
-    "→ %@" : {
-
-    },
-    "+%lld more meanings" : {
-
-    },
-    "+%lld this week" : {
-
-    },
-    "+%lld vs last week" : {
-
-    },
-    "+1 more meaning" : {
-
-    },
-    "×%lld" : {
-
-    },
-    "<" : {
-
-    },
-    ">" : {
-
-    },
-    "≈ %lld min of conversation a day" : {
-
-    },
-    "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed." : {
-
-    },
-    "😀" : {
-
-    },
-    "1 credit ≈ 100 characters spoken in your voice." : {
-
-    },
-    "1 minute. Vary your pitch a little." : {
-
-    },
-    "1 phrase saved while watching" : {
-
-    },
-    "1 talk today" : {
-
-    },
-    "1×" : {
-
-    },
-    "A quick active-recall run through this talk's saved phrases." : {
-
-    },
-    "A voice for the other person. Add people under Watch to have someone specific play the scene." : {
-
-    },
-    "About half a minute." : {
-
-    },
-    "About them" : {
-
-    },
-    "About you" : {
-
-    },
-    "Account" : {
-
-    },
-    "Across skills" : {
-
-    },
-    "Activity" : {
-
-    },
-    "Add a language" : {
-
-    },
-    "Add category" : {
-
-    },
-    "Add interests" : {
-
-    },
-    "Add someone from your real life — their cloned voice can act out any scenario you build." : {
-
-    },
-    "Add your own (comma-separated)" : {
-
-    },
-    "After you end a conversation, the corrections it surfaces show up here grouped by session." : {
-
-    },
-    "All scenarios" : {
-
-    },
-    "Already have an account? Sign in" : {
-
-    },
-    "Always free" : {
-
-    },
-    "Analyzing your week…" : {
-
-    },
-    "Answer in" : {
-
-    },
-    "Anything else" : {
-
-    },
-    "Anything else (optional)" : {
-
-    },
-    "Anything specific?" : {
-
-    },
-    "Appearance" : {
-
-    },
-    "Archive" : {
-
-    },
-    "Archived" : {
-
-    },
-    "Assessed %@ — a while back. Your next talks feed a fresh assessment." : {
-
-    },
-    "Assessed %@ from your recent talk — vocabulary, grammar, fluency and expression together." : {
-
-    },
-    "Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together." : {
-
-    },
-    "Assessed level" : {
-
-    },
-    "Assessing your level from everything you've said…" : {
-
-    },
-    "Assessment" : {
-
-    },
-    "Back" : {
-
-    },
-    "Back to the welcome screen?" : {
-
-    },
-    "Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it." : {
-
-    },
-    "Billing" : {
-
-    },
-    "Billing period" : {
-
-    },
-    "Book mastered" : {
-
-    },
-    "Bookmark a line from shadow practice and it'll live here for repeat reps." : {
-
-    },
-    "Build a scenario" : {
-
-    },
-    "Build it from a category below, type it, or say it with the mic — then %@ it." : {
-
-    },
-    "Build new" : {
-
-    },
-    "Build your first scenario" : {
-
-    },
-    "Building scenarios for %@…" : {
-
-    },
-    "Can't record now? No rush — this will wait." : {
-
-    },
-    "Cancel" : {
-
-    },
-    "Captured automatically from what you say. Mark the ones you've got down as known." : {
-
-    },
-    "Cards done — now say it out loud" : {
-
-    },
-    "Cards from this talk" : {
-
-    },
-    "Category name (e.g. Landlord, Gym)" : {
-
-    },
-    "City" : {
-
-    },
-    "Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in." : {
-
-    },
-    "Cloning your voice…" : {
-
-    },
-    "Close" : {
-
-    },
-    "Close without saving" : {
-
-    },
-    "Coach's note" : {
-
-    },
-    "Continue" : {
-
-    },
-    "Couldn't delete account" : {
-
-    },
-    "Couldn't get a response." : {
-
-    },
-    "Couldn't play audio" : {
-
-    },
-    "Couldn't rebuild your voice" : {
-
-    },
-    "Couldn't write the scene" : {
-
-    },
-    "Country" : {
-
-    },
-    "Credits left" : {
-
-    },
-    "Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever." : {
-
-    },
-    "Credits power voice synthesis and AI replies. Invite friends to earn more." : {
-
-    },
-    "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free." : {
-
-    },
-    "Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more." : {
-
-    },
-    "Day" : {
-
-    },
-    "Debug builds only. Routes back through the first-run setup flow." : {
-
-    },
-    "Delete" : {
-
-    },
-    "Delete account" : {
-
-    },
-    "Delete forever" : {
-
-    },
-    "Delete talk" : {
-
-    },
-    "Delete this scenario?" : {
-
-    },
-    "Delete this talk?" : {
-
-    },
-    "Delete your account?" : {
-
-    },
-    "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too." : {
-
-    },
-    "Describe the situation" : {
-
-    },
-    "Developer" : {
-
-    },
-    "Dictate" : {
-
-    },
-    "Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level." : {
-
-    },
-    "Distinct graded words you've used, accumulating from the day each was first said." : {
-
-    },
-    "Distinct words from your talks in the last %lld days." : {
-
-    },
-    "Doesn't sound like you? Record again" : {
-
-    },
-    "Done" : {
-
-    },
-    "Drill next" : {
-
-    },
-    "Drills" : {
-
-    },
-    "Drills appear here after you end a conversation." : {
-
-    },
-    "e.g. “%@”" : {
-
-    },
-    "e.g. Boram tells me she's moving back to Seoul" : {
-
-    },
-    "e.g. Lufthansa cabin-crew interview next week — I want to rehearse it" : {
-
-    },
-    "e.g. Running into them at the wedding and catching up" : {
-
-    },
-    "e.g. Solo founder of an AI app for parents" : {
-
-    },
-    "e.g. Wife and 4yo daughter at Kita" : {
-
-    },
-    "Edit" : {
-
-    },
-    "Edit interests" : {
-
-    },
-    "Edit persona" : {
-
-    },
-    "End" : {
-
-    },
-    "Enter a friend's code once to get 300 bonus credits." : {
-
-    },
-    "Enter invite code" : {
-
-    },
-    "Estimated from %lld distinct words you've used in the last %lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Estimated from %1$lld distinct words you've used in the last %2$lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever."
+    "%lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld"
           }
         }
       }
     },
-    "Estimated level" : {
-
-    },
-    "Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete." : {
-
-    },
-    "Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours." : {
-
-    },
-    "Everything in this scenario is yours now." : {
-
-    },
-    "Everything nawana does, fueled up — in your own voice." : {
-
-    },
-    "Everything this conversation had to teach is yours." : {
-
-    },
-    "Examples & variants" : {
-
-    },
-    "Excluded from scoring — marked as misheard" : {
-
-    },
-    "Explain in my language" : {
-
-    },
-    "Explanations and translations come in this language." : {
-
-    },
-    "Expressions" : {
-
-    },
-    "Expressions you used" : {
-
-    },
-    "Expressions you've used" : {
-
-    },
-    "Feedback" : {
-
-    },
-    "Filing this under a category…" : {
-
-    },
-    "Filter" : {
-
-    },
-    "Finding scenarios from your life…" : {
-
-    },
-    "Finding scenarios…" : {
-
-    },
-    "Finding stories…" : {
-
-    },
-    "Finish a conversation, then come back to shadow any line your fluent self said." : {
-
-    },
-    "Finished books. They keep their progress — unarchive anytime." : {
-
-    },
-    "Free" : {
-
-    },
-    "Free notes — quirks, recent events, anything that helps" : {
-
-    },
-    "Friends joined" : {
-
-    },
-    "From scenarios" : {
-
-    },
-    "From your recent sessions" : {
-
-    },
-    "full line" : {
-
-    },
-    "Future self" : {
-
-    },
-    "Future Self" : {
-
-    },
-    "Future self · %lld" : {
-
-    },
-    "Future self is the pixel surface behind every call button — tap a theme to feel it." : {
-
-    },
-    "Future self is thinking…" : {
-
-    },
-    "Generate scenarios for %@" : {
-
-    },
-    "Get started" : {
-
-    },
-    "Goal" : {
-
-    },
-    "Good. %llds more for the cleanest clone" : {
-
-    },
-    "Grammar" : {
-
-    },
-    "Grammar review" : {
-
-    },
-    "Grounded in your profile — name, city, work, family, interests." : {
-
-    },
-    "Grounded in your relationship with %@ — these appear as ideas when you tap them on the Watch tab." : {
-
-    },
-    "Growth" : {
-
-    },
-    "Have a code?" : {
-
-    },
-    "Have a few conversations and I'll estimate your level and break down how your %@ is developing." : {
-
-    },
-    "Have an invite code?" : {
-
-    },
-    "Hear it again" : {
-
-    },
-    "Hear my attempt" : {
-
-    },
-    "Hear target" : {
-
-    },
-    "Hear yourself" : {
-
-    },
-    "Help set the price" : {
-
-    },
-    "Hide" : {
-
-    },
-    "Hide meaning" : {
-
-    },
-    "Hide words I know" : {
-
-    },
-    "Highlighted words are worth picking up — tap one to check it out." : {
-
-    },
-    "History" : {
-
-    },
-    "Honestly, it went really well. I felt prepared." : {
-
-    },
-    "How comfortable are you right now?" : {
-
-    },
-    "How it's assessed" : {
-
-    },
-    "How long have you been there? (optional)" : {
-
-    },
-    "How long? (optional)" : {
-
-    },
-    "How they talk" : {
-
-    },
-    "How this is assessed" : {
-
-    },
-    "How to improve" : {
-
-    },
-    "How to level up" : {
-
-    },
-    "How you met (and how long)" : {
-
-    },
-    "Ideas with %@" : {
-
-    },
-    "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't." : {
-
-    },
-    "In your own words (optional) — e.g. switches to English when excited" : {
-
-    },
-    "Interests" : {
-
-    },
-    "Invite & credits" : {
-
-    },
-    "Invite code" : {
-
-    },
-    "Keep going — %llds more for a usable clone" : {
-
-    },
-    "Keep my current voice" : {
-
-    },
-    "Keep studying this word" : {
-
-    },
-    "Keep this voice" : {
-
-    },
-    "Kind" : {
-
-    },
-    "Language" : {
-
-    },
-    "Languages" : {
-
-    },
-    "Last talk" : {
-
-    },
-    "Later" : {
-
-    },
-    "Latest assessment" : {
-
-    },
-    "Learning" : {
-
-    },
-    "less" : {
-
-    },
-    "Let's talk" : {
-
-    },
-    "Let's talk — start a call" : {
-
-    },
-    "Level" : {
-
-    },
-    "Likely situations" : {
-
-    },
-    "Listen" : {
-
-    },
-    "Listen to your recording" : {
-
-    },
-    "Listening — tap to finish" : {
-
-    },
-    "Load stories" : {
-
-    },
-    "Looking it up…" : {
-
-    },
-    "loop %@–%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "loop %1$@–%2$@"
+    "%lld/%lld mastered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld mastered"
           }
         }
       }
     },
-    "Make your own situation" : {
-
-    },
-    "Mark as known" : {
-
-    },
-    "Mark as mastered" : {
-
-    },
-    "Marked as known" : {
-
-    },
-    "mastered" : {
-
-    },
-    "Mastered" : {
-
-    },
-    "Me" : {
-
-    },
-    "Meaning" : {
-
-    },
-    "Microphone access needed" : {
-
-    },
-    "Minutes" : {
-
-    },
-    "Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal." : {
-
-    },
-    "Misheard" : {
-
-    },
-    "Misheard — exclude from scoring" : {
-
-    },
-    "more" : {
-
-    },
-    "More" : {
-
-    },
-    "More natural" : {
-
-    },
-    "More natural alternatives" : {
-
-    },
-    "More precisely? — e.g. College roommate" : {
-
-    },
-    "Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions." : {
-
-    },
-    "My expressions · %lld" : {
-
-    },
-    "My words · %lld" : {
-
-    },
-    "Name" : {
-
-    },
-    "Names your clone here and on ElevenLabs. Leave it empty to go back to the default." : {
-
-    },
-    "Narrow it down" : {
-
-    },
-    "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana." : {
-
-    },
-    "New" : {
-
-    },
-    "New here? Get started instead" : {
-
-    },
-    "New person" : {
-
-    },
-    "New persona" : {
-
-    },
-    "New scenario" : {
-
-    },
-    "New words" : {
-
-    },
-    "Next" : {
-
-    },
-    "Next assessment" : {
-
-    },
-    "Next assessment after %lld more min of new talk." : {
-
-    },
-    "Next assessment in %lld day%@." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Next assessment in %1$lld day%2$@."
+    "%lld/%lld min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld min"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld분"
           }
         }
       }
     },
-    "Next report in %lldd · %lld more minutes of practice." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Next report in %1$lldd · %2$lld more minutes of practice."
+    "%lld/%lld min new talk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld min new talk"
           }
         }
       }
     },
-    "Nice work" : {
-
-    },
-    "No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?" : {
-
-    },
-    "No dictionary entry yet — tap to open the card." : {
-
-    },
-    "No drills due" : {
-
-    },
-    "No practice this day." : {
-
-    },
-    "No progress yet" : {
-
-    },
-    "No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue." : {
-
-    },
-    "No saved lines" : {
-
-    },
-    "No session cards yet" : {
-
-    },
-    "No sessions yet" : {
-
-    },
-    "No streak yet" : {
-
-    },
-    "No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing." : {
-
-    },
-    "No talk yet today" : {
-
-    },
-    "no timings" : {
-
-    },
-    "Not happy with a take? You can re-record." : {
-
-    },
-    "Not now" : {
-
-    },
-    "Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated." : {
-
-    },
-    "Note" : {
-
-    },
-    "Nothing in progress" : {
-
-    },
-    "Nothing to shadow yet" : {
-
-    },
-    "Nutrition" : {
-
-    },
-    "OK" : {
-
-    },
-    "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book." : {
-
-    },
-    "Open" : {
-
-    },
-    "Open Settings" : {
-
-    },
-    "Open to review" : {
-
-    },
-    "Open to start" : {
-
-    },
-    "Opens the full card" : {
-
-    },
-    "Optional — pick a chip to go deeper, or hit Watch with what you have." : {
-
-    },
-    "Optional — what's the situation about?" : {
-
-    },
-    "Or a generic role:" : {
-
-    },
-    "Or describe one yourself" : {
-
-    },
-    "Or describe where (custom)…" : {
-
-    },
-    "Or describe who (custom)…" : {
-
-    },
-    "Overall" : {
-
-    },
-    "Past attempts" : {
-
-    },
-    "Past dialogues" : {
-
-    },
-    "Pause" : {
-
-    },
-    "People" : {
-
-    },
-    "phrases" : {
-
-    },
-    "Pick a category" : {
-
-    },
-    "Pick a scenario" : {
-
-    },
-    "Pick a voice, or one of your people to have them play the scene as themselves." : {
-
-    },
-    "Pick an area to go one step deeper — or type your own above." : {
-
-    },
-    "Pick your pace" : {
-
-    },
-    "Planned launch pricing — final prices confirm on the App Store at launch." : {
-
-    },
-    "Play" : {
-
-    },
-    "Play what you said" : {
-
-    },
-    "Play your recording" : {
-
-    },
-    "Plenty for a great clone — stop whenever you're ready" : {
-
-    },
-    "Practice" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "연습"
+    "(+%@)": {},
+    "+%lld more meanings": {},
+    "+%lld this week": {},
+    "+%lld vs last week": {},
+    "+1 more meaning": {},
+    "/ %lldm": {},
+    "1 credit ≈ 100 characters spoken in your voice.": {},
+    "1 minute. Vary your pitch a little.": {},
+    "1 phrase saved while watching": {},
+    "1 talk today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 대화 1회"
           }
         }
       }
     },
-    "Practice language: %@" : {
-
-    },
-    "Practice these %lld cards" : {
-
-    },
-    "Practice this card" : {
-
-    },
-    "Preview %@" : {
-
-    },
-    "Previous selection" : {
-
-    },
-    "Prices load from the App Store — not available yet in this build." : {
-
-    },
-    "Profile & settings" : {
-
-    },
-    "Progress" : {
-
-    },
-    "Pronunciation" : {
-
-    },
-    "Pulling examples from your life…" : {
-
-    },
-    "Purchase failed" : {
-
-    },
-    "Quirks, preferences, anything that helps me sound like you" : {
-
-    },
-    "Rather just fill in a form?" : {
-
-    },
-    "Rating" : {
-
-    },
-    "Re-assessing your level now…" : {
-
-    },
-    "Re-record" : {
-
-    },
-    "Re-record your voice?" : {
-
-    },
-    "Read in" : {
-
-    },
-    "Read it naturally. Mistakes are fine — just keep going." : {
-
-    },
-    "Read the full report" : {
-
-    },
-    "Read whichever one feels natural — we're capturing your voice, not your reading." : {
-
-    },
-    "Ready — assessing your level now…" : {
-
-    },
-    "Ready — re-assessing your level now…" : {
-
-    },
-    "Record again" : {
-
-    },
-    "Record here." : {
-
-    },
-    "Record your voice again?" : {
-
-    },
-    "Redeem" : {
-
-    },
-    "Refresh" : {
-
-    },
-    "Refresh stories" : {
-
-    },
-    "Relationship (e.g. Best friend, Kita parent, Manager)" : {
-
-    },
-    "Remember this when" : {
-
-    },
-    "Remove from saved lines" : {
-
-    },
-    "Renamed on this device only" : {
-
-    },
-    "Repeat your fluent self's lines from this talk." : {
-
-    },
-    "Replay" : {
-
-    },
-    "Replay anytime" : {
-
-    },
-    "Replay onboarding?" : {
-
-    },
-    "Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation." : {
-
-    },
-    "Reports compare week-over-week, so we wait until there's enough new material." : {
-
-    },
-    "Reps" : {
-
-    },
-    "Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person." : {
-
-    },
-    "Reset" : {
-
-    },
-    "Restart" : {
-
-    },
-    "Restore purchases" : {
-
-    },
-    "Retry" : {
-
-    },
-    "Review" : {
-
-    },
-    "Review %lld cards" : {
-
-    },
-    "Review %lld grammar %@ from this talk" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Review %1$lld grammar %2$@ from this talk"
+    "1×": {},
+    "<": {},
+    ">": {},
+    "A quick active-recall run through this talk's saved phrases.": {},
+    "A voice for the other person. Add people under Watch to have someone specific play the scene.": {},
+    "About half a minute.": {},
+    "About them": {},
+    "About you": {},
+    "Account": {},
+    "Across skills": {},
+    "Activity": {},
+    "Add a language": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어 추가"
           }
         }
       }
     },
-    "Review 1 card" : {
-
-    },
-    "Reviewing your saved words, drills, and dialogues stays free during the beta." : {
-
-    },
-    "Rhythm" : {
-
-    },
-    "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." : {
-
-    },
-    "Same bands as “How this is assessed” — tap a skill for its measured numbers." : {
-
-    },
-    "Save" : {
-
-    },
-    "Save %lld%% vs monthly" : {
-
-    },
-    "Save conversation" : {
-
-    },
-    "Save line" : {
-
-    },
-    "Save phrase" : {
-
-    },
-    "Save to expressions" : {
-
-    },
-    "Saved" : {
-
-    },
-    "Saved to expressions" : {
-
-    },
-    "Saving wraps up the talk and keeps the transcript, feedback, and drills." : {
-
-    },
-    "Say it better" : {
-
-    },
-    "Say it out loud, then tap the card to check" : {
-
-    },
-    "Scenario" : {
-
-    },
-    "Scenarios" : {
-
-    },
-    "Score" : {
-
-    },
-    "Scorecard" : {
-
-    },
-    "See plans" : {
-
-    },
-    "Selected: %@ / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Selected: %1$@ / %2$@"
+    "Add category": {},
+    "Add interests": {},
+    "Add someone from your real life — their cloned voice can act out any scenario you build.": {},
+    "Add your own (comma-separated)": {},
+    "After you end a conversation, the corrections it surfaces show up here grouped by session.": {},
+    "All scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 상황"
           }
         }
       }
     },
-    "Send" : {
-
-    },
-    "Setting the scene…" : {
-
-    },
-    "Settings" : {
-
-    },
-    "Shadow" : {
-
-    },
-    "shadow %lld" : {
-
-    },
-    "shadow +%lld" : {
-
-    },
-    "Shadow avg %lld this week" : {
-
-    },
-    "Shadow this" : {
-
-    },
-    "Shadow this conversation" : {
-
-    },
-    "Shadow this line" : {
-
-    },
-    "Shadowing" : {
-
-    },
-    "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does." : {
-
-    },
-    "Share invite" : {
-
-    },
-    "Shared context, memories, inside jokes" : {
-
-    },
-    "Sharpen it" : {
-
-    },
-    "Sign out" : {
-
-    },
-    "Sign out & go back" : {
-
-    },
-    "Sign out?" : {
-
-    },
-    "Situation ideas" : {
-
-    },
-    "Skip" : {
-
-    },
-    "Skip sign-in (debug)" : {
-
-    },
-    "Something went wrong" : {
-
-    },
-    "Sorting it out…" : {
-
-    },
-    "Source" : {
-
-    },
-    "Specific enough — %@ it, or tap a breadcrumb to explore more." : {
-
-    },
-    "Speed" : {
-
-    },
-    "Start" : {
-
-    },
-    "Start a new conversation" : {
-
-    },
-    "Start over" : {
-
-    },
-    "Start practicing" : {
-
-    },
-    "Start talking" : {
-
-    },
-    "Starting level" : {
-
-    },
-    "Starting your conversation…" : {
-
-    },
-    "Stay" : {
-
-    },
-    "Stop" : {
-
-    },
-    "Stop & review" : {
-
-    },
-    "Stop dictation" : {
-
-    },
-    "Stop playback" : {
-
-    },
-    "Stop preview" : {
-
-    },
-    "Stop your recording" : {
-
-    },
-    "Studied %@" : {
-
-    },
-    "Studied, then said" : {
-
-    },
-    "Study record" : {
-
-    },
-    "Studying" : {
-
-    },
-    "Studying this word" : {
-
-    },
-    "Style (e.g. Direct, loves jokes / Formal, careful)" : {
-
-    },
-    "Suggested for you" : {
-
-    },
-    "Take your AirPods out before recording" : {
-
-    },
-    "Talk" : {
-
-    },
-    "Talk %lld more minutes and this level gets re-read from everything new you've said." : {
-
-    },
-    "Talk mastered" : {
-
-    },
-    "Talk now" : {
-
-    },
-    "Talking with" : {
-
-    },
-    "Talks get more real when I know your life." : {
-
-    },
-    "Tap ▶ to hear a sample in %@." : {
-
-    },
-    "Tap a category — the composer suggests specific scenarios you can watch." : {
-
-    },
-    "Tap a line to shadow it in your own voice. Score %lld+ and it's mastered." : {
-
-    },
-    "Tap a word in the cloud to start your notebook" : {
-
-    },
-    "Tap End session after a conversation and it'll show up here." : {
-
-    },
-    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice." : {
-
-    },
-    "Tap one to fill your scenario above, then edit it freely." : {
-
-    },
-    "Tap Refresh to generate scenarios." : {
-
-    },
-    "Tap someone — situations with them, in their voice." : {
-
-    },
-    "Tap to reveal" : {
-
-    },
-    "Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”." : {
-
-    },
-    "Tap to toggle. Or type your own and hit return." : {
-
-    },
-    "Target line" : {
-
-    },
-    "Tell me about them" : {
-
-    },
-    "Tell me more about you" : {
-
-    },
-    "Thank you" : {
-
-    },
-    "Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free." : {
-
-    },
-    "That's your session" : {
-
-    },
-    "The avatar will play this role. You practice your side." : {
-
-    },
-    "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead." : {
-
-    },
-    "The curriculum and its progress go with it." : {
-
-    },
-    "The estimated level" : {
-
-    },
-    "The fluent versions of your own sentences from this talk. Shadow one in your voice — score %lld+ and it's mastered." : {
-
-    },
-    "The more you share, the more I'll sound like a version of you — not a textbook." : {
-
-    },
-    "The real thing coming up — an interview, a call, a visit. Describe it, watch it handled." : {
-
-    },
-    "The situation" : {
-
-    },
-    "The situations you've built — every watch writes a fresh take. Past takes live in Practice." : {
-
-    },
-    "Their name — as you call them" : {
-
-    },
-    "Theme" : {
-
-    },
-    "These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice." : {
-
-    },
-    "thing you studied has come out of your mouth in a real conversation" : {
-
-    },
-    "things you studied have come out of your mouth in a real conversation" : {
-
-    },
-    "Thinking of situations with them…" : {
-
-    },
-    "This conversation isn't saved yet" : {
-
-    },
-    "This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions." : {
-
-    },
-    "This person has been deleted" : {
-
-    },
-    "This signs you out. Your answers stay on this device." : {
-
-    },
-    "Time speaking" : {
-
-    },
-    "To reach %@" : {
-
-    },
-    "Transcript" : {
-
-    },
-    "Trend" : {
-
-    },
-    "Try again" : {
-
-    },
-    "Try saying" : {
-
-    },
-    "Type a topic" : {
-
-    },
-    "Unarchive" : {
-
-    },
-    "Unlimited credits" : {
-
-    },
-    "Unsave" : {
-
-    },
-    "Use this topic" : {
-
-    },
-    "Use this voice" : {
-
-    },
-    "Used %lld time%@ · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Used %1$lld time%2$@ · %3$@"
+    "Already have an account? Sign in": {},
+    "Always free": {},
+    "Analyzing your week…": {},
+    "Answer in": {},
+    "Anything else": {},
+    "Anything else (optional)": {},
+    "Anything specific?": {},
+    "Appearance": {},
+    "Archive": {},
+    "Archived": {},
+    "Assessed %@ from your recent talk — vocabulary, grammar, fluency and expression together.": {},
+    "Assessed %@ — a while back. Your next talks feed a fresh assessment.": {},
+    "Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together.": {},
+    "Assessed level": {},
+    "Assessing your level from everything you've said…": {},
+    "Assessment": {},
+    "Back": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
           }
         }
       }
     },
-    "Uses credits" : {
-
-    },
-    "View" : {
-
-    },
-    "Vocabulary growth" : {
-
-    },
-    "Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length." : {
-
-    },
-    "vocabulary level" : {
-
-    },
-    "Voice" : {
-
-    },
-    "Voice name" : {
-
-    },
-    "voiced by %@" : {
-
-    },
-    "Watch" : {
-
-    },
-    "Watch the scene, study its words and expressions, shadow your lines, then Talk it live." : {
-
-    },
-    "Watch uses this text — edit it freely." : {
-
-    },
-    "Watching" : {
-
-    },
-    "We boost the level on upload — clarity matters more than loudness." : {
-
-    },
-    "We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot." : {
-
-    },
-    "We'll remind you before your trial ends." : {
-
-    },
-    "Welcome to the beta" : {
-
-    },
-    "What each day was made of — talk turns, shadow takes, drill reviews." : {
-
-    },
-    "What I heard" : {
-
-    },
-    "What I noticed lately" : {
-
-    },
-    "What never moves the level" : {
-
-    },
-    "What should I call you?" : {
-
-    },
-    "What to practice" : {
-
-    },
-    "What uses credits?" : {
-
-    },
-    "What you do" : {
-
-    },
-    "What you usually talk about" : {
-
-    },
-    "What's measured" : {
-
-    },
-    "What's your native language?" : {
-
-    },
-    "When do you most need %@?" : {
-
-    },
-    "When you run low" : {
-
-    },
-    "Where" : {
-
-    },
-    "Where they live, what they do" : {
-
-    },
-    "Where you live" : {
-
-    },
-    "Which language do you want to speak?" : {
-
-    },
-    "Which language next?" : {
-
-    },
-    "Who" : {
-
-    },
-    "Who you live with (optional)" : {
-
-    },
-    "Who you're talking to" : {
-
-    },
-    "Why this level" : {
-
-    },
-    "with %@" : {
-
-    },
-    "With %@" : {
-
-    },
-    "Word starts, speed-matched — orange landed off the target's beat." : {
-
-    },
-    "words" : {
-
-    },
-    "Words" : {
-
-    },
-    "Words you use, by level" : {
-
-    },
-    "Wrapping up your session…" : {
-
-    },
-    "Writing the dialogue…" : {
-
-    },
-    "Writing this scenario's scene…" : {
-
-    },
-    "Writing this scene…" : {
-
-    },
-    "You" : {
-
-    },
-    "You · %lld" : {
-
-    },
-    "You and your friend each get 300 credits when they join with your code — for up to 10 friends." : {
-
-    },
-    "You finished %lld card%@. They'll surface again on the Leitner schedule." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "You finished %1$lld card%2$@. They'll surface again on the Leitner schedule."
+    "Back to the welcome screen?": {},
+    "Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it.": {},
+    "Billing": {},
+    "Billing period": {},
+    "Book mastered": {},
+    "Bookmark a line from shadow practice and it'll live here for repeat reps.": {},
+    "Build a scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황 만들기"
           }
         }
       }
     },
-    "You used what you practiced" : {
-
-    },
-    "You, but fluent" : {
-
-    },
-    "You'll both get 300 credits when you sign in." : {
-
-    },
-    "You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one." : {
-
-    },
-    "You're about to build your fluent self — another you that already speaks fluent %@. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk." : {
-
-    },
-    "You're already learning every language we support today. More are on the way." : {
-
-    },
-    "You're in" : {
-
-    },
-    "You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step." : {
-
-    },
-    "You're out of credits, so your future self can't reply." : {
-
-    },
-    "Your %@" : {
-
-    },
-    "Your answers go straight to the team building nawana." : {
-
-    },
-    "Your CEFR level shapes each conversation. The daily goal drives the ring on Home." : {
-
-    },
-    "Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Your cloned voice already speaks %1$@ — no new recording needed. Your %2$@ progress stays untouched."
+    "Build it from a category below, type it, or say it with the mic — then %@ it.": {},
+    "Build new": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 만들기"
           }
         }
       }
     },
-    "Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime." : {
-
+    "Build your first scenario": {},
+    "Building scenarios for %@…": {},
+    "Can't record now? No rush — this will wait.": {},
+    "Cancel": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        }
+      }
     },
-    "Your code" : {
-
+    "Captured automatically from what you say. Mark the ones you've got down as known.": {},
+    "Cards done — now say it out loud": {},
+    "Cards from this talk": {},
+    "Category name (e.g. Landlord, Gym)": {},
+    "City": {},
+    "Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.": {},
+    "Cloning your voice…": {},
+    "Close": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
     },
-    "Your current clone will be deleted on ElevenLabs after the new one is created." : {
-
+    "Close without saving": {},
+    "Coach's note": {},
+    "Continue": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        }
+      }
     },
-    "Your feedback" : {
-
+    "Couldn't delete account": {},
+    "Couldn't get a response.": {},
+    "Couldn't play audio": {},
+    "Couldn't rebuild your voice": {},
+    "Couldn't write the scene": {},
+    "Country": {},
+    "Credits left": {},
+    "Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever.": {},
+    "Credits power voice synthesis and AI replies. Invite friends to earn more.": {},
+    "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.": {},
+    "Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more.": {},
+    "Day": {},
+    "Debug builds only. Routes back through the first-run setup flow.": {},
+    "Delete": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        }
+      }
     },
-    "Your feedback goes straight to the person building this." : {
-
+    "Delete account": {},
+    "Delete forever": {},
+    "Delete talk": {},
+    "Delete this scenario?": {},
+    "Delete this talk?": {},
+    "Delete your account?": {},
+    "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too.": {},
+    "Describe the situation": {},
+    "Developer": {},
+    "Dictate": {},
+    "Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level.": {},
+    "Distinct graded words you've used, accumulating from the day each was first said.": {},
+    "Distinct words from your talks in the last %lld days.": {},
+    "Doesn't sound like you? Record again": {},
+    "Done": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
     },
-    "Your first assessment unlocks after %lld minutes of talk." : {
-
+    "Drill next": {},
+    "Drills": {},
+    "Drills appear here after you end a conversation.": {},
+    "Edit": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "편집"
+          }
+        }
+      }
     },
-    "Your first report unlocks after %lld minutes of practice." : {
-
+    "Edit interests": {},
+    "Edit persona": {},
+    "End": {},
+    "Enter a friend's code once to get 300 bonus credits.": {},
+    "Enter invite code": {},
+    "Estimated from %lld distinct words you've used in the last %lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Estimated from %1$lld distinct words you've used in the last %2$lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever."
+          }
+        }
+      }
     },
-    "Your fluent self is ready" : {
-
+    "Estimated level": {},
+    "Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete.": {},
+    "Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours.": {},
+    "Everything in this scenario is yours now.": {},
+    "Everything nawana does, fueled up — in your own voice.": {},
+    "Everything this conversation had to teach is yours.": {},
+    "Examples & variants": {},
+    "Excluded from scoring — marked as misheard": {},
+    "Explain in my language": {},
+    "Explanations and translations come in this language.": {},
+    "Expressions": {},
+    "Expressions you used": {},
+    "Expressions you've used": {},
+    "Feedback": {},
+    "Filing this under a category…": {},
+    "Filter": {},
+    "Finding scenarios from your life…": {},
+    "Finding scenarios…": {},
+    "Finding stories…": {},
+    "Finish a conversation, then come back to shadow any line your fluent self said.": {},
+    "Finished books. They keep their progress — unarchive anytime.": {},
+    "Free": {},
+    "Free notes — quirks, recent events, anything that helps": {},
+    "Friends joined": {},
+    "From scenarios": {},
+    "From your recent sessions": {},
+    "Future Self": {},
+    "Future self": {},
+    "Future self is the pixel surface behind every call button — tap a theme to feel it.": {},
+    "Future self is thinking…": {},
+    "Future self · %lld": {},
+    "Generate scenarios for %@": {},
+    "Get started": {},
+    "Goal": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목표"
+          }
+        }
+      }
     },
-    "Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup." : {
-
+    "Good. %llds more for the cleanest clone": {},
+    "Grammar": {},
+    "Grammar review": {},
+    "Grounded in your profile — name, city, work, family, interests.": {},
+    "Grounded in your relationship with %@ — these appear as ideas when you tap them on the Watch tab.": {},
+    "Growth": {},
+    "Have a code?": {},
+    "Have a few conversations and I'll estimate your level and break down how your %@ is developing.": {},
+    "Have an invite code?": {},
+    "Hear it again": {},
+    "Hear my attempt": {},
+    "Hear target": {},
+    "Hear yourself": {},
+    "Help set the price": {},
+    "Hide": {},
+    "Hide meaning": {},
+    "Hide words I know": {},
+    "Highlighted words are worth picking up — tap one to check it out.": {},
+    "History": {},
+    "Honestly, it went really well. I felt prepared.": {},
+    "How comfortable are you right now?": {},
+    "How it's assessed": {},
+    "How long have you been there? (optional)": {},
+    "How long? (optional)": {},
+    "How they talk": {},
+    "How this is assessed": {},
+    "How to improve": {},
+    "How to level up": {},
+    "How you met (and how long)": {},
+    "Ideas with %@": {},
+    "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't.": {},
+    "In your own words (optional) — e.g. switches to English when excited": {},
+    "Interests": {},
+    "Invite & credits": {},
+    "Invite code": {},
+    "Keep going — %llds more for a usable clone": {},
+    "Keep my current voice": {},
+    "Keep studying this word": {},
+    "Keep this voice": {},
+    "Kind": {},
+    "Language": {},
+    "Languages": {},
+    "Last talk": {},
+    "Later": {},
+    "Latest assessment": {},
+    "Learning": {},
+    "Let's talk": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화하기"
+          }
+        }
+      }
     },
-    "Your fluent self wants to know you" : {
-
+    "Let's talk — start a call": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화하기 — 통화 시작"
+          }
+        }
+      }
     },
-    "Your future self used these; you haven't yet. Tap one to study it — or mark it as known." : {
-
+    "Level": {},
+    "Likely situations": {},
+    "Listen": {},
+    "Listen to your recording": {},
+    "Listening — tap to finish": {},
+    "Load stories": {},
+    "Looking it up…": {},
+    "Make your own situation": {},
+    "Mark as known": {},
+    "Mark as mastered": {},
+    "Marked as known": {},
+    "Mastered": {},
+    "Me": {},
+    "Meaning": {},
+    "Microphone access needed": {},
+    "Minutes": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분"
+          }
+        }
+      }
     },
-    "Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level." : {
-
+    "Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.": {},
+    "Misheard": {},
+    "Misheard — exclude from scoring": {},
+    "More": {},
+    "More natural": {},
+    "More natural alternatives": {},
+    "More precisely? — e.g. College roommate": {},
+    "Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions.": {},
+    "My expressions · %lld": {},
+    "My words · %lld": {},
+    "Name": {},
+    "Names your clone here and on ElevenLabs. Leave it empty to go back to the default.": {},
+    "Narrow it down": {},
+    "New": {},
+    "New here? Get started instead": {},
+    "New person": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람 추가"
+          }
+        }
+      }
     },
-    "Your history together" : {
-
+    "New persona": {},
+    "New scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 상황"
+          }
+        }
+      }
     },
-    "Your interests" : {
-
+    "New words": {},
+    "Next": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        }
+      }
     },
-    "Your invite code" : {
-
+    "Next assessment": {},
+    "Next assessment after %lld more min of new talk.": {},
+    "Next assessment in %lld day%@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Next assessment in %1$lld day%2$@."
+          }
+        }
+      }
     },
-    "Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after %lld minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level." : {
-
+    "Next report in %lldd · %lld more minutes of practice.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Next report in %1$lldd · %2$lld more minutes of practice."
+          }
+        }
+      }
     },
-    "Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session." : {
-
+    "Nice work": {},
+    "No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?": {},
+    "No dictionary entry yet — tap to open the card.": {},
+    "No drills due": {},
+    "No practice this day.": {},
+    "No progress yet": {},
+    "No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.": {},
+    "No saved lines": {},
+    "No session cards yet": {},
+    "No sessions yet": {},
+    "No streak yet": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 연속 기록 없음"
+          }
+        }
+      }
     },
-    "Your level is re-assessed regularly. The next assessment needs both:" : {
-
+    "No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing.": {},
+    "No talk yet today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘은 아직 대화 전이에요"
+          }
+        }
+      }
     },
-    "Your level, one point per assessment — this line is what growing looks like." : {
-
+    "Not happy with a take? You can re-record.": {},
+    "Not now": {},
+    "Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.": {},
+    "Note": {},
+    "Nothing in progress": {},
+    "Nothing to shadow yet": {},
+    "Nutrition": {},
+    "OK": {},
+    "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book.": {},
+    "Open": {},
+    "Open Settings": {},
+    "Open to review": {},
+    "Open to start": {},
+    "Opens the full card": {},
+    "Optional — pick a chip to go deeper, or hit Watch with what you have.": {},
+    "Optional — what's the situation about?": {},
+    "Or a generic role:": {},
+    "Or describe one yourself": {},
+    "Or describe where (custom)…": {},
+    "Or describe who (custom)…": {},
+    "Overall": {},
+    "Past attempts": {},
+    "Past dialogues": {},
+    "Pause": {},
+    "People": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람"
+          }
+        }
+      }
     },
-    "Your match" : {
-
+    "Pick a category": {},
+    "Pick a scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황 고르기"
+          }
+        }
+      }
     },
-    "Your name" : {
-
+    "Pick a voice, or one of your people to have them play the scene as themselves.": {},
+    "Pick an area to go one step deeper — or type your own above.": {},
+    "Pick your pace": {},
+    "Planned launch pricing — final prices confirm on the App Store at launch.": {},
+    "Play": {},
+    "Play what you said": {},
+    "Play your recording": {},
+    "Plenty for a great clone — stop whenever you're ready": {},
+    "Practice": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습"
+          }
+        }
+      }
     },
-    "Your own" : {
-
+    "Practice language: %@": {},
+    "Practice these %lld cards": {},
+    "Practice this card": {},
+    "Preview %@": {},
+    "Previous selection": {},
+    "Prices load from the App Store — not available yet in this build.": {},
+    "Profile & settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필 및 설정"
+          }
+        }
+      }
     },
-    "Your people" : {
-
+    "Progress": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성장"
+          }
+        }
+      }
     },
-    "Your persona plays this scene in their own voice." : {
-
+    "Pronunciation": {},
+    "Pulling examples from your life…": {},
+    "Purchase failed": {},
+    "Quirks, preferences, anything that helps me sound like you": {},
+    "Rather just fill in a form?": {},
+    "Rating": {},
+    "Re-assessing your level now…": {},
+    "Re-record": {},
+    "Re-record your voice?": {},
+    "Read in": {},
+    "Read it naturally. Mistakes are fine — just keep going.": {},
+    "Read the full report": {},
+    "Read whichever one feels natural — we're capturing your voice, not your reading.": {},
+    "Ready — assessing your level now…": {},
+    "Ready — re-assessing your level now…": {},
+    "Record again": {},
+    "Record here.": {},
+    "Record your voice again?": {},
+    "Redeem": {},
+    "Refresh": {},
+    "Refresh stories": {},
+    "Relationship (e.g. Best friend, Kita parent, Manager)": {},
+    "Remember this when": {},
+    "Remove from saved lines": {},
+    "Renamed on this device only": {},
+    "Repeat your fluent self's lines from this talk.": {},
+    "Replay": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 듣기"
+          }
+        }
+      }
     },
-    "Your practice data stays on this device. Your voice clone and credits stay with your account." : {
-
+    "Replay anytime": {},
+    "Replay onboarding?": {},
+    "Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation.": {},
+    "Reports compare week-over-week, so we wait until there's enough new material.": {},
+    "Reps": {},
+    "Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person.": {},
+    "Reset": {},
+    "Restart": {},
+    "Restore purchases": {},
+    "Retry": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시도"
+          }
+        }
+      }
     },
-    "Your scenario" : {
-
+    "Review": {},
+    "Review %lld cards": {},
+    "Review %lld grammar %@ from this talk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Review %1$lld grammar %2$@ from this talk"
+          }
+        }
+      }
     },
-    "Your scenarios" : {
-
+    "Review 1 card": {},
+    "Reviewing your saved words, drills, and dialogues stays free during the beta.": {},
+    "Rhythm": {},
+    "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time.": {},
+    "Same bands as “How this is assessed” — tap a skill for its measured numbers.": {},
+    "Save": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
+          }
+        }
+      }
     },
-    "Your situation" : {
-
+    "Save %lld%% vs monthly": {},
+    "Save conversation": {},
+    "Save line": {},
+    "Save phrase": {},
+    "Save to expressions": {},
+    "Saved": {},
+    "Saved to expressions": {},
+    "Saving wraps up the talk and keeps the transcript, feedback, and drills.": {},
+    "Say it better": {},
+    "Say it out loud, then tap the card to check": {},
+    "Scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황"
+          }
+        }
+      }
     },
-    "Your situation so far" : {
-
+    "Scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황"
+          }
+        }
+      }
     },
-    "Your subscription is active. Credits land on your account as soon as Apple confirms the purchase." : {
-
-    }
+    "Score": {},
+    "Scorecard": {},
+    "See plans": {},
+    "Selected: %@ / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Selected: %1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Send": {},
+    "Setting the scene…": {},
+    "Settings": {},
+    "Shadow": {},
+    "Shadow avg %lld this week": {},
+    "Shadow this": {},
+    "Shadow this conversation": {},
+    "Shadow this line": {},
+    "Shadowing": {},
+    "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.": {},
+    "Share invite": {},
+    "Shared context, memories, inside jokes": {},
+    "Sharpen it": {},
+    "Sign out": {},
+    "Sign out & go back": {},
+    "Sign out?": {},
+    "Situation ideas": {},
+    "Skip": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        }
+      }
+    },
+    "Skip sign-in (debug)": {},
+    "Something went wrong": {},
+    "Sorting it out…": {},
+    "Source": {},
+    "Specific enough — %@ it, or tap a breadcrumb to explore more.": {},
+    "Speed": {},
+    "Start": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
+          }
+        }
+      }
+    },
+    "Start a new conversation": {},
+    "Start over": {},
+    "Start practicing": {},
+    "Start talking": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 시작"
+          }
+        }
+      }
+    },
+    "Starting level": {},
+    "Starting your conversation…": {},
+    "Stay": {},
+    "Stop": {},
+    "Stop & review": {},
+    "Stop dictation": {},
+    "Stop playback": {},
+    "Stop preview": {},
+    "Stop your recording": {},
+    "Studied %@": {},
+    "Studied, then said": {},
+    "Study record": {},
+    "Studying": {},
+    "Studying this word": {},
+    "Style (e.g. Direct, loves jokes / Formal, careful)": {},
+    "Suggested for you": {},
+    "Take your AirPods out before recording": {},
+    "Talk": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화"
+          }
+        }
+      }
+    },
+    "Talk %lld more minutes and this level gets re-read from everything new you've said.": {},
+    "Talk mastered": {},
+    "Talk now": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 대화하기"
+          }
+        }
+      }
+    },
+    "Talking with": {},
+    "Talks get more real when I know your life.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "당신의 일상을 알수록 대화가 진짜에 가까워져요."
+          }
+        }
+      }
+    },
+    "Tap End session after a conversation and it'll show up here.": {},
+    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.": {},
+    "Tap Refresh to generate scenarios.": {},
+    "Tap a category — the composer suggests specific scenarios you can watch.": {},
+    "Tap a line to shadow it in your own voice. Score %lld+ and it's mastered.": {},
+    "Tap a word in the cloud to start your notebook": {},
+    "Tap one to fill your scenario above, then edit it freely.": {},
+    "Tap someone — situations with them, in their voice.": {},
+    "Tap to reveal": {},
+    "Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.": {},
+    "Tap to toggle. Or type your own and hit return.": {},
+    "Tap ▶ to hear a sample in %@.": {},
+    "Target line": {},
+    "Tell me about them": {},
+    "Tell me more about you": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나에 대해 더 알려주기"
+          }
+        }
+      }
+    },
+    "Thank you": {},
+    "Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free.": {},
+    "That's your session": {},
+    "The avatar will play this role. You practice your side.": {},
+    "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.": {},
+    "The curriculum and its progress go with it.": {},
+    "The estimated level": {},
+    "The fluent versions of your own sentences from this talk. Shadow one in your voice — score %lld+ and it's mastered.": {},
+    "The more you share, the more I'll sound like a version of you — not a textbook.": {},
+    "The real thing coming up — an interview, a call, a visit. Describe it, watch it handled.": {},
+    "The situation": {},
+    "The situations you've built — every watch writes a fresh take. Past takes live in Practice.": {},
+    "Their name — as you call them": {},
+    "Theme": {},
+    "These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice.": {},
+    "Thinking of situations with them…": {},
+    "This conversation isn't saved yet": {},
+    "This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.": {},
+    "This person has been deleted": {},
+    "This signs you out. Your answers stay on this device.": {},
+    "Time speaking": {},
+    "To reach %@": {},
+    "Transcript": {},
+    "Trend": {},
+    "Try again": {},
+    "Try saying": {},
+    "Type a topic": {},
+    "Unarchive": {},
+    "Unlimited credits": {},
+    "Unsave": {},
+    "Use this topic": {},
+    "Use this voice": {},
+    "Used %lld time%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Used %1$lld time%2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Uses credits": {},
+    "View": {},
+    "Vocabulary growth": {},
+    "Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.": {},
+    "Voice": {},
+    "Voice name": {},
+    "Watch": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미리보기"
+          }
+        }
+      }
+    },
+    "Watch the scene, study its words and expressions, shadow your lines, then Talk it live.": {},
+    "Watch uses this text — edit it freely.": {},
+    "Watching": {},
+    "We boost the level on upload — clarity matters more than loudness.": {},
+    "We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot.": {},
+    "We'll remind you before your trial ends.": {},
+    "Welcome to the beta": {},
+    "What I heard": {},
+    "What I noticed lately": {},
+    "What each day was made of — talk turns, shadow takes, drill reviews.": {},
+    "What never moves the level": {},
+    "What should I call you?": {},
+    "What to practice": {},
+    "What uses credits?": {},
+    "What you do": {},
+    "What you usually talk about": {},
+    "What's measured": {},
+    "What's your native language?": {},
+    "When do you most need %@?": {},
+    "When you run low": {},
+    "Where": {},
+    "Where they live, what they do": {},
+    "Where you live": {},
+    "Which language do you want to speak?": {},
+    "Which language next?": {},
+    "Who": {},
+    "Who you live with (optional)": {},
+    "Who you're talking to": {},
+    "Why this level": {},
+    "With %@": {},
+    "Word starts, speed-matched — orange landed off the target's beat.": {},
+    "Words": {},
+    "Words you use, by level": {},
+    "Wrapping up your session…": {},
+    "Writing the dialogue…": {},
+    "Writing this scenario's scene…": {},
+    "Writing this scene…": {},
+    "You": {},
+    "You and your friend each get 300 credits when they join with your code — for up to 10 friends.": {},
+    "You finished %lld card%@. They'll surface again on the Leitner schedule.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "You finished %1$lld card%2$@. They'll surface again on the Leitner schedule."
+          }
+        }
+      }
+    },
+    "You used what you practiced": {},
+    "You · %lld": {},
+    "You'll both get 300 credits when you sign in.": {},
+    "You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one.": {},
+    "You're about to build your fluent self — another you that already speaks fluent %@. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.": {},
+    "You're already learning every language we support today. More are on the way.": {},
+    "You're in": {},
+    "You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step.": {},
+    "You're out of credits, so your future self can't reply.": {},
+    "You, but fluent": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창해진 나"
+          }
+        }
+      }
+    },
+    "Your %@": {},
+    "Your CEFR level shapes each conversation. The daily goal drives the ring on Home.": {},
+    "Your answers go straight to the team building nawana.": {},
+    "Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Your cloned voice already speaks %1$@ — no new recording needed. Your %2$@ progress stays untouched."
+          }
+        }
+      }
+    },
+    "Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime.": {},
+    "Your code": {},
+    "Your current clone will be deleted on ElevenLabs after the new one is created.": {},
+    "Your feedback": {},
+    "Your feedback goes straight to the person building this.": {},
+    "Your first assessment unlocks after %lld minutes of talk.": {},
+    "Your first report unlocks after %lld minutes of practice.": {},
+    "Your fluent self is ready": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 기다리고 있어요"
+          }
+        }
+      }
+    },
+    "Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.": {},
+    "Your fluent self wants to know you": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 당신을 알고 싶어 해요"
+          }
+        }
+      }
+    },
+    "Your future self used these; you haven't yet. Tap one to study it — or mark it as known.": {},
+    "Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.": {},
+    "Your history together": {},
+    "Your interests": {},
+    "Your invite code": {},
+    "Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after %lld minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.": {},
+    "Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session.": {},
+    "Your level is re-assessed regularly. The next assessment needs both:": {},
+    "Your level, one point per assessment — this line is what growing looks like.": {},
+    "Your match": {},
+    "Your name": {},
+    "Your own": {},
+    "Your people": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 사람들"
+          }
+        }
+      }
+    },
+    "Your persona plays this scene in their own voice.": {},
+    "Your practice data stays on this device. Your voice clone and credits stay with your account.": {},
+    "Your scenario": {},
+    "Your scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 상황"
+          }
+        }
+      }
+    },
+    "Your situation": {},
+    "Your situation so far": {},
+    "Your subscription is active. Credits land on your account as soon as Apple confirms the purchase.": {},
+    "e.g. Boram tells me she's moving back to Seoul": {},
+    "e.g. Lufthansa cabin-crew interview next week — I want to rehearse it": {},
+    "e.g. Running into them at the wedding and catching up": {},
+    "e.g. Solo founder of an AI app for parents": {},
+    "e.g. Wife and 4yo daughter at Kita": {},
+    "e.g. “%@”": {},
+    "full line": {},
+    "less": {},
+    "loop %@–%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "loop %1$@–%2$@"
+          }
+        }
+      }
+    },
+    "mastered": {},
+    "more": {},
+    "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.": {},
+    "no timings": {},
+    "phrases": {},
+    "shadow %lld": {},
+    "shadow +%lld": {},
+    "thing you studied has come out of your mouth in a real conversation": {},
+    "things you studied have come out of your mouth in a real conversation": {},
+    "vocabulary level": {},
+    "voiced by %@": {},
+    "with %@": {},
+    "words": {},
+    "·": {},
+    "×%lld": {},
+    "—": {},
+    "“%@”": {},
+    "•": {},
+    "…": {},
+    "→ %@": {},
+    "≈ %lld min of conversation a day": {},
+    "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed.": {},
+    "😀": {}
   },
-  "version" : "1.0"
+  "version": "1.0"
 }
