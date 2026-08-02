@@ -517,7 +517,7 @@ struct ConversationHome: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Your fluent self is ready", systemImage: "waveform")
                 .font(.subheadline.weight(.semibold))
-            Text("Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.")
+            Text(explain("Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

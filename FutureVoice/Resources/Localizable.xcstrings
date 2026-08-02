@@ -1050,7 +1050,16 @@
       }
     },
     "Tap End session after a conversation and it'll show up here.": {},
-    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.": {},
+    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래의 Let's talk — 또는 상황이나 뉴스 — 를 눌러 첫 대화를 시작하세요. 여기서 만난 건 전부 Practice에 복습거리로 쌓입니다."
+          }
+        }
+      }
+    },
     "Tap Refresh to generate scenarios.": {},
     "Tap a category — the composer suggests specific scenarios you can watch.": {},
     "Tap a line to shadow it in your own voice. Score %lld+ and it's mastered.": {},
