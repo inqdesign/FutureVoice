@@ -72,6 +72,8 @@ Two cases that look like exceptions but aren't:
 
 `explain()` is the ONLY marker — an unwrapped literal is chrome by default. When adding UI text, ask "does the learner have to parse this to act, or do they recognize it by shape?" Parse → `explain()`. Recognize → plain `Text`.
 
+**Refreshing the catalog:** a plain `xcodebuild build` does NOT write newly-added strings back into `Localizable.xcstrings` — it only compiles what's already there. Run `xcodebuild -exportLocalizations -localizationPath <tmp> -exportLanguage ko` to merge new keys in, then translate them. Skipping this is why a string can look wired up and still be missing from the catalog.
+
 Nothing here names a language. Adding German is a `de` column in the catalog — no code change. Two gaps remain: most explanatory strings are still unwrapped, and literals that flow through a `String` variable (`source = "Free talk"`, `case .words: return "Vocabulary"`) aren't `LocalizedStringKey`, so they neither extract nor localize until converted to `String(localized:)`.
 
 ## Hard rules

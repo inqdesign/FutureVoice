@@ -205,15 +205,15 @@ struct VoicePresetPickerView: View {
     /// speaker-gender agreement so any voice can say them naturally.
     static func previewLine(for languageCode: String) -> String {
         switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
-        case "es": return explain("¡Hola! Qué alegría verte. ¿Empezamos?")
-        case "de": return explain("Hallo! Schön, dich zu sehen. Sollen wir anfangen?")
-        case "fr": return explain("Bonjour ! Ça me fait plaisir de te voir. On commence ?")
-        case "it": return explain("Ciao! Che bello vederti. Iniziamo?")
-        case "pt": return explain("Oi! Que bom te ver. Vamos começar?")
+        case "es": return "¡Hola! Qué alegría verte. ¿Empezamos?"
+        case "de": return "Hallo! Schön, dich zu sehen. Sollen wir anfangen?"
+        case "fr": return "Bonjour ! Ça me fait plaisir de te voir. On commence ?"
+        case "it": return "Ciao! Che bello vederti. Iniziamo?"
+        case "pt": return "Oi! Que bom te ver. Vamos começar?"
         case "ja": return "こんにちは！会えてうれしいです。始めましょうか？"
         case "ko": return "안녕하세요! 만나서 반가워요. 시작해 볼까요?"
         case "zh": return "你好！很高兴见到你。我们开始吧？"
-        default:   return explain("Hi! It's good to see you. Shall we get started?")
+        default:   return "Hi! It's good to see you. Shall we get started?"
         }
     }
 }
