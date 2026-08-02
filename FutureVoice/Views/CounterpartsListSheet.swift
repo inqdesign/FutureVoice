@@ -29,7 +29,7 @@ struct CounterpartFormView: View {
                 } header: {
                     Text("Who")
                 } footer: {
-                    Text("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person.")
+                    Text(explain("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person."))
                 }
 
                 Section("About them") {
@@ -119,7 +119,7 @@ struct VoicePresetPickerView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else {
-                    Text("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage)).")
+                    Text(explain("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage))."))
                 }
             }
         }

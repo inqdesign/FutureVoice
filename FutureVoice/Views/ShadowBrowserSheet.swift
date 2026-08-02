@@ -98,7 +98,7 @@ private extension ShadowBrowserView {
             ContentUnavailableView(
                 "Nothing to shadow yet",
                 systemImage: "waveform.badge.mic",
-                description: Text("Finish a conversation, then come back to shadow any line your fluent self said.")
+                description: Text(explain("Finish a conversation, then come back to shadow any line your fluent self said."))
             )
         } else {
             List {

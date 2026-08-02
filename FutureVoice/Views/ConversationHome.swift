@@ -474,7 +474,7 @@ struct ConversationHome: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Your fluent self is ready", systemImage: "waveform")
                 .font(.subheadline.weight(.semibold))
-            Text("Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.")
+            Text(explain("Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -520,7 +520,7 @@ struct ConversationHome: View {
                     Text("Tell me more about you")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Text("Talks get more real when I know your life.")
+                    Text(explain("Talks get more real when I know your life."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -673,7 +673,7 @@ struct TalkScenariosListView: View {
                     }
                 }
             } footer: {
-                Text("Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete.")
+                Text(explain("Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete."))
             }
         }
         .navigationTitle("Scenarios")
@@ -742,7 +742,7 @@ struct PeopleSheet: View {
                     }
                 } else {
                     Section {
-                        Text("Add someone from your real life — their cloned voice can act out any scenario you build.")
+                        Text(explain("Add someone from your real life — their cloned voice can act out any scenario you build."))
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }
@@ -755,3 +755,4 @@ struct PeopleSheet: View {
         }
     }
 }
+

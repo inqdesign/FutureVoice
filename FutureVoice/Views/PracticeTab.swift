@@ -792,7 +792,7 @@ struct PracticeTab: View {
                 }
             }
             .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemGroupedBackground)))
-            Text("Finished books. They keep their progress — unarchive anytime.")
+            Text(explain("Finished books. They keep their progress — unarchive anytime."))
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 2)
         }
@@ -948,7 +948,7 @@ struct FinishedBooksSheet: View {   // internal: DebugCaptureHarness renders it
                     }
                 }
             } footer: {
-                Text("A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.")
+                Text(explain("A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished."))
             }
         }
         .listStyle(.insetGrouped)
@@ -989,7 +989,7 @@ struct FinishedBooksSheet: View {   // internal: DebugCaptureHarness renders it
                 .foregroundStyle(.tertiary)
             Text("Nothing finished yet")
                 .font(.headline)
-            Text("Master every word and line in a book — from a talk or a scene — and it lands here for good.")
+            Text(explain("Master every word and line in a book — from a talk or a scene — and it lands here for good."))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

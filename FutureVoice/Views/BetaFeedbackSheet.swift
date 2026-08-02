@@ -19,20 +19,20 @@ struct BetaFeedbackSheet: View {
 
         var title: String {
             switch self {
-            case .firstTalk:       return "How was your first conversation?"
-            case .firstWatch:      return "How was your first Watch?"
-            case .creditsDepleted: return "You've used all your beta credits"
+            case .firstTalk:       return explain("How was your first conversation?")
+            case .firstWatch:      return explain("How was your first Watch?")
+            case .creditsDepleted: return explain("You've used all your beta credits")
             }
         }
 
         var subtitle: String {
             switch self {
             case .firstTalk:
-                return "You just talked with your future voice. What felt right — and what felt off?"
+                return explain("You just talked with your future voice. What felt right — and what felt off?")
             case .firstWatch:
-                return "You just heard yourself handle a real situation. Did it sound like you?"
+                return explain("You just heard yourself handle a real situation. Did it sound like you?")
             case .creditsDepleted:
-                return "That means you really tested it — thank you. Before anything else: what should we fix first?"
+                return explain("That means you really tested it — thank you. Before anything else: what should we fix first?")
             }
         }
     }
@@ -112,7 +112,7 @@ struct BetaFeedbackSheet: View {
             .alert("Thank you", isPresented: $sent) {
                 Button("Done") { dismiss() }
             } message: {
-                Text("Your feedback goes straight to the person building this.")
+                Text(explain("Your feedback goes straight to the person building this."))
             }
         }
         .presentationDetents([.medium, .large])

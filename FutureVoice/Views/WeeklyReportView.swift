@@ -174,13 +174,13 @@ struct WeeklyReportView: View {
             let doneMin = Int(accumulated / 60)
             let totalMin = Int(required / 60)
             VStack(alignment: .leading, spacing: 12) {
-                Text("Your first report unlocks after \(totalMin) minutes of practice.")
+                Text(explain("Your first report unlocks after \(totalMin) minutes of practice."))
                     .font(.subheadline)
                 ProgressView(value: accumulated, total: required)
-                Text("\(doneMin) / \(totalMin) min so far.")
+                Text(explain("\(doneMin) / \(totalMin) min so far."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot.")
+                Text(explain("We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -188,9 +188,9 @@ struct WeeklyReportView: View {
         case .lockedNext(let days, let secondsRemaining):
             let minsRem = Int((secondsRemaining + 59) / 60) // round up
             VStack(alignment: .leading, spacing: 8) {
-                Text("Next report in \(max(days, 0))d · \(max(minsRem, 0)) more minutes of practice.")
+                Text(explain("Next report in \(max(days, 0))d · \(max(minsRem, 0)) more minutes of practice."))
                     .font(.subheadline)
-                Text("Reports compare week-over-week, so we wait until there's enough new material.")
+                Text(explain("Reports compare week-over-week, so we wait until there's enough new material."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

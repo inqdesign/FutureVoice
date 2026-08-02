@@ -211,7 +211,7 @@ struct ScenarioComposerSheet: View {
         } header: {
             Text("Your scenario")
         } footer: {
-            Text("Build it from a category below, type it, or say it with the mic — then \(ctaTitle) it.")
+            Text(explain("Build it from a category below, type it, or say it with the mic — then \(ctaTitle) it."))
         }
     }
 

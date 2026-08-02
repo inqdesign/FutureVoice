@@ -33,6 +33,15 @@ struct FutureVoiceApp: App {
                 .environmentObject(appState)
                 .environmentObject(auth)
                 .preferredColorScheme(appState.appearance.colorScheme)
+                // UI chrome speaks the language being LEARNED, not the device's.
+                // Labels, buttons and tabs are one-word A1 vocabulary the
+                // learner meets dozens of times a day — free exposure, and the
+                // same chrome works for every target language. Explanatory
+                // copy is the exception and resolves separately through
+                // `Bundle.explanations`. SwiftUI resolves every
+                // `Text("literal")` against this locale, so the whole catalog
+                // follows with no per-call changes.
+                .environment(\.locale, Locale(identifier: appState.targetLanguage))
         }
         .onChange(of: scenePhase) { _, phase in
             // Drill grading may have moved due dates — leave with an accurate

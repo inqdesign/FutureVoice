@@ -13,7 +13,7 @@ struct HistoryView: View {
                 ContentUnavailableView(
                     "No sessions yet",
                     systemImage: "clock",
-                    description: Text("Tap End session after a conversation and it'll show up here.")
+                    description: Text(explain("Tap End session after a conversation and it'll show up here."))
                 )
             } else {
                 List {

@@ -102,7 +102,7 @@ struct WatchTab: View {
                 .padding(.vertical, 6)
             }
         } footer: {
-            Text("Tap someone — situations with them, in their voice.")
+            Text(explain("Tap someone — situations with them, in their voice."))
                 .padding(.horizontal, 4)
         }
         .listRowBackground(Color.clear)
@@ -169,7 +169,7 @@ struct WatchTab: View {
             } header: {
                 Text("Your scenarios")
             } footer: {
-                Text("The situations you've built — every watch writes a fresh take. Past takes live in Practice.")
+                Text(explain("The situations you've built — every watch writes a fresh take. Past takes live in Practice."))
             }
         }
     }
@@ -236,7 +236,7 @@ struct WatchTab: View {
                         Text("Make your own situation")
                             .font(.body.weight(.medium))
                             .foregroundStyle(.primary)
-                        Text("The real thing coming up — an interview, a call, a visit. Describe it, watch it handled.")
+                        Text(explain("The real thing coming up — an interview, a call, a visit. Describe it, watch it handled."))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -268,7 +268,7 @@ struct WatchTab: View {
         } header: {
             Text("Likely situations")
         } footer: {
-            Text("Tap a category — the composer suggests specific scenarios you can watch.")
+            Text(explain("Tap a category — the composer suggests specific scenarios you can watch."))
         }
     }
 
@@ -488,7 +488,7 @@ struct SituationComposerSheet: View {
         } header: {
             Text("The situation")
         } footer: {
-            Text("Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it.")
+            Text(explain("Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it."))
         }
     }
 
@@ -721,7 +721,7 @@ struct SituationBuilderSheet: View {
         } header: {
             Text("Sharpen it")
         } footer: {
-            Text("Optional — pick a chip to go deeper, or hit Watch with what you have.")
+            Text(explain("Optional — pick a chip to go deeper, or hit Watch with what you have."))
         }
     }
 
@@ -732,7 +732,7 @@ struct SituationBuilderSheet: View {
         } header: {
             Text("The situation")
         } footer: {
-            Text("Watch uses this text — edit it freely.")
+            Text(explain("Watch uses this text — edit it freely."))
         }
     }
 

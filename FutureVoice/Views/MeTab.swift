@@ -131,7 +131,7 @@ struct MeTab: View {
                 } header: {
                     Text("Learning")
                 } footer: {
-                    Text("Your CEFR level shapes each conversation. The daily goal drives the ring on Home.")
+                    Text(explain("Your CEFR level shapes each conversation. The daily goal drives the ring on Home."))
                 }
 
                 Section {
@@ -145,7 +145,7 @@ struct MeTab: View {
                 } header: {
                     Text("Appearance")
                 } footer: {
-                    Text("Future self is the pixel surface behind every call button — tap a theme to feel it.")
+                    Text(explain("Future self is the pixel surface behind every call button — tap a theme to feel it."))
                 }
 
                 voiceSection
@@ -171,7 +171,7 @@ struct MeTab: View {
                     }
                     .disabled(deletingAccount)
                 } footer: {
-                    Text("Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too.")
+                    Text(explain("Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too."))
                 }
 
                 #if DEBUG
@@ -186,7 +186,7 @@ struct MeTab: View {
                 } header: {
                     Text("Developer")
                 } footer: {
-                    Text("Debug builds only. Routes back through the first-run setup flow.")
+                    Text(explain("Debug builds only. Routes back through the first-run setup flow."))
                 }
                 #endif
             }
@@ -213,7 +213,7 @@ struct MeTab: View {
                     appState.resetVoiceClone()   // RootView swaps to onboarding
                 }
             } message: {
-                Text("Your current clone will be deleted on ElevenLabs after the new one is created.")
+                Text(explain("Your current clone will be deleted on ElevenLabs after the new one is created."))
             }
             .alert("Sign out?", isPresented: $confirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
@@ -230,13 +230,13 @@ struct MeTab: View {
                     }
                 }
             } message: {
-                Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
+                Text(explain("Your practice data stays on this device. Your voice clone and credits stay with your account."))
             }
             .alert("Delete your account?", isPresented: $confirmingAccountDelete) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete forever", role: .destructive) { deleteAccount() }
             } message: {
-                Text("This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.")
+                Text(explain("This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions."))
             }
             .alert("Couldn't delete account", isPresented: Binding(
                 get: { accountDeleteError != nil },
@@ -253,7 +253,7 @@ struct MeTab: View {
                     appState.resetOnboarding()   // RootView swaps to SetupFlowView
                 }
             } message: {
-                Text("Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.")
+                Text(explain("Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in."))
             }
             #endif
             .task { account = await AccountStatus.fetch() }
@@ -355,7 +355,7 @@ struct MeTab: View {
             Button("Cancel", role: .cancel) {}
             Button("Save") { renameVoice() }
         } message: {
-            Text("Names your clone here and on ElevenLabs. Leave it empty to go back to the default.")
+            Text(explain("Names your clone here and on ElevenLabs. Leave it empty to go back to the default."))
         }
         .alert("Renamed on this device only", isPresented: Binding(
             get: { voiceRenameWarning != nil },

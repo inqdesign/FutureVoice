@@ -13,7 +13,7 @@ struct DrillsBySessionView: View {
                 ContentUnavailableView(
                     "No session cards yet",
                     systemImage: "tray",
-                    description: Text("After you end a conversation, the corrections it surfaces show up here grouped by session.")
+                    description: Text(explain("After you end a conversation, the corrections it surfaces show up here grouped by session."))
                 )
             } else {
                 List {

@@ -24,7 +24,7 @@ struct InviteView: View {
                         .foregroundStyle(balance > 0 ? Color.primary : Color.orange)
                 }
             } footer: {
-                Text("Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more.")
+                Text(explain("Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more."))
             }
 
             Section {
@@ -56,7 +56,7 @@ struct InviteView: View {
             } header: {
                 Text("Your invite code")
             } footer: {
-                Text("You and your friend each get 300 credits when they join with your code — for up to 10 friends.")
+                Text(explain("You and your friend each get 300 credits when they join with your code — for up to 10 friends."))
             }
 
             Section {
@@ -84,7 +84,7 @@ struct InviteView: View {
             } header: {
                 Text("Have a code?")
             } footer: {
-                Text("Enter a friend's code once to get 300 bonus credits.")
+                Text(explain("Enter a friend's code once to get 300 bonus credits."))
             }
         }
         .navigationTitle("Invite & credits")

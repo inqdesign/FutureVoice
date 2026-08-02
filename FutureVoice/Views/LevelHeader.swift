@@ -62,8 +62,8 @@ struct LevelInfoSheet: View {
 
         var headline: String {
             switch self {
-            case .talk:  return "How your future self talks"
-            case .watch: return "How this scene is written"
+            case .talk:  return explain("How your future self talks")
+            case .watch: return explain("How this scene is written")
             }
         }
 
@@ -149,7 +149,7 @@ struct LevelInfoSheet: View {
                 } header: {
                     Text("How your level moves")
                 } footer: {
-                    Text("Your level is measured from the talks you actually have — it isn't a setting you keep in sync by hand.")
+                    Text(explain("Your level is measured from the talks you actually have — it isn't a setting you keep in sync by hand."))
                 }
 
                 // Not a dead end. Telling someone whose current conversation
@@ -165,7 +165,7 @@ struct LevelInfoSheet: View {
                             .font(.subheadline)
                     }
                 } footer: {
-                    Text("The same setting as Me → Level. The next assessment overwrites it with what your talks show.")
+                    Text(explain("The same setting as Me → Level. The next assessment overwrites it with what your talks show."))
                 }
             }
             .navigationTitle("Level \(level.rawValue.uppercased())")
@@ -194,7 +194,7 @@ struct LevelInfoSheet: View {
         switch unlock {
         case .lockedFirst(let accumulated, let required):
             VStack(alignment: .leading, spacing: 8) {
-                Text("Your first assessment unlocks after \(Int(required / 60)) minutes of talk.")
+                Text(explain("Your first assessment unlocks after \(Int(required / 60)) minutes of talk."))
                     .font(.subheadline)
                 HStack(spacing: 10) {
                     ProgressView(value: min(accumulated, required), total: required)
@@ -237,7 +237,7 @@ struct LevelSettingView: View {
                 .pickerStyle(.inline)
                 .labelsHidden()
             } footer: {
-                Text("Sets how your future self speaks and how scenes are written. Your measured level in Progress is unaffected until the next assessment, which will overwrite this with what your talks show.")
+                Text(explain("Sets how your future self speaks and how scenes are written. Your measured level in Progress is unaffected until the next assessment, which will overwrite this with what your talks show."))
             }
         }
         .navigationTitle("Your level")

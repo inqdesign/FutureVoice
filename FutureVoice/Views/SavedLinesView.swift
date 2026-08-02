@@ -13,7 +13,7 @@ struct SavedLinesView: View {
                 ContentUnavailableView {
                     Label("No saved lines", systemImage: "bookmark")
                 } description: {
-                    Text("Bookmark a line from shadow practice and it'll live here for repeat reps.")
+                    Text(explain("Bookmark a line from shadow practice and it'll live here for repeat reps."))
                 }
             } else {
                 List {

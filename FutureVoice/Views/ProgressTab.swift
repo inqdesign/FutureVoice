@@ -303,7 +303,7 @@ struct ProgressTab: View {
                              : "Assessed \(at.formatted(.relative(presentation: .named))) from your recent talk — vocabulary, grammar, fluency and expression together.")
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else {
-                        Text("Assessed from \(totalSpeakingMinutes) min of conversation — vocabulary, grammar, fluency and expression together.")
+                        Text(explain("Assessed from \(totalSpeakingMinutes) min of conversation — vocabulary, grammar, fluency and expression together."))
                             .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     }
                     nextAssessmentStatus
@@ -324,7 +324,7 @@ struct ProgressTab: View {
                     // band. A weak axis is a visibly shorter column.
                     LevelEqualizer(bars: equalizerBars)
                         .padding(.top, 8)
-                    Text("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.")
+                    Text(explain("Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length."))
                         .font(.caption2).foregroundStyle(.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
                     CardDivider(inset: 0)
@@ -357,7 +357,7 @@ struct ProgressTab: View {
                 skillRow(.fluency, value: fluencyCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
                 skillRow(.grammar, value: grammarCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
                 skillRow(.expressiveness, value: expressionCEFR.map { "≈" + $0.rawValue.uppercased() } ?? "—")
-                Text("Same bands as \u{201C}How this is assessed\u{201D} — tap a skill for its measured numbers.")
+                Text(explain("Same bands as \u{201C}How this is assessed\u{201D} — tap a skill for its measured numbers."))
                     .font(.caption2).foregroundStyle(.tertiary)
             }
 
@@ -478,7 +478,7 @@ struct ProgressTab: View {
     private var weeklyReadLockedState: some View {
         switch reportUnlock {
         case .lockedFirst(let acc, let req):
-            Text("Your first assessment unlocks after \(Int(req / 60)) minutes of talk.")
+            Text(explain("Your first assessment unlocks after \(Int(req / 60)) minutes of talk."))
                 .font(.subheadline).foregroundStyle(.secondary)
             HStack(spacing: 10) {
                 ProgressView(value: min(acc, req), total: req)
@@ -536,11 +536,11 @@ struct ProgressTab: View {
                     }
                 }
                 .frame(height: 150)
-                Text("Your level, one point per assessment — this line is what growing looks like.")
+                Text(explain("Your level, one point per assessment — this line is what growing looks like."))
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.")
+                Text(explain("Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -577,7 +577,7 @@ struct ProgressTab: View {
                 }
             }
             .frame(height: 120)
-            Text("Minutes you actually spoke, per day. The dashed line is your \(dailyGoalMinutes)-minute daily goal.")
+            Text(explain("Minutes you actually spoke, per day. The dashed line is your \(dailyGoalMinutes)-minute daily goal."))
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -697,7 +697,7 @@ struct ProgressTab: View {
                 }
             }
             .frame(height: 130)
-            Text("What each day was made of — talk turns, shadow takes, drill reviews.")
+            Text(explain("What each day was made of — talk turns, shadow takes, drill reviews."))
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             CardDivider(inset: 0)
@@ -832,7 +832,7 @@ struct ProgressTab: View {
         } else {
             switch reportUnlock {
             case .lockedFirst(let acc, let req):
-                Text("Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session.")
+                Text(explain("Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session."))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 10) {
@@ -842,7 +842,7 @@ struct ProgressTab: View {
                         .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 }
             case .lockedNext(let daysRemaining, let secondsRemaining):
-                Text("Your level is re-assessed regularly. The next assessment needs both:")
+                Text(explain("Your level is re-assessed regularly. The next assessment needs both:"))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 unlockConditionRow(
@@ -903,7 +903,7 @@ struct ProgressTab: View {
                         ? "A week since the last assessment"
                         : (daysRemaining == 1 ? "1 more day" : "\(daysRemaining) more days"))
                 if secondsRemaining > 0 {
-                    Text("Talk \(max(1, Int((secondsRemaining / 60).rounded(.up)))) more minutes and this level gets re-read from everything new you've said.")
+                    Text(explain("Talk \(max(1, Int((secondsRemaining / 60).rounded(.up)))) more minutes and this level gets re-read from everything new you've said."))
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -954,7 +954,7 @@ struct ProgressTab: View {
                     if let why = latestAssessment?.levelRationale, !why.isEmpty {
                         Text(why).font(.callout)
                     }
-                    Text("Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after \(Self.levelMinMinutes) minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.")
+                    Text(explain("Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after \(Self.levelMinMinutes) minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level."))
                         .font(.callout)
                         .foregroundStyle(latestAssessment?.levelRationale == nil ? .primary : .secondary)
                 } header: {
@@ -994,10 +994,10 @@ struct ProgressTab: View {
                 } header: {
                     Text("What's measured")
                 } footer: {
-                    Text("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed.")
+                    Text(explain("≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed."))
                 }
                 Section {
-                    Text("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.")
+                    Text(explain("Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does."))
                         .font(.callout)
                 } header: {
                     Text("What never moves the level")
@@ -1070,7 +1070,7 @@ struct ProgressTab: View {
                         .geistPixel(44).foregroundStyle(.tint)
                     Text("vocabulary level").font(.subheadline).foregroundStyle(.secondary)
                 }
-                Text("Estimated from \(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded by CEFR level — your current speaking vocabulary, not everything ever.")
+                Text(explain("Estimated from \(usedTotal) distinct words you've used in the last \(Self.vocabWindowDays) days, each graded by CEFR level — your current speaking vocabulary, not everything ever."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if vocabTrend.count >= 2 {
@@ -1085,14 +1085,14 @@ struct ProgressTab: View {
                             .foregroundStyle(.tint)
                     }
                     .frame(height: 130)
-                    Text("Distinct graded words you've used, accumulating from the day each was first said.")
+                    Text(explain("Distinct graded words you've used, accumulating from the day each was first said."))
                         .font(.caption).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
             panel {
                 Text("Words you use, by level").font(.headline)
-                Text("Distinct words from your talks in the last \(Self.vocabWindowDays) days.")
+                Text(explain("Distinct words from your talks in the last \(Self.vocabWindowDays) days."))
                     .font(.caption).foregroundStyle(.secondary)
                 ForEach(CEFRLevel.allCases, id: \.self) { lv in
                     levelBar(lv)
@@ -1100,7 +1100,7 @@ struct ProgressTab: View {
             }
             panel {
                 Text("How to level up").font(.headline)
-                Text("Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level.")
+                Text(explain("Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level."))
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
             }
             panel {
@@ -1110,7 +1110,7 @@ struct ProgressTab: View {
                     Text("\(vocab.expressionCount)")
                         .font(.headline).foregroundStyle(.tint).monospacedDigit()
                 }
-                Text("Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions.")
+                Text(explain("Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -1341,12 +1341,12 @@ struct ProgressTab: View {
 
     private func canDo(_ l: CEFRLevel) -> String {
         switch l {
-        case .a1: return "Simple words and phrases about immediate, familiar things."
-        case .a2: return "Everyday topics in simple terms — routines, plans, basic needs."
-        case .b1: return "Familiar topics fluently enough to get by, and tell a simple story."
-        case .b2: return "Clear, detailed talk on many topics, including some abstract ones."
-        case .c1: return "Fluent, flexible, and precise — even on complex topics."
-        case .c2: return "Effortless and nuanced, close to native."
+        case .a1: return explain("Simple words and phrases about immediate, familiar things.")
+        case .a2: return explain("Everyday topics in simple terms — routines, plans, basic needs.")
+        case .b1: return explain("Familiar topics fluently enough to get by, and tell a simple story.")
+        case .b2: return explain("Clear, detailed talk on many topics, including some abstract ones.")
+        case .c1: return explain("Fluent, flexible, and precise — even on complex topics.")
+        case .c2: return explain("Effortless and nuanced, close to native.")
         }
     }
 
@@ -1422,7 +1422,7 @@ struct ProgressTab: View {
         ContentUnavailableView {
             Label("No progress yet", systemImage: "chart.line.uptrend.xyaxis")
         } description: {
-            Text("Have a few conversations and I'll estimate your level and break down how your \(LanguageCatalog.englishName(appState.targetLanguage)) is developing.")
+            Text(explain("Have a few conversations and I'll estimate your level and break down how your \(LanguageCatalog.englishName(appState.targetLanguage)) is developing."))
         }
     }
 

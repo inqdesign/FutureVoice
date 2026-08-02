@@ -419,7 +419,7 @@ struct ShadowDrillView: View {
                     rhythmRow(label: "Target", analysis: r, learner: false)
                     rhythmRow(label: "You", analysis: r, learner: true)
                 }
-                Text("Word starts, speed-matched — orange landed off the target's beat.")
+                Text(explain("Word starts, speed-matched — orange landed off the target's beat."))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }

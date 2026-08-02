@@ -1,0 +1,2740 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "": {},
+    " ": {},
+    "%@ %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$lld"
+          }
+        }
+      }
+    },
+    "%@ / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@ credits / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ credits / %2$@"
+          }
+        }
+      }
+    },
+    "%@ credits, %@ plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ credits, %2$@ plan"
+          }
+        }
+      }
+    },
+    "%@ theme": {},
+    "%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "%@ · %lld mastered · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld mastered · %3$@"
+          }
+        }
+      }
+    },
+    "%@ · %lld turns spoken": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · %2$lld turns spoken"
+          }
+        }
+      }
+    },
+    "%@ · voiced by %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ · voiced by %2$@"
+          }
+        }
+      }
+    },
+    "%@. Level %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@. Level %2$@"
+          }
+        }
+      }
+    },
+    "%lld": {},
+    "%lld %@ this session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld %2$@ this session"
+          }
+        }
+      }
+    },
+    "%lld / %lld min so far.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld / %2$lld min so far."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금까지 %1$lld / %2$lld분."
+          }
+        }
+      }
+    },
+    "%lld / 10": {},
+    "%lld active days · %lld min this year": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld active days · %2$lld min this year"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "올해 %1$lld일 활동 · %2$lld분"
+          }
+        }
+      }
+    },
+    "%lld books finished": {},
+    "%lld card%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld card%2$@"
+          }
+        }
+      }
+    },
+    "%lld days free,\nno surprises": {},
+    "%lld days free. Cancel anytime.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 무료. 언제든 해지할 수 있어요."
+          }
+        }
+      }
+    },
+    "%lld expressions": {},
+    "%lld known": {},
+    "%lld min": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
+          }
+        }
+      }
+    },
+    "%lld min this week": {},
+    "%lld of %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld mastered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld mastered"
+          }
+        }
+      }
+    },
+    "%lld of %lld mastered · everything from your talks and watches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld mastered · everything from your talks and watches"
+          }
+        }
+      }
+    },
+    "%lld of %lld minutes today, %lld talks today, %lld day streak. Opens activity calendar.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld minutes today, %3$lld talks today, %4$lld day streak. Opens activity calendar."
+          }
+        }
+      }
+    },
+    "%lld phrases saved while watching": {},
+    "%lld sessions · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld sessions · %2$@"
+          }
+        }
+      }
+    },
+    "%lld talks today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 대화 %lld회"
+          }
+        }
+      }
+    },
+    "%lld talks · tap for calendar": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 %lld회 · 탭하면 달력"
+          }
+        }
+      }
+    },
+    "%lld total": {},
+    "%lld turns": {},
+    "%lld turns spoken": {},
+    "%lld vs last week": {},
+    "%lld words": {},
+    "%lld words and lines mastered inside them": {},
+    "%lld%%": {},
+    "%lld-day streak": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 연속"
+          }
+        }
+      }
+    },
+    "%lld/%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "%lld/%lld mastered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld mastered"
+          }
+        }
+      }
+    },
+    "%lld/%lld min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld min"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld분"
+          }
+        }
+      }
+    },
+    "%lld/%lld min new talk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld/%2$lld min new talk"
+          }
+        }
+      }
+    },
+    "(+%@)": {},
+    "+%lld more meanings": {},
+    "+%lld this week": {},
+    "+%lld vs last week": {},
+    "+1 more meaning": {},
+    "/ %lldm": {},
+    "1 book finished": {},
+    "1 credit ≈ 100 characters spoken in your voice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1크레딧 ≈ 내 목소리로 말한 100자."
+          }
+        }
+      }
+    },
+    "1 minute. Vary your pitch a little.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1분이면 돼요. 억양을 조금씩 바꿔가며 읽어 주세요."
+          }
+        }
+      }
+    },
+    "1 phrase saved while watching": {},
+    "1 talk today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 대화 1회"
+          }
+        }
+      }
+    },
+    "1×": {},
+    "<": {},
+    ">": {},
+    "A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "책 안의 단어와 문장을 전부 익히면 여기로 옵니다. 그냥 치워 둔 건 안 세고, 끝낸 것만 셉니다."
+          }
+        }
+      }
+    },
+    "A new assessment is due — it runs after your next talk.": {},
+    "A quick active-recall run through this talk's saved phrases.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 대화에서 저장한 표현들을 빠르게 떠올려 보는 시간이에요."
+          }
+        }
+      }
+    },
+    "A voice for the other person. Add people under Watch to have someone specific play the scene.": {},
+    "About half a minute.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30초쯤 걸려요."
+          }
+        }
+      }
+    },
+    "About them": {},
+    "About you": {},
+    "Account": {},
+    "Across skills": {},
+    "Activity": {},
+    "Add a language": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어 추가"
+          }
+        }
+      }
+    },
+    "Add category": {},
+    "Add interests": {},
+    "Add someone from your real life — their cloned voice can act out any scenario you build.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실제로 아는 사람을 추가해 보세요. 그 사람의 목소리로 어떤 상황이든 연기해 줍니다."
+          }
+        }
+      }
+    },
+    "Add your own (comma-separated)": {},
+    "Advanced — I express myself fluently and precisely": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고급 — 유창하고 정확하게 표현해요"
+          }
+        }
+      }
+    },
+    "After you end a conversation, the corrections it surfaces show up here grouped by session.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화를 끝내면 그때 나온 교정들이 세션별로 여기 모여요."
+          }
+        }
+      }
+    },
+    "All scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 상황"
+          }
+        }
+      }
+    },
+    "Already have an account? Sign in": {},
+    "Always free": {},
+    "Analyzing your week…": {},
+    "Answer in": {},
+    "Anything else": {},
+    "Anything else (optional)": {},
+    "Anything specific?": {},
+    "Appearance": {},
+    "Archive": {},
+    "Archived": {},
+    "Assessed %@ from your recent talk — vocabulary, grammar, fluency and expression together.": {},
+    "Assessed %@ — a while back. Your next talks feed a fresh assessment.": {},
+    "Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 %lld분을 바탕으로 어휘·문법·유창성·표현력을 함께 보고 판정했어요."
+          }
+        }
+      }
+    },
+    "Assessed level": {},
+    "Assessing your level from everything you've said…": {},
+    "Assessment": {},
+    "Back": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
+          }
+        }
+      }
+    },
+    "Back to the welcome screen?": {},
+    "Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구체적으로 적어 주세요 — 어디서, 무슨 일이고, 무엇을 원하는지. 키보드의 마이크를 누르면 말로 해도 됩니다."
+          }
+        }
+      }
+    },
+    "Billing": {},
+    "Billing period": {},
+    "Book mastered": {},
+    "Bookmark a line from shadow practice and it'll live here for repeat reps.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "섀도잉하다 마음에 든 문장을 저장하면 여기 남아 반복할 수 있어요."
+          }
+        }
+      }
+    },
+    "Build a scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황 만들기"
+          }
+        }
+      }
+    },
+    "Build it from a category below, type it, or say it with the mic — then %@ it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 카테고리에서 고르거나, 직접 쓰거나, 마이크로 말해 보세요. 그다음 %@ 하면 됩니다."
+          }
+        }
+      }
+    },
+    "Build new": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 만들기"
+          }
+        }
+      }
+    },
+    "Build your first scenario": {},
+    "Building scenarios for %@…": {},
+    "By level": {},
+    "Can't record now? No rush — this will wait.": {},
+    "Cancel": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "취소"
+          }
+        }
+      }
+    },
+    "Captured automatically from what you say. Mark the ones you've got down as known.": {},
+    "Cards done — now say it out loud": {},
+    "Cards from this talk": {},
+    "Category name (e.g. Landlord, Gym)": {},
+    "Change my level": {},
+    "City": {},
+    "Clear, detailed talk on many topics, including some abstract ones.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추상적인 주제까지 포함해 여러 주제를 분명하고 자세히 말할 수 있어요."
+          }
+        }
+      }
+    },
+    "Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정·음성 클론·페르소나를 지우고 첫 실행 과정을 다시 시작해요. 로그인은 유지됩니다."
+          }
+        }
+      }
+    },
+    "Cloning your voice…": {},
+    "Close": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
+    "Close without saving": {},
+    "Coach's note": {},
+    "Come back when the next cards are due.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 카드가 복습 시점이 되면 다시 오세요."
+          }
+        }
+      }
+    },
+    "Continue": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계속"
+          }
+        }
+      }
+    },
+    "Conversational — I get by on familiar topics": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중급 — 익숙한 주제면 무리 없이 대화해요"
+          }
+        }
+      }
+    },
+    "Couldn't delete account": {},
+    "Couldn't get a response.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "응답을 받지 못했어요."
+          }
+        }
+      }
+    },
+    "Couldn't play audio": {},
+    "Couldn't rebuild your voice": {},
+    "Couldn't write the scene": {},
+    "Country": {},
+    "Credits left": {},
+    "Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크레딧은 새 음성 합성과 AI 통화에 쓰이고 주기마다 다시 채워져요. 다시 듣기, 드릴, 진행 상황은 계속 무료입니다."
+          }
+        }
+      }
+    },
+    "Credits power voice synthesis and AI replies. Invite friends to earn more.": {},
+    "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.": {},
+    "Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크레딧은 음성 합성과 AI 응답에 쓰여요. 베타 기간에는 구독이 없고, 친구를 초대하면 더 받을 수 있습니다."
+          }
+        }
+      }
+    },
+    "Day": {},
+    "Debug builds only. Routes back through the first-run setup flow.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "디버그 빌드 전용. 첫 실행 설정 과정으로 되돌아갑니다."
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제"
+          }
+        }
+      }
+    },
+    "Delete account": {},
+    "Delete forever": {},
+    "Delete talk": {},
+    "Delete this scenario?": {},
+    "Delete this talk?": {},
+    "Delete your account?": {},
+    "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정을 삭제하면 음성 클론, 크레딧, 계정 데이터가 영구히 사라져요. 이 기기의 학습 데이터도 함께 지워집니다."
+          }
+        }
+      }
+    },
+    "Describe the situation": {},
+    "Developer": {},
+    "Dictate": {},
+    "Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 안 쓰는 단어를 찾아 써 보세요. Practice → Vocabulary에서 내 레벨 이상인 단어를 표시해 줍니다."
+          }
+        }
+      }
+    },
+    "Distinct graded words you've used, accumulating from the day each was first said.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 실제로 쓴 등급별 단어 수예요. 각 단어를 처음 말한 날부터 쌓입니다."
+          }
+        }
+      }
+    },
+    "Distinct words from your talks in the last %lld days.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 %lld일간의 대화에서 쓴 서로 다른 단어 수예요."
+          }
+        }
+      }
+    },
+    "Doesn't sound like you? Record again": {},
+    "Done": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
+    },
+    "Drag the card into a folder": {},
+    "Drill next": {},
+    "Drills": {},
+    "Drills appear here after you end a conversation.": {},
+    "Edit": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "편집"
+          }
+        }
+      }
+    },
+    "Edit interests": {},
+    "Edit persona": {},
+    "Effortless and nuanced, close to native.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "힘들이지 않고 뉘앙스까지 살려 말해요. 원어민에 가깝습니다."
+          }
+        }
+      }
+    },
+    "End": {},
+    "English": {},
+    "Enter a friend's code once to get 300 bonus credits.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구 코드를 한 번 입력하면 보너스 크레딧 300개를 받아요."
+          }
+        }
+      }
+    },
+    "Enter invite code": {},
+    "Estimated from %lld distinct words you've used in the last %lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Estimated from %1$lld distinct words you've used in the last %2$lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 %2$lld일간 쓴 서로 다른 단어 %1$lld개를 CEFR 등급으로 매겨 추정했어요. 지금 말하기에 쓰는 어휘이지, 평생 아는 단어 전부는 아닙니다."
+          }
+        }
+      }
+    },
+    "Estimated level": {},
+    "Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 만들거나 Watch에서 본 상황은 모두 저장돼요. 눌러서 다시 말해 볼 수 있고, 밀어서 지울 수 있습니다."
+          }
+        }
+      }
+    },
+    "Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 항목은 전부 이번 세션에서 실제로 말한 문장을 그대로 옮긴 거예요. 고친 건 문법뿐이고, 표현은 그대로 둡니다."
+          }
+        }
+      }
+    },
+    "Everyday topics in simple terms — routines, plans, basic needs.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일상적인 주제를 간단한 말로 — 하루 일과, 계획, 기본적인 필요."
+          }
+        }
+      }
+    },
+    "Everything in this scenario is yours now.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 상황에서 배울 건 다 익혔어요."
+          }
+        }
+      }
+    },
+    "Everything nawana does, fueled up — in your own voice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nawana의 모든 기능을, 내 목소리로 넉넉하게."
+          }
+        }
+      }
+    },
+    "Everything this conversation had to teach is yours.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 대화에서 배울 건 다 익혔어요."
+          }
+        }
+      }
+    },
+    "Examples & variants": {},
+    "Excluded from scoring — marked as misheard": {},
+    "Explain in my language": {},
+    "Explains what this level changes": {},
+    "Explanations and translations come in this language.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설명과 번역이 이 언어로 나와요."
+          }
+        }
+      }
+    },
+    "Expressions": {},
+    "Expressions you use in your talks will collect here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서 쓴 표현들이 여기 모여요."
+          }
+        }
+      }
+    },
+    "Expressions you used": {},
+    "Expressions you've used": {},
+    "Familiar topics fluently enough to get by, and tell a simple story.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "익숙한 주제는 무리 없이 이야기하고, 간단한 이야기도 들려줄 수 있어요."
+          }
+        }
+      }
+    },
+    "Feedback": {},
+    "Filing this under a category…": {},
+    "Filter": {},
+    "Finding scenarios from your life…": {},
+    "Finding scenarios…": {},
+    "Finding stories…": {},
+    "Finish a conversation, then come back to shadow any line your fluent self said.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화를 마치고 오면 유창한 내가 말한 문장을 섀도잉할 수 있어요."
+          }
+        }
+      }
+    },
+    "Finished": {},
+    "Finished books. They keep their progress — unarchive anytime.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝낸 책이에요. 진행 상황은 그대로 남고, 언제든 다시 꺼낼 수 있습니다."
+          }
+        }
+      }
+    },
+    "Fluent, flexible, and precise — even on complex topics.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복잡한 주제에서도 유창하고 유연하고 정확해요."
+          }
+        }
+      }
+    },
+    "Free": {},
+    "Free notes — quirks, recent events, anything that helps": {},
+    "Friends joined": {},
+    "From scenarios": {},
+    "From your recent sessions": {},
+    "Future Self": {},
+    "Future self": {},
+    "Future self is the pixel surface behind every call button — tap a theme to feel it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Future self는 모든 통화 버튼 뒤에 깔리는 픽셀 화면이에요. 테마를 눌러 느낌을 보세요."
+          }
+        }
+      }
+    },
+    "Future self is thinking…": {},
+    "Future self speaking — tap to hang up": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 말하는 중 — 누르면 통화 종료"
+          }
+        }
+      }
+    },
+    "Future self · %lld": {},
+    "Generate scenarios for %@": {},
+    "Get started": {},
+    "Goal": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목표"
+          }
+        }
+      }
+    },
+    "Good. %llds more for the cleanest clone": {},
+    "Got it — moves up the ladder": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알아요 — 다음 단계로 올라갑니다"
+          }
+        }
+      }
+    },
+    "Grammar": {},
+    "Grammar review": {},
+    "Grounded in your profile — name, city, work, family, interests.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 프로필(이름·도시·일·가족·관심사)을 바탕으로 만들어져요."
+          }
+        }
+      }
+    },
+    "Grounded in your relationship with %@ — these appear as ideas when you tap them on the Watch tab.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@와의 관계를 바탕으로 했어요. Watch 탭에서 이 사람을 누르면 아이디어로 나옵니다."
+          }
+        }
+      }
+    },
+    "Growth": {},
+    "Have a code?": {},
+    "Have a few conversations and I'll estimate your level and break down how your %@ is developing.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화를 몇 번 나누면 레벨을 추정하고 %@ 실력이 어떻게 늘고 있는지 나눠서 보여드릴게요."
+          }
+        }
+      }
+    },
+    "Have an invite code?": {},
+    "Hear it again": {},
+    "Hear my attempt": {},
+    "Hear target": {},
+    "Hear yourself": {},
+    "Help set the price": {},
+    "Hide": {},
+    "Hide meaning": {},
+    "Hide words I know": {},
+    "Highlighted words are worth picking up — tap one to check it out.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표시된 단어는 익혀 둘 만한 것들이에요. 눌러서 확인해 보세요."
+          }
+        }
+      }
+    },
+    "History": {},
+    "Honestly, it went really well. I felt prepared.": {},
+    "How comfortable are you right now?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 어느 정도로 편하게 말할 수 있나요?"
+          }
+        }
+      }
+    },
+    "How it's assessed": {},
+    "How long have you been there? (optional)": {},
+    "How long? (optional)": {},
+    "How they talk": {},
+    "How this is assessed": {},
+    "How this scene is written": {
+      "comment": "Title of a sheet that explains how a scene is written for a particular CEFR level.",
+      "isCommentAutoGenerated": true,
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 장면이 어떻게 쓰이는지"
+          }
+        }
+      }
+    },
+    "How to improve": {},
+    "How to level up": {},
+    "How was your first Watch?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 Watch는 어땠나요?"
+          }
+        }
+      }
+    },
+    "How was your first conversation?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 대화는 어땠나요?"
+          }
+        }
+      }
+    },
+    "How you met (and how long)": {},
+    "How your future self talks": {
+      "comment": "Heading in the \"Level Info\" sheet for Talk.",
+      "isCommentAutoGenerated": true,
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미래의 내가 어떻게 말하는지"
+          }
+        }
+      }
+    },
+    "How your level moves": {},
+    "Ideas with %@": {},
+    "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리하면, 내 목소리로 새 오디오를 만들 때만 크레딧이 들어요. 이미 만들어진 걸로 연습하는 건 무료입니다."
+          }
+        }
+      }
+    },
+    "In your own words (optional) — e.g. switches to English when excited": {},
+    "Independent — I discuss most things with some ease": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중상급 — 웬만한 주제는 어렵지 않게 이야기해요"
+          }
+        }
+      }
+    },
+    "Interests": {},
+    "Invite & credits": {},
+    "Invite code": {},
+    "Just starting — a few words and set phrases": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "입문 — 단어 몇 개와 정해진 표현 정도"
+          }
+        }
+      }
+    },
+    "Keep going — %llds more for a usable clone": {},
+    "Keep my current voice": {},
+    "Keep studying this word": {},
+    "Keep this voice": {},
+    "Kind": {},
+    "Language": {},
+    "Last talk": {},
+    "Later": {},
+    "Latest assessment": {},
+    "Learning": {},
+    "Let's talk": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화하기"
+          }
+        }
+      }
+    },
+    "Let's talk — start a call": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화하기 — 통화 시작"
+          }
+        }
+      }
+    },
+    "Level": {},
+    "Level %@": {},
+    "Likely situations": {},
+    "Listen": {},
+    "Listen to your recording": {},
+    "Listening · pause to send · tap to stop": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣는 중 · 잠깐 멈추면 전송 · 누르면 종료"
+          }
+        }
+      }
+    },
+    "Listening — tap to finish": {},
+    "Listening — tap to hang up": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣는 중 — 누르면 통화 종료"
+          }
+        }
+      }
+    },
+    "Load stories": {},
+    "Looking it up…": {},
+    "Make your own situation": {},
+    "Mark as known": {},
+    "Mark as mastered": {},
+    "Mark expressions you've got down as known.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완전히 익힌 표현은 '아는 것'으로 표시해 두세요."
+          }
+        }
+      }
+    },
+    "Marked as known": {},
+    "Master every word and line in a book — from a talk or a scene — and it lands here for good.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서 왔든 장면에서 왔든, 책 안의 단어와 문장을 전부 익히면 여기에 영구히 남습니다."
+          }
+        }
+      }
+    },
+    "Mastered": {},
+    "Me": {},
+    "Meaning": {},
+    "Microphone access needed": {},
+    "Minutes": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분"
+          }
+        }
+      }
+    },
+    "Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루에 실제로 말한 시간이에요. 점선은 하루 목표 %lld분입니다."
+          }
+        }
+      }
+    },
+    "Misheard": {},
+    "Misheard — exclude from scoring": {},
+    "More": {},
+    "More natural": {},
+    "More natural alternatives": {},
+    "More precisely? — e.g. College roommate": {},
+    "Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서 실제로 쓴 여러 단어짜리 표현을 자동으로 모아요. Practice → Expressions에서 볼 수 있습니다."
+          }
+        }
+      }
+    },
+    "My expressions · %lld": {},
+    "My words · %lld": {},
+    "Name": {},
+    "Names your clone here and on ElevenLabs. Leave it empty to go back to the default.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱과 ElevenLabs 양쪽에서 쓸 클론 이름이에요. 비워 두면 기본값으로 돌아갑니다."
+          }
+        }
+      }
+    },
+    "Narrow it down": {},
+    "New": {},
+    "New here? Get started instead": {},
+    "New person": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람 추가"
+          }
+        }
+      }
+    },
+    "New persona": {},
+    "New scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 상황"
+          }
+        }
+      }
+    },
+    "New words": {},
+    "Next": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        }
+      }
+    },
+    "Next assessment": {},
+    "Next assessment after %lld more min of new talk.": {},
+    "Next assessment in %lld day%@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Next assessment in %1$lld day%2$@."
+          }
+        }
+      }
+    },
+    "Next report in %lldd · %lld more minutes of practice.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Next report in %1$lldd · %2$lld more minutes of practice."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 리포트까지 %1$lld일 · 연습 %2$lld분 더."
+          }
+        }
+      }
+    },
+    "Nice work": {},
+    "No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "베타 기간에는 요금이 없어요. 정식 출시 예정 가격을 봤을 때, 어느 쪽을 실제로 구독하시겠어요?"
+          }
+        }
+      }
+    },
+    "No dictionary entry yet — tap to open the card.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 사전 항목이 없어요. 눌러서 카드를 열어 보세요."
+          }
+        }
+      }
+    },
+    "No drills due": {},
+    "No practice this day.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이날은 연습 기록이 없어요."
+          }
+        }
+      }
+    },
+    "No progress yet": {},
+    "No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면에 카드도 힌트도 없이, 스스로 꺼내 쓴 표현들이에요. 실제 대화에서 나온 카드는 복습 순서에서 앞당겨집니다."
+          }
+        }
+      }
+    },
+    "No saved lines": {},
+    "No session cards yet": {},
+    "No sessions yet": {},
+    "No streak yet": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 연속 기록 없음"
+          }
+        }
+      }
+    },
+    "No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "베타 기간에는 구독이 없어요. 크레딧 300개로 시작하는데, 목소리를 클론하고 일주일쯤 대화하고 Watch와 섀도잉까지 써 볼 수 있는 양입니다."
+          }
+        }
+      }
+    },
+    "No talk yet today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘은 아직 대화 전이에요"
+          }
+        }
+      }
+    },
+    "Not happy with a take? You can re-record.": {},
+    "Not now": {},
+    "Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말한 내용과 다른가요? 해당 항목을 왼쪽으로 밀어 Misheard로 표시하세요. 그 턴은 채점에서 빠지고 문법 점수가 다시 계산됩니다."
+          }
+        }
+      }
+    },
+    "Note": {},
+    "Nothing finished yet": {},
+    "Nothing in progress": {},
+    "Nothing to shadow yet": {},
+    "Nutrition": {},
+    "OK": {},
+    "On call · tap to stop": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화 중 · 누르면 종료"
+          }
+        }
+      }
+    },
+    "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "딱 이 상황에 맞는 대화 하나예요. 거기 나온 단어·표현과 내 대사가 체크리스트가 됩니다. 한 번 만들어지면 내 책이 돼요."
+          }
+        }
+      }
+    },
+    "Open": {},
+    "Open Settings": {},
+    "Open to review": {},
+    "Open to start": {},
+    "Opens the full card": {},
+    "Optional — pick a chip to go deeper, or hit Watch with what you have.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 사항이에요. 칩을 눌러 더 구체화하거나, 지금 상태로 바로 Watch 해도 됩니다."
+          }
+        }
+      }
+    },
+    "Optional — what's the situation about?": {},
+    "Or a generic role:": {},
+    "Or describe one yourself": {},
+    "Or describe where (custom)…": {},
+    "Or describe who (custom)…": {},
+    "Overall": {},
+    "Past attempts": {},
+    "Past dialogues": {},
+    "Pause": {},
+    "People": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람"
+          }
+        }
+      }
+    },
+    "Pick a category": {},
+    "Pick a scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황 고르기"
+          }
+        }
+      }
+    },
+    "Pick a voice, or one of your people to have them play the scene as themselves.": {},
+    "Pick an area to go one step deeper — or type your own above.": {},
+    "Pick your pace": {},
+    "Planned launch pricing — final prices confirm on the App Store at launch.": {},
+    "Play": {},
+    "Play what you said": {},
+    "Play your recording": {},
+    "Plenty for a great clone — stop whenever you're ready": {},
+    "Practice": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습"
+          }
+        }
+      }
+    },
+    "Practice these %lld cards": {},
+    "Practice this card": {},
+    "Preview %@": {},
+    "Previous selection": {},
+    "Prices load from the App Store — not available yet in this build.": {},
+    "Profile & settings": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필 및 설정"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성장"
+          }
+        }
+      }
+    },
+    "Pronunciation": {},
+    "Pulling examples from your life…": {},
+    "Purchase failed": {},
+    "Quirks, preferences, anything that helps me sound like you": {},
+    "Rather just fill in a form?": {},
+    "Rating": {},
+    "Re-assessing your level now…": {},
+    "Re-record": {},
+    "Re-record your voice?": {},
+    "Read in": {},
+    "Read it naturally. Mistakes are fine — just keep going.": {},
+    "Read the full report": {},
+    "Read whichever one feels natural — we're capturing your voice, not your English.": {},
+    "Ready — assessing your level now…": {},
+    "Ready — re-assessing your level now…": {},
+    "Record again": {},
+    "Record here.": {},
+    "Record your voice again?": {},
+    "Redeem": {},
+    "Refresh": {},
+    "Refresh stories": {},
+    "Relationship (e.g. Best friend, Kita parent, Manager)": {},
+    "Remember this when": {},
+    "Remove from saved lines": {},
+    "Renamed on this device only": {},
+    "Repeat your fluent self's lines from this talk.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 대화에서 유창한 내가 말한 문장을 따라 말해 보세요."
+          }
+        }
+      }
+    },
+    "Replay": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 듣기"
+          }
+        }
+      }
+    },
+    "Replay anytime": {},
+    "Replay onboarding?": {},
+    "Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화를 다시 듣고, 거기 나온 단어를 챙기고, 더 자연스럽게 고쳐진 내 문장을 섀도잉한 다음, 대화를 이어가세요."
+          }
+        }
+      }
+    },
+    "Reports compare week-over-week, so we wait until there's enough new material.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "리포트는 주 단위로 비교하기 때문에, 새 자료가 충분히 쌓일 때까지 기다려요."
+          }
+        }
+      }
+    },
+    "Reps": {},
+    "Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필수 항목이에요. 아래는 선택이지만, 채울수록 대화가 실제 그 사람처럼 느껴집니다."
+          }
+        }
+      }
+    },
+    "Reset": {},
+    "Restart": {},
+    "Restore purchases": {},
+    "Retry": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시도"
+          }
+        }
+      }
+    },
+    "Review": {},
+    "Review %lld cards": {},
+    "Review %lld grammar %@ from this talk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Review %1$lld grammar %2$@ from this talk"
+          }
+        }
+      }
+    },
+    "Review 1 card": {},
+    "Reviewing your saved words, drills, and dialogues stays free during the beta.": {},
+    "Rhythm": {},
+    "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time.": {},
+    "Same bands as “How this is assessed” — tap a skill for its measured numbers.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“How this is assessed”와 같은 기준이에요. 항목을 누르면 측정된 수치를 볼 수 있습니다."
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
+          }
+        }
+      }
+    },
+    "Save %lld%% vs monthly": {},
+    "Save conversation": {},
+    "Save line": {},
+    "Save phrase": {},
+    "Save to expressions": {},
+    "Saved": {},
+    "Saved to expressions": {},
+    "Saving wraps up the talk and keeps the transcript, feedback, and drills.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장하면 대화가 마무리되고 대화록·피드백·드릴이 남아요."
+          }
+        }
+      }
+    },
+    "Say it better": {},
+    "Say it out loud, then tap the card to check": {},
+    "Scenario": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황"
+          }
+        }
+      }
+    },
+    "Scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상황"
+          }
+        }
+      }
+    },
+    "Score": {},
+    "Scorecard": {},
+    "Scored against your %@ level setting — how this talk went, not a level rating.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 레벨 설정을 기준으로 매긴 점수예요. 레벨 판정이 아니라 이번 대화가 어땠는지를 보여줍니다."
+          }
+        }
+      }
+    },
+    "Scored against your %@ level setting — this talk itself read as ≈%@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Scored against your %1$@ level setting — this talk itself read as ≈%2$@."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 레벨 설정을 기준으로 매겼어요. 이번 대화 자체는 ≈%2$@로 읽혔습니다."
+          }
+        }
+      }
+    },
+    "See plans": {},
+    "Selected: %@ / %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Selected: %1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Send": {},
+    "Sets how your future self speaks and how scenes are written. Your measured level in Progress is unaffected until the next assessment, which will overwrite this with what your talks show.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미래의 내가 어떻게 말할지, 장면이 어떻게 쓰일지를 정해요. Progress에서 측정된 레벨은 다음 평가 전까지 영향을 받지 않고, 그 평가 때 실제 대화가 보여준 값으로 덮어씁니다."
+          }
+        }
+      }
+    },
+    "Setting the scene…": {},
+    "Settings": {},
+    "Shadow": {},
+    "Shadow avg %lld this week": {},
+    "Shadow this": {},
+    "Shadow this conversation": {},
+    "Shadow this line": {},
+    "Shadowing": {},
+    "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "섀도잉 점수와 복습 횟수는 레벨이 아니라 연습량을 보는 지표예요. Activity와 Practice 탭에 있습니다. 하면 실력이 늘지만, 레벨은 실제 말하기가 달라져야 움직입니다."
+          }
+        }
+      }
+    },
+    "Share invite": {},
+    "Shared context, memories, inside jokes": {},
+    "Sharpen it": {},
+    "Sign out": {},
+    "Sign out & go back": {},
+    "Sign out?": {},
+    "Simple words and phrases about immediate, familiar things.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가까이 있는 익숙한 것들에 대해 간단한 단어와 표현으로."
+          }
+        }
+      }
+    },
+    "Situation ideas": {},
+    "Skip": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        }
+      }
+    },
+    "Skip sign-in (debug)": {},
+    "Something went wrong": {},
+    "Sorting it out…": {},
+    "Source": {},
+    "Specific enough — %@ it, or tap a breadcrumb to explore more.": {},
+    "Speed": {},
+    "Start": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
+          }
+        }
+      }
+    },
+    "Start a new conversation": {},
+    "Start over": {},
+    "Start practicing": {},
+    "Start talking": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 시작"
+          }
+        }
+      }
+    },
+    "Starting your conversation…": {},
+    "Stay": {},
+    "Stop": {},
+    "Stop & review": {},
+    "Stop dictation": {},
+    "Stop playback": {},
+    "Stop preview": {},
+    "Stop your recording": {},
+    "Studied %@": {},
+    "Studied, then said": {},
+    "Study record": {},
+    "Studying": {},
+    "Studying this word": {},
+    "Style (e.g. Direct, loves jokes / Formal, careful)": {},
+    "Suggested for you": {},
+    "Take your AirPods out before recording": {},
+    "Talk": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화"
+          }
+        }
+      }
+    },
+    "Talk %lld more minutes and this level gets re-read from everything new you've said.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 더 대화하면 그동안 새로 말한 걸 전부 모아 레벨을 다시 판정해요."
+          }
+        }
+      }
+    },
+    "Talk mastered": {},
+    "Talk now": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 대화하기"
+          }
+        }
+      }
+    },
+    "Talking with": {},
+    "Talks get more real when I know your life.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "당신의 일상을 알수록 대화가 진짜에 가까워져요."
+          }
+        }
+      }
+    },
+    "Tap End session after a conversation and it'll show up here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 후 End session을 누르면 여기에 나타나요."
+          }
+        }
+      }
+    },
+    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래의 Let's talk — 또는 상황이나 뉴스 — 를 눌러 첫 대화를 시작하세요. 여기서 만난 건 전부 Practice에 복습거리로 쌓입니다."
+          }
+        }
+      }
+    },
+    "Tap Refresh to generate scenarios.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh를 누르면 상황을 만들어 드려요."
+          }
+        }
+      }
+    },
+    "Tap a category — the composer suggests specific scenarios you can watch.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카테고리를 누르면 바로 볼 수 있는 구체적인 상황을 제안해 줘요."
+          }
+        }
+      }
+    },
+    "Tap a line to shadow it in your own voice. Score %lld+ and it's mastered.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문장을 눌러 내 목소리로 따라 말해 보세요. %lld점 이상이면 완료입니다."
+          }
+        }
+      }
+    },
+    "Tap a word in the cloud to start your notebook": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구름에서 단어를 눌러 단어장을 시작해 보세요"
+          }
+        }
+      }
+    },
+    "Tap one to fill your scenario above, then edit it freely.": {},
+    "Tap someone — situations with them, in their voice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사람을 누르면 그 사람과의 상황을, 그 사람 목소리로 볼 수 있어요."
+          }
+        }
+      }
+    },
+    "Tap to reveal": {},
+    "Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러서 켜고 끄거나, 직접 입력하고 엔터를 누르세요. 여기에 맞는 최신 기사가 “In the news”에 올라옵니다."
+          }
+        }
+      }
+    },
+    "Tap to toggle. Or type your own and hit return.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러서 켜고 끌 수 있어요. 직접 입력하고 엔터를 눌러도 됩니다."
+          }
+        }
+      }
+    },
+    "Tap ▶ to hear a sample in %@.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "▶를 누르면 %@ 샘플을 들을 수 있어요."
+          }
+        }
+      }
+    },
+    "Target line": {},
+    "Tell me about them": {},
+    "Tell me more about you": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나에 대해 더 알려주기"
+          }
+        }
+      }
+    },
+    "Thank you": {},
+    "Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고맙습니다. 출시 가격을 정하는 데 반영할게요. 저장한 단어·드릴·대화 복습은 언제든 계속 무료입니다."
+          }
+        }
+      }
+    },
+    "That means you really tested it — thank you. Before anything else: what should we fix first?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그만큼 제대로 써 보셨다는 뜻이네요, 고맙습니다. 무엇부터 고치면 좋을까요?"
+          }
+        }
+      }
+    },
+    "That's your session": {},
+    "The avatar will play this role. You practice your side.": {},
+    "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화와 점수, 복습 카드, 오디오가 영구히 사라져요. 남겨 두되 통계에서만 빼려면 삭제 대신 보관하세요."
+          }
+        }
+      }
+    },
+    "The curriculum and its progress go with it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "커리큘럼과 진행 상황도 함께 사라져요."
+          }
+        }
+      }
+    },
+    "The estimated level": {},
+    "The fluent versions of your own sentences from this talk. Shadow one in your voice — score %lld+ and it's mastered.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 대화에서 내가 한 말을 더 자연스럽게 고친 문장들이에요. 내 목소리로 따라 말해 %lld점 이상이면 완료입니다."
+          }
+        }
+      }
+    },
+    "The more you share, the more I'll sound like a version of you — not a textbook.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "많이 알려줄수록 교과서가 아니라 당신의 또 다른 버전처럼 말하게 돼요."
+          }
+        }
+      }
+    },
+    "The real thing coming up — an interview, a call, a visit. Describe it, watch it handled.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곧 닥칠 진짜 일 — 면접, 전화, 방문 같은 것. 상황을 적으면 어떻게 풀어가는지 보여드려요."
+          }
+        }
+      }
+    },
+    "The same setting as Me → Level. The next assessment overwrites it with what your talks show.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Me → Level과 같은 설정이에요. 다음 평가 때 실제 대화가 보여준 값으로 덮어씁니다."
+          }
+        }
+      }
+    },
+    "The situation": {},
+    "The situations you've built — every watch writes a fresh take. Past takes live in Practice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 만든 상황들이에요. 볼 때마다 새로 쓰이고, 지난 것들은 Practice에 남습니다."
+          }
+        }
+      }
+    },
+    "Their name — as you call them": {},
+    "Theme": {},
+    "These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 300 크레딧이 베타 기간 전체 할당량이에요. 다 쓰고 나서도 저장한 단어·드릴·지난 대화 복습은 계속 무료입니다. 정식 출시 후에 Pro나 Premium을 고르시면 되고, 그때까지는 연습만 하시면 돼요."
+          }
+        }
+      }
+    },
+    "Thinking of situations with them…": {},
+    "This conversation isn't saved yet": {},
+    "This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "음성 클론, 크레딧, 계정이 영구히 삭제되고 되돌릴 수 없어요. App Store 구독이 살아 있다면 설정 → Apple ID → 구독에서 따로 해지해야 합니다."
+          }
+        }
+      }
+    },
+    "This person has been deleted": {},
+    "This signs you out. Your answers stay on this device.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그아웃됩니다. 입력한 답변은 이 기기에 남아요."
+          }
+        }
+      }
+    },
+    "Time speaking": {},
+    "To reach %@": {},
+    "Transcript": {},
+    "Trend": {},
+    "Try again": {},
+    "Try saying": {},
+    "Type a topic": {},
+    "Unarchive": {},
+    "Unlimited credits": {},
+    "Unsave": {},
+    "Use this topic": {},
+    "Use this voice": {},
+    "Used %lld time%@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Used %1$lld time%2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Uses credits": {},
+    "View": {},
+    "Vocabulary growth": {},
+    "Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어휘는 실제로 쓴 단어로 등급을 매기고, ≈ 레벨은 말하는 속도·문법 점수·발화 길이에서 읽어낸 값이에요."
+          }
+        }
+      }
+    },
+    "Voice": {},
+    "Voice name": {},
+    "Watch": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미리보기"
+          }
+        }
+      }
+    },
+    "Watch again": {},
+    "Watch the scene, study its words and expressions, shadow your lines, then Talk it live.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "장면을 보고, 거기 나온 단어와 표현을 익히고, 내 대사를 섀도잉한 다음, 실제로 Talk 해 보세요."
+          }
+        }
+      }
+    },
+    "Watch uses this text — edit it freely.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch가 이 내용을 그대로 씁니다. 자유롭게 고치세요."
+          }
+        }
+      }
+    },
+    "Watching": {},
+    "We boost the level on upload — clarity matters more than loudness.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드할 때 음량은 저희가 키워요. 크게 말하는 것보다 또렷한 게 중요합니다."
+          }
+        }
+      }
+    },
+    "We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "세션 횟수가 아니라 말한 시간을 봅니다. 1분짜리 대화 하나로는 알 수 없지만, 1분짜리가 열 번이면 많은 걸 알 수 있어요."
+          }
+        }
+      }
+    },
+    "We'll remind you before your trial ends.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무료 체험이 끝나기 전에 알려드릴게요."
+          }
+        }
+      }
+    },
+    "Welcome to the beta": {},
+    "What I heard": {},
+    "What I noticed lately": {},
+    "What each day was made of — talk turns, shadow takes, drill reviews.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."
+          }
+        }
+      }
+    },
+    "What never moves the level": {},
+    "What should I call you?": {},
+    "What to practice": {},
+    "What uses credits?": {},
+    "What you do": {},
+    "What you usually talk about": {},
+    "What's measured": {},
+    "What's your native language?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모국어가 무엇인가요?"
+          }
+        }
+      }
+    },
+    "When do you most need %@?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@가 가장 필요한 순간은 언제인가요?"
+          }
+        }
+      }
+    },
+    "When you run low": {},
+    "Where": {},
+    "Where they live, what they do": {},
+    "Where you live": {},
+    "Which language do you want to speak?": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어떤 언어를 말하고 싶으세요?"
+          }
+        }
+      }
+    },
+    "Which language next?": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음은 어떤 언어로 할까요?"
+          }
+        }
+      }
+    },
+    "Who": {},
+    "Who you live with (optional)": {},
+    "Who you're talking to": {},
+    "Why this level": {},
+    "With %@": {},
+    "Word starts, speed-matched — orange landed off the target's beat.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "속도를 맞춘 뒤 각 단어의 시작점이에요. 주황색은 원래 박자에서 벗어난 부분입니다."
+          }
+        }
+      }
+    },
+    "Words": {},
+    "Words you use, by level": {},
+    "Wrapping up your session…": {},
+    "Writing the dialogue…": {},
+    "Writing this scenario's scene…": {},
+    "Writing this scene…": {},
+    "You": {},
+    "You and your friend each get 300 credits when they join with your code — for up to 10 friends.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구가 내 코드로 가입하면 둘 다 300 크레딧을 받아요. 최대 10명까지 가능합니다."
+          }
+        }
+      }
+    },
+    "You finished %lld card%@. They'll surface again on the Leitner schedule.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "You finished %1$lld card%2$@. They'll surface again on the Leitner schedule."
+          }
+        }
+      }
+    },
+    "You just heard yourself handle a real situation. Did it sound like you?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금 내가 실제 상황을 풀어가는 걸 들으셨어요. 내 목소리 같던가요?"
+          }
+        }
+      }
+    },
+    "You just talked with your future voice. What felt right — and what felt off?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금 미래의 내 목소리와 대화하셨어요. 어떤 점이 좋았고, 어떤 점이 어색했나요?"
+          }
+        }
+      }
+    },
+    "You used what you practiced": {},
+    "You · %lld": {},
+    "You'll both get 300 credits when you sign in.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인하면 둘 다 300 크레딧을 받아요."
+          }
+        }
+      }
+    },
+    "You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대본을 한 번 더 읽으시면 되고 1분쯤 걸려요. 설정 중 재녹음은 무료이고, 새 목소리를 선택할 때만 기존 목소리가 교체됩니다."
+          }
+        }
+      }
+    },
+    "You're about to build your fluent self — another you that already speaks fluent %@. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이제 유창한 나를 만듭니다. 이미 %@를 유창하게 하는 또 다른 나예요. 여기서 고른 값이 그 사람이 어떻게 말하고 무엇을 고쳐줄지를 정합니다. 잘 모르겠으면 가장 가까운 걸 고르세요. 대화하면서 앱이 맞춰갑니다."
+          }
+        }
+      }
+    },
+    "You're already learning every language we support today. More are on the way.": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 지원하는 언어는 이미 전부 학습 중이세요. 곧 더 추가됩니다."
+          }
+        }
+      }
+    },
+    "You're in": {},
+    "You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step.": {},
+    "You're out of credits, so your future self can't reply.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "크레딧이 떨어져서 유창한 내가 답할 수 없어요."
+          }
+        }
+      }
+    },
+    "You've used all your beta credits": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "베타 크레딧을 모두 쓰셨어요"
+          }
+        }
+      }
+    },
+    "You, but fluent": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창해진 나"
+          }
+        }
+      }
+    },
+    "Your %@": {},
+    "Your CEFR level shapes each conversation. The daily goal drives the ring on Home.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CEFR 레벨이 대화의 난이도를 정하고, 하루 목표가 홈 화면의 링을 채웁니다."
+          }
+        }
+      }
+    },
+    "Your answers go straight to the team building nawana.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남기신 답변은 nawana를 만드는 팀에게 바로 전달돼요."
+          }
+        }
+      }
+    },
+    "Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched.": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Your cloned voice already speaks %1$@ — no new recording needed. Your %2$@ progress stays untouched."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클론된 목소리는 이미 %1$@를 할 줄 알아서 다시 녹음할 필요가 없어요. 기존 %2$@ 진행 상황도 그대로 유지됩니다."
+          }
+        }
+      }
+    },
+    "Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime.": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클론된 목소리는 추가한 모든 언어를 말합니다. 언어를 빼도 진행 상황은 남아서 언제든 다시 추가할 수 있어요."
+          }
+        }
+      }
+    },
+    "Your code": {},
+    "Your current clone will be deleted on ElevenLabs after the new one is created.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 클론이 만들어진 뒤 기존 클론은 ElevenLabs에서 삭제돼요."
+          }
+        }
+      }
+    },
+    "Your feedback": {},
+    "Your feedback goes straight to the person building this.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남기신 의견은 이걸 만드는 사람에게 바로 전달돼요."
+          }
+        }
+      }
+    },
+    "Your first assessment unlocks after %lld minutes of talk.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 %lld분을 채우면 첫 평가가 열려요."
+          }
+        }
+      }
+    },
+    "Your first report unlocks after %lld minutes of practice.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연습 %lld분을 채우면 첫 리포트가 열려요."
+          }
+        }
+      }
+    },
+    "Your fluent self is ready": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 기다리고 있어요"
+          }
+        }
+      }
+    },
+    "Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.": {
+      "extractionState": "stale",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 이 언어를 내 목소리로 말해요. 언어는 나중에 더 추가할 수 있고, 같은 목소리라 따로 설정할 게 없습니다."
+          }
+        }
+      }
+    },
+    "Your fluent self wants to know you": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창한 내가 당신을 알고 싶어 해요"
+          }
+        }
+      }
+    },
+    "Your future self used these; you haven't yet. Tap one to study it — or mark it as known.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미래의 내가 쓴 표현인데 아직 안 써 보신 것들이에요. 눌러서 익히거나, 이미 안다고 표시해 두세요."
+          }
+        }
+      }
+    },
+    "Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성장 곡선은 두 번째 평가부터 그려져요. 평가할 때마다 점이 하나씩 찍히고, 레벨은 평가로만 움직입니다."
+          }
+        }
+      }
+    },
+    "Your history together": {},
+    "Your interests": {},
+    "Your invite code": {},
+    "Your level": {},
+    "Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after %lld minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레벨은 주기적인 평가로 정해져요. 평가할 때마다 직전 평가 이후에 말한 걸 전부 모아, 공식 CEFR 말하기 기준(어휘의 폭과 정확도, 실수를 감안한 문법 통제력, 생각을 얼마나 끝까지 풀어내는지)에 비추어 판정합니다. 첫 평가는 대화 %lld분을 채우면 열리고, 그 뒤로는 대화를 이어가는 주마다 다시 평가해요. 레벨은 평가로만 움직입니다."
+          }
+        }
+      }
+    },
+    "Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레벨은 첫 평가에서 매겨져요. 세션 하나로 짐작하는 게 아니라 지금까지 말한 걸 전부 모아 한 번에 판정합니다."
+          }
+        }
+      }
+    },
+    "Your level is measured from the talks you actually have — it isn't a setting you keep in sync by hand.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레벨은 실제로 나눈 대화에서 측정돼요. 손으로 맞춰 두는 설정이 아닙니다."
+          }
+        }
+      }
+    },
+    "Your level is re-assessed regularly. The next assessment needs both:": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "레벨은 주기적으로 다시 평가해요. 다음 평가에는 두 가지가 모두 필요합니다:"
+          }
+        }
+      }
+    },
+    "Your level, one point per assessment — this line is what growing looks like.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평가할 때마다 찍히는 레벨 점이에요. 이 선이 성장의 모습입니다."
+          }
+        }
+      }
+    },
+    "Your match": {},
+    "Your name": {},
+    "Your own": {},
+    "Your people": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 사람들"
+          }
+        }
+      }
+    },
+    "Your persona plays this scene in their own voice.": {},
+    "Your practice data stays on this device. Your voice clone and credits stay with your account.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학습 데이터는 이 기기에 남고, 음성 클론과 크레딧은 계정에 남아요."
+          }
+        }
+      }
+    },
+    "Your scenario": {},
+    "Your scenarios": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 상황"
+          }
+        }
+      }
+    },
+    "Your situation": {},
+    "Your situation so far": {},
+    "Your subscription is active. Credits land on your account as soon as Apple confirms the purchase.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구독이 활성화됐어요. Apple이 결제를 확인하는 대로 크레딧이 계정에 들어옵니다."
+          }
+        }
+      }
+    },
+    "book finished": {},
+    "books finished": {},
+    "e.g. Boram tells me she's moving back to Seoul": {},
+    "e.g. Lufthansa cabin-crew interview next week — I want to rehearse it": {},
+    "e.g. Running into them at the wedding and catching up": {},
+    "e.g. Solo founder of an AI app for parents": {},
+    "e.g. Wife and 4yo daughter at Kita": {},
+    "e.g. “%@”": {},
+    "full line": {},
+    "less": {},
+    "loop %@–%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "loop %1$@–%2$@"
+          }
+        }
+      }
+    },
+    "mastered": {},
+    "more": {},
+    "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말하는 걸 들으려면 마이크와 음성 인식 권한이 필요해요. 설정 → nawana에서 켜 주세요."
+          }
+        }
+      }
+    },
+    "no timings": {},
+    "phrases": {},
+    "shadow %lld": {},
+    "shadow +%lld": {},
+    "thing you studied has come out of your mouth in a real conversation": {},
+    "things you studied have come out of your mouth in a real conversation": {},
+    "vocabulary level": {},
+    "voiced by %@": {},
+    "with %@": {},
+    "words": {},
+    "·": {},
+    "×%lld": {},
+    "—": {},
+    "“%@”": {},
+    "•": {},
+    "…": {},
+    "→ %@": {},
+    "≈ %lld min of conversation a day": {},
+    "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈는 AI의 판단이 아니라 실제 측정값을 고정된 기준으로 CEFR 구간에 대응시킨 값이에요. 각 구간은 측정 하나에서 나온 상한선이라(빠른 속도나 긴 발화만으로 레벨이 되지는 않습니다), 실제 판정 레벨은 보통 여기 가장 높은 구간과 같거나 그 아래에 놓입니다. 판정에는 오류 밀도와 생각을 얼마나 풀어냈는지도 함께 반영되기 때문이에요."
+          }
+        }
+      }
+    },
+    "한국어": {},
+    "😀": {}
+  },
+  "version": "1.1"
+}

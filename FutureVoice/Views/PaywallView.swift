@@ -87,7 +87,7 @@ struct PaywallView: View {
         .alert("You're in", isPresented: purchasedBinding) {
             Button("Done") { dismiss() }
         } message: {
-            Text("Your subscription is active. Credits land on your account as soon as Apple confirms the purchase.")
+            Text(explain("Your subscription is active. Credits land on your account as soon as Apple confirms the purchase."))
         }
         .alert("Purchase failed", isPresented: failedBinding) {
             Button("OK") { store.purchaseState = .idle }
@@ -97,7 +97,7 @@ struct PaywallView: View {
         .alert("Thank you", isPresented: $surveySent) {
             Button("Done") { dismiss() }
         } message: {
-            Text("Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free.")
+            Text(explain("Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free."))
         }
     }
 
@@ -162,11 +162,11 @@ struct PaywallView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
             } else if step == .survey {
-                Text("Your answers go straight to the team building nawana.")
+                Text(explain("Your answers go straight to the team building nawana."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else if step != .plans {
-                Text("\(store.trialDays) days free. Cancel anytime.")
+                Text(explain("\(store.trialDays) days free. Cancel anytime."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -198,7 +198,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("You, but fluent")
                     .font(.largeTitle.weight(.bold))
-                Text("Everything nawana does, fueled up — in your own voice.")
+                Text(explain("Everything nawana does, fueled up — in your own voice."))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -242,7 +242,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("\(store.trialDays) days free,\nno surprises")
                     .font(.largeTitle.weight(.bold))
-                Text("We'll remind you before your trial ends.")
+                Text(explain("We'll remind you before your trial ends."))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -338,7 +338,7 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text("Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever.")
+            Text(explain("Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -489,7 +489,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Help set the price")
                     .font(.largeTitle.weight(.bold))
-                Text("No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?")
+                Text(explain("No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?"))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }

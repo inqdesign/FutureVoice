@@ -63,7 +63,18 @@ Two cases that look like exceptions but aren't:
 - **Scenario titles/blurbs** (`TopicEngine`) are MATERIAL, so target language — the blurb literally becomes the scene the learner talks through. These used to say "in English" literally; they now follow `targetLanguage`, which only matters once the target isn't English.
 - **Counterpart profiles** (`CounterpartParser`) are the user's OWN note about their own friend, dictated in their own language and edited by hand afterwards — so every field comes back in the native language. They're also injected as free-text context into `DialogueEngine` / `TopicEngine` / `ScenarioCurriculumEngine` prompts, each of which carries a "context only, don't let its language change your output language" guard next to the data. Keep that guard next to any new native-language context you inject.
 
-Still English, and the one real gap: **UI chrome**. The app has **no** localization infrastructure — no `.xcstrings`, no `String(localized:)`; ~590 hardcoded English literals in `Views/` alone.
+### UI text follows the same split, on two different axes
+
+`Localizable.xcstrings` (+ `SWIFT_EMIT_LOC_STRINGS`) holds every UI string; the build extracts SwiftUI literals automatically, so the catalog can't drift from the code. `UILanguage.swift` decides which language each string resolves in:
+
+- **Chrome → the TARGET language.** Tabs, labels, buttons, titles, chips. One-word A1 vocabulary the learner meets dozens of times a day next to an icon: free exposure at no comprehension cost, and the same chrome serves every target language. Wired once at the app root as `.environment(\.locale, targetLanguage)` — every `Text("literal")` follows with **no per-call code**.
+- **Explanations → the NATIVE language, until the learner outgrows it.** Why a number moved, what a control does, what a term means, what a confirm will destroy, empty states that instruct, error recovery. Wrap these in `explain("…")` (which resolves through `Bundle.explanations`). At or below `UILanguage.nativeExplanationsThrough` (B1) they render in the learner's own language; above it they render in the target language.
+
+`explain()` is the ONLY marker — an unwrapped literal is chrome by default. When adding UI text, ask "does the learner have to parse this to act, or do they recognize it by shape?" Parse → `explain()`. Recognize → plain `Text`.
+
+**Refreshing the catalog:** a plain `xcodebuild build` does NOT write newly-added strings back into `Localizable.xcstrings` — it only compiles what's already there. Run `xcodebuild -exportLocalizations -localizationPath <tmp> -exportLanguage ko` to merge new keys in, then translate them. Skipping this is why a string can look wired up and still be missing from the catalog.
+
+Nothing here names a language. Adding German is a `de` column in the catalog — no code change. Two gaps remain: most explanatory strings are still unwrapped, and literals that flow through a `String` variable (`source = "Free talk"`, `case .words: return "Vocabulary"`) aren't `LocalizedStringKey`, so they neither extract nor localize until converted to `String(localized:)`.
 
 ## Hard rules
 

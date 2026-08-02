@@ -96,7 +96,7 @@ struct PersonaOnboardingView: View {
         } header: {
             Text("Your fluent self wants to know you")
         } footer: {
-            Text("The more you share, the more I'll sound like a version of you — not a textbook.")
+            Text(explain("The more you share, the more I'll sound like a version of you — not a textbook."))
         }
         .onChange(of: avatarPick) { _, item in
             guard let item else { return }
@@ -144,7 +144,7 @@ struct PersonaOnboardingView: View {
             } header: {
                 Text("Interests")
             } footer: {
-                Text("Tap to toggle. Or type your own and hit return.")
+                Text(explain("Tap to toggle. Or type your own and hit return."))
             }
 
             Section {
@@ -154,7 +154,7 @@ struct PersonaOnboardingView: View {
                 TextField("Add your own (comma-separated)", text: $situationsDraft)
                     .onSubmit { mergeDraft(into: &persona.situations, from: &situationsDraft) }
             } header: {
-                Text("When do you most need \(LanguageCatalog.englishName(appState.targetLanguage))?")
+                Text(explain("When do you most need \(LanguageCatalog.englishName(appState.targetLanguage))?"))
             }
 
             Section("Anything else (optional)") {
