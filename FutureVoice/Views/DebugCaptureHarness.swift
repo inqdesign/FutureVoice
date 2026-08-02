@@ -151,10 +151,16 @@ enum DebugCapture {
                 ConversationDetailView(session: carryoverSession ?? seedCarryoverSession())
                     .environmentObject(appState)
             })
+        case "finished":
+            // The finished-books shelf, populated — the real sheet, sample rows.
+            return AnyView(FinishedBooksSheet(books: sampleFinishedBooks)
+                .environmentObject(appState))
+        case "finished-empty":
+            return AnyView(FinishedBooksSheet(books: []).environmentObject(appState))
         case "progress":
             once("progress") {
                 seedVocab(); seedSessions(scored: true)
-                _ = seedCarryoverSession()
+                _ = seedCarryoverSession(scored: true)
                 // A pooled weekly read so the big CEFR level (not "building")
                 // renders for design capture.
                 let report = WeeklyReport(
@@ -379,6 +385,25 @@ enum DebugCapture {
 
     // MARK: - Sessions (Home stats + mission)
 
+    /// Books taken all the way to mastered, for the finished-books shelf.
+    static var sampleFinishedBooks: [FinishedBooksSheet.FinishedBook] {
+        let day = 86_400.0
+        return [
+            .init(id: UUID(), title: "Pharmacy · picking up a prescription",
+                  subtitle: "Scene · with Pharmacist", icon: "film.fill", itemCount: 14,
+                  finishedAt: Date().addingTimeInterval(-2 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Job interview", subtitle: "Talk",
+                  icon: "bubble.left.and.bubble.right.fill", itemCount: 9,
+                  finishedAt: Date().addingTimeInterval(-6 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Café · catching up", subtitle: "Scene · with Sarah",
+                  icon: "film.fill", itemCount: 14,
+                  finishedAt: Date().addingTimeInterval(-13 * day), session: nil, scenario: nil),
+            .init(id: UUID(), title: "Four-day work week", subtitle: "Talk",
+                  icon: "bubble.left.and.bubble.right.fill", itemCount: 11,
+                  finishedAt: Date().addingTimeInterval(-21 * day), session: nil, scenario: nil),
+        ]
+    }
+
     /// Held so the "carryover" route seeds once but can still hand the same
     /// session to the view it returns.
     static var carryoverSession: Session?
@@ -386,8 +411,10 @@ enum DebugCapture {
     /// A finished talk carrying one carryover per source. Quotes are written
     /// as the learner padding the studied item out — exactly what the matcher
     /// accepts — so what renders here is what a real hit looks like.
+    /// `scored: false` leaves the scorecard off so the carryover section lands
+    /// above the fold — this route exists to look at that section.
     @discardableResult
-    static func seedCarryoverSession() -> Session {
+    static func seedCarryoverSession(scored: Bool = false) -> Session {
         let sessionId = UUID()
         let ended = Date().addingTimeInterval(-1_800)
         let started = ended.addingTimeInterval(-720)
@@ -430,7 +457,7 @@ enum DebugCapture {
         var summary = SessionSummary(
             phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
             overallNote: "Relaxed, natural talk — and you pulled in a lot of what you'd been studying.",
-            scorecard: sampleScorecard)
+            scorecard: scored ? sampleScorecard : nil)
         summary.carryovers = carryovers
 
         let session = Session(
@@ -562,6 +589,11 @@ enum DebugCapture {
         appState.saveScenario(Scenario(environment: "Job interview · panel round",
                                        role: "Interviewer", notes: "",
                                        curriculum: curriculum(mastered: 0), isTopic: false))
+        // …and one taken all the way (14 = every item), so the finished-books
+        // shelf renders populated instead of only in its empty state.
+        appState.saveScenario(Scenario(environment: "Pharmacy · picking up a prescription",
+                                       role: "Pharmacist", notes: "",
+                                       curriculum: curriculum(mastered: 14), isTopic: false))
     }
 
     // MARK: - Shadow (karaoke line)

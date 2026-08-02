@@ -49,6 +49,7 @@ struct PracticeTab: View {
     /// review sheet itself.
     @State private var dueDrillCount = 0
     @State private var showingDrills = false
+    @State private var showingFinished = false
     @State private var talks: [Session] = []
     @State private var archivedTalks: [Session] = []
     /// Derived talk-book progress, filled in a follow-up pass (pickup-word
@@ -125,6 +126,7 @@ struct PracticeTab: View {
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Practice")
             .toolbarTitleDisplayMode(.inlineLarge)
+            .toolbar { finishedShelfButton }
             .onAppear {
                 reload()
                 consumePendingRoute()
@@ -155,6 +157,10 @@ struct PracticeTab: View {
             }
             .sheet(isPresented: $showingDrills, onDismiss: reload) {
                 DrillSheet().environmentObject(appState)
+            }
+            .sheet(isPresented: $showingFinished, onDismiss: reload) {
+                FinishedBooksSheet(books: finishedBooks)
+                    .environmentObject(appState)
             }
         }
     }
@@ -346,6 +352,64 @@ struct PracticeTab: View {
         return Array((talkBooks + scenarioBooks)
             .sorted { lastStudied($0) > lastStudied($1) }
             .prefix(4))
+    }
+
+    /// The count is the point — it's a running tally of books you finished, so
+    /// it belongs in the chrome where it's visible from every shelf, not
+    /// buried at the bottom of one. Shown even at zero: an empty trophy shelf
+    /// that tells you how to earn the first one beats a button that only
+    /// appears once you no longer need the explanation.
+    @ToolbarContentBuilder
+    private var finishedShelfButton: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            let count = finishedBooks.count
+            Button {
+                showingFinished = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: count > 0 ? "checkmark.seal.fill" : "checkmark.seal")
+                    if count > 0 {
+                        Text("\(count)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                    }
+                }
+                .foregroundStyle(count > 0 ? AnyShapeStyle(Color.green) : AnyShapeStyle(.secondary))
+            }
+            .accessibilityLabel(count == 1 ? "1 book finished" : "\(count) books finished")
+        }
+    }
+
+    // MARK: - Finished books (the trophy shelf)
+
+    /// Books where every single item is mastered — Talk and Watch together,
+    /// archived or not. Archiving is tidying; THIS is the achievement, and
+    /// until now the app computed it and then hid it inside a per-shelf
+    /// archive list. Most recently finished first.
+    private var finishedBooks: [FinishedBooksSheet.FinishedBook] {
+        typealias Row = FinishedBooksSheet.FinishedBook
+        let fromTalks: [Row] = (talks + archivedTalks).compactMap { session in
+            guard let snap = talkSnapshots[session.id], snap.isMastered else { return nil }
+            return Row(
+                id: session.id,
+                title: session.displayTitle,
+                subtitle: "Talk",
+                icon: "bubble.left.and.bubble.right.fill",
+                itemCount: snap.totalCount,
+                finishedAt: snap.lastStudiedAt ?? session.endedAt ?? session.startedAt,
+                session: session, scenario: nil)
+        }
+        let fromScenarios: [Row] = appState.scenarios.compactMap { scenario in
+            guard scenario.isMastered, let c = scenario.curriculum else { return nil }
+            let finished = (c.words + c.expressions + c.shadowLines).compactMap(\.masteredAt).max()
+            return Row(
+                id: scenario.id,
+                title: scenario.environment,
+                subtitle: linkedPersonaName(scenario).map { "Scene · with \($0)" } ?? "Scene",
+                icon: "film.fill",
+                itemCount: c.totalCount,
+                finishedAt: finished ?? scenario.lastUsedAt ?? scenario.createdAt,
+                session: nil, scenario: scenario)
+        }
+        return (fromTalks + fromScenarios).sorted { $0.finishedAt > $1.finishedAt }
     }
 
     /// Aggregate mastery across EVERY book the activities ever generated —
@@ -784,5 +848,127 @@ struct PracticeTab: View {
             }
             talkSnapshots = out
         }
+    }
+}
+
+// MARK: - Finished books shelf
+
+/// Every book the learner took all the way to mastered — the app's only
+/// surface that is purely a record of things completed.
+///
+/// Deliberately NOT the archive: archiving is filing something away, which
+/// can mean "I gave up on this". A book lands here only when every word and
+/// line in it is mastered, so the count can't be inflated by tidying.
+struct FinishedBooksSheet: View {   // internal: DebugCaptureHarness renders it
+    let books: [FinishedBook]
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    /// Mirrors `PracticeTab.FinishedBook` — the sheet takes prepared rows so
+    /// it never has to know how Talk and Watch books compute mastery.
+    struct FinishedBook: Identifiable {
+        let id: UUID
+        let title: String
+        let subtitle: String
+        let icon: String
+        let itemCount: Int
+        let finishedAt: Date
+        let session: Session?
+        let scenario: Scenario?
+    }
+
+    private var itemsMastered: Int { books.reduce(0) { $0 + $1.itemCount } }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if books.isEmpty { emptyState } else { list }
+            }
+            .navigationTitle("Finished")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private var list: some View {
+        List {
+            Section {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text("\(books.count)")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.green)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(books.count == 1 ? "book finished" : "books finished")
+                            .font(.headline)
+                        Text("\(itemsMastered) words and lines mastered inside them")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+            Section {
+                ForEach(books) { book in
+                    NavigationLink {
+                        destination(for: book)
+                    } label: {
+                        row(book)
+                    }
+                }
+            } footer: {
+                Text("A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.")
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private func row(_ book: FinishedBook) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: book.icon)
+                .font(.body)
+                .foregroundStyle(.tint)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(book.title).font(.subheadline.weight(.medium)).lineLimit(2)
+                Text("\(book.subtitle) · \(book.itemCount) mastered · \(book.finishedAt.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "checkmark.seal.fill")
+                .font(.subheadline)
+                .foregroundStyle(.green)
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private func destination(for book: FinishedBook) -> some View {
+        if let session = book.session {
+            ConversationDetailView(session: session).environmentObject(appState)
+        } else if let scenario = book.scenario {
+            ScenarioDetailView(scenarioId: scenario.id).environmentObject(appState)
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "checkmark.seal")
+                .font(.system(size: 44))
+                .foregroundStyle(.tertiary)
+            Text("Nothing finished yet")
+                .font(.headline)
+            Text("Master every word and line in a book — from a talk or a scene — and it lands here for good.")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 }
