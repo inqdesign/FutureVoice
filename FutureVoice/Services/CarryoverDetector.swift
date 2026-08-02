@@ -77,18 +77,34 @@ enum CarryoverDetector {
         // One item is credited once per session, even if it shows up as both a
         // card and a suggestion.
         var claimed = Set<String>()
+        // …and one SENTENCE earns at most one credit. Near-duplicate study
+        // items ("I'm in a good mood today" / "I'm just in a good mood today")
+        // otherwise all match the same utterance and the section turns into
+        // three rows quoting one thing the learner said once.
+        var creditedTurns = Set<UUID>()
+
+        func claim(_ key: String, _ hit: Hit, source: Carryover.Source,
+                   item: String, sourceId: UUID?) {
+            claimed.insert(key)
+            creditedTurns.insert(hit.turnId)
+            out.append(Carryover(
+                sessionId: sessionId, source: source, item: item,
+                quote: hit.quote, turnId: hit.turnId, sourceId: sourceId, detectedAt: now))
+        }
+
+        /// Sources run heaviest-first, so the first claim on a sentence wins.
+        func available(_ key: String) -> Bool { !key.isEmpty && !claimed.contains(key) }
+        func free(_ hit: Hit) -> Bool { !creditedTurns.contains(hit.turnId) }
 
         // ── Cards from earlier talks, said unprompted today. The biggest win
         // the app can detect: a correction survived the gap between sessions.
         for card in cards
         where card.sourceSessionId != sessionId && card.createdAt < sessionStartedAt {
             let key = normalized(card.targetPhrase)
-            guard !key.isEmpty, !claimed.contains(key),
-                  let hit = firstMatch(of: card.targetPhrase, in: userTurns) else { continue }
-            claimed.insert(key)
-            out.append(Carryover(
-                sessionId: sessionId, source: .drillCard, item: card.targetPhrase,
-                quote: hit.quote, turnId: hit.turnId, sourceId: card.id, detectedAt: now))
+            guard available(key),
+                  let hit = firstMatch(of: card.targetPhrase, in: userTurns),
+                  free(hit) else { continue }
+            claim(key, hit, source: .drillCard, item: card.targetPhrase, sourceId: card.id)
         }
 
         // ── Material from a Watch book, produced in a live talk. The book's
@@ -97,15 +113,12 @@ enum CarryoverDetector {
         // unrelated conversation — the better win — goes unnoticed there.
         for item in curriculumItems {
             let key = normalized(item.text)
-            guard !key.isEmpty, !claimed.contains(key) else { continue }
-            let hit = item.isWord
+            guard available(key) else { continue }
+            let match = item.isWord
                 ? firstLemmaMatch(of: key, in: userTurns)
                 : firstMatch(of: item.text, in: userTurns)
-            guard let hit else { continue }
-            claimed.insert(key)
-            out.append(Carryover(
-                sessionId: sessionId, source: .curriculumItem, item: item.text,
-                quote: hit.quote, turnId: hit.turnId, sourceId: item.id, detectedAt: now))
+            guard let hit = match, free(hit) else { continue }
+            claim(key, hit, source: .curriculumItem, item: item.text, sourceId: item.id)
         }
 
         // ── Phrases they'd deliberately bookmarked to study, then said. The
@@ -113,12 +126,10 @@ enum CarryoverDetector {
         // LLM happening to notice the phrase.
         for phrase in studyingExpressions {
             let key = normalized(phrase)
-            guard !key.isEmpty, !claimed.contains(key),
-                  let hit = firstMatch(of: phrase, in: userTurns) else { continue }
-            claimed.insert(key)
-            out.append(Carryover(
-                sessionId: sessionId, source: .studyingExpression, item: phrase,
-                quote: hit.quote, turnId: hit.turnId, sourceId: nil, detectedAt: now))
+            guard available(key),
+                  let hit = firstMatch(of: phrase, in: userTurns),
+                  free(hit) else { continue }
+            claim(key, hit, source: .studyingExpression, item: phrase, sourceId: nil)
         }
 
         // ── Suggestions from earlier in THIS call, applied later in it.
@@ -129,12 +140,14 @@ enum CarryoverDetector {
             let later = Array(userTurns.dropFirst(index + 1))
             guard !later.isEmpty else { continue }
             let key = normalized(suggestion.alternative)
-            guard !key.isEmpty, !claimed.contains(key),
-                  let hit = firstMatch(of: suggestion.alternative, in: later) else { continue }
-            claimed.insert(key)
-            out.append(Carryover(
-                sessionId: sessionId, source: .suggestion, item: suggestion.alternative,
-                quote: hit.quote, turnId: hit.turnId, sourceId: turn.id, detectedAt: now))
+            guard available(key) else { continue }
+            // If the turn that EARNED the suggestion already matches it, the
+            // learner was saying this before the suggestion existed — repeating
+            // themselves isn't adopting anything.
+            guard firstMatch(of: suggestion.alternative, in: [turn]) == nil else { continue }
+            guard let hit = firstMatch(of: suggestion.alternative, in: later),
+                  free(hit) else { continue }
+            claim(key, hit, source: .suggestion, item: suggestion.alternative, sourceId: turn.id)
         }
 
         // ── Notebook words. Single words can't go through the phrase matcher
@@ -151,7 +164,8 @@ enum CarryoverDetector {
         for word in studyingWords {
             let key = normalized(word)
             guard !key.isEmpty, !claimedWords.contains(key),
-                  let hit = firstLemmaMatch(of: key, in: userTurns) else { continue }
+                  let hit = firstLemmaMatch(of: key, in: userTurns),
+                  !creditedTurns.contains(hit.turnId) else { continue }
             let rank = CoreVocabulary.level(of: key).map { CoreVocabulary.levelRank($0) } ?? 0
             wordHits.append((key, hit, rank))
         }
@@ -186,10 +200,10 @@ enum CarryoverDetector {
     /// points at the moment they reached for it, not a later repetition.
     static func firstMatch(of item: String, in userTurns: [Turn]) -> Hit? {
         let needle = tokens(item)
-        guard needle.count >= minTokens,
-              contentTokens(item).count >= minContentTokens else { return nil }
+        let core = contentTokens(item)
+        guard needle.count >= minTokens, core.count >= minContentTokens else { return nil }
         for turn in userTurns {
-            guard contains(needle, in: tokens(turn.transcript)) else { continue }
+            guard contains(needle, core: core, in: tokens(turn.transcript)) else { continue }
             return Hit(
                 quote: DrillStore.relevantFragment(of: turn.transcript, matching: item),
                 turnId: turn.id)
@@ -217,7 +231,7 @@ enum CarryoverDetector {
     /// `required` rounds up to the whole phrase, so short items must match
     /// exactly, in order. That's deliberate: short items are the ones generic
     /// enough to hit by accident.
-    private static func contains(_ needle: [String], in hay: [String]) -> Bool {
+    private static func contains(_ needle: [String], core: [String], in hay: [String]) -> Bool {
         guard !needle.isEmpty, hay.count >= minTokens else { return false }
         // Room for the learner to pad the phrase out — "I'd rather just stay
         // in tonight, honestly" still counts.
@@ -226,7 +240,17 @@ enum CarryoverDetector {
         guard hay.count >= required else { return false }
         for start in 0...(hay.count - required) {
             let slice = Array(hay[start..<min(hay.count, start + window)])
-            if lcsLength(needle, slice) >= required { return true }
+            guard lcsLength(needle, slice) >= required else { continue }
+            // EVERY meaning-carrying word, in order — no partial credit here.
+            //
+            // Coverage alone is not enough, and this isn't hypothetical: a card
+            // reading "I'm in a SWEET mood today" matched "I'm in a really GOOD
+            // mood today", because the one word that made the phrase worth
+            // studying was the one allowed to go missing. Function words may
+            // slip — that's what `minCoverage` is for. Content words may not.
+            guard lcsLength(core, slice.filter { !filler.contains($0) }) == core.count
+            else { continue }
+            return true
         }
         return false
     }
