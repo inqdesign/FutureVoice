@@ -472,7 +472,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
         case .tenMinutes: return "Back in 10 minutes"
         case .tomorrow:   return "Back tomorrow"
         case .threeDays:  return "Back in 3 days"
-        case .gotIt:      return "Got it — moves up the ladder"
+        case .gotIt:      return explain("Got it — moves up the ladder")
         }
     }
 

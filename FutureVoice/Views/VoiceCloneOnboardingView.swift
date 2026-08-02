@@ -502,7 +502,7 @@ struct VoiceCloneOnboardingView: View {
             }
             .mask(softEdges)
 
-            Text("1 minute. Vary your pitch a little.")
+            Text(explain("1 minute. Vary your pitch a little."))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -584,7 +584,7 @@ struct VoiceCloneOnboardingView: View {
             .buttonStyle(.bordered)
             .controlSize(.large)
 
-            Text("We boost the level on upload — clarity matters more than loudness.")
+            Text(explain("We boost the level on upload — clarity matters more than loudness."))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -601,7 +601,7 @@ struct VoiceCloneOnboardingView: View {
                 .foregroundStyle(.secondary)
                 .id(becomingLine)
                 .transition(.opacity)
-            Text("About half a minute.")
+            Text(explain("About half a minute."))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
@@ -671,7 +671,7 @@ struct VoiceCloneOnboardingView: View {
         } message: {
             // Free, and said out loud — a user who suspects a retake costs
             // them credits will settle for a voice that isn't theirs.
-            Text("You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one.")
+            Text(explain("You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one."))
         }
     }
 

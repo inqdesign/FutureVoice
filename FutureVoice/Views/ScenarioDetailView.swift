@@ -96,7 +96,7 @@ struct ScenarioDetailView: View {
                 dismiss()
             }
         } message: {
-            Text("The curriculum and its progress go with it.")
+            Text(explain("The curriculum and its progress go with it."))
         }
     }
 
@@ -200,7 +200,7 @@ struct ScenarioDetailView: View {
             }
             .padding(.vertical, 6)
         } footer: {
-            Text("Watch the scene, study its words and expressions, shadow your lines, then Talk it live.")
+            Text(explain("Watch the scene, study its words and expressions, shadow your lines, then Talk it live."))
         }
     }
 
@@ -211,7 +211,7 @@ struct ScenarioDetailView: View {
                     .font(.title2).foregroundStyle(.green)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Book mastered").font(.subheadline.weight(.semibold))
-                    Text("Everything in this scenario is yours now.")
+                    Text(explain("Everything in this scenario is yours now."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -323,7 +323,7 @@ struct ScenarioDetailView: View {
         } header: {
             sectionHeader(title: "Shadow these lines", icon: "waveform", items: c.shadowLines)
         } footer: {
-            Text("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
+            Text(explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
         }
     }
 
@@ -369,7 +369,7 @@ struct ScenarioDetailView: View {
             }
         } footer: {
             if generating {
-                Text("One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book.")
+                Text(explain("One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book."))
             }
         }
     }

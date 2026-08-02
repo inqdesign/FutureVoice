@@ -254,7 +254,7 @@ struct ConversationView: View {
                 }
                 Button("Not now", role: .cancel) { }
             } message: {
-                Text("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.")
+                Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
             .onChange(of: topic) { _, newTopic in
@@ -310,7 +310,7 @@ struct ConversationView: View {
                     close()
                 }
             } message: {
-                Text("Saving wraps up the talk and keeps the transcript, feedback, and drills.")
+                Text(explain("Saving wraps up the talk and keeps the transcript, feedback, and drills."))
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
@@ -489,9 +489,9 @@ struct ConversationView: View {
     private var micA11yLabel: String {
         if phoneCallActive {
             switch phase {
-            case .listening: return "Listening — tap to hang up"
+            case .listening: return explain("Listening — tap to hang up")
             case .thinking:  return "Thinking"
-            case .speaking:  return "Future self speaking — tap to hang up"
+            case .speaking:  return explain("Future self speaking — tap to hang up")
             case .idle:      return "Hang up"
             }
         }
@@ -503,10 +503,10 @@ struct ConversationView: View {
     private var micHint: String {
         if phoneCallActive {
             switch phase {
-            case .listening: return "Listening · pause to send · tap to stop"
+            case .listening: return explain("Listening · pause to send · tap to stop")
             case .thinking:  return "Thinking… · tap to stop"
             case .speaking:  return "Speaking… · tap to stop"
-            case .idle:      return "On call · tap to stop"
+            case .idle:      return explain("On call · tap to stop")
             }
         }
         return turns.isEmpty ? "Tap to start a phone-call" : "Tap to continue"
@@ -1799,7 +1799,7 @@ private struct TopicPickerSheet: View {
                     if loading && suggestions.isEmpty {
                         HStack { ProgressView(); Text("Finding scenarios from your life…").foregroundStyle(.secondary) }
                     } else if suggestions.isEmpty {
-                        Text("Tap Refresh to generate scenarios.")
+                        Text(explain("Tap Refresh to generate scenarios."))
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(suggestions) { item in
@@ -1835,7 +1835,7 @@ private struct TopicPickerSheet: View {
                     if let e = error {
                         Text(e).foregroundStyle(.red)
                     } else {
-                        Text("Grounded in your profile — name, city, work, family, interests.")
+                        Text(explain("Grounded in your profile — name, city, work, family, interests."))
                     }
                 }
 
@@ -1921,7 +1921,7 @@ struct RetryReplyRow: View {   // internal: DebugCaptureHarness renders it
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.slash.fill")
                         .foregroundStyle(.secondary)
-                    Text("You're out of credits, so your future self can't reply.")
+                    Text(explain("You're out of credits, so your future self can't reply."))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1941,7 +1941,7 @@ struct RetryReplyRow: View {   // internal: DebugCaptureHarness renders it
             HStack(spacing: 10) {
                 Image(systemName: "wifi.exclamationmark")
                     .foregroundStyle(.secondary)
-                Text("Couldn\'t get a response.")
+                Text(explain("Couldn\'t get a response."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Spacer()

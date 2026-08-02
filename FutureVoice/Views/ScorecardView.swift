@@ -177,7 +177,7 @@ struct GrammarReviewView: View {
                             .foregroundStyle(.secondary)
                     }
                 } footer: {
-                    Text("Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours.")
+                    Text(explain("Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours."))
                 }
 
                 Section {
@@ -240,7 +240,7 @@ struct GrammarReviewView: View {
                     Text("\(displayIssues.count) \(displayIssues.count == 1 ? "slip" : "slips") this session")
                 } footer: {
                     if sessionId != nil {
-                        Text("Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.")
+                        Text(explain("Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated."))
                     }
                 }
             }

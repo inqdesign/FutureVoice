@@ -704,7 +704,7 @@ struct PracticeTab: View {
                 }
             }
             .background(RoundedRectangle(cornerRadius: 14).fill(Color(.secondarySystemGroupedBackground)))
-            Text("Finished books. They keep their progress — unarchive anytime.")
+            Text(explain("Finished books. They keep their progress — unarchive anytime."))
                 .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 2)
         }

@@ -46,13 +46,13 @@ struct AddLanguageSheet: View {
                         .buttonStyle(.plain)
                     }
                 } header: {
-                    Text("Which language next?")
+                    Text(explain("Which language next?"))
                 } footer: {
                     // Reachable: a learner enrolled in everything the app can
                     // deliver today. Say so plainly instead of showing a bare
                     // empty list.
                     if choices.isEmpty {
-                        Text("You're already learning every language we support today. More are on the way.")
+                        Text(explain("You're already learning every language we support today. More are on the way."))
                     }
                 }
                 if let code {
@@ -64,7 +64,7 @@ struct AddLanguageSheet: View {
                             }
                         }
                     } footer: {
-                        Text("Your cloned voice already speaks \(LanguageCatalog.englishName(code)) — no new recording needed. Your \(LanguageCatalog.englishName(appState.targetLanguage)) progress stays untouched.")
+                        Text(explain("Your cloned voice already speaks \(LanguageCatalog.englishName(code)) — no new recording needed. Your \(LanguageCatalog.englishName(appState.targetLanguage)) progress stays untouched."))
                     }
                 }
             }

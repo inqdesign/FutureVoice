@@ -28,7 +28,7 @@ struct CreditGuideView: View {
             } header: {
                 Text("Uses credits")
             } footer: {
-                Text("1 credit ≈ 100 characters spoken in your voice.")
+                Text(explain("1 credit ≈ 100 characters spoken in your voice."))
             }
 
             Section {
@@ -45,7 +45,7 @@ struct CreditGuideView: View {
             } header: {
                 Text("Always free")
             } footer: {
-                Text("In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't.")
+                Text(explain("In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't."))
             }
         }
         .listStyle(.insetGrouped)

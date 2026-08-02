@@ -563,7 +563,7 @@ struct ConversationHome: View {
                     Text("Tell me more about you")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
-                    Text("Talks get more real when I know your life.")
+                    Text(explain("Talks get more real when I know your life."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -716,7 +716,7 @@ struct TalkScenariosListView: View {
                     }
                 }
             } footer: {
-                Text("Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete.")
+                Text(explain("Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete."))
             }
         }
         .navigationTitle("Scenarios")
@@ -785,7 +785,7 @@ struct PeopleSheet: View {
                     }
                 } else {
                     Section {
-                        Text("Add someone from your real life — their cloned voice can act out any scenario you build.")
+                        Text(explain("Add someone from your real life — their cloned voice can act out any scenario you build."))
                             .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }

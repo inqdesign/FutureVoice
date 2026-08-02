@@ -18,7 +18,7 @@ struct BetaWelcomeView: View {
             VStack(spacing: 10) {
                 Text("Welcome to the beta")
                     .font(.title.bold())
-                Text("No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing.")
+                Text(explain("No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing."))
                     .font(.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
@@ -27,7 +27,7 @@ struct BetaWelcomeView: View {
             VStack(spacing: 12) {
                 Text("When you run low")
                     .font(.headline)
-                Text("These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice.")
+                Text(explain("These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice."))
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)

@@ -149,6 +149,6 @@ struct PracticeSessionView: View {
         if sessionReps > 0 {
             return "\(sessionReps) rep\(sessionReps == 1 ? "" : "s") this session — it all counts toward your level."
         }
-        return "Come back when the next cards are due."
+        return explain("Come back when the next cards are due.")
     }
 }

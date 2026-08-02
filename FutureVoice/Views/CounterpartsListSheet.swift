@@ -29,7 +29,7 @@ struct CounterpartFormView: View {
                 } header: {
                     Text("Who")
                 } footer: {
-                    Text("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person.")
+                    Text(explain("Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person."))
                 }
 
                 Section("About them") {
@@ -119,7 +119,7 @@ struct VoicePresetPickerView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                 } else {
-                    Text("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage)).")
+                    Text(explain("Tap ▶ to hear a sample in \(LanguageCatalog.englishName(appState.targetLanguage))."))
                 }
             }
         }
@@ -205,15 +205,15 @@ struct VoicePresetPickerView: View {
     /// speaker-gender agreement so any voice can say them naturally.
     static func previewLine(for languageCode: String) -> String {
         switch languageCode.split(separator: "-").first.map(String.init) ?? languageCode {
-        case "es": return "¡Hola! Qué alegría verte. ¿Empezamos?"
-        case "de": return "Hallo! Schön, dich zu sehen. Sollen wir anfangen?"
-        case "fr": return "Bonjour ! Ça me fait plaisir de te voir. On commence ?"
-        case "it": return "Ciao! Che bello vederti. Iniziamo?"
-        case "pt": return "Oi! Que bom te ver. Vamos começar?"
+        case "es": return explain("¡Hola! Qué alegría verte. ¿Empezamos?")
+        case "de": return explain("Hallo! Schön, dich zu sehen. Sollen wir anfangen?")
+        case "fr": return explain("Bonjour ! Ça me fait plaisir de te voir. On commence ?")
+        case "it": return explain("Ciao! Che bello vederti. Iniziamo?")
+        case "pt": return explain("Oi! Que bom te ver. Vamos começar?")
         case "ja": return "こんにちは！会えてうれしいです。始めましょうか？"
         case "ko": return "안녕하세요! 만나서 반가워요. 시작해 볼까요?"
         case "zh": return "你好！很高兴见到你。我们开始吧？"
-        default:   return "Hi! It's good to see you. Shall we get started?"
+        default:   return explain("Hi! It's good to see you. Shall we get started?")
         }
     }
 }

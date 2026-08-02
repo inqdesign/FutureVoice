@@ -99,9 +99,9 @@ struct SetupFlowView: View {
                 ) { targetLanguage = code }
             }
         } header: {
-            Text("Which language do you want to speak?")
+            Text(explain("Which language do you want to speak?"))
         } footer: {
-            Text("Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.")
+            Text(explain("Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup."))
         }
     }
 
@@ -121,20 +121,20 @@ struct SetupFlowView: View {
                 ) { level = lvl }
             }
         } header: {
-            Text("How comfortable are you right now?")
+            Text(explain("How comfortable are you right now?"))
         } footer: {
-            Text("You're about to build your fluent self — another you that already speaks fluent \(Self.englishName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.")
+            Text(explain("You're about to build your fluent self — another you that already speaks fluent \(Self.englishName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk."))
         }
     }
 
     /// Plain-language read of each CEFR band, from the learner's chair.
     private static func levelBlurb(_ level: CEFRLevel) -> String {
         switch level {
-        case .a1: return "Just starting — a few words and set phrases"
+        case .a1: return explain("Just starting — a few words and set phrases")
         case .a2: return "Basic — simple, everyday exchanges"
-        case .b1: return "Conversational — I get by on familiar topics"
-        case .b2: return "Independent — I discuss most things with some ease"
-        case .c1: return "Advanced — I express myself fluently and precisely"
+        case .b1: return explain("Conversational — I get by on familiar topics")
+        case .b2: return explain("Independent — I discuss most things with some ease")
+        case .c1: return explain("Advanced — I express myself fluently and precisely")
         case .c2: return "Mastery — effortless, near-native"
         }
     }
@@ -154,9 +154,9 @@ struct SetupFlowView: View {
                 ) { nativeLanguage = code }
             }
         } header: {
-            Text("What's your native language?")
+            Text(explain("What's your native language?"))
         } footer: {
-            Text("Explanations and translations come in this language.")
+            Text(explain("Explanations and translations come in this language."))
         }
     }
 
@@ -238,7 +238,7 @@ struct SetupFlowView: View {
             Button("Sign out & go back", role: .destructive) { backToWelcome() }
             Button("Stay", role: .cancel) {}
         } message: {
-            Text("This signs you out. Your answers stay on this device.")
+            Text(explain("This signs you out. Your answers stay on this device."))
         }
     }
 

@@ -161,7 +161,7 @@ struct CounterpartDetailView: View {
                 }
             }
         } footer: {
-            Text("Grounded in your relationship with \(c.name) — these appear as ideas when you tap them on the Watch tab.")
+            Text(explain("Grounded in your relationship with \(c.name) — these appear as ideas when you tap them on the Watch tab."))
         }
     }
 

@@ -387,7 +387,7 @@ struct NotebookSheet: View {
     private var emptyState: some View {
         VStack(spacing: 10) {
             Image(systemName: "books.vertical").font(.largeTitle).foregroundStyle(.secondary)
-            Text("Tap a word in the cloud to start your notebook")
+            Text(explain("Tap a word in the cloud to start your notebook"))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -505,7 +505,7 @@ struct WordCard: View {
                 .font(.body).foregroundStyle(.secondary)
                 .redacted(reason: .placeholder)
         } else {
-            Text("No dictionary entry yet — tap to open the card.")
+            Text(explain("No dictionary entry yet — tap to open the card."))
                 .font(.footnote).foregroundStyle(.secondary)
         }
     }

@@ -105,8 +105,8 @@ struct ExpressionsView: View {
     }
     private var emptyMessage: String {
         switch filter {
-        case .toStudy: return "Expressions you use in your talks will collect here."
-        case .known:   return "Mark expressions you've got down as known."
+        case .toStudy: return explain("Expressions you use in your talks will collect here.")
+        case .known:   return explain("Mark expressions you've got down as known.")
         }
     }
 

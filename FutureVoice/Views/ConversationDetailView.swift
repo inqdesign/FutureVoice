@@ -120,7 +120,7 @@ struct ConversationDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.")
+            Text(explain("The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead."))
         }
     }
 
@@ -185,7 +185,7 @@ struct ConversationDetailView: View {
             }
             .padding(.vertical, 6)
         } footer: {
-            Text("Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation.")
+            Text(explain("Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation."))
         }
     }
 
@@ -196,7 +196,7 @@ struct ConversationDetailView: View {
                     .font(.title2).foregroundStyle(.green)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Talk mastered").font(.subheadline.weight(.semibold))
-                    Text("Everything this conversation had to teach is yours.")
+                    Text(explain("Everything this conversation had to teach is yours."))
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -237,7 +237,7 @@ struct ConversationDetailView: View {
                     if tab == .you {
                         levelGroupedChips(mine)
                     } else {
-                        Text("Your future self used these; you haven't yet. Tap one to study it — or mark it as known.")
+                        Text(explain("Your future self used these; you haven't yet. Tap one to study it — or mark it as known."))
                             .font(.caption).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         levelGroupedChips(theirs)
@@ -273,7 +273,7 @@ struct ConversationDetailView: View {
             } header: {
                 Label("You used what you practiced", systemImage: "target")
             } footer: {
-                Text("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.")
+                Text(explain("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue."))
             }
         }
     }
@@ -426,7 +426,7 @@ struct ConversationDetailView: View {
             } header: {
                 sectionHeader(title: "Say it smoother", icon: "waveform", items: curriculum.shadowLines)
             } footer: {
-                Text("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
+                Text(explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
             }
         }
     }
@@ -476,7 +476,7 @@ struct ConversationDetailView: View {
             } header: {
                 Text("Shadow this conversation")
             } footer: {
-                Text("Repeat your fluent self's lines from this talk.")
+                Text(explain("Repeat your fluent self's lines from this talk."))
             }
         }
     }
@@ -559,7 +559,7 @@ struct ConversationDetailView: View {
                     }
                 }
             } footer: {
-                Text("A quick active-recall run through this talk's saved phrases.")
+                Text(explain("A quick active-recall run through this talk's saved phrases."))
             }
         }
     }
@@ -693,9 +693,9 @@ struct ConversationDetailView: View {
     private func scoreContextLine(_ sc: SessionScorecard) -> String {
         let setting = appState.proficiency.rawValue.uppercased()
         if let read = sc.cefrLevel?.uppercased() {
-            return "Scored against your \(setting) level setting — this talk itself read as ≈\(read)."
+            return explain("Scored against your \(setting) level setting — this talk itself read as ≈\(read).")
         }
-        return "Scored against your \(setting) level setting — how this talk went, not a level rating."
+        return explain("Scored against your \(setting) level setting — how this talk went, not a level rating.")
     }
 
     private func overall(_ sc: SessionScorecard) -> Int {
@@ -750,7 +750,7 @@ struct TalkTranscriptView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 14) {
-                    Text("Highlighted words are worth picking up — tap one to check it out.")
+                    Text(explain("Highlighted words are worth picking up — tap one to check it out."))
                         .font(.caption).foregroundStyle(.secondary)
                     ForEach(Array(session.turns.enumerated()), id: \.element.id) { idx, turn in
                         VStack(alignment: .leading, spacing: 4) {

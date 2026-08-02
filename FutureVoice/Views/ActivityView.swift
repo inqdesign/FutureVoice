@@ -317,7 +317,7 @@ struct ActivityView: View {
             Text(day.formatted(date: .complete, time: .omitted))
                 .font(.headline)
             if mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 {
-                Text("No practice this day.")
+                Text(explain("No practice this day."))
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 detailRow(icon: "waveform", tint: .accentColor,
@@ -447,7 +447,7 @@ struct ActivityView: View {
         let year = cal.component(.year, from: displayedMonth)
         let active = activeDays.filter { cal.component(.year, from: $0) == year }.count
         let mins = periodMinutes(displayedMonth, granularity: .year)
-        return "\(active) active days · \(mins) min this year"
+        return explain("\(active) active days · \(mins) min this year")
     }
 
     /// Minutes spoken in the calendar month/year that `date` falls in.

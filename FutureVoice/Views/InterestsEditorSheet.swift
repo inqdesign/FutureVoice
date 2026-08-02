@@ -26,7 +26,7 @@ struct InterestsEditorSheet: View {
                 } header: {
                     Text("Your interests")
                 } footer: {
-                    Text("Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.")
+                    Text(explain("Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”."))
                 }
             }
             .navigationTitle("Interests")
