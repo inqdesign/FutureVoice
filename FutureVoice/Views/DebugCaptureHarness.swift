@@ -17,6 +17,10 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the expanded word card: `VocabularyView` opens
+    /// its notebook sheet at full height instead of the peek.
+    static var previewWordCard = false
+
     /// True while capturing the drill bin tray: `DrillView` opens already
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
@@ -50,6 +54,12 @@ enum DebugCapture {
         switch name {
         case "vocab":
             once("vocab") { seedVocab() }
+            return AnyView(NavigationStack { VocabularyView() })
+        case "vocab-card":
+            // The word card at full height — the peek is the default, so a
+            // screenshot can't reach the expanded state without this.
+            once("vocab") { seedVocab() }
+            previewWordCard = true
             return AnyView(NavigationStack { VocabularyView() })
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }

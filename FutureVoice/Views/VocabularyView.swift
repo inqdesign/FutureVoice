@@ -12,7 +12,13 @@ struct VocabularyView: View {
     @ObservedObject private var store = VocabStore.shared
     @State private var currentWord: String?
     @State private var showSheet = true
-    @State private var detent: PresentationDetent = .height(130)
+    /// Two stops, not three. The old ladder was 130 → medium → large, so
+    /// reading a word's meaning cost TWO drags, and the 130pt rung showed
+    /// nothing the cloud hadn't already shown (the word you just tapped).
+    /// The peek is now tall enough to carry the meaning itself, and one drag —
+    /// or one tap — goes all the way.
+    static let peekHeight: CGFloat = 220
+    @State private var detent: PresentationDetent = .height(VocabularyView.peekHeight)
     @State private var pan: CGSize = .zero
     @State private var panAnchor: CGSize = .zero
     @State private var nodes: [CloudLayout.Node] = []
@@ -43,6 +49,9 @@ struct VocabularyView: View {
                         // sheet shows it regardless of the cloud's level filter.
                         currentWord = appState.focusWord ?? store.studying.first
                         appState.focusWord = nil
+                        #if DEBUG
+                        if DebugCapture.previewWordCard { detent = .large }
+                        #endif
                     }
                     if nodes.isEmpty { rebuild(center: true) }      // don't recompute on every re-appear
                 }
@@ -80,9 +89,11 @@ struct VocabularyView: View {
         }
         .onChange(of: level) { _, _ in rebuild(center: true) }
         .sheet(isPresented: $showSheet) {
-            NotebookSheet(currentWord: $currentWord, isExpanded: detent != .height(130))
+            NotebookSheet(currentWord: $currentWord,
+                          isExpanded: detent != .height(Self.peekHeight),
+                          onExpand: { withAnimation(.easeOut(duration: 0.25)) { detent = .large } })
                 .environmentObject(appState)
-                .presentationDetents([.height(130), .medium, .large], selection: $detent)
+                .presentationDetents([.height(Self.peekHeight), .large], selection: $detent)
                 .presentationBackgroundInteraction(.enabled(upThrough: .large))
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled(true)
@@ -147,7 +158,10 @@ struct VocabularyView: View {
                         .position(x: sx, y: sy)
                         .onTapGesture {
                             currentWord = node.word
-                            detent = .height(130)     // stay compact — quick-check & move on; scroll/drag to open
+                            // Stay on the peek — it now shows the meaning, so
+                            // tapping through the cloud is a quick-check loop
+                            // with no drag at all. Tap the peek for the rest.
+                            detent = .height(Self.peekHeight)
                         }
                 }
             }
@@ -351,13 +365,17 @@ struct NotebookSheet: View {
     @ObservedObject private var store = VocabStore.shared
     @Binding var currentWord: String?
     let isExpanded: Bool
+    /// Pull the sheet to full height. Given to the peek so the whole card is
+    /// one TAP away — dragging a sheet is the slowest way to ask for more.
+    var onExpand: () -> Void = {}
 
     var body: some View {
         NavigationStack {
             if let word = currentWord {
                 // No .id(word) — keep the SAME card view and just swap its
                 // content, so navigating doesn't rebuild/jolt the layout.
-                WordCard(word: word, currentWord: $currentWord, isExpanded: isExpanded)
+                WordCard(word: word, currentWord: $currentWord, isExpanded: isExpanded,
+                         onExpand: onExpand)
             } else {
                 emptyState
                     .navigationTitle("My words · \(store.studying.count)")
@@ -389,6 +407,9 @@ struct WordCard: View {
     /// tapped chip's sibling words so the user can browse a session's new
     /// words without closing and reopening the sheet per word.
     var navigationWords: [String]? = nil
+    /// Pull the containing sheet to full height. nil where the card is already
+    /// full-screen (ConversationDetailView), which also means no peek there.
+    var onExpand: (() -> Void)? = nil
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @StateObject private var player = AudioPlayer()
@@ -410,6 +431,86 @@ struct WordCard: View {
     private var isKnown: Bool { store.records[word] != nil }
 
     var body: some View {
+        Group {
+            if isExpanded {
+                fullCard
+            } else {
+                peekCard
+            }
+        }
+        .navigationTitle("My words · \(store.studying.count)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { cardToolbar }
+        .safeAreaInset(edge: .bottom) { if isExpanded { actionBar } }
+        .task(id: word) { await load() }
+        .onDisappear { player.stop() }
+        .fullScreenCover(item: $shadowing) { turn in
+            NavigationStack {
+                ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
+                    .environmentObject(appState)
+            }
+        }
+    }
+
+    /// What the sheet shows at its resting height: the word, its part of
+    /// speech, and — the whole point — its FIRST meaning, right there. The peek
+    /// used to be the top of `fullCard` clipped to 130pt, which is to say the
+    /// word the user had just tapped in the cloud and nothing else: a rung that
+    /// charged a drag and paid nothing. Tapping anywhere here opens the rest.
+    private var peekCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center, spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(word).font(.system(size: 30, weight: .bold, design: .rounded))
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    Text(entry?.pos ?? nlPos ?? " ")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if appState.voiceCloneId != nil { pronounceButton }
+            }
+            peekMeaning
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 22)
+        .padding(.top, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .contentShape(Rectangle())
+        .onTapGesture { onExpand?() }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Opens the full card")
+    }
+
+    @ViewBuilder
+    private var peekMeaning: some View {
+        if let sense = entry?.senses.first {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(sense.meaning)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                // More than one sense: say so, rather than letting the peek
+                // read as the whole truth.
+                if let extra = entry.map({ $0.senses.count - 1 }), extra > 0 {
+                    Text(extra == 1 ? "+1 more meaning" : "+\(extra) more meanings")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } else if loading {
+            // Shaped like the gloss it's about to become, so the peek doesn't
+            // resize under the reader when the lookup lands.
+            Text("Looking it up…")
+                .font(.body).foregroundStyle(.secondary)
+                .redacted(reason: .placeholder)
+        } else {
+            Text("No dictionary entry yet — tap to open the card.")
+                .font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    private var fullCard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 HStack(alignment: .center, spacing: 14) {
@@ -471,9 +572,12 @@ struct WordCard: View {
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)   // fixed full width — no jump as content loads
         }
-        .navigationTitle("My words · \(store.studying.count)")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
+    }
+
+    /// Shared by peek and full card.
+    @ToolbarContentBuilder
+    private var cardToolbar: some ToolbarContent {
+        Group {
             // Collapsed: quick bookmark / mark-known top-left (no need to expand).
             if !isExpanded {
                 ToolbarItemGroup(placement: .topBarLeading) {
@@ -492,23 +596,15 @@ struct WordCard: View {
                     .tint(isKnown ? .green : .secondary)
                 }
             }
-            // Navigate the word list from a fixed spot in the header.
-            if let i = navIndex {
+            // Collapsed only — expanded, the same two chevrons live at the
+            // bottom next to Keep / I know, and two sets would be a puzzle.
+            if !isExpanded, let i = navIndex {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button { currentWord = navList[i - 1] } label: { Image(systemName: "chevron.up") }
                         .disabled(i == 0)
                     Button { currentWord = navList[i + 1] } label: { Image(systemName: "chevron.down") }
                         .disabled(i + 1 >= navList.count)
                 }
-            }
-        }
-        .safeAreaInset(edge: .bottom) { if isExpanded { actionBar } }
-        .task(id: word) { await load() }
-        .onDisappear { player.stop() }
-        .fullScreenCover(item: $shadowing) { turn in
-            NavigationStack {
-                ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
-                    .environmentObject(appState)
             }
         }
     }
@@ -652,15 +748,25 @@ struct WordCard: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(.tertiarySystemFill)))
     }
 
+    /// Everything you do to the word you're reading, on one row at the bottom
+    /// of the expanded card: the two verdicts, then walk to the next word.
+    ///
+    /// Labels stay ONE word. They used to say "Keep studying" / "I know it",
+    /// and swap to "Studying" / "Known" once set — four strings that pushed the
+    /// two capsules to the screen edges and left nowhere for the chevrons. The
+    /// state is carried by the icon (outline → filled) and its tint instead,
+    /// which is what the eye reads first anyway.
     private var actionBar: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             let studying = store.isStudying(word)
-            blurButton(studying ? "Studying" : "Keep studying",
+            blurButton("Keep",
                        icon: studying ? "bookmark.fill" : "bookmark",
                        tint: studying ? .accentColor : .primary) {
                 studying ? store.removeStudying(word) : store.addStudying(word)
             }
-            blurButton(isKnown ? "Known" : "I know it",
+            .accessibilityLabel(studying ? "Studying this word" : "Keep studying this word")
+
+            blurButton("I know",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
                 // Toggle: tap to mark known, tap again to clear it. Stay on the
@@ -668,9 +774,44 @@ struct WordCard: View {
                 // Deliberately NO jump to the next study word.
                 isKnown ? store.unmark(word) : store.markKnown(word)
             }
+            .accessibilityLabel(isKnown ? "Marked as known" : "Mark as known")
+
+            // Walking the list belongs next to the verdicts — you decide, then
+            // move on, and both halves of that are now under the same thumb.
+            // (Collapsed, where there's no action bar, the chevrons stay in
+            // the toolbar.)
+            if let i = navIndex {
+                stepButton("chevron.up", label: "Previous word") { currentWord = navList[i - 1] }
+                    .disabled(i == 0)
+                stepButton("chevron.down", label: "Next word") { currentWord = navList[i + 1] }
+                    .disabled(i + 1 >= navList.count)
+            }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.vertical, 10)
+    }
+
+    /// Icon-only sibling of `blurButton` — same glass capsule, sized to its
+    /// glyph so the two labelled buttons keep the width.
+    private func stepButton(_ icon: String, label: String,
+                            action: @escaping () -> Void) -> some View {
+        let button = Button(action: action) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                // Just the glyph — every point saved here is a point the two
+                // labelled buttons get to keep.
+                .frame(width: 14)
+        }
+        .controlSize(.large)
+        .buttonBorderShape(.capsule)
+        .tint(.primary)
+        .accessibilityLabel(label)
+        if #available(iOS 26.0, *) {
+            return AnyView(button.buttonStyle(.glass))
+        } else {
+            return AnyView(button.buttonStyle(.bordered)
+                .background(.regularMaterial, in: Capsule()))
+        }
     }
 
     /// Action button matching the header's chevron buttons: native Liquid Glass
@@ -681,6 +822,11 @@ struct WordCard: View {
         let button = Button(action: action) {
             Label(title, systemImage: icon)
                 .font(.subheadline.weight(.semibold))
+                // One line, always. Four controls share this row now, so a
+                // label that wraps ("I" / "know") both looks broken and grows
+                // the bar's height.
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
         }
         .controlSize(.large)
