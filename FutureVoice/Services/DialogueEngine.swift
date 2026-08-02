@@ -116,6 +116,11 @@ enum DialogueEngine {
 
         out.append("")
         out.append("COUNTERPART persona:")
+        // The user dictated this profile in their own language, so it comes
+        // back in their own language. It is context, never output.
+        out.append("(the user's own note about this person, in their native "
+                   + "language — CONTEXT ONLY: never quote it back, and never "
+                   + "let its language change the language you write in)")
         out.append("- name: \(counterpart.name)")
         if !counterpart.relationship.isEmpty {
             out.append("- relationship to user: \(counterpart.relationship)")

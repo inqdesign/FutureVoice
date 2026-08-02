@@ -53,3 +53,10 @@ fastlane/screenshots/_raw/
 
 # Nested git worktrees (parallel version development)
 .worktrees/
+
+# Android (android/) — Gradle
+android/local.properties
+android/.gradle/
+android/.kotlin/
+android/captures/
+.cxx/

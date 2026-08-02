@@ -61,6 +61,17 @@ final class FreeTalkOpeners {
         return line
     }
 
+    /// The line `next()` WOULD return, without consuming it. Read-only — the
+    /// launcher uses this to synthesize the upcoming greeting ahead of the
+    /// tap, so the call opens on cached audio instead of an ElevenLabs round
+    /// trip. Must stay in sync with `next()`'s index arithmetic.
+    func peek(language: String, personaName: String?) -> String? {
+        guard let pool = load(),
+              pool.key == Self.key(language: language, personaName: personaName),
+              !pool.lines.isEmpty else { return nil }
+        return pool.lines[pool.cursor % pool.lines.count]
+    }
+
     /// True when a valid pool exists for this language/persona. Read-only —
     /// unlike `next()` it never advances the rotation cursor.
     func hasPool(language: String, personaName: String?) -> Bool {

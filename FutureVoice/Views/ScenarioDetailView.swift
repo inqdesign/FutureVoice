@@ -506,7 +506,7 @@ struct ScenarioDetailView: View {
         c.name = s.role.trimmingCharacters(in: .whitespaces).isEmpty ? "the other person" : s.role
         c.location = s.environment
         c.background = s.notes
-        c.voicePresetId = VoicePreset.catalog.first!.id
+        c.voicePresetId = s.voicePresetId ?? VoicePreset.sceneDefault.id
         return c
     }
 }

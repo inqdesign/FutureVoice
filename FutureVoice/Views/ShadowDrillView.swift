@@ -1116,7 +1116,8 @@ struct ShadowDrillView: View {
         if analysis.score < 90 {
             do {
                 payload = try await GeminiClient.shared.sendJSON(
-                    system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage),
+                    system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
+                                                      nativeLanguage: appState.nativeLanguage),
                     messages: [GeminiClient.Message(
                         role: .user,
                         content: ShadowEngine.userMessage(

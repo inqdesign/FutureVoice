@@ -42,6 +42,37 @@ struct DialogueLine<Content: View, Accessory: View>: View {
     @ViewBuilder var content: () -> Content
     @ViewBuilder var accessory: () -> Accessory
 
+    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+
+    /// Mono is the one palette whose accent is INK rather than a hue, so the
+    /// usual 18%-accent wash landed as a barely-there gray: the learner's own
+    /// lines stopped being tellable from the fluent self's, which is the only
+    /// job this fill has. In mono the user bubble goes solid instead — the
+    /// label colour as fill, the background colour as text. Same monochrome
+    /// pairing Practice's selected chip uses, and it inverts correctly in dark
+    /// mode (white bubble, dark text) rather than sinking into the background.
+    private var isMonoUser: Bool {
+        speaker.isUser && FutureselfTheme(rawValue: storedTheme) == .mono
+    }
+
+    private var bubbleFill: Color {
+        if isMonoUser { return Color(.label) }
+        return speaker.isUser ? Color.accentColor.opacity(0.18)
+                              : Color(.secondarySystemBackground)
+    }
+
+    /// Only forced on the solid mono bubble; elsewhere the default cascade
+    /// (and any colour a caller set on its own content) stands.
+    private var bubbleForeground: Color {
+        isMonoUser ? Color(.systemBackground) : Color.primary
+    }
+
+    /// The playback ring is accent-coloured — invisible against a solid ink
+    /// bubble, so mono draws it in the bubble's own text colour instead.
+    private var ringColor: Color {
+        isMonoUser ? Color(.systemBackground) : Color.accentColor
+    }
+
     init(speaker: DialogueSpeaker,
          name: String,
          scale: Scale = .standard,
@@ -70,6 +101,7 @@ struct DialogueLine<Content: View, Accessory: View>: View {
 
                 content()
                     .font(scale.font)
+                    .foregroundStyle(bubbleForeground)
                     // Long lines stay left-ragged even in a trailing bubble —
                     // centre/right-ragged body text is hard to read.
                     .multilineTextAlignment(.leading)
@@ -78,13 +110,11 @@ struct DialogueLine<Content: View, Accessory: View>: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(speaker.isUser
-                                  ? Color.accentColor.opacity(0.18)
-                                  : Color(.secondarySystemBackground))
+                            .fill(bubbleFill)
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(isCurrent ? Color.accentColor : .clear, lineWidth: 2)
+                            .stroke(isCurrent ? ringColor : .clear, lineWidth: 2)
                     )
 
                 accessory()

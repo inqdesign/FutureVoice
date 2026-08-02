@@ -8,6 +8,10 @@ private enum TLConst {
     static let handleW: CGFloat = 14
     static let grabRadius: CGFloat = 24
     static let minTimeSelection: Double = 0.2
+    /// Extra audio played past a selection's last word so its release isn't
+    /// clipped — see `playbackEnd(for:)`. Long enough for a final plosive or
+    /// vowel decay, short enough not to leak the next word.
+    static let tailRelease: Double = 0.14
 }
 
 /// Trimmer-style player for the shadow target line. The loop region shows as a
@@ -114,12 +118,12 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
         .onDisappear { player.stop() }
         .onChange(of: selectedWordRange) { _, _ in
             if player.isPlaying, let s = selectionTimes {
-                player.updateSegment(from: s.start, to: s.end)
+                player.updateSegment(from: s.start, to: playbackEnd(for: s.end))
             }
         }
         .onChange(of: timeSelection) { _, _ in
             if player.isPlaying, let s = selectionTimes {
-                player.updateSegment(from: s.start, to: s.end)
+                player.updateSegment(from: s.start, to: playbackEnd(for: s.end))
             }
         }
         // Karaoke timings recovered in the BACKGROUND arrive after this view
@@ -353,11 +357,30 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
             player.setRate(playbackRate)
         }
         if let s = selectionTimes {
-            player.playSegment(from: s.start, to: s.end, loop: loop)
+            player.playSegment(from: s.start, to: playbackEnd(for: s.end), loop: loop)
         } else {
             let start = player.currentTime < player.duration - 0.05 ? player.currentTime : 0
             player.playSegment(from: start, to: nil, loop: loop)
         }
+    }
+
+    /// Where playback should actually stop for a selection ending at `end`.
+    ///
+    /// A word timing marks where that word's CHARACTERS end, not where its
+    /// sound does — the release of a final consonant, the decay of a vowel and
+    /// any breath after it all live past `endMs`, and cutting the player there
+    /// clips the tail off the last word. (The estimated timings make it worse:
+    /// they deliberately subtract 20ms from every word so adjacent karaoke
+    /// highlights read as separate.) So: pad the stop by a release window, and
+    /// when the selection runs to the LAST word just play the file out — there
+    /// is no following word to protect from bleed.
+    ///
+    /// `playSegment` clamps to the file duration, so overshooting is safe.
+    private func playbackEnd(for end: Double) -> Double {
+        if let r = selectedWordRange, r.upperBound == timings.count - 1 {
+            return max(player.duration, end)
+        }
+        return end + TLConst.tailRelease
     }
 
     private func moveHandle(isStart: Bool, x: CGFloat, w: CGFloat, dur: Double) {

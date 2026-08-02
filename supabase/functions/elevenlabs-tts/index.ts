@@ -99,7 +99,12 @@ Deno.serve(async (req) => {
       voice_settings: {
         stability: 0.55,
         similarity_boost: 0.90,
-        style: 0.15,
+        // style MUST stay 0 for cloned voices. Any style exaggeration > 0
+        // pushes the model away from the reference speaker (and adds
+        // latency) — it buys performance at the cost of the one thing this
+        // product sells: "that sounds like me". We ran 0.15 through
+        // TestFlight and users reported the clone not sounding like them.
+        style: 0,
         use_speaker_boost: true,
       },
     }),

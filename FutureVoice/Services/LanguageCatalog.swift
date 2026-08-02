@@ -28,6 +28,30 @@ enum LanguageCatalog {
     /// AppState) so non-UI services like CoreVocabulary can read it too.
     static let targetLanguageDefaultsKey = "futurevoice.targetLanguage"
 
+    /// UserDefaults key for the learner's NATIVE language — the language every
+    /// explanation, correction note and report is written in. Same reasoning as
+    /// `targetLanguageDefaultsKey`: prompt builders in `Services/` need it and
+    /// must not reach into AppState.
+    static let nativeLanguageDefaultsKey = "futurevoice.nativeLanguage"
+
+    /// Current native language, for the non-UI callers that can't be handed one.
+    /// Mirrors AppState's default so both agree before setup writes a choice.
+    static var currentNative: String {
+        UserDefaults.standard.string(forKey: nativeLanguageDefaultsKey) ?? defaultNative
+    }
+
+    /// Best guess at the learner's native language from the device, used to
+    /// pre-select the setup picker. Falls back to Korean (the launch market)
+    /// when the device language isn't one we offer as a native language.
+    static var defaultNative: String {
+        for identifier in Locale.preferredLanguages {
+            let code = Locale(identifier: identifier).language.languageCode?.identifier
+                ?? identifier.split(separator: "-").first.map(String.init)
+            if let code, nativeLanguages.contains(code) { return code }
+        }
+        return "ko"
+    }
+
     /// Languages offered as a practice target (order = setup picker order).
     static let targets: [Language] = [
         Language(code: "en", sttLocale: "en-US", tokenStyle: .word, wordlistResource: "cefr_words"),

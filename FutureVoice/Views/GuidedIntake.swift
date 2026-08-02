@@ -153,8 +153,21 @@ struct SpeakOrTypeField: View {
     /// ONE shared toggle above several stacked fields (PersonaDeepenSheet) —
     /// three copies of the same picker read as clutter.
     var showsLocalePicker = true
+    /// Field height, in lines. Intake narration wants room (5–10); a one-line
+    /// scenario prompt wants a compact field.
+    var lineRange: ClosedRange<Int> = 5...10
+    /// Host-owned focus for the inner TextField, so a host that reacts to
+    /// blur (the scenario composer derives a category there) keeps working
+    /// when this field replaces its plain TextField. nil = self-managed.
+    var externalFocus: FocusState<Bool>.Binding? = nil
+    /// Card fill. The default reads on a plain systemBackground page (the
+    /// intake flows); hosts embedding the field in a grouped Form must pass
+    /// the grouped-row color instead — on light mode the default is the SAME
+    /// gray as the Form's page background and the card disappears.
+    var cardBackground = Color(.secondarySystemBackground)
 
     @StateObject private var live = LiveTranscriber()
+    @FocusState private var internalFocus: Bool
     @State private var isRecording = false
     @State private var error: String?
     /// `text` snapshot at record start (plus separator) — each live partial
@@ -168,7 +181,8 @@ struct SpeakOrTypeField: View {
         VStack(spacing: 6) {
             VStack(spacing: 0) {
                 TextField(placeholder, text: $text, axis: .vertical)
-                    .lineLimit(5...10)
+                    .lineLimit(lineRange)
+                    .focused(externalFocus ?? $internalFocus)
                     .padding(14)
                     // Don't fight the dictation stream mid-take; visually
                     // unchanged, so this isn't a mode — just turn-taking.
@@ -220,7 +234,7 @@ struct SpeakOrTypeField: View {
                 .padding(.horizontal, 14)
                 .padding(.bottom, 8)
             }
-            .background(Color(.secondarySystemBackground))
+            .background(cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
             if let e = error {

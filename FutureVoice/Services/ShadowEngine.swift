@@ -214,8 +214,10 @@ enum ShadowEngine {
         let fix: String
     }
 
-    static func systemPrompt(targetLanguage: String) -> String {
-        """
+    static func systemPrompt(targetLanguage: String,
+                             nativeLanguage: String = LanguageCatalog.currentNative) -> String {
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
+        return """
         You are a strict but fair pronunciation + delivery coach for \(LanguageCatalog.englishName(targetLanguage)). \
         The learner shadowed a fluent line. You will be given:
           • target_line       — what they tried to say
@@ -237,6 +239,11 @@ enum ShadowEngine {
         { "pronunciation": "...", "pacing": "...", "fix": "..." }
 
         Rules:
+        - LANGUAGE: write all three fields in \(nativeName). This is coaching \
+          the learner reads between attempts, not material they speak — in the \
+          practice language it just gets skipped. Words and sounds you cite \
+          from the diff stay in their original spelling, quoted inside the \
+          \(nativeName) sentence, never transliterated or translated.
         - "pronunciation": one sentence on pronunciation, citing specific tokens \
           from the diff. If the diff is all `=`, congratulate plainly.
         - "pacing": one sentence. Use duration_ratio for overall speed \
@@ -249,8 +256,9 @@ enum ShadowEngine {
           word or sound, not generic advice ("stress the second syllable in X", \
           not "speak more clearly").
         - Each field ≤ 22 words.
-        - If learner_transcript is empty, say "I didn't catch anything — try again \
-          closer to the mic" in "pronunciation".
+        - If learner_transcript is empty, put the \(nativeName) equivalent of \
+          "I didn't catch anything — try again closer to the mic" in \
+          "pronunciation".
         """
     }
 

@@ -18,9 +18,10 @@ enum CounterpartParser {
 
     static func parse(
         spokenDescription: String,
-        languageHint: String
+        languageHint: String,
+        nativeLanguage: String = LanguageCatalog.currentNative
     ) async throws -> Counterpart {
-        let system = systemPrompt()
+        let system = systemPrompt(nativeLanguage: nativeLanguage)
         let userMsg = """
         language_hint: \(languageHint)
         spoken_description:
@@ -47,16 +48,20 @@ enum CounterpartParser {
         )
     }
 
-    private static func systemPrompt() -> String {
-        """
+    private static func systemPrompt(nativeLanguage: String) -> String {
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
+        return """
         The user just described a person they know — someone they'd practice
         speaking their target language with in a simulated dialogue. The description was
         spoken, so it may be casual, contain restarts, or trail off. Extract
         a structured profile.
 
-        The user likely spoke in their native language (e.g. Korean). For app
-        consistency, return ALL fields except `name` in English. The name stays
-        in the original script the user used.
+        Write EVERY field in \(nativeName), the language the user spoke in.
+        This profile is the user's own note about their own friend: they read
+        it on the person's card and edit it by hand. Handing back an English
+        translation of what they just said in \(nativeName) means they have to
+        re-read and re-edit their own words in a foreign language. The name
+        stays in the original script the user used.
 
         Return STRICT JSON only — no prose, no code fences:
         {
@@ -72,21 +77,23 @@ enum CounterpartParser {
         Rules:
         - name: as the user said it (original script for names — 보람 stays
           보람, "Sarah" stays "Sarah").
-        - relationship: a short 2–5 word English label that names the type of
-          relationship — "Best friend", "Kita parent", "Senior at work",
-          "College roommate".
-        - location: 1 short sentence in English on where they live, work, or
-          spend time. Empty string "" if the user didn't say.
+        - relationship: a short label naming the type of relationship — the
+          \(nativeName) equivalent of "Best friend", "Kita parent", "Senior at
+          work", "College roommate". A few words, no more.
+        - location: 1 short sentence on where they live, work, or spend time.
+          Empty string "" if the user didn't say.
         - how_we_met: 1 sentence on how they met the user and roughly how
           long they've known each other. Empty string "" if unknown.
-        - background: 2–3 dense English sentences. Shared history, inside
-          jokes, what they know about the user, anything specific that would
-          make a dialogue feel real. Keep concrete details the user gave —
-          don't generalize.
-        - conversation_style: 1–2 English sentences on how they talk — tempo,
+        - background: 2–3 dense sentences. Shared history, inside jokes, what
+          they know about the user, anything specific that would make a
+          dialogue feel real. Keep concrete details the user gave — don't
+          generalize.
+        - conversation_style: 1–2 sentences on how they talk — tempo,
           formality, humor, directness, energy.
-        - common_topics: short English phrase — what the two of them usually
-          end up talking about. Empty string "" if unclear.
+        - common_topics: a short phrase — what the two of them usually end up
+          talking about. Empty string "" if unclear.
+        - Keep the user's own wording where you can. This is a transcription
+          into fields, not a rewrite.
         - Don't invent facts the user didn't imply. Use empty strings ("")
           rather than fabricating for fields the user didn't touch.
         """

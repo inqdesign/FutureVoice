@@ -254,6 +254,77 @@ struct SessionSummary: Codable {
     /// in the user's turns before being stored (hallucination-guarded, same
     /// policy as `expressionsUsed`).
     var grammarIssues: [GrammarIssue] = []
+    /// Things the learner had already been given — a review card, or a
+    /// suggestion earlier in this same call — that they then PRODUCED
+    /// unprompted. Filled in deterministically by `CarryoverDetector`; no LLM.
+    var carryovers: [Carryover] = []
+}
+
+/// One piece of studied material the learner actually said in a real
+/// conversation. The app's strongest evidence of learning, and the one thing
+/// the learner cannot notice about themselves — you don't feel yourself
+/// reaching for a phrase you were corrected on last week.
+///
+/// Always carries the learner's OWN sentence (`quote`) and the turn it came
+/// from, so the achievement is shown as evidence — with their own recording
+/// one tap away — rather than as a claim.
+struct Carryover: Codable, Identifiable, Hashable {
+    /// Where the studied item came from. Ordered by how much it took to
+    /// produce: a card from a past talk is a bigger win than applying a
+    /// suggestion still fresh on screen.
+    enum Source: String, Codable {
+        case drillCard            // a correction card minted in an earlier talk
+        case curriculumItem       // study material from a Watch book
+        case studyingExpression   // a phrase they'd bookmarked in their notebook
+        case suggestion           // a suggestion given earlier in THIS call
+        case studyingWord         // a word they'd collected into their notebook
+    }
+
+    var id: UUID = UUID()
+    var sessionId: UUID
+    var source: Source
+    /// The studied item, verbatim as it was being practiced.
+    var item: String
+    /// The learner's own words that prove it — always from a user turn.
+    var quote: String
+    /// Turn `quote` came from, so the receipt can play their own recording.
+    var turnId: UUID
+    /// The `DrillCard` (for `.drillCard`) or the suggestion's originating
+    /// user turn (for `.suggestion`).
+    var sourceId: UUID?
+    var detectedAt: Date
+}
+
+extension Carryover.Source {
+    /// Where the learner met this item, in their words. Lives on the type so
+    /// the wrap-up and Progress can't drift into describing the same source
+    /// two different ways. (Plain strings — no UI framework involved; the
+    /// icon is just an SF Symbol name.)
+    var label: String {
+        switch self {
+        case .drillCard:          return "Review cards"
+        case .curriculumItem:     return "Your books"
+        case .studyingExpression: return "Expression notebook"
+        case .studyingWord:       return "Word notebook"
+        case .suggestion:         return "In-call suggestions"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .drillCard:          return "rectangle.stack"
+        case .curriculumItem:     return "book"
+        case .studyingExpression: return "bookmark"
+        case .studyingWord:       return "text.book.closed"
+        case .suggestion:         return "lightbulb"
+        }
+    }
+
+    /// Fixed display order — heaviest evidence first, so the breakdown reads
+    /// the same everywhere and never reshuffles between reloads.
+    static let displayOrder: [Carryover.Source] = [
+        .drillCard, .curriculumItem, .studyingExpression, .studyingWord, .suggestion,
+    ]
 }
 
 /// One concrete grammar slip from this session: the user's sentence verbatim,
@@ -271,7 +342,7 @@ extension SessionSummary {
     enum CodingKeys: String, CodingKey {
         case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
         case scorecard, newWordsUsed, expressionsUsed, weakVocabAreas
-        case grammarIssues
+        case grammarIssues, carryovers
     }
 
     // Custom decode so sessions saved BEFORE newWordsUsed/expressionsUsed
@@ -289,6 +360,7 @@ extension SessionSummary {
         expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
         weakVocabAreas = try c.decodeIfPresent([String].self, forKey: .weakVocabAreas) ?? []
         grammarIssues = try c.decodeIfPresent([GrammarIssue].self, forKey: .grammarIssues) ?? []
+        carryovers = try c.decodeIfPresent([Carryover].self, forKey: .carryovers) ?? []
     }
 }
 
@@ -647,35 +719,40 @@ struct VoicePreset: Hashable, Identifiable {
     let accent: String
     let description: String
 
+    // Four voices, hand-picked from the ElevenLabs library (2026-07): one
+    // female + one male per accent, chosen for conversation. All four IDs
+    // are verified synthesizable with the production API key. The two
+    // British voices are library (shared) voices whose upstream names the
+    // voices API doesn't expose — display names for those are ours. Old
+    // stored IDs from the retired 8-voice premade list keep synthesizing
+    // fine but fall back to catalog[0] for display.
     static let catalog: [VoicePreset] = [
-        VoicePreset(id: "21m00Tcm4TlvDq8ikWAM",
-                    displayName: "Rachel", gender: "Female", accent: "American",
-                    description: "Calm, conversational"),
-        VoicePreset(id: "EXAVITQu4vr4xnSDxMaL",
-                    displayName: "Bella", gender: "Female", accent: "American",
-                    description: "Soft, friendly"),
-        VoicePreset(id: "AZnzlk1XvdvUeBnXmlld",
-                    displayName: "Domi", gender: "Female", accent: "American",
-                    description: "Strong, confident"),
-        VoicePreset(id: "MF3mGyEYCl7XYWbV9V6O",
-                    displayName: "Elli", gender: "Female", accent: "American",
-                    description: "Emotional, youthful"),
-        VoicePreset(id: "ErXwobaYiN019PkySvjV",
-                    displayName: "Antoni", gender: "Male", accent: "American",
-                    description: "Well-rounded narrator"),
-        VoicePreset(id: "VR6AewLTigWG4xSOukaG",
-                    displayName: "Arnold", gender: "Male", accent: "American",
-                    description: "Crisp, mature"),
-        VoicePreset(id: "TxGEqnHWrfWFTfGW9XjX",
-                    displayName: "Josh", gender: "Male", accent: "American",
-                    description: "Deep, casual"),
-        VoicePreset(id: "pNInz6obpgDQGcFmaJgB",
-                    displayName: "Adam", gender: "Male", accent: "American",
-                    description: "Deep, narration"),
+        VoicePreset(id: "NDTYOmYEjbDIVCKB35i3",
+                    displayName: "Paige", gender: "Female", accent: "American",
+                    description: "Engaging, natural"),
+        VoicePreset(id: "UgBBYS2sOqTuMpoF3BR0",
+                    displayName: "Mark", gender: "Male", accent: "American",
+                    description: "Natural, conversational"),
+        VoicePreset(id: "FF59babHL8N8gfTgtBMT",
+                    displayName: "Emma", gender: "Female", accent: "British",
+                    description: "Clear, friendly"),
+        VoicePreset(id: "L0Dsvb3SLTyegXwtm47J",
+                    displayName: "James", gender: "Male", accent: "British",
+                    description: "Warm, easygoing"),
     ]
 
     static func by(id: String) -> VoicePreset {
         catalog.first(where: { $0.id == id }) ?? catalog[0]
+    }
+
+    /// UserDefaults key for the fallback voice of Watch scenes that have no
+    /// linked persona ("Make your own situation", likely-situation leaves).
+    /// Personas keep their own per-person `voicePresetId`; this only covers
+    /// the synthetic counterpart. Set in Me → Voice → Scene partner voice.
+    static let sceneDefaultKey = "futurevoice.defaultSceneVoice"
+
+    static var sceneDefault: VoicePreset {
+        by(id: UserDefaults.standard.string(forKey: sceneDefaultKey) ?? catalog[0].id)
     }
 }
 
@@ -697,6 +774,11 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// scenario uses the persona's real voice/identity instead of a generic
     /// preset. Optional so scenarios saved before this decode unchanged.
     var counterpartId: UUID? = nil
+    /// Voice for the scene's counterpart when NO persona is linked — picked
+    /// in the composer's "Talking with" section. nil = the user's default
+    /// scene voice (`VoicePreset.sceneDefault`). Optional so scenarios saved
+    /// before this decode unchanged.
+    var voicePresetId: String? = nil
     /// The scenario's course content — words, expressions, and shadow lines
     /// to master. Generated once on first open of the scenario page and
     /// persisted here. nil for scenarios that haven't been opened yet
@@ -785,7 +867,8 @@ struct ScenarioCurriculum: Codable, Hashable {
         var id: UUID = UUID()
         var text: String
         /// One-line usage hint ("when the nurse asks about symptoms").
-        var note: String
+        /// Default empty string so items saved before this field was added still decode.
+        var note: String = ""
         /// For words/expressions: a natural first-person sentence using the
         /// item in this scenario's context. nil for shadow lines (text IS
         /// the sentence) and for curricula generated before this existed.

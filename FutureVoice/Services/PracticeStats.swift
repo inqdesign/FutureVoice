@@ -33,6 +33,48 @@ enum PracticeStats {
         )
     }
 
+    // MARK: - Carryover (studied → said in a real conversation)
+
+    /// The proof-of-transfer number, and the one almost no language app can
+    /// show: material the learner had been given that they later produced
+    /// unprompted, live.
+    ///
+    /// Deduped by item text across sessions — saying the same phrase in five
+    /// talks is one thing learned, not five — and dated by FIRST use, so the
+    /// weekly figure means "newly crossed over", not "said again".
+    struct CarryoverSummary {
+        var total = 0
+        var thisWeek = 0
+        var bySource: [Carryover.Source: Int] = [:]
+        /// Newest first — the evidence list under the number.
+        var recent: [Carryover] = []
+    }
+
+    static func carryoverSummary(
+        sessions: [Session],
+        now: Date = Date(),
+        recentLimit: Int = 3
+    ) -> CarryoverSummary {
+        var firstByItem: [String: Carryover] = [:]
+        for session in sessions {
+            for c in session.summary?.carryovers ?? [] {
+                let key = CarryoverDetector.normalized(c.item)
+                guard !key.isEmpty else { continue }
+                if let existing = firstByItem[key], existing.detectedAt <= c.detectedAt { continue }
+                firstByItem[key] = c
+            }
+        }
+        let all = Array(firstByItem.values)
+        let weekAgo = now.addingTimeInterval(-7 * 86_400)
+        var bySource: [Carryover.Source: Int] = [:]
+        for c in all { bySource[c.source, default: 0] += 1 }
+        return CarryoverSummary(
+            total: all.count,
+            thisWeek: all.filter { $0.detectedAt > weekAgo }.count,
+            bySource: bySource,
+            recent: Array(all.sorted { $0.detectedAt > $1.detectedAt }.prefix(recentLimit)))
+    }
+
     // MARK: - Shadow / pronunciation trend
 
     /// Deterministic pronunciation signal from saved shadow attempts —

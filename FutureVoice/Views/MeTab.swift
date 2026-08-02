@@ -8,6 +8,9 @@ struct MeTab: View {
     @EnvironmentObject private var auth: AuthService
     @Environment(\.dismiss) private var dismiss
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
+    /// Fallback voice for Watch scenes with no linked persona — same key
+    /// `ScenarioDetailView.syntheticCounterpart` reads via `VoicePreset.sceneDefault`.
+    @AppStorage(VoicePreset.sceneDefaultKey) private var defaultSceneVoiceId = VoicePreset.catalog[0].id
     @State private var account: AccountStatus = .empty
     /// AI's holistic CEFR read of the last few conversations (mode of the
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay
@@ -22,6 +25,10 @@ struct MeTab: View {
     @State private var deletingAccount = false
     @State private var accountDeleteError: String?
     @State private var regeneratingVoice = false
+    @State private var renamingVoice = false
+    @State private var voiceNameDraft = ""
+    @State private var voiceRenameWarning: String?
+    @State private var voiceRegenerateError: String?
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     #endif
@@ -43,8 +50,12 @@ struct MeTab: View {
 
                 Section {
                     HStack {
+                        // balanceLabel, not the raw number — an admin account
+                        // never spends, so its stored balance is cosmetic and
+                        // reads as "Unlimited" (the header chip already does
+                        // this; this row was showing the bare figure).
                         row(icon: "bolt.fill",
-                            title: "\(account.creditBalance) credits",
+                            title: "\(account.balanceLabel) credits",
                             subtitle: account.planLabel)
                         Spacer()
                     }
@@ -173,31 +184,7 @@ struct MeTab: View {
                     Text("Future self is the pixel surface behind every call button — tap a theme to feel it.")
                 }
 
-                Section("Voice") {
-                    Button(role: .destructive) {
-                        confirmingVoiceReset = true
-                    } label: {
-                        row(icon: "mic.badge.plus",
-                            title: "Re-record voice",
-                            subtitle: "Replace your current clone with a new one")
-                    }
-                    if VoiceSampleStore.shared.exists {
-                        Button {
-                            regenerateFromSavedSample()
-                        } label: {
-                            HStack {
-                                row(icon: "arrow.triangle.2.circlepath",
-                                    title: "Regenerate from saved recording",
-                                    subtitle: "Rebuild the clone from your last recording")
-                                if regeneratingVoice {
-                                    Spacer()
-                                    ProgressView()
-                                }
-                            }
-                        }
-                        .disabled(regeneratingVoice)
-                    }
-                }
+                voiceSection
 
                 Section {
                     Button(role: .destructive) {
@@ -270,7 +257,16 @@ struct MeTab: View {
             .alert("Sign out?", isPresented: $confirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
                 Button("Sign out", role: .destructive) {
-                    Task { await auth.signOut() }
+                    Task {
+                        await auth.signOut()
+                        // RootView's Welcome gate is "has the journey begun",
+                        // not "is there a session" — leaving this set drops a
+                        // signed-out user straight back into the tabs (setup,
+                        // persona and clone all still read complete), so the
+                        // button looked like it did nothing. Same reset
+                        // SetupFlowView does on its way back to Welcome.
+                        appState.onboardingStarted = false
+                    }
                 }
             } message: {
                 Text("Your practice data stays on this device. Your voice clone and credits stay with your account.")
@@ -338,7 +334,100 @@ struct MeTab: View {
         regeneratingVoice = true
         Task {
             defer { regeneratingVoice = false }
-            try? await appState.regenerateVoiceClone(fromSampleAt: url)
+            do {
+                try await appState.regenerateVoiceClone(fromSampleAt: url)
+            } catch {
+                // This used to be `try?`: the spinner stopped, nothing changed,
+                // and the failure was invisible — the user walked away thinking
+                // their voice had been rebuilt.
+                voiceRegenerateError = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Voice
+
+    private var voiceSection: some View {
+        Section("Voice") {
+            Button {
+                voiceNameDraft = appState.voiceDisplayName
+                renamingVoice = true
+            } label: {
+                row(icon: "textformat",
+                    title: "Voice name: \(appState.voiceDisplayName)",
+                    subtitle: "What your clone is called, here and on ElevenLabs")
+            }
+            NavigationLink {
+                VoicePresetPickerView(selection: $defaultSceneVoiceId)
+                    .environmentObject(appState)
+            } label: {
+                row(icon: "person.wave.2",
+                    title: "Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)",
+                    subtitle: "For Watch scenes without a saved person")
+            }
+            Button(role: .destructive) {
+                confirmingVoiceReset = true
+            } label: {
+                row(icon: "mic.badge.plus",
+                    title: "Re-record voice",
+                    subtitle: "Replace your current clone with a new one")
+            }
+            if VoiceSampleStore.shared.exists {
+                Button {
+                    regenerateFromSavedSample()
+                } label: {
+                    HStack {
+                        row(icon: "arrow.triangle.2.circlepath",
+                            title: "Regenerate from saved recording",
+                            subtitle: "Rebuild the clone from your last recording")
+                        if regeneratingVoice {
+                            Spacer()
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(regeneratingVoice)
+            }
+        }
+        .alert("Voice name", isPresented: $renamingVoice) {
+            TextField("Future Self", text: $voiceNameDraft)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { renameVoice() }
+        } message: {
+            Text("Names your clone here and on ElevenLabs. Leave it empty to go back to the default.")
+        }
+        .alert("Renamed on this device only", isPresented: Binding(
+            get: { voiceRenameWarning != nil },
+            set: { if !$0 { voiceRenameWarning = nil } }
+        )) {
+            Button("OK") { voiceRenameWarning = nil }
+        } message: {
+            Text(voiceRenameWarning ?? "")
+        }
+        .alert("Couldn't rebuild your voice", isPresented: Binding(
+            get: { voiceRegenerateError != nil },
+            set: { if !$0 { voiceRegenerateError = nil } }
+        )) {
+            Button("OK") { voiceRegenerateError = nil }
+        } message: {
+            Text(voiceRegenerateError ?? "")
+        }
+    }
+
+    /// Save the new name. The local name is kept either way — if the upstream
+    /// rename fails (offline, or the rename function isn't deployed), the app
+    /// says so plainly and the name still reaches ElevenLabs on the next clone.
+    private func renameVoice() {
+        // Typing nothing (or the unchanged default) means "use the default" —
+        // storing the derived string would freeze it against a persona rename.
+        let draft = voiceNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let next = draft == appState.defaultVoiceName ? "" : draft
+        Task {
+            do {
+                try await appState.renameVoice(to: next)
+            } catch {
+                voiceRenameWarning = "Saved here, but ElevenLabs didn't accept the new name: \(error.localizedDescription) It'll be applied the next time your voice is cloned."
+            }
         }
     }
 

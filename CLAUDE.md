@@ -29,7 +29,7 @@ Every feature should feed this loop. Per-turn suggestions come back in the SAME 
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
-- **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`.
+- **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
@@ -47,6 +47,23 @@ xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice \
 ```
 
 SourceKit diagnostics commonly show ghost errors ("Cannot find type …") for new files until xcodegen + a build run. **xcodebuild is the truth — don't chase SourceKit ghosts.**
+
+## Two languages (target vs. native)
+
+Every learner has a **target** language (what they practice, `AppState.targetLanguage`) and a **native** language (what they think in, `AppState.nativeLanguage`, picked in setup, editable in Me). Anything an LLM writes falls on one side of a single line:
+
+- **Material → target language.** Anything the learner says out loud, drills, or memorizes: drill cards, `fluent_alternative`, `suggested_drills`, expressions, scene lines, shadow targets.
+- **Coaching → native language.** Anything that explains, judges or frames that material: `reason`, `note`, `overall_note`, scorecard commentary, weekly-report prose, drill memory hooks, shadow feedback. A B1 learner skips feedback they have to decode.
+- **Machine-consumed fields stay English** regardless: `weak_vocab_areas` and `new_patterns_detected.context` are re-injected into the next conversation's system prompt via `LearnerProfile` and are never rendered.
+
+`CoachingLanguage.contract(target:native:)` is the shared preamble; each engine then tags its own fields (an "OUTPUT LANGUAGE, FIELD BY FIELD" block). When adding a field to any prompt schema, decide which side it's on and say so in the prompt — an untagged field silently comes back English.
+
+Two cases that look like exceptions but aren't:
+
+- **Scenario titles/blurbs** (`TopicEngine`) are MATERIAL, so target language — the blurb literally becomes the scene the learner talks through. These used to say "in English" literally; they now follow `targetLanguage`, which only matters once the target isn't English.
+- **Counterpart profiles** (`CounterpartParser`) are the user's OWN note about their own friend, dictated in their own language and edited by hand afterwards — so every field comes back in the native language. They're also injected as free-text context into `DialogueEngine` / `TopicEngine` / `ScenarioCurriculumEngine` prompts, each of which carries a "context only, don't let its language change your output language" guard next to the data. Keep that guard next to any new native-language context you inject.
+
+Still English, and the one real gap: **UI chrome**. The app has **no** localization infrastructure — no `.xcstrings`, no `String(localized:)`; ~590 hardcoded English literals in `Views/` alone.
 
 ## Hard rules
 
@@ -78,8 +95,13 @@ SourceKit diagnostics commonly show ghost errors ("Cannot find type …") for ne
 - Default LLM: Gemini `gemini-3.6-flash` with `thinkingLevel: "low"` and DEFAULT sampling (Google recommends against sub-1.0 temperature on gen-3 — `GeminiClient` drops the caller's temperature for gen-3 models), via the `gemini` Edge Function (`GeminiClient.Model`).
 - Utility calls (Translator's pure translation, CounterpartParser, FreeTalkOpeners) run on `gemini-3.1-flash-lite`. Learner-facing coaching text stays on the default model.
 - `gemini-2.5-flash` remains in the enum as a rollback hatch only — the 2.5 family retires 2026-10-16.
-- Conversation turns: structured JSON `{reply, suggestion}`; analysis calls (summary, shadow bullets, weekly report) via `sendJSON`. Temperature args still exist on the API for 2.5-era callers but are ignored on gen-3.
-- TTS: Talk conversation turns use `eleven_flash_v2_5` (`ElevenLabsClient.conversationModelId`); Shadow/Watch/everything else stays on `eleven_turbo_v2_5`.
+- Conversation turns: structured JSON, **streamed** via `sendJSONStream` (`stream: true` → the `gemini` Edge Function proxies `streamGenerateContent?alt=sse`). Field order is load-bearing — `{reply, suggestion, transcript}`, reply FIRST — because TTS fires the instant the reply's closing quote arrives while the tail is still being written. Don't put a field before `reply` and don't reorder the prompt's schema line. Analysis calls (summary, shadow bullets, weekly report) stay on buffered `sendJSON`. Temperature args still exist on the API for 2.5-era callers but are ignored on gen-3.
+- TTS: **speaker similarity is the product** — the user must believe the voice is theirs. Model choice ranks `eleven_multilingual_v2` > `eleven_turbo_v2_5` > `eleven_flash_v2_5` on similarity, and exactly the reverse on latency. Defaults:
+  - Talk conversation turns → `eleven_turbo_v2_5` (`ElevenLabsClient.conversationModelId`). Flash was tried here and reverted: it costs the same but sounds less like the user, on the app's highest-exposure surface.
+  - Watch scenes (the user's OWN voice only) + the onboarding greeting → `eleven_multilingual_v2` (`ElevenLabsClient.fidelityModelId`).
+  - Everything else — Shadow, drills, library, counterpart preset voices → `eleven_turbo_v2_5`.
+  - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
+  - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
 
 ## Audio format
 

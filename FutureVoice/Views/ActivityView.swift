@@ -335,7 +335,7 @@ struct ActivityView: View {
                 // The day's talks as tappable rows — the record links straight
                 // back to each talk's book for review.
                 if !daySessions.isEmpty {
-                    Divider()
+                    CardDivider(inset: 0)
                     ForEach(daySessions) { session in
                         NavigationLink {
                             ConversationDetailView(session: session)

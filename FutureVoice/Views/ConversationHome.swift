@@ -14,7 +14,6 @@ struct ConversationHome: View {
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
         shadowableLineCount: 0
     )
-    @Environment(\.openURL) private var openURL
     @State private var sessionCount = 0
     @State private var todaySpokenSeconds = 0
     /// Talks finished TODAY — the Today card counts the day, never lifetime.
@@ -130,6 +129,7 @@ struct ConversationHome: View {
                     personaName: appState.persona?.displayName,
                     proficiency: appState.proficiency
                 )
+                await prewarmFreeTalkOpenerAudio()
             }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 // Only pitch the trial to someone who still has free credits;
@@ -237,11 +237,11 @@ struct ConversationHome: View {
             // Practice (SRS review itself now lives there, on Studying);
             // the book you're mid-way through opens directly.
             if overallTotal > 0 {
-                Divider().padding(.leading, 16)
+                CardDivider()
                 practiceProgressRow
             }
             if let book = continueBook {
-                Divider().padding(.leading, 16)
+                CardDivider()
                 todayActionRow(icon: "book",
                                title: "Continue studying",
                                subtitle: book.environment) {
@@ -291,7 +291,14 @@ struct ConversationHome: View {
     /// and the SRS review live.
     private var practiceProgressRow: some View {
         Button {
-            openURL(URL(string: "futurevoice://practice")!)
+            // Stage the route; RootTabView switches the tab. This used to be
+            // `openURL("futurevoice://practice")` — moving between two tabs of
+            // the SAME app by asking the operating system to open a URL. The
+            // OS is free to hand that scheme to any app that claims it, and
+            // with a second build of Future Voice side-loaded it did exactly
+            // that: tapping Practice launched the other app. Deep links are
+            // for arriving from outside; in-app navigation stays in-app.
+            appState.pendingPracticeRoute = .studying
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: "books.vertical")
@@ -366,6 +373,35 @@ struct ConversationHome: View {
             ($0.words + $0.expressions + $0.shadowLines).compactMap(\.masteredAt).max()
         }
         return mastery ?? s.lastUsedAt ?? s.createdAt
+    }
+
+    /// Synthesize the NEXT free-talk greeting while the user is still looking
+    /// at the launcher, so tapping "Let's talk" opens on cached audio instead
+    /// of waiting out an ElevenLabs round trip — the wait that made the start
+    /// of a call feel slow. Deliberately does NOT touch the rotation: the
+    /// greeting still differs every call (that variety is the point), only its
+    /// audio is ready early.
+    ///
+    /// Costs nothing extra in the normal case — it synthesizes exactly the
+    /// line the call was about to synthesize anyway, under the same
+    /// (text, voiceId) cache key and the same model, and no-ops once cached.
+    /// The one wasteful case is a user who opens Talk and never calls; that is
+    /// bounded at one line per rotation position.
+    private func prewarmFreeTalkOpenerAudio() async {
+        guard let voiceId = appState.voiceCloneId,
+              let line = FreeTalkOpeners.shared.peek(
+                  language: appState.targetLanguage,
+                  personaName: appState.persona?.displayName),
+              // `allowLineage: false` mirrors the live call's lookup — warming
+              // a line the call would still consider a miss is pointless.
+              PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
+                                           allowLineage: false) == nil,
+              let audio = try? await ElevenLabsClient.shared.synthesize(
+                  voiceId: voiceId, text: line,
+                  modelId: ElevenLabsClient.conversationModelId,
+                  purpose: "turn")
+        else { return }
+        PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
     }
 
     // MARK: - Actions (tap = start the call)

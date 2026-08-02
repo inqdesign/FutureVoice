@@ -45,6 +45,25 @@ final class LiveTranscriber: ObservableObject {
         var duration: Double
     }
 
+    /// What the most recent `stopAndFinalize()` actually did. The rescored
+    /// FINAL pass either lands before the turn is sent or it doesn't, and until
+    /// this existed nothing recorded which — so a turn shipped with the
+    /// recognizer's worst hypothesis looked identical to a clean one.
+    struct FinalizeWait {
+        /// How long the final pass was waited for, in ms.
+        var waitedMs: Int
+        /// Rotated segments still holding a partial when the turn ended.
+        var pendingSegments: Int
+        /// True when the deadline hit first — the turn shipped unrescored text.
+        var timedOut: Bool
+        /// True when waiting actually changed the transcript, i.e. the wait
+        /// earned its latency.
+        var upgradedText: Bool
+    }
+
+    /// Diagnostics from the last `stopAndFinalize()`; nil until one has run.
+    private(set) var lastFinalizeWait: FinalizeWait?
+
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -58,6 +77,19 @@ final class LiveTranscriber: ObservableObject {
     /// Set while `stopAndFinalize()` waits for the last segment's final pass;
     /// cleared when it arrives (or the wait times out).
     private var finalizingGen: Int?
+    /// Generations whose chunk was frozen by the quiet watcher and is STILL
+    /// holding a partial hypothesis, waiting for its rescored final to land.
+    ///
+    /// Without this, `stopAndFinalize` only ever knew about the live segment —
+    /// and the quiet watcher (1.5s) rotates before the turn-taking VAD on its
+    /// default/long tiers (2.2s/5s), so on those turns the live segment was
+    /// empty, the wait was skipped entirely, and whether the turn shipped
+    /// rescored or partial text came down to an unobserved race. (Since the
+    /// 2026-08 VAD retune the SHORT tier at 1.2s can now fire ahead of a
+    /// rotation, putting the live segment back in play — `finalizingGen`
+    /// covers that half, this set covers the rotated half, and a turn can
+    /// legitimately be waiting on both.)
+    private var pendingFinalGens: Set<Int> = []
     private var lastSegmentText = ""
     private var lastChangeTime = Date()
     private var quietWatcher: Task<Void, Never>?
@@ -79,6 +111,10 @@ final class LiveTranscriber: ObservableObject {
     /// actually been silent" — as opposed to "how long since the STT partial
     /// last changed", which lags real speech by an unpredictable amount.
     var lastVoicedAt: Date? { fluency.lastVoicedTime() }
+
+    /// Ambient noise estimate the endpointer is currently working against
+    /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
+    var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
 
     private static let quietCommitThreshold: TimeInterval = 1.5
 
@@ -187,6 +223,8 @@ final class LiveTranscriber: ObservableObject {
         self.recognizer = rec
         self.chunks = []
         self.finalizingGen = nil
+        self.pendingFinalGens = []
+        self.lastFinalizeWait = nil
         self.transcript = ""
         self.lastSegmentText = ""
         self.lastChangeTime = Date()
@@ -213,6 +251,7 @@ final class LiveTranscriber: ObservableObject {
         currentTask = nil
         recognizer = nil
         finalizingGen = nil
+        pendingFinalGens.removeAll()
         level = 0
         return transcript
     }
@@ -234,20 +273,32 @@ final class LiveTranscriber: ObservableObject {
         engine = nil
         level = 0
 
-        if lastSegmentText.isEmpty {
-            // Nothing pending in the live segment — no final to wait for.
-            currentRequest?.endAudio()
-            currentTask?.finish()
-        } else {
-            finalizingGen = taskGeneration
-            currentRequest?.endAudio()
-            let deadline = Date().addingTimeInterval(timeout)
-            while finalizingGen != nil && Date() < deadline {
-                try? await Task.sleep(nanoseconds: 60_000_000)
-            }
-            finalizingGen = nil
-            currentTask?.cancel()
+        // The live segment is worth waiting on only if it holds text. Rotated
+        // segments always are: their chunk is frozen at a partial until the
+        // final lands. Waiting on BOTH is the whole point — on a 3s/5s-tier
+        // turn the live segment is empty and the rotated one is the only place
+        // the user's last words live.
+        if !lastSegmentText.isEmpty { finalizingGen = taskGeneration }
+        currentRequest?.endAudio()
+
+        let startedWaiting = Date()
+        let pendingAtStop = pendingFinalGens.count
+        let textBefore = transcript
+        let deadline = startedWaiting.addingTimeInterval(timeout)
+        while finalizingGen != nil || !pendingFinalGens.isEmpty {
+            if Date() >= deadline { break }
+            try? await Task.sleep(nanoseconds: 60_000_000)
         }
+        lastFinalizeWait = FinalizeWait(
+            waitedMs: Int(Date().timeIntervalSince(startedWaiting) * 1000),
+            pendingSegments: pendingAtStop,
+            timedOut: finalizingGen != nil || !pendingFinalGens.isEmpty,
+            upgradedText: transcript != textBefore
+        )
+
+        finalizingGen = nil
+        pendingFinalGens.removeAll()
+        currentTask?.cancel()
         currentRequest = nil
         currentTask = nil
         recognizer = nil
@@ -290,12 +341,19 @@ final class LiveTranscriber: ObservableObject {
         }
     }
 
-    private func commitAndRestart() {
+    /// - Parameter awaitingFinal: whether this segment's rescored FINAL is
+    ///   still to come. True for the quiet watcher, which freezes a PARTIAL and
+    ///   relies on the late-final upgrade. False when the final already arrived
+    ///   (`result.isFinal`) or never will (error path) — marking those as
+    ///   pending would strand `stopAndFinalize` until its deadline waiting for
+    ///   a result that is already in hand or gone for good.
+    private func commitAndRestart(awaitingFinal: Bool) {
         guard isRunning else { return }
         // What the user has seen becomes this segment's chunk; the next
         // recognition segment starts empty so further partials append.
         if !lastSegmentText.isEmpty {
             chunks.append((gen: taskGeneration, text: lastSegmentText))
+            if awaitingFinal { pendingFinalGens.insert(taskGeneration) }
         }
         lastSegmentText = ""
         lastChangeTime = Date()
@@ -327,7 +385,8 @@ final class LiveTranscriber: ObservableObject {
                 guard !self.lastSegmentText.isEmpty else { continue }
                 let quietFor = Date().timeIntervalSince(self.lastChangeTime)
                 if quietFor > Self.quietCommitThreshold {
-                    self.commitAndRestart()
+                    // Freezes a partial — its final is still owed.
+                    self.commitAndRestart(awaitingFinal: true)
                 }
             }
         }
@@ -339,11 +398,17 @@ final class LiveTranscriber: ObservableObject {
         // still want from it is the FINAL, language-model-rescored text —
         // strictly better than the partial its chunk was frozen with.
         guard myGen == taskGeneration else {
-            if let result, result.isFinal,
-               let idx = chunks.firstIndex(where: { $0.gen == myGen }) {
-                let finalText = result.bestTranscription.formattedString
-                if !finalText.isEmpty { chunks[idx].text = finalText }
-                rebuildTranscript()
+            if let result, result.isFinal {
+                if let idx = chunks.firstIndex(where: { $0.gen == myGen }) {
+                    let finalText = result.bestTranscription.formattedString
+                    if !finalText.isEmpty { chunks[idx].text = finalText }
+                    rebuildTranscript()
+                }
+                pendingFinalGens.remove(myGen)
+            } else if error != nil {
+                // Nothing more is coming for this segment; release the wait
+                // rather than let it burn the full deadline.
+                pendingFinalGens.remove(myGen)
             }
             return
         }
@@ -396,14 +461,16 @@ final class LiveTranscriber: ObservableObject {
                 )
             }
             if result.isFinal {
-                commitAndRestart()
+                // This IS the final — nothing further to wait for.
+                commitAndRestart(awaitingFinal: false)
             }
             return
         }
 
-        // Error path: preserve whatever we already showed, then resume.
+        // Error path: preserve whatever we already showed, then resume. No
+        // final will follow an error, so this chunk stays as-is.
         if error != nil {
-            commitAndRestart()
+            commitAndRestart(awaitingFinal: false)
         }
     }
 
@@ -455,7 +522,31 @@ private final class FluencyMeter: @unchecked Sendable {
     private var longestPause = 0.0
     private var lastVoicedAt: Date?
 
-    private let voicedThreshold: Float = 0.35   // normalized 0…1 level from rms()
+    /// Absolute "this is speech" floor — 0.35 on the `rms()` curve is
+    /// −32.5 dBFS. A quiet room's ambient sits far below it, so there this
+    /// always wins and behavior is exactly what it was before adaptation.
+    private let baseVoicedThreshold: Float = 0.35
+    /// How far above the measured noise floor a frame must sit to count as
+    /// speech. 0.12 on the 0…1 curve ≈ 6 dB.
+    private let noiseMargin: Float = 0.12
+    /// Decaying-minimum noise estimate (classic "minimum statistics"): snaps
+    /// DOWN to any quieter frame, creeps UP slowly. Speech cannot drag it up —
+    /// even continuous speech has low-energy frames between words — but a room
+    /// that genuinely got louder is tracked within a few seconds.
+    ///
+    /// Why this exists: outdoors and in cafés ambient runs −40…−25 dBFS, i.e.
+    /// ABOVE the fixed 0.35 bar. Every frame then read as "the user is still
+    /// talking", `lastVoicedAt` never went stale, and the energy-based
+    /// endpointing never fired — turns fell through to the 6s transcript-quiet
+    /// fallback, which is the "slow outside" the user felt. It also inflated
+    /// speakingSeconds/pause stats by counting street noise as speech.
+    private var noiseFloor: Float = 0
+    private var hasNoiseFloor = false
+    private let noiseRisePerSecond: Float = 0.03   // ≈1.5 dB/s
+
+    private var voicedThreshold: Float {
+        max(baseVoicedThreshold, noiseFloor + noiseMargin)
+    }
     private let minPause = 0.35                  // seconds of silence = one pause
 
     func reset() {
@@ -463,6 +554,7 @@ private final class FluencyMeter: @unchecked Sendable {
         total = 0; voiced = 0; started = false; silenceRun = 0
         pauseCount = 0; pauseSeconds = 0; longestPause = 0
         lastVoicedAt = nil
+        noiseFloor = 0; hasNoiseFloor = false
     }
 
     func lastVoicedTime() -> Date? {
@@ -470,10 +562,30 @@ private final class FluencyMeter: @unchecked Sendable {
         return lastVoicedAt
     }
 
+    /// Current ambient estimate (0…1 on the `rms()` curve) — telemetry only,
+    /// so a "slow turn-taking" report can be read against how loud it actually
+    /// was where the user stood.
+    func noiseFloorLevel() -> Float {
+        lock.lock(); defer { lock.unlock() }
+        return noiseFloor
+    }
+
     func feed(level: Float, seconds: Double) {
         guard seconds > 0 else { return }
         lock.lock(); defer { lock.unlock() }
         total += seconds
+        // Seed from the first frame (the mic opens before the user starts, so
+        // it is normally ambient) — but never ABOVE the old fixed bar. If that
+        // frame happens to catch speech, an unclamped seed would push the
+        // threshold above the user's own voice and read them as silent. With
+        // the clamp the worst case is exactly the pre-adaptation behavior,
+        // and the decaying minimum corrects within a few frames.
+        if hasNoiseFloor {
+            noiseFloor = min(level, noiseFloor + noiseRisePerSecond * Float(seconds))
+        } else {
+            noiseFloor = min(level, baseVoicedThreshold)
+            hasNoiseFloor = true
+        }
         if level >= voicedThreshold {
             // Voiced again — close any qualifying mid-speech silence.
             if started, silenceRun >= minPause {

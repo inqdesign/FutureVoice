@@ -102,8 +102,17 @@ struct ConversationView: View {
     // without recreating that bug. `sttSettleSeconds` additionally holds fire
     // while the partial transcript is still moving, so a lagging recognizer
     // never gets its tail truncated.
-    private static let vadShortSeconds: Double   = 1.5
-    private static let vadDefaultSeconds: Double = 3.0
+    // 2026-08 retune: `talk_turn_timing` says the DEFAULT tier fires 53% of
+    // turns (95/179) and the short tier 27%, i.e. this wait is the single
+    // biggest slice of the silence between "user stops" and "fluent self
+    // speaks" — bigger than the whole Gemini call. Every `final_timeout` seen
+    // so far is 0 (the rescored FINAL pass always landed with room to spare),
+    // so the padding buys nothing. Default 3.0 → 2.2, short 1.5 → 1.2. The
+    // LONG tier stays at 5s: it only fires on a hanging conjunction or filler,
+    // where cutting in is exactly the failure mode this whole scheme exists to
+    // avoid. Roll back if `final_timeout=1` starts appearing in telemetry.
+    private static let vadShortSeconds: Double   = 1.2
+    private static let vadDefaultSeconds: Double = 2.2
     private static let vadLongSeconds: Double    = 5.0
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
@@ -115,9 +124,9 @@ struct ConversationView: View {
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
     /// How much true silence before warming the network path. Well under the
-    /// shortest VAD tier (1.5s), so by the time the turn actually fires the
+    /// shortest VAD tier (1.2s), so by the time the turn actually fires the
     /// TLS handshake + auth token are already in place.
-    private static let preconnectAfterSilenceSeconds: Double = 0.8
+    private static let preconnectAfterSilenceSeconds: Double = 0.6
     /// One preconnect per listening phase — reset when the mic restarts.
     @State private var didPreconnectThisTurn = false
     /// Per-turn latency breadcrumbs, accumulated across the VAD → finalize →
@@ -137,6 +146,8 @@ struct ConversationView: View {
     @State private var sessionId = UUID()
     @State private var sessionStartedAt = Date()
     @State private var didSaveCurrentSession = false
+    /// ✕ tapped with unsaved turns — asks save vs. discard before leaving.
+    @State private var confirmingDiscard = false
     @State private var userSpeechStartedAt: Date?
     /// Last time the live STT partial changed — the endpoint monitor waits
     /// for BOTH audio silence and a settled transcript before sending.
@@ -272,9 +283,34 @@ struct ConversationView: View {
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
-                close()
+                // A talk with unsaved turns doesn't just vanish on a stray ✕
+                // tap — closing is gated behind an explicit choice between
+                // saving (the End flow: summary + drills) and discarding.
+                if !turns.isEmpty && !didSaveCurrentSession {
+                    confirmingDiscard = true
+                } else {
+                    close()
+                }
             } label: {
                 Label("Close", systemImage: "xmark")
+            }
+            // Anchored on the ✕ itself, not on the screen: iOS presents a
+            // confirmation dialog as a popover that emerges from the view the
+            // modifier hangs off. Attached to the root container it pointed at
+            // the bottom-center mic pill — the one control it has nothing to
+            // do with. Keep it here so the sheet grows out of the button the
+            // user actually tapped.
+            .confirmationDialog("This conversation isn't saved yet",
+                                isPresented: $confirmingDiscard,
+                                titleVisibility: .visible) {
+                Button("Save conversation") {
+                    Task { await endSession() }
+                }
+                Button("Close without saving", role: .destructive) {
+                    close()
+                }
+            } message: {
+                Text("Saving wraps up the talk and keeps the transcript, feedback, and drills.")
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
@@ -547,7 +583,17 @@ struct ConversationView: View {
                 // fire on the old transcript-quiet signal as an upper bound.
                 let transcriptSettled = sinceTextChange >= Self.noisyRoomFallbackSeconds
                 guard audioSettled || transcriptSettled else { continue }
-                turnTiming = ["vad_wait_ms": String(Int(audioSilence * 1000))]
+                // `vad_wait_ms` alone hid the worst case: on the noisy fallback
+                // the energy meter never saw silence, so it logs a TINY audio
+                // gap for a turn that actually sat out the 6s transcript wait.
+                // Record which condition fired, the transcript-quiet duration,
+                // and how loud the room was, so "slow outside" is readable.
+                turnTiming = [
+                    "vad_wait_ms": String(Int(audioSilence * 1000)),
+                    "vad_path": audioSettled ? "audio" : "noisy",
+                    "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
+                    "noise": String(format: "%.2f", live.ambientNoiseLevel),
+                ]
                 turnEndedSpeakingAt = Date()
                 HapticEngine.voiceSent()
                 await stopAndSend()
@@ -559,8 +605,8 @@ struct ConversationView: View {
     /// Inspect the latest STT transcript and pick a REQUIRED TRUE-SILENCE
     /// duration (seconds since the mic last heard voiced audio):
     ///   • 5.0s — clearly mid-thought (filler / hanging conjunction / stub).
-    ///   • 1.5s — wrapped up cleanly (terminal punctuation .!?).
-    ///   • 3.0s — anything in between.
+    ///   • 1.2s — wrapped up cleanly (terminal punctuation .!?).
+    ///   • 2.2s — anything in between.
     private func currentVadWaitSeconds() -> Double {
         let trimmed = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         if Self.isLikelyIncomplete(trimmed) {
@@ -826,6 +872,15 @@ struct ConversationView: View {
         let finalizeStarted = Date()
         let finalText = await live.stopAndFinalize()
         turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
+        // Whether the rescored FINAL pass actually landed before the turn
+        // shipped. `final_timeout=1` means the user's words went out as the
+        // recognizer's un-rescored partial — previously unobservable, and the
+        // only way to tell if `quietCommitThreshold` needs retuning next.
+        if let w = live.lastFinalizeWait {
+            turnTiming["final_pending"] = String(w.pendingSegments)
+            turnTiming["final_timeout"] = w.timedOut ? "1" : "0"
+            turnTiming["final_upgraded"] = w.upgradedText ? "1" : "0"
+        }
         let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
@@ -887,9 +942,27 @@ struct ConversationView: View {
             default:          turnTiming["audio"] = "none"
             }
             let geminiStarted = Date()
+            // The reply is the FIRST field of the streamed turn JSON, so TTS
+            // starts the instant it closes — the suggestion and the verbatim
+            // transcript that follow it are written while the voice is already
+            // loading, instead of ahead of the first sound.
+            var speakTask: Task<Void, Error>?
+            let speakEarly: @MainActor (String) -> Void = { reply in
+                guard speakTask == nil, !isTornDown else { return }
+                let text = Self.stripLeakedSchemaTail(reply)
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { return }
+                turnTiming["gemini_first_ms"] =
+                    String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
+                speakTask = Task { @MainActor in
+                    try await speakAndAppend(text, voiceId: voiceId,
+                                             idempotencyKey: "tts-turn:\(turnId.uuidString)")
+                }
+            }
             let payload: ConversationTurnPayload
             do {
-                payload = try await turnPayload(audio: turnAudio, turnId: turnId)
+                payload = try await turnPayload(audio: turnAudio, turnId: turnId,
+                                                onReply: speakEarly)
             } catch where turnAudio != nil && !error.isOutOfCredits {
                 // The audio-attached call is the NEW, riskier path (bigger
                 // upload, audio ingestion, longer JSON). If it fails for any
@@ -900,7 +973,8 @@ struct ConversationView: View {
                     "error": (error as NSError).domain + ":\((error as NSError).code)",
                 ])
                 turnAudio = nil
-                payload = try await turnPayload(audio: nil, turnId: turnId)
+                payload = try await turnPayload(audio: nil, turnId: turnId,
+                                                onReply: speakEarly)
             }
             turnTiming["gemini_ms"] = String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
             // The screen may have closed while the reply was in flight.
@@ -920,8 +994,15 @@ struct ConversationView: View {
                let idx = turns.firstIndex(where: { $0.id == turnId }) {
                 turns[idx].suggestion = s
             }
-            try await speakAndAppend(replyText, voiceId: voiceId,
-                                     idempotencyKey: "tts-turn:\(turnId.uuidString)")
+            // Already speaking from the stream callback: adopt its result so a
+            // TTS failure still reaches the catch below and offers Retry.
+            // Otherwise (no early fire — buffered fallback) speak now.
+            if let speakTask {
+                try await speakTask.value
+            } else {
+                try await speakAndAppend(replyText, voiceId: voiceId,
+                                         idempotencyKey: "tts-turn:\(turnId.uuidString)")
+            }
             // DO NOT set phase = .idle here. speakAndAppend kicks off audio
             // playback (non-blocking) whose completion flips phase back to
             // .idle AND auto-restarts listening for phone-call mode.
@@ -946,15 +1027,26 @@ struct ConversationView: View {
     /// reply so the caller's audio→text rescue (and the Retry chip) engage
     /// instead of silently dead-ending the turn.
     private func turnPayload(audio: GeminiClient.Message.InlineAudio?,
-                             turnId: UUID) async throws -> ConversationTurnPayload {
+                             turnId: UUID,
+                             onReply: @MainActor @escaping (String) -> Void)
+    async throws -> ConversationTurnPayload {
         do {
-            let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSON(
+            let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSONStream(
                 system: systemPrompt()
-                    + ConversationEngine.turnOutputInstruction(targetLanguage: appState.targetLanguage),
+                    + ConversationEngine.turnOutputInstruction(
+                        targetLanguage: appState.targetLanguage,
+                        nativeLanguage: appState.nativeLanguage),
                 messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
                 // Headroom for transcript + reply + suggestion: a MAX_TOKENS
                 // truncation shows up here as a DecodingError-failed turn.
-                maxTokens: 1024,
+                // gen-3 counts THINKING tokens against this ceiling too, so the
+                // budget is shared with reasoning the user never sees — and the
+                // transcript field scales with how long the user just spoke.
+                // At 1024 that combination truncated ~8% of turns into a dead
+                // Retry chip (evenly split across wifi/cellular, i.e. not a
+                // network fault). The ceiling is not billed, only tokens
+                // actually produced, so the headroom is free.
+                maxTokens: 2048,
                 temperature: 0.7,
                 purpose: "turn",
                 // Keyed to the user turn: the inline Retry button and the
@@ -964,7 +1056,14 @@ struct ConversationView: View {
                 // Audio-attached calls get a short idle timeout so a stalled
                 // upload fails into the text-only rescue in seconds instead
                 // of eating the session-wide 40s window first.
-                requestTimeout: audio != nil ? 20 : nil
+                requestTimeout: audio != nil ? 20 : nil,
+                // Speak as soon as "reply" closes; everything after it in the
+                // JSON (suggestion, transcript) lands while the voice loads.
+                earlyField: "reply",
+                onEarlyField: onReply,
+                // Stream cut after the reply shipped: keep the turn the user
+                // already heard, minus the correction.
+                fallbackFromEarly: { ConversationTurnPayload(reply: $0, suggestion: nil) }
             )
             guard !payload.reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 throw GeminiError.invalidResponse
@@ -1025,8 +1124,13 @@ struct ConversationView: View {
         guard !isTornDown else { return }
         // Content-addressed cache hit avoids re-billing ElevenLabs for repeated
         // fluent-self lines (greetings, short acknowledgements, etc.).
-        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
-            let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId) ?? []
+        // `allowLineage: false` — a LIVE call must sound like one take, so an
+        // older clone's recording is never spliced in mid-conversation. Review
+        // surfaces (scenes, drills, shadow) do accept it.
+        if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId,
+                                                    allowLineage: false) {
+            let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId,
+                                                          allowLineage: false) ?? []
             try appendTurnAndPlay(cached, timings: timings, transcript: text)
             logTurnTiming(tts: "cache")
             return
@@ -1087,9 +1191,6 @@ struct ConversationView: View {
             switch result {
             case .pcm22050(let fullPCM) where streamTurnId != nil && !fullPCM.isEmpty:
                 player.finishPCMStream()
-                // Persist as WAV so replay, the phrase cache, and shadow all
-                // keep working (AVAudioPlayer sniffs the container). No word
-                // timings on this path — shadow re-synthesizes them on demand.
                 let wav = AudioLoudness.wavData(
                     fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
                 let durationMs = Int(Double(fullPCM.count / 2)
@@ -1100,21 +1201,68 @@ struct ConversationView: View {
                     turns[idx].audioURL = savedURL
                     turns[idx].durationMs = durationMs
                 }
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
+                            TurnAudioStore.shared.saveTimings(timings, for: streamTurnId!)
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already cached, karaoke will use estimate
+                    }
+                }
                 return
             case .pcm22050(let fullPCM) where !fullPCM.isEmpty:
-                // Stream arrived but the local engine couldn't start —
-                // play the accumulated PCM the classic way. Already paid for.
                 let wav = AudioLoudness.wavData(
                     fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
+                            let turnId = turns.last(where: { $0.transcript == text })?.id
+                            if let id = turnId {
+                                TurnAudioStore.shared.saveTimings(timings, for: id)
+                            }
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already playing, karaoke will use estimate
+                    }
+                }
                 logTurnTiming(tts: "buffered")
                 return
             case .mp3(let data) where !data.isEmpty:
-                // Older edge deploy (no streaming support) — identical to the
-                // pre-streaming behavior.
                 PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(data, timings: [], transcript: text)
+                Task {
+                    do {
+                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
+                            voiceId: voiceId, text: text,
+                            modelId: ElevenLabsClient.conversationModelId,
+                            idempotencyKey: idempotencyKey,
+                            purpose: "turn")
+                        if !timings.isEmpty {
+                            PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: timings)
+                            let turnId = turns.last(where: { $0.transcript == text })?.id
+                            if let id = turnId {
+                                TurnAudioStore.shared.saveTimings(timings, for: id)
+                            }
+                        }
+                    } catch {
+                        // Timing recovery failed — audio already playing, karaoke will use estimate
+                    }
+                }
                 logTurnTiming(tts: "buffered")
                 return
             default:
@@ -1217,6 +1365,7 @@ struct ConversationView: View {
         do {
             let systemP = ConversationEngine.summarySystemPrompt(
                 targetLanguage: appState.targetLanguage,
+                nativeLanguage: appState.nativeLanguage,
                 profile: appState.learnerProfile
             )
             let transcript = ConversationEngine.formatTranscript(turns)
@@ -1278,6 +1427,18 @@ struct ConversationView: View {
                     && needle != normalized($0.correction)
             }
 
+            // Did anything they'd been studying actually come out of their
+            // mouth? Runs against the drill cards as they stood BEFORE this
+            // session's own corrections are ingested below, so a card minted
+            // tonight can't be credited as carried into tonight.
+            let carryovers = CarryoverDetector.detect(
+                in: turns, cards: DrillStore.shared.load(),
+                curriculumItems: appState.openCurriculumItems,
+                studyingExpressions: VocabStore.shared.studyingExpressions,
+                studyingWords: VocabStore.shared.studying,
+                sessionId: sessionId, sessionStartedAt: sessionStartedAt)
+            computed.carryovers = carryovers
+
             summary = computed
             phase = .idle
 
@@ -1304,6 +1465,21 @@ struct ConversationView: View {
             // re-summarizes the whole thing) so they don't pile up.
             DrillStore.shared.deleteForSession(sessionId)
             DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
+            // Producing a card's phrase live outranks any flashcard tap —
+            // credit it against the SRS schedule, not just the wrap-up.
+            DrillStore.shared.markUsedInConversation(
+                ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
+            // Same principle for book material: producing it live masters it,
+            // wherever the book lives.
+            appState.markCurriculumItemsUsedInConversation(
+                itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
+            if !carryovers.isEmpty {
+                Analytics.capture("carryovers_detected", [
+                    "count": carryovers.count,
+                    "from_cards": carryovers.filter { $0.source == .drillCard }.count,
+                    "from_suggestions": carryovers.filter { $0.source == .suggestion }.count,
+                ])
+            }
             // Grow the long-term learner profile — the next conversation's
             // system prompt picks these patterns up.
             appState.recordSessionOutcome(summary: computed, turns: turns)

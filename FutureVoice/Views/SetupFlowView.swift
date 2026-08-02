@@ -21,7 +21,7 @@ struct SetupFlowView: View {
     @EnvironmentObject private var auth: AuthService
     @State private var step: Int = 0
     @State private var level: CEFRLevel = .b1
-    @State private var nativeLanguage: String = "ko"
+    @State private var nativeLanguage: String = LanguageCatalog.defaultNative
     @State private var targetLanguage: String = "en"
     /// Backing out of step one crosses the auth boundary (Welcome lives
     /// before sign-in), so it asks first instead of silently signing out.
@@ -61,7 +61,9 @@ struct SetupFlowView: View {
             targetLanguage = appState.targetLanguage
             level = appState.proficiency
             // Native and target can't coincide; targets step re-checks after
-            // the native pick too (see advance()).
+            // the native pick too (see advance()). The target moves, not the
+            // native — the native seed came from the device and is the better
+            // guess of the two.
             if targetLanguage == nativeLanguage {
                 targetLanguage = targetChoices.first ?? "en"
             }

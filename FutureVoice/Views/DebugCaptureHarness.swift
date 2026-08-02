@@ -17,6 +17,14 @@ enum DebugCapture {
     /// path, so the timeline renders offline for the screenshot.
     static var captureShadow = false
 
+    /// True while capturing the expanded word card: `VocabularyView` opens
+    /// its notebook sheet at full height instead of the peek.
+    static var previewWordCard = false
+
+    /// True while capturing the drill bin tray: `DrillView` opens already
+    /// revealed and "mid-drag" so the drop targets are on screen.
+    static var previewDrillTray = false
+
     /// True while capturing the scenario composer: it pre-selects a category
     /// and injects sample AI chips so the layout renders offline.
     static var composerPreview = false
@@ -47,6 +55,12 @@ enum DebugCapture {
         case "vocab":
             once("vocab") { seedVocab() }
             return AnyView(NavigationStack { VocabularyView() })
+        case "vocab-card":
+            // The word card at full height — the peek is the default, so a
+            // screenshot can't reach the expanded state without this.
+            once("vocab") { seedVocab() }
+            previewWordCard = true
+            return AnyView(NavigationStack { VocabularyView() })
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
@@ -67,6 +81,12 @@ enum DebugCapture {
             // The SRS review sheet, incl. a legacy card whose source is a whole
             // rambling turn — verifies the render-time fragment trim.
             once("drills") { seedVocab() }
+            return AnyView(DrillSheet().environmentObject(appState))
+        case "drills-tray":
+            // Same deck, frozen mid-drag: the bin tray is a drag-only surface,
+            // so a screenshot can't reach it without this.
+            once("drills") { seedVocab() }
+            previewDrillTray = true
             return AnyView(DrillSheet().environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
@@ -102,9 +122,19 @@ enum DebugCapture {
             once("composer") { seedNews(into: appState); composerPreview = true }
             return AnyView(ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { _ in }
                 .environmentObject(appState))
+        case "carryover":
+            // The post-talk receipt with one hit from EVERY source, so the
+            // "you used what you practiced" section can be judged at a glance
+            // without first earning the hits in a real conversation.
+            once("carryover") { carryoverSession = seedCarryoverSession() }
+            return AnyView(NavigationStack {
+                ConversationDetailView(session: carryoverSession ?? seedCarryoverSession())
+                    .environmentObject(appState)
+            })
         case "progress":
             once("progress") {
                 seedVocab(); seedSessions(scored: true)
+                _ = seedCarryoverSession()
                 // A pooled weekly read so the big CEFR level (not "building")
                 // renders for design capture.
                 let report = WeeklyReport(
@@ -328,6 +358,68 @@ enum DebugCapture {
     }
 
     // MARK: - Sessions (Home stats + mission)
+
+    /// Held so the "carryover" route seeds once but can still hand the same
+    /// session to the view it returns.
+    static var carryoverSession: Session?
+
+    /// A finished talk carrying one carryover per source. Quotes are written
+    /// as the learner padding the studied item out — exactly what the matcher
+    /// accepts — so what renders here is what a real hit looks like.
+    @discardableResult
+    static func seedCarryoverSession() -> Session {
+        let sessionId = UUID()
+        let ended = Date().addingTimeInterval(-1_800)
+        let started = ended.addingTimeInterval(-720)
+
+        struct Seed {
+            let source: Carryover.Source
+            let item: String
+            let quote: String
+        }
+        let seeds = [
+            Seed(source: .drillCard, item: "I'd rather stay in tonight.",
+                 quote: "Honestly I'd rather just stay in tonight, if that's okay."),
+            Seed(source: .curriculumItem, item: "Could you box that up for me?",
+                 quote: "Great, could you box that up for me please?"),
+            Seed(source: .studyingExpression, item: "it slipped my mind",
+                 quote: "Sorry, it totally slipped my mind."),
+            Seed(source: .suggestion, item: "I'm really looking forward to it.",
+                 quote: "Next Friday. I'm really looking forward to it."),
+            Seed(source: .studyingWord, item: "commute",
+                 quote: "I commuted for two hours every day back then."),
+        ]
+
+        var turns: [Turn] = []
+        var carryovers: [Carryover] = []
+        for (index, seed) in seeds.enumerated() {
+            let at = started.addingTimeInterval(Double(index) * 90)
+            turns.append(Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                              transcript: "Mm — and then what?", durationMs: 2400,
+                              timestamp: at, suggestion: nil))
+            let userTurn = Turn(id: UUID(), role: .user, audioURL: nil,
+                                transcript: seed.quote, durationMs: 7200,
+                                timestamp: at.addingTimeInterval(4), suggestion: nil)
+            turns.append(userTurn)
+            carryovers.append(Carryover(
+                sessionId: sessionId, source: seed.source, item: seed.item,
+                quote: seed.quote, turnId: userTurn.id, sourceId: UUID(),
+                detectedAt: ended))
+        }
+
+        var summary = SessionSummary(
+            phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
+            overallNote: "Relaxed, natural talk — and you pulled in a lot of what you'd been studying.",
+            scorecard: sampleScorecard)
+        summary.carryovers = carryovers
+
+        let session = Session(
+            id: sessionId, userId: UUID(), targetLanguage: "en", mode: .conversation,
+            topic: "Weekend plans", startedAt: started, endedAt: ended,
+            turns: turns, summary: summary, origin: .free)
+        SessionStore.shared.save(session)
+        return session
+    }
 
     static func seedSessions(scored: Bool = false) {
         let uid = UUID()

@@ -419,12 +419,21 @@ struct SituationComposerSheet: View {
     @State private var ideas: [SuggestedTopic] = []
     @State private var loadingIdeas = false
     @State private var ideasError: String?
+    // Who the scene's counterpart sounds like — always set when the sheet
+    // isn't already scoped to a person. Defaults to the Me → Voice pick.
+    @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
+    @State private var pickedPersonId: UUID?
 
     var body: some View {
         NavigationStack {
             Form {
                 if let p = person { personHeader(p) }
                 situationField
+                if person == nil {
+                    TalkingWithSection(selectedVoiceId: $selectedVoiceId,
+                                       attachedPersonId: $pickedPersonId,
+                                       counterparts: appState.counterparts)
+                }
                 if person != nil { ideasSection }
             }
             .navigationTitle(person.map { "With \($0.name)" } ?? "Your situation")
@@ -543,15 +552,20 @@ struct SituationComposerSheet: View {
     private func startWatch() {
         let description = situation.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !description.isEmpty else { return }
+        let who = person ?? pickedPersonId.flatMap { id in
+            appState.counterparts.first { $0.id == id }
+        }
         var s = Scenario(
             environment: description,
             // No person → leave the role EMPTY: the scene infers the natural
             // counterpart from the situation itself (a landlord situation
             // casts a landlord, not a generic friend).
-            role: person.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
+            role: who.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
             notes: ""
         )
-        s.counterpartId = person?.id
+        s.counterpartId = who?.id
+        // No persona → the picked preset voice sticks to the scenario.
+        s.voicePresetId = who == nil ? selectedVoiceId : nil
         appState.saveScenario(s)
         onWatch(s)
     }

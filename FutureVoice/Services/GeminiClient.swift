@@ -92,6 +92,76 @@ final class GeminiClient {
         jsonResponse: Bool = false,
         requestTimeout: TimeInterval? = nil
     ) async throws -> String {
+        try await sendRaw(
+            system: system, messages: messages, model: model, maxTokens: maxTokens,
+            temperature: temperature, searchGrounding: searchGrounding,
+            purpose: purpose, idempotencyKey: idempotencyKey,
+            jsonResponse: jsonResponse, requestTimeout: requestTimeout
+        ).text
+    }
+
+    /// Same request as `send`, but also surfaces the candidate's
+    /// `finishReason`. `sendJSON` needs it to tell a genuinely malformed reply
+    /// apart from one the token ceiling cut in half: after decoding fails the
+    /// two are indistinguishable, yet only the latter is fixed by raising
+    /// `maxTokens`. Keeping them separate in telemetry is the only way to know
+    /// whether a ceiling bump actually landed.
+    private func sendRaw(
+        system: String,
+        messages: [Message],
+        model: Model = .flash36,
+        maxTokens: Int = 512,
+        temperature: Double = 0.7,
+        searchGrounding: Bool = false,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil,
+        jsonResponse: Bool = false,
+        requestTimeout: TimeInterval? = nil
+    ) async throws -> (text: String, finishReason: String?) {
+        let request = try await makeRequest(
+            system: system, messages: messages, model: model, maxTokens: maxTokens,
+            temperature: temperature, searchGrounding: searchGrounding,
+            purpose: purpose, idempotencyKey: idempotencyKey,
+            jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false
+        )
+
+        let (data, response) = try await session.dataWithRetry(for: request)
+        try Self.validate(response: response, data: data)
+
+        let decoded = try JSONDecoder().decode(APIResponse.self, from: data)
+        let candidate = decoded.candidates?.first
+        let text = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), candidate?.finishReason)
+    }
+
+    /// One `generateContent` candidate — shared by the buffered response and
+    /// by every SSE event of the streaming one (each event carries the same
+    /// shape, holding that step's text delta).
+    private struct APIResponse: Decodable {
+        struct Candidate: Decodable {
+            struct ContentR: Decodable {
+                struct PartR: Decodable { let text: String? }
+                let parts: [PartR]?
+            }
+            let content: ContentR?
+            let finishReason: String?
+        }
+        let candidates: [Candidate]?
+    }
+
+    private func makeRequest(
+        system: String,
+        messages: [Message],
+        model: Model,
+        maxTokens: Int,
+        temperature: Double,
+        searchGrounding: Bool,
+        purpose: String?,
+        idempotencyKey: String?,
+        jsonResponse: Bool,
+        requestTimeout: TimeInterval?,
+        stream: Bool
+    ) async throws -> URLRequest {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
         // Optionals encode via encodeIfPresent, so a text part carries no
@@ -122,6 +192,7 @@ final class GeminiClient {
             let generationConfig: GenerationConfig
             let tools: [Tool]?   // nil = omitted; edge function passes through
             let purpose: String? // nil = omitted; edge function bills per intent
+            let stream: Bool?    // nil = omitted; true = SSE passthrough
         }
         let body = Body(
             model: model.rawValue,
@@ -154,7 +225,8 @@ final class GeminiClient {
                 responseMimeType: (jsonResponse && !searchGrounding) ? "application/json" : nil
             ),
             tools: searchGrounding ? [Tool(google_search: EmptyObject())] : nil,
-            purpose: purpose
+            purpose: purpose,
+            stream: stream ? true : nil
         )
 
         var request = URLRequest(url: url)
@@ -170,23 +242,7 @@ final class GeminiClient {
         request.setValue(idempotencyKey ?? UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await session.dataWithRetry(for: request)
-        try Self.validate(response: response, data: data)
-
-        struct APIResponse: Decodable {
-            struct Candidate: Decodable {
-                struct ContentR: Decodable {
-                    struct PartR: Decodable { let text: String? }
-                    let parts: [PartR]?
-                }
-                let content: ContentR?
-            }
-            let candidates: [Candidate]?
-        }
-        let decoded = try JSONDecoder().decode(APIResponse.self, from: data)
-        let text = decoded.candidates?.first?.content?.parts?.compactMap { $0.text }.joined() ?? ""
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return request
     }
 
     /// One-shot JSON request. Caller specifies the expected `Decodable` shape.
@@ -203,7 +259,7 @@ final class GeminiClient {
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil
     ) async throws -> T {
-        let raw = try await send(
+        let (raw, finishReason) = try await sendRaw(
             system: system,
             messages: messages,
             model: model,
@@ -215,13 +271,184 @@ final class GeminiClient {
             jsonResponse: true,
             requestTimeout: requestTimeout
         )
+        // Reclassify ONLY after parsing has actually failed — never on the
+        // flag alone, so a response that happens to be complete is still used.
+        let truncated = finishReason == "MAX_TOKENS"
         guard let jsonData = Self.extractJSON(from: raw) else {
-            throw GeminiError.jsonNotFound(raw: raw)
+            throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: raw)
         }
-        return try JSONDecoder().decode(T.self, from: jsonData)
+        do {
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        } catch {
+            if truncated { throw GeminiError.truncated }
+            throw error
+        }
+    }
+
+    /// Streaming sibling of `sendJSON`, for the conversation turn.
+    ///
+    /// The turn schema puts `reply` FIRST, so `onEarlyField` fires the moment
+    /// that field's closing quote arrives — the TTS request goes out while the
+    /// model is still writing the suggestion and the verbatim transcript, both
+    /// of which used to sit on the critical path before the first sound.
+    ///
+    /// Degrades in three silent steps:
+    ///   • edge deploy without SSE support (no `X-Gemini-Stream` handshake) →
+    ///     buffer the plain JSON body and decode as usual, no early fire;
+    ///   • stream dies AFTER the early field → `fallbackFromEarly` rebuilds the
+    ///     payload from what already arrived, so the user still hears the turn;
+    ///   • stream dies BEFORE it → throws, and the caller's non-streaming retry
+    ///     runs on the same idempotency key (no second charge).
+    func sendJSONStream<T: Decodable>(
+        system: String,
+        messages: [Message],
+        model: Model = .flash36,
+        maxTokens: Int = 1024,
+        temperature: Double = 0.4,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil,
+        requestTimeout: TimeInterval? = nil,
+        earlyField: String,
+        onEarlyField: @MainActor @escaping (String) -> Void,
+        fallbackFromEarly: (String) -> T?
+    ) async throws -> T {
+        let request = try await makeRequest(
+            system: system, messages: messages, model: model, maxTokens: maxTokens,
+            temperature: temperature, searchGrounding: false,
+            purpose: purpose, idempotencyKey: idempotencyKey,
+            jsonResponse: true, requestTimeout: requestTimeout, stream: true
+        )
+
+        // One immediate re-dial on a transient connect failure, matching the
+        // TTS stream: a radio blip at stream OPEN otherwise drops the turn
+        // into the buffered path and costs more than it saves.
+        var opened: (URLSession.AsyncBytes, URLResponse)
+        do {
+            opened = try await session.bytes(for: request)
+        } catch where error.isTransientNetworkError {
+            opened = try await session.bytes(for: request)
+        }
+        let (bytes, response) = opened
+        guard let http = response as? HTTPURLResponse else { throw GeminiError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            var errBody = Data()
+            for try await b in bytes.prefix(512) { errBody.append(b) }
+            if http.statusCode == 402 { throw GeminiError.insufficientCredits }
+            throw GeminiError.httpError(status: http.statusCode,
+                                        body: String(data: errBody, encoding: .utf8) ?? "<binary>")
+        }
+
+        // No handshake → this deploy ignored `stream` and sent one JSON body.
+        guard http.value(forHTTPHeaderField: "X-Gemini-Stream") == "sse" else {
+            var all = Data()
+            for try await b in bytes { all.append(b) }
+            let decoded = try JSONDecoder().decode(APIResponse.self, from: all)
+            let candidate = decoded.candidates?.first
+            let text = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+            guard let jsonData = Self.extractJSON(from: text) else {
+                throw candidate?.finishReason == "MAX_TOKENS"
+                    ? GeminiError.truncated : GeminiError.jsonNotFound(raw: text)
+            }
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        }
+
+        var raw = ""                 // model text accumulated across events
+        var finishReason: String?
+        var early: String?
+        do {
+            for try await line in bytes.lines {
+                guard line.hasPrefix("data:") else { continue }
+                let event = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+                guard !event.isEmpty, event != "[DONE]",
+                      let data = event.data(using: .utf8),
+                      let chunk = try? JSONDecoder().decode(APIResponse.self, from: data)
+                else { continue }
+                let candidate = chunk.candidates?.first
+                if let reason = candidate?.finishReason { finishReason = reason }
+                let delta = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+                guard !delta.isEmpty else { continue }
+                raw += delta
+                if early == nil, let value = Self.completedStringField(earlyField, in: raw) {
+                    early = value
+                    await MainActor.run { onEarlyField(value) }
+                }
+            }
+        } catch {
+            if let early, let payload = fallbackFromEarly(early) { return payload }
+            throw error
+        }
+
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let truncated = finishReason == "MAX_TOKENS"
+        guard let jsonData = Self.extractJSON(from: trimmed) else {
+            if let early, let payload = fallbackFromEarly(early) { return payload }
+            throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: trimmed)
+        }
+        do {
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        } catch {
+            // The reply already shipped; a malformed or cut-off tail must not
+            // undo a turn the user has heard.
+            if let early, let payload = fallbackFromEarly(early) { return payload }
+            if truncated { throw GeminiError.truncated }
+            throw error
+        }
     }
 
     // MARK: - Helpers
+
+    /// Pulls a top-level string field out of a JSON body that is still being
+    /// streamed, returning it only once its CLOSING quote has arrived. Returns
+    /// nil while the value is incomplete, and for a non-string value (`null`,
+    /// an object) so a `"suggestion": null` never reads as a finished string.
+    static func completedStringField(_ name: String, in partial: String) -> String? {
+        guard let key = partial.range(of: "\"\(name)\"") else { return nil }
+        var i = key.upperBound
+        func skipSpace() {
+            while i < partial.endIndex, partial[i].isWhitespace { i = partial.index(after: i) }
+        }
+        skipSpace()
+        guard i < partial.endIndex, partial[i] == ":" else { return nil }
+        i = partial.index(after: i)
+        skipSpace()
+        guard i < partial.endIndex, partial[i] == "\"" else { return nil }
+        i = partial.index(after: i)
+
+        var out = ""
+        var escaped = false
+        while i < partial.endIndex {
+            let c = partial[i]
+            if escaped {
+                switch c {
+                case "n":  out.append("\n")
+                case "t":  out.append("\t")
+                case "r":  out.append("\r")
+                case "\"": out.append("\"")
+                case "\\": out.append("\\")
+                case "/":  out.append("/")
+                case "u":
+                    // \uXXXX. Surrogate halves can't be resolved one escape at
+                    // a time — bail and let the fully decoded payload win.
+                    let start = partial.index(after: i)
+                    guard let end = partial.index(start, offsetBy: 4, limitedBy: partial.endIndex),
+                          let value = UInt32(String(partial[start..<end]), radix: 16),
+                          let scalar = Unicode.Scalar(value) else { return nil }
+                    out.append(Character(scalar))
+                    i = partial.index(before: end)
+                default:   out.append(c)
+                }
+                escaped = false
+            } else if c == "\\" {
+                escaped = true
+            } else if c == "\"" {
+                return out          // closing quote → the field is complete
+            } else {
+                out.append(c)
+            }
+            i = partial.index(after: i)
+        }
+        return nil                  // still streaming
+    }
 
     private static func extractJSON(from text: String) -> Data? {
         guard let start = text.firstIndex(of: "{"),
@@ -247,6 +474,10 @@ enum GeminiError: Error, LocalizedError {
     case httpError(status: Int, body: String)
     case jsonNotFound(raw: String)
     case insufficientCredits
+    // Append-only: telemetry logs the bridged NSError code, which is the case
+    // INDEX. Reordering these silently rewrites history (insufficientCredits
+    // must stay 3).
+    case truncated
 
     var errorDescription: String? {
         switch self {
@@ -254,6 +485,7 @@ enum GeminiError: Error, LocalizedError {
         case .httpError(let status, let body): return "Gemini HTTP \(status): \(body)"
         case .jsonNotFound(let raw):         return "Gemini: no JSON found in reply: \(raw.prefix(200))"
         case .insufficientCredits:           return "You're out of credits. Check your plan under Me → Account."
+        case .truncated:                     return "Gemini: reply hit the token ceiling before it finished"
         }
     }
 }

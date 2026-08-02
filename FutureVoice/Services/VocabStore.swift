@@ -179,7 +179,7 @@ final class VocabStore: ObservableObject {
         guard !ingestedSessions.contains(sessionId) else { return [] }
         ingestedSessions.insert(sessionId)
         var newWords: [String] = []
-        for lemma in lemmas(in: userTexts) where CoreVocabulary.set.contains(lemma) {
+        for lemma in Self.lemmas(in: userTexts) where CoreVocabulary.set.contains(lemma) {
             if var r = records[lemma] {
                 r.count += 1
                 r.lastAt = date
@@ -341,14 +341,14 @@ final class VocabStore: ObservableObject {
         var out: [SourceSentence] = []
         for s in SessionStore.shared.load() {
             for t in s.turns where t.role == .fluentSelf {
-                if lemmas(in: [t.transcript]).contains(word) {
+                if Self.lemmas(in: [t.transcript]).contains(word) {
                     out.append(SourceSentence(text: t.transcript, audioURL: t.audioURL, source: "Talk"))
                 }
             }
         }
         for d in WatchDialogueStore.shared.load() {
             for turn in d.turns where turn.speaker == "user" {
-                if lemmas(in: [turn.text]).contains(word) {
+                if Self.lemmas(in: [turn.text]).contains(word) {
                     out.append(SourceSentence(text: turn.text, audioURL: nil, source: "Watch"))
                 }
             }
@@ -362,7 +362,7 @@ final class VocabStore: ObservableObject {
     /// to say would flood the list with noise.
     func pickupWords(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?) -> [String] {
         let minRank = minLevel.map(CoreVocabulary.levelRank)
-        return lemmas(in: texts)
+        return Self.lemmas(in: texts)
             .filter { records[$0] == nil }
             .compactMap { w -> (word: String, rank: Int)? in
                 guard let lv = CoreVocabulary.level(of: w) else { return nil }
@@ -409,7 +409,14 @@ final class VocabStore: ObservableObject {
         NLLanguage(rawValue: LanguageScope.active)
     }
 
-    private func lemmas(in texts: [String]) -> Set<String> {
+    /// Headwords spoken across `texts`.
+    ///
+    /// `nonisolated static` because it's a pure function of text — no records,
+    /// no disk — which lets `CarryoverDetector` ask the same question of a
+    /// single turn without hopping to the main actor. Lemmatization is
+    /// language-specific (English NLTagger vs. `KoreanMorph`) and that
+    /// knowledge belongs here, not scattered across callers.
+    nonisolated static func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()
@@ -435,7 +442,7 @@ final class VocabStore: ObservableObject {
     /// deterministic KoreanMorph heuristic (particle stripping, ending → 다).
     /// Only lexicon hits come back — a candidate that isn't a headword is a
     /// guess we couldn't verify, not a word to track.
-    private func koreanLemmas(in texts: [String]) -> Set<String> {
+    nonisolated private static func koreanLemmas(in texts: [String]) -> Set<String> {
         var out = Set<String>()
         for text in texts {
             let tokens = text.components(separatedBy: CharacterSet.alphanumerics.inverted)

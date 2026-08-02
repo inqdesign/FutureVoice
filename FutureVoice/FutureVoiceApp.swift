@@ -89,7 +89,12 @@ final class AppState: ObservableObject {
     @Published var talkRootVisible = true
 
     @Published var voiceCloneId: String? {
-        didSet { UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey) }
+        didSet {
+            UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey)
+            // Remember the id so a LATER re-record doesn't orphan everything
+            // already synthesized in this voice — see PhraseAudioStore.
+            PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
+        }
     }
     /// Transient (never persisted): true while the voice-clone onboarding is
     /// playing its final act (cloned-voice greeting + theme pick). Setting
@@ -107,7 +112,7 @@ final class AppState: ObservableObject {
             if onboardingStarted && !oldValue { Analytics.capture("onboarding_started") }
         }
     }
-    @Published var nativeLanguage: String = "ko" {
+    @Published var nativeLanguage: String = LanguageCatalog.defaultNative {
         didSet { UserDefaults.standard.set(nativeLanguage, forKey: Self.nativeLanguageKey) }
     }
     @Published var targetLanguage: String = "en" {
@@ -164,8 +169,61 @@ final class AppState: ObservableObject {
     /// to show a "Analyzing your week…" spinner instead of an empty state.
     @Published var weeklyReportGenerating: Bool = false
 
+    /// What the user's clone is called — on ElevenLabs and in Me → Voice.
+    /// Empty means "never named it": `voiceDisplayName` then derives one from
+    /// the persona, so two users' clones are still tellable apart. Renaming
+    /// goes through `renameVoice(to:)`, which also updates ElevenLabs.
+    @Published private(set) var voiceName: String = "" {
+        didSet { UserDefaults.standard.set(voiceName, forKey: Self.voiceNameKey) }
+    }
+
+    /// The name to SHOW and to send upstream — the user's own if they set one,
+    /// otherwise "Future <persona name>". Falls back to a short slice of the
+    /// account id when there's no persona name yet, so the ElevenLabs library
+    /// never fills up with identical "Future Self" entries.
+    var voiceDisplayName: String {
+        let custom = voiceName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return custom.isEmpty ? defaultVoiceName : custom
+    }
+
+    /// The name used when the user hasn't chosen one. Kept separate from
+    /// `voiceDisplayName` so the editor can tell "they left the default alone"
+    /// from "they typed this exact string" — storing the derived name would
+    /// freeze it against a later persona rename.
+    var defaultVoiceName: String {
+        let personaName = (persona?.displayName ?? "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !personaName.isEmpty { return "Future \(personaName)" }
+        // No persona name yet (rare — setup asks for it before the clone).
+        // A short stable token still beats yet another identical "Future Self"
+        // in the voice library; renaming replaces it.
+        return "Future Self (\(Self.voiceNameFallbackToken))"
+    }
+
+    /// Stable per-install token for the last-resort voice name.
+    private static let voiceNameFallbackToken: String = {
+        let key = "futurevoice.voiceNameToken"
+        if let s = UserDefaults.standard.string(forKey: key) { return s }
+        let s = String(UUID().uuidString.prefix(6)).lowercased()
+        UserDefaults.standard.set(s, forKey: key)
+        return s
+    }()
+
+    /// Rename the clone. Persists locally FIRST so the name sticks even when
+    /// the upstream call fails (offline, function not deployed yet) — it is
+    /// then applied on the next clone creation. Throws on upstream failure so
+    /// the caller can say the two names are temporarily out of sync.
+    func renameVoice(to newName: String) async throws {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        voiceName = trimmed
+        guard let voiceId = voiceCloneId else { return }
+        try await ElevenLabsClient.shared.renameVoice(voiceId: voiceId, name: voiceDisplayName)
+    }
+
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
-    private static let nativeLanguageKey = "futurevoice.nativeLanguage"
+    private static let voiceNameKey = "futurevoice.voiceName"
+    private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
+    private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
     private static let proficiencyKey = "futurevoice.proficiency"
     private static let appearanceKey = "futurevoice.appearance"
@@ -173,7 +231,8 @@ final class AppState: ObservableObject {
     private static let onboardingStartedKey = "futurevoice.onboardingStarted"
 
     init() {
-        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey) ?? "ko"
+        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey)
+            ?? LanguageCatalog.defaultNative
         let storedTarget = UserDefaults.standard.string(forKey: Self.targetLanguageKey) ?? "en"
         let storedLevel = UserDefaults.standard.string(forKey: Self.proficiencyKey)
             .flatMap(CEFRLevel.init(rawValue:)) ?? .b1
@@ -188,6 +247,8 @@ final class AppState: ObservableObject {
         appearance = UserDefaults.standard.string(forKey: Self.appearanceKey)
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
+        voiceName = UserDefaults.standard.string(forKey: Self.voiceNameKey) ?? ""
+        pendingDeleteVoiceId = UserDefaults.standard.string(forKey: Self.pendingDeleteVoiceIdKey)
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
         persona = PersonaStore.shared.load()
@@ -198,6 +259,9 @@ final class AppState: ObservableObject {
         shadowAttempts = ShadowAttemptStore.shared.load()
         savedLines = SavedLineStore.shared.load()
         weeklyReports = WeeklyReportStore.shared.load()
+        // didSet never fires for assignments inside init — seed the lineage
+        // here so an install that predates it still resolves its own audio.
+        PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
 
         Task { await self.observeAuth() }
     }
@@ -223,7 +287,8 @@ final class AppState: ObservableObject {
                 let report = try await WeeklyReportEngine.generate(
                     endedSessions: sessions,
                     lastReport: last,
-                    targetLanguage: self.targetLanguage
+                    targetLanguage: self.targetLanguage,
+                    nativeLanguage: self.nativeLanguage
                 )
                 await MainActor.run {
                     WeeklyReportStore.shared.save(report)
@@ -302,6 +367,10 @@ final class AppState: ObservableObject {
             // distinct_id = Supabase user UUID (a random account id, not PII).
             Analytics.identify(userId: session.user.id.uuidString)
             await self.restoreVoiceCloneFromCloud()
+            // Retry any delete that never landed — an orphaned clone holds an
+            // account voice slot hostage, and the ceiling is shared by every
+            // user.
+            await self.cleanupPreviousVoiceClone()
         }
     }
 
@@ -435,6 +504,45 @@ final class AppState: ObservableObject {
         saveScenario(s)
     }
 
+    /// Every un-mastered study item across the learner's live books, flattened
+    /// for `CarryoverDetector`. Archived books are done with — nothing there
+    /// is still being studied.
+    var openCurriculumItems: [CarryoverDetector.CurriculumItem] {
+        scenarios.filter { $0.archivedAt == nil }.flatMap { scenario -> [CarryoverDetector.CurriculumItem] in
+            guard let c = scenario.curriculum else { return [] }
+            let words = c.words.filter { $0.masteredAt == nil }
+                .map { CarryoverDetector.CurriculumItem(id: $0.id, text: $0.text, isWord: true) }
+            let phrases = (c.expressions + c.shadowLines).filter { $0.masteredAt == nil }
+                .map { CarryoverDetector.CurriculumItem(id: $0.id, text: $0.text, isWord: false) }
+            return words + phrases
+        }
+    }
+
+    /// Master the book items the learner PRODUCED in a real conversation.
+    /// Saying it live in an unrelated talk is the strongest form of the
+    /// "used in a real talk" rule `refreshScenarioMastery` documents — that
+    /// pass just can't see it, because it only reads talks whose topic matches
+    /// the book's title.
+    func markCurriculumItemsUsedInConversation(itemIds: [UUID]) {
+        guard !itemIds.isEmpty else { return }
+        let wanted = Set(itemIds)
+        for var scenario in scenarios {
+            guard var c = scenario.curriculum else { continue }
+            var changed = false
+            for path in [\ScenarioCurriculum.words, \.expressions, \.shadowLines] {
+                for i in c[keyPath: path].indices
+                where c[keyPath: path][i].masteredAt == nil
+                    && wanted.contains(c[keyPath: path][i].id) {
+                    c[keyPath: path][i].masteredAt = Date()
+                    changed = true
+                }
+            }
+            guard changed else { continue }
+            scenario.curriculum = c
+            saveScenario(scenario)
+        }
+    }
+
     /// Recompute mastery for one scenario's curriculum from what the user has
     /// ACTUALLY done. Deterministic, no LLM, and it reads the app's existing
     /// learning records instead of keeping a parallel one:
@@ -538,11 +646,18 @@ final class AppState: ObservableObject {
         topicSuggestions = topics
     }
 
-    /// In-memory holding pen for the previous voice id while the user is
-    /// in re-record onboarding. We can't delete it via the API until the new
-    /// clone is actually created — if we deleted up front and the user then
-    /// gave up, they'd have NO voice at all.
-    @Published private(set) var pendingDeleteVoiceId: String?
+    /// Holding pen for the previous voice id while the user is in re-record
+    /// onboarding. We can't delete it via the API until the new clone is
+    /// actually created — if we deleted up front and the user then gave up,
+    /// they'd have NO voice at all.
+    ///
+    /// PERSISTED: this used to be in-memory only, so a delete that failed (or
+    /// an app kill mid-flow) orphaned the old voice in the ElevenLabs account
+    /// forever. Those leaked slots are what fills a 30-voice ceiling. Now it
+    /// survives relaunch and the delete is retried at startup.
+    @Published private(set) var pendingDeleteVoiceId: String? {
+        didSet { UserDefaults.standard.set(pendingDeleteVoiceId, forKey: Self.pendingDeleteVoiceIdKey) }
+    }
 
     /// Wipe the clone so the user re-records. Stashes the current id so it
     /// can be deleted from ElevenLabs once a new clone is in place.
@@ -574,7 +689,9 @@ final class AppState: ObservableObject {
         // Published state — the didSet observers re-persist the fresh values,
         // which is exactly what a first-run install would look like.
         voiceCloneId = nil
+        voiceName = ""
         pendingDeleteVoiceId = nil
+        PhraseAudioStore.shared.clearOwnVoiceLineage()
         persona = nil
         setupComplete = false
         learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)
@@ -592,18 +709,59 @@ final class AppState: ObservableObject {
     /// sample loudness, uploads to ElevenLabs, swaps in the new voice id, and
     /// cleans up the previous clone. Shared by first-run onboarding and the
     /// Settings "regenerate from saved recording" action.
-    func regenerateVoiceClone(fromSampleAt sampleURL: URL) async throws {
+    /// `scriptLanguage` is the language the sample was READ in (onboarding
+    /// lets the user choose; a regeneration from the saved sample doesn't
+    /// know, and passes nil). Reported so the funnel can tell whether the
+    /// native-language take actually reduces re-records.
+    func regenerateVoiceClone(fromSampleAt sampleURL: URL,
+                              scriptLanguage: String? = nil) async throws {
         let isFirstClone = voiceCloneId == nil
-        Analytics.capture("voice_clone_started", ["first_time": isFirstClone])
+        Analytics.capture("voice_clone_started", [
+            "first_time": isFirstClone,
+            "script_language": scriptLanguage ?? "unknown",
+            "native_language": nativeLanguage,
+            "level": proficiency.rawValue
+        ])
         let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
+        // Denoise only a take that actually needs it. The threshold matches
+        // AudioSampleQuality's own "some background noise" line, so anything
+        // it would flag to the user still gets cleaned, and only a take it
+        // calls clean is passed through untouched (where the denoiser could
+        // only strip voice texture). Measured here rather than in the view so
+        // the Settings → Voice regeneration path gets the same decision.
+        // Unreadable sample → denoise, matching the previous behaviour.
+        let snr = AudioSampleQuality.analyze(url: normalized)?.estimatedSNRdB
+        let denoise = (snr ?? 0) < 22
+        Analytics.capture("voice_clone_denoise", ["applied": denoise,
+                                                  "snr_db": Int(snr ?? -1)])
         let newId: String
         do {
             newId = try await ElevenLabsClient.shared.cloneVoice(
-                name: "Future Self",   // one clone speaks every language — no language in the name
-                sampleAudioURLs: [normalized]
+                // The user's chosen name (or the persona-derived default) —
+                // every clone used to land upstream as the same "Future Self".
+                // Never put a language in it: one clone speaks all of them.
+                name: voiceDisplayName,
+                sampleAudioURLs: [normalized],
+                removeBackgroundNoise: denoise
             )
+        } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
+            // The account's voice slots are full AND this user is re-recording,
+            // so one of those slots is their own outgoing clone. Free it and
+            // retry once: a re-record shouldn't be blocked by the voice it is
+            // replacing. (Only the STAGED id — never the live one, or a second
+            // failure would leave them with no voice at all.)
+            Analytics.capture("voice_clone_slot_reclaimed", ["first_time": isFirstClone])
+            await cleanupPreviousVoiceClone()
+            do {
+                newId = try await ElevenLabsClient.shared.cloneVoice(
+                    name: voiceDisplayName, sampleAudioURLs: [normalized],
+                    removeBackgroundNoise: denoise)
+            } catch {
+                reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: true)
+                throw error
+            }
         } catch {
-            Analytics.capture("voice_clone_failed", ["first_time": isFirstClone])
+            reportCloneFailure(error, isFirstClone: isFirstClone, afterReclaim: false)
             throw error
         }
         if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
@@ -612,13 +770,55 @@ final class AppState: ObservableObject {
         await cleanupPreviousVoiceClone()
     }
 
-    /// Called by VoiceCloneOnboardingView after a new clone succeeds.
-    /// Best-effort delete — failures are swallowed so a transient ElevenLabs
-    /// hiccup doesn't block the user.
+    /// WHY it failed, not just THAT it failed. Without the status + reason the
+    /// funnel shows a wall of identical `voice_clone_failed` rows, and "the
+    /// account is out of voice slots" is indistinguishable from "the user was
+    /// offline" after the fact.
+    private func reportCloneFailure(_ error: Error, isFirstClone: Bool, afterReclaim: Bool) {
+        Analytics.capture("voice_clone_failed", [
+            "first_time": isFirstClone,
+            "status": Self.failureStatus(error),
+            "reason": String(error.localizedDescription.prefix(200)),
+            "voice_limit_reached": error.isVoiceLimitReached,
+            "after_slot_reclaim": afterReclaim
+        ])
+    }
+
+    /// HTTP status behind a clone failure — 402 for the credit wall, the real
+    /// code for an upstream error, the URLError code when the request never
+    /// landed. Reported to analytics so failures are triageable without a
+    /// device in hand.
+    private static func failureStatus(_ error: Error) -> Int {
+        if let e = error as? ElevenLabsError {
+            switch e {
+            case .insufficientCredits: return 402
+            case .httpError(let status, _): return status
+            case .invalidResponse: return -1
+            }
+        }
+        return (error as NSError).code
+    }
+
+    /// Called by VoiceCloneOnboardingView after a new clone succeeds, and at
+    /// launch. Best-effort for the USER — it never blocks them — but the id is
+    /// only forgotten once the delete actually succeeds, so a transient failure
+    /// retries on the next launch instead of leaking the voice slot.
     func cleanupPreviousVoiceClone() async {
         guard let oldId = pendingDeleteVoiceId else { return }
-        pendingDeleteVoiceId = nil
-        try? await ElevenLabsClient.shared.deleteVoice(voiceId: oldId)
+        // Never delete the voice currently in use (a restore could have handed
+        // the same id back).
+        guard oldId != voiceCloneId else { pendingDeleteVoiceId = nil; return }
+        do {
+            try await ElevenLabsClient.shared.deleteVoice(voiceId: oldId)
+            pendingDeleteVoiceId = nil
+        } catch {
+            // 403 "not owned" / 404 means it's already gone upstream — stop
+            // retrying. Anything else stays queued for the next launch.
+            if let e = error as? ElevenLabsError, case .httpError(let status, _) = e,
+               status == 403 || status == 404 {
+                pendingDeleteVoiceId = nil
+            }
+        }
     }
 
     /// Fold a finished session into the learner profile and persist. Called
