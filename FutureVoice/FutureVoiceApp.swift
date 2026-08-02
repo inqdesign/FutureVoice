@@ -690,9 +690,19 @@ final class AppState: ObservableObject {
     /// sample loudness, uploads to ElevenLabs, swaps in the new voice id, and
     /// cleans up the previous clone. Shared by first-run onboarding and the
     /// Settings "regenerate from saved recording" action.
-    func regenerateVoiceClone(fromSampleAt sampleURL: URL) async throws {
+    /// `scriptLanguage` is the language the sample was READ in (onboarding
+    /// lets the user choose; a regeneration from the saved sample doesn't
+    /// know, and passes nil). Reported so the funnel can tell whether the
+    /// native-language take actually reduces re-records.
+    func regenerateVoiceClone(fromSampleAt sampleURL: URL,
+                              scriptLanguage: String? = nil) async throws {
         let isFirstClone = voiceCloneId == nil
-        Analytics.capture("voice_clone_started", ["first_time": isFirstClone])
+        Analytics.capture("voice_clone_started", [
+            "first_time": isFirstClone,
+            "script_language": scriptLanguage ?? "unknown",
+            "native_language": nativeLanguage,
+            "level": proficiency.rawValue
+        ])
         let normalized = AudioLoudness.peakNormalizedWAV(at: sampleURL)
         // Denoise only a take that actually needs it. The threshold matches
         // AudioSampleQuality's own "some background noise" line, so anything

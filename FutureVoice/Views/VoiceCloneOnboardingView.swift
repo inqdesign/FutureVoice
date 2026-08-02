@@ -55,6 +55,14 @@ struct VoiceCloneOnboardingView: View {
     @State private var meetBurst = false
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
 
+    /// The meet act is the first time the user HEARS the clone — and the only
+    /// honest moment to judge it. If it doesn't sound like them, they can go
+    /// straight back to the script from there; this flag marks that second
+    /// pass, so Back cancels back to the voice they already have instead of
+    /// walking the wizard backwards, and a failed re-clone doesn't strand them.
+    @State private var isReRecordingClone = false
+    @State private var confirmReRecord = false
+
     /// ElevenLabs IVC quality climbs steeply to ~60s and keeps improving to
     /// ~90s. These three had all been collapsed to 60, which broke the flow in
     /// two ways: the script below needs ~75-80s to read, so it was ALWAYS cut
@@ -83,21 +91,17 @@ struct VoiceCloneOnboardingView: View {
         case meet        // clone landed; greeting + theme pick
     }
 
-    /// Phonetically varied so the clone has range — short and long vowels,
-    /// hard consonants, rising and falling intonation. Read it like you mean
-    /// it, not like a school recital.
-    // Sized so a natural read lands in the 60–90s window: ~180 words at a
-    // careful read-aloud pace ≈ 75–80s. The previous ~115-word script ran out
-    // near 50s, and users understandably tapped "Stop (early)" — every early
-    // sample hurts clone quality more than any prompt tweak can win back.
-    private static let scriptParagraphs = [
-        "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",
-        "Let me describe a moment from this week. The weather turned cooler than I expected. I was walking and caught myself thinking in two languages at once — one for what I saw, one for what I felt. Funny how that works.",
-        "Here's a quick list, just to stretch the sounds: Monday morning, Wednesday afternoon, Friday night. Three, thirteen, thirty-three. A double espresso, a glass of water, and a window seat if you have one, please.",
-        "Now a few different shapes: \"Could you actually repeat that?\" \"Wait — that's not quite right.\" \"Honestly, I'm not sure yet, but here's what I think.\" \"Oh, that's brilliant — say more.\"",
-        "One more, a little slower this time. When I speak this language a year from now, I want it to feel easy. Not perfect — easy. Like I'm not translating anymore, just talking.",
-        "Okay. I think that's enough of my voice for now. If this worked, the next voice you hear should sound a lot like me. Talk to me soon.",
-    ]
+    /// Which language the user reads the script in. The clone captures a
+    /// VOICE, not a language: a reader stumbling through English hands the
+    /// cloner disfluent speech and gets a clone of the stumble. Comfortable
+    /// English readers still do better in English (their own phonemes, no
+    /// accent transfer), so this is a choice, defaulted by self-rated level
+    /// and switchable right on the script step. See `CloneScriptStore`.
+    @State private var readInNative = false
+    /// The native-language script once it's on the device — nil until the
+    /// generation lands (or forever, for a native language it never does,
+    /// in which case the picker simply never appears).
+    @State private var nativeScript: [String]?
 
     /// The clone's first words — spoken in the user's own voice the moment it
     /// exists. Short on purpose (one TTS call per onboarding).
@@ -161,6 +165,10 @@ struct VoiceCloneOnboardingView: View {
             debugSeed()
             restorePendingTake()
         }
+        // Fetch the native script while the user is still reading the intro:
+        // three wizard steps of slack, so the script step lands with the
+        // choice already there instead of popping a picker in mid-read.
+        .task { await prepareNativeScript() }
     }
 
     private var contentTopPadding: CGFloat {
@@ -448,17 +456,39 @@ struct VoiceCloneOnboardingView: View {
         noiseGate.tint == .green && echoGate.tint == .green
     }
 
+    /// The paragraphs on stage — the native script only when it exists AND
+    /// the user picked it.
+    private var activeScript: [String] {
+        (readInNative ? nativeScript : nil) ?? CloneScriptStore.english
+    }
+
     // Step 4 — the script, in full, BEFORE anything records. Recording only
     // starts on the explicit button tap.
     private var scriptContent: some View {
         VStack(spacing: 10) {
-            Text("Read it naturally. Mistakes are fine — just keep going.")
+            // The language choice is made by LOOKING at the text — "can I
+            // read this aloud for a minute without stumbling?" is answered by
+            // the paragraphs below, not by a question on its own screen.
+            if nativeScript != nil {
+                Picker("Read in", selection: $readInNative) {
+                    Text("English").tag(false)
+                    Text(LanguageCatalog.endonym(appState.nativeLanguage)).tag(true)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 28)
+            }
+
+            Text(nativeScript == nil
+                 ? "Read it naturally. Mistakes are fine — just keep going."
+                 : "Read whichever one feels natural — we're capturing your voice, not your English.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                    ForEach(Array(activeScript.enumerated()), id: \.offset) { _, para in
                         Text(para)
                             .font(.title3.weight(.medium))
                             .lineSpacing(5)
@@ -482,7 +512,7 @@ struct VoiceCloneOnboardingView: View {
         VStack(spacing: 8) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    ForEach(Array(Self.scriptParagraphs.enumerated()), id: \.offset) { _, para in
+                    ForEach(Array(activeScript.enumerated()), id: \.offset) { _, para in
                         Text(para)
                             .font(.title3.weight(.medium))
                             .lineSpacing(5)
@@ -608,16 +638,39 @@ struct VoiceCloneOnboardingView: View {
                 }
             }
 
-            if greetingData != nil {
+            VStack(spacing: 14) {
+                if greetingData != nil {
+                    Button {
+                        playGreeting()
+                    } label: {
+                        Label("Hear it again", systemImage: "arrow.clockwise")
+                            .font(.footnote)
+                    }
+                }
+
+                // The verdict belongs here, not one screen earlier: at review
+                // they judged their own raw take, here they judge the CLONE.
+                // "It doesn't sound like me" with no way back is the one exit
+                // this act can't afford.
                 Button {
-                    playGreeting()
+                    player.stop()
+                    confirmReRecord = true
                 } label: {
-                    Label("Hear it again", systemImage: "arrow.clockwise")
+                    Label("Doesn't sound like you? Record again", systemImage: "mic.fill")
                         .font(.footnote)
                 }
             }
         }
         .transition(.opacity)
+        .confirmationDialog("Record your voice again?", isPresented: $confirmReRecord,
+                            titleVisibility: .visible) {
+            Button("Record again", role: .destructive) { beginReRecordFromMeet() }
+            Button("Keep this voice", role: .cancel) {}
+        } message: {
+            // Free, and said out loud — a user who suspects a retake costs
+            // them credits will settle for a voice that isn't theirs.
+            Text("You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one.")
+        }
     }
 
     private func ratingTint(_ r: AudioSampleQuality.Rating) -> Color {
@@ -647,8 +700,17 @@ struct VoiceCloneOnboardingView: View {
                 wizardBar(next: "Next", backTo: .mic) { status = .script }
 
             case .script:
-                wizardBar(next: "Record my voice", nextIcon: "mic.fill", backTo: .spot) {
-                    startRecording()
+                // Re-recording from the meet act: Back means "never mind,
+                // keep the voice I have", not "walk the wizard backwards".
+                if isReRecordingClone {
+                    wizardBar(next: "Record my voice", nextIcon: "mic.fill",
+                              onBack: { cancelReRecord() }) {
+                        startRecording()
+                    }
+                } else {
+                    wizardBar(next: "Record my voice", nextIcon: "mic.fill", backTo: .spot) {
+                        startRecording()
+                    }
                 }
 
             case .recording:
@@ -694,6 +756,13 @@ struct VoiceCloneOnboardingView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                }
+
+                // Escape hatch for the second pass — including after a failed
+                // re-clone, where the live voice is still intact.
+                if isReRecordingClone {
+                    Button("Keep my current voice") { cancelReRecord() }
+                        .font(.footnote)
                 }
 
             case .account:
@@ -805,6 +874,42 @@ struct VoiceCloneOnboardingView: View {
         recorder.inputDescription.lowercased().contains("bluetooth")
     }
 
+    // MARK: - Script language
+
+    /// Below B2, reading English aloud for 90 seconds is work — the take
+    /// comes out halting and the clone inherits it. At B2 and up the English
+    /// take wins instead, so it stays the default there. Self-rating is
+    /// noisy, which is exactly why the switch sits next to the text.
+    private static func prefersNativeScript(_ level: CEFRLevel) -> Bool {
+        switch level {
+        case .a1, .a2, .b1: return true
+        case .b2, .c1, .c2: return false
+        }
+    }
+
+    private func prepareNativeScript() async {
+        let code = appState.nativeLanguage
+        guard code != "en", nativeScript == nil else { return }
+        // Hand-authored languages resolve synchronously; the rest cost one
+        // Gemini call, once per device, cached forever.
+        var script = CloneScriptStore.shared.script(for: code)
+        if script == nil { script = await CloneScriptStore.shared.ensure(for: code) }
+        guard let script else { return }
+        nativeScript = script
+        // Only pre-select while the choice is still ahead of them — never
+        // swap the text out from under someone mid-read.
+        if status.rawValue < Status.script.rawValue,
+           Self.prefersNativeScript(appState.proficiency) {
+            readInNative = true
+        }
+    }
+
+    /// What the take was read in — the funnel needs it to tell whether the
+    /// native script actually cuts re-records.
+    private var scriptLanguageCode: String {
+        readInNative && nativeScript != nil ? appState.nativeLanguage : "en"
+    }
+
     // MARK: - Actions
 
     /// Mic step's Next: ask for the permission right here — its own moment,
@@ -892,7 +997,8 @@ struct VoiceCloneOnboardingView: View {
         VoiceSampleStore.shared.save(from: url)
         Task {
             do {
-                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                try await appState.regenerateVoiceClone(fromSampleAt: url,
+                                                        scriptLanguage: scriptLanguageCode)
                 UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
                 // First words in the user's own voice. Best-effort: a failed
                 // synthesis never blocks the flow — the act just opens silent.
@@ -909,12 +1015,16 @@ struct VoiceCloneOnboardingView: View {
                         modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
                 }
                 HapticEngine.success()
+                isReRecordingClone = false
                 status = .meet
                 openMeet()
             } catch {
                 self.error = error.localizedDescription
                 status = .reviewing
-                appState.holdVoiceOnboarding = false
+                // Only release the hold when there's no voice to fall back to.
+                // On a failed re-clone the old voice is still live, and letting
+                // go here would drop the user into the tabs mid-flow.
+                if !isReRecordingClone { appState.holdVoiceOnboarding = false }
             }
         }
     }
@@ -958,6 +1068,32 @@ struct VoiceCloneOnboardingView: View {
         elapsedSeconds = 0
         error = nil
         status = .script
+    }
+
+    /// Meet act → straight back to the script. The existing clone stays live
+    /// the whole way (`regenerateVoiceClone` only stages the old voice for
+    /// deletion once a NEW one succeeds), and `holdVoiceOnboarding` stays on
+    /// so RootView doesn't swap to the tabs the moment we leave this act.
+    private func beginReRecordFromMeet() {
+        isReRecordingClone = true
+        meetBurst = false
+        appState.holdVoiceOnboarding = true
+        // greetingData survives on purpose — cancelling or a failed re-clone
+        // returns to this act with the current voice still able to speak.
+        reRecord()
+    }
+
+    /// Abandon the second pass and go back to the voice they already have.
+    private func cancelReRecord() {
+        player.stop()
+        if let url = recordedSampleURL { try? FileManager.default.removeItem(at: url) }
+        UserDefaults.standard.removeObject(forKey: Self.pendingTakeKey)
+        recordedSampleURL = nil
+        quality = nil
+        elapsedSeconds = 0
+        error = nil
+        isReRecordingClone = false
+        status = .meet
     }
 
     private func reRecord() {
@@ -1044,6 +1180,12 @@ struct VoiceCloneOnboardingView: View {
     /// data — no mic, no network.
     private func debugSeed() {
         #if DEBUG
+        // `-cloneScript native` forces the native-language script on stage —
+        // the level default only applies before the script step, which a
+        // stage jump lands past.
+        if UserDefaults.standard.string(forKey: "cloneScript") == "native" {
+            readInNative = true
+        }
         guard let stage = UserDefaults.standard.string(forKey: "cloneStage") else { return }
         switch stage {
         case "spot":      status = .spot

@@ -2,7 +2,9 @@
 //
 // Multipart pass-through, then mirrors the new voice_id into voice_clones.
 // Charges 5 credits (priceFor("voice_clone")) — voice slot management is
-// expensive enough that we don't want users churning clones.
+// expensive enough that we don't want users churning clones — EXCEPT during
+// onboarding, where getting a voice the user believes is theirs is the entry
+// ticket: see the allowance below.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
@@ -31,18 +33,39 @@ Deno.serve(async (req) => {
   }
 
   const action = "voice_clone" as const
-  // The FIRST clone is free — it's the product's entry ticket, not usage.
-  // Re-records pay. "First" = no voice_clone row in the ledger yet (the free
-  // clone stamps a 0-credit row AFTER upstream success, so a failed first
-  // attempt stays free on retry).
-  const { data: priorClone } = await supabase
+  // The FIRST clone is free — it's the product's entry ticket, not usage —
+  // and so are the retakes that immediately follow it. The user only learns
+  // whether the clone sounds like THEM one screen later, when they first
+  // hear it speak; charging for "that isn't my voice, let me read it again"
+  // would price the entry ticket after the fact. Bounded by TIME only —
+  // deliberately no attempt cap: the user who needs six takes before the
+  // voice sounds like them is exactly the user we can least afford to
+  // charge, and the window alone keeps this from being a free-clone faucet.
+  // Re-records after it (Me → Voice) pay the full price.
+  //
+  // "First" = no voice_clone row in the ledger yet. Every free clone stamps
+  // a 0-credit row AFTER upstream success, so a failed attempt stays free on
+  // retry and the window is anchored to a clone the user actually got.
+  const ONBOARDING_GRACE_MS = 24 * 60 * 60 * 1000
+  const { data: priorClones } = await supabase
     .from("usage_ledger")
-    .select("id")
+    .select("created_at")
     .eq("user_id", user.id)
     .eq("action", action)
+    // Debits only — a refunded failed clone also writes a voice_clone row,
+    // and it must not move the anchor.
+    .eq("kind", "debit")
+    .order("created_at", { ascending: true })
     .limit(1)
-  const isFirstClone = (priorClone?.length ?? 0) === 0
-  const amount = isFirstClone ? 0 : priceFor(action)
+  const firstCloneAt = priorClones?.[0]?.created_at
+    ? Date.parse(priorClones[0].created_at as string)
+    : null
+  const isFirstClone = firstCloneAt === null
+  const withinOnboardingGrace =
+    firstCloneAt !== null && Number.isFinite(firstCloneAt) &&
+    Date.now() - firstCloneAt < ONBOARDING_GRACE_MS
+  const isFree = isFirstClone || withinOnboardingGrace
+  const amount = isFree ? 0 : priceFor(action)
   let balanceAfter = -1
   if (amount > 0) {
     const ch = await charge({
@@ -89,16 +112,20 @@ Deno.serve(async (req) => {
 
   const json = await upstream.json() as { voice_id: string }
 
-  // Free first clone: stamp a 0-credit ledger row NOW (post-success) so the
-  // next clone reads as a re-record and pays. Idempotent per user.
-  if (isFirstClone) {
+  // Free clone: stamp a 0-credit ledger row NOW (post-success) — the first
+  // one anchors the grace window, the rest keep usage analytics honest about
+  // what actually ran. Keyed per user for the first (idempotent), per
+  // attempt for retakes.
+  if (isFree) {
     await supabase.rpc("charge_credits", {
       p_user_id: user.id,
       p_credits: 0,
       p_action: action,
       p_source_fn: SOURCE_FN,
-      p_idempotency_key: `first-clone:${user.id}`,
-      p_metadata: { free_first_clone: true },
+      p_idempotency_key: isFirstClone ? `first-clone:${user.id}` : `free-clone:${idemKey}`,
+      p_metadata: isFirstClone
+        ? { free_first_clone: true }
+        : { free_onboarding_retake: true },
     })
   }
 
