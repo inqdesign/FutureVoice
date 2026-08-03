@@ -7,6 +7,22 @@ import XCTest
 /// positive ones.
 final class CarryoverDetectorTests: XCTestCase {
 
+    /// These fixtures are English, and the lemma matcher routes on the ACTIVE
+    /// target language (`VocabStore.matchesKorean` / `taggerLanguage` read
+    /// `LanguageScope.active`, i.e. a UserDefaults key the host app persists).
+    /// Without pinning it, the suite passes or fails depending on which
+    /// language the app happened to be launched in last — a real trap, hit
+    /// while testing the Korean target by hand.
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+    }
+
+    override func tearDown() {
+        UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        super.tearDown()
+    }
+
     private let sessionId = UUID()
     private let sessionStart = Date()
 
