@@ -294,7 +294,9 @@ struct ConversationView: View {
                 // A talk with unsaved turns doesn't just vanish on a stray ✕
                 // tap — closing is gated behind an explicit choice between
                 // saving (the End flow: summary + drills) and discarding.
-                if !turns.isEmpty && !didSaveCurrentSession {
+                // Only the USER's turns count: if all that happened is the
+                // fluent self's opener, there's nothing worth saving.
+                if turns.contains(where: { $0.role == .user }) && !didSaveCurrentSession {
                     confirmingDiscard = true
                 } else {
                     close()
