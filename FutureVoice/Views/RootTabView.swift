@@ -137,6 +137,9 @@ struct RootTabView: View {
             case "freetalk":
                 selection = .home
                 appState.pendingFreeTalk = true
+            case "talk":
+                // Streak widget: open the Talk tab so the user does an activity.
+                selection = .home
             case "practice":
                 selection = .practice
                 appState.pendingPracticeRoute = .studying   // land on the Studying shelf, not wherever it was left

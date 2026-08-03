@@ -10,6 +10,70 @@ struct FutureVoiceWidgetBundle: WidgetBundle {
         FreeTalkWidget()
         ProgressWidget()
         BookWidget()
+        StreakWidget()
+    }
+}
+
+// MARK: - Streak widget — Duolingo-style day counter
+
+/// Big flame + day count to keep the learner's run alive; an at-risk badge
+/// shows when today's goal isn't met yet. Reads the shared progress snapshot;
+/// tapping opens Talk to do an activity.
+struct StreakWidget: Widget {
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: streakWidgetKind,
+                            provider: StreakProvider()) { entry in
+            StreakWidgetView(entry: entry)
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+        }
+        .configurationDisplayName("Streak")
+        .description("Keep your daily talking streak alive.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+struct StreakEntry: TimelineEntry {
+    let date: Date
+    let streakDays: Int
+    let doneToday: Bool
+    let theme: Int
+}
+
+struct StreakProvider: TimelineProvider {
+    func placeholder(in context: Context) -> StreakEntry {
+        StreakEntry(date: Date(), streakDays: 12, doneToday: false,
+                    theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+    func getSnapshot(in context: Context, completion: @escaping (StreakEntry) -> Void) {
+        completion(entry(context.isPreview))
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<StreakEntry>) -> Void) {
+        completion(Timeline(entries: [entry(false)], policy: .never))
+    }
+
+    private func entry(_ preview: Bool) -> StreakEntry {
+        if preview {
+            return StreakEntry(date: Date(), streakDays: 12, doneToday: false,
+                               theme: StudyWidgetSnapshotStore.themeIndex)
+        }
+        let s = StudyWidgetSnapshotStore.loadProgress()
+        let done = s.todaySeconds >= max(1, s.goalMinutes * 60)
+        return StreakEntry(date: Date(), streakDays: s.streakDays, doneToday: done,
+                           theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+}
+
+struct StreakWidgetView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: StreakEntry
+
+    var body: some View {
+        StreakCard(theme: entry.theme,
+                   streakDays: entry.streakDays,
+                   doneToday: entry.doneToday,
+                   compact: family == .systemSmall)
+            .widgetURL(URL(string: "futurevoice://talk"))
     }
 }
 

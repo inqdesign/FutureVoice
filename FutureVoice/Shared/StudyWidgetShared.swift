@@ -119,6 +119,11 @@ struct StudyProgressSnapshot: Codable {
 /// mid-way through, tappable straight into its detail page.
 let bookWidgetKind = "FutureVoiceBookWidget"
 
+/// WidgetKit `kind` for the streak widget — a Duolingo-style day counter that
+/// nudges the learner not to break their run. Reads the shared progress
+/// snapshot (streak + whether today's goal is met).
+let streakWidgetKind = "FutureVoiceStreakWidget"
+
 /// The single most-recently-studied in-progress book (a Talk or a Watch book),
 /// mirrored to the App Group so the Continue widget can render its title +
 /// mastery progress and deep-link to its detail page.
@@ -653,5 +658,89 @@ struct BookCard: View {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Streak card (Duolingo-style day counter), shared
+
+/// A big flame + day count that pushes the learner to keep their run going —
+/// when today's goal isn't met yet, a warning badge sits on the flame. On the
+/// same themed grid as the other widgets; tapping opens Talk to do an activity.
+struct StreakCard: View {
+    var theme: Int = 0
+    var streakDays: Int = 0
+    var doneToday: Bool = false
+    var compact: Bool = false
+
+    private var vivid: Color { WidgetTheme.vivid(theme) }
+
+    var body: some View {
+        Group {
+            if compact { compactBody } else { mediumBody }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(compact ? 12 : 16)
+    }
+
+    /// Flame in the theme accent; an at-risk badge sits on it when today isn't
+    /// done yet (the flame stays full-colour so it reads as urgent, not faded).
+    private func flame(_ size: CGFloat) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: size, weight: .bold))
+                .foregroundStyle(vivid)
+            if !doneToday && streakDays > 0 {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: size * 0.34, weight: .bold))
+                    .foregroundStyle(.white, .red)
+                    .offset(x: size * 0.12, y: -size * 0.04)
+            }
+        }
+    }
+
+    private var subtitle: String {
+        if streakDays == 0 { return "Start your streak" }
+        return doneToday ? "Done for today" : "Talk today to keep it"
+    }
+
+    private var compactBody: some View {
+        VStack(spacing: 3) {
+            flame(38)
+            Text("\(streakDays)")
+                .font(pixelFont(36))
+                .foregroundStyle(vivid)
+                .lineLimit(1).minimumScaleFactor(0.5)
+            Text("day streak")
+                .font(pixelFont(11))
+                .foregroundStyle(.white.opacity(0.7))
+        }
+    }
+
+    private var mediumBody: some View {
+        // Fixed-width left column (flame over number) so a 1- or 4-digit streak
+        // never pushes the text sideways — the number just scales inside it.
+        HStack(spacing: 14) {
+            VStack(spacing: 2) {
+                flame(40)
+                Text("\(streakDays)")
+                    .font(pixelFont(42))
+                    .foregroundStyle(vivid)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.4)
+            }
+            .frame(width: 110)
+            // Clear left/right split, so the text column starts at a fixed x.
+            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 64)
+            VStack(alignment: .leading, spacing: 5) {
+                Text("day streak")
+                    .font(pixelFont(17))
+                    .foregroundStyle(.white)
+                Text(subtitle)
+                    .font(pixelFont(12))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
     }
 }

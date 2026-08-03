@@ -100,6 +100,8 @@ enum StudyWidgetRefresher {
             studyingExpressions: vocab.studyingExpressions.count)
         StudyWidgetSnapshotStore.saveProgress(snapshot)
         WidgetCenter.shared.reloadTimelines(ofKind: progressWidgetKind)
+        // The streak widget reads the same snapshot.
+        WidgetCenter.shared.reloadTimelines(ofKind: streakWidgetKind)
     }
 
     // MARK: - Continue widget (one in-progress book → its detail page)

@@ -244,6 +244,9 @@ enum DebugCapture {
         case "widget-book":
             // Just the Continue widget (small + medium), for design review.
             return AnyView(BookWidgetGallery().fontDesign(nil))
+        case "widget-streak":
+            // Just the Streak widget (small + medium), for design review.
+            return AnyView(StreakWidgetGallery().fontDesign(nil))
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.
@@ -825,6 +828,34 @@ private struct BookWidgetGallery: View {
                       hasBook: Bool) -> some View {
         BookCard(theme: theme, hasBook: hasBook, kind: kind, title: title,
                  subtitle: subtitle, mastered: mastered, total: total, compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The Streak widget alone — small + medium, done vs at-risk, a few themes.
+private struct StreakWidgetGallery: View {
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 26) {
+                HStack(alignment: .top, spacing: 18) {
+                    tile(theme: 4, size: CGSize(width: 158, height: 158), compact: true, streak: 1284, done: false)
+                    tile(theme: 2, size: CGSize(width: 158, height: 158), compact: true, streak: 7, done: true)
+                }
+                tile(theme: 0, size: CGSize(width: 338, height: 158), compact: false, streak: 1284, done: false)
+                tile(theme: 3, size: CGSize(width: 338, height: 158), compact: false, streak: 7, done: true)
+                tile(theme: 1, size: CGSize(width: 338, height: 158), compact: false, streak: 0, done: false)
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    private func tile(theme: Int, size: CGSize, compact: Bool, streak: Int, done: Bool) -> some View {
+        StreakCard(theme: theme, streakDays: streak, doneToday: done, compact: compact)
             .frame(width: size.width, height: size.height)
             .background(WidgetGrid(theme: theme,
                                    shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
