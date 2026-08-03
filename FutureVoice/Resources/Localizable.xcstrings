@@ -117,6 +117,12 @@
     },
     "%lld / %lld min so far.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisher %1$lld / %2$lld Min."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -134,6 +140,12 @@
     "%lld / 10": {},
     "%lld active days · %lld min this year": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld aktive Tage · %2$lld Min. dieses Jahr"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -162,6 +174,12 @@
     "%lld days free,\nno surprises": {},
     "%lld days free. Cancel anytime.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage kostenlos. Jederzeit kündbar."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -174,6 +192,12 @@
     "%lld known": {},
     "%lld min": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Min."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -213,6 +237,28 @@
         }
       }
     },
+    "%lld of %lld min today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute %1$lld von %2$lld Min."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld min today"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 %1$lld / %2$lld분"
+          }
+        }
+      }
+    },
     "%lld of %lld minutes today, %lld talks today, %lld day streak. Opens activity calendar.": {
       "localizations": {
         "en": {
@@ -236,6 +282,12 @@
     },
     "%lld talks today": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Gespräche heute"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -246,6 +298,12 @@
     },
     "%lld talks · tap for calendar": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Gespräche · tippen für Kalender"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -263,6 +321,12 @@
     "%lld%%": {},
     "%lld-day streak": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Tage in Folge"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -293,6 +357,12 @@
     },
     "%lld/%lld min": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld Min."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -326,6 +396,12 @@
     "1 book finished": {},
     "1 credit ≈ 100 characters spoken in your voice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Credit ≈ 100 Zeichen, gesprochen in deiner Stimme."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -336,6 +412,12 @@
     },
     "1 minute. Vary your pitch a little.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine Minute. Variiere die Tonhöhe ein wenig."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -347,6 +429,12 @@
     "1 phrase saved while watching": {},
     "1 talk today": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 Gespräch heute"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -357,6 +445,12 @@
     },
     "1×": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1×"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -369,6 +463,12 @@
     ">": {},
     "A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Buch landet hier, sobald jedes Wort und jeder Satz darin sitzt. Weggelegtes zählt nicht — nur Abgeschlossenes."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -379,6 +479,12 @@
     },
     "A new assessment is due — it runs after your next talk.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine neue Einstufung steht an — sie läuft nach deinem nächsten Gespräch."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -389,6 +495,12 @@
     },
     "A quick active-recall run through this talk's saved phrases.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein schneller Durchgang durch die gesicherten Wendungen aus diesem Gespräch."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -400,6 +512,12 @@
     "A voice for the other person. Add people under Watch to have someone specific play the scene.": {},
     "About half a minute.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwa eine halbe Minute."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -410,6 +528,12 @@
     },
     "About them": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über die Person"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -420,6 +544,12 @@
     },
     "About you": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Über dich"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -430,6 +560,12 @@
     },
     "Account": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -440,6 +576,12 @@
     },
     "Across skills": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Bereich"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -450,6 +592,12 @@
     },
     "Activity": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivität"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -460,6 +608,12 @@
     },
     "Add a language": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprache hinzufügen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -470,6 +624,12 @@
     },
     "Add category": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorie hinzufügen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -480,6 +640,12 @@
     },
     "Add interests": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interessen hinzufügen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -490,6 +656,12 @@
     },
     "Add someone from your real life — their cloned voice can act out any scenario you build.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge jemanden aus deinem echten Leben hinzu — die geklonte Stimme spielt jede Situation, die du baust."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -501,6 +673,12 @@
     "Add your own (comma-separated)": {},
     "Advanced — I express myself fluently and precisely": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortgeschritten — ich drücke mich fließend und präzise aus"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -511,6 +689,12 @@
     },
     "After you end a conversation, the corrections it surfaces show up here grouped by session.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn du ein Gespräch beendest, erscheinen die Korrekturen hier, nach Sitzung gruppiert."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -521,6 +705,12 @@
     },
     "All scenarios": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -531,6 +721,12 @@
     },
     "Already have an account? Sign in": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schon ein Konto? Anmelden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -541,6 +737,12 @@
     },
     "Always free": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Immer kostenlos"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -551,6 +753,12 @@
     },
     "Analyzing your week…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Woche wird ausgewertet…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -561,6 +769,12 @@
     },
     "Answer in": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antworten auf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -571,6 +785,12 @@
     },
     "Anything else": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonst noch etwas"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -581,6 +801,12 @@
     },
     "Anything else (optional)": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonst noch etwas (optional)"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -591,6 +817,12 @@
     },
     "Anything specific?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas Bestimmtes?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -601,6 +833,12 @@
     },
     "Appearance": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erscheinungsbild"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +849,12 @@
     },
     "Archive": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivieren"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -621,6 +865,12 @@
     },
     "Archived": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiv"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -633,6 +883,12 @@
     "Assessed %@ — a while back. Your next talks feed a fresh assessment.": {},
     "Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ermittelt aus %lld Min. Gespräch — Wortschatz, Grammatik, Flüssigkeit und Ausdruck zusammen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -643,6 +899,12 @@
     },
     "Assessed level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ermitteltes Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -653,6 +915,12 @@
     },
     "Assessing your level from everything you've said…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau wird aus allem Gesagten ermittelt…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -664,6 +932,12 @@
     "Assessment": {},
     "Back": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurück"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -675,6 +949,12 @@
     "Back to the welcome screen?": {},
     "Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Werde konkret — wo, was los ist, was du willst. Tippe aufs Mikrofon der Tastatur, um es einfach zu sagen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -685,9 +965,14 @@
     },
     "Billing": {},
     "Billing period": {},
-    "Bonjour ! Ça me fait plaisir de te voir. On commence ?": {},
     "Book mastered": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buch gemeistert"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -698,6 +983,12 @@
     },
     "Bookmark a line from shadow practice and it'll live here for repeat reps.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markiere einen Satz beim Nachsprechen, dann liegt er hier für Wiederholungen bereit."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -708,6 +999,12 @@
     },
     "Build a scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situation erstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -718,6 +1015,12 @@
     },
     "Build it from a category below, type it, or say it with the mic — then %@ it.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bau sie aus einer Kategorie unten, tippe sie ein oder sprich sie ins Mikrofon — dann %@."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -728,6 +1031,12 @@
     },
     "Build new": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu erstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -738,6 +1047,12 @@
     },
     "Build your first scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erste Situation erstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -749,6 +1064,12 @@
     "Building scenarios for %@…": {},
     "By level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -759,6 +1080,12 @@
     },
     "Can't record now? No rush — this will wait.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerade keine Aufnahme möglich? Kein Stress — das wartet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -769,6 +1096,12 @@
     },
     "Cancel": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abbrechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -780,6 +1113,12 @@
     "Captured automatically from what you say. Mark the ones you've got down as known.": {},
     "Cards done — now say it out loud": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karten erledigt — jetzt laut aussprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -790,6 +1129,12 @@
     },
     "Cards from this talk": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karten aus diesem Gespräch"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -801,6 +1146,12 @@
     "Category name (e.g. Landlord, Gym)": {},
     "Change my level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau ändern"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -809,10 +1160,15 @@
         }
       }
     },
-    "Ciao! Che bello vederti. Iniziamo?": {},
     "City": {},
     "Clear, detailed talk on many topics, including some abstract ones.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klar und detailliert zu vielen Themen, auch zu abstrakteren."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -823,6 +1179,12 @@
     },
     "Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löscht Setup, Stimmklon und Persona und startet den Erstlauf neu. Du bleibst angemeldet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -833,6 +1195,12 @@
     },
     "Cloning your voice…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Stimme wird geklont…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -843,6 +1211,12 @@
     },
     "Close": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -853,6 +1227,12 @@
     },
     "Close without saving": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Speichern schließen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -863,6 +1243,12 @@
     },
     "Coach's note": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiz vom Coach"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -873,6 +1259,12 @@
     },
     "Come back when the next cards are due.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Komm wieder, wenn die nächsten Karten fällig sind."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -883,6 +1275,12 @@
     },
     "Continue": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -893,6 +1291,12 @@
     },
     "Conversational — I get by on familiar topics": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesprächsfähig — bei vertrauten Themen komme ich zurecht"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -904,6 +1308,12 @@
     "Couldn't delete account": {},
     "Couldn't get a response.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Antwort erhalten."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -916,6 +1326,12 @@
     "Couldn't rebuild your voice": {},
     "Couldn't write the scene": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szene konnte nicht geschrieben werden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -927,6 +1343,12 @@
     "Country": {},
     "Credits left": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbleibende Credits"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -937,6 +1359,12 @@
     },
     "Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credits treiben neue Sprachsynthese und KI-Anrufe an und füllen sich jeden Zyklus wieder auf. Wiederholen, Üben und Fortschritt bleiben für immer kostenlos."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -949,6 +1377,12 @@
     "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.": {},
     "Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Credits treiben Sprachsynthese und KI-Antworten an. In der Beta gibt es kein Abo — lade Freunde ein, um mehr zu bekommen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -960,6 +1394,12 @@
     "Day": {},
     "Debug builds only. Routes back through the first-run setup flow.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Debug-Builds. Führt zurück durch den Erstlauf."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -970,6 +1410,12 @@
     },
     "Delete": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -980,6 +1426,12 @@
     },
     "Delete account": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konto löschen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -990,6 +1442,12 @@
     },
     "Delete forever": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endgültig löschen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1000,6 +1458,12 @@
     },
     "Delete talk": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräch löschen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1013,6 +1477,12 @@
     "Delete your account?": {},
     "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Löschen des Kontos verschwinden Stimmklon, Credits und Kontodaten endgültig. Die Lerndaten auf diesem Gerät werden ebenfalls gelöscht."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1024,6 +1494,12 @@
     "Describe the situation": {},
     "Developer": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entwickler"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1035,6 +1511,12 @@
     "Dictate": {},
     "Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entdecke Wörter, zu denen du noch nicht greifst — unter Practice → Vocabulary sind die auf und über deinem Niveau markiert."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1045,6 +1527,12 @@
     },
     "Distinct graded words you've used, accumulating from the day each was first said.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschiedene eingestufte Wörter, die du verwendet hast — gezählt ab dem Tag, an dem du sie zuerst gesagt hast."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1055,6 +1543,12 @@
     },
     "Distinct words from your talks in the last %lld days.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verschiedene Wörter aus deinen Gesprächen der letzten %lld Tage."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1065,6 +1559,12 @@
     },
     "Doesn't sound like you? Record again": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klingt nicht nach dir? Nochmal aufnehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1075,6 +1575,12 @@
     },
     "Done": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fertig"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1085,6 +1591,12 @@
     },
     "Drag the card into a folder": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karte in einen Ordner ziehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1095,6 +1607,12 @@
     },
     "Drill next": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Übung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1105,6 +1623,12 @@
     },
     "Drills": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1116,6 +1640,12 @@
     "Drills appear here after you end a conversation.": {},
     "Edit": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1126,6 +1656,12 @@
     },
     "Edit interests": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interessen bearbeiten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1137,6 +1673,12 @@
     "Edit persona": {},
     "Effortless and nuanced, close to native.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mühelos und nuanciert, nahe an Muttersprache."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1147,6 +1689,12 @@
     },
     "End": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beenden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1155,9 +1703,14 @@
         }
       }
     },
-    "English": {},
     "Enter a friend's code once to get 300 bonus credits.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gib einmal den Code eines Freundes ein und erhalte 300 Bonus-Credits."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1169,6 +1722,12 @@
     "Enter invite code": {},
     "Estimated from %lld distinct words you've used in the last %lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschätzt aus %1$lld verschiedenen Wörtern der letzten %2$lld Tage, jeweils nach GER-Niveau eingestuft — dein aktueller Sprechwortschatz, nicht alles jemals Gelernte."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -1185,6 +1744,12 @@
     },
     "Estimated level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschätztes Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1195,6 +1760,12 @@
     },
     "Every situation you build here or watch in Watch is saved as a scenario — tap one to talk it out again. Swipe to delete.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Situation, die du hier baust oder in Watch ansiehst, wird gesichert — tippe darauf, um sie erneut durchzusprechen. Zum Löschen wischen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1205,6 +1776,12 @@
     },
     "Every slip below is quoted from what you actually said this session. The fix changes only the grammar — your words stay yours.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeder Punkt unten ist wörtlich aus dem zitiert, was du in dieser Sitzung gesagt hast. Die Korrektur ändert nur die Grammatik — deine Worte bleiben deine."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1215,6 +1792,12 @@
     },
     "Everyday topics in simple terms — routines, plans, basic needs.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alltagsthemen in einfachen Worten — Abläufe, Pläne, Grundbedürfnisse."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1225,6 +1808,12 @@
     },
     "Everything in this scenario is yours now.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles aus dieser Situation sitzt jetzt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1235,6 +1824,12 @@
     },
     "Everything nawana does, fueled up — in your own voice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles, was nawana kann — in deiner eigenen Stimme, ohne Limit."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1245,6 +1840,12 @@
     },
     "Everything this conversation had to teach is yours.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles, was dieses Gespräch zu lehren hatte, sitzt jetzt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1255,6 +1856,12 @@
     },
     "Examples & variants": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beispiele & Varianten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1265,6 +1872,12 @@
     },
     "Excluded from scoring — marked as misheard": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von der Bewertung ausgenommen — als falsch verstanden markiert"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1277,6 +1890,12 @@
     "Explains what this level changes": {},
     "Explanations and translations come in this language.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erklärungen und Übersetzungen erscheinen in dieser Sprache."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1287,6 +1906,12 @@
     },
     "Expressions": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wendungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1297,6 +1922,12 @@
     },
     "Expressions you use in your talks will collect here.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wendungen aus deinen Gesprächen sammeln sich hier."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1307,6 +1938,12 @@
     },
     "Expressions you used": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwendete Wendungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1317,6 +1954,12 @@
     },
     "Expressions you've used": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisher verwendete Wendungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1327,6 +1970,12 @@
     },
     "Familiar topics fluently enough to get by, and tell a simple story.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertraute Themen flüssig genug, um zurechtzukommen, und eine einfache Geschichte erzählen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1337,6 +1986,12 @@
     },
     "Feedback": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feedback"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1347,6 +2002,12 @@
     },
     "Filing this under a category…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird einer Kategorie zugeordnet…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1358,6 +2019,12 @@
     "Filter": {},
     "Finding scenarios from your life…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situationen aus deinem Leben werden gesucht…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1368,6 +2035,12 @@
     },
     "Finding scenarios…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situationen werden gesucht…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1378,6 +2051,12 @@
     },
     "Finding stories…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel werden gesucht…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1388,6 +2067,12 @@
     },
     "Finish a conversation, then come back to shadow any line your fluent self said.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beende ein Gespräch und komm zurück, um jeden Satz deines fließenden Ichs nachzusprechen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1398,6 +2083,12 @@
     },
     "Finished": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgeschlossen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1408,6 +2099,12 @@
     },
     "Finished books. They keep their progress — unarchive anytime.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgeschlossene Bücher. Ihr Fortschritt bleibt — jederzeit wieder hervorholbar."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1418,6 +2115,12 @@
     },
     "Fluent, flexible, and precise — even on complex topics.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fließend, flexibel und präzise — auch bei komplexen Themen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1428,6 +2131,12 @@
     },
     "Free": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kostenlos"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1439,6 +2148,12 @@
     "Free notes — quirks, recent events, anything that helps": {},
     "Friends joined": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beigetretene Freunde"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1449,6 +2164,12 @@
     },
     "From scenarios": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1459,6 +2180,12 @@
     },
     "From your recent sessions": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus deinen letzten Sitzungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1471,6 +2198,12 @@
     "Future self": {},
     "Future self is the pixel surface behind every call button — tap a theme to feel it.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Future self ist die Pixelfläche hinter jedem Anruf-Button — tippe ein Thema an, um es zu spüren."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1481,6 +2214,12 @@
     },
     "Future self is thinking…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein fließendes Ich denkt nach…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1491,6 +2230,12 @@
     },
     "Future self speaking — tap to hang up": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein fließendes Ich spricht — tippen zum Auflegen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1503,6 +2248,12 @@
     "Generate scenarios for %@": {},
     "Get started": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los geht's"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1513,6 +2264,12 @@
     },
     "Goal": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziel"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1521,9 +2278,79 @@
         }
       }
     },
+    "Goal reached · %lld min": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziel erreicht · %lld Min."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목표 달성 · %lld분"
+          }
+        }
+      }
+    },
+    "Good afternoon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Tag"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안녕하세요"
+          }
+        }
+      }
+    },
+    "Good evening": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Abend"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좋은 저녁"
+          }
+        }
+      }
+    },
+    "Good morning": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guten Morgen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "좋은 아침"
+          }
+        }
+      }
+    },
     "Good. %llds more for the cleanest clone": {},
     "Got it — moves up the ladder": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitzt — rückt eine Stufe auf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1534,6 +2361,12 @@
     },
     "Grammar": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grammatik"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1544,6 +2377,12 @@
     },
     "Grammar review": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grammatik-Rückblick"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1554,6 +2393,12 @@
     },
     "Grounded in your profile — name, city, work, family, interests.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basiert auf deinem Profil — Name, Stadt, Arbeit, Familie, Interessen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1564,6 +2409,12 @@
     },
     "Grounded in your relationship with %@ — these appear as ideas when you tap them on the Watch tab.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basiert auf deiner Beziehung zu %@ — diese erscheinen als Ideen, wenn du im Watch-Tab darauf tippst."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1574,6 +2425,12 @@
     },
     "Growth": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortschritt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1582,9 +2439,14 @@
         }
       }
     },
-    "Hallo! Schön, dich zu sehen. Sollen wir anfangen?": {},
     "Have a code?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du einen Code?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1595,6 +2457,12 @@
     },
     "Have a few conversations and I'll estimate your level and break down how your %@ is developing.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Führ ein paar Gespräche, dann schätze ich dein Niveau und zeige dir, wie sich dein %@ entwickelt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1605,6 +2473,12 @@
     },
     "Have an invite code?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hast du einen Einladungscode?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1615,6 +2489,12 @@
     },
     "Hear it again": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal anhören"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1625,6 +2505,12 @@
     },
     "Hear my attempt": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Aufnahme anhören"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1635,6 +2521,12 @@
     },
     "Hear target": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original anhören"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1644,8 +2536,30 @@
       }
     },
     "Hear yourself": {},
+    "Hello": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hallo"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안녕하세요"
+          }
+        }
+      }
+    },
     "Help set the price": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hilf beim Preis"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1654,12 +2568,17 @@
         }
       }
     },
-    "Hi! It's good to see you. Shall we get started?": {},
     "Hide": {},
     "Hide meaning": {},
     "Hide words I know": {},
     "Highlighted words are worth picking up — tap one to check it out.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markierte Wörter lohnen sich — tippe eines an, um es dir anzusehen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1670,6 +2589,12 @@
     },
     "History": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1681,6 +2606,12 @@
     "Honestly, it went really well. I felt prepared.": {},
     "How comfortable are you right now?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie sicher fühlst du dich gerade?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1691,6 +2622,12 @@
     },
     "How it's assessed": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So wird bewertet"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1703,6 +2640,12 @@
     "How long? (optional)": {},
     "How they talk": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechweise"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1713,6 +2656,12 @@
     },
     "How this is assessed": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So wird bewertet"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1723,6 +2672,12 @@
     },
     "How this scene is written": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So entsteht diese Szene"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1733,6 +2688,12 @@
     },
     "How to improve": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So wirst du besser"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1743,6 +2704,12 @@
     },
     "How to level up": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So steigst du auf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1753,6 +2720,12 @@
     },
     "How was your first Watch?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie war dein erstes Watch?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1763,6 +2736,12 @@
     },
     "How was your first conversation?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie war dein erstes Gespräch?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1774,6 +2753,12 @@
     "How you met (and how long)": {},
     "How your future self talks": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So spricht dein fließendes Ich"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1784,6 +2769,12 @@
     },
     "How your level moves": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So bewegt sich dein Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1795,6 +2786,12 @@
     "Ideas with %@": {},
     "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurz gesagt: Neues Audio in deiner Stimme kostet Credits. Mit Vorhandenem zu üben nicht."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1806,6 +2803,12 @@
     "In your own words (optional) — e.g. switches to English when excited": {},
     "Independent — I discuss most things with some ease": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selbstständig — die meisten Themen fallen mir leicht"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1816,6 +2819,12 @@
     },
     "Interests": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interessen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1826,6 +2835,12 @@
     },
     "Invite & credits": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladen & Credits"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1837,6 +2852,12 @@
     "Invite code": {},
     "Just starting — a few words and set phrases": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anfang — ein paar Wörter und feste Wendungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1848,6 +2869,12 @@
     "Keep going — %llds more for a usable clone": {},
     "Keep my current voice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Stimme behalten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1859,6 +2886,12 @@
     "Keep studying this word": {},
     "Keep this voice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Stimme behalten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1871,6 +2904,12 @@
     "Language": {},
     "Languages": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1882,6 +2921,12 @@
     "Last talk": {},
     "Later": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Später"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1892,6 +2937,12 @@
     },
     "Latest assessment": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Einstufung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1902,6 +2953,12 @@
     },
     "Learning": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lernsprache"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1912,6 +2969,12 @@
     },
     "Let's talk": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechen wir"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1922,6 +2985,12 @@
     },
     "Let's talk — start a call": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechen wir — Anruf starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1934,6 +3003,12 @@
     "Level %@": {},
     "Likely situations": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Naheliegende Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1944,6 +3019,12 @@
     },
     "Listen": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhören"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1955,6 +3036,12 @@
     "Listen to your recording": {},
     "Listening · pause to send · tap to stop": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höre zu · Pause zum Senden · tippen zum Beenden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1965,6 +3052,12 @@
     },
     "Listening — tap to finish": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höre zu — tippen zum Beenden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1975,6 +3068,12 @@
     },
     "Listening — tap to hang up": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Höre zu — tippen zum Auflegen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1985,6 +3084,12 @@
     },
     "Load stories": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel laden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -1995,6 +3100,12 @@
     },
     "Looking it up…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird nachgeschlagen…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2005,6 +3116,12 @@
     },
     "Make your own situation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eigene Situation erstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2016,6 +3133,12 @@
     "Mark as known": {},
     "Mark as mastered": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als gemeistert markieren"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2026,6 +3149,12 @@
     },
     "Mark expressions you've got down as known.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markiere Wendungen, die sitzen, als bekannt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2037,6 +3166,12 @@
     "Marked as known": {},
     "Master every word and line in a book — from a talk or a scene — and it lands here for good.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beherrsche jedes Wort und jeden Satz eines Buchs — aus einem Gespräch oder einer Szene — und es landet dauerhaft hier."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2051,6 +3186,12 @@
     "Microphone access needed": {},
     "Minutes": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minuten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2061,6 +3202,12 @@
     },
     "Minutes you actually spoke, per day. The dashed line is your %lld-minute daily goal.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tatsächlich gesprochene Minuten pro Tag. Die gestrichelte Linie ist dein Tagesziel von %lld Minuten."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2071,6 +3218,12 @@
     },
     "Misheard": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falsch verstanden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2081,6 +3234,12 @@
     },
     "Misheard — exclude from scoring": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Falsch verstanden — von der Bewertung ausnehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2091,6 +3250,12 @@
     },
     "More": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehr"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2101,6 +3266,12 @@
     },
     "More natural": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Natürlicher"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2111,6 +3282,12 @@
     },
     "More natural alternatives": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Natürlichere Varianten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2122,6 +3299,12 @@
     "More precisely? — e.g. College roommate": {},
     "Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mehrwortwendungen, die du wirklich gesagt hast, automatisch gesammelt — nachzulesen unter Practice → Expressions."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2135,6 +3318,12 @@
     "Name": {},
     "Names your clone here and on ElevenLabs. Leave it empty to go back to the default.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benennt deinen Klon hier und bei ElevenLabs. Leer lassen für den Standardnamen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2146,6 +3335,12 @@
     "Narrow it down": {},
     "New": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2156,6 +3351,12 @@
     },
     "New here? Get started instead": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu hier? Dann leg los"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2166,6 +3367,12 @@
     },
     "New person": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Person hinzufügen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2177,6 +3384,12 @@
     "New persona": {},
     "New scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Situation"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2187,6 +3400,12 @@
     },
     "New words": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Wörter"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2195,8 +3414,15 @@
         }
       }
     },
+    "News": {},
     "Next": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2207,6 +3433,12 @@
     },
     "Next assessment": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Einstufung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2228,6 +3460,12 @@
     },
     "Next report in %lldd · %lld more minutes of practice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächster Bericht in %1$lld T. · noch %2$lld Minuten Übung."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -2245,6 +3483,12 @@
     "Nice work": {},
     "No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Beta fallen keine Kosten an. Welchen der geplanten Startpreise würdest du wirklich abonnieren?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2255,6 +3499,12 @@
     },
     "No dictionary entry yet — tap to open the card.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Wörterbucheintrag — tippen, um die Karte zu öffnen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2266,6 +3516,12 @@
     "No drills due": {},
     "No practice this day.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An diesem Tag keine Übung."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2276,6 +3532,12 @@
     },
     "No progress yet": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch kein Fortschritt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2286,6 +3548,12 @@
     },
     "No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ohne Aufforderung, ohne Karte auf dem Bildschirm — du bist von selbst darauf gekommen. Solche Karten rücken in der Wiederholung nach vorn."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2296,6 +3564,12 @@
     },
     "No saved lines": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine gespeicherten Sätze"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2308,6 +3582,12 @@
     "No sessions yet": {},
     "No streak yet": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Serie"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2318,6 +3598,12 @@
     },
     "No subscription while we're in beta. You start with 300 credits — enough to clone your voice, talk for about a week, and try Watch + shadowing.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Während der Beta kein Abo. Du startest mit 300 Credits — genug, um deine Stimme zu klonen, etwa eine Woche zu sprechen und Watch plus Nachsprechen auszuprobieren."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2328,6 +3614,12 @@
     },
     "No talk yet today": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute noch kein Gespräch"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2338,6 +3630,12 @@
     },
     "Not happy with a take? You can re-record.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit der Aufnahme unzufrieden? Du kannst sie wiederholen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2348,6 +3646,12 @@
     },
     "Not now": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht jetzt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2358,6 +3662,12 @@
     },
     "Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht das, was du gesagt hast? Wische den Punkt nach links und markiere ihn als falsch verstanden — der Beitrag fällt aus der Bewertung und die Grammatiknote wird neu berechnet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2368,6 +3678,12 @@
     },
     "Note": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notiz"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2378,6 +3694,12 @@
     },
     "Nothing finished yet": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nichts abgeschlossen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2390,6 +3712,12 @@
     "Nothing to shadow yet": {},
     "Nutrition": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ernährung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2400,6 +3728,12 @@
     },
     "OK": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2408,9 +3742,14 @@
         }
       }
     },
-    "Oi! Que bom te ver. Vamos começar?": {},
     "On call · tap to stop": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Gespräch · tippen zum Beenden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2421,6 +3760,12 @@
     },
     "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Dialog für genau diese Situation — seine Wörter, Wendungen und deine Sätze werden zur Checkliste. Einmal erzeugt, dann ist es dein Buch."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +3776,12 @@
     },
     "Open": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2441,6 +3792,12 @@
     },
     "Open Settings": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen öffnen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2451,6 +3808,12 @@
     },
     "Open to review": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Wiederholen öffnen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2461,6 +3824,12 @@
     },
     "Open to start": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Starten öffnen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2472,6 +3841,12 @@
     "Opens the full card": {},
     "Optional — pick a chip to go deeper, or hit Watch with what you have.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional — wähle einen Chip für mehr Tiefe oder starte Watch mit dem, was du hast."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2483,6 +3858,12 @@
     "Optional — what's the situation about?": {},
     "Or a generic role:": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oder eine allgemeine Rolle:"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2493,6 +3874,12 @@
     },
     "Or describe one yourself": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oder beschreibe selbst eine"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2505,6 +3892,12 @@
     "Or describe who (custom)…": {},
     "Overall": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesamt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2515,6 +3908,12 @@
     },
     "Past attempts": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Versuche"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2525,6 +3924,12 @@
     },
     "Past dialogues": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frühere Dialoge"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2536,6 +3941,12 @@
     "Pause": {},
     "People": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2546,6 +3957,12 @@
     },
     "Pick a category": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kategorie wählen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2556,6 +3973,12 @@
     },
     "Pick a scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situation wählen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2568,6 +3991,12 @@
     "Pick an area to go one step deeper — or type your own above.": {},
     "Pick your pace": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tempo wählen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2578,6 +4007,12 @@
     },
     "Planned launch pricing — final prices confirm on the App Store at launch.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geplante Startpreise — die endgültigen Preise stehen zum Start im App Store fest."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2588,6 +4023,12 @@
     },
     "Play": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abspielen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2600,6 +4041,12 @@
     "Play your recording": {},
     "Plenty for a great clone — stop whenever you're ready": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reicht locker für einen guten Klon — hör auf, wann du willst"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2610,6 +4057,12 @@
     },
     "Practice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Üben"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2624,6 +4077,12 @@
     "Preview %@": {},
     "Previous selection": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorherige Auswahl"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2634,6 +4093,12 @@
     },
     "Prices load from the App Store — not available yet in this build.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preise kommen aus dem App Store — in diesem Build noch nicht verfügbar."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2644,6 +4109,12 @@
     },
     "Profile & settings": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil & Einstellungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2654,6 +4125,12 @@
     },
     "Progress": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fortschritt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2664,6 +4141,12 @@
     },
     "Pronunciation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aussprache"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2674,6 +4157,12 @@
     },
     "Pulling examples from your life…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beispiele aus deinem Leben werden geholt…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2686,6 +4175,12 @@
     "Quirks, preferences, anything that helps me sound like you": {},
     "Rather just fill in a form?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lieber ein Formular ausfüllen?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2696,6 +4191,12 @@
     },
     "Rating": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewertung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2706,6 +4207,12 @@
     },
     "Re-assessing your level now…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau wird neu eingestuft…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2716,6 +4223,12 @@
     },
     "Re-record": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu aufnehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2729,6 +4242,12 @@
     "Read it naturally. Mistakes are fine — just keep going.": {},
     "Read the full report": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ganzen Bericht lesen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2737,10 +4256,15 @@
         }
       }
     },
-    "Read whichever one feels natural — we're capturing your voice, not your English.": {},
     "Read whichever one feels natural — we're capturing your voice, not your reading.": {},
     "Ready — assessing your level now…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereit — dein Niveau wird jetzt ermittelt…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2751,6 +4275,12 @@
     },
     "Ready — re-assessing your level now…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereit — dein Niveau wird jetzt neu ermittelt…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2761,6 +4291,12 @@
     },
     "Record again": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal aufnehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2771,6 +4307,12 @@
     },
     "Record here.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier aufnehmen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2782,6 +4324,12 @@
     "Record your voice again?": {},
     "Redeem": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einlösen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2792,6 +4340,12 @@
     },
     "Refresh": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualisieren"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2802,6 +4356,12 @@
     },
     "Refresh stories": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artikel aktualisieren"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2813,6 +4373,12 @@
     "Relationship (e.g. Best friend, Kita parent, Manager)": {},
     "Remember this when": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merk es dir, wenn"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2825,6 +4391,12 @@
     "Renamed on this device only": {},
     "Repeat your fluent self's lines from this talk.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprich die Sätze deines fließenden Ichs aus diesem Gespräch nach."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2835,6 +4407,12 @@
     },
     "Replay": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal anhören"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2845,6 +4423,12 @@
     },
     "Replay anytime": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jederzeit nochmal"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2856,6 +4440,12 @@
     "Replay onboarding?": {},
     "Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hör das Gespräch nochmal, nimm seine Wörter mit, sprich die geglätteten Fassungen deiner eigenen Sätze nach — und führ das Gespräch dann weiter."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2866,6 +4456,12 @@
     },
     "Reports compare week-over-week, so we wait until there's enough new material.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berichte vergleichen Woche für Woche, deshalb warten wir, bis genug neues Material da ist."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2877,6 +4473,12 @@
     "Reps": {},
     "Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pflichtfeld. Alles darunter ist optional — aber je mehr du ausfüllst, desto echter wirken die simulierten Dialoge."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2887,6 +4489,12 @@
     },
     "Reset": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zurücksetzen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2897,6 +4505,12 @@
     },
     "Restart": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neu starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2907,6 +4521,12 @@
     },
     "Restore purchases": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Käufe wiederherstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2917,6 +4537,12 @@
     },
     "Retry": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erneut versuchen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2927,6 +4553,12 @@
     },
     "Review": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2949,6 +4581,12 @@
     "Review 1 card": {},
     "Reviewing your saved words, drills, and dialogues stays free during the beta.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesicherte Wörter, Übungen und Dialoge zu wiederholen bleibt in der Beta kostenlos."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2959,6 +4597,12 @@
     },
     "Rhythm": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rhythmus"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2969,6 +4613,12 @@
     },
     "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grobes Transkript — die abschließende Erkennung lief nicht durch (Netzwerk). Die Bewertung kann diesmal danebenliegen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2979,6 +4629,12 @@
     },
     "Same bands as “How this is assessed” — tap a skill for its measured numbers.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieselben Bänder wie unter „How this is assessed“ — tippe einen Bereich an für die gemessenen Werte."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -2989,6 +4645,12 @@
     },
     "Save": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sichern"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3000,6 +4662,12 @@
     "Save %lld%% vs monthly": {},
     "Save conversation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräch sichern"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3011,6 +4679,12 @@
     "Save line": {},
     "Save phrase": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wendung sichern"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3021,6 +4695,12 @@
     },
     "Save to expressions": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Wendungen sichern"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3031,6 +4711,12 @@
     },
     "Saved": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesichert"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3041,6 +4727,12 @@
     },
     "Saved to expressions": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zu Wendungen gesichert"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3051,6 +4743,12 @@
     },
     "Saving wraps up the talk and keeps the transcript, feedback, and drills.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Sichern wird das Gespräch abgeschlossen; Transkript, Feedback und Übungen bleiben erhalten."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3061,6 +4759,12 @@
     },
     "Say it better": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Besser sagen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3071,6 +4775,12 @@
     },
     "Say it out loud, then tap the card to check": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag es laut, dann tippe die Karte zum Prüfen an"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3081,6 +4791,12 @@
     },
     "Scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situation"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3091,6 +4807,12 @@
     },
     "Scenarios": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3101,6 +4823,12 @@
     },
     "Score": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Punkte"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3112,6 +4840,12 @@
     "Scorecard": {},
     "Scored against your %@ level setting — how this talk went, not a level rating.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewertet gegen deine Niveau-Einstellung %@ — wie dieses Gespräch lief, keine Niveau-Einstufung."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3122,6 +4856,12 @@
     },
     "Scored against your %@ level setting — this talk itself read as ≈%@.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewertet gegen deine Niveau-Einstellung %1$@ — dieses Gespräch selbst las sich als ≈%2$@."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -3138,6 +4878,12 @@
     },
     "See plans": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarife ansehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3158,6 +4904,12 @@
     },
     "Send": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3168,6 +4920,12 @@
     },
     "Sets how your future self speaks and how scenes are written. Your measured level in Progress is unaffected until the next assessment, which will overwrite this with what your talks show.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legt fest, wie dein fließendes Ich spricht und wie Szenen geschrieben werden. Dein gemessenes Niveau unter Progress bleibt bis zur nächsten Einstufung unberührt — die überschreibt diesen Wert dann mit dem, was deine Gespräche zeigen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3179,6 +4937,12 @@
     "Setting the scene…": {},
     "Settings": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3189,6 +4953,12 @@
     },
     "Shadow": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachsprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3200,6 +4970,12 @@
     "Shadow avg %lld this week": {},
     "Shadow this": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Satz nachsprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3210,6 +4986,12 @@
     },
     "Shadow this conversation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Gespräch nachsprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3220,6 +5002,12 @@
     },
     "Shadow this line": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diesen Satz nachsprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3230,6 +5018,12 @@
     },
     "Shadowing": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachsprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3240,6 +5034,12 @@
     },
     "Shadowing scores and review reps measure practice, not level. They live under Activity and in the Practice tab — doing them makes you better, and the level moves only when your speech does.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachsprech-Punkte und Wiederholungen messen Übung, nicht Niveau. Sie stehen unter Activity und im Practice-Tab — sie machen dich besser, aber das Niveau bewegt sich erst, wenn sich dein Sprechen bewegt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3250,6 +5050,12 @@
     },
     "Share invite": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einladung teilen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3261,6 +5067,12 @@
     "Shared context, memories, inside jokes": {},
     "Sharpen it": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weiter schärfen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3271,6 +5083,12 @@
     },
     "Sign out": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abmelden"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3281,6 +5099,12 @@
     },
     "Sign out & go back": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abmelden & zurück"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3292,6 +5116,12 @@
     "Sign out?": {},
     "Simple words and phrases about immediate, familiar things.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einfache Wörter und Wendungen zu unmittelbaren, vertrauten Dingen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3302,6 +5132,12 @@
     },
     "Situation ideas": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ideen für Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3312,6 +5148,12 @@
     },
     "Skip": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überspringen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3322,6 +5164,12 @@
     },
     "Skip sign-in (debug)": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anmeldung überspringen (Debug)"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3333,6 +5181,12 @@
     "Something went wrong": {},
     "Sorting it out…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird einsortiert…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3346,6 +5200,12 @@
     "Speed": {},
     "Start": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3356,6 +5216,12 @@
     },
     "Start a new conversation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neues Gespräch starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3366,6 +5232,12 @@
     },
     "Start over": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Von vorn"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3376,6 +5248,12 @@
     },
     "Start practicing": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Üben starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3386,6 +5264,12 @@
     },
     "Start talking": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechen starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3398,6 +5282,12 @@
     "Starting your conversation…": {},
     "Stay": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleiben"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3409,6 +5299,12 @@
     "Stop": {},
     "Stop & review": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stoppen & wiederholen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3424,6 +5320,12 @@
     "Studied %@": {},
     "Studied, then said": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gelernt und dann gesagt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3434,6 +5336,12 @@
     },
     "Study record": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lernverlauf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3447,6 +5355,12 @@
     "Style (e.g. Direct, loves jokes / Formal, careful)": {},
     "Suggested for you": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Für dich vorgeschlagen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3457,6 +5371,12 @@
     },
     "Take your AirPods out before recording": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nimm die AirPods vor der Aufnahme heraus"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3467,6 +5387,12 @@
     },
     "Talk": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3475,8 +5401,30 @@
         }
       }
     },
+    "Talk %lld min today": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute %lld Min. sprechen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 %lld분 대화하기"
+          }
+        }
+      }
+    },
     "Talk %lld more minutes and this level gets re-read from everything new you've said.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprich noch %lld Minuten, dann wird dieses Niveau aus allem Neuen neu gelesen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3487,6 +5435,12 @@
     },
     "Talk mastered": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräch gemeistert"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3497,6 +5451,12 @@
     },
     "Talk now": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt sprechen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3507,6 +5467,12 @@
     },
     "Talking with": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Gespräch mit"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3517,6 +5483,12 @@
     },
     "Talks get more real when I know your life.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräche werden echter, wenn ich dein Leben kenne."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3527,6 +5499,12 @@
     },
     "Tap End session after a conversation and it'll show up here.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe nach einem Gespräch auf End session, dann erscheint es hier."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3537,6 +5515,12 @@
     },
     "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, wird in Practice zum Wiederholungsstoff."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3547,6 +5531,12 @@
     },
     "Tap Refresh to generate scenarios.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf Refresh, um Situationen zu erzeugen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3557,6 +5547,12 @@
     },
     "Tap a category — the composer suggests specific scenarios you can watch.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe eine Kategorie an — der Editor schlägt konkrete Situationen zum Ansehen vor."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3567,6 +5563,12 @@
     },
     "Tap a line to shadow it in your own voice. Score %lld+ and it's mastered.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe einen Satz an, um ihn in deiner Stimme nachzusprechen. Ab %lld Punkten sitzt er."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3577,6 +5579,12 @@
     },
     "Tap a word in the cloud to start your notebook": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe ein Wort in der Wolke an, um dein Notizbuch zu starten"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3588,6 +5596,12 @@
     "Tap one to fill your scenario above, then edit it freely.": {},
     "Tap someone — situations with them, in their voice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe eine Person an — Situationen mit ihr, in ihrer Stimme."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3598,6 +5612,12 @@
     },
     "Tap to reveal": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen zum Aufdecken"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3608,6 +5628,12 @@
     },
     "Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Ein- und Ausschalten tippen oder eigene eintippen und Enter drücken. Passende aktuelle Artikel erscheinen unter „In the news“."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3618,6 +5644,12 @@
     },
     "Tap to toggle. Or type your own and hit return.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zum Ein- und Ausschalten tippen. Oder eigene eintippen und Enter drücken."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3628,6 +5660,12 @@
     },
     "Tap ▶ to hear a sample in %@.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippe auf ▶ für eine Hörprobe auf %@."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3638,6 +5676,12 @@
     },
     "Target line": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Originalsatz"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3648,6 +5692,12 @@
     },
     "Tell me about them": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erzähl mir von der Person"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3658,6 +5708,12 @@
     },
     "Tell me more about you": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erzähl mir mehr über dich"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3669,6 +5725,12 @@
     "Thank you": {},
     "Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Danke — das fließt in die Startpreise ein. Gesicherte Wörter, Übungen und Dialoge kannst du jederzeit weiter wiederholen — das bleibt kostenlos."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3679,6 +5741,12 @@
     },
     "That means you really tested it — thank you. Before anything else: what should we fix first?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dann hast du es wirklich auf die Probe gestellt — danke. Zuerst: Was sollten wir als Erstes beheben?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3689,6 +5757,12 @@
     },
     "That's your session": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das war deine Sitzung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3700,6 +5774,12 @@
     "The avatar will play this role. You practice your side.": {},
     "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräch, Bewertung, Wiederholungskarten und Audio werden endgültig entfernt. Wenn du es behalten, aber aus der Statistik nehmen willst, archiviere es stattdessen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3710,6 +5790,12 @@
     },
     "The curriculum and its progress go with it.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Lernplan und sein Fortschritt verschwinden mit."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3721,6 +5807,12 @@
     "The estimated level": {},
     "The fluent versions of your own sentences from this talk. Shadow one in your voice — score %lld+ and it's mastered.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die flüssigen Fassungen deiner eigenen Sätze aus diesem Gespräch. Sprich einen in deiner Stimme nach — ab %lld Punkten sitzt er."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3731,6 +5823,12 @@
     },
     "The more you share, the more I'll sound like a version of you — not a textbook.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je mehr du erzählst, desto mehr klinge ich nach einer Version von dir — nicht nach einem Lehrbuch."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3741,6 +5839,12 @@
     },
     "The real thing coming up — an interview, a call, a visit. Describe it, watch it handled.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das, was wirklich ansteht — ein Vorstellungsgespräch, ein Anruf, ein Besuch. Beschreib es und sieh zu, wie es läuft."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3751,6 +5855,12 @@
     },
     "The same setting as Me → Level. The next assessment overwrites it with what your talks show.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieselbe Einstellung wie unter Me → Level. Die nächste Einstufung überschreibt sie mit dem, was deine Gespräche zeigen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3761,6 +5871,12 @@
     },
     "The situation": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Situation"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3771,6 +5887,12 @@
     },
     "The situations you've built — every watch writes a fresh take. Past takes live in Practice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Situationen, die du gebaut hast — jedes Ansehen schreibt eine neue Fassung. Frühere Fassungen liegen in Practice."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3783,6 +5905,12 @@
     "Theme": {},
     "These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese 300 Credits sind dein gesamtes Beta-Kontingent. Wenn sie aufgebraucht sind, bleibt das Wiederholen gesicherter Wörter, Übungen und früherer Dialoge kostenlos. Nach dem Start wählst du Pro oder Premium — bis dahin einfach üben."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3793,6 +5921,12 @@
     },
     "Thinking of situations with them…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Situationen mit dieser Person werden überlegt…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3804,6 +5938,12 @@
     "This conversation isn't saved yet": {},
     "This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dies löscht Stimmklon, Credits und Konto endgültig und lässt sich nicht rückgängig machen. Ein laufendes App-Store-Abo muss separat unter Einstellungen → Apple-ID → Abos gekündigt werden."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3815,6 +5955,12 @@
     "This person has been deleted": {},
     "This signs you out. Your answers stay on this device.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Damit meldest du dich ab. Deine Antworten bleiben auf diesem Gerät."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3825,6 +5971,12 @@
     },
     "Time speaking": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprechzeit"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3836,6 +5988,12 @@
     "To reach %@": {},
     "Transcript": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transkript"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3846,6 +6004,12 @@
     },
     "Trend": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verlauf"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3856,6 +6020,12 @@
     },
     "Try again": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal versuchen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3866,6 +6036,12 @@
     },
     "Try saying": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sag mal so"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3877,6 +6053,12 @@
     "Type a topic": {},
     "Unarchive": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Archiv holen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3889,6 +6071,12 @@
     "Unsave": {},
     "Use this topic": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Thema nehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3899,6 +6087,12 @@
     },
     "Use this voice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Stimme nehmen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3919,6 +6113,12 @@
     },
     "Uses credits": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbraucht Credits"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3930,6 +6130,12 @@
     "View": {},
     "Vocabulary growth": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wortschatzwachstum"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3940,6 +6146,12 @@
     },
     "Vocabulary is graded from the words you actually use; ≈ levels are read from your pace, grammar score and turn length.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der Wortschatz wird aus den Wörtern eingestuft, die du wirklich verwendest; ≈-Niveaus werden aus Tempo, Grammatiknote und Beitragslänge gelesen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3950,6 +6162,12 @@
     },
     "Voice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stimme"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3961,6 +6179,12 @@
     "Voice name": {},
     "Watch": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ansehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3971,6 +6195,12 @@
     },
     "Watch again": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nochmal ansehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3981,6 +6211,12 @@
     },
     "Watch the scene, study its words and expressions, shadow your lines, then Talk it live.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieh dir die Szene an, lerne ihre Wörter und Wendungen, sprich deine Sätze nach und führ es dann live als Gespräch."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -3991,6 +6227,12 @@
     },
     "Watch uses this text — edit it freely.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch verwendet diesen Text — bearbeite ihn frei."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4001,6 +6243,12 @@
     },
     "Watching": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird angesehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4011,6 +6259,12 @@
     },
     "We boost the level on upload — clarity matters more than loudness.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wir heben den Pegel beim Hochladen an — Deutlichkeit zählt mehr als Lautstärke."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4021,6 +6275,12 @@
     },
     "We measure your time talking, not the number of sessions — a one-minute exchange tells us nothing, ten one-minute exchanges tell us a lot.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wir messen deine Sprechzeit, nicht die Zahl der Sitzungen — ein einminütiger Austausch sagt nichts, zehn davon sagen viel."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4031,6 +6291,12 @@
     },
     "We'll remind you before your trial ends.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wir erinnern dich, bevor dein Testzeitraum endet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4041,6 +6307,12 @@
     },
     "Welcome to the beta": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen in der Beta"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4051,6 +6323,12 @@
     },
     "What I heard": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was ich gehört habe"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4061,6 +6339,12 @@
     },
     "What I noticed lately": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was mir zuletzt aufgefallen ist"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4071,6 +6355,12 @@
     },
     "What each day was made of — talk turns, shadow takes, drill reviews.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woraus jeder Tag bestand — Gesprächsbeiträge, Nachsprech-Aufnahmen, Übungswiederholungen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4081,6 +6371,12 @@
     },
     "What never moves the level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was das Niveau nie bewegt"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4092,6 +6388,12 @@
     "What should I call you?": {},
     "What to practice": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was du üben solltest"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4102,6 +6404,12 @@
     },
     "What uses credits?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wofür Credits draufgehen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4112,6 +6420,12 @@
     },
     "What you do": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was du machst"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4123,6 +6437,12 @@
     "What you usually talk about": {},
     "What's measured": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was gemessen wird"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4133,6 +6453,12 @@
     },
     "What's your native language?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was ist deine Muttersprache?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4143,6 +6469,12 @@
     },
     "When do you most need %@?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wann brauchst du %@ am meisten?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4153,6 +6485,12 @@
     },
     "When you run low": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wenn es knapp wird"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4163,6 +6501,12 @@
     },
     "Where": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4174,6 +6518,12 @@
     "Where they live, what they do": {},
     "Where you live": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo du lebst"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4184,6 +6534,12 @@
     },
     "Which language do you want to speak?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Sprache möchtest du sprechen?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4194,6 +6550,12 @@
     },
     "Which language next?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Sprache als Nächstes?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4204,6 +6566,12 @@
     },
     "Who": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4214,6 +6582,12 @@
     },
     "Who you live with (optional)": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit wem du lebst (optional)"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4224,6 +6598,12 @@
     },
     "Who you're talking to": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit wem du sprichst"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4236,6 +6616,12 @@
     "With %@": {},
     "Word starts, speed-matched — orange landed off the target's beat.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wortanfänge, tempoangeglichen — Orange lag neben dem Takt des Originals."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4247,6 +6633,12 @@
     "Words": {},
     "Words you use, by level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Wörter nach Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4257,6 +6649,12 @@
     },
     "Wrapping up your session…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitzung wird abgeschlossen…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4267,6 +6665,12 @@
     },
     "Writing the dialogue…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dialog wird geschrieben…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4277,6 +6681,12 @@
     },
     "Writing this scenario's scene…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Szene zu dieser Situation wird geschrieben…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4287,6 +6697,12 @@
     },
     "Writing this scene…": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szene wird geschrieben…"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4297,6 +6713,12 @@
     },
     "You": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4307,6 +6729,12 @@
     },
     "You and your friend each get 300 credits when they join with your code — for up to 10 friends.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du und dein Freund bekommt je 300 Credits, wenn er mit deinem Code beitritt — für bis zu 10 Freunde."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4327,6 +6755,12 @@
     },
     "You just heard yourself handle a real situation. Did it sound like you?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast dich gerade eine echte Situation meistern hören. Klang das nach dir?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4337,6 +6771,12 @@
     },
     "You just talked with your future voice. What felt right — and what felt off?": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast gerade mit deiner zukünftigen Stimme gesprochen. Was hat gepasst — und was nicht?"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4347,6 +6787,12 @@
     },
     "You used what you practiced": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast Geübtes verwendet"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4358,6 +6804,12 @@
     "You · %lld": {},
     "You'll both get 300 credits when you sign in.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihr bekommt beide 300 Credits, sobald du dich anmeldest."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4368,6 +6820,12 @@
     },
     "You'll read the script once more, about a minute. Recording again during setup is free, and this voice is replaced only if you keep the new one.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du liest den Text noch einmal, etwa eine Minute. Eine erneute Aufnahme während des Setups ist kostenlos, und diese Stimme wird nur ersetzt, wenn du die neue behältst."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4378,6 +6836,12 @@
     },
     "You're about to build your fluent self — another you that already speaks fluent %@. This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gleich baust du dein fließendes Ich — ein anderes Du, das %@ bereits fließend spricht. Das hier legt fest, wie es spricht und was es korrigiert. Unsicher? Nimm das Nächstliegende — die App passt sich beim Sprechen an."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4388,6 +6852,12 @@
     },
     "You're already learning every language we support today. More are on the way.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du lernst bereits jede Sprache, die wir heute unterstützen. Weitere kommen."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4399,6 +6869,12 @@
     "You're in": {},
     "You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du bist in der Beta — Abos sind noch nicht aktiv. Deine Start-Credits sind endgültig, aber Wiederholen bleibt immer kostenlos. Sag uns im nächsten Schritt, was du dir zum Start wünschst."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4409,6 +6885,12 @@
     },
     "You're out of credits, so your future self can't reply.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Credits sind aufgebraucht, dein fließendes Ich kann nicht antworten."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4419,6 +6901,12 @@
     },
     "You've used all your beta credits": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du hast alle Beta-Credits verbraucht"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4429,6 +6917,12 @@
     },
     "You, but fluent": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Du, nur fließend"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4440,6 +6934,12 @@
     "Your %@": {},
     "Your CEFR level shapes each conversation. The daily goal drives the ring on Home.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein GER-Niveau prägt jedes Gespräch. Das Tagesziel füllt den Ring auf der Startseite."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4450,6 +6950,12 @@
     },
     "Your answers go straight to the team building nawana.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Antworten gehen direkt an das Team hinter nawana."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4460,6 +6966,12 @@
     },
     "Your cloned voice already speaks %@ — no new recording needed. Your %@ progress stays untouched.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine geklonte Stimme spricht %1$@ bereits — keine neue Aufnahme nötig. Dein Fortschritt in %2$@ bleibt unberührt."
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "new",
@@ -4476,6 +6988,12 @@
     },
     "Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine geklonte Stimme spricht jede Sprache, die du hinzufügst. Beim Entfernen bleibt der Fortschritt erhalten — jederzeit wieder hinzufügbar."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4486,6 +7004,12 @@
     },
     "Your code": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Code"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4496,6 +7020,12 @@
     },
     "Your current clone will be deleted on ElevenLabs after the new one is created.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein aktueller Klon wird bei ElevenLabs gelöscht, sobald der neue erstellt ist."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4506,6 +7036,12 @@
     },
     "Your feedback": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Feedback"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4516,6 +7052,12 @@
     },
     "Your feedback goes straight to the person building this.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Feedback geht direkt an die Person, die das hier baut."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4526,6 +7068,12 @@
     },
     "Your first assessment unlocks after %lld minutes of talk.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine erste Einstufung wird nach %lld Minuten Gespräch freigeschaltet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4536,6 +7084,12 @@
     },
     "Your first report unlocks after %lld minutes of practice.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein erster Bericht wird nach %lld Minuten Übung freigeschaltet."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4546,6 +7100,12 @@
     },
     "Your fluent self is ready": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein fließendes Ich ist bereit"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4556,6 +7116,12 @@
     },
     "Your fluent self speaks this language in your own voice. You can add more languages later — same voice, no extra setup.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein fließendes Ich spricht diese Sprache in deiner eigenen Stimme. Weitere Sprachen kannst du später hinzufügen — gleiche Stimme, kein zusätzliches Setup."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4566,6 +7132,12 @@
     },
     "Your fluent self wants to know you": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein fließendes Ich möchte dich kennenlernen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4576,6 +7148,12 @@
     },
     "Your future self used these; you haven't yet. Tap one to study it — or mark it as known.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein zukünftiges Ich hat diese verwendet, du noch nicht. Tippe eines an, um es zu lernen — oder markiere es als bekannt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4586,6 +7164,12 @@
     },
     "Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Wachstumskurve beginnt bei der zweiten Einstufung — jede Einstufung setzt hier einen Punkt, und nur Einstufungen bewegen dein Niveau."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4596,6 +7180,12 @@
     },
     "Your history together": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eure gemeinsame Geschichte"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4606,6 +7196,12 @@
     },
     "Your interests": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Interessen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4616,6 +7212,12 @@
     },
     "Your invite code": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Einladungscode"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4626,6 +7228,12 @@
     },
     "Your level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4636,6 +7244,12 @@
     },
     "Your level comes from periodic assessments — each one pools everything you've said since the previous assessment and judges it against the official CEFR speaking descriptors: range and precision of vocabulary, grammatical control across the errors you make, and how far you develop ideas. The first assessment unlocks after %lld minutes of talk; after that you're re-assessed each week you keep talking, and only assessments move your level.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau ergibt sich aus regelmäßigen Einstufungen — jede bündelt alles, was du seit der letzten Einstufung gesagt hast, und misst es an den offiziellen GER-Deskriptoren fürs Sprechen: Umfang und Präzision des Wortschatzes, grammatische Kontrolle über deine Fehler hinweg und wie weit du Gedanken ausführst. Die erste Einstufung wird nach %lld Minuten Gespräch freigeschaltet; danach wirst du in jeder Woche, in der du weiter sprichst, neu eingestuft. Nur Einstufungen bewegen dein Niveau."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4646,6 +7260,12 @@
     },
     "Your level is graded at your first assessment — one pooled judgment over ALL your talk, not a guess from one session.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau wird bei der ersten Einstufung vergeben — ein gebündeltes Urteil über ALLE deine Gespräche, keine Schätzung aus einer Sitzung."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4656,6 +7276,12 @@
     },
     "Your level is measured from the talks you actually have — it isn't a setting you keep in sync by hand.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau wird aus deinen tatsächlichen Gesprächen gemessen — es ist keine Einstellung, die du von Hand pflegst."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4666,6 +7292,12 @@
     },
     "Your level is re-assessed regularly. The next assessment needs both:": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau wird regelmäßig neu eingestuft. Die nächste Einstufung braucht beides:"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4676,6 +7308,12 @@
     },
     "Your level, one point per assessment — this line is what growing looks like.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Niveau, ein Punkt je Einstufung — diese Linie ist, wie Wachstum aussieht."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4686,6 +7324,12 @@
     },
     "Your match": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übereinstimmung"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4697,6 +7341,12 @@
     "Your name": {},
     "Your own": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selbst erstellen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4707,6 +7357,12 @@
     },
     "Your people": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Leute"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4718,6 +7374,12 @@
     "Your persona plays this scene in their own voice.": {},
     "Your practice data stays on this device. Your voice clone and credits stay with your account.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Lerndaten bleiben auf diesem Gerät. Stimmklon und Credits bleiben bei deinem Konto."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4728,6 +7390,12 @@
     },
     "Your scenario": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Situation"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4738,6 +7406,12 @@
     },
     "Your scenarios": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Situationen"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4749,6 +7423,12 @@
     "Your situation": {},
     "Your situation so far": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Situation bisher"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4759,6 +7439,12 @@
     },
     "Your subscription is active. Credits land on your account as soon as Apple confirms the purchase.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dein Abo ist aktiv. Die Credits landen auf deinem Konto, sobald Apple den Kauf bestätigt."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4777,6 +7463,12 @@
     "e.g. “%@”": {},
     "full line": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ganzer Satz"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4787,6 +7479,12 @@
     },
     "less": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weniger"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4808,6 +7506,12 @@
     "mastered": {},
     "more": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mehr"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4818,6 +7522,12 @@
     },
     "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nawana braucht Mikrofon und Spracherkennung, um dich zu hören. Aktiviere beides unter Einstellungen → nawana."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4834,6 +7544,12 @@
     "things you studied have come out of your mouth in a real conversation": {},
     "vocabulary level": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wortschatzniveau"
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4845,7 +7561,6 @@
     "voiced by %@": {},
     "with %@": {},
     "words": {},
-    "¡Hola! Qué alegría verte. ¿Empezamos?": {},
     "·": {},
     "×%lld": {},
     "—": {},
@@ -4856,6 +7571,12 @@
     "≈ %lld min of conversation a day": {},
     "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed.": {
       "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ steht für einen deterministischen Näherungswert — eine echte Messung, die über feste Schwellen einem GER-Band zugeordnet wird, kein KI-Urteil. Jedes Band ist eine OBERGRENZE aus einer einzelnen Messung (schnelles Tempo oder lange Beiträge allein ergeben kein Niveau), deshalb liegt das eingestufte Niveau normalerweise auf oder unter den stärksten Bändern hier: Die Einstufung gewichtet außerdem die Fehlerdichte und wie weit Gedanken tatsächlich ausgeführt werden."
+          }
+        },
         "ko": {
           "stringUnit": {
             "state": "translated",
@@ -4864,7 +7585,6 @@
         }
       }
     },
-    "한국어": {},
     "😀": {}
   },
   "version": "1.0"

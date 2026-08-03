@@ -26,6 +26,15 @@ struct DiscoverSection: View {
     enum Tab: String, CaseIterable {
         case news = "News"
         case scenarios = "Scenarios"
+
+        /// Chrome, so it follows the TARGET language. The raw value stays an
+        /// identifier — localizing it would key state off translated text.
+        var label: String {
+            switch self {
+            case .news:      return String(localized: "News")
+            case .scenarios: return String(localized: "Scenarios")
+            }
+        }
     }
 
     private var interests: [String] { appState.persona?.interests ?? [] }
@@ -100,7 +109,7 @@ struct DiscoverSection: View {
 
     private func chip(_ t: Tab) -> some View {
         Button { withAnimation(.easeOut(duration: 0.15)) { tab = t } } label: {
-            Text(t.rawValue)
+            Text(t.label)
                 .font(.subheadline.weight(.medium))
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(Capsule().fill(tab == t ? Color(.label) : Color(.secondarySystemGroupedBackground)))

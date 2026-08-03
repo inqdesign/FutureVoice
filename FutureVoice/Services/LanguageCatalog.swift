@@ -82,20 +82,18 @@ enum LanguageCatalog {
     /// English included since multi-language: the practice target is
     /// user-selectable, so an English native learning Japanese is a real user.
     /// Pickers filter out whichever code sits on the other side.
-    static let nativeLanguages: [String] = [
-        // East & Southeast Asia
-        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
-        // South Asia
-        "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
-        // Middle East & Central Asia
-        "ar", "fa", "tr", "he", "kk", "uz", "az", "ka", "hy", "ps",
-        // Europe
-        "en", "es", "pt", "fr", "de", "it", "ru", "pl", "uk", "nl", "ro", "el", "cs",
-        "hu", "sv", "da", "fi", "no", "sk", "bg", "hr", "sr", "lt", "lv", "et",
-        "sl", "ca",
-        // Africa
-        "sw", "am", "af", "ha", "yo", "zu",
-    ]
+    /// Languages we currently SHIP. A native language needs a translated
+    /// column in `Localizable.xcstrings` — without one, every explanation
+    /// falls back to English, which reads as a broken app rather than an
+    /// untranslated one. So this list is exactly the columns we have.
+    ///
+    /// Note what this costs: LLM coaching text (session notes, the weekly
+    /// report, correction explanations) is GENERATED per language and works
+    /// for any of them — only the static UI strings need a column. Widening
+    /// this list is one edit here plus that language's column; the full
+    /// 67-language list is in git history (see `nativeLanguages` before this
+    /// commit) if we want it back.
+    static let nativeLanguages: [String] = ["en", "ko", "de"]
 
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code
