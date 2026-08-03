@@ -278,9 +278,9 @@ struct ConversationHome: View {
 
     private var goalHeadline: String {
         let mins = todaySpokenSeconds / 60
-        if goalProgress >= 1 { return String(localized: "Goal reached · \(mins) min") }
-        if mins == 0 { return String(localized: "Talk \(dailyGoalMinutes) min today") }
-        return String(localized: "\(mins) of \(dailyGoalMinutes) min today")
+        if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
+        if mins == 0 { return chrome("Talk \(dailyGoalMinutes) min today") }
+        return chrome("\(mins) of \(dailyGoalMinutes) min today")
     }
 
     /// A Today action row. With `subtitle`, the title becomes the ACTION
@@ -503,10 +503,10 @@ struct ConversationHome: View {
 
     private var greetingText: String {
         switch Calendar.current.component(.hour, from: Date()) {
-        case 5..<12:  return String(localized: "Good morning")
-        case 12..<17: return String(localized: "Good afternoon")
-        case 17..<22: return String(localized: "Good evening")
-        default:      return String(localized: "Hello")
+        case 5..<12:  return chrome("Good morning")
+        case 12..<17: return chrome("Good afternoon")
+        case 17..<22: return chrome("Good evening")
+        default:      return chrome("Hello")
         }
     }
 

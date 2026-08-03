@@ -31,8 +31,8 @@ struct DiscoverSection: View {
         /// identifier — localizing it would key state off translated text.
         var label: String {
             switch self {
-            case .news:      return String(localized: "News")
-            case .scenarios: return String(localized: "Scenarios")
+            case .news:      return chrome("News")
+            case .scenarios: return chrome("Scenarios")
             }
         }
     }

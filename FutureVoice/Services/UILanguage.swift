@@ -64,6 +64,20 @@ func explain(_ key: String.LocalizationValue) -> String {
     String(localized: key, bundle: .explanations)
 }
 
+/// Marks a string as CHROME that can't be written as `Text("literal")` —
+/// it has to flow through a `String` first (a computed navigation title, a
+/// `switch` that returns a label, an interpolated headline).
+///
+/// A plain `String(localized:)` looks WRONG here even though it compiles: it
+/// resolves against the main bundle and the system locale, so it ignores the
+/// root's `.environment(\.locale, targetLanguage)` entirely and hands back the
+/// source language forever. `Text("literal")` follows the environment; a
+/// `String` never sees it. This routes through the chrome bundle instead, so
+/// both spellings of chrome land in the same language.
+func chrome(_ key: String.LocalizationValue) -> String {
+    String(localized: key, bundle: .chrome)
+}
+
 extension Bundle {
 
     /// The bundle whose `.lproj` holds explanatory copy for this learner.
@@ -77,6 +91,14 @@ extension Bundle {
     /// like every other unlocalized string does.
     static var explanations: Bundle {
         lproj(UILanguage.explanationLanguage) ?? .main
+    }
+
+    /// The bundle whose `.lproj` holds chrome for this learner — the target
+    /// language. Same `.main` fallback as `explanations`: the source language
+    /// has no `.lproj`, so a learner practicing English resolves nothing for
+    /// `en` and correctly degrades to the catalog keys themselves.
+    static var chrome: Bundle {
+        lproj(UILanguage.chromeLanguage) ?? .main
     }
 
     /// Cached `.lproj` lookup. `Bundle(path:)` hits the filesystem and
