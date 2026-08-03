@@ -567,7 +567,7 @@ private extension DrillView {
                         Text(DrillStore.relevantFragment(of: card.sourcePhrase,
                                                          matching: card.targetPhrase))
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Self.onCardSecondary)
                             .strikethrough(revealed)
                             .fixedSize(horizontal: false, vertical: true)
                         // The transcript is STT output and occasionally wrong —
@@ -603,7 +603,7 @@ private extension DrillView {
             labeled(revealed ? "Try saying" : "How would a fluent speaker say it?") {
                 Text(card.targetPhrase)
                     .font(Self.targetFont(for: card.targetPhrase))
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Self.onCard)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                     .redacted(reason: revealed ? [] : .placeholder)
@@ -613,7 +613,7 @@ private extension DrillView {
                 labeled("Why") {
                     Text(card.reason)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Self.onCardSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -653,14 +653,24 @@ private extension DrillView {
         .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color.accentColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
+        // The accent IS the card now, so every foreground on it reads against
+        // the accent, not the system background. Setting the tint once here
+        // carries `.foregroundStyle(.tint)` descendants (play glyph, "Tap to
+        // reveal", pill labels) along with it.
+        .tint(Self.onCard)
+        .shadow(color: Color.accentColor.opacity(0.28), radius: 8, y: 4)
     }
+
+    /// Content color on the accent card.
+    static var onCard: Color { .white }
+    /// Supporting text — the card's own "secondary".
+    static var onCardSecondary: Color { .white.opacity(0.72) }
 
     @ViewBuilder
     func pillButton(systemImage: String?, text: String, showSpinner: Bool = false, action: @escaping () -> Void) -> some View {
@@ -678,8 +688,8 @@ private extension DrillView {
             .font(.footnote.weight(.semibold))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Capsule().fill(Color.accentColor.opacity(0.12)))
-            .foregroundStyle(.tint)
+            .background(Capsule().fill(Color.white.opacity(0.18)))
+            .foregroundStyle(Self.onCard)
         }
         .buttonStyle(.plain)
     }
@@ -689,7 +699,7 @@ private extension DrillView {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Self.onCardSecondary)
             content()
         }
     }
