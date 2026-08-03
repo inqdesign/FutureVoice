@@ -105,8 +105,9 @@ struct VoiceCloneOnboardingView: View {
 
     /// The clone's first words — spoken in the user's own voice the moment it
     /// exists. Short on purpose (one TTS call per onboarding).
-    private static let greetingLine =
-        "Hey — it's you. Just more fluent. Pick a color that feels like us."
+    private var greetingLine: String {
+        VoiceCloneScript.greeting(for: appState.targetLanguage)
+    }
 
     /// Staged narration for the cloning wait. Honest theater — no fake
     /// percentages, just what the process is genuinely about.
@@ -343,7 +344,7 @@ struct VoiceCloneOnboardingView: View {
     // Step 1 — the narrative. One thought, nothing else.
     private var introContent: some View {
         stepHeader("Another you.\nAlready fluent.",
-                   "It speaks perfect English in your own voice. From here, you just follow.")
+                   "It speaks perfect \(LanguageCatalog.englishName(appState.targetLanguage)) in your own voice. From here, you just follow.")
             .transition(.opacity)
     }
 
@@ -459,7 +460,8 @@ struct VoiceCloneOnboardingView: View {
     /// The paragraphs on stage — the native script only when it exists AND
     /// the user picked it.
     private var activeScript: [String] {
-        (readInNative ? nativeScript : nil) ?? CloneScriptStore.english
+        (readInNative ? nativeScript : nil)
+            ?? VoiceCloneScript.paragraphs(for: appState.targetLanguage)
     }
 
     // Step 4 — the script, in full, BEFORE anything records. Recording only
@@ -471,7 +473,7 @@ struct VoiceCloneOnboardingView: View {
             // the paragraphs below, not by a question on its own screen.
             if nativeScript != nil {
                 Picker("Read in", selection: $readInNative) {
-                    Text("English").tag(false)
+                    Text(LanguageCatalog.endonym(appState.targetLanguage)).tag(false)
                     Text(LanguageCatalog.endonym(appState.nativeLanguage)).tag(true)
                 }
                 .pickerStyle(.segmented)
@@ -480,7 +482,7 @@ struct VoiceCloneOnboardingView: View {
 
             Text(nativeScript == nil
                  ? "Read it naturally. Mistakes are fine — just keep going."
-                 : "Read whichever one feels natural — we're capturing your voice, not your English.")
+                 : "Read whichever one feels natural — we're capturing your voice, not your reading.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -889,7 +891,7 @@ struct VoiceCloneOnboardingView: View {
 
     private func prepareNativeScript() async {
         let code = appState.nativeLanguage
-        guard code != "en", nativeScript == nil else { return }
+        guard code != appState.targetLanguage, nativeScript == nil else { return }
         // Hand-authored languages resolve synchronously; the rest cost one
         // Gemini call, once per device, cached forever.
         var script = CloneScriptStore.shared.script(for: code)
@@ -907,7 +909,7 @@ struct VoiceCloneOnboardingView: View {
     /// What the take was read in — the funnel needs it to tell whether the
     /// native script actually cuts re-records.
     private var scriptLanguageCode: String {
-        readInNative && nativeScript != nil ? appState.nativeLanguage : "en"
+        readInNative && nativeScript != nil ? appState.nativeLanguage : appState.targetLanguage
     }
 
     // MARK: - Actions
@@ -1011,7 +1013,7 @@ struct VoiceCloneOnboardingView: View {
                     // we spend money on. The extra latency lands inside the
                     // "Becoming…" act, which is already a wait.
                     greetingData = try? await ElevenLabsClient.shared.synthesize(
-                        voiceId: voiceId, text: Self.greetingLine,
+                        voiceId: voiceId, text: greetingLine,
                         modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
                 }
                 HapticEngine.success()

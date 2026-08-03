@@ -56,7 +56,10 @@ enum LanguageCatalog {
     static let targets: [Language] = [
         Language(code: "en", sttLocale: "en-US", tokenStyle: .word, wordlistResource: "cefr_words"),
         Language(code: "es", sttLocale: "es-ES", tokenStyle: .word, wordlistResource: nil),
-        Language(code: "de", sttLocale: "de-DE", tokenStyle: .word, wordlistResource: nil),
+        // German wordlist: Goethe-Institut A1–B1 vocabulary (content words)
+        // plus curated B2–C2 — cased headwords (nouns capitalized), matched
+        // case-insensitively by CoreVocabulary.
+        Language(code: "de", sttLocale: "de-DE", tokenStyle: .word, wordlistResource: "cefr_words_de"),
         Language(code: "fr", sttLocale: "fr-FR", tokenStyle: .word, wordlistResource: nil),
         Language(code: "it", sttLocale: "it-IT", tokenStyle: .word, wordlistResource: nil),
         Language(code: "pt", sttLocale: "pt-BR", tokenStyle: .word, wordlistResource: nil),
@@ -73,28 +76,40 @@ enum LanguageCatalog {
     /// `targets`, a native language needs NO STT locale, wordlist or
     /// tokenizer: it's only ever handed to the LLM as a display name, so any
     /// BCP-47 code the OS can name works. That's why this list is far wider
-    /// than `targets` — it covers essentially every sizable English-learning
+    /// than `targets` — it covers essentially every sizable language-learning
     /// market. Ordered by region (East/SE Asia → South Asia → Middle East &
     /// Central Asia → Europe → Africa); order = setup picker order.
-    /// English is intentionally absent — it's the fixed practice target.
-    static let nativeLanguages: [String] = [
-        // East & Southeast Asia
-        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
-        // South Asia
-        "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
-        // Middle East & Central Asia
-        "ar", "fa", "tr", "he", "kk", "uz", "az", "ka", "hy", "ps",
-        // Europe
-        "es", "pt", "fr", "de", "it", "ru", "pl", "uk", "nl", "ro", "el", "cs",
-        "hu", "sv", "da", "fi", "no", "sk", "bg", "hr", "sr", "lt", "lv", "et",
-        "sl", "ca",
-        // Africa
-        "sw", "am", "af", "ha", "yo", "zu",
-    ]
+    /// English included since multi-language: the practice target is
+    /// user-selectable, so an English native learning Japanese is a real user.
+    /// Pickers filter out whichever code sits on the other side.
+    /// Languages we currently SHIP. A native language needs a translated
+    /// column in `Localizable.xcstrings` — without one, every explanation
+    /// falls back to English, which reads as a broken app rather than an
+    /// untranslated one. So this list is exactly the columns we have.
+    ///
+    /// Note what this costs: LLM coaching text (session notes, the weekly
+    /// report, correction explanations) is GENERATED per language and works
+    /// for any of them — only the static UI strings need a column. Widening
+    /// this list is one edit here plus that language's column; the full
+    /// 67-language list is in git history (see `nativeLanguages` before this
+    /// commit) if we want it back.
+    static let nativeLanguages: [String] = ["en", "ko", "de"]
 
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code
         return targets.first { $0.code == base }
+    }
+
+    /// Targets a user may actually PICK. A target without a graded wordlist
+    /// still talks, corrects, drills and shadows perfectly — but its whole
+    /// vocabulary layer comes up empty (nothing is ever collected from a
+    /// talk, the CEFR filter has nothing to filter, pickup words and the word
+    /// widget stay blank), and that reads as a bug, not as a missing extra.
+    /// So the picker only offers what the app can deliver end to end; the
+    /// rest stay in `targets` — already wired for STT, scoring and the clone
+    /// script — and return on their own the moment a list ships for them.
+    static var selectableTargets: [Language] {
+        targets.filter { $0.wordlistResource != nil }
     }
 
     /// English display name — for prompts ("Reply in Korean only") and UI
@@ -129,14 +144,26 @@ enum LanguageCatalog {
         .a1: 1, .a2: 2, .b1: 3, .b2: 4, .c1: 5, .c2: 6
     ]
 
+    /// JLPT equivalents (JF Standard rough correspondence, A1→N5 … C1→N1).
+    /// C2 sits past the JLPT scale, so it stays bare CEFR.
+    private static let jlptByCEFR: [CEFRLevel: Int] = [
+        .a1: 5, .a2: 4, .b1: 3, .b2: 2, .c1: 1
+    ]
+
     /// How a CEFR level should read for a given target language. Internals
-    /// stay CEFR everywhere; Korean learners think in TOPIK levels, so the
-    /// label carries the official equivalence alongside.
+    /// stay CEFR everywhere; Korean learners think in TOPIK and Japanese
+    /// learners in JLPT, so those labels carry the equivalence alongside.
     static func levelLabel(_ level: CEFRLevel, target: String) -> String {
         let cefr = level.rawValue.uppercased()
-        guard language(target)?.code == "ko", let topik = topikByCEFR[level] else {
+        switch language(target)?.code {
+        case "ko":
+            guard let topik = topikByCEFR[level] else { return cefr }
+            return "\(cefr) · TOPIK \(topik)"
+        case "ja":
+            guard let jlpt = jlptByCEFR[level] else { return cefr }
+            return "\(cefr) · JLPT N\(jlpt)"
+        default:
             return cefr
         }
-        return "\(cefr) · TOPIK \(topik)"
     }
 }

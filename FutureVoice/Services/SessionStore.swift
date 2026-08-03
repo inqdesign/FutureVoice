@@ -11,18 +11,19 @@ import Foundation
 /// once per launch and after each write the cache is updated in place. The
 /// lock keeps the cache safe for the background stat readers
 /// (`PracticeStats.snapshot` now runs off-main).
-final class SessionStore {
+final class SessionStore: LanguageScopedStore {
     static let shared = SessionStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let lock = NSLock()
     private var cache: [Session]?
 
     init(filename: String = "sessions.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -32,6 +33,12 @@ final class SessionStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        lock.lock(); defer { lock.unlock() }
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
+        cache = nil
     }
 
     /// All sessions, newest-ended-first. Sessions are value types, so callers

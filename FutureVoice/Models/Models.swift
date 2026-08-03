@@ -606,11 +606,29 @@ struct Counterpart: Codable, Identifiable, Hashable {
     // Catch-all
     var freeNotes: String = ""             // anything that doesn't fit above
 
-    /// Persona-grounded scenario library specific to this counterpart. Fed by
-    /// `TopicEngine.suggestForCounterpart` and cached here so opening Watch
-    /// for the same person doesn't re-bill Gemini every time. Empty until
-    /// first WatchSetupSheet open.
-    var savedScenarios: [SuggestedTopic] = []
+    /// Persona-grounded scenario library specific to this counterpart, KEYED
+    /// BY TARGET LANGUAGE. Fed by `TopicEngine.suggestForCounterpart` and
+    /// cached so opening Watch for the same person doesn't re-bill Gemini
+    /// every time. Empty until first WatchSetupSheet open.
+    ///
+    /// The person stays global — nobody should re-enter their own life once
+    /// per language — but these ideas ARE written in the language being
+    /// practiced, so they can't be shared across languages. Keying them
+    /// (rather than clearing the cache on every switch) keeps both pools
+    /// alive, so moving back and forth never re-bills.
+    ///
+    /// Rows written before multi-language hold a bare array under the old
+    /// `savedScenarios` key; they decode into the "en" bucket, which is
+    /// where they belong — the practice target was fixed to English then.
+    var scenariosByLanguage: [String: [SuggestedTopic]] = [:]
+
+    func savedScenarios(in language: String) -> [SuggestedTopic] {
+        scenariosByLanguage[language] ?? []
+    }
+
+    mutating func setSavedScenarios(_ list: [SuggestedTopic], in language: String) {
+        scenariosByLanguage[language] = list
+    }
 
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
@@ -626,6 +644,68 @@ struct Counterpart: Codable, Identifiable, Hashable {
     var isMinimallyComplete: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
             && !relationship.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+}
+
+extension Counterpart {
+    enum CodingKeys: String, CodingKey {
+        case id, name, relationship, location, howWeMet, background
+        case conversationStyle, commonTopics, voicePresetId, freeNotes
+        case scenariosByLanguage, createdAt, updatedAt
+        /// Pre-multi-language rows: one flat array, always English.
+        case savedScenarios
+    }
+
+    /// Hand-written so rows saved before the per-language split still load —
+    /// their flat `savedScenarios` array becomes the "en" bucket, which is
+    /// where it belongs (the practice target was fixed to English then).
+    /// Every optional-with-default field is decoded leniently for the same
+    /// reason: this store predates several of them.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decode(String.self, forKey: .name)
+        relationship = try c.decode(String.self, forKey: .relationship)
+        location = try c.decodeIfPresent(String.self, forKey: .location) ?? ""
+        howWeMet = try c.decodeIfPresent(String.self, forKey: .howWeMet) ?? ""
+        background = try c.decode(String.self, forKey: .background)
+        conversationStyle = try c.decode(String.self, forKey: .conversationStyle)
+        commonTopics = try c.decodeIfPresent(String.self, forKey: .commonTopics) ?? ""
+        voicePresetId = try c.decode(String.self, forKey: .voicePresetId)
+        freeNotes = try c.decodeIfPresent(String.self, forKey: .freeNotes) ?? ""
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
+
+        if let keyed = try c.decodeIfPresent([String: [SuggestedTopic]].self,
+                                             forKey: .scenariosByLanguage) {
+            scenariosByLanguage = keyed
+        } else if let legacy = try c.decodeIfPresent([SuggestedTopic].self,
+                                                     forKey: .savedScenarios),
+                  !legacy.isEmpty {
+            scenariosByLanguage = ["en": legacy]
+        } else {
+            scenariosByLanguage = [:]
+        }
+    }
+
+    /// Explicit because `CodingKeys` carries a legacy case with no property —
+    /// the synthesized encoder can't be used. `savedScenarios` is read-only
+    /// history: never written back.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(name, forKey: .name)
+        try c.encode(relationship, forKey: .relationship)
+        try c.encode(location, forKey: .location)
+        try c.encode(howWeMet, forKey: .howWeMet)
+        try c.encode(background, forKey: .background)
+        try c.encode(conversationStyle, forKey: .conversationStyle)
+        try c.encode(commonTopics, forKey: .commonTopics)
+        try c.encode(voicePresetId, forKey: .voicePresetId)
+        try c.encode(freeNotes, forKey: .freeNotes)
+        try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
+        try c.encode(createdAt, forKey: .createdAt)
+        try c.encode(updatedAt, forKey: .updatedAt)
     }
 }
 

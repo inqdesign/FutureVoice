@@ -3,16 +3,17 @@ import Foundation
 /// Local persistence + Leitner spaced-repetition scheduling for `DrillCard`s.
 /// Mirrors `SessionStore`'s on-disk JSON pattern. Phase 2 will move this
 /// (alongside sessions and learner profile) into Supabase.
-final class DrillStore {
+final class DrillStore: LanguageScopedStore {
     static let shared = DrillStore()
 
-    private let fileURL: URL
+    private var fileURL: URL
+    private let filename: String
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
     init(filename: String = "drills.json") {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        self.fileURL = dir.appendingPathComponent(filename)
+        self.filename = filename
+        self.fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -22,6 +23,10 @@ final class DrillStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+    }
+
+    func languageScopeDidChange() {
+        fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
     }
 
     // MARK: - CRUD

@@ -18,6 +18,7 @@ struct MeTab: View {
     @State private var aiLevel: CEFRLevel?
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
+    @State private var showingAddLanguage = false
     @State private var confirmingVoiceReset = false
     @State private var confirmingSignOut = false
     @State private var confirmingAccountDelete = false
@@ -90,6 +91,41 @@ struct MeTab: View {
                 }
 
                 Section {
+                    ForEach(appState.enrolledLanguages, id: \.self) { code in
+                        Button {
+                            appState.switchLanguage(to: code)
+                        } label: {
+                            HStack {
+                                row(icon: "globe",
+                                    title: LanguageCatalog.endonym(code),
+                                    subtitle: LanguageCatalog.englishName(code))
+                                Spacer()
+                                if code == appState.targetLanguage {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.accentColor)
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+                        .deleteDisabled(appState.enrolledLanguages.count == 1)
+                    }
+                    .onDelete { indexSet in
+                        for i in indexSet { appState.removeLanguage(appState.enrolledLanguages[i]) }
+                    }
+                    Button {
+                        showingAddLanguage = true
+                    } label: {
+                        row(icon: "plus.circle",
+                            title: "Add a language",
+                            subtitle: "Same voice, new language")
+                    }
+                } header: {
+                    Text("Languages")
+                } footer: {
+                    Text(explain("Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime."))
+                }
+
+                Section {
                     Picker(selection: $appState.proficiency) {
                         ForEach(CEFRLevel.allCases, id: \.self) { level in
                             Text(LanguageCatalog.levelLabel(level, target: appState.targetLanguage))
@@ -98,7 +134,7 @@ struct MeTab: View {
                     } label: {
                         row(icon: "chart.bar",
                             title: "Level",
-                            subtitle: "Calibrates conversations and feedback")
+                            subtitle: "Calibrates \(LanguageCatalog.englishName(appState.targetLanguage)) conversations")
                     }
                     Picker(selection: $appState.nativeLanguage) {
                         ForEach(LanguageCatalog.nativeLanguages.filter { $0 != appState.targetLanguage },
@@ -206,6 +242,9 @@ struct MeTab: View {
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingAddLanguage) {
+                AddLanguageSheet().environmentObject(appState)
             }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}

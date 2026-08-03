@@ -68,11 +68,15 @@ extension Bundle {
 
     /// The bundle whose `.lproj` holds explanatory copy for this learner.
     ///
-    /// Falls back to the chrome language rather than the device's: a Vietnamese
-    /// speaker we haven't translated for should see the rest of the screen's
-    /// language, not whatever their phone happens to be set to.
+    /// Falls back to `.main` — the source language — and NEVER to the chrome
+    /// language. The source language has no `.lproj` of its own (its strings
+    /// are the catalog keys), so an English speaker learning Korean resolves
+    /// nothing for `en`; routing that miss to the chrome bundle handed them
+    /// KOREAN explanations, the exact failure this whole split exists to
+    /// prevent. A miss must degrade to the language the app is written in,
+    /// like every other unlocalized string does.
     static var explanations: Bundle {
-        lproj(UILanguage.explanationLanguage) ?? lproj(UILanguage.chromeLanguage) ?? .main
+        lproj(UILanguage.explanationLanguage) ?? .main
     }
 
     /// Cached `.lproj` lookup. `Bundle(path:)` hits the filesystem and

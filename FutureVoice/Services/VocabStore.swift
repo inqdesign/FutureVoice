@@ -30,21 +30,40 @@ final class VocabStore: ObservableObject {
     private var ingestedSessions: Set<UUID> = []
     private var ingestedExpressionSessions: Set<UUID> = []
 
-    private let fileURL: URL
-    private let metaURL: URL
-    private let studyingURL: URL
-    private let expressionsURL: URL
-    private let expressionsMetaURL: URL
-    private let studyingExpressionsURL: URL
+    private var fileURL: URL
+    private var metaURL: URL
+    private var studyingURL: URL
+    private var expressionsURL: URL
+    private var expressionsMetaURL: URL
+    private var studyingExpressionsURL: URL
 
     init() {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dir = LanguageScope.activeDirectory
         fileURL = dir.appendingPathComponent("vocab_pool.json")
         metaURL = dir.appendingPathComponent("vocab_ingested.json")
         studyingURL = dir.appendingPathComponent("vocab_studying.json")
         expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
+        load()
+    }
+
+    /// Language switch: repoint every file at the new language's directory
+    /// and swap the in-memory pool for that language's contents.
+    func languageScopeDidChange() {
+        let dir = LanguageScope.activeDirectory
+        fileURL = dir.appendingPathComponent("vocab_pool.json")
+        metaURL = dir.appendingPathComponent("vocab_ingested.json")
+        studyingURL = dir.appendingPathComponent("vocab_studying.json")
+        expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
+        expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
+        studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
+        records = [:]
+        studying = []
+        expressionRecords = [:]
+        studyingExpressions = []
+        ingestedSessions = []
+        ingestedExpressionSessions = []
         load()
     }
 
@@ -366,7 +385,7 @@ final class VocabStore: ObservableObject {
         }
         let tagger = NLTagger(tagSchemes: [.lemma])
         tagger.string = w
-        tagger.setLanguage(.english, range: w.startIndex..<w.endIndex)
+        tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
         let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
         if let lemma, CoreVocabulary.set.contains(lemma) { return lemma }
         return w
@@ -375,13 +394,20 @@ final class VocabStore: ObservableObject {
     // MARK: - Lemmatization
 
     /// NLTagger's lemma scheme doesn't cover Korean, and Korean surface forms
-    /// carry particles/conjugation the wordlist headwords don't. Route by the
-    /// current target language (same launch-scoped read as CoreVocabulary).
-    nonisolated private static let matchesKorean: Bool = {
-        let target = UserDefaults.standard
-            .string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
-        return LanguageCatalog.language(target)?.code == "ko"
-    }()
+    /// carry particles/conjugation the wordlist headwords don't. Routed by
+    /// the CURRENT target language on every call — a switch re-picks the
+    /// tokenizer immediately (this was a launch-scoped `static let` before
+    /// multi-language).
+    nonisolated private static var matchesKorean: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "ko"
+    }
+
+    /// NLTagger language for the current target. NLLanguage raw values ARE
+    /// bare BCP-47 codes ("en", "de"), so the active code maps directly;
+    /// an unsupported code just yields nil tags → surface-token fallback.
+    nonisolated private static var taggerLanguage: NLLanguage {
+        NLLanguage(rawValue: LanguageScope.active)
+    }
 
     /// Headwords spoken across `texts`.
     ///
@@ -392,16 +418,19 @@ final class VocabStore: ObservableObject {
     /// knowledge belongs here, not scattered across callers.
     nonisolated static func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
+        let language = Self.taggerLanguage
         var out = Set<String>()
         let tagger = NLTagger(tagSchemes: [.lemma])
         for text in texts {
-            let lower = text.lowercased()
-            tagger.string = lower
-            tagger.setLanguage(.english, range: lower.startIndex..<lower.endIndex)
-            tagger.enumerateTags(in: lower.startIndex..<lower.endIndex,
+            // Original casing IN, lowercase OUT: German lemmatization reads
+            // noun capitalization as a signal, while pool keys stay lowercase
+            // (CoreVocabulary matches case-insensitively).
+            tagger.string = text
+            tagger.setLanguage(language, range: text.startIndex..<text.endIndex)
+            tagger.enumerateTags(in: text.startIndex..<text.endIndex,
                                  unit: .word, scheme: .lemma,
                                  options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
-                let lemma = (tag?.rawValue ?? String(lower[range])).lowercased()
+                let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
                 if lemma.count > 1 { out.insert(lemma) }
                 return true
             }

@@ -50,9 +50,14 @@ struct PersonaDeepenSheet: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         Spacer()
+                        // Native first (the point of the sheet is that talking
+                        // about your life shouldn't be a language exercise),
+                        // then the target for whoever prefers to practice.
                         Picker("Language", selection: $locale) {
-                            Text("한국어").tag("ko")
-                            Text("English").tag("en")
+                            Text(LanguageCatalog.endonym(appState.nativeLanguage))
+                                .tag(appState.nativeLanguage)
+                            Text(LanguageCatalog.endonym(appState.targetLanguage))
+                                .tag(appState.targetLanguage)
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 170)

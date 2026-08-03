@@ -87,7 +87,12 @@ struct RootView: View {
             // (greeting + theme pick) after the clone id has already landed.
             VoiceCloneOnboardingView()
         } else {
+            // A language switch swaps the entire scoped store set underneath
+            // the tabs — rebuild the tree so every view re-reads from the new
+            // language's stores (the stores themselves are repointed in
+            // LanguageScope.repointStores; this only resets view state).
             RootTabView()
+                .id(appState.targetLanguage)
         }
     }
 

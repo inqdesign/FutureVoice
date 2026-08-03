@@ -110,7 +110,7 @@ struct CounterpartDetailView: View {
     @ViewBuilder
     private func scenariosSection(for c: Counterpart) -> some View {
         Section {
-            if c.savedScenarios.isEmpty {
+            if c.savedScenarios(in: appState.targetLanguage).isEmpty {
                 if loadingScenarios {
                     HStack {
                         ProgressView()
@@ -126,7 +126,7 @@ struct CounterpartDetailView: View {
                     }
                 }
             } else {
-                ForEach(c.savedScenarios) { scenario in
+                ForEach(c.savedScenarios(in: appState.targetLanguage)) { scenario in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(scenario.title)
                             .foregroundStyle(.primary)
@@ -146,7 +146,7 @@ struct CounterpartDetailView: View {
             HStack {
                 Text("Situation ideas")
                 Spacer()
-                if !c.savedScenarios.isEmpty {
+                if !c.savedScenarios(in: appState.targetLanguage).isEmpty {
                     Button {
                         Task { await regenerateScenarios(for: c) }
                     } label: {
@@ -176,7 +176,7 @@ struct CounterpartDetailView: View {
                 targetLanguage: appState.targetLanguage
             )
             var updated = c
-            updated.savedScenarios = fresh
+            updated.setSavedScenarios(fresh, in: appState.targetLanguage)
             appState.saveCounterpart(updated)
         } catch {
             self.scenarioError = "Couldn't refresh scenarios: \(error.localizedDescription)"
