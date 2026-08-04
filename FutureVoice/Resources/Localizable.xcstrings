@@ -1,29 +1,99 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {
-
+    "" : {},
+    " " : {},
+    "%@ %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %lld"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ %lld"
+          }
+        }
+      }
     },
-    " " : {
-
+    "%@ / %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
     },
-    "—" : {
-
+    "%@ credits / %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Credits / %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ credits / %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "크레딧 %1$@ / %2$@"
+          }
+        }
+      }
     },
-    "…" : {
-
+    "%@ credits, %@ plan" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Credits, %2$@-Plan"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ credits, %2$@ plan"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "크레딧 %1$@ · %2$@ 플랜"
+          }
+        }
+      }
     },
-    "·" : {
-
-    },
-    "“%@”" : {
-
-    },
-    "(+%@)" : {
-
-    },
-    "/ %lldm" : {
-
+    "%@ theme" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@-Design"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 테마"
+          }
+        }
+      }
     },
     "%@ · %@" : {
       "localizations" : {
@@ -47,89 +117,129 @@
     },
     "%@ · %lld mastered · %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld gemeistert · %3$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$lld mastered · %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 완료 %2$lld · %3$@"
           }
         }
       }
     },
     "%@ · %lld turns spoken" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · %2$lld Beiträge gesprochen"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · %2$lld turns spoken"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · 말한 턴 %2$lld"
           }
         }
       }
     },
     "%@ · voiced by %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ · Stimme: %2$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ · voiced by %2$@"
           }
-        }
-      }
-    },
-    "%@ / %@" : {
-      "localizations" : {
-        "en" : {
+        },
+        "ko" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ / %2$@"
+            "state" : "translated",
+            "value" : "%1$@ · 목소리: %2$@"
           }
         }
       }
-    },
-    "%@ %lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld"
-          }
-        }
-      }
-    },
-    "%@ credits / %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ credits / %2$@"
-          }
-        }
-      }
-    },
-    "%@ credits, %@ plan" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ credits, %2$@ plan"
-          }
-        }
-      }
-    },
-    "%@ theme" : {
-
     },
     "%@. Level %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. Niveau %2$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@. Level %2$@"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@. 레벨 %2$@"
+          }
         }
       }
     },
     "%lld" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld %@ this session" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld %2$@ in dieser Sitzung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld %2$@ this session"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 세션 %2$@ %1$lld개"
+          }
+        }
+      }
     },
     "%lld / %lld min so far." : {
       "localizations" : {
@@ -154,14 +264,17 @@
       }
     },
     "%lld / 10" : {
-
-    },
-    "%lld %@ this session" : {
       "localizations" : {
-        "en" : {
+        "de" : {
           "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld %2$@ this session"
+            "state" : "translated",
+            "value" : "%lld / 10"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld / 10"
           }
         }
       }
@@ -189,14 +302,39 @@
       }
     },
     "%lld books finished" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Bücher abgeschlossen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝낸 책 %lld권"
+          }
+        }
+      }
     },
     "%lld card%@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Karte(n)"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld card%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드 %1$lld장"
           }
         }
       }
@@ -234,7 +372,20 @@
       }
     },
     "%lld days free,\nno surprises" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Tage kostenlos,\nohne Haken"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 무료,\n조건 없이"
+          }
+        }
+      }
     },
     "%lld days free. Cancel anytime." : {
       "localizations" : {
@@ -253,10 +404,36 @@
       }
     },
     "%lld expressions" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wendungen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현 %lld개"
+          }
+        }
+      }
     },
     "%lld known" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld bekannt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아는 것 %lld개"
+          }
+        }
+      }
     },
     "%lld min" : {
       "localizations" : {
@@ -275,34 +452,83 @@
       }
     },
     "%lld min this week" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Woche %lld Min."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 %lld분"
+          }
+        }
+      }
     },
     "%lld of %lld" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld"
           }
         }
       }
     },
     "%lld of %lld mastered" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld gemeistert"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld mastered"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld 완료"
           }
         }
       }
     },
     "%lld of %lld mastered · everything from your talks and watches" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld von %2$lld gemeistert · alles aus deinen Gesprächen und Watches"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld of %2$lld mastered · everything from your talks and watches"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld / %2$lld 완료 · 대화와 Watch에서 모은 전부"
           }
         }
       }
@@ -330,30 +556,39 @@
       }
     },
     "%lld phrases saved while watching" : {
-
-    },
-    "%lld sessions · %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lld sessions · %2$@"
-          }
-        }
-      }
-    },
-    "%lld talks · tap for calendar" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%lld Gespräche · tippen für Kalender"
+            "value" : "%lld Sätze beim Zuschauen gespeichert"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "대화 %lld회 · 탭하면 달력"
+            "value" : "보면서 저장한 문장 %lld개"
+          }
+        }
+      }
+    },
+    "%lld sessions · %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Sitzungen · %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sessions · %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세션 %1$lld회 · %2$@"
           }
         }
       }
@@ -375,23 +610,133 @@
         }
       }
     },
+    "%lld talks · tap for calendar" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Gespräche · tippen für Kalender"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화 %lld회 · 탭하면 달력"
+          }
+        }
+      }
+    },
     "%lld total" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld insgesamt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "총 %lld개"
+          }
+        }
+      }
     },
     "%lld turns" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Beiträge"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld턴"
+          }
+        }
+      }
     },
     "%lld turns spoken" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Beiträge gesprochen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말한 턴 %lld"
+          }
+        }
+      }
     },
     "%lld vs last week" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ggü. letzter Woche"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지난주 대비 %lld"
+          }
+        }
+      }
     },
     "%lld words" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wörter"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어 %lld개"
+          }
+        }
+      }
     },
     "%lld words and lines mastered inside them" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Wörter und Sätze darin gemeistert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그 안에서 익힌 단어·문장 %lld개"
+          }
+        }
+      }
+    },
+    "%lld%%" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld %%"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld%%"
+          }
+        }
+      }
     },
     "%lld-day streak" : {
       "localizations" : {
@@ -411,9 +756,21 @@
     },
     "%lld/%lld" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "%1$lld/%2$lld"
           }
         }
@@ -421,10 +778,22 @@
     },
     "%lld/%lld mastered" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld gemeistert"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld/%2$lld mastered"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld 완료"
           }
         }
       }
@@ -453,68 +822,122 @@
     },
     "%lld/%lld min new talk" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld Min. neues Gespräch"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$lld/%2$lld min new talk"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 대화 %1$lld/%2$lld분"
+          }
         }
       }
     },
-    "%lld%%" : {
-
-    },
-    "•" : {
-
-    },
-    "→ %@" : {
-
-    },
+    "(+%@)" : {},
     "+%lld more meanings" : {
-
-    },
-    "+%lld this week" : {
-
-    },
-    "+%lld vs last week" : {
-
-    },
-    "+1 more meaning" : {
-
-    },
-    "×%lld" : {
-
-    },
-    "<" : {
-
-    },
-    ">" : {
-
-    },
-    "≈ %lld min of conversation a day" : {
-
-    },
-    "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "≈ steht für einen deterministischen Näherungswert — eine echte Messung, die über feste Schwellen einem GER-Band zugeordnet wird, kein KI-Urteil. Jedes Band ist eine OBERGRENZE aus einer einzelnen Messung (schnelles Tempo oder lange Beiträge allein ergeben kein Niveau), deshalb liegt das eingestufte Niveau normalerweise auf oder unter den stärksten Bändern hier: Die Einstufung gewichtet außerdem die Fehlerdichte und wie weit Gedanken tatsächlich ausgeführt werden."
+            "value" : "+%lld weitere Bedeutungen"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "≈는 AI의 판단이 아니라 실제 측정값을 고정된 기준으로 CEFR 구간에 대응시킨 값이에요. 각 구간은 측정 하나에서 나온 상한선이라(빠른 속도나 긴 발화만으로 레벨이 되지는 않습니다), 실제 판정 레벨은 보통 여기 가장 높은 구간과 같거나 그 아래에 놓입니다. 판정에는 오류 밀도와 생각을 얼마나 풀어냈는지도 함께 반영되기 때문이에요."
+            "value" : "+뜻 %lld개 더"
           }
         }
       }
     },
-    "😀" : {
-
+    "+%lld this week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld diese Woche"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 +%lld"
+          }
+        }
+      }
+    },
+    "+%lld vs last week" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld ggü. letzter Woche"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지난주 대비 +%lld"
+          }
+        }
+      }
+    },
+    "+1 more meaning" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+1 weitere Bedeutung"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+뜻 1개 더"
+          }
+        }
+      }
+    },
+    "/ %lldm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld Min."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld분"
+          }
+        }
+      }
     },
     "1 book finished" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Buch abgeschlossen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝낸 책 1권"
+          }
+        }
+      }
     },
     "1 credit ≈ 100 characters spoken in your voice." : {
       "localizations" : {
@@ -549,7 +972,20 @@
       }
     },
     "1 phrase saved while watching" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Satz beim Zuschauen gespeichert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보면서 저장한 문장 1개"
+          }
+        }
+      }
     },
     "1 talk today" : {
       "extractionState" : "stale",
@@ -584,9 +1020,9 @@
         }
       }
     },
-    "A" : {
-
-    },
+    "<" : {},
+    ">" : {},
+    "A" : {},
     "A book lands here once every word and line in it is mastered. Nothing you file away counts — only what you finished." : {
       "localizations" : {
         "de" : {
@@ -636,7 +1072,20 @@
       }
     },
     "A voice for the other person. Add people under Watch to have someone specific play the scene." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Stimme für dein Gegenüber. Füge unter Watch Personen hinzu, damit jemand Bestimmtes die Szene spielt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대방의 목소리예요. Watch에서 사람을 추가하면 특정 인물이 장면을 연기해요."
+          }
+        }
+      }
     },
     "About half a minute." : {
       "localizations" : {
@@ -799,7 +1248,20 @@
       }
     },
     "Add your own (comma-separated)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigene hinzufügen (durch Komma getrennt)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "직접 추가 (쉼표로 구분)"
+          }
+        }
+      }
     },
     "Advanced — I express myself fluently and precisely" : {
       "localizations" : {
@@ -1009,11 +1471,37 @@
         }
       }
     },
-    "Assessed %@ — a while back. Your next talks feed a fresh assessment." : {
-
-    },
     "Assessed %@ from your recent talk — vocabulary, grammar, fluency and expression together." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingestuft %@ anhand deiner letzten Gespräche — Wortschatz, Grammatik, Flüssigkeit und Ausdruck zusammen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 최근 대화로 평가했어요 — 어휘·문법·유창성·표현을 함께 봅니다."
+          }
+        }
+      }
+    },
+    "Assessed %@ — a while back. Your next talks feed a fresh assessment." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingestuft %@ — schon eine Weile her. Deine nächsten Gespräche fließen in eine neue Einstufung ein."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 평가했어요 — 꽤 지났네요. 다음 대화들이 새 평가에 반영돼요."
+          }
+        }
+      }
     },
     "Assessed from %lld min of conversation — vocabulary, grammar, fluency and expression together." : {
       "localizations" : {
@@ -1064,7 +1552,20 @@
       }
     },
     "Assessment" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstufung"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "평가"
+          }
+        }
+      }
     },
     "Back" : {
       "localizations" : {
@@ -1083,7 +1584,20 @@
       }
     },
     "Back to the welcome screen?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurück zum Startbildschirm?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음 화면으로 돌아갈까요?"
+          }
+        }
+      }
     },
     "Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it." : {
       "extractionState" : "stale",
@@ -1103,13 +1617,36 @@
       }
     },
     "Billing" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrechnung"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결제"
+          }
+        }
+      }
     },
     "Billing period" : {
-
-    },
-    "book finished" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrechnungszeitraum"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결제 주기"
+          }
+        }
+      }
     },
     "Book mastered" : {
       "localizations" : {
@@ -1142,9 +1679,6 @@
           }
         }
       }
-    },
-    "books finished" : {
-
     },
     "Build a scenario" : {
       "localizations" : {
@@ -1211,7 +1745,20 @@
       }
     },
     "Building scenarios for %@…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situationen für %@ werden erstellt…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 상황을 만드는 중…"
+          }
+        }
+      }
     },
     "By level" : {
       "localizations" : {
@@ -1262,7 +1809,20 @@
       }
     },
     "Captured automatically from what you say. Mark the ones you've got down as known." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisch aus deinen Äußerungen gesammelt. Markiere, was sitzt, als bekannt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말한 내용에서 자동으로 모아요. 완전히 익힌 건 '아는 것'으로 표시하세요."
+          }
+        }
+      }
     },
     "Cards done — now say it out loud" : {
       "localizations" : {
@@ -1297,7 +1857,20 @@
       }
     },
     "Category name (e.g. Landlord, Gym)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kategoriename (z. B. Vermieter, Fitnessstudio)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카테고리 이름 (예: 집주인, 헬스장)"
+          }
+        }
+      }
     },
     "Change my level" : {
       "localizations" : {
@@ -1316,7 +1889,20 @@
       }
     },
     "City" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stadt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도시"
+          }
+        }
+      }
     },
     "Clear, detailed talk on many topics, including some abstract ones." : {
       "localizations" : {
@@ -1463,7 +2049,20 @@
       }
     },
     "Couldn't delete account" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konto konnte nicht gelöscht werden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계정을 삭제하지 못했어요"
+          }
+        }
+      }
     },
     "Couldn't get a response." : {
       "localizations" : {
@@ -1482,10 +2081,36 @@
       }
     },
     "Couldn't play audio" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio konnte nicht abgespielt werden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오디오를 재생하지 못했어요"
+          }
+        }
+      }
     },
     "Couldn't rebuild your voice" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme konnte nicht neu erstellt werden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 다시 만들지 못했어요"
+          }
+        }
+      }
     },
     "Couldn't write the scene" : {
       "localizations" : {
@@ -1504,7 +2129,20 @@
       }
     },
     "Country" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Land"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "국가"
+          }
+        }
+      }
     },
     "Credits left" : {
       "localizations" : {
@@ -1539,10 +2177,36 @@
       }
     },
     "Credits power voice synthesis and AI replies. Invite friends to earn more." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credits treiben Sprachsynthese und KI-Antworten an. Lade Freunde ein, um mehr zu verdienen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "크레딧은 음성 합성과 AI 응답에 쓰여요. 친구를 초대하면 더 받을 수 있어요."
+          }
+        }
+      }
     },
     "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Credits treiben Sprachsynthese und KI-Antworten an. Wörter, Übungen und Dialoge wiederholen bleibt immer kostenlos."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "크레딧은 음성 합성과 AI 응답에 쓰여요. 단어·드릴·대화 복습은 언제나 무료예요."
+          }
+        }
+      }
     },
     "Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more." : {
       "localizations" : {
@@ -1561,11 +2225,20 @@
       }
     },
     "Day" : {
-
-    },
-    "day streak" : {
-      "comment" : "A label that says \"day streak\".",
-      "isCommentAutoGenerated" : true
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일"
+          }
+        }
+      }
     },
     "Debug builds only. Routes back through the first-run setup flow." : {
       "localizations" : {
@@ -1631,6 +2304,24 @@
         }
       }
     },
+    "Delete scenario" : {
+      "comment" : "A button label that prompts the user to delete a scenario.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situation löschen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황 삭제"
+          }
+        }
+      }
+    },
     "Delete talk" : {
       "localizations" : {
         "de" : {
@@ -1648,13 +2339,52 @@
       }
     },
     "Delete this scenario?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Situation löschen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 상황을 삭제할까요?"
+          }
+        }
+      }
     },
     "Delete this talk?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gespräch löschen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화를 삭제할까요?"
+          }
+        }
+      }
     },
     "Delete your account?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Konto löschen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계정을 삭제할까요?"
+          }
+        }
+      }
     },
     "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too." : {
       "localizations" : {
@@ -1689,7 +2419,20 @@
       }
     },
     "Dictate" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktieren"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말로 입력"
+          }
+        }
+      }
     },
     "Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level." : {
       "localizations" : {
@@ -1771,6 +2514,24 @@
         }
       }
     },
+    "Done for today" : {
+      "comment" : "A message in the streak card when they've completed a day.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für heute geschafft"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 여기까지"
+          }
+        }
+      }
+    },
     "Drag the card into a folder" : {
       "localizations" : {
         "de" : {
@@ -1820,19 +2581,36 @@
       }
     },
     "Drills appear here after you end a conversation." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Übungen erscheinen hier, sobald du ein Gespräch beendest."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화를 마치면 드릴이 여기 생겨요."
+          }
+        }
+      }
     },
-    "e.g. “%@”" : {
-
-    },
-    "e.g. Boram tells me she's moving back to Seoul" : {
-
-    },
-    "e.g. Solo founder of an AI app for parents" : {
-
-    },
-    "e.g. Wife and 4yo daughter at Kita" : {
-
+    "EN" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "EN"
+          }
+        }
+      }
     },
     "Edit" : {
       "localizations" : {
@@ -1867,7 +2645,36 @@
       }
     },
     "Edit persona" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persona bearbeiten"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "페르소나 편집"
+          }
+        }
+      }
+    },
+    "Edit scenario" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situation bearbeiten"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상황 편집"
+          }
+        }
+      }
     },
     "Effortless and nuanced, close to native." : {
       "localizations" : {
@@ -1884,9 +2691,6 @@
           }
         }
       }
-    },
-    "EN" : {
-
     },
     "End" : {
       "localizations" : {
@@ -1921,7 +2725,20 @@
       }
     },
     "Enter invite code" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladungscode eingeben"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대 코드 입력"
+          }
+        }
+      }
     },
     "Estimated from %lld distinct words you've used in the last %lld days, each graded by CEFR level — your current speaking vocabulary, not everything ever." : {
       "localizations" : {
@@ -2090,10 +2907,36 @@
       }
     },
     "Explain in my language" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In meiner Sprache erklären"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 언어로 설명"
+          }
+        }
+      }
     },
     "Explains what this level changes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erklärt, was dieses Niveau ändert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 레벨이 무엇을 바꾸는지 설명합니다"
+          }
+        }
+      }
     },
     "Explanations and translations come in this language." : {
       "localizations" : {
@@ -2224,7 +3067,20 @@
       }
     },
     "Filter" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "필터"
+          }
+        }
+      }
     },
     "Finding scenarios from your life…" : {
       "localizations" : {
@@ -2355,7 +3211,20 @@
       }
     },
     "Free notes — quirks, recent events, anything that helps" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freie Notizen — Eigenheiten, aktuelle Ereignisse, alles, was hilft"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유 메모 — 습관, 최근 일, 도움이 될 것 무엇이든"
+          }
+        }
+      }
     },
     "Friends joined" : {
       "localizations" : {
@@ -2405,30 +3274,37 @@
         }
       }
     },
-    "full line" : {
+    "Future Self" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ganzer Satz"
+            "value" : "Fließendes Ich"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "전체 문장"
+            "value" : "미래의 나"
           }
         }
       }
     },
     "Future self" : {
-
-    },
-    "Future Self" : {
-
-    },
-    "Future self · %lld" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fließendes Ich"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미래의 나"
+          }
+        }
+      }
     },
     "Future self is the pixel surface behind every call button — tap a theme to feel it." : {
       "localizations" : {
@@ -2478,8 +3354,37 @@
         }
       }
     },
+    "Future self · %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fließendes Ich · %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미래의 나 · %lld"
+          }
+        }
+      }
+    },
     "Generate scenarios for %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Situationen für %@ erstellen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 상황 만들기"
+          }
+        }
+      }
     },
     "Get started" : {
       "localizations" : {
@@ -2581,7 +3486,20 @@
       }
     },
     "Good. %llds more for the cleanest clone" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gut. Noch %lld s für den saubersten Klon"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좋아요. %lld초만 더 하면 가장 깨끗한 클론이 돼요"
+          }
+        }
+      }
     },
     "Got it — moves up the ladder" : {
       "localizations" : {
@@ -2776,7 +3694,20 @@
       }
     },
     "Hear yourself" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hör dich selbst"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리 듣기"
+          }
+        }
+      }
     },
     "Hello" : {
       "extractionState" : "stale",
@@ -2812,13 +3743,52 @@
       }
     },
     "Hide" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausblenden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "숨기기"
+          }
+        }
+      }
     },
     "Hide meaning" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedeutung ausblenden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뜻 숨기기"
+          }
+        }
+      }
     },
     "Hide words I know" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekannte Wörter ausblenden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아는 단어 숨기기"
+          }
+        }
+      }
     },
     "Highlighted words are worth picking up — tap one to check it out." : {
       "localizations" : {
@@ -2853,7 +3823,20 @@
       }
     },
     "Honestly, it went really well. I felt prepared." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ehrlich gesagt lief es richtig gut. Ich fühlte mich vorbereitet."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "솔직히 정말 잘 됐어요. 준비돼 있다는 느낌이었어요."
+          }
+        }
+      }
     },
     "How comfortable are you right now?" : {
       "localizations" : {
@@ -2888,10 +3871,36 @@
       }
     },
     "How long have you been there? (optional)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie lange bist du schon dort? (optional)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "거기 얼마나 있었나요? (선택)"
+          }
+        }
+      }
     },
     "How long? (optional)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie lange? (optional)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "얼마나 됐나요? (선택)"
+          }
+        }
+      }
     },
     "How they talk" : {
       "localizations" : {
@@ -2973,22 +3982,6 @@
         }
       }
     },
-    "How was your first conversation?" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wie war dein erstes Gespräch?"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "첫 대화는 어땠나요?"
-          }
-        }
-      }
-    },
     "How was your first Watch?" : {
       "localizations" : {
         "de" : {
@@ -3005,8 +3998,37 @@
         }
       }
     },
+    "How was your first conversation?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie war dein erstes Gespräch?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 대화는 어땠나요?"
+          }
+        }
+      }
+    },
     "How you met (and how long)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie ihr euch kennengelernt habt (und seit wann)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어떻게 만났는지 (그리고 얼마나 됐는지)"
+          }
+        }
+      }
     },
     "How your future self talks" : {
       "localizations" : {
@@ -3057,7 +4079,20 @@
       }
     },
     "In your own words (optional) — e.g. switches to English when excited" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In eigenen Worten (optional) — z. B. wechselt ins Englische, wenn aufgeregt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유롭게 (선택) — 예: 신나면 영어로 바꿔 말함"
+          }
+        }
+      }
     },
     "Independent — I discuss most things with some ease" : {
       "localizations" : {
@@ -3108,7 +4143,38 @@
       }
     },
     "Invite code" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladungscode"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대 코드"
+          }
+        }
+      }
+    },
+    "Its book in Practice goes with it — study items and mastery included." : {
+      "comment" : "Message in a confirmation dialog when deleting a scenario.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das zugehörige Buch unter Üben geht mit — samt Lernstoff und Fortschritt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 탭의 책도 함께 삭제돼요 — 학습 항목과 진행도까지요."
+          }
+        }
+      }
     },
     "Just starting — a few words and set phrases" : {
       "localizations" : {
@@ -3127,7 +4193,20 @@
       }
     },
     "Keep going — %llds more for a usable clone" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter so — noch %lld s für einen brauchbaren Klon"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "계속하세요 — %lld초만 더 하면 쓸 수 있는 클론이 돼요"
+          }
+        }
+      }
     },
     "Keep my current voice" : {
       "localizations" : {
@@ -3146,7 +4225,20 @@
       }
     },
     "Keep studying this word" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Wort weiterlernen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 단어 계속 학습"
+          }
+        }
+      }
     },
     "Keep this voice" : {
       "localizations" : {
@@ -3165,10 +4257,36 @@
       }
     },
     "Kind" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Art"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "종류"
+          }
+        }
+      }
     },
     "Language" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprache"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언어"
+          }
+        }
+      }
     },
     "Languages" : {
       "localizations" : {
@@ -3187,7 +4305,20 @@
       }
     },
     "Last talk" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letztes Gespräch"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마지막 대화"
+          }
+        }
+      }
     },
     "Later" : {
       "localizations" : {
@@ -3233,22 +4364,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "학습 중"
-          }
-        }
-      }
-    },
-    "less" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "weniger"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "접기"
           }
         }
       }
@@ -3309,10 +4424,52 @@
       }
     },
     "Level" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨"
+          }
+        }
+      }
     },
     "Level %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveau %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨 %@"
+          }
+        }
+      }
+    },
+    "Level up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Level-Aufstieg"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "레벨 업"
+          }
+        }
+      }
     },
     "Likely situations" : {
       "localizations" : {
@@ -3347,7 +4504,36 @@
       }
     },
     "Listen to your recording" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme anhören"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음 듣기"
+          }
+        }
+      }
+    },
+    "Listening · pause to send · tap to stop" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Höre zu · Pause zum Senden · tippen zum Beenden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "듣는 중 · 잠깐 멈추면 전송 · 누르면 종료"
+          }
+        }
+      }
     },
     "Listening — tap to finish" : {
       "localizations" : {
@@ -3377,22 +4563,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "듣는 중 — 누르면 통화 종료"
-          }
-        }
-      }
-    },
-    "Listening · pause to send · tap to stop" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Höre zu · Pause zum Senden · tippen zum Beenden"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "듣는 중 · 잠깐 멈추면 전송 · 누르면 종료"
           }
         }
       }
@@ -3429,16 +4599,6 @@
         }
       }
     },
-    "loop %@–%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "loop %1$@–%2$@"
-          }
-        }
-      }
-    },
     "Make your own situation" : {
       "localizations" : {
         "de" : {
@@ -3456,7 +4616,20 @@
       }
     },
     "Mark as known" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als bekannt markieren"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아는 것으로 표시"
+          }
+        }
+      }
     },
     "Mark as mastered" : {
       "localizations" : {
@@ -3491,7 +4664,20 @@
       }
     },
     "Marked as known" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Als bekannt markiert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아는 것으로 표시됨"
+          }
+        }
+      }
     },
     "Master every word and line in a book — from a talk or a scene — and it lands here for good." : {
       "localizations" : {
@@ -3509,20 +4695,69 @@
         }
       }
     },
-    "mastered" : {
-
-    },
     "Mastered" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemeistert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "완료"
+          }
+        }
+      }
     },
     "Me" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나"
+          }
+        }
+      }
     },
     "Meaning" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bedeutung"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뜻"
+          }
+        }
+      }
     },
     "Microphone access needed" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mikrofonzugriff erforderlich"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "마이크 접근 권한이 필요해요"
+          }
+        }
+      }
     },
     "Minutes" : {
       "localizations" : {
@@ -3588,22 +4823,6 @@
         }
       }
     },
-    "more" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "mehr"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "더 보기"
-          }
-        }
-      }
-    },
     "More" : {
       "localizations" : {
         "de" : {
@@ -3653,7 +4872,20 @@
       }
     },
     "More precisely? — e.g. College roommate" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genauer? — z. B. Mitbewohner aus dem Studium"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좀 더 구체적으로? — 예: 대학 룸메이트"
+          }
+        }
+      }
     },
     "Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions." : {
       "localizations" : {
@@ -3672,13 +4904,52 @@
       }
     },
     "My expressions · %lld" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Wendungen · %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 표현 · %lld"
+          }
+        }
+      }
     },
     "My words · %lld" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meine Wörter · %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 단어 · %lld"
+          }
+        }
+      }
     },
     "Name" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이름"
+          }
+        }
+      }
     },
     "Names your clone here and on ElevenLabs. Leave it empty to go back to the default." : {
       "localizations" : {
@@ -3697,20 +4968,17 @@
       }
     },
     "Narrow it down" : {
-
-    },
-    "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "nawana braucht Mikrofon und Spracherkennung, um dich zu hören. Aktiviere beides unter Einstellungen → nawana."
+            "value" : "Weiter eingrenzen"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "말하는 걸 들으려면 마이크와 음성 인식 권한이 필요해요. 설정 → nawana에서 켜 주세요."
+            "value" : "좁혀 보기"
           }
         }
       }
@@ -3764,7 +5032,20 @@
       }
     },
     "New persona" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neue Persona"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 페르소나"
+          }
+        }
+      }
     },
     "New scenario" : {
       "localizations" : {
@@ -3799,7 +5080,20 @@
       }
     },
     "News" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "News"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뉴스"
+          }
+        }
+      }
     },
     "Next" : {
       "localizations" : {
@@ -3834,14 +5128,39 @@
       }
     },
     "Next assessment after %lld more min of new talk." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nächste Einstufung nach %lld weiteren Min. neuem Gespräch."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 대화 %lld분을 더 하면 다음 평가가 실행돼요."
+          }
+        }
+      }
     },
     "Next assessment in %lld day%@." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nächste Einstufung in %1$lld Tag(en)."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Next assessment in %1$lld day%2$@."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 평가까지 %1$lld일."
           }
         }
       }
@@ -3869,7 +5188,20 @@
       }
     },
     "Nice work" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gut gemacht"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "수고했어요"
+          }
+        }
+      }
     },
     "No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?" : {
       "localizations" : {
@@ -3904,7 +5236,20 @@
       }
     },
     "No drills due" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keine Übungen fällig"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복습할 드릴 없음"
+          }
+        }
+      }
     },
     "No practice this day." : {
       "localizations" : {
@@ -3971,10 +5316,36 @@
       }
     },
     "No session cards yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Karten aus Sitzungen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 세션 카드가 없어요"
+          }
+        }
+      }
     },
     "No sessions yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Sitzungen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 세션이 없어요"
+          }
+        }
+      }
     },
     "No streak yet" : {
       "localizations" : {
@@ -4024,9 +5395,6 @@
           }
         }
       }
-    },
-    "no timings" : {
-
     },
     "Not happy with a take? You can re-record." : {
       "localizations" : {
@@ -4109,10 +5477,36 @@
       }
     },
     "Nothing in progress" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts in Arbeit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진행 중인 게 없어요"
+          }
+        }
+      }
     },
     "Nothing to shadow yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch nichts zum Nachsprechen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 섀도잉할 게 없어요"
+          }
+        }
+      }
     },
     "Nutrition" : {
       "localizations" : {
@@ -4243,7 +5637,20 @@
       }
     },
     "Opens the full card" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die ganze Karte"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 카드를 엽니다"
+          }
+        }
+      }
     },
     "Optional — pick a chip to go deeper, or hit Watch with what you have." : {
       "extractionState" : "stale",
@@ -4263,7 +5670,20 @@
       }
     },
     "Optional — what's the situation about?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional — worum geht es in der Situation?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택 — 어떤 상황인가요?"
+          }
+        }
+      }
     },
     "Or a generic role:" : {
       "localizations" : {
@@ -4298,10 +5718,36 @@
       }
     },
     "Or describe where (custom)…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder beschreibe wo (frei)…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "또는 장소를 직접 설명…"
+          }
+        }
+      }
     },
     "Or describe who (custom)…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oder beschreibe wen (frei)…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "또는 상대를 직접 설명…"
+          }
+        }
+      }
     },
     "Overall" : {
       "localizations" : {
@@ -4352,7 +5798,20 @@
       }
     },
     "Pause" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일시정지"
+          }
+        }
+      }
     },
     "People" : {
       "localizations" : {
@@ -4369,9 +5828,6 @@
           }
         }
       }
-    },
-    "phrases" : {
-
     },
     "Pick a category" : {
       "localizations" : {
@@ -4406,10 +5862,36 @@
       }
     },
     "Pick a voice, or one of your people to have them play the scene as themselves." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle eine Stimme — oder eine deiner Personen, damit sie die Szene als sie selbst spielt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 고르거나, 내 사람 중 한 명을 골라 본인 역할로 연기하게 하세요."
+          }
+        }
+      }
     },
     "Pick an area to go one step deeper — or type your own above." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wähle einen Bereich, um einen Schritt tiefer zu gehen — oder tippe oben deinen eigenen ein."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 단계 더 들어갈 영역을 고르세요 — 위에 직접 입력해도 돼요."
+          }
+        }
+      }
     },
     "Pick your pace" : {
       "localizations" : {
@@ -4460,10 +5942,36 @@
       }
     },
     "Play what you said" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abspielen, was du gesagt hast"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 말한 것 재생"
+          }
+        }
+      }
     },
     "Play your recording" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme abspielen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음 재생"
+          }
+        }
+      }
     },
     "Plenty for a great clone — stop whenever you're ready" : {
       "localizations" : {
@@ -4498,16 +6006,68 @@
       }
     },
     "Practice language: %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lernsprache: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습 언어: %@"
+          }
+        }
+      }
     },
     "Practice these %lld cards" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese %lld Karten üben"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 카드 %lld장 연습하기"
+          }
+        }
+      }
     },
     "Practice this card" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Karte üben"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 카드 연습하기"
+          }
+        }
+      }
     },
     "Preview %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ probehören"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 미리 듣기"
+          }
+        }
+      }
     },
     "Previous selection" : {
       "localizations" : {
@@ -4606,10 +6166,36 @@
       }
     },
     "Purchase failed" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kauf fehlgeschlagen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매에 실패했어요"
+          }
+        }
+      }
     },
     "Quirks, preferences, anything that helps me sound like you" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eigenheiten, Vorlieben — alles, was mich wie dich klingen lässt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말버릇, 취향 — 내가 더 나답게 들리게 하는 것들"
+          }
+        }
+      }
     },
     "Rather just fill in a form?" : {
       "localizations" : {
@@ -4676,13 +6262,52 @@
       }
     },
     "Re-record your voice?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stimme neu aufnehmen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 다시 녹음할까요?"
+          }
+        }
+      }
     },
     "Read in" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lesen auf"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽기 언어"
+          }
+        }
+      }
     },
     "Read it naturally. Mistakes are fine — just keep going." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies es natürlich. Fehler sind okay — einfach weiterlesen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자연스럽게 읽으세요. 틀려도 괜찮아요 — 계속 이어가면 돼요."
+          }
+        }
+      }
     },
     "Read the full report" : {
       "localizations" : {
@@ -4701,7 +6326,20 @@
       }
     },
     "Read whichever one feels natural — we're capturing your voice, not your reading." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lies, was sich natürlich anfühlt — wir erfassen deine Stimme, nicht dein Vorlesen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "편하게 느껴지는 걸 읽으세요 — 낭독 실력이 아니라 목소리를 담는 거예요."
+          }
+        }
+      }
     },
     "Ready — assessing your level now…" : {
       "localizations" : {
@@ -4768,7 +6406,20 @@
       }
     },
     "Record your voice again?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Stimme noch einmal aufnehmen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리를 다시 녹음할까요?"
+          }
+        }
+      }
     },
     "Redeem" : {
       "localizations" : {
@@ -4819,7 +6470,20 @@
       }
     },
     "Relationship (e.g. Best friend, Kita parent, Manager)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beziehung (z. B. bester Freund, Kita-Elternteil, Chef)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "관계 (예: 절친, 어린이집 학부모, 상사)"
+          }
+        }
+      }
     },
     "Remember this when" : {
       "localizations" : {
@@ -4838,10 +6502,36 @@
       }
     },
     "Remove from saved lines" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus gespeicherten Sätzen entfernen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장한 문장에서 삭제"
+          }
+        }
+      }
     },
     "Renamed on this device only" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur auf diesem Gerät umbenannt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 기기에서만 이름이 바뀌어요"
+          }
+        }
+      }
     },
     "Repeat your fluent self's lines from this talk." : {
       "localizations" : {
@@ -4892,7 +6582,20 @@
       }
     },
     "Replay onboarding?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einführung noch einmal abspielen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "온보딩을 다시 볼까요?"
+          }
+        }
+      }
     },
     "Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation." : {
       "localizations" : {
@@ -4927,7 +6630,20 @@
       }
     },
     "Reps" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wdh."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "반복"
+          }
+        }
+      }
     },
     "Required. Everything below is optional but the more you fill in, the more the simulated dialogues feel like the real person." : {
       "localizations" : {
@@ -5026,20 +6742,58 @@
       }
     },
     "Review %lld cards" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Karten wiederholen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드 %lld장 복습"
+          }
+        }
+      }
     },
     "Review %lld grammar %@ from this talk" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Grammatikpunkte aus diesem Gespräch wiederholen"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Review %1$lld grammar %2$@ from this talk"
           }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화의 문법 포인트 %1$lld개 복습"
+          }
         }
       }
     },
     "Review 1 card" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Karte wiederholen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드 1장 복습"
+          }
+        }
+      }
     },
     "Reviewing your saved words, drills, and dialogues stays free during the beta." : {
       "localizations" : {
@@ -5122,7 +6876,20 @@
       }
     },
     "Save %lld%% vs monthly" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld %% ggü. monatlich sparen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "월간 대비 %lld%% 절약"
+          }
+        }
+      }
     },
     "Save conversation" : {
       "localizations" : {
@@ -5141,7 +6908,20 @@
       }
     },
     "Save line" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satz speichern"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문장 저장"
+          }
+        }
+      }
     },
     "Save phrase" : {
       "localizations" : {
@@ -5304,7 +7084,20 @@
       }
     },
     "Scorecard" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scorecard"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스코어카드"
+          }
+        }
+      }
     },
     "Scored against your %@ level setting — how this talk went, not a level rating." : {
       "localizations" : {
@@ -5362,10 +7155,22 @@
     },
     "Selected: %@ / %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ausgewählt: %1$@ / %2$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Selected: %1$@ / %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택: %1$@ / %2$@"
           }
         }
       }
@@ -5403,7 +7208,20 @@
       }
     },
     "Setting the scene…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Szene wird vorbereitet…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "장면을 준비하는 중…"
+          }
+        }
+      }
     },
     "Settings" : {
       "localizations" : {
@@ -5437,14 +7255,21 @@
         }
       }
     },
-    "shadow %lld" : {
-
-    },
-    "shadow +%lld" : {
-
-    },
     "Shadow avg %lld this week" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachsprechen Ø %lld diese Woche"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 주 섀도잉 평균 %lld"
+          }
+        }
+      }
     },
     "Shadow this" : {
       "localizations" : {
@@ -5543,7 +7368,20 @@
       }
     },
     "Shared context, memories, inside jokes" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemeinsamer Kontext, Erinnerungen, Insiderwitze"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "함께 아는 맥락, 추억, 우리끼리 농담"
+          }
+        }
+      }
     },
     "Sharpen it" : {
       "extractionState" : "stale",
@@ -5595,7 +7433,20 @@
       }
     },
     "Sign out?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abmelden?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그아웃할까요?"
+          }
+        }
+      }
     },
     "Simple words and phrases about immediate, familiar things." : {
       "localizations" : {
@@ -5662,7 +7513,20 @@
       }
     },
     "Something went wrong" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Etwas ist schiefgelaufen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제가 생겼어요"
+          }
+        }
+      }
     },
     "Sorting it out…" : {
       "localizations" : {
@@ -5681,13 +7545,52 @@
       }
     },
     "Source" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quelle"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "출처"
+          }
+        }
+      }
     },
     "Specific enough — %@ it, or tap a breadcrumb to explore more." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konkret genug — %@ starten oder auf einen Pfadpunkt tippen, um weiterzustöbern."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "충분히 구체적이에요 — %@ 하거나, 위 경로를 눌러 더 탐색하세요."
+          }
+        }
+      }
     },
     "Speed" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tempo"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "속도"
+          }
+        }
+      }
     },
     "Start" : {
       "localizations" : {
@@ -5769,11 +7672,53 @@
         }
       }
     },
+    "Start your streak" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte deine Serie"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연속 기록을 시작하세요"
+          }
+        }
+      }
+    },
     "Starting level" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Startniveau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시작 레벨"
+          }
+        }
+      }
     },
     "Starting your conversation…" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Gespräch startet…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화를 시작하는 중…"
+          }
+        }
+      }
     },
     "Stay" : {
       "localizations" : {
@@ -5792,7 +7737,20 @@
       }
     },
     "Stop" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopp"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정지"
+          }
+        }
+      }
     },
     "Stop & review" : {
       "localizations" : {
@@ -5811,19 +7769,84 @@
       }
     },
     "Stop dictation" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diktat beenden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말로 입력 중지"
+          }
+        }
+      }
     },
     "Stop playback" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wiedergabe stoppen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "재생 중지"
+          }
+        }
+      }
     },
     "Stop preview" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Probehören stoppen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미리 듣기 중지"
+          }
+        }
+      }
     },
     "Stop your recording" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufnahme stoppen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음 중지"
+          }
+        }
+      }
     },
     "Studied %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelernt: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 학습함"
+          }
+        }
+      }
     },
     "Studied, then said" : {
       "localizations" : {
@@ -5858,13 +7881,52 @@
       }
     },
     "Studying" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gelernt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학습 중"
+          }
+        }
+      }
     },
     "Studying this word" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Wort wird gelernt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 단어 학습 중"
+          }
+        }
+      }
     },
     "Style (e.g. Direct, loves jokes / Formal, careful)" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stil (z. B. direkt, witzig / förmlich, bedacht)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스타일 (예: 직설적, 농담 좋아함 / 격식 있음, 신중함)"
+          }
+        }
+      }
     },
     "Suggested for you" : {
       "localizations" : {
@@ -6010,18 +8072,68 @@
         }
       }
     },
-    "Tap ▶ to hear a sample in %@." : {
+    "Tap End session after a conversation and it'll show up here." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe auf ▶ für eine Hörprobe auf %@."
+            "value" : "Tippe nach einem Gespräch auf End session, dann erscheint es hier."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "▶를 누르면 %@ 샘플을 들을 수 있어요."
+            "value" : "대화 후 End session을 누르면 여기에 나타나요."
+          }
+        }
+      }
+    },
+    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, wird in Practice zum Wiederholungsstoff."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아래의 Let's talk — 또는 상황이나 뉴스 — 를 눌러 첫 대화를 시작하세요. 여기서 만난 건 전부 Practice에 복습거리로 쌓입니다."
+          }
+        }
+      }
+    },
+    "Tap Refresh to generate scenarios." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf Refresh, um Situationen zu erzeugen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Refresh를 누르면 상황을 만들어 드려요."
+          }
+        }
+      }
+    },
+    "Tap a card to review or tweak it, then watch — every watch writes a fresh take. Past takes live in Practice." : {
+      "comment" : "Text below the grid of saved scenarios, explaining how users can use the feature.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf eine Karte, um sie zu prüfen oder anzupassen, dann schau zu — jedes Watch schreibt eine neue Fassung. Frühere Fassungen liegen unter Üben."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드를 눌러 확인하거나 다듬은 뒤 Watch 하세요 — 볼 때마다 새 버전이 만들어져요. 지난 버전은 연습 탭에 있어요."
           }
         }
       }
@@ -6074,53 +8186,18 @@
         }
       }
     },
-    "Tap End session after a conversation and it'll show up here." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tippe nach einem Gespräch auf End session, dann erscheint es hier."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화 후 End session을 누르면 여기에 나타나요."
-          }
-        }
-      }
-    },
-    "Tap Let's talk — or a scenario or story below — to have your first conversation. Everything you meet becomes review material in Practice." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tippe auf Let's talk — oder unten auf eine Situation oder einen Artikel — für dein erstes Gespräch. Alles, was dir dabei begegnet, wird in Practice zum Wiederholungsstoff."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "아래의 Let's talk — 또는 상황이나 뉴스 — 를 눌러 첫 대화를 시작하세요. 여기서 만난 건 전부 Practice에 복습거리로 쌓입니다."
-          }
-        }
-      }
-    },
     "Tap one to fill your scenario above, then edit it freely." : {
-
-    },
-    "Tap Refresh to generate scenarios." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tippe auf Refresh, um Situationen zu erzeugen."
+            "value" : "Tippe auf eine, um deine Situation oben zu füllen — dann frei bearbeiten."
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Refresh를 누르면 상황을 만들어 드려요."
+            "value" : "하나를 누르면 위 상황이 채워져요. 자유롭게 고치세요."
           }
         }
       }
@@ -6158,7 +8235,20 @@
       }
     },
     "Tap to talk" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Sprechen tippen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "눌러서 말하기"
+          }
+        }
+      }
     },
     "Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”." : {
       "localizations" : {
@@ -6188,6 +8278,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "눌러서 켜고 끌 수 있어요. 직접 입력하고 엔터를 눌러도 됩니다."
+          }
+        }
+      }
+    },
+    "Tap ▶ to hear a sample in %@." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe auf ▶ für eine Hörprobe auf %@."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "▶를 누르면 %@ 샘플을 들을 수 있어요."
           }
         }
       }
@@ -6241,7 +8347,20 @@
       }
     },
     "Thank you" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Danke"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "고마워요"
+          }
+        }
+      }
     },
     "Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free." : {
       "localizations" : {
@@ -6292,7 +8411,20 @@
       }
     },
     "The avatar will play this role. You practice your side." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Avatar spielt diese Rolle. Du übst deine Seite."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아바타가 이 역할을 연기해요. 나는 내 쪽을 연습해요."
+          }
+        }
+      }
     },
     "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead." : {
       "localizations" : {
@@ -6327,7 +8459,20 @@
       }
     },
     "The estimated level" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das geschätzte Niveau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "추정 레벨"
+          }
+        }
+      }
     },
     "The fluent versions of your own sentences from this talk. Shadow one in your voice — score %lld+ and it's mastered." : {
       "localizations" : {
@@ -6411,6 +8556,7 @@
       }
     },
     "The situations you've built — every watch writes a fresh take. Past takes live in Practice." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6427,10 +8573,36 @@
       }
     },
     "Their name — as you call them" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ihr Name — so, wie du sie nennst"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대 이름 — 내가 부르는 대로"
+          }
+        }
+      }
     },
     "Theme" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Design"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "테마"
+          }
+        }
+      }
     },
     "These 300 credits are your full beta quota. When they run out, reviewing saved words, drills, and past dialogues stays free. After launch you'll pick Pro or Premium — until then, just practice." : {
       "localizations" : {
@@ -6447,12 +8619,6 @@
           }
         }
       }
-    },
-    "thing you studied has come out of your mouth in a real conversation" : {
-
-    },
-    "things you studied have come out of your mouth in a real conversation" : {
-
     },
     "Thinking of situations with them…" : {
       "extractionState" : "stale",
@@ -6472,7 +8638,20 @@
       }
     },
     "This conversation isn't saved yet" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Gespräch ist noch nicht gespeichert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 대화는 아직 저장되지 않았어요"
+          }
+        }
+      }
     },
     "This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions." : {
       "localizations" : {
@@ -6491,7 +8670,20 @@
       }
     },
     "This person has been deleted" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Person wurde gelöscht"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "삭제된 사람이에요"
+          }
+        }
+      }
     },
     "This signs you out. Your answers stay on this device." : {
       "localizations" : {
@@ -6526,7 +8718,20 @@
       }
     },
     "To reach %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bis %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@까지 가려면"
+          }
+        }
+      }
     },
     "Transcript" : {
       "localizations" : {
@@ -6593,7 +8798,20 @@
       }
     },
     "Type a topic" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thema eingeben"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주제 입력"
+          }
+        }
+      }
     },
     "Unarchive" : {
       "localizations" : {
@@ -6612,10 +8830,36 @@
       }
     },
     "Unlimited credits" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unbegrenzte Credits"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무제한 크레딧"
+          }
+        }
+      }
     },
     "Unsave" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nicht mehr speichern"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장 취소"
+          }
+        }
+      }
     },
     "Use this topic" : {
       "localizations" : {
@@ -6651,10 +8895,22 @@
     },
     "Used %lld time%@ · %@" : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld-mal verwendet · %3$@"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "Used %1$lld time%2$@ · %3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld번 사용 · %3$@"
           }
         }
       }
@@ -6676,7 +8932,20 @@
       }
     },
     "View" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ansehen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보기"
+          }
+        }
+      }
     },
     "Vocabulary growth" : {
       "localizations" : {
@@ -6710,22 +8979,6 @@
         }
       }
     },
-    "vocabulary level" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wortschatzniveau"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "어휘 레벨"
-          }
-        }
-      }
-    },
     "Voice" : {
       "localizations" : {
         "de" : {
@@ -6743,10 +8996,20 @@
       }
     },
     "Voice name" : {
-
-    },
-    "voiced by %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Name der Stimme"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리 이름"
+          }
+        }
+      }
     },
     "Watch" : {
       "localizations" : {
@@ -6893,22 +9156,6 @@
         }
       }
     },
-    "What each day was made of — talk turns, shadow takes, drill reviews." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Woraus jeder Tag bestand — Gesprächsbeiträge, Nachsprech-Aufnahmen, Übungswiederholungen."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."
-          }
-        }
-      }
-    },
     "What I heard" : {
       "localizations" : {
         "de" : {
@@ -6941,6 +9188,22 @@
         }
       }
     },
+    "What each day was made of — talk turns, shadow takes, drill reviews." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Woraus jeder Tag bestand — Gesprächsbeiträge, Nachsprech-Aufnahmen, Übungswiederholungen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그날 무엇으로 채웠는지 — 대화 턴, 섀도잉, 드릴 복습."
+          }
+        }
+      }
+    },
     "What never moves the level" : {
       "localizations" : {
         "de" : {
@@ -6958,7 +9221,20 @@
       }
     },
     "What should I call you?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie soll ich dich nennen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뭐라고 부르면 될까요?"
+          }
+        }
+      }
     },
     "What to practice" : {
       "localizations" : {
@@ -7009,7 +9285,20 @@
       }
     },
     "What you usually talk about" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Worüber ihr meistens redet"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주로 나누는 이야기"
+          }
+        }
+      }
     },
     "What's measured" : {
       "localizations" : {
@@ -7028,7 +9317,20 @@
       }
     },
     "What's on your mind\nthis evening?" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was beschäftigt dich\nheute Abend?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 저녁,\n무슨 생각해요?"
+          }
+        }
+      }
     },
     "What's on your mind this afternoon?" : {
       "localizations" : {
@@ -7159,7 +9461,20 @@
       }
     },
     "Where they live, what they do" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wo sie leben, was sie machen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사는 곳, 하는 일"
+          }
+        }
+      }
     },
     "Where you live" : {
       "localizations" : {
@@ -7258,10 +9573,20 @@
       }
     },
     "Why this level" : {
-
-    },
-    "with %@" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warum dieses Niveau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "왜 이 레벨인가"
+          }
+        }
+      }
     },
     "Word starts, speed-matched — orange landed off the target's beat." : {
       "localizations" : {
@@ -7279,11 +9604,21 @@
         }
       }
     },
-    "words" : {
-
-    },
     "Words" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어"
+          }
+        }
+      }
     },
     "Words you use, by level" : {
       "localizations" : {
@@ -7381,9 +9716,6 @@
         }
       }
     },
-    "You · %lld" : {
-
-    },
     "You and your friend each get 300 credits when they join with your code — for up to 10 friends." : {
       "localizations" : {
         "de" : {
@@ -7402,10 +9734,22 @@
     },
     "You finished %lld card%@. They'll surface again on the Leitner schedule." : {
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld Karte(n) geschafft. Sie tauchen nach dem Leitner-Plan wieder auf."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "You finished %1$lld card%2$@. They'll surface again on the Leitner schedule."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "카드 %1$lld장을 끝냈어요. 라이트너 일정에 따라 다시 나타나요."
           }
         }
       }
@@ -7458,18 +9802,18 @@
         }
       }
     },
-    "You, but fluent" : {
+    "You · %lld" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du, nur fließend"
+            "value" : "Du · %lld"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "유창해진 나"
+            "value" : "나 · %lld"
           }
         }
       }
@@ -7539,7 +9883,20 @@
       }
     },
     "You're in" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du bist drin"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "등록됐어요"
+          }
+        }
+      }
     },
     "You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step." : {
       "localizations" : {
@@ -7589,21 +9946,34 @@
         }
       }
     },
-    "Your %@" : {
-
-    },
-    "Your answers go straight to the team building nawana." : {
+    "You, but fluent" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deine Antworten gehen direkt an das Team hinter nawana."
+            "value" : "Du, nur fließend"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "남기신 답변은 nawana를 만드는 팀에게 바로 전달돼요."
+            "value" : "유창해진 나"
+          }
+        }
+      }
+    },
+    "Your %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 %@"
           }
         }
       }
@@ -7620,6 +9990,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CEFR 레벨이 대화의 난이도를 정하고, 하루 목표가 홈 화면의 링을 채웁니다."
+          }
+        }
+      }
+    },
+    "Your answers go straight to the team building nawana." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Antworten gehen direkt an das Team hinter nawana."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남기신 답변은 nawana를 만드는 팀에게 바로 전달돼요."
           }
         }
       }
@@ -7999,7 +10385,20 @@
       }
     },
     "Your name" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Name"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 이름"
+          }
+        }
+      }
     },
     "Your own" : {
       "localizations" : {
@@ -8034,7 +10433,20 @@
       }
     },
     "Your persona plays this scene in their own voice." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Persona spielt diese Szene mit ihrer eigenen Stimme."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 페르소나가 자기 목소리로 이 장면을 연기해요."
+          }
+        }
+      }
     },
     "Your practice data stays on this device. Your voice clone and credits stay with your account." : {
       "localizations" : {
@@ -8048,6 +10460,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "학습 데이터는 이 기기에 남고, 음성 클론과 크레딧은 계정에 남아요."
+          }
+        }
+      }
+    },
+    "Your recent conversations measure at a higher level. Scoring and material difficulty now follow it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine letzten Gespräche wurden auf einem höheren Niveau eingestuft. Bewertung und Materialschwierigkeit richten sich jetzt danach."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 대화가 더 높은 레벨로 측정됐어요. 이제 채점과 학습 자료 난이도가 새 레벨을 따라갑니다."
           }
         }
       }
@@ -8116,7 +10544,439 @@
           }
         }
       }
-    }
+    },
+    "book finished" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Buch fertig"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝낸 책"
+          }
+        }
+      }
+    },
+    "books finished" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bücher fertig"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝낸 책"
+          }
+        }
+      }
+    },
+    "day streak" : {
+      "comment" : "A label that says \"day streak\".",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tage-Serie"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일 연속"
+          }
+        }
+      }
+    },
+    "e.g. Boram tells me she's moving back to Seoul" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Boram erzählt mir, dass sie zurück nach Seoul zieht"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 보람이가 서울로 돌아간다고 말한다"
+          }
+        }
+      }
+    },
+    "e.g. Solo founder of an AI app for parents" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Solo-Gründer einer KI-App für Eltern"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 부모용 AI 앱 1인 창업자"
+          }
+        }
+      }
+    },
+    "e.g. Wife and 4yo daughter at Kita" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "z. B. Frau und 4-jährige Tochter in der Kita"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "예: 아내, 어린이집 다니는 4살 딸"
+          }
+        }
+      }
+    },
+    "e.g. “%@”" : {},
+    "full line" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ganzer Satz"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전체 문장"
+          }
+        }
+      }
+    },
+    "left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "übrig"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남음"
+          }
+        }
+      }
+    },
+    "less" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "weniger"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접기"
+          }
+        }
+      }
+    },
+    "loop %@–%@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schleife %1$@–%2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "loop %1$@–%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구간 %1$@–%2$@ 반복"
+          }
+        }
+      }
+    },
+    "mastered" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gemeistert"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "완료"
+          }
+        }
+      }
+    },
+    "more" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mehr"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 보기"
+          }
+        }
+      }
+    },
+    "nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana braucht Mikrofon und Spracherkennung, um dich zu hören. Aktiviere beides unter Einstellungen → nawana."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말하는 걸 들으려면 마이크와 음성 인식 권한이 필요해요. 설정 → nawana에서 켜 주세요."
+          }
+        }
+      }
+    },
+    "no timings" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "keine Zeitdaten"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "타이밍 정보 없음"
+          }
+        }
+      }
+    },
+    "phrases" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wendungen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현"
+          }
+        }
+      }
+    },
+    "shadow %lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachsprechen %lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "섀도잉 %lld"
+          }
+        }
+      }
+    },
+    "shadow +%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nachsprechen +%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "섀도잉 +%lld"
+          }
+        }
+      }
+    },
+    "thing you studied has come out of your mouth in a real conversation" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelerntes ist dir in einem echten Gespräch über die Lippen gekommen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— 익힌 것이 실제 대화에서 입 밖으로 나왔어요"
+          }
+        }
+      }
+    },
+    "things you studied have come out of your mouth in a real conversation" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gelernte sind dir in echten Gesprächen über die Lippen gekommen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "— 익힌 것들이 실제 대화에서 입 밖으로 나왔어요"
+          }
+        }
+      }
+    },
+    "vocabulary level" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wortschatzniveau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어휘 레벨"
+          }
+        }
+      }
+    },
+    "voiced by %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stimme: %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리: %@"
+          }
+        }
+      }
+    },
+    "with %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mit %@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대: %@"
+          }
+        }
+      }
+    },
+    "words" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어"
+          }
+        }
+      }
+    },
+    "·" : {},
+    "×%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "×%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "×%lld"
+          }
+        }
+      }
+    },
+    "—" : {},
+    "“%@”" : {},
+    "•" : {},
+    "…" : {},
+    "→ %@" : {},
+    "≈ %lld min of conversation a day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≈ %lld Min. Gespräch pro Tag"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≈ 하루 대화 %lld분"
+          }
+        }
+      }
+    },
+    "≈ marks a deterministic proxy — a real measurement mapped to a CEFR band by fixed thresholds, not an AI opinion. Each band is a CEILING from one measurement (fast pace or long turns alone don't make a level), so the assessed level normally sits at or below the strongest bands here: the assessment also weighs error density and how far ideas actually get developed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≈ steht für einen deterministischen Näherungswert — eine echte Messung, die über feste Schwellen einem GER-Band zugeordnet wird, kein KI-Urteil. Jedes Band ist eine OBERGRENZE aus einer einzelnen Messung (schnelles Tempo oder lange Beiträge allein ergeben kein Niveau), deshalb liegt das eingestufte Niveau normalerweise auf oder unter den stärksten Bändern hier: Die Einstufung gewichtet außerdem die Fehlerdichte und wie weit Gedanken tatsächlich ausgeführt werden."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "≈는 AI의 판단이 아니라 실제 측정값을 고정된 기준으로 CEFR 구간에 대응시킨 값이에요. 각 구간은 측정 하나에서 나온 상한선이라(빠른 속도나 긴 발화만으로 레벨이 되지는 않습니다), 실제 판정 레벨은 보통 여기 가장 높은 구간과 같거나 그 아래에 놓입니다. 판정에는 오류 밀도와 생각을 얼마나 풀어냈는지도 함께 반영되기 때문이에요."
+          }
+        }
+      }
+    },
+    "😀" : {}
   },
   "version" : "1.1"
 }
