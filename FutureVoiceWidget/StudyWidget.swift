@@ -24,7 +24,8 @@ struct StreakWidget: Widget {
         StaticConfiguration(kind: streakWidgetKind,
                             provider: StreakProvider()) { entry in
             StreakWidgetView(entry: entry)
-                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+                // Grid cells match the mascot's pixels — one coherent display.
+                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme, step: streakPixel) }
         }
         .configurationDisplayName("Streak")
         .description("Keep your daily talking streak alive.")
@@ -37,31 +38,58 @@ struct StreakEntry: TimelineEntry {
     let date: Date
     let streakDays: Int
     let doneToday: Bool
+    let deadline: Date       // next local midnight — the streak's daily wire
     let theme: Int
 }
 
 struct StreakProvider: TimelineProvider {
     func placeholder(in context: Context) -> StreakEntry {
         StreakEntry(date: Date(), streakDays: 12, doneToday: false,
+                    deadline: Date().addingTimeInterval(5 * 3600),
                     theme: StudyWidgetSnapshotStore.themeIndex)
     }
     func getSnapshot(in context: Context, completion: @escaping (StreakEntry) -> Void) {
-        completion(entry(context.isPreview))
-    }
-    func getTimeline(in context: Context, completion: @escaping (Timeline<StreakEntry>) -> Void) {
-        completion(Timeline(entries: [entry(false)], policy: .never))
+        let now = Date()
+        completion(entry(at: now, done: previewDone(context), streak: previewStreak(context),
+                         deadline: Self.nextMidnight(after: now)))
     }
 
-    private func entry(_ preview: Bool) -> StreakEntry {
-        if preview {
-            return StreakEntry(date: Date(), streakDays: 12, doneToday: false,
-                               theme: StudyWidgetSnapshotStore.themeIndex)
-        }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<StreakEntry>) -> Void) {
+        let now = Date()
+        let deadline = Self.nextMidnight(after: now)
         let s = StudyWidgetSnapshotStore.loadProgress()
-        let done = s.todaySeconds >= max(1, s.goalMinutes * 60)
-        return StreakEntry(date: Date(), streakDays: s.streakDays, doneToday: done,
-                           theme: StudyWidgetSnapshotStore.themeIndex)
+        // Only count "today" if the snapshot is actually from today; otherwise a
+        // stale snapshot after midnight would wrongly read as done.
+        let freshToday = Calendar.current.isDate(s.updatedAt, inSameDayAs: now)
+        let done = freshToday && s.todaySeconds >= max(1, s.goalMinutes * 60)
+
+        var entries = [entry(at: now, done: done, streak: s.streakDays, deadline: deadline)]
+        // If the streak's alive but unmet, add an entry 3h before the wire so the
+        // mascot turns anxious on its own without the app writing anything.
+        if !done, s.streakDays > 0 {
+            let anxiousAt = deadline.addingTimeInterval(-3 * 3600)
+            if anxiousAt > now {
+                entries.append(entry(at: anxiousAt, done: false, streak: s.streakDays, deadline: deadline))
+            }
+        }
+        // Re-read after midnight (new day → new deadline, streak may have moved).
+        completion(Timeline(entries: entries, policy: .after(deadline)))
     }
+
+    private func entry(at date: Date, done: Bool, streak: Int, deadline: Date) -> StreakEntry {
+        StreakEntry(date: date, streakDays: streak, doneToday: done,
+                    deadline: deadline, theme: StudyWidgetSnapshotStore.themeIndex)
+    }
+
+    /// Local midnight strictly after `date`.
+    static func nextMidnight(after date: Date) -> Date {
+        let cal = Calendar.current
+        return cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: date))
+            ?? date.addingTimeInterval(6 * 3600)
+    }
+
+    private func previewDone(_ context: Context) -> Bool { false }
+    private func previewStreak(_ context: Context) -> Int { 12 }
 }
 
 struct StreakWidgetView: View {
@@ -72,6 +100,8 @@ struct StreakWidgetView: View {
         StreakCard(theme: entry.theme,
                    streakDays: entry.streakDays,
                    doneToday: entry.doneToday,
+                   renderDate: entry.date,
+                   deadline: entry.deadline,
                    compact: family == .systemSmall)
             .widgetURL(URL(string: "futurevoice://talk"))
     }

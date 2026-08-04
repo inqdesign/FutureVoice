@@ -870,23 +870,30 @@ private struct StreakWidgetGallery: View {
         ScrollView {
             VStack(spacing: 26) {
                 HStack(alignment: .top, spacing: 18) {
-                    tile(theme: 4, size: CGSize(width: 158, height: 158), compact: true, streak: 1284, done: false)
-                    tile(theme: 2, size: CGSize(width: 158, height: 158), compact: true, streak: 7, done: true)
+                    // At the wire (2h left) → anxious.
+                    tile(theme: 4, size: CGSize(width: 158, height: 158), compact: true, streak: 1284, done: false, hoursLeft: 2)
+                    tile(theme: 2, size: CGSize(width: 158, height: 158), compact: true, streak: 7, done: true, hoursLeft: 0)
                 }
-                tile(theme: 0, size: CGSize(width: 338, height: 158), compact: false, streak: 1284, done: false)
-                tile(theme: 3, size: CGSize(width: 338, height: 158), compact: false, streak: 7, done: true)
-                tile(theme: 1, size: CGSize(width: 338, height: 158), compact: false, streak: 0, done: false)
+                // Plenty of day left (8h) → calm, even at 1,284.
+                tile(theme: 0, size: CGSize(width: 338, height: 158), compact: false, streak: 1284, done: false, hoursLeft: 8)
+                // Near the wire (2h) → anxious.
+                tile(theme: 5, size: CGSize(width: 338, height: 158), compact: false, streak: 1284, done: false, hoursLeft: 2)
+                tile(theme: 3, size: CGSize(width: 338, height: 158), compact: false, streak: 7, done: true, hoursLeft: 0)
+                tile(theme: 1, size: CGSize(width: 338, height: 158), compact: false, streak: 0, done: false, hoursLeft: 5)
             }
             .padding(24)
         }
         .background(Color(.systemGroupedBackground))
     }
 
-    private func tile(theme: Int, size: CGSize, compact: Bool, streak: Int, done: Bool) -> some View {
-        StreakCard(theme: theme, streakDays: streak, doneToday: done, compact: compact)
+    private func tile(theme: Int, size: CGSize, compact: Bool, streak: Int, done: Bool, hoursLeft: Double) -> some View {
+        let now = Date()
+        return StreakCard(theme: theme, streakDays: streak, doneToday: done,
+                          renderDate: now, deadline: now.addingTimeInterval(hoursLeft * 3600),
+                          compact: compact)
             .frame(width: size.width, height: size.height)
-            .background(WidgetGrid(theme: theme,
-                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous))))
+            .background(WidgetGrid(theme: theme, shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous)),
+                                   step: streakPixel))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }

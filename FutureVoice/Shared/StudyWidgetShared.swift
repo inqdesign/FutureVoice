@@ -309,19 +309,27 @@ enum WidgetTheme {
     static func frame(_ i: Int) -> Color { c(frameC, i) }
 }
 
+/// The shared pixel unit for the streak widget — the mascot's face pixels AND
+/// the background grid cells both use this, so the whole surface reads as one
+/// coherent pixel display. Sized so the 11×11 face fits both families.
+let streakPixel: CGFloat = 8
+
 struct WidgetGrid: View {
     var theme: Int = 0
     /// Corner shape — matches the home-screen widget's own radius via
     /// `ContainerRelativeShape` inside a widget; a rounded rect elsewhere (the
     /// app's design-review gallery).
     var shape: AnyShape = AnyShape(ContainerRelativeShape())
+    /// Grid cell size. Default graph-paper spacing; the streak widget passes
+    /// `streakPixel` so its grid matches the mascot's pixels.
+    var step: CGFloat = 26
 
     var body: some View {
         let ground = WidgetTheme.ground(theme)
         let vivid = WidgetTheme.vivid(theme)
+        let step = self.step
         Canvas { ctx, size in
             ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(ground))
-            let step: CGFloat = 26
             // Grid lines tinted with the theme's vivid colour, very faint.
             let line = vivid.opacity(0.06)
             var x: CGFloat = 0
@@ -661,18 +669,102 @@ struct BookCard: View {
     }
 }
 
+// MARK: - Pixel face (streak mascot), shared
+
+/// The streak mascot's mood — drives which pixel face renders.
+enum StreakFace { case happy, anxious, neutral }
+
+/// A tiny face drawn on the pixel grid, matching the widgets' Futureself look.
+/// Each row is a string: '#' = accent pixel, 'o' = a marker pixel (sweat drop)
+/// in a second colour, space = empty. Rendered crisply via Canvas so it stays
+/// sharp at any size (and works inside a widget, where shaders can't run).
+struct PixelFace: View {
+    let expression: StreakFace
+    var color: Color
+    var marker: Color = Color(red: 0.55, green: 0.8, blue: 1.0)
+
+    // Same 11×11 features as the reference faces, but with the outline removed —
+    // just dot eyes + a curved smile / flat / frown mouth (sweat bead when anxious).
+    private var rows: [String] {
+        switch expression {
+        case .happy:      // dot eyes + wide smile
+            return ["           ",
+                    "           ",
+                    "           ",
+                    "   #   #   ",
+                    "           ",
+                    "           ",
+                    "  #     #  ",
+                    "   #####   ",
+                    "           ",
+                    "           ",
+                    "           "]
+        case .anxious:    // dot eyes, frown, a sweat bead (o)
+            return ["           ",
+                    "           ",
+                    " o         ",
+                    "   #   #   ",
+                    "           ",
+                    "           ",
+                    "   #####   ",
+                    "  #     #  ",
+                    "           ",
+                    "           ",
+                    "           "]
+        case .neutral:    // dot eyes, flat mouth (resting)
+            return ["           ",
+                    "           ",
+                    "           ",
+                    "   #   #   ",
+                    "           ",
+                    "           ",
+                    "           ",
+                    "   #####   ",
+                    "           ",
+                    "           ",
+                    "           "]
+        }
+    }
+
+    var body: some View {
+        let grid = rows
+        Canvas { ctx, size in
+            let cols = grid.map(\.count).max() ?? 1
+            let rowsN = grid.count
+            let cell = min(size.width / CGFloat(cols), size.height / CGFloat(rowsN))
+            let ox = (size.width - cell * CGFloat(cols)) / 2
+            let oy = (size.height - cell * CGFloat(rowsN)) / 2
+            for (r, line) in grid.enumerated() {
+                for (c, ch) in line.enumerated() where ch != " " {
+                    let rect = CGRect(x: ox + CGFloat(c) * cell, y: oy + CGFloat(r) * cell,
+                                      width: cell * 0.9, height: cell * 0.9)
+                    ctx.fill(Path(rect), with: .color(ch == "o" ? marker : color))
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Streak card (Duolingo-style day counter), shared
 
-/// A big flame + day count that pushes the learner to keep their run going —
-/// when today's goal isn't met yet, a warning badge sits on the flame. On the
-/// same themed grid as the other widgets; tapping opens Talk to do an activity.
+/// A pixel-face mascot + day count that pushes the learner to keep their run
+/// going — the face's mood tracks state (smiling once today's done, anxious
+/// while the day slips by unmet). On the same themed grid as the other widgets;
+/// tapping opens Talk to do an activity.
 struct StreakCard: View {
     var theme: Int = 0
     var streakDays: Int = 0
     var doneToday: Bool = false
+    /// When this entry renders, and the streak's daily deadline (next midnight).
+    /// The mascot's mood and the countdown are driven by the gap between them —
+    /// a huge streak stays calm all morning and only gets anxious near the wire.
+    var renderDate: Date = Date()
+    var deadline: Date = Date().addingTimeInterval(6 * 3600)
     var compact: Bool = false
 
     private var vivid: Color { WidgetTheme.vivid(theme) }
+    private var atRisk: Bool { streakDays > 0 && !doneToday }
+    private var hoursLeft: Double { max(0, deadline.timeIntervalSince(renderDate) / 3600) }
 
     var body: some View {
         Group {
@@ -682,63 +774,73 @@ struct StreakCard: View {
         .padding(compact ? 12 : 16)
     }
 
-    /// Flame in the theme accent; an at-risk badge sits on it when today isn't
-    /// done yet (the flame stays full-colour so it reads as urgent, not faded).
-    private func flame(_ size: CGFloat) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(systemName: "flame.fill")
-                .font(.system(size: size, weight: .bold))
-                .foregroundStyle(vivid)
-            if !doneToday && streakDays > 0 {
-                Image(systemName: "exclamationmark.circle.fill")
-                    .font(.system(size: size * 0.34, weight: .bold))
-                    .foregroundStyle(.white, .red)
-                    .offset(x: size * 0.12, y: -size * 0.04)
+    /// Mood from TIME PRESSURE, not just done/not-done: smiling once today's
+    /// goal is met, calm while there's plenty of the day left, anxious only as
+    /// the midnight deadline closes in on an unmet streak.
+    private var expression: StreakFace {
+        if doneToday { return .happy }
+        if streakDays == 0 { return .neutral }
+        return hoursLeft <= 3 ? .anxious : .neutral
+    }
+
+    /// The pixel-face mascot, cells sized to `streakPixel` so it lines up with
+    /// the background grid (9×7 matrix).
+    private var faceView: some View {
+        PixelFace(expression: expression, color: vivid)
+            .frame(width: 11 * streakPixel, height: 11 * streakPixel)
+    }
+
+    /// A live countdown to the deadline (WidgetKit ticks it every minute).
+    private var countdown: some View {
+        Text(timerInterval: renderDate...max(renderDate.addingTimeInterval(60), deadline),
+             countsDown: true)
+    }
+
+    /// The second line: countdown while at risk, else a short status.
+    @ViewBuilder private func statusLine(_ size: CGFloat) -> some View {
+        if doneToday {
+            Text("Done for today").font(pixelFont(size)).foregroundStyle(.white.opacity(0.7))
+        } else if streakDays == 0 {
+            Text("Start your streak").font(pixelFont(size)).foregroundStyle(.white.opacity(0.7))
+        } else {
+            HStack(spacing: 4) {
+                countdown
+                    .font(pixelFont(size))
+                    .foregroundStyle(atRisk && hoursLeft <= 3 ? vivid : .white.opacity(0.85))
+                    .monospacedDigit()
+                Text("left").font(pixelFont(size)).foregroundStyle(.white.opacity(0.5))
             }
+            .lineLimit(1)
         }
     }
 
-    private var subtitle: String {
-        if streakDays == 0 { return "Start your streak" }
-        return doneToday ? "Done for today" : "Talk today to keep it"
-    }
-
     private var compactBody: some View {
-        VStack(spacing: 3) {
-            flame(38)
+        VStack(spacing: 4) {
+            faceView
             Text("\(streakDays)")
-                .font(pixelFont(36))
+                .font(pixelFont(30))
                 .foregroundStyle(vivid)
-                .lineLimit(1).minimumScaleFactor(0.5)
-            Text("day streak")
-                .font(pixelFont(11))
-                .foregroundStyle(.white.opacity(0.7))
+                .lineLimit(1).minimumScaleFactor(0.4)
+            statusLine(10)
         }
     }
 
     private var mediumBody: some View {
-        // Fixed-width left column (flame over number) so a 1- or 4-digit streak
-        // never pushes the text sideways — the number just scales inside it.
-        HStack(spacing: 14) {
-            VStack(spacing: 2) {
-                flame(40)
+        // Face gets the whole left block; number + label + countdown stack on
+        // the right (number on its own line, so digit count never shifts them).
+        HStack(spacing: 16) {
+            faceView
+            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 74)
+            VStack(alignment: .leading, spacing: 4) {
                 Text("\(streakDays)")
-                    .font(pixelFont(42))
+                    .font(pixelFont(44))
                     .foregroundStyle(vivid)
                     .lineLimit(1)
                     .minimumScaleFactor(0.4)
-            }
-            .frame(width: 110)
-            // Clear left/right split, so the text column starts at a fixed x.
-            Rectangle().fill(Color.white.opacity(0.12)).frame(width: 1, height: 64)
-            VStack(alignment: .leading, spacing: 5) {
                 Text("day streak")
-                    .font(pixelFont(17))
+                    .font(pixelFont(16))
                     .foregroundStyle(.white)
-                Text(subtitle)
-                    .font(pixelFont(12))
-                    .foregroundStyle(.white.opacity(0.7))
-                    .fixedSize(horizontal: false, vertical: true)
+                statusLine(12)
             }
             Spacer(minLength: 0)
         }
