@@ -170,6 +170,9 @@ struct RootTabView: View {
         .fullScreenCover(isPresented: $showingBetaWelcome, onDismiss: { betaWelcomeSeen = true }) {
             BetaWelcomeView()
         }
+        .sheet(item: $appState.levelUpAnnouncement) { announcement in
+            LevelUpSheet(announcement: announcement)
+        }
     }
 
     // MARK: - Free talk (ring → call morph)

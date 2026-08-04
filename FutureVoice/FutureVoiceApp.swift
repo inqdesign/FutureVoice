@@ -149,6 +149,11 @@ final class AppState: ObservableObject {
     @Published var enrolledLanguages: [String] = ["en"] {
         didSet { UserDefaults.standard.set(enrolledLanguages, forKey: LanguageScope.enrolledDefaultsKey) }
     }
+    /// Transient (never persisted): set when a weekly assessment RAISES the
+    /// measured level — RootTabView presents the one-time level-up sheet from
+    /// it. Manual level changes (Me tab, setup) never trigger it; a measured
+    /// downgrade stays silent — the Progress tab tells that story.
+    @Published var levelUpAnnouncement: LevelUpAnnouncement?
     @Published var proficiency: CEFRLevel = .b1 {
         didSet {
             UserDefaults.standard.set(proficiency.rawValue, forKey: Self.proficiencyKey)
@@ -324,7 +329,14 @@ final class AppState: ObservableObject {
                     // change in Me still overrides until the next assessment.
                     if let lvl = report.cefrLevel.flatMap(CEFRLevel.init(rawValue:)),
                        lvl != self.proficiency {
+                        let previous = self.proficiency
                         self.proficiency = lvl
+                        if CoreVocabulary.levelRank(lvl) > CoreVocabulary.levelRank(previous) {
+                            self.levelUpAnnouncement = LevelUpAnnouncement(from: previous, to: lvl)
+                            Analytics.capture("level_up", [
+                                "from": previous.rawValue, "to": lvl.rawValue
+                            ])
+                        }
                     }
                 }
             } catch {
