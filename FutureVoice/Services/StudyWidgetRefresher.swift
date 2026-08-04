@@ -33,6 +33,13 @@ enum StudyWidgetRefresher {
         Task { @MainActor in refresh() }
     }
 
+    /// Language code stamped into the study snapshots — only when the user is
+    /// enrolled in more than one language, so a single-language install never
+    /// shows a redundant chip.
+    private static var widgetLanguage: String? {
+        LanguageScope.enrolled.count > 1 ? LanguageScope.active : nil
+    }
+
     // MARK: - Vocabulary widget
 
     @MainActor
@@ -46,7 +53,8 @@ enum StudyWidgetRefresher {
             StudyWidgetItem(text: $0, note: VocabStore.coreLevelLabel(for: $0))
         }
         StudyWidgetSnapshotStore.save(
-            StudyWidgetSnapshot(updatedAt: Date(), total: words.count, items: Array(items)),
+            StudyWidgetSnapshot(updatedAt: Date(), total: words.count, items: Array(items),
+                                language: widgetLanguage),
             for: .words)
         WidgetCenter.shared.reloadTimelines(ofKind: StudyWidgetSection.words.widgetKind)
     }
@@ -67,7 +75,8 @@ enum StudyWidgetRefresher {
                                    note: count > 1 ? "×\(count)" : "")
         }
         StudyWidgetSnapshotStore.save(
-            StudyWidgetSnapshot(updatedAt: Date(), total: keys.count, items: Array(items)),
+            StudyWidgetSnapshot(updatedAt: Date(), total: keys.count, items: Array(items),
+                                language: widgetLanguage),
             for: .expressions)
         WidgetCenter.shared.reloadTimelines(ofKind: StudyWidgetSection.expressions.widgetKind)
     }

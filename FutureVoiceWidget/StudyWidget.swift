@@ -358,6 +358,7 @@ struct StudyEntry: TimelineEntry {
     let position: Int              // 1-based index for the "3 / 20" style count
     let total: Int
     let theme: Int                 // the user's Futureself theme index
+    var language: String? = nil    // set only when >1 language is enrolled
 }
 
 struct StudyTimelineProvider: TimelineProvider {
@@ -389,12 +390,14 @@ struct StudyTimelineProvider: TimelineProvider {
         let theme = StudyWidgetSnapshotStore.themeIndex
         let items = snapshot.items
         guard !items.isEmpty else {
-            return StudyEntry(date: now, section: section, item: nil, position: 0, total: 0, theme: theme)
+            return StudyEntry(date: now, section: section, item: nil, position: 0, total: 0,
+                              theme: theme, language: snapshot.language)
         }
         let raw = StudyWidgetSnapshotStore.cursor(section)
         let idx = ((raw % items.count) + items.count) % items.count
         return StudyEntry(date: now, section: section, item: items[idx],
-                          position: idx + 1, total: items.count, theme: theme)
+                          position: idx + 1, total: items.count, theme: theme,
+                          language: snapshot.language)
     }
 }
 
@@ -419,8 +422,15 @@ struct StudyWidgetView: View {
     private var compact: Bool { family == .systemSmall }
     private var navSize: CGFloat { compact ? 30 : 38 }
 
+    /// "Words" normally; "Words · DE" once a second language is enrolled, so
+    /// a glance says WHICH language's queue this is after a switch.
+    private var cardLabel: String {
+        guard let code = entry.language, !code.isEmpty else { return entry.section.shortLabel }
+        return "\(entry.section.shortLabel) · \(code.uppercased())"
+    }
+
     private var card: some View {
-        StudyCard(label: entry.section.shortLabel,
+        StudyCard(label: cardLabel,
                   word: entry.item?.text ?? "",
                   note: entry.section.showsNote ? (entry.item?.note ?? "") : "",
                   emptyText: emptyText,

@@ -23,6 +23,10 @@ struct StudyWidgetSnapshot: Codable {
     /// Size of the whole collection (not just the windowed items) — the badge.
     var total: Int
     var items: [StudyWidgetItem]
+    /// Target-language code the items belong to ("en", "de"). Written only
+    /// when the user is enrolled in MORE than one language — with a single
+    /// language the label is noise. nil also covers pre-1.1 snapshots.
+    var language: String?
 
     static let empty = StudyWidgetSnapshot(updatedAt: .distantPast, total: 0, items: [])
 }
