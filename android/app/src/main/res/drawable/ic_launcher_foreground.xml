@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Mic capsule + stand: the product is a phone call, not a chat app. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,30c-4.4,0 -8,3.6 -8,8v14c0,4.4 3.6,8 8,8s8,-3.6 8,-8V38C62,33.6 58.4,30 54,30z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68,50v2c0,7.7 -6.3,14 -14,14s-14,-6.3 -14,-14v-2h-5v2c0,9.8 7.4,17.9 17,18.9V78h-8v5h20v-5h-8v-7.1c9.6,-1 17,-9.1 17,-18.9v-2H68z" />
+</vector>

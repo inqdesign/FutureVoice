@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose owns all styling; the platform theme only needs to get out of
+         the way (no action bar, transparent system bars handled in Compose). -->
+    <style name="Theme.FutureVoice" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
