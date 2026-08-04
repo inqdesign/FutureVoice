@@ -271,6 +271,13 @@ enum ConversationEngine {
           machine-readable: weak_vocab_areas, new_patterns_detected.context.
 
         Rules:
+        - The transcript is SPEECH, not writing — judge every field in this
+          JSON against how fluent speakers TALK. Contractions, casual register,
+          and conversational fragments ("Sounds good.", "Maybe tomorrow?") are
+          natural speech, never something to report or "fix" anywhere. Every
+          fluent_alternative / correction / suggested_drill must sound like a
+          line said out loud in casual conversation — the user's own register,
+          contractions welcome — never a written-essay rewrite.
         - cefr_level: a single holistic CEFR estimate of the user's SPEAKING in
           this whole conversation, weighing vocabulary range, grammatical
           control, fluency, and how well they express ideas together. Anchor to
@@ -455,6 +462,14 @@ enum ConversationEngine {
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already
           natural as spoken. Don't invent a change for a line that was fine.
+        - Judge that line as SPEECH, never as writing. Contractions, casual
+          register, and the sentence fragments normal in dialogue ("Sounds
+          good.", "Maybe tomorrow?") are how fluent speakers talk — NOT slips.
+          Never suggest an essay-style rewrite: "alternative" is what a fluent
+          speaker would actually SAY here, in the user's own register,
+          contractions welcome. Punctuation, capitalization and spelling come
+          from the transcriber, not the user's mouth — never build a
+          suggestion on them.
         - "alternative" must be a CONCRETE full utterance the user could say
           out loud (their corrected sentence), never a rule or category.
         - "alternative" rewrites ONE sentence only — the single sentence with
