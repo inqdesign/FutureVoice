@@ -12,9 +12,6 @@ struct RootTabView: View {
     /// Beta intro shows ONCE, right after onboarding — in place of a paywall
     /// (no subscription during the beta). Explains the free quota + invites.
     @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
-    /// Drives the free-talk pill's outline + orbiting highlight so the chrome
-    /// matches whichever Futureself palette the surface is wearing.
-    @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @State private var showingBetaWelcome = false
     /// Non-nil while the free-talk call is up. A fresh UUID per call gives
     /// ConversationView a clean view identity each time (same reason
@@ -63,7 +60,7 @@ struct RootTabView: View {
                     .tag(Tab.watch)
 
                 PracticeTab()
-                    .tabItem { Label("Practice", systemImage: "books.vertical.fill") }
+                    .tabItem { Label("Practice", systemImage: "book.fill") }
                     .tag(Tab.practice)
 
                 ProgressTab()
@@ -90,12 +87,15 @@ struct RootTabView: View {
                     .zIndex(1)
             }
 
-            // Floating Free talk pill — Talk tab's ROOT only: pushed pages
-            // (Activity, scenario list) drop it via talkRootVisible. It lives
-            // HERE (not in ConversationHome) so it can ride above the tab bar
-            // and above the call layer during the morph.
-            if selection == .home && !pillHidden && appState.talkRootVisible {
-                freeTalkPill
+            // Free-talk morph proxy — the hero ring's Futureself detaches
+            // and flies down into the call's mic-pill pose (and back on
+            // close). Rect-driven by hand: the proxy starts on the ring's
+            // reported global frame and springs to the docked pill frame —
+            // cross-hierarchy matchedGeometryEffect broke here (see the
+            // original pill morph notes). It lives HERE (not in
+            // ConversationHome) so it can ride above the call layer.
+            if selection == .home && !pillHidden && appState.talkRingProxyActive {
+                freeTalkProxy
                     .zIndex(2)
             }
         }
@@ -172,56 +172,47 @@ struct RootTabView: View {
         }
     }
 
-    // MARK: - Free talk (floating pill → call morph)
+    // MARK: - Free talk (ring → call morph)
 
-    /// Resting pose: 180×56, 12pt above the standard 49pt tab bar. Docked
-    /// pose: 156×64 sitting exactly on the call screen's mic pill (whose
-    /// bottom edge is 20pt padding + 16pt hint + 10pt spacing = 46pt above
-    /// the safe area — keep in sync with ConversationView.bottomBar).
-    private var freeTalkPill: some View {
-        Button(action: startFreeTalk) {
+    /// Start pose: the hero ring's Futureself circle, exactly where the
+    /// home drew it. Docked pose: 156×64 sitting exactly on the call
+    /// screen's mic pill (whose bottom edge is 20pt padding + 16pt hint +
+    /// 10pt spacing = 46pt above the safe area — keep in sync with
+    /// ConversationView.bottomBar). One surface, frame+corner animated
+    /// between the two.
+    private var freeTalkProxy: some View {
+        GeometryReader { geo in
+            // The ring frame is GLOBAL; convert into this container.
+            let container = geo.frame(in: .global)
+            let dock = CGRect(x: geo.size.width / 2 - 78,
+                              y: geo.size.height - 46 - 64,
+                              width: 156, height: 64)
+            let ringGlobal = appState.talkRingFrame
+            let start = ringGlobal == .zero
+                ? dock   // no measured ring (cold widget launch) — no fly-in
+                : ringGlobal.offsetBy(dx: -container.minX, dy: -container.minY)
+            let rect = pillDocked ? dock : start
+            let corner: CGFloat = pillDocked ? 32 : rect.height / 2
             ZStack {
-                Futureself(mode: .idle, level: 0)
+                Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                // The label clears quickly and nothing replaces it: the
+                // call's own pill is glyph-free while on call (the living
+                // surface IS the state), so the docked proxy matches it by
+                // showing bare pixels too.
                 Text("Let's talk")
-                    .geistPixel(18)
+                    .geistPixel(20)
                     .foregroundStyle(.primary)
                     .opacity(pillDocked ? 0 : 1)
-                    // The label clears quickly and nothing replaces it: the
-                    // call's own pill is glyph-free while on call (the living
-                    // surface IS the state), so the docked proxy matches it by
-                    // showing bare pixels too.
                     .animation(.easeOut(duration: 0.15), value: pillDocked)
             }
-            .frame(width: pillDocked ? 156 : 180, height: pillDocked ? 64 : 56)
-            .clipShape(Capsule())
-            // Outline hand-off: resting shows the palette's living edge (1pt,
-            // tinted); docked cross-fades to the call mic pill's exact hairline
-            // (0.5pt separator) so the border doesn't jump when the real pill
-            // takes over.
-            .overlay {
-                ZStack {
-                    Capsule().strokeBorder(pillTint.opacity(0.55), lineWidth: 1)
-                        .opacity(pillDocked ? 0 : 1)
-                    Capsule().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5)
-                        .opacity(pillDocked ? 1 : 0)
-                }
-            }
-            // What makes the resting pill catch the eye: a light reflection
-            // orbiting that outline — quiet surface, living edge, same hue.
-            .overlay(ReflectiveOutline(tint: pillTint).opacity(pillDocked ? 0 : 1))
-            .shadow(color: .black.opacity(pillDocked ? 0 : 0.18), radius: 14, y: 6)
+            .frame(width: rect.width, height: rect.height)
+            .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            .position(x: rect.midX, y: rect.midY)
         }
-        .buttonStyle(.plain)
-        .allowsHitTesting(freeTalkCallId == nil && !freeTalkClosing)
-        .accessibilityLabel("Let's talk — start a call")
-        .accessibilityHidden(freeTalkCallId != nil)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, pillDocked ? 46 : 61)
-    }
-
-    /// The live Futureself palette's tint, driving the pill's outline chrome.
-    private var pillTint: Color {
-        (FutureselfTheme(rawValue: storedTheme) ?? .blue).tint
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     /// Honour a pending Free Talk request from the widget deep link — only on
@@ -235,16 +226,20 @@ struct RootTabView: View {
 
     private func startFreeTalk() {
         guard freeTalkCallId == nil, !freeTalkClosing, !pillDocked else { return }
-        // Stage 1 — cover + morph ONLY. Mounting ConversationView in this same
-        // animation used to drop the spring's frames: inserting a whole
-        // NavigationStack (UINavigationController creation + toolbar layout)
-        // is expensive, and inline it lands exactly on the morph frames. So
-        // the spring animates nothing heavier than a Color and the pill.
+        // Stage 0 — the proxy mounts ON the ring's pose (the home ring hides
+        // itself the same tick), and the backdrop starts covering the home.
+        appState.talkRingProxyActive = true
         withAnimation(.easeOut(duration: 0.22)) { callBackdropShown = true }
-        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-            pillDocked = true
-        }
         Task { @MainActor in
+            // Stage 1 — one frame later (so the proxy exists at its start
+            // pose and the dock change actually ANIMATES), fly it down.
+            // Mounting ConversationView in this same animation used to drop
+            // the spring's frames, so the spring animates nothing heavier
+            // than a Color and the proxy.
+            try? await Task.sleep(nanoseconds: 30_000_000)
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                pillDocked = true
+            }
             // Stage 2 — mount the call only after the morph has visually
             // settled, fading it in over the now-static backdrop; its mount
             // cost can't stutter an animation that has already finished.
@@ -262,12 +257,12 @@ struct RootTabView: View {
         guard freeTalkCallId != nil, !freeTalkClosing else { return }
         freeTalkClosing = true
         // Reverse hand-off: proxy reappears over the mic pill, then carries
-        // the morph back up while the call fades away underneath.
+        // the morph back up to the ring while the call fades underneath.
         withAnimation(.easeIn(duration: 0.1)) { pillHidden = false }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 100_000_000)
             // The call (and backdrop) dissolve on their own SHORT fade while
-            // the pill rises on its spring — decoupled, so the
+            // the proxy rises on its spring — decoupled, so the
             // NavigationStack teardown rides the brief fade instead of
             // stretching across the spring's frames.
             withAnimation(.easeOut(duration: 0.2)) {
@@ -277,50 +272,18 @@ struct RootTabView: View {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
                 pillDocked = false
             }
-            // Let the call layer finish fading before the pill takes taps
-            // again — a fresh call mounted now would overlap the teardown.
+            // Let the spring land back on the ring before the home ring
+            // takes over the surface (and taps) again.
             try? await Task.sleep(nanoseconds: 450_000_000)
+            appState.talkRingProxyActive = false
             freeTalkClosing = false
+            // The call consumed a warmed greeting — top the cache back up so
+            // the NEXT call opens instantly too (no-op once every pool line
+            // is cached).
+            await FreeTalkOpeners.shared.warmAudio(
+                language: appState.targetLanguage,
+                personaName: appState.persona?.displayName,
+                voiceId: appState.voiceCloneId)
         }
-    }
-}
-
-/// A specular highlight orbiting a capsule's border — an angular-gradient
-/// stroke segment (tint → soft core → tint) rotating on the animation
-/// timeline. The rest of the outline stays clear so the base outline keeps
-/// defining the shape. `tint` follows the live Futureself palette so the
-/// sheen shares the surface's hue instead of a fixed blue.
-private struct ReflectiveOutline: View {
-    var tint: Color
-
-    var body: some View {
-        TimelineView(.animation) { tl in
-            let t = tl.date.timeIntervalSinceReferenceDate
-            let angle = Angle.degrees(t.truncatingRemainder(dividingBy: 3.5) / 3.5 * 360)
-            Capsule()
-                .strokeBorder(
-                    AngularGradient(
-                        // Transparent stops are tint-at-zero-alpha, NOT
-                        // .clear — interpolating toward clear (transparent
-                        // BLACK) drags the fade through muddy grays that
-                        // read as a dark smudge on light backgrounds. The
-                        // core is a lightened tint rather than pure white so
-                        // the sheen reads as a soft gleam, not a hard spark.
-                        gradient: Gradient(stops: [
-                            .init(color: tint.opacity(0), location: 0.00),
-                            .init(color: tint.opacity(0.9), location: 0.08),
-                            // Bright core = the moving gleam. White gives it
-                            // the specular pop; the tinted flanks keep the
-                            // whole sheen in the palette's hue.
-                            .init(color: .white, location: 0.12),
-                            .init(color: tint.opacity(0.9), location: 0.16),
-                            .init(color: tint.opacity(0), location: 0.24),
-                            .init(color: tint.opacity(0), location: 1.00),
-                        ]),
-                        center: .center,
-                        angle: angle),
-                    lineWidth: 1.6)
-        }
-        .allowsHitTesting(false)
     }
 }

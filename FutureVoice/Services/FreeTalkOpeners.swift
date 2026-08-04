@@ -72,6 +72,42 @@ final class FreeTalkOpeners {
         return pool.lines[pool.cursor % pool.lines.count]
     }
 
+    /// Every line in the current pool (empty when none). Read-only — the
+    /// launcher warms EACH line's TTS once, so any rotation position opens
+    /// the call on cached audio.
+    func lines(language: String, personaName: String?) -> [String] {
+        guard let pool = load(),
+              pool.key == Self.key(language: language, personaName: personaName),
+              !pool.lines.isEmpty else { return [] }
+        return pool.lines
+    }
+
+    /// Synthesize EVERY pool line's audio that isn't cached yet, so any
+    /// rotation position opens a call on cached audio — no ElevenLabs round
+    /// trip on the greeting. Bounded cost: one synthesis per unique line per
+    /// voice, ever (the content cache makes later uses free). A failure
+    /// aborts the sweep (the rest would fail the same way); the live call
+    /// still falls back to on-demand TTS.
+    func warmAudio(language: String, personaName: String?, voiceId: String?) async {
+        guard let voiceId else { return }
+        for line in lines(language: language, personaName: personaName) {
+            guard !Task.isCancelled else { return }
+            // `allowLineage: false` mirrors the live call's lookup — warming
+            // a line the call would still consider a miss is pointless.
+            guard PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
+                                               allowLineage: false) == nil else { continue }
+            do {
+                let audio = try await ElevenLabsClient.shared.synthesize(
+                    voiceId: voiceId, text: line,
+                    modelId: ElevenLabsClient.conversationModelId,
+                    purpose: "turn")
+                PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
+            } catch {
+                return
+            }
+        }
+    }
+
     /// True when a valid pool exists for this language/persona. Read-only —
     /// unlike `next()` it never advances the rotation cursor.
     func hasPool(language: String, personaName: String?) -> Bool {

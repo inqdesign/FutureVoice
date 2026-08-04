@@ -8,6 +8,7 @@ import SwiftUI
 struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
@@ -18,12 +19,6 @@ struct ConversationHome: View {
     @State private var todaySpokenSeconds = 0
     /// Talks finished TODAY — the Today card counts the day, never lifetime.
     @State private var todayTalks = 0
-    /// Today's next actions: the book to pick back up, plus the whole-library
-    /// mastery aggregate behind the Practice row (async — see reload()).
-    @State private var continueBook: Scenario?
-    @State private var overallMastered = 0
-    @State private var overallTotal = 0
-    @State private var openBook: Scenario?
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     /// Presenting the call via an item (not a Bool) gives every presentation
     /// a fresh view identity — with `isPresented`, ConversationView's
@@ -74,8 +69,7 @@ struct ConversationHome: View {
             // section margins.
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    todayCard
-                        .padding(.horizontal, 20)
+                    heroSection
                     if sessionCount == 0 {
                         firstRunCard
                             .padding(.horizontal, 20)
@@ -92,17 +86,15 @@ struct ConversationHome: View {
                 .padding(.top, 8)
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
-            // Root visibility → RootTabView keeps the floating Free-talk pill
-            // off pushed pages (Activity, the scenarios list, …).
+            // Root visibility → RootTabView shows the free-talk morph proxy
+            // only while docking (the ring below is the resting CTA now).
             .onAppear { appState.talkRootVisible = true }
             .onDisappear { appState.talkRootVisible = false }
-            // Room for RootTabView's floating Free talk pill — the last rows
-            // can still scroll up past it.
-            .contentMargins(.bottom, 96, for: .scrollContent)
-            .navigationTitle(greetingText)
-            // .large (its own row), NOT .inlineLarge — the toolbar items
-            // share the inline row and truncate "Good afternoon".
-            .navigationBarTitleDisplayMode(.large)
+            .contentMargins(.bottom, 24, for: .scrollContent)
+            // No navigation title: the hero's time-of-day question IS the
+            // greeting (a large title above it doubled the greeting). The
+            // inline bar carries just the chips: language · streak · account.
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Language chip on the leading edge — the one-tap switch
                 // between enrolled languages and the discoverable entry point
@@ -114,6 +106,12 @@ struct ConversationHome: View {
                 // account things live together up here, out of the Today card.
                 ToolbarItem(placement: .topBarTrailing) {
                     headerControl
+                }
+                // Streak chip, centered — the one Today stat that lives in the
+                // header. Tapping opens the activity calendar (the old Today
+                // card's tap target).
+                ToolbarItem(placement: .principal) {
+                    streakChip
                 }
             }
             .sheet(isPresented: $showingAddLanguage) {
@@ -157,13 +155,13 @@ struct ConversationHome: View {
                 TalkScenariosListView(onPick: runScenario)
                     .environmentObject(appState)
             }
-            .navigationDestination(item: $openBook) { book in
-                ScenarioDetailView(scenarioId: book.id)
-                    .environmentObject(appState)
-            }
             .fullScreenCover(item: $callLaunch, onDismiss: {
                 reload()
                 maybePromptDeepen()
+                // The call just consumed a warmed greeting — top the cache
+                // back up so the NEXT call opens instantly too (no-op once
+                // every pool line is cached).
+                Task { await prewarmFreeTalkOpenerAudio() }
             }) { launch in
                 ConversationView(initialTopic: launch.topic, initialBlurb: launch.blurb,
                                  initialIsNews: launch.isNews,
@@ -175,105 +173,245 @@ struct ConversationHome: View {
         }
     }
 
-    // MARK: - Today (activity status)
+    // MARK: - Hero (welcome question + the goal ring / call button)
 
     private var goalProgress: Double {
         min(1, Double(todaySpokenSeconds) / Double(max(1, dailyGoalMinutes * 60)))
     }
+    /// The arc fraction the ring actually draws (identical to goalProgress
+    /// today; named so the depth overlays read as arc geometry, not stats).
+    private var goalProgress0to1: Double { goalProgress }
 
-    /// ONE hierarchy: the goal ring anchors the card, the headline tells
-    /// today's story in a sentence, and next actions are full-width rows
-    /// (never truncating chips). Status block taps into Activity. No "Today"
-    /// header — the ring and headline say it themselves.
-    private var todayCard: some View {
+    /// The page's opening move: a time-of-day question in the display face,
+    /// and one giant goal ring whose interior is the living Futureself
+    /// surface — tapping it IS starting the call (via RootTabView's staged
+    /// free-talk transition, same path as the widget deep link).
+    ///
+    /// The hero owns the whole first viewport: the ring sits at its center
+    /// (≈ screen center at rest) and the question floats in the gap between
+    /// the header and the ring; the list scrolls up from underneath.
+    private var heroSection: some View {
         VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text(welcomeQuestion)
+                .geistPixel(28)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
+            Spacer(minLength: 0)
+            talkRing
+                .scaleEffect(ringScale)
+                // Flatten ring + surface + labels into ONE layer before the
+                // fade — without this, opacity reaches each layer separately
+                // (the shader surface especially) and the parts visibly
+                // dissolve at different rates.
+                .compositingGroup()
+                .opacity(appState.talkRingProxyActive ? 0 : ringOpacity)
+            // Breathing room under the ring (with the outer stack's 24pt,
+            // ≈44pt to the list) — close enough to invite the scroll, far
+            // enough not to crowd the ring.
+            Color.clear.frame(height: 20)
+        }
+        .frame(maxWidth: .infinity)
+        // Bottom-anchored ring, hero exactly tall enough that the ring's
+        // CENTER lands on the DEVICE screen's midline — solved from the
+        // hero's measured global top (status bar + nav bar + padding), not
+        // guessed from the scroll viewport.
+        .frame(height: heroHeight)
+        .background(GeometryReader { g in
+            Color.clear.preference(key: HeroTopYKey.self,
+                                   value: g.frame(in: .global).minY)
+        })
+        // Layout-transient frames report garbage minY (0 before the nav
+        // inset lands, overshoot during settle) — so track the latest report
+        // WITHOUT laying out from it, and adopt it once, after the first
+        // layout has settled. heroHeight uses only the adopted value.
+        // The continuous stream doubles as the scroll link: how far the hero
+        // has moved up from rest drives the ring's shrink.
+        .onPreferenceChange(HeroTopYKey.self) { y in
+            latestHeroTopReport = y
+            scrollOffset = max(0, heroTopY - y)
+        }
+        .onPreferenceChange(TalkRingFrameKey.self) { appState.talkRingFrame = $0 }
+        .task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            heroTopY = latestHeroTopReport
+        }
+    }
+
+    /// How far the hero has scrolled up from its at-rest pose.
+    @State private var scrollOffset: CGFloat = 0
+    /// Two-phase exit. Phase 1 (0–110pt): the ring only SHRINKS, fully
+    /// opaque — no premature translucency while it's still mid-page. Phase 2
+    /// (110–250pt): it keeps shrinking AND fades to zero, gone before it
+    /// could slide under the header chips. The scale floor sits beyond the
+    /// fade's end, so the shrink never visibly stops.
+    private var ringScale: CGFloat {
+        max(0.3, 1 - scrollOffset / 450)
+    }
+    private var ringOpacity: CGFloat {
+        let fadeStart: CGFloat = 110
+        let fadeLength: CGFloat = 140
+        guard scrollOffset > fadeStart else { return 1 }
+        return max(0, 1 - (scrollOffset - fadeStart) / fadeLength)
+    }
+
+    /// Where the hero starts in GLOBAL coordinates at rest (scrolled to top)
+    /// — everything above it: status bar, inline nav bar, top padding.
+    /// Seeded with a close guess so the first frame is near-correct; the
+    /// settle-sample above then replaces it with the measured value.
+    @State private var heroTopY: CGFloat = 106
+    @State private var latestHeroTopReport: CGFloat = 106
+    /// Ring center must sit at screenHeight/2. The ring's center is 160pt
+    /// above the hero's bottom (140 half-ring + 20 tail), so:
+    /// heroTop + heroHeight − 160 = screenHeight/2.
+    private var heroHeight: CGFloat {
+        max(380, UIScreen.main.bounds.height / 2 + 160 - heroTopY)
+    }
+
+    private var welcomeQuestion: String {
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<12:  return chrome("What's on your mind this morning?")
+        case 12..<17: return chrome("What's on your mind this afternoon?")
+        case 17..<22: return chrome("What's on your mind this evening?")
+        default:      return chrome("What's on your mind tonight?")
+        }
+    }
+
+    /// A thin, fully-closed goal ring (progress from 12 o'clock) around the
+    /// Futureself surface. virtualHeight pins the surface's pixel grid to
+    /// the call pill's cell size, so the eventual morph onto the call screen
+    /// never changes pixel scale.
+    private var talkRing: some View {
+        ZStack {
+            Circle()
+                // Barely-there track: quaternary reads as a whisper of a
+                // groove against the page background, not a gray donut.
+                .stroke(Color(.quaternarySystemFill), lineWidth: 14)
+            // Accent, even at goal — the ring follows the app's palette
+            // (green-at-goal clashed with non-green Futureself themes).
+            // ONE gradient stroke: the tail FADES IN from near-transparent
+            // at 12 o'clock to full accent by ~55% of the arc — comet-style
+            // depth, no black overlay. (Angles are PRE-rotation; 0° lands on
+            // the tail once the -90° below spins the layer.)
+            // Nothing at zero: a near-empty trim under the angular gradient
+            // renders as a half-cut dot at 12, so an empty day shows the
+            // bare track instead.
+            //
+            // The fade is EARNED, not constant: a short arc is solid accent
+            // (a gradient across a 15° pill just smears it), and only as the
+            // ring closes does the tail thin out — reaching 15% right when
+            // the head needs to read as passing over it.
+            if goalProgress0to1 > 0.01 {
+                let tailOpacity = 1.0 - 0.85 * max(0, (goalProgress0to1 - 0.3) / 0.7)
+                Circle()
+                    .trim(from: 0, to: goalProgress0to1)
+                    .stroke(
+                        AngularGradient(
+                            stops: [
+                                .init(color: Color.accentColor.opacity(tailOpacity), location: 0),
+                                .init(color: Color.accentColor, location: 0.55),
+                            ],
+                            center: .center,
+                            startAngle: .degrees(0),
+                            endAngle: .degrees(360 * goalProgress0to1)),
+                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            // At full progress the circle closes and the stroke loses its
+            // caps — the seam at 12 turns into a flat butt joint. Re-draw
+            // the last sliver with a round cap (NO shadow): its head pokes
+            // just past 12 over the faded tail, and its trailing edge is the
+            // same full accent as the base arc, so no seam shows.
+            if goalProgress0to1 > 0.97 {
+                Circle()
+                    .trim(from: goalProgress0to1 - 0.02, to: goalProgress0to1)
+                    .stroke(Color.accentColor,
+                            style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+
+            Button {
+                // Same gate as openBilling: a spent free balance goes to the
+                // paywall INSTEAD of into a call that can only 402. Unlimited
+                // and subscribed accounts always pass (the server is the
+                // authority); an unknown account (fetch not landed) passes
+                // too rather than blocking the tap on the network.
+                if let account, !account.unlimited, !account.isEntitled,
+                   account.creditBalance <= 0 {
+                    showingPaywall = true
+                } else {
+                    appState.pendingFreeTalk = true
+                }
+            } label: {
+                ZStack {
+                    Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                    // Wash the surface toward the page background so the
+                    // circle sits IN the page instead of glowing against it
+                    // (the shader's own base runs brighter than grouped bg).
+                    Color(.systemGroupedBackground).opacity(0.35)
+                    // Uniform inner shadow — a blurred inner ring, masked to
+                    // the circle so the vignette hugs the whole edge evenly
+                    // (a one-sided shadow here reads as a lighting mistake).
+                    // Light mode gets a MUCH gentler pass: on the airy light
+                    // surface the dark-mode strength reads as a hole.
+                    // Tight spread: a narrow stroke + small blur keeps the
+                    // vignette hugging the rim instead of flooding inward.
+                    Circle()
+                        .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
+                                      lineWidth: 10)
+                        .blur(radius: 6)
+                        .mask(Circle())
+                    VStack(spacing: 6) {
+                        Text("Let's talk")
+                            .geistPixel(20)
+                            .foregroundStyle(.primary)
+                        Text(goalHeadline)
+                            .font(.footnote.weight(.medium))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(width: 262, height: 262)
+                // The proxy morph needs the surface's live pose (global) —
+                // reported from HERE so it tracks layout, not guesses.
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: TalkRingFrameKey.self,
+                                           value: g.frame(in: .global))
+                })
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Let's talk — start a call. \(todaySpokenSeconds / 60) of \(dailyGoalMinutes) minutes today.")
+        }
+        .frame(width: 280, height: 280)
+    }
+
+    /// Header streak chip — tap opens the activity calendar (the old Today
+    /// card's tap target). Hidden until a streak exists.
+    @ViewBuilder
+    private var streakChip: some View {
+        if snapshot.streakDays > 0 {
             Button {
                 showingActivity = true
             } label: {
-                HStack(spacing: 14) {
-                    goalRing
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(goalHeadline)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        // Plain Image+Text, NOT Label — List quietly drops a
-                        // Label's title in this slot.
-                        HStack(spacing: 4) {
-                            if snapshot.streakDays > 0 {
-                                Image(systemName: "flame.fill")
-                                    .foregroundStyle(.orange)
-                                Text("\(snapshot.streakDays)-day streak")
-                                    .foregroundStyle(.secondary)
-                                if todayTalks > 0 {
-                                    Text("·").foregroundStyle(.tertiary).padding(.horizontal, 1)
-                                }
-                            }
-                            if todayTalks > 0 {
-                                Text(todayTalks == 1 ? "1 talk today" : "\(todayTalks) talks today")
-                                    .foregroundStyle(.secondary)
-                            }
-                            if snapshot.streakDays == 0 && todayTalks == 0 {
-                                Text("No talk yet today").foregroundStyle(.secondary)
-                            }
-                        }
-                        .font(.caption)
-                        .lineLimit(1)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    Text("\(snapshot.streakDays) day streak")
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.primary)
                 }
-                .padding(16)
-                .contentShape(Rectangle())
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(Color(.secondarySystemFill)))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("\(todaySpokenSeconds / 60) of \(dailyGoalMinutes) minutes today, \(todayTalks) talks today, \(snapshot.streakDays) day streak. Opens activity calendar.")
-
-            // Next actions — one full-width row each, so nothing truncates
-            // into garbage. The whole-library mastery bar nudges toward
-            // Practice (SRS review itself now lives there, on Studying);
-            // the book you're mid-way through opens directly.
-            if overallTotal > 0 {
-                CardDivider()
-                practiceProgressRow
-            }
-            if let book = continueBook {
-                CardDivider()
-                todayActionRow(icon: "book",
-                               title: "Continue studying",
-                               subtitle: book.environment) {
-                    openBook = book
-                }
-            }
+            .accessibilityLabel("\(snapshot.streakDays) day streak. Opens activity calendar.")
         }
-        .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
-    }
-
-    /// Fitness-style minutes ring — filled arc = progress toward the daily
-    /// goal, the number inside = minutes spoken (✓ once the goal is hit).
-    private var goalRing: some View {
-        ZStack {
-            Circle()
-                .stroke(Color(.tertiarySystemFill), lineWidth: 5)
-            Circle()
-                .trim(from: 0, to: max(goalProgress, 0.001))
-                .stroke(goalProgress >= 1 ? Color.green : Color.accentColor,
-                        style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            if goalProgress >= 1 {
-                Image(systemName: "checkmark")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.green)
-            } else {
-                Text("\(todaySpokenSeconds / 60)")
-                    .font(.subheadline.weight(.bold))
-                    .monospacedDigit()
-            }
-        }
-        .frame(width: 46, height: 46)
     }
 
     private var goalHeadline: String {
@@ -283,125 +421,20 @@ struct ConversationHome: View {
         return chrome("\(mins) of \(dailyGoalMinutes) min today")
     }
 
-    /// A Today action row. With `subtitle`, the title becomes the ACTION
-    /// label and the subtitle the target on a second line (so a long book
-    /// name wraps instead of truncating into "…").
-    /// "연습하라" — how much of ALL the material your talks/watches generated
-    /// is mastered, as a bar. Tap hops to Practice (Studying), where the books
-    /// and the SRS review live.
-    private var practiceProgressRow: some View {
-        Button {
-            // Stage the route; RootTabView switches the tab. This used to be
-            // `openURL("futurevoice://practice")` — moving between two tabs of
-            // the SAME app by asking the operating system to open a URL. The
-            // OS is free to hand that scheme to any app that claims it, and
-            // with a second build of Future Voice side-loaded it did exactly
-            // that: tapping Practice launched the other app. Deep links are
-            // for arriving from outside; in-app navigation stays in-app.
-            appState.pendingPracticeRoute = .studying
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "books.vertical")
-                    .font(.body)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack {
-                        Text("Practice")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text("\(overallMastered) of \(overallTotal) mastered")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    ProgressView(value: Double(overallMastered), total: Double(max(overallTotal, 1)))
-                        .tint(overallMastered == overallTotal ? .green : .accentColor)
-                }
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func todayActionRow(icon: String, title: String, subtitle: String? = nil,
-                                action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.primary)
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
 
     private func linkedPersonaName(_ s: Scenario) -> String? {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
     }
 
-    /// When a book was last actually studied — most recent mastery event,
-    /// else last use, else creation (same policy as Practice's Studying tab).
-    private func bookLastStudied(_ s: Scenario) -> Date {
-        let mastery = s.curriculum.flatMap {
-            ($0.words + $0.expressions + $0.shadowLines).compactMap(\.masteredAt).max()
-        }
-        return mastery ?? s.lastUsedAt ?? s.createdAt
-    }
-
-    /// Synthesize the NEXT free-talk greeting while the user is still looking
-    /// at the launcher, so tapping "Let's talk" opens on cached audio instead
-    /// of waiting out an ElevenLabs round trip — the wait that made the start
-    /// of a call feel slow. Deliberately does NOT touch the rotation: the
-    /// greeting still differs every call (that variety is the point), only its
-    /// audio is ready early.
-    ///
-    /// Costs nothing extra in the normal case — it synthesizes exactly the
-    /// line the call was about to synthesize anyway, under the same
-    /// (text, voiceId) cache key and the same model, and no-ops once cached.
-    /// The one wasteful case is a user who opens Talk and never calls; that is
-    /// bounded at one line per rotation position.
+    /// Warm every pool greeting's TTS (see FreeTalkOpeners.warmAudio) — so
+    /// "Let's talk" always opens on cached audio, whatever the rotation
+    /// position. (Warming only the next line left every fresh line in the
+    /// rotation slow the first time it came up.)
     private func prewarmFreeTalkOpenerAudio() async {
-        guard let voiceId = appState.voiceCloneId,
-              let line = FreeTalkOpeners.shared.peek(
-                  language: appState.targetLanguage,
-                  personaName: appState.persona?.displayName),
-              // `allowLineage: false` mirrors the live call's lookup — warming
-              // a line the call would still consider a miss is pointless.
-              PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
-                                           allowLineage: false) == nil,
-              let audio = try? await ElevenLabsClient.shared.synthesize(
-                  voiceId: voiceId, text: line,
-                  modelId: ElevenLabsClient.conversationModelId,
-                  purpose: "turn")
-        else { return }
-        PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
+        await FreeTalkOpeners.shared.warmAudio(
+            language: appState.targetLanguage,
+            personaName: appState.persona?.displayName,
+            voiceId: appState.voiceCloneId)
     }
 
     // MARK: - Actions (tap = start the call)
@@ -501,15 +534,6 @@ struct ConversationHome: View {
         Task { account = await AccountStatus.fetch() }
     }
 
-    private var greetingText: String {
-        switch Calendar.current.component(.hour, from: Date()) {
-        case 5..<12:  return chrome("Good morning")
-        case 12..<17: return chrome("Good afternoon")
-        case 17..<22: return chrome("Good evening")
-        default:      return chrome("Hello")
-        }
-    }
-
     // MARK: - First run
 
     /// Under Today before the first conversation — explains the lists below.
@@ -603,34 +627,23 @@ struct ConversationHome: View {
         }
         todaySpokenSeconds = todayMs / 1000
         todayTalks = todayCount
+    }
+}
 
-        // Today's next actions — the most recently studied unfinished book
-        // (progress started, not yet mastered).
-        continueBook = appState.scenarios
-            .filter { !$0.isArchived && !$0.isMastered && ($0.curriculum?.masteredCount ?? 0) > 0 }
-            .max { bookLastStudied($0) < bookLastStudied($1) }
+/// The Talk hero's at-rest global top edge (see ConversationHome.heroTopY).
+private struct HeroTopYKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
 
-        // Whole-library mastery for the Practice row — same aggregate as
-        // Practice's Studying header. Deferred: TalkCurriculum.build's
-        // pickup-word extraction is too heavy for first paint.
-        Task { @MainActor in
-            var mastered = 0, total = 0
-            for s in sessions {
-                let snap = TalkCurriculum.build(session: s,
-                                                proficiency: appState.proficiency,
-                                                shadowAttempts: appState.shadowAttempts)
-                mastered += snap.masteredCount
-                total += snap.totalCount
-            }
-            for sc in appState.scenarios {
-                if let c = sc.curriculum {
-                    mastered += c.masteredCount
-                    total += c.totalCount
-                }
-            }
-            overallMastered = mastered
-            overallTotal = total
-        }
+/// The hero ring surface's live global frame (→ AppState.talkRingFrame).
+private struct TalkRingFrameKey: PreferenceKey {
+    static var defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
     }
 }
 

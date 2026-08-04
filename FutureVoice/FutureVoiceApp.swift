@@ -97,6 +97,14 @@ final class AppState: ObservableObject {
     /// pages (Activity, scenario lists, …).
     @Published var talkRootVisible = true
 
+    /// The Talk hero ring's live GLOBAL frame (its Futureself circle),
+    /// reported by ConversationHome — RootTabView's free-talk proxy morphs
+    /// from exactly this pose down into the call's mic pill.
+    @Published var talkRingFrame: CGRect = .zero
+    /// True while that proxy owns the surface (morphing or on call). The
+    /// home ring hides itself then, so the surface never shows twice.
+    @Published var talkRingProxyActive = false
+
     @Published var voiceCloneId: String? {
         didSet {
             UserDefaults.standard.set(voiceCloneId, forKey: Self.voiceCloneIdKey)

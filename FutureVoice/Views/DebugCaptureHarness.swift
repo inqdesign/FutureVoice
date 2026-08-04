@@ -112,6 +112,15 @@ enum DebugCapture {
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
+        case "talk-alt":
+            // Layout experiment — How-We-Feel-style Talk home (design review).
+            return AnyView(TalkHomeExperiment())
+        case "talk-alt-call":
+            // The experiment's on-call end state (surface morphed to the pill).
+            return AnyView(TalkHomeExperiment(startOnCall: true))
+        case "talk-alt-demo":
+            // Auto-plays the circle→pill morph — record a video of this.
+            return AnyView(TalkHomeExperiment(autoDemo: true))
         case "watch":
             // The Watch tab folded into Practice's shelves — capture that.
             once("watch") { seedScenarios(into: appState) }
@@ -139,6 +148,13 @@ enum DebugCapture {
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
             return AnyView(WatchTab())
+        case "watchtab-empty":
+            // First-run Watch: no saved scenarios, so the "Likely situations"
+            // chips sit high enough to capture without scrolling.
+            once("watchtab-empty") {
+                for s in appState.scenarios { appState.deleteScenario(id: s.id) }
+            }
+            return AnyView(WatchTab())
         case "intake-people":
             return AnyView(CounterpartVoiceIntakeView())
         case "deepen", "deepen-full":
@@ -163,9 +179,6 @@ enum DebugCapture {
             }
             .padding(20)
             .background(Color(.systemBackground)))
-        case "builder":
-            // Renders the sheet's content full-screen (no host to present it).
-            return AnyView(SituationBuilderSheet(root: WatchTab.situationTree[0]) { _ in })
         case "composer":
             once("composer") { seedNews(into: appState); composerPreview = true }
             return AnyView(ScenarioComposerSheet(person: nil, ctaTitle: "Talk", ctaIcon: "mic.fill") { _ in }
@@ -609,22 +622,37 @@ enum DebugCapture {
                                            notes: "", curriculum: curriculum(mastered: done),
                                            isTopic: true))
         }
-        // A couple of situation books for the "By scenario" shelf.
-        appState.saveScenario(Scenario(environment: "Café · catching up",
+        // A couple of situation books for the "By scenario" shelf. Shaped like
+        // real composer output: environment = the concrete prompt, summary =
+        // the tidy card title, category/icon = the composer's filing — so the
+        // Watch-tab card renders every field it has in captures.
+        appState.saveScenario(Scenario(environment: "At the café with Sarah: catching up after months apart — she asks what I've been up to and I keep the story going.",
                                        role: "Sarah (close friend)", notes: "",
-                                       curriculum: curriculum(mastered: 5), isTopic: false))
-        appState.saveScenario(Scenario(environment: "Doctor's visit", role: "Doctor",
-                                       notes: "", curriculum: curriculum(mastered: 3), isTopic: false))
+                                       lastUsedAt: Date().addingTimeInterval(-5 * 3600),
+                                       curriculum: curriculum(mastered: 5), isTopic: false,
+                                       category: "Cafe", categoryIcon: "cup.and.saucer.fill",
+                                       summary: "Café · catching up"))
+        appState.saveScenario(Scenario(environment: "At the doctor's office: describing a symptom I've had for a week and answering their follow-up questions.",
+                                       role: "Doctor", notes: "",
+                                       lastUsedAt: Date().addingTimeInterval(-2 * 86400),
+                                       curriculum: curriculum(mastered: 3), isTopic: false,
+                                       category: "Health", categoryIcon: "cross.case.fill",
+                                       summary: "Doctor's visit"))
         // One brand-new 0% book so the Studying page's "Start next" section
         // renders in captures.
-        appState.saveScenario(Scenario(environment: "Job interview · panel round",
+        appState.saveScenario(Scenario(environment: "A panel interview: introducing myself, walking through my experience, and handling curveball questions.",
                                        role: "Interviewer", notes: "",
-                                       curriculum: curriculum(mastered: 0), isTopic: false))
+                                       curriculum: curriculum(mastered: 0), isTopic: false,
+                                       category: "Work", categoryIcon: "briefcase.fill",
+                                       summary: "Job interview · panel round"))
         // …and one taken all the way (14 = every item), so the finished-books
         // shelf renders populated instead of only in its empty state.
-        appState.saveScenario(Scenario(environment: "Pharmacy · picking up a prescription",
+        appState.saveScenario(Scenario(environment: "At the pharmacy: picking up a prescription, and the pharmacist has questions about my insurance.",
                                        role: "Pharmacist", notes: "",
-                                       curriculum: curriculum(mastered: 14), isTopic: false))
+                                       lastUsedAt: Date().addingTimeInterval(-10 * 86400),
+                                       curriculum: curriculum(mastered: 14), isTopic: false,
+                                       category: "Health", categoryIcon: "cross.case.fill",
+                                       summary: "Pharmacy · picking up a prescription"))
     }
 
     // MARK: - Shadow (karaoke line)

@@ -60,6 +60,12 @@ struct Futureself: View {
     /// Explicit palette override (the settings previews). nil — the live
     /// surfaces everywhere — follows the user's chosen theme.
     var theme: FutureselfTheme? = nil
+    /// When set, the shader sees THIS height instead of the real one, pinning
+    /// the cell size (height/5) no matter how big the rendered frame is. The
+    /// Talk home's ring interior passes the call pill's 64 so its big circle
+    /// keeps the pill's fine pixel grid — and morphing between the two never
+    /// changes the pixel scale. nil = stock behavior (5 rows fill the frame).
+    var virtualHeight: CGFloat? = nil
 
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
     @Environment(\.colorScheme) private var colorScheme
@@ -76,12 +82,18 @@ struct Futureself: View {
                 let t = Float(now.truncatingRemainder(dividingBy: 1000))
                 let display = smoother.step(toward: level, at: now)
                 let resolved = theme ?? FutureselfTheme(rawValue: storedTheme) ?? .blue
+                // The size the shader derives its cell grid from — real by
+                // default; the virtualHeight lie keeps width/height ratio so
+                // the shader's normalized math stays consistent.
+                let realH = Float(geo.size.height)
+                let shaderH = virtualHeight.map { Float($0) } ?? realH
+                let shaderW = Float(geo.size.width) * (shaderH / max(realH, 1))
                 // Fill color is ignored — the shader owns the palette and
                 // paints the full surface, theme-aware via the dark flag.
                 Rectangle()
                     .fill(.black)
                     .colorEffect(ShaderLibrary.futureself(
-                        .float2(Float(geo.size.width), Float(geo.size.height)),
+                        .float2(shaderW, shaderH),
                         .float(t),
                         .float(display),
                         .float(mode.rawValue),

@@ -118,15 +118,64 @@ struct DiscoverSection: View {
         .buttonStyle(.plain)
     }
 
-    /// The one rail both tabs share: full-width scroll track, cards inset to
-    /// the 20pt grid by the HStack's own padding.
-    private func rail<Content: View>(@ViewBuilder _ cards: () -> Content) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: 12) { cards() }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 4)
+    /// The one list both tabs share: full-width stacked cards on the 20pt
+    /// grid (the old horizontal rail read as posters; these read as a list).
+    private func list<Content: View>(@ViewBuilder _ cards: () -> Content) -> some View {
+        VStack(spacing: 10) { cards() }
+            .padding(.horizontal, 20)
+    }
+
+    /// One list card — leading icon in a tinted circle, title + caption,
+    /// chevron. The shared row anatomy for news stories and scenarios.
+    private func listCard(title: String, caption: String?,
+                          @ViewBuilder icon: () -> some View) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.accentColor.opacity(0.15))
+                    .frame(width: 36, height: 36)
+                icon()
+                    .foregroundStyle(.tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let caption, !caption.isEmpty {
+                    Text(caption)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
         }
-        .scrollClipDisabled()
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(Color(.secondarySystemGroupedBackground)))
+        .contentShape(Rectangle())
+    }
+
+    /// Best-effort glyph for a free-form interest category ("ai / tech" →
+    /// cpu). Fallback is the newspaper — every story is at least news.
+    private static func categoryIcon(_ category: String?) -> String {
+        guard let c = category?.lowercased() else { return "newspaper.fill" }
+        if c.contains("ai") || c.contains("tech") { return "cpu" }
+        if c.contains("cook") || c.contains("food") { return "fork.knife" }
+        if c.contains("sport") || c.contains("fitness") { return "figure.run" }
+        if c.contains("music") { return "music.note" }
+        if c.contains("travel") { return "airplane" }
+        if c.contains("science") { return "atom" }
+        if c.contains("business") || c.contains("finance") { return "chart.line.uptrend.xyaxis" }
+        if c.contains("film") || c.contains("movie") || c.contains("tv") { return "film" }
+        if c.contains("game") { return "gamecontroller" }
+        if c.contains("health") { return "heart" }
+        return "newspaper.fill"
     }
 
     // MARK: - News
@@ -158,10 +207,16 @@ struct DiscoverSection: View {
                 .padding(.horizontal, 20)
             }
         } else {
-            rail {
+            list {
                 ForEach(newsTopics) { item in
-                    Button { onPickNews(item) } label: { newsCard(item) }
-                        .buttonStyle(.plain)
+                    Button { onPickNews(item) } label: {
+                        listCard(title: item.title,
+                                 caption: item.category?.capitalized) {
+                            Image(systemName: Self.categoryIcon(item.category))
+                                .font(.subheadline)
+                        }
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -169,49 +224,6 @@ struct DiscoverSection: View {
             Text(e).font(.caption).foregroundStyle(.red)
                 .padding(.horizontal, 20)
         }
-    }
-
-    /// Rail card WIDTH — narrower than a Practice grid card; the rail wants
-    /// tall, poster-ish cards you flick through, not wide review tiles.
-    private static let cardWidth: CGFloat = 176
-
-    /// A news STORY to start a call about — the Practice card's visual
-    /// language (rounded surface, bare tinted glyph, text pinned to the
-    /// bottom) but purpose-built for tapping into a conversation, so there's
-    /// no mastery strip. Category sits in the top-right, opposite the glyph.
-    private func newsCard(_ item: SuggestedTopic) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top) {
-                Image(systemName: "newspaper.fill").font(.title2).foregroundStyle(.tint)
-                Spacer()
-                if let category = item.category, !category.isEmpty {
-                    Text(category.capitalized)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.tint)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 14)
-            Text(item.title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(4)
-                .fixedSize(horizontal: false, vertical: true)
-            if !item.blurb.isEmpty {
-                Text(item.blurb)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    // Breathing room between headline and its detail.
-                    .padding(.top, 7)
-            }
-        }
-        .padding(14)
-        .frame(width: Self.cardWidth, alignment: .leading)
-        .frame(minHeight: 190, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-        .contentShape(Rectangle())
     }
 
     // MARK: - Scenarios
@@ -225,94 +237,52 @@ struct DiscoverSection: View {
             }
             .padding(.horizontal, 20)
         } else {
-            rail {
-                ForEach(scenarios.prefix(8)) { s in
-                    Button { onPickScenario(s) } label: { scenarioCard(s) }
-                        .buttonStyle(.plain)
-                        // Horizontal cards can't swipe — long-press to delete.
-                        .contextMenu {
-                            Button(role: .destructive) {
-                                appState.deleteScenario(id: s.id)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
+            list {
+                ForEach(scenarios.prefix(5)) { s in
+                    let name = personaName(s)
+                    let partner: String? = {
+                        if let name { return name }
+                        let r = s.role.trimmingCharacters(in: .whitespaces)
+                        return r.isEmpty ? nil : r
+                    }()
+                    Button { onPickScenario(s) } label: {
+                        // The tidy summary as the title, NOT the raw prompt.
+                        listCard(title: s.cardTitle,
+                                 caption: partner.map { chrome("with \($0)") }) {
+                            if let name {
+                                Text(Books.initials(name))
+                                    .font(.caption.weight(.semibold))
+                            } else {
+                                Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
+                                    .font(.subheadline)
                             }
                         }
+                    }
+                    .buttonStyle(.plain)
+                    // Cards don't swipe — long-press to delete.
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            appState.deleteScenario(id: s.id)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
                 }
-                allScenariosCard
+                // List tail — the door to the full collection.
+                Button(action: onAllScenarios) {
+                    listCard(title: chrome("All scenarios"),
+                             caption: "\(scenarios.count)") {
+                        Image(systemName: "rectangle.stack")
+                            .font(.subheadline)
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
-    }
-
-    /// A SITUATION to talk out — same visual language as the news card
-    /// (Practice's surface + bare glyph), no mastery strip: tapping starts
-    /// the call, it isn't a review book here.
-    private func scenarioCard(_ s: Scenario) -> some View {
-        let name = personaName(s)
-        let partner: String? = {
-            if let name { return name }
-            let r = s.role.trimmingCharacters(in: .whitespaces)
-            return r.isEmpty ? nil : r
-        }()
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top) {
-                if let name {
-                    Text(Books.initials(name)).font(.title3.weight(.bold)).foregroundStyle(.tint)
-                } else {
-                    Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
-                        .font(.title2).foregroundStyle(.tint)
-                }
-                Spacer()
-                if let category = s.category, !category.isEmpty {
-                    Text(category)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.tint)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 14)
-            // The tidy summary, NOT the raw prompt the user typed.
-            Text(s.cardTitle)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(4)
-                .fixedSize(horizontal: false, vertical: true)
-            if let partner {
-                Text("with \(partner)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.top, 7)
-            }
-        }
-        .padding(14)
-        .frame(width: Self.cardWidth, alignment: .leading)
-        .frame(minHeight: 190, alignment: .top)
-        .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-        .contentShape(Rectangle())
     }
 
     private func personaName(_ s: Scenario) -> String? {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
-    }
-
-    /// Rail tail — the door to the full collection (browse, build, delete).
-    private var allScenariosCard: some View {
-        Button(action: onAllScenarios) {
-            VStack(spacing: 8) {
-                Image(systemName: "rectangle.stack")
-                    .font(.title2).foregroundStyle(.tint)
-                Text("All scenarios")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                Text("\(scenarios.count)")
-                    .font(.caption).foregroundStyle(.secondary).monospacedDigit()
-            }
-            .frame(width: 120)
-            .frame(minHeight: 190)
-            .background(RoundedRectangle(cornerRadius: 18).fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - News data
