@@ -401,53 +401,70 @@ final class GeminiClient {
     /// streamed, returning it only once its CLOSING quote has arrived. Returns
     /// nil while the value is incomplete, and for a non-string value (`null`,
     /// an object) so a `"suggestion": null` never reads as a finished string.
+    ///
+    /// A completed value that OPENS a JSON body (`{…`) is not a real field —
+    /// it's the model nesting the whole turn schema inside the value without
+    /// escaping (`"reply": "{"reply": "text"…`), where the unescaped inner
+    /// quote closes the outer string after one `{`. Skip that occurrence and
+    /// keep scanning: the next `"reply"` key is the INNER, real one, so the
+    /// turn recovers instead of speaking "{" (seen in beta 11 feedback).
     static func completedStringField(_ name: String, in partial: String) -> String? {
-        guard let key = partial.range(of: "\"\(name)\"") else { return nil }
-        var i = key.upperBound
-        func skipSpace() {
-            while i < partial.endIndex, partial[i].isWhitespace { i = partial.index(after: i) }
-        }
-        skipSpace()
-        guard i < partial.endIndex, partial[i] == ":" else { return nil }
-        i = partial.index(after: i)
-        skipSpace()
-        guard i < partial.endIndex, partial[i] == "\"" else { return nil }
-        i = partial.index(after: i)
-
-        var out = ""
-        var escaped = false
-        while i < partial.endIndex {
-            let c = partial[i]
-            if escaped {
-                switch c {
-                case "n":  out.append("\n")
-                case "t":  out.append("\t")
-                case "r":  out.append("\r")
-                case "\"": out.append("\"")
-                case "\\": out.append("\\")
-                case "/":  out.append("/")
-                case "u":
-                    // \uXXXX. Surrogate halves can't be resolved one escape at
-                    // a time — bail and let the fully decoded payload win.
-                    let start = partial.index(after: i)
-                    guard let end = partial.index(start, offsetBy: 4, limitedBy: partial.endIndex),
-                          let value = UInt32(String(partial[start..<end]), radix: 16),
-                          let scalar = Unicode.Scalar(value) else { return nil }
-                    out.append(Character(scalar))
-                    i = partial.index(before: end)
-                default:   out.append(c)
-                }
-                escaped = false
-            } else if c == "\\" {
-                escaped = true
-            } else if c == "\"" {
-                return out          // closing quote → the field is complete
-            } else {
-                out.append(c)
+        var searchFrom = partial.startIndex
+        scan: while let key = partial.range(of: "\"\(name)\"",
+                                            range: searchFrom..<partial.endIndex) {
+            searchFrom = key.upperBound
+            var i = key.upperBound
+            func skipSpace() {
+                while i < partial.endIndex, partial[i].isWhitespace { i = partial.index(after: i) }
             }
+            skipSpace()
+            guard i < partial.endIndex, partial[i] == ":" else { return nil }
             i = partial.index(after: i)
+            skipSpace()
+            guard i < partial.endIndex, partial[i] == "\"" else { return nil }
+            i = partial.index(after: i)
+
+            var out = ""
+            var escaped = false
+            while i < partial.endIndex {
+                let c = partial[i]
+                if escaped {
+                    switch c {
+                    case "n":  out.append("\n")
+                    case "t":  out.append("\t")
+                    case "r":  out.append("\r")
+                    case "\"": out.append("\"")
+                    case "\\": out.append("\\")
+                    case "/":  out.append("/")
+                    case "u":
+                        // \uXXXX. Surrogate halves can't be resolved one escape at
+                        // a time — bail and let the fully decoded payload win.
+                        let start = partial.index(after: i)
+                        guard let end = partial.index(start, offsetBy: 4, limitedBy: partial.endIndex),
+                              let value = UInt32(String(partial[start..<end]), radix: 16),
+                              let scalar = Unicode.Scalar(value) else { return nil }
+                        out.append(Character(scalar))
+                        i = partial.index(before: end)
+                    default:   out.append(c)
+                    }
+                    escaped = false
+                } else if c == "\\" {
+                    escaped = true
+                } else if c == "\"" {
+                    // Closing quote → the field is complete, unless the "value"
+                    // is a nested JSON opener — then hunt for the inner key.
+                    if out.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") {
+                        continue scan
+                    }
+                    return out
+                } else {
+                    out.append(c)
+                }
+                i = partial.index(after: i)
+            }
+            return nil              // still streaming
         }
-        return nil                  // still streaming
+        return nil
     }
 
     private static func extractJSON(from text: String) -> Data? {

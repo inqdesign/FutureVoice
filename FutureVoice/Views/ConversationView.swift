@@ -961,7 +961,9 @@ struct ConversationView: View {
                 guard speakTask == nil, !isTornDown else { return }
                 let text = Self.stripLeakedSchemaTail(reply)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !text.isEmpty else { return }
+                // A brace-opener is un-unwrappable JSON debris, never speech —
+                // stay silent and let the buffered decode / rescue path decide.
+                guard !text.isEmpty, !text.hasPrefix("{") else { return }
                 turnTiming["gemini_first_ms"] =
                     String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
                 speakTask = Task { @MainActor in
@@ -1010,6 +1012,11 @@ struct ConversationView: View {
             if let speakTask {
                 try await speakTask.value
             } else {
+                // After unwrapping, a reply that is still empty or raw JSON
+                // must fail into the Retry chip — never reach TTS or the feed.
+                guard !replyText.isEmpty, !replyText.hasPrefix("{") else {
+                    throw GeminiError.invalidResponse
+                }
                 try await speakAndAppend(replyText, voiceId: voiceId,
                                          idempotencyKey: "tts-turn:\(turnId.uuidString)")
             }
@@ -1095,16 +1102,23 @@ struct ConversationView: View {
     /// Defensive cleanup: a malformed model turn occasionally NESTS the whole
     /// {reply, suggestion, transcript} schema INSIDE the reply string (escaped),
     /// so after JSON-decoding the reply literally trails with
-    /// `","suggestion":null,"transcript":"…"}`. That must never be spoken —
-    /// cut the reply at the first such seam.
+    /// `","suggestion":null,"transcript":"…"}` — or IS the entire inner JSON
+    /// body. Neither must ever be spoken: unwrap a whole-body reply to its
+    /// inner "reply" field, then cut at the first leaked-schema seam.
     static func stripLeakedSchemaTail(_ reply: String) -> String {
+        var text = reply
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("{"),
+           let inner = GeminiClient.completedStringField("reply", in: trimmed) {
+            text = inner
+        }
         let pattern = #""\s*,\s*"(?:suggestion|transcript|reply)"\s*:"#
         guard let re = try? NSRegularExpression(pattern: pattern),
-              let m = re.firstMatch(in: reply, range: NSRange(reply.startIndex..., in: reply)),
-              let r = Range(m.range, in: reply) else {
-            return reply
+              let m = re.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let r = Range(m.range, in: text) else {
+            return text
         }
-        return String(reply[..<r.lowerBound])
+        return String(text[..<r.lowerBound])
     }
 
     private func retryReply() {
