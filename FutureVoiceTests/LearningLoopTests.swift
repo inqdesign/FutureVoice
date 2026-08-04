@@ -411,9 +411,13 @@ final class DrillReminderFireDateTests: XCTestCase {
     }
 
     func testEarlyMorningDueClampsToNine() {
+        // Fixed `now` (10:00) so tomorrow-3am stays OUTSIDE the 12-hour
+        // fire-exactly window at any time of day the suite runs — this test
+        // exercises the waking-hours clamp, not that bypass.
+        let now = date(hour: 10)
         let due = calendar.date(bySettingHour: 3, minute: 0, second: 0,
-                                of: calendar.date(byAdding: .day, value: 1, to: Date())!)!
-        let fire = DrillReminder.fireDate(now: Date(), nextDue: due, hasDueNow: false)
+                                of: calendar.date(byAdding: .day, value: 1, to: now)!)!
+        let fire = DrillReminder.fireDate(now: now, nextDue: due, hasDueNow: false)
         XCTAssertEqual(calendar.component(.hour, from: fire!), 9)
         XCTAssertTrue(calendar.isDate(fire!, inSameDayAs: due))
     }
