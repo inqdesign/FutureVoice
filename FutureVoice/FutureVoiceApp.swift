@@ -104,6 +104,14 @@ final class AppState: ObservableObject {
     /// True while that proxy owns the surface (morphing or on call). The
     /// home ring hides itself then, so the surface never shows twice.
     @Published var talkRingProxyActive = false
+    /// Mirror of the ring's minutes line ("4 of 10 min today"), kept fresh by
+    /// ConversationHome.reload — the proxy renders the EXACT same two-line
+    /// label, so the hand-off never shifts "Let's talk" vertically.
+    @Published var talkRingHeadline = ""
+    /// Bumped by RootTabView when a ring-path call closes. The home never
+    /// disappears under that overlay (no onAppear), so this is what triggers
+    /// the stats reload — behind the backdrop, before the reveal.
+    @Published var talkHomeReloadToken = UUID()
 
     @Published var voiceCloneId: String? {
         didSet {

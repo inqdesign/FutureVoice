@@ -117,7 +117,16 @@ struct ConversationHome: View {
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)
             }
-            .onAppear(perform: reload)
+            .onAppear { reload(); drawRing() }
+            // Ring-path calls live in RootTabView's overlay — this view never
+            // disappears, so onAppear can't refresh the stats. The token
+            // bumps at call close, while the backdrop still covers the home.
+            .onChange(of: appState.talkHomeReloadToken) { _, _ in reload() }
+            // The reveal after a call: the ring re-draws itself from zero as
+            // the backdrop lifts, instead of popping in fully drawn.
+            .onChange(of: appState.talkRingProxyActive) { _, active in
+                if !active { drawRing() }
+            }
             // Warm the free-talk opener pool while the user is still on the
             // launcher — the first "Let's talk" then greets from a canned
             // line instead of blocking on a live Gemini call.
@@ -157,6 +166,7 @@ struct ConversationHome: View {
             }
             .fullScreenCover(item: $callLaunch, onDismiss: {
                 reload()
+                drawRing()
                 maybePromptDeepen()
                 // The call just consumed a warmed greeting — top the cache
                 // back up so the NEXT call opens instantly too (no-op once
@@ -178,9 +188,27 @@ struct ConversationHome: View {
     private var goalProgress: Double {
         min(1, Double(todaySpokenSeconds) / Double(max(1, dailyGoalMinutes * 60)))
     }
-    /// The arc fraction the ring actually draws (identical to goalProgress
-    /// today; named so the depth overlays read as arc geometry, not stats).
-    private var goalProgress0to1: Double { goalProgress }
+    /// The arc fraction the ring actually draws — animated: it sweeps from 0
+    /// up to `goalProgress` whenever the ring (re)takes the stage, instead
+    /// of popping in fully drawn.
+    @State private var displayedProgress: Double = 0
+    private var goalProgress0to1: Double { displayedProgress }
+
+    /// Sweep the arc from zero to today's value. Called on first appear and
+    /// every time the ring is revealed again (call close, cover dismiss).
+    /// The reset must NOT animate (and must land in its own transaction) or
+    /// the sweep starts mid-flight — hence the explicit two-step.
+    private func drawRing() {
+        var snap = Transaction()
+        snap.disablesAnimations = true
+        withTransaction(snap) { displayedProgress = 0 }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            withAnimation(.easeOut(duration: 0.55)) {
+                displayedProgress = goalProgress
+            }
+        }
+    }
 
     /// The page's opening move: a time-of-day question in the display face,
     /// and one giant goal ring whose interior is the living Futureself
@@ -201,12 +229,19 @@ struct ConversationHome: View {
             Spacer(minLength: 0)
             talkRing
                 .scaleEffect(ringScale)
-                // Flatten ring + surface + labels into ONE layer before the
-                // fade — without this, opacity reaches each layer separately
-                // (the shader surface especially) and the parts visibly
-                // dissolve at different rates.
                 .compositingGroup()
-                .opacity(appState.talkRingProxyActive ? 0 : ringOpacity)
+                .opacity(appState.talkRingProxyActive ? 0 : 1)
+                // The scroll fade is a WASH of the page background, not an
+                // alpha fade: the Metal-backed Futureself layer doesn't
+                // reliably inherit ancestor opacity, but nothing escapes
+                // being painted over. On the flat background the two are
+                // visually identical.
+                .overlay(
+                    Rectangle()
+                        .fill(Color(.systemGroupedBackground))
+                        .opacity(1 - ringOpacity)
+                        .allowsHitTesting(false)
+                )
             // Breathing room under the ring (with the outer stack's 24pt,
             // ≈44pt to the list) — close enough to invite the scroll, far
             // enough not to crowd the ring.
@@ -284,52 +319,55 @@ struct ConversationHome: View {
     /// never changes pixel scale.
     private var talkRing: some View {
         ZStack {
+            // Whisper of a track: primary at 1.5% — all but invisible. The
+            // full circle is merely SENSED against the background on a good
+            // display, never seen as a shape of its own.
             Circle()
-                // Barely-there track: quaternary reads as a whisper of a
-                // groove against the page background, not a gray donut.
-                .stroke(Color(.quaternarySystemFill), lineWidth: 14)
+                .stroke(Color.primary.opacity(0.015), lineWidth: 14)
             // Accent, even at goal — the ring follows the app's palette
             // (green-at-goal clashed with non-green Futureself themes).
             // ONE gradient stroke: the tail FADES IN from near-transparent
             // at 12 o'clock to full accent by ~55% of the arc — comet-style
             // depth, no black overlay. (Angles are PRE-rotation; 0° lands on
             // the tail once the -90° below spins the layer.)
-            // Nothing at zero: a near-empty trim under the angular gradient
-            // renders as a half-cut dot at 12, so an empty day shows the
-            // bare track instead.
+            // Both arc layers render UNCONDITIONALLY (hidden via opacity at
+            // zero) — an `if` around them re-INSERTS the view when progress
+            // moves off zero, and inserted views fade in at final length
+            // instead of animating their trim: the draw-on sweep only works
+            // on a view that already exists.
             //
-            // The fade is EARNED, not constant: a short arc is solid accent
-            // (a gradient across a 15° pill just smears it), and only as the
-            // ring closes does the tail thin out — reaching 15% right when
-            // the head needs to read as passing over it.
-            if goalProgress0to1 > 0.01 {
-                let tailOpacity = 1.0 - 0.85 * max(0, (goalProgress0to1 - 0.3) / 0.7)
-                Circle()
-                    .trim(from: 0, to: goalProgress0to1)
-                    .stroke(
-                        AngularGradient(
-                            stops: [
-                                .init(color: Color.accentColor.opacity(tailOpacity), location: 0),
-                                .init(color: Color.accentColor, location: 0.55),
-                            ],
-                            center: .center,
-                            startAngle: .degrees(0),
-                            endAngle: .degrees(360 * goalProgress0to1)),
-                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
+            // The tail ALWAYS fades — but only over the REAR of the arc: at
+            // most 90° of circle, never past the arc's halfway point. The
+            // head half stays solid accent, so a short arc reads as a crisp
+            // little comet instead of a smeared translucent pill. (Zero
+            // progress also needs the hide below: a near-empty trim under
+            // the angular gradient renders as a half-cut dot at 12.)
+            let fadeEnd = min(0.5, 0.25 / max(goalProgress0to1, 0.001))
+            Circle()
+                .trim(from: 0, to: goalProgress0to1)
+                .stroke(
+                    AngularGradient(
+                        stops: [
+                            .init(color: Color.accentColor.opacity(0.15), location: 0),
+                            .init(color: Color.accentColor, location: fadeEnd),
+                        ],
+                        center: .center,
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360 * goalProgress0to1)),
+                    style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .opacity(goalProgress0to1 > 0.005 ? 1 : 0)
             // At full progress the circle closes and the stroke loses its
             // caps — the seam at 12 turns into a flat butt joint. Re-draw
             // the last sliver with a round cap (NO shadow): its head pokes
             // just past 12 over the faded tail, and its trailing edge is the
             // same full accent as the base arc, so no seam shows.
-            if goalProgress0to1 > 0.97 {
-                Circle()
-                    .trim(from: goalProgress0to1 - 0.02, to: goalProgress0to1)
-                    .stroke(Color.accentColor,
-                            style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-            }
+            Circle()
+                .trim(from: max(goalProgress0to1 - 0.02, 0), to: goalProgress0to1)
+                .stroke(Color.accentColor,
+                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .opacity(goalProgress0to1 > 0.97 ? 1 : 0)
 
             Button {
                 // Same gate as openBilling: a spent free balance goes to the
@@ -627,6 +665,8 @@ struct ConversationHome: View {
         }
         todaySpokenSeconds = todayMs / 1000
         todayTalks = todayCount
+        // Keep the proxy's label copy in sync (see AppState.talkRingHeadline).
+        appState.talkRingHeadline = goalHeadline
     }
 }
 

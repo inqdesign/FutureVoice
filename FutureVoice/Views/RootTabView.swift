@@ -195,15 +195,34 @@ struct RootTabView: View {
             let corner: CGFloat = pillDocked ? 32 : rect.height / 2
             ZStack {
                 Futureself(mode: .idle, level: 0, virtualHeight: 64)
-                // The label clears quickly and nothing replaces it: the
-                // call's own pill is glyph-free while on call (the living
-                // surface IS the state), so the docked proxy matches it by
-                // showing bare pixels too.
-                Text("Let's talk")
-                    .geistPixel(20)
-                    .foregroundStyle(.primary)
+                // At the ring pose the surface wears the ring's exact
+                // dressing — background wash + uniform inner shadow — and
+                // sheds it while docking (the call pill is bare). Without
+                // this the hand-off visibly swapped surface treatments.
+                Color(.systemGroupedBackground).opacity(0.35)
                     .opacity(pillDocked ? 0 : 1)
-                    .animation(.easeOut(duration: 0.15), value: pillDocked)
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
+                                  lineWidth: 10)
+                    .blur(radius: 6)
+                    .mask(RoundedRectangle(cornerRadius: corner, style: .continuous))
+                    .opacity(pillDocked ? 0 : 1)
+                // The label clears quickly while docked and nothing replaces
+                // it: the call's own pill is glyph-free while on call (the
+                // living surface IS the state). At the ring pose the label
+                // is the EXACT two-line stack the home ring renders, so the
+                // hand-off never shifts "Let's talk" vertically.
+                VStack(spacing: 6) {
+                    Text("Let's talk")
+                        .geistPixel(20)
+                        .foregroundStyle(.primary)
+                    Text(appState.talkRingHeadline)
+                        .font(.footnote.weight(.medium))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                .opacity(pillDocked ? 0 : 1)
+                .animation(.easeOut(duration: 0.15), value: pillDocked)
             }
             .frame(width: rect.width, height: rect.height)
             .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
@@ -256,25 +275,31 @@ struct RootTabView: View {
     private func closeFreeTalk() {
         guard freeTalkCallId != nil, !freeTalkClosing else { return }
         freeTalkClosing = true
+        // Refresh the home's stats NOW, behind the backdrop — the minutes
+        // line (here on the proxy and on the ring underneath) is already
+        // up to date by the time anything is revealed.
+        appState.talkHomeReloadToken = UUID()
         // Reverse hand-off: proxy reappears over the mic pill, then carries
         // the morph back up to the ring while the call fades underneath.
         withAnimation(.easeIn(duration: 0.1)) { pillHidden = false }
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 100_000_000)
-            // The call (and backdrop) dissolve on their own SHORT fade while
-            // the proxy rises on its spring — decoupled, so the
-            // NavigationStack teardown rides the brief fade instead of
-            // stretching across the spring's frames.
+            // The call dissolves on its own SHORT fade while the proxy rises
+            // on its spring — but the BACKDROP stays up: the morph plays on
+            // a clean stage, not over the reappearing home UI.
             withAnimation(.easeOut(duration: 0.2)) {
                 freeTalkCallId = nil
-                callBackdropShown = false
             }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
                 pillDocked = false
             }
-            // Let the spring land back on the ring before the home ring
-            // takes over the surface (and taps) again.
+            // Only after the spring has landed on the ring does the home
+            // fade back in around it — transition first, THEN the UI.
             try? await Task.sleep(nanoseconds: 450_000_000)
+            withAnimation(.easeOut(duration: 0.25)) { callBackdropShown = false }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            // Backdrop cleared with the proxy still ON the ring pose — the
+            // swap to the real ring underneath is pixel-identical.
             appState.talkRingProxyActive = false
             freeTalkClosing = false
             // The call consumed a warmed greeting — top the cache back up so
