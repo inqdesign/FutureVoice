@@ -9,13 +9,23 @@
 #   3. `brew install fastlane` (or `gem install fastlane`)
 #
 # Then:
+#   fastlane beta          # build Release + upload to TestFlight (bumps the build number)
 #   fastlane metadata      # upload name/subtitle/description/keywords/promo/URLs (en-US + ko)
 #   fastlane screenshots   # upload whatever is in fastlane/screenshots/<locale>/
+#
+# HEADS UP — fastlane 2.x does not run on Ruby 4.0 (removed default gems, and
+# its dependency set no longer resolves). This machine's only ruby is 4.0, so
+# every lane here currently fails before it starts. Releasing does not depend
+# on fixing that: `./scripts/beta.sh` does the build + upload with nothing but
+# Xcode. These lanes stay for a machine (or CI) with Ruby 3.x.
 #
 # What this CANNOT do (do once by hand in ASC):
 #   Paid Apps agreement + banking · subscription products · age rating · App Privacy labels
 
 default_platform(:ios)
+
+APP_PLIST    = "FutureVoice/Resources/Info.plist".freeze
+WIDGET_PLIST = "FutureVoiceWidget/Info.plist".freeze
 
 def asc_key
   app_store_connect_api_key(
@@ -25,7 +35,58 @@ def asc_key
   )
 end
 
+# The next build number, asked of TestFlight rather than read from disk.
+# A local counter drifts the moment an upload happens from another machine (or
+# a branch) — Apple rejects a duplicate (bundle id, build) outright, at the end
+# of a ten-minute upload. Falling back to the plist keeps the lane usable
+# offline or before the app exists in ASC.
+def next_build_number(current)
+  latest = latest_testflight_build_number(api_key: asc_key, initial_build_number: 0)
+  [latest.to_i, current.to_i].max + 1
+rescue StandardError => e
+  UI.important("TestFlight lookup failed (#{e.message}) — bumping the local number instead")
+  current.to_i + 1
+end
+
 platform :ios do
+  desc "Build Release and upload it to TestFlight"
+  lane :beta do
+    # The .xcodeproj is generated — build whatever project.yml currently says,
+    # never a stale one someone forgot to regenerate.
+    sh("cd .. && xcodegen generate")
+
+    current = get_info_plist_value(path: APP_PLIST, key: "CFBundleVersion")
+    build   = next_build_number(current).to_s
+    # The widget is an embedded extension: Apple rejects the archive unless its
+    # CFBundleVersion matches the host app's exactly. Bump both, always.
+    [APP_PLIST, WIDGET_PLIST].each do |plist|
+      set_info_plist_value(path: plist, key: "CFBundleVersion", value: build)
+    end
+    version = get_info_plist_value(path: APP_PLIST, key: "CFBundleShortVersionString")
+    UI.success("Building #{version} (#{build})")
+
+    build_app(
+      project: "FutureVoice.xcodeproj",
+      scheme: "FutureVoice",
+      configuration: "Release",
+      export_method: "app-store",
+      clean: true,
+      output_directory: "build/fastlane",
+      # Release is the only config that ships; Debug installs beside it as
+      # `nawana dev` (project.yml) and must never reach App Store Connect.
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    upload_to_testflight(
+      api_key: asc_key,
+      skip_waiting_for_build_processing: true,   # returns as soon as the binary lands
+      distribute_external: false                 # internal testers only; promote in ASC
+    )
+
+    UI.success("#{version} (#{build}) uploaded. It appears in TestFlight once Apple finishes processing.")
+    UI.important("Commit the bumped build number: git add #{APP_PLIST} #{WIDGET_PLIST}")
+  end
+
   desc "Push all text metadata (en-US + ko) to App Store Connect"
   lane :metadata do
     deliver(
