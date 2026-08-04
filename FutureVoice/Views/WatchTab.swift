@@ -10,9 +10,9 @@ import SwiftUI
 ///   2. "Make your own situation" — the default: describe the real thing
 ///      coming up ("Lufthansa cabin-crew interview next week") in a blank
 ///      composer. No person required; the scene casts whoever fits.
-///   3. Likely situations — a card grid of everyday territories; tapping a
-///      card opens a step-by-step builder sheet (chip by chip, stoppable at
-///      any depth).
+///   3. Likely situations — light category chips; tapping one opens the
+///      composer pre-scoped to that category, with AI ideas loading right
+///      away.
 ///
 /// Watching mints the scenario book that Practice reviews later.
 struct WatchTab: View {
@@ -38,20 +38,31 @@ struct WatchTab: View {
         var person: Counterpart?
         /// Pre-selected category (from a "Likely situations" card).
         var category: ScenarioComposerSheet.Category?
+        /// Set when a saved scenario card was tapped — the composer opens
+        /// prefilled as a settings sheet (edit, delete, or Watch a fresh take)
+        /// instead of generating immediately.
+        var editing: Scenario?
     }
 
     var body: some View {
         NavigationStack {
-            List {
-                peopleSection
-                makeYourOwnSection
-                scenariosSection
-                likelySection
+            // A ScrollView, NOT a List: every section here is a custom grid or
+            // card. Inside a List each grid lives in one row, and the
+            // inset-grouped cell mask rounds the row's corners — visibly
+            // clipping whatever chip/card sits at an edge — and long-press
+            // context menus preview the WHOLE row instead of one card.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    peopleSection
+                    makeYourOwnSection
+                    scenariosSection
+                    likelySection
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
             }
-            .listStyle(.insetGrouped)
-            // The inset-grouped default top margin reads as a hole under the
-            // inline-large title — pull the people row up close to the header.
-            .contentMargins(.top, 8, for: .scrollContent)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Watch")
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
@@ -65,12 +76,20 @@ struct WatchTab: View {
             .sheet(item: $composer) { cfg in
                 // The ONE unified composer — same as Talk's "+", but its action
                 // is Watch (play the scene). Saves the scenario, then plays it.
+                // A saved card opens the SAME sheet in edit mode (cfg.editing):
+                // review/tweak the settings, delete, or Watch a fresh take.
                 ScenarioComposerSheet(person: cfg.person,
                                       initialCategory: cfg.category,
-                                      ctaTitle: "Watch", ctaIcon: "play.fill") { scenario in
+                                      editing: cfg.editing,
+                                      ctaTitle: "Watch", ctaIcon: "play.fill",
+                                      onDelete: cfg.editing.map { s in
+                                          { appState.deleteScenario(id: s.id); composer = nil }
+                                      }) { scenario in
                     appState.saveScenario(scenario)
                     composer = nil
-                    watchScene = WatchTarget(scenario: scenario, fresh: false)
+                    // Editing an existing scenario → its Watch is a fresh take
+                    // into the same book; a just-minted one plays its first.
+                    watchScene = WatchTarget(scenario: scenario, fresh: cfg.editing != nil)
                 }
                 .environmentObject(appState)
             }
@@ -91,7 +110,7 @@ struct WatchTab: View {
     // MARK: - 1. People (stories row)
 
     private var peopleSection: some View {
-        Section {
+        VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach(appState.counterparts) { c in
@@ -99,14 +118,16 @@ struct WatchTab: View {
                     }
                     addPersonBubble
                 }
+                // Full-bleed scroller: cancel the page's side padding so
+                // avatars run edge to edge, then restore it inside.
+                .padding(.horizontal, 20)
                 .padding(.vertical, 6)
             }
-        } footer: {
+            .padding(.horizontal, -20)
             Text(explain("Tap someone — situations with them, in their voice."))
-                .padding(.horizontal, 4)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets())
     }
 
     private func personBubble(_ c: Counterpart) -> some View {
@@ -156,22 +177,26 @@ struct WatchTab: View {
     @ViewBuilder
     private var scenariosSection: some View {
         if !savedScenarios.isEmpty {
-            Section {
-                // Same 2-column card grid as "Likely situations" below.
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader("Your scenarios")
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
                           spacing: 12) {
                     ForEach(savedScenarios) { s in
                         scenarioCard(s)
                     }
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-            } header: {
-                Text("Your scenarios")
-            } footer: {
-                Text(explain("The situations you've built — every watch writes a fresh take. Past takes live in Practice."))
+                Text(explain("Tap a card to review or tweak it, then watch — every watch writes a fresh take. Past takes live in Practice."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
+    }
+
+    /// Grouped-list-style section title, hand-rolled since the page left List.
+    private func sectionHeader(_ title: LocalizedStringKey) -> some View {
+        Text(title)
+            .font(.title3.weight(.semibold))
+            .foregroundStyle(.secondary)
     }
 
     private func scenarioCard(_ s: Scenario) -> some View {
@@ -180,28 +205,66 @@ struct WatchTab: View {
         }
         let partner = personaName
             ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role)
+        // The concrete situation under the tidy title — only when the title
+        // isn't already the environment text (rows with no summary show the
+        // environment AS the title, so a blurb would just repeat it).
+        let env = s.environment.trimmingCharacters(in: .whitespacesAndNewlines)
+        let blurb = env.caseInsensitiveCompare(s.cardTitle) == .orderedSame ? nil : env
         return Button {
-            watchScene = WatchTarget(scenario: s, fresh: true)
+            // Settings sheet first, not straight to generation — check the
+            // situation/voice, tweak or delete, then Watch from there.
+            composer = ComposerConfig(editing: s)
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                if let personaName {
-                    Text(Books.initials(personaName))
-                        .font(.title3.weight(.bold)).foregroundStyle(.tint)
-                } else {
-                    Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
-                        .font(.title2).foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top) {
+                    if let personaName {
+                        Text(Books.initials(personaName))
+                            .font(.title3.weight(.bold)).foregroundStyle(.tint)
+                    } else {
+                        Image(systemName: s.categoryIcon ?? Books.roleIcon(for: s.role))
+                            .font(.title2).foregroundStyle(.tint)
+                    }
+                    Spacer(minLength: 8)
+                    // Tap opens the settings sheet; Watch (a fresh take) is its
+                    // CTA — the play glyph still names the card's end action.
+                    Image(systemName: "play.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.tint)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
+                    if let category = s.category, personaName == nil {
+                        Text(category)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                     Text(s.cardTitle)
                         .font(.headline)
                         .foregroundStyle(.primary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let partner {
-                        Text("with \(partner)")
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    if let blurb {
+                        Text(blurb)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
+                Spacer(minLength: 0)
+                HStack(spacing: 4) {
+                    if let partner {
+                        Text("with \(partner)").lineLimit(1)
+                    }
+                    if partner != nil && s.lastUsedAt != nil {
+                        Text(verbatim: "·")
+                    }
+                    if let last = s.lastUsedAt {
+                        Text(last, format: .relative(presentation: .named)).lineLimit(1)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
@@ -211,6 +274,10 @@ struct WatchTab: View {
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color(.secondarySystemGroupedBackground)))
             .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            // Long-press preview hugs THIS card's rounded rect (outside a
+            // List it would default to the view's rectangular bounds).
+            .contentShape(.contextMenuPreview,
+                          RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
         .buttonStyle(.plain)
         .contextMenu {
@@ -223,75 +290,80 @@ struct WatchTab: View {
     // MARK: - 2. Make your own (the default)
 
     private var makeYourOwnSection: some View {
-        Section {
-            Button {
-                composer = ComposerConfig()
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "square.and.pencil")
-                        .font(.title3)
-                        .foregroundStyle(.tint)
-                        .frame(width: 28)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Make your own situation")
-                            .font(.body.weight(.medium))
-                            .foregroundStyle(.primary)
-                        Text(explain("The real thing coming up — an interview, a call, a visit. Describe it, watch it handled."))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Spacer(minLength: 8)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+        Button {
+            composer = ComposerConfig()
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "square.and.pencil")
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Make your own situation")
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                    Text(explain("The real thing coming up — an interview, a call, a visit. Describe it, watch it handled."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.vertical, 4)
-                .contentShape(Rectangle())
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
-            .buttonStyle(.plain)
+            .padding(16)
+            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground)))
+            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 3. Likely situations (category cards → the unified composer)
 
     private var likelySection: some View {
-        Section {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)],
-                      spacing: 12) {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeader("Likely situations")
+            // Deliberately LIGHTER than the scenario cards above: these are
+            // starting points that open the composer, not saved content that
+            // plays. Chip styling (same as the composer's own choice chips)
+            // keeps the two tap behaviors visually distinct.
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)],
+                      alignment: .leading, spacing: 8) {
                 ForEach(prioritizedTree) { node in
-                    categoryCard(node)
+                    categoryChip(node)
                 }
             }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
-        } header: {
-            Text("Likely situations")
-        } footer: {
             Text(explain("Tap a category — the composer suggests specific scenarios you can watch."))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
         }
     }
 
-    private func categoryCard(_ node: SituationBranch) -> some View {
+    private func categoryChip(_ node: SituationBranch) -> some View {
         Button {
             // Jump into the unified composer pre-scoped to this category.
             composer = ComposerConfig(
                 category: ScenarioComposerSheet.Category(title: node.label, icon: node.icon))
         } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Image(systemName: node.icon)
-                    .font(.title2)
+                    .font(.subheadline)
                     .foregroundStyle(.tint)
                 Text(node.label)
-                    .font(.headline)
+                    .font(.subheadline)
                     .foregroundStyle(.primary)
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground)))
-            .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.tertiarySystemFill)))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -398,375 +470,6 @@ struct WatchTab: View {
             ])
         ])
     ]
-}
-
-// MARK: - Situation composer (bottom sheet)
-
-/// The one place a situation gets made — reached from a persona bubble
-/// (scoped to them, with relationship-grounded ideas), the "make your own"
-/// button, or a drill-down leaf (prefilled, editable). Watch generates the
-/// scene and plays it; the book lands in Practice.
-struct SituationComposerSheet: View {
-    let person: Counterpart?
-    var initialText = ""
-    /// Called with the freshly minted scenario after Watch is tapped.
-    let onWatch: (Scenario) -> Void
-
-    @EnvironmentObject private var appState: AppState
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var situation = ""
-    @State private var ideas: [SuggestedTopic] = []
-    @State private var loadingIdeas = false
-    @State private var ideasError: String?
-    // Who the scene's counterpart sounds like — always set when the sheet
-    // isn't already scoped to a person. Defaults to the Me → Voice pick.
-    @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
-    @State private var pickedPersonId: UUID?
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                if let p = person { personHeader(p) }
-                situationField
-                if person == nil {
-                    TalkingWithSection(selectedVoiceId: $selectedVoiceId,
-                                       attachedPersonId: $pickedPersonId,
-                                       counterparts: appState.counterparts)
-                }
-                if person != nil { ideasSection }
-            }
-            .navigationTitle(person.map { "With \($0.name)" } ?? "Your situation")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                // Watch lives in the header, not a bottom bar — the sheet's
-                // lower half stays free for the form and the keyboard.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { startWatch() } label: {
-                        Label("Watch", systemImage: "play.fill")
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            // Typing is OPTIONAL — the keyboard never pops on its own. The
-            // sheet opens showing the ideas / the prefilled text; the field
-            // activates only when the user taps it.
-            .onAppear { situation = initialText }
-            .task { await loadIdeasIfNeeded() }
-        }
-        .presentationDetents([.medium, .large])
-    }
-
-    // MARK: - Pieces
-
-    private func personHeader(_ p: Counterpart) -> some View {
-        Section {
-            HStack(spacing: 12) {
-                PersonBubble(name: p.name, size: 40)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(p.name).font(.body.weight(.medium))
-                    if !p.relationship.isEmpty {
-                        Text(p.relationship).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
-
-    private var situationField: some View {
-        Section {
-            TextField(person == nil
-                        ? "e.g. Lufthansa cabin-crew interview next week — I want to rehearse it"
-                        : "e.g. Running into them at the wedding and catching up",
-                      text: $situation, axis: .vertical)
-                .lineLimit(3...6)
-        } header: {
-            Text("The situation")
-        } footer: {
-            Text(explain("Be concrete — where, what's going on, what you want. Tap the keyboard mic to just say it."))
-        }
-    }
-
-    /// Relationship-grounded situation ideas for THIS person — cached on the
-    /// counterpart so reopening is free; refresh regenerates.
-    @ViewBuilder
-    private var ideasSection: some View {
-        Section {
-            if loadingIdeas && ideas.isEmpty {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Thinking of situations with them…").foregroundStyle(.secondary)
-                }
-            } else {
-                ForEach(ideas) { idea in
-                    Button {
-                        situation = "\(idea.title). \(idea.blurb)"
-                    } label: {
-                        HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: "text.insert")
-                                .font(.subheadline)
-                                .foregroundStyle(.tint)
-                                .frame(width: 22)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(idea.title).font(.subheadline).foregroundStyle(.primary)
-                                if !idea.blurb.isEmpty {
-                                    Text(idea.blurb).font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer(minLength: 8)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            if let e = ideasError {
-                Text(e).font(.caption).foregroundStyle(.red)
-            }
-        } header: {
-            HStack {
-                Text("Ideas with \(person?.name ?? "")")
-                Spacer()
-                Button {
-                    Task { await regenerateIdeas() }
-                } label: {
-                    if loadingIdeas {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                            .labelStyle(.iconOnly)
-                    }
-                }
-                .disabled(loadingIdeas)
-            }
-        }
-    }
-
-    // MARK: - Actions
-
-    private func startWatch() {
-        let description = situation.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !description.isEmpty else { return }
-        let who = person ?? pickedPersonId.flatMap { id in
-            appState.counterparts.first { $0.id == id }
-        }
-        var s = Scenario(
-            environment: description,
-            // No person → leave the role EMPTY: the scene infers the natural
-            // counterpart from the situation itself (a landlord situation
-            // casts a landlord, not a generic friend).
-            role: who.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
-            notes: ""
-        )
-        s.counterpartId = who?.id
-        // No persona → the picked preset voice sticks to the scenario.
-        s.voicePresetId = who == nil ? selectedVoiceId : nil
-        appState.saveScenario(s)
-        onWatch(s)
-    }
-
-    private func loadIdeasIfNeeded() async {
-        guard let p = person, ideas.isEmpty else { return }
-        if !p.savedScenarios(in: appState.targetLanguage).isEmpty {
-            ideas = p.savedScenarios(in: appState.targetLanguage)
-        } else {
-            await regenerateIdeas()
-        }
-    }
-
-    private func regenerateIdeas() async {
-        guard let p = person else { return }
-        loadingIdeas = true
-        ideasError = nil
-        defer { loadingIdeas = false }
-        do {
-            let fresh = try await TopicEngine.suggestForCounterpart(
-                persona: appState.persona,
-                counterpart: p,
-                targetLanguage: appState.targetLanguage
-            )
-            ideas = fresh
-            // Persist onto the counterpart so the next open is instant + free.
-            var updated = p
-            updated.setSavedScenarios(fresh, in: appState.targetLanguage)
-            appState.saveCounterpart(updated)
-        } catch {
-            ideasError = error.localizedDescription
-        }
-    }
-}
-
-// MARK: - Step-by-step situation builder (bottom sheet)
-
-/// Opened from a "Likely situations" card. The user sharpens the situation
-/// chip by chip down the branch tree — and can stop at ANY depth: Watch is
-/// always live in the header with whatever has been picked so far. Reaching
-/// a leaf drops its full ready-made situation into the editable text.
-struct SituationBuilderSheet: View {
-    let root: WatchTab.SituationBranch
-    /// Called with the freshly minted scenario after Watch is tapped.
-    let onWatch: (Scenario) -> Void
-
-    @EnvironmentObject private var appState: AppState
-    @Environment(\.dismiss) private var dismiss
-
-    /// Chips picked so far (below the root).
-    @State private var path: [WatchTab.SituationBranch] = []
-    /// The always-editable situation text — rewritten on every chip pick,
-    /// free for the user to touch up before watching.
-    @State private var situation = ""
-
-    private var currentChildren: [WatchTab.SituationBranch] {
-        path.last?.children ?? root.children
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                picksSection
-                if !currentChildren.isEmpty { choicesSection }
-                situationSection
-            }
-            .navigationTitle(root.label)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
-                }
-                // Header Watch — usable mid-chain, not just at a leaf.
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { startWatch() } label: {
-                        Label("Watch", systemImage: "play.fill")
-                            .labelStyle(.titleAndIcon)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(situation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-            }
-            .onAppear { if situation.isEmpty { situation = assembledText() } }
-        }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-    }
-
-    // MARK: - Sections
-
-    /// The chosen chain so far, as chips — tap one to back up to that step.
-    private var picksSection: some View {
-        Section {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    stepChip(label: root.label, filled: path.isEmpty) {
-                        backUp(to: 0)
-                    }
-                    ForEach(Array(path.enumerated()), id: \.element.id) { i, node in
-                        Image(systemName: "chevron.right")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                        stepChip(label: node.label, filled: i == path.count - 1) {
-                            backUp(to: i + 1)
-                        }
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-        } header: {
-            Text("Your situation so far")
-        }
-    }
-
-    private func stepChip(label: String, filled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.subheadline.weight(.medium))
-                .lineLimit(1)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(filled ? Color.accentColor.opacity(0.15)
-                                                  : Color(.tertiarySystemFill)))
-                .foregroundStyle(filled ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// The next refinement, as tappable chips.
-    private var choicesSection: some View {
-        Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 8)],
-                      alignment: .leading, spacing: 8) {
-                ForEach(currentChildren) { node in
-                    Button {
-                        withAnimation(.easeOut(duration: 0.15)) { pick(node) }
-                    } label: {
-                        Text(node.label)
-                            .font(.subheadline)
-                            .multilineTextAlignment(.leading)
-                            .lineLimit(2)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 9)
-                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .fill(Color(.tertiarySystemFill)))
-                            .foregroundStyle(.primary)
-                            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        } header: {
-            Text("Sharpen it")
-        } footer: {
-            Text(explain("Optional — pick a chip to go deeper, or hit Watch with what you have."))
-        }
-    }
-
-    private var situationSection: some View {
-        Section {
-            TextField("Describe the situation", text: $situation, axis: .vertical)
-                .lineLimit(2...5)
-        } header: {
-            Text("The situation")
-        } footer: {
-            Text(explain("Watch uses this text — edit it freely."))
-        }
-    }
-
-    // MARK: - Logic
-
-    private func pick(_ node: WatchTab.SituationBranch) {
-        path.append(node)
-        situation = node.situation ?? assembledText()
-    }
-
-    private func backUp(to depth: Int) {
-        guard depth < path.count else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
-            path.removeLast(path.count - depth)
-            situation = path.last?.situation ?? assembledText()
-        }
-    }
-
-    /// Situation text for a mid-chain stop — the picked labels, readable
-    /// enough for the scene engine to cast and improvise the rest.
-    private func assembledText() -> String {
-        let labels = [root.label] + path.map(\.label)
-        return labels.joined(separator: " — ") + ": a realistic everyday moment."
-    }
-
-    private func startWatch() {
-        let description = situation.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !description.isEmpty else { return }
-        // Role left empty — the scene infers the natural counterpart
-        // (same policy as the free composer).
-        let s = Scenario(environment: description, role: "", notes: "")
-        appState.saveScenario(s)
-        onWatch(s)
-    }
 }
 
 // MARK: - PersonBubble

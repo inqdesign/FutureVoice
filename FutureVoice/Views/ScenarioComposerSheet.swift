@@ -19,8 +19,14 @@ struct ScenarioComposerSheet: View {
     /// Pre-select a category on open (Watch's "Likely situations" cards jump
     /// straight into it, so its AI ideas load immediately).
     var initialCategory: Category? = nil
+    /// When set, the sheet EDITS this saved scenario instead of minting a new
+    /// one: every field prefills from it, commit keeps its identity (id, book,
+    /// mastery, history), and a delete row appears at the bottom.
+    var editing: Scenario? = nil
     let ctaTitle: String
     let ctaIcon: String
+    /// Edit mode only — remove the scenario (and with it, its Practice book).
+    var onDelete: (() -> Void)? = nil
     let onCommit: (Scenario) -> Void
 
     @EnvironmentObject private var appState: AppState
@@ -75,6 +81,7 @@ struct ScenarioComposerSheet: View {
     /// The tidy card summary — a picked chip's short label, or the AI's
     /// paraphrase of typed text. Never the raw prompt.
     @State private var summary = ""
+    @State private var confirmingDelete = false
 
     struct Category: Identifiable, Hashable {
         var id: String { title.lowercased() }
@@ -116,8 +123,9 @@ struct ScenarioComposerSheet: View {
                 overviewSection
                 choiceSection
                 if person == nil { attachSection }
+                if onDelete != nil { deleteSection }
             }
-            .navigationTitle("New scenario")
+            .navigationTitle(editing == nil ? Text("New scenario") : Text("Edit scenario"))
             .navigationBarTitleDisplayMode(.inline)
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
@@ -126,6 +134,21 @@ struct ScenarioComposerSheet: View {
                 // TLS handshake + auth-token refresh off the critical path, so
                 // the first real ideas call isn't also paying for a cold radio.
                 GeminiClient.shared.preconnect()
+                if let e = editing, situation.isEmpty, path.isEmpty {
+                    // Prefill from the saved scenario. Custom mode — the text
+                    // IS the scenario, so no chip grid to contradict it; the
+                    // saved category shows as the breadcrumb.
+                    programmaticSituation = true
+                    situation = e.environment
+                    summary = e.summary ?? ""
+                    customMode = true
+                    if let cat = e.category {
+                        path = [Crumb(label: cat, scenario: "",
+                                      icon: e.categoryIcon ?? "sparkles")]
+                    }
+                    attachedPersonId = e.counterpartId
+                    selectedVoiceId = e.voicePresetId ?? VoicePreset.sceneDefault.id
+                }
                 if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
                 dictationLocale = appState.nativeLanguage
             }
@@ -163,8 +186,10 @@ struct ScenarioComposerSheet: View {
             if !path.isEmpty { breadcrumb }
             // Same speak-or-type field as the persona intake: type, or tap
             // the mic and just say the situation — dictation streams into
-            // the field live. The field draws its own card, so the row
-            // sheds the Form's inset/background to avoid a double box.
+            // the field live. The SECTION is the one and only container here:
+            // the field's own card is turned off (clear) so the breadcrumb
+            // row and the field share the section's native rounded box —
+            // stacking a second radius inside it read as two welded cards.
             // No locale toggle here: on-device STT can't auto-detect the
             // spoken language, so dictation is pinned to the user's native
             // language (how situations get described anyway). Typing is
@@ -175,11 +200,9 @@ struct ScenarioComposerSheet: View {
                              showsLocalePicker: false,
                              lineRange: 2...6,
                              externalFocus: $situationFocused,
-                             // Grouped-row white/elevated fill — the default
-                             // card gray vanishes against the Form background.
-                             cardBackground: Color(.secondarySystemGroupedBackground))
+                             cardBackground: Color.clear)
                 .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 .onChange(of: situation) { _, _ in
                     // Ignore our own writes (chip picks); a real keystroke means
                     // the user is writing their own — detach the stale category
@@ -248,7 +271,10 @@ struct ScenarioComposerSheet: View {
             }
             .padding(.vertical, 2)
         }
-        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
+        // First row INSIDE the section's shared container, directly above the
+        // input field — no separator between them, they're one composed unit.
+        .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 2, trailing: 16))
+        .listRowSeparator(.hidden)
     }
 
     // MARK: - Choices (current drill level)
@@ -421,6 +447,26 @@ struct ScenarioComposerSheet: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - Delete (edit mode)
+
+    private var deleteSection: some View {
+        Section {
+            Button(role: .destructive) { confirmingDelete = true } label: {
+                Label("Delete scenario", systemImage: "trash")
+            }
+            .confirmationDialog("Delete this scenario?",
+                                isPresented: $confirmingDelete,
+                                titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    onDelete?()
+                    dismiss()
+                }
+            } message: {
+                Text(explain("Its book in Practice goes with it — study items and mastery included."))
+            }
+        }
+    }
+
     // MARK: - Person
 
     private func personHeader(_ p: Counterpart) -> some View {
@@ -572,11 +618,24 @@ struct ScenarioComposerSheet: View {
             let who = person ?? attachedPersonId.flatMap { id in
                 appState.counterparts.first { $0.id == id }
             }
-            var s = Scenario(
-                environment: text,
-                role: who.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
-                notes: ""
-            )
+            var s: Scenario
+            if var e = editing {
+                // Edit in place: id, curriculum, mastery and history survive —
+                // only the settings the sheet exposes change. Stored openers
+                // were written for the OLD situation text, so a text change
+                // invalidates them (they regenerate on the next talk).
+                if e.environment != text { e.openers = nil; e.openerCursor = nil }
+                e.environment = text
+                e.role = who.map { $0.relationship.isEmpty ? $0.name : $0.relationship }
+                    ?? (e.counterpartId != nil ? "" : e.role)
+                s = e
+            } else {
+                s = Scenario(
+                    environment: text,
+                    role: who.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
+                    notes: ""
+                )
+            }
             s.counterpartId = who?.id
             // No persona → carry the picked preset voice into every future
             // watch of this scenario.
