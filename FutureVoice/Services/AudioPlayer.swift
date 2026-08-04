@@ -384,6 +384,26 @@ final class AudioPlayer: NSObject, ObservableObject {
         }
     }
 
+    /// File-end handling. When the loop region runs to the END of the file —
+    /// which is the shadow trimmer's DEFAULT (whole line selected, and
+    /// `playbackEnd` pads the last word out to the file duration) — the 30Hz
+    /// ticker can never observe `currentTime >= segmentEnd`: AVAudioPlayer
+    /// finishes and fires its delegate first, and `stop()` tore the loop down.
+    /// So on natural finish, restart from `segmentStart` when looping.
+    private func finishOrLoop() {
+        if loopEnabled, let p = player {
+            p.currentTime = segmentStart
+            p.rate = rate
+            if p.play() {
+                isPlaying = true
+                currentTime = segmentStart
+                startTicker()
+                return
+            }
+        }
+        stop()
+    }
+
     private func startTicker() {
         stopTicker()
         ticker = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
@@ -425,7 +445,7 @@ final class AudioPlayer: NSObject, ObservableObject {
 
 extension AudioPlayer: AVAudioPlayerDelegate {
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor in self.stop() }
+        Task { @MainActor in self.finishOrLoop() }
     }
 
     nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
