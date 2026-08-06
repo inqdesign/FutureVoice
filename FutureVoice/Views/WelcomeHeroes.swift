@@ -401,7 +401,8 @@ struct ShadowHero: View {
     // MARK: - Target line (real FlowLayout + karaoke colours)
 
     private func targetLine(nowMs: Int) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
+        // spacing 8 — ShadowDrillView's targetSection.
+        VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Target line").font(.caption).foregroundStyle(.secondary)
                 Spacer()
@@ -510,31 +511,39 @@ struct ShadowHero: View {
         .foregroundStyle(.secondary)
     }
 
-    /// The transport row — play, loop (on), the centered mic, speed, and the
-    /// A/B "hear my take" — matched to ShadowTimelinePlayer's current controls
-    /// (the old xmark/clear was replaced by these).
+    /// The transport row — play and loop (on) hugging the left, the centered
+    /// mic, then the speed pill and the back-to-previous-selection button on
+    /// the right. Matched 1:1 to ShadowTimelinePlayer's `controls`.
     private var controls: some View {
         HStack(spacing: 20) {
             Image(systemName: "play.circle.fill")
-                .font(.system(size: 44)).foregroundStyle(.tint)
+                .font(.system(size: 44))
+                .frame(width: 44, height: 44)
+                .foregroundStyle(.tint)
             Image(systemName: "repeat.circle.fill")
-                .font(.system(size: 44)).foregroundStyle(Color.accentColor)
+                .font(.system(size: 44))
+                .frame(width: 44, height: 44)
+                .foregroundStyle(Color.accentColor)
             Spacer(minLength: 72)
             Text("1×")
                 .font(.subheadline.weight(.semibold)).monospacedDigit()
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12).padding(.vertical, 9)
                 .background(Capsule().fill(Color(.tertiarySystemFill)))
-            // A/B compare — hear your own last take next to the target.
-            Image(systemName: "person.wave.2.fill")
-                .font(.system(size: 44)).foregroundStyle(.tint)
+            // Step back through the regions you drilled — always visible, gray
+            // until there's history to pop.
+            Image(systemName: "arrow.uturn.backward.circle")
+                .font(.system(size: 44))
+                .frame(width: 44, height: 44)
+                .foregroundStyle(Color.secondary)
         }
         .overlay {
-            // The centered mic — the primary record action.
+            // The centered mic — the primary record action, 60pt like the real
+            // one (micButton(diameter: 60)), glyph at 0.375 × diameter.
             Image(systemName: "mic.fill")
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
+                .font(.system(size: 60 * 0.375, weight: .semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .frame(width: 60, height: 60)
                 .background(Circle().fill(Color.accentColor))
         }
     }
