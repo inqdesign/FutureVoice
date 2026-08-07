@@ -21,18 +21,40 @@ enum NewsTopicEngine {
     }
     private struct ResponsePayload: Decodable {
         let topics: [ServerTopic]
+        /// Categories the server is still generating. Absent on older
+        /// deployments, which always answered fully-generated.
+        let pending: [String]?
+        /// A refresh actually started an extra batch (vs. the day's cap
+        /// having stopped it) — so a bigger pool is on its way.
+        let growing: Bool?
+    }
+
+    /// One fetch's worth of pool, plus whether more is still cooking
+    /// server-side. A grounded batch takes ~10-30s, so the server answers
+    /// with what it has and the caller polls for the rest.
+    struct Pool {
+        let topics: [SuggestedTopic]
+        let pending: [String]
+        let growing: Bool
+
+        var isComplete: Bool { pending.isEmpty }
     }
 
     /// How many mixed topics the picker shows at once. The fetched POOL can
     /// be larger (server grows it on refresh) — the sheet rotates through it.
     static let maxShown = 6
 
+    /// Poll cadence and ceiling while the server fills pending categories.
+    /// 6 × 5s covers a slow grounded batch without hammering the function.
+    static let pollInterval: Duration = .seconds(5)
+    static let maxPolls = 6
+
     /// Fetch the day's topic pool. `refresh: true` asks the server to grow
     /// each category's pool by one more batch (capped server-side), so the
     /// refresh button actually surfaces NEW stories instead of re-reading
     /// the same daily cache.
     static func fetch(interests: [String], targetLanguage: String,
-                      refresh: Bool = false) async throws -> [SuggestedTopic] {
+                      refresh: Bool = false) async throws -> Pool {
         let response: ResponsePayload = try await SupabaseProvider.shared.functions.invoke(
             "news-topics",
             options: FunctionInvokeOptions(
@@ -42,7 +64,9 @@ enum NewsTopicEngine {
         )
         // No cap here — return the full interleaved pool; display selection
         // (unseen-first, maxShown) happens in the sheet.
-        return interleaved(response.topics, cap: .max)
+        return Pool(topics: interleaved(response.topics, cap: .max),
+                    pending: response.pending ?? [],
+                    growing: response.growing ?? false)
     }
 
     /// Round-robin across categories so the shown handful has variety —

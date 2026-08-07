@@ -63,11 +63,15 @@ struct DiscoverSection: View {
             // auto-load on open; the local cache skips even the network hop
             // within the same day.
             guard newsTopics.isEmpty, !interests.isEmpty else { return }
-            if let cached = NewsTopicStore.shared.valid(for: interests) {
-                newsTopics = displaySelection(from: cached)
-            } else {
+            guard let cached = NewsTopicStore.shared.valid(for: interests) else {
                 await fetchNews()
+                return
             }
+            // Paint the cache instantly, then top up in the background if it
+            // was saved while some categories were still generating.
+            newsTopics = displaySelection(from: cached)
+            let covered = Set(cached.compactMap(\.category))
+            if covered.count < interests.count { await fetchNews() }
         }
     }
 
@@ -86,7 +90,7 @@ struct DiscoverSection: View {
                 .accessibilityLabel("Edit interests")
                 if !newsTopics.isEmpty {
                     Button {
-                        Task { await fetchNews(refresh: true) }
+                        Task { await refreshNews() }
                     } label: {
                         if loadingNews {
                             ProgressView().controlSize(.small)
@@ -287,6 +291,22 @@ struct DiscoverSection: View {
 
     // MARK: - News data
 
+    /// The refresh button. Rotating the pool the user hasn't seen yet costs
+    /// NOTHING — no network, no generation — so try that first and only ask
+    /// the server for new stories once the local pool is exhausted. Most
+    /// taps land on the instant path.
+    private func refreshNews() async {
+        if let cached = NewsTopicStore.shared.valid(for: interests), cached.count > newsTopics.count {
+            NewsTopicStore.shared.markSeen(newsTopics.map(\.title), interests: interests)
+            let rotated = displaySelection(from: cached)
+            if rotated.map(\.title) != newsTopics.map(\.title) {
+                newsTopics = rotated
+                return
+            }
+        }
+        await fetchNews(refresh: true)
+    }
+
     private func fetchNews(refresh: Bool = false) async {
         loadingNews = true
         newsError = nil
@@ -297,18 +317,49 @@ struct DiscoverSection: View {
             NewsTopicStore.shared.markSeen(newsTopics.map(\.title), interests: interests)
         }
         do {
-            let pool = try await NewsTopicEngine.fetch(
+            var pool = try await NewsTopicEngine.fetch(
                 interests: interests,
                 targetLanguage: appState.targetLanguage,
                 refresh: refresh
             )
-            if !pool.isEmpty {
-                NewsTopicStore.shared.save(pool, interests: interests)
+            apply(pool)
+
+            // The server answers with whatever is generated and keeps the
+            // rest cooking in the background, so keep asking until every
+            // category has landed — each poll paints the ones that finished
+            // instead of holding one long request open. A refresh polls
+            // until the pool actually grows: its extra batch is generated
+            // in the background too.
+            var polls = 0
+            var target = pool.growing ? pool.topics.count + 1 : 0
+            while polls < NewsTopicEngine.maxPolls,
+                  !pool.isComplete || pool.topics.count < target {
+                try await Task.sleep(for: NewsTopicEngine.pollInterval)
+                polls += 1
+                pool = try await NewsTopicEngine.fetch(
+                    interests: interests,
+                    targetLanguage: appState.targetLanguage
+                )
+                apply(pool)
+                // Stop chasing growth once it arrives.
+                if pool.topics.count >= target { target = 0 }
             }
-            newsTopics = displaySelection(from: pool)
+        } catch is CancellationError {
+            // View went away mid-poll — nothing to report.
         } catch {
             newsError = error.localizedDescription
         }
+    }
+
+    /// Paint a fetched pool and cache it. Partial pools are cached too — a
+    /// story on screen next open beats an empty section — and the `.task`
+    /// re-fetch tops them up.
+    private func apply(_ pool: NewsTopicEngine.Pool) {
+        guard !pool.topics.isEmpty else { return }
+        NewsTopicStore.shared.save(pool.topics, interests: interests)
+        newsTopics = displaySelection(from: pool.topics)
+        // Stories are up: drop the spinner even though polling continues.
+        loadingNews = false
     }
 
     /// Pick what to show from the (possibly larger) pool: unseen stories
