@@ -835,7 +835,7 @@ struct ConversationView: View {
                     Return STRICT JSON only — no prose: { "openers": ["...", "...", "..."] }
                     """
                 )],
-                maxTokens: 500,
+                maxTokens: 1200,
                 purpose: "opener",
                 idempotencyKey: "opener:\(sessionId.uuidString)"
             )
@@ -1724,7 +1724,17 @@ struct ConversationView: View {
             let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
                 system: systemP,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
-                maxTokens: 1400,
+                // The schema's worst case is big: up to 15 grammar_errors
+                // (quote + correction + a NATIVE-language note each), 5
+                // phrases_used, 3-4 drills, expressions, and a 6-field
+                // scorecard whose notes are also native-language. On top of
+                // that gen-3 counts THINKING tokens against this same ceiling.
+                // At 1400 a long B2 session ran out mid-JSON and surfaced as
+                // "reply hit the token ceiling" on End — the talk was already
+                // saved, but its whole review yield (drills, scorecard,
+                // profile update) was lost. The ceiling is not billed, only
+                // tokens actually produced, so the headroom is free.
+                maxTokens: 4096,
                 purpose: "summary",
                 idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
             )
@@ -1836,6 +1846,14 @@ struct ConversationView: View {
             // notification permission makes sense.
             Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
         } catch {
+            // A failed summary costs the session its ENTIRE review yield, so
+            // it needs the same visibility the per-turn failure has — a
+            // truncation here is silent otherwise (the talk still saved).
+            Telemetry.log("talk_summary_error", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "turns": String(turns.count),
+                "out_of_credits": error.isOutOfCredits ? "1" : "0",
+            ])
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
             phase = .idle

@@ -248,6 +248,20 @@ final class GeminiClient {
     /// One-shot JSON request. Caller specifies the expected `Decodable` shape.
     /// Default temperature is low for analysis-style calls; conversation
     /// turns pass a higher one so the structured wrapper doesn't flatten tone.
+    ///
+    /// SIZING `maxTokens` (applies to every send* on this client): budget it
+    /// for the worst-case payload and then some — not for the typical one.
+    ///   • gen-3 spends THINKING tokens out of this SAME ceiling, and that
+    ///     spend is invisible, uncapped from the caller's side, and largest
+    ///     on exactly the long/messy inputs whose output is also longest.
+    ///   • Native-language coaching prose costs far more tokens per sentence
+    ///     in CJK than the English the schema was eyeballed in.
+    ///   • The failure is not a shorter answer, it is `GeminiError.truncated`:
+    ///     the JSON stops mid-body and the WHOLE call is lost.
+    ///   • The ceiling is not billed — only tokens actually produced — so
+    ///     headroom costs nothing. A tight ceiling buys nothing either: it
+    ///     cannot make the model brief, only cut it off. Bound length in the
+    ///     PROMPT, bound disaster with this number.
     func sendJSON<T: Decodable>(
         system: String,
         messages: [Message],

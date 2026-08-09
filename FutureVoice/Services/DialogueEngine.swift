@@ -53,7 +53,12 @@ enum DialogueEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 1500,
+            // 6-10 spoken turns plus a title. gen-3 counts THINKING tokens
+            // against this ceiling too, so the old 1500 left the tail of a
+            // long scene one bad round of reasoning away from being cut —
+            // and a cut scene throws, it can't be half-played. Free headroom:
+            // the ceiling is not billed, only tokens actually produced.
+            maxTokens: 3000,
             purpose: "scene"
         )
         let turns = payload.turns.compactMap { item -> Turn? in

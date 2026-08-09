@@ -139,7 +139,7 @@ final class FreeTalkOpeners {
                                       proficiency: proficiency),
             messages: [GeminiClient.Message(role: .user, content: "Write the greetings.")],
             model: .flashLite31,
-            maxTokens: 500,
+            maxTokens: 1200,
             purpose: "freetalk-openers",
             idempotencyKey: "freetalk-openers:\(Self.key(language: language, personaName: personaName))"
         )

@@ -1129,7 +1129,10 @@ struct ShadowDrillView: View {
                             rhythm: rhythm
                         )
                     )],
-                    maxTokens: 300,
+                    // Three native-language bullets — cheap, but 300 left no
+                    // room for thinking, and a truncation drops the feedback
+                    // entirely (payload = nil) leaving a bare score.
+                    maxTokens: 1024,
                     purpose: "shadow"
                 )
             } catch {

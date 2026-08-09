@@ -163,7 +163,14 @@ enum WeeklyReportEngine {
                 suggestionPairs: suggestionPairs,
                 deliveryEvidence: deliveryEvidence
             ))],
-            maxTokens: 2048,
+            // Three arrays capped at 5 items each (two of which carry a
+            // NATIVE-language line per item) plus a 2-3 sentence
+            // level_rationale that has to cite numbers — and gen-3 spends
+            // THINKING tokens out of this same ceiling, on the longest
+            // evidence prompt in the app. Sized well past the worst case:
+            // the ceiling is not billed, only tokens actually produced, and a
+            // truncation here loses the learner's main written feedback.
+            maxTokens: 4096,
             purpose: "weekly"
         )
 

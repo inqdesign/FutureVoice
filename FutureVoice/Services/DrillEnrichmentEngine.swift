@@ -33,7 +33,11 @@ enum DrillEnrichmentEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 1000,
+            // 3 examples + 2-3 variants + a memory hook, most of whose prose
+            // is NATIVE-language (token-hungry for CJK natives), and gen-3
+            // takes its THINKING out of this same ceiling. Free headroom:
+            // the ceiling is not billed, only tokens actually produced.
+            maxTokens: 2048,
             purpose: "enrichment",
             idempotencyKey: "enrichment:\(card.id.uuidString)"
         )

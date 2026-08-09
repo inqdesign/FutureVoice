@@ -28,6 +28,13 @@ import { serviceRoleClient } from "../_shared/credits.ts"
 const MAX_CALLS_PER_HOUR = 300
 const MAX_TEXT_LEN = 600
 
+// Sized for the worst case, not the typical one: 600 chars in can be well over
+// 400 tokens out in a script like Korean, and gen-3 spends THINKING tokens out
+// of this same ceiling. Unlike the JSON callers, a truncation here isn't an
+// error — it's a sentence that stops mid-word, which the client then caches to
+// disk FOREVER. The ceiling is not billed, only tokens produced.
+const MAX_OUTPUT_TOKENS = 1500
+
 // Pure translation is mechanical → flash-lite. The correction explanation is
 // learner-facing coaching text → stays on the default model (see CLAUDE.md
 // "Model defaults"). Both are gen-3: thinkingLevel "low", default sampling.
@@ -77,7 +84,7 @@ what was changed and why the natural version is better — quote the \
 specific words that changed. Output only the explanation.`
     userText = `Learner said: ${original}\nMore natural: ${alternative}`
     model = EXPLAIN_MODEL
-    maxTokens = 500
+    maxTokens = MAX_OUTPUT_TOKENS
   } else if (kind === "translate") {
     const text = (body.text ?? "").trim()
     if (!text) return errorResponse(400, "text required")
@@ -87,7 +94,7 @@ specific words that changed. Output only the explanation.`
 Output ONLY the translation — no quotes, no romanization, no notes, no original text.`
     userText = text
     model = TRANSLATE_MODEL
-    maxTokens = 400
+    maxTokens = MAX_OUTPUT_TOKENS
   } else {
     return errorResponse(400, "unknown kind")
   }
@@ -156,7 +163,17 @@ async function generate(
       return null
     }
     const payload = await upstream.json()
-    const text: string = payload?.candidates?.[0]?.content?.parts
+    const candidate = payload?.candidates?.[0]
+    // Output is PLAIN TEXT, so nothing downstream can tell a complete answer
+    // from one the ceiling cut in half — and the client caches what it gets to
+    // disk permanently. Fail the call instead: the meaning simply doesn't
+    // appear, the tap is free to retry, and the hourly quota isn't spent
+    // (the caller logs only on success).
+    if (candidate?.finishReason === "MAX_TOKENS") {
+      console.error("translate hit the token ceiling", model, maxTokens)
+      return null
+    }
+    const text: string = candidate?.content?.parts
       ?.map((p: { text?: string }) => p.text ?? "").join("") ?? ""
     const trimmed = text.trim()
     return trimmed.length > 0 ? trimmed : null

@@ -113,7 +113,12 @@ final class CloneScriptStore {
                 system: Self.systemPrompt(code: code),
                 messages: [GeminiClient.Message(role: .user, content: "Write the script.")],
                 model: .flash36,
-                maxTokens: 1200,
+                // A read-aloud script long enough to fill 60s of recording,
+                // in a language that may cost 2x the tokens English does.
+                // Truncating drops below the 4-paragraph floor below and
+                // silently falls back to English on the ONE screen where the
+                // user's voice is captured.
+                maxTokens: 2500,
                 purpose: "clone-script",
                 idempotencyKey: "clone-script:\(code):v\(Self.promptVersion)"
             )

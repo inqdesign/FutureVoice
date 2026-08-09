@@ -32,7 +32,9 @@ enum CounterpartParser {
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
             model: .flashLite31,
-            maxTokens: 600,
+            // Six free-text fields, all in the user's NATIVE language — the
+            // token-per-sentence cost the 600 was never sized for.
+            maxTokens: 1500,
             purpose: "parse"
         )
 

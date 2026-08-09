@@ -37,7 +37,10 @@ enum PersonaParser {
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
             // Pure transcript cleanup — utility tier, like CounterpartParser.
             model: .flashLite31,
-            maxTokens: 500,
+            // Three polished native-language answers out of three rambling
+            // spoken ones — the input is unbounded, so the output can be long
+            // even though the schema looks small. Onboarding runs this once.
+            maxTokens: 1500,
             purpose: "parse"
         )
     }

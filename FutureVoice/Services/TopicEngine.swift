@@ -29,7 +29,7 @@ enum TopicEngine {
             let payload: Payload = try await GeminiClient.shared.sendJSON(
                 system: system,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
-                maxTokens: 800,
+                maxTokens: 1500,
                 purpose: "topics"
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
@@ -123,7 +123,7 @@ enum TopicEngine {
             let payload: Payload = try await GeminiClient.shared.sendJSON(
                 system: system,
                 messages: [GeminiClient.Message(role: .user, content: userMsg)],
-                maxTokens: 900,
+                maxTokens: 1500,
                 purpose: "topics"
             )
             return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }
@@ -234,7 +234,8 @@ enum TopicEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: userMsg)],
-            maxTokens: 900,
+            // TEN topics here, not five — the widest output in this file.
+            maxTokens: 2000,
             purpose: "topics"
         )
         return payload.topics.map {
@@ -287,7 +288,10 @@ enum TopicEngine {
             // Pure classification (category + icon + short label) — utility
             // tier; the learner-facing idea GENERATION stays on the default.
             model: .flashLite31,
-            maxTokens: 160,
+            // Four short fields — but 160 left nothing for thinking, and this
+            // call is the ONLY thing standing between a typed scenario and a
+            // category, so a truncation is not a cosmetic loss.
+            maxTokens: 512,
             purpose: "topics"
         )
     }
@@ -324,10 +328,12 @@ enum TopicEngine {
         let payload: Payload = try await GeminiClient.shared.sendJSON(
             system: system,
             messages: [GeminiClient.Message(role: .user, content: lines.joined(separator: "\n"))],
-            // Chips are short. Output length IS the latency here — the learner
-            // is staring at skeletons until the last token lands, so keep the
-            // ceiling tight instead of letting the model ramble.
-            maxTokens: 600,
+            // Chips are short and output length IS the latency here — the
+            // learner stares at skeletons until the last token lands. But a
+            // tight CEILING doesn't buy brevity, it only cuts the JSON in
+            // half and loses the whole call; the prompt is what keeps chips
+            // short. Ceiling sized for disaster, brevity left to the prompt.
+            maxTokens: 1200,
             purpose: "topics"
         )
         return payload.topics.map { SuggestedTopic(title: $0.title, blurb: $0.blurb) }

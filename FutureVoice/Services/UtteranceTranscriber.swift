@@ -30,7 +30,12 @@ enum UtteranceTranscriber {
                 system: prompt(targetLanguage: targetLanguage),
                 messages: [.init(role: .user, content: asrGuess, inlineAudio: audio)],
                 model: .flashLite31,
-                maxTokens: 512,
+                // A turn can run to ~2 minutes (the audio cap) — 300+ words
+                // of verbatim dictation, before thinking. At 512 the longest
+                // turns truncated, and the failure is SILENT: nil here leaves
+                // the raw on-device guess in the bubble, which is then what
+                // the summary, drills and profile all learn from.
+                maxTokens: 2048,
                 purpose: "transcribe",
                 idempotencyKey: idempotencyKey
             )
