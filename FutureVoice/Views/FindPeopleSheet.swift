@@ -15,7 +15,7 @@ struct FindPeopleSheet: View {
 
     /// Start a live call with this (already saved) person.
     let onTalk: (Counterpart) -> Void
-    /// Open the situation composer scoped to this person.
+    /// Watch a scene of the fluent self and this person just talking.
     let onWatch: (Counterpart) -> Void
 
     @State private var pool: [PublicPersonaService.PublicPersona] = []
@@ -190,6 +190,13 @@ struct FindPeopleSheet: View {
         loadFailed = false
         do {
             pool = try await PublicPersonaService.fetchPool(language: appState.targetLanguage)
+            // The pool is the only thing that can tell a stranger saved
+            // without its `remoteId` apart from a person the user made —
+            // heal those rows the moment we have it.
+            if PublicPersonaService.healRowsMissingRemoteId(
+                pool: pool, counterparts: appState.counterparts) {
+                appState.reloadCounterparts()
+            }
         } catch {
             loadFailed = pool.isEmpty
         }
@@ -276,6 +283,9 @@ struct FindPersonCard: View {
         }
         .safeAreaInset(edge: .bottom) {
             HStack(spacing: 12) {
+                // Same weight on both: watching and talking are two ways in,
+                // not a main action and a lesser one. A prominent Talk read
+                // as "the real button" and made Watch look like a preamble.
                 Button {
                     onWatch(savedPerson())
                 } label: {
@@ -290,7 +300,7 @@ struct FindPersonCard: View {
                     Label("Talk", systemImage: "phone.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.bordered)
             }
             .controlSize(.large)
             .padding(.horizontal, 20)
@@ -299,9 +309,10 @@ struct FindPersonCard: View {
         }
     }
 
-    /// First Talk/Watch is the moment you "meet" them — persist the person so
-    /// sessions can link to a stable local id and they join "People you've
-    /// met". Idempotent for someone already saved.
+    /// First Talk/Preview is the moment you "meet" them — persist the person
+    /// so sessions can link to a stable local id and they join "People you've
+    /// met". Idempotent: the local id is derived from the remote one, and the
+    /// store dedupes on `remoteId`, so re-tapping can't file a twin.
     private func savedPerson() -> Counterpart {
         if appState.counterparts.contains(where: { $0.id == person.id }) { return person }
         appState.saveCounterpart(person)

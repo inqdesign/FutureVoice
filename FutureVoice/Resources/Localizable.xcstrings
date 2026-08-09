@@ -3509,6 +3509,7 @@
       }
     },
     "Find" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6762,6 +6763,23 @@
         }
       }
     },
+    "Preview" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorschau"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미리보기"
+          }
+        }
+      }
+    },
     "Preview %@" : {
       "localizations" : {
         "de" : {
@@ -9056,6 +9074,7 @@
       }
     },
     "Tap someone — situations with them, in their voice." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9067,6 +9086,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "사람을 누르면 그 사람과의 상황을, 그 사람 목소리로 볼 수 있어요."
+          }
+        }
+      }
+    },
+    "Tap someone to build a situation with them, in their voice. Find people opens the shared pool — strangers you can talk with, in a stock voice." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tippe eine Person an, um mit ihrer Stimme eine Situation zu bauen. „Leute finden“ öffnet den gemeinsamen Pool — Fremde, mit denen du sprechen kannst, mit einer Standardstimme."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사람을 누르면 그 사람의 목소리로 상황을 만들어요. 사람 찾기는 공유 풀이에요 — 기본 목소리로 대화하는 낯선 사람들."
           }
         }
       }
@@ -11444,6 +11480,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "직접 만들기"
+          }
+        }
+      }
+    },
+    "Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine eigenen Leute plus alle, die du in „Leute finden“ gemerkt hast. Ein Gespräch allein fügt niemanden hier hinzu — merke dir jemanden, um ihn zu behalten."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 만든 사람들과, 사람 찾기에서 북마크한 사람들이에요. 대화만으로는 여기 추가되지 않아요 — 곁에 두려면 북마크하세요."
           }
         }
       }

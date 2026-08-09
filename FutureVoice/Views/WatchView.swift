@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 /// Step 1 of Watch mode: confirm the counterpart, pick or type a scenario,
 /// then push into `WatchView` where the dialogue plays out.
@@ -184,6 +185,11 @@ struct WatchView: View {
     /// Where to go once the scene has played out. nil for callers with
     /// nowhere to send the viewer (a one-shot Watch with no book behind it).
     let handoff: SceneHandoff?
+    /// When set, turns arrive progressively from a streaming generation —
+    /// play each one as it lands instead of waiting for the whole scene.
+    /// The feed's owner (SceneWatchView) drives generation and persistence;
+    /// this view only mirrors and plays.
+    let feed: SceneFeed?
 
     /// The "you've watched it — now study it" exit.
     ///
@@ -206,13 +212,15 @@ struct WatchView: View {
          customScenario: String = "",
          savedDialogue: WatchDialogue? = nil,
          persist: Bool = true,
-         handoff: SceneHandoff? = nil) {
+         handoff: SceneHandoff? = nil,
+         feed: SceneFeed? = nil) {
         self.counterpart = counterpart
         self.topic = topic
         self.customScenario = customScenario
         self.savedDialogue = savedDialogue
         self.persist = persist
         self.handoff = handoff
+        self.feed = feed
     }
 
     @EnvironmentObject private var appState: AppState
@@ -250,6 +258,60 @@ struct WatchView: View {
     /// Lowercased drill targets already in the queue — drives the per-line
     /// "Save phrase" button state so the same line can't be saved twice.
     @State private var savedPhraseKeys: Set<String> = []
+
+    /// Feed mode: playback auto-starts exactly once, on the first turn.
+    @State private var streamAutoStarted = false
+
+    /// Audio for the line AFTER the one playing, fetched while it plays.
+    /// Without this the loop was fully serial — synthesize, play, synthesize,
+    /// play — so a full network round-trip of silence sat between every line,
+    /// and the gap was WORSE before the future self's lines because the own
+    /// voice runs on the slower fidelity model. Real conversational turn gaps
+    /// are ~200 ms; these were seconds, and uneven.
+    ///
+    /// Never cancelled: a synthesis in flight is already billed, so letting it
+    /// finish and land in `PhraseAudioStore` is strictly better than throwing
+    /// it away. A stale one is simply not awaited.
+    /// TWO lines ahead, not one. One line of lookahead only covers a
+    /// synthesis that finishes within the current line's playback, and the
+    /// fluent self's lines run on the fidelity model — routinely longer than
+    /// the short counterpart line playing in front of them, so the gap landed
+    /// on exactly the voice the user is waiting for. A second slot gives a
+    /// slow line two lines of speech to hide behind.
+    private static let prefetchDepth = 2
+    @State private var prefetches: [Int: Task<Data, Error>] = [:]
+
+    /// Everything needed to synthesize one line, resolved on the main actor
+    /// before any concurrency so a prefetch can't race `turns` growing under
+    /// it while a streamed scene is still arriving.
+    private struct SpeechRequest {
+        let text: String
+        let voiceId: String
+        let previousText: String?
+        let nextText: String?
+    }
+
+    private func speechRequest(at index: Int) -> SpeechRequest {
+        let turn = turns[index]
+        return SpeechRequest(
+            text: turn.text,
+            voiceId: turn.speaker == .user
+                ? (appState.voiceCloneId ?? "")
+                : counterpart.voicePresetId,
+            // Both neighbours regardless of who speaks them: the point is that
+            // this line lands MID-conversation. `nextText` is simply absent for
+            // the line at the frontier of a still-streaming scene.
+            previousText: index > 0 ? turns[index - 1].text : nil,
+            nextText: index + 1 < turns.count ? turns[index + 1].text : nil
+        )
+    }
+
+    private var feedTurnsPublisher: AnyPublisher<[DialogueEngineTurn], Never> {
+        feed?.$turns.eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
+    }
+    private var feedTitlePublisher: AnyPublisher<String?, Never> {
+        feed?.$title.eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -304,6 +366,7 @@ struct WatchView: View {
         }
         .task {
             savedPhraseKeys = Set(DrillStore.shared.load().map { $0.targetPhrase.lowercased() })
+            guard feed == nil else { return }   // fed views mirror, never generate
             if turns.isEmpty {
                 if let saved = savedDialogue {
                     // Replay a saved dialogue — skip Gemini, just hydrate
@@ -320,6 +383,28 @@ struct WatchView: View {
                     await generate()
                 }
             }
+        }
+        .onReceive(feedTurnsPublisher) { stored in
+            // Mirror the feed append-only: re-emissions of the same prefix
+            // are no-ops, and the final full write after a degraded
+            // (buffered) stream lands here as one big append.
+            guard stored.count > turns.count else { return }
+            turns.append(contentsOf: stored[turns.count...].map {
+                DialogueEngine.Turn(
+                    speaker: DialogueEngine.Speaker(rawValue: $0.speaker) ?? .counterpart,
+                    text: $0.text
+                )
+            })
+            loading = false
+            // First line on screen → start the scene; the playback loop
+            // waits at the frontier for the lines still being written.
+            if !streamAutoStarted {
+                streamAutoStarted = true
+                Task { await playFrom(index: 0) }
+            }
+        }
+        .onReceive(feedTitlePublisher) { title in
+            if let title { generatedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines) }
         }
         .onDisappear {
             // Flip the loop gate BEFORE stopping the player: player.stop()
@@ -539,6 +624,10 @@ struct WatchView: View {
                 topicBlurb: nil,
                 targetLanguage: appState.targetLanguage
             )
+            // New script — anything prefetched was keyed to the old line at
+            // that index and must not be claimed for this one. In-flight
+            // tasks are left to finish into the audio cache, never cancelled.
+            prefetches.removeAll()
             turns = generated.turns
             generatedTitle = generated.title?.trimmingCharacters(in: .whitespacesAndNewlines)
             // Persist so the user can replay later without burning another
@@ -581,19 +670,49 @@ struct WatchView: View {
     /// (or pulls cached) audio via the appropriate voice id and chains
     /// `.play` calls in a loop. PhraseAudioStore content-cache makes
     /// repeated playback free.
+    /// Feed mode only: more lines are still on the wire, so running out of
+    /// turns means "wait at the frontier", not "the scene is over".
+    private var awaitingMoreTurns: Bool {
+        guard let feed else { return false }
+        return !feed.isComplete
+    }
+
     private func playFrom(index: Int) async {
         guard index < turns.count else { return }
         isPlaying = true
         var i = index
-        while isPlaying && i < turns.count {
+        while true {
+            // Streaming: hold the playhead until the next line lands or the
+            // generation closes the scene. In practice the model writes
+            // faster than speech, so this only ever waits at the very front.
+            while isPlaying && i >= turns.count && awaitingMoreTurns {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+            }
+            guard isPlaying, i < turns.count else { break }
             currentIndex = i
-            let turn = turns[i]
-            let voiceId = turn.speaker == .user
-                ? (appState.voiceCloneId ?? "")
-                : counterpart.voicePresetId
+            let request = speechRequest(at: i)
             do {
-                let data = try await loadOrSynthesize(text: turn.text, voiceId: voiceId)
-                try await playAndWait(data)
+                // Fill the lookahead window BEFORE awaiting this line, so the
+                // next lines synthesize alongside it instead of after it —
+                // this is what covers the very first line's wait too.
+                startPrefetch(after: i)
+                var data: Data?
+                // Claim the prefetch if it was for this line. A failed one
+                // falls through to a normal fetch rather than ending the
+                // scene — it was only ever an optimization.
+                if let pending = prefetches.removeValue(forKey: i) {
+                    data = try? await pending.value
+                }
+                if data == nil {
+                    data = PhraseAudioStore.shared.data(text: request.text,
+                                                        voiceId: request.voiceId)
+                }
+                if let audio = data {
+                    try await playAndWait(audio)
+                } else if try await streamAndPlay(request) == false {
+                    // Streaming unavailable — classic fetch-then-play.
+                    try await playAndWait(try await loadOrSynthesize(request))
+                }
             } catch {
                 self.error = error.localizedDescription
                 isPlaying = false
@@ -601,21 +720,38 @@ struct WatchView: View {
             }
             i += 1
         }
+        // A pause exits with isPlaying already false; only a natural run-out
+        // past the LAST line of a closed scene counts as finishing.
+        let reachedEnd = isPlaying && i >= turns.count
         isPlaying = false
         currentIndex = nil
         // Reached the last line — the scene is over, so the controls stop
         // offering only "watch it again" and start offering the book.
-        if i >= turns.count, !didFinishScene {
+        if reachedEnd, !didFinishScene {
             withAnimation(.easeOut(duration: 0.25)) { didFinishScene = true }
         }
         // Completed the whole dialogue for the first time → ask for feedback.
-        if i >= turns.count && BetaFeedback.shouldShow(.firstWatch) {
+        if reachedEnd && BetaFeedback.shouldShow(.firstWatch) {
             BetaFeedback.markShown(.firstWatch)
             feedbackContext = .firstWatch
         }
     }
 
-    private func loadOrSynthesize(text: String, voiceId: String) async throws -> Data {
+    /// Starts fetching the next `prefetchDepth` lines that aren't already in
+    /// flight. Cache hits make this nearly free on a replay, and a line that
+    /// never gets played still lands in `PhraseAudioStore` for next time.
+    private func startPrefetch(after index: Int) {
+        for offset in 1...Self.prefetchDepth {
+            let next = index + offset
+            guard next < turns.count, prefetches[next] == nil else { continue }
+            let request = speechRequest(at: next)
+            prefetches[next] = Task { try await loadOrSynthesize(request) }
+        }
+    }
+
+    private func loadOrSynthesize(_ request: SpeechRequest) async throws -> Data {
+        let text = request.text
+        let voiceId = request.voiceId
         if voiceId.isEmpty {
             throw NSError(domain: "WatchView", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "No voice id available."])
@@ -633,9 +769,62 @@ struct WatchView: View {
         let audio = try await ElevenLabsClient.shared.synthesize(
             voiceId: voiceId, text: text,
             modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
-            purpose: "scene")
+            purpose: "scene",
+            previousText: request.previousText,
+            nextText: request.nextText)
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
+    }
+
+    /// Speak `request` by STREAMING it: audio starts on the first PCM chunk
+    /// instead of after the whole file lands. This is the fix for the wait in
+    /// front of the fluent self's lines — its fidelity model takes seconds to
+    /// synthesize a line, and buffered playback spent every one of them
+    /// silent. Prefetched lines keep the buffered path: they arrived while
+    /// the previous line was still speaking, so there is nothing to hide.
+    ///
+    /// Returns false when streaming isn't available (an edge deploy that
+    /// ignored `stream`, or an audio engine that refused) so the caller can
+    /// fall back to the classic fetch-then-play.
+    private func streamAndPlay(_ request: SpeechRequest) async throws -> Bool {
+        guard !request.voiceId.isEmpty else { return false }
+        let latch = PlaybackLatch()
+        var started = false
+        let isOwnVoice = request.voiceId == appState.voiceCloneId
+        let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+            voiceId: request.voiceId,
+            text: request.text,
+            modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
+            purpose: "scene"
+        ) { chunk, sampleRate in
+            if !started {
+                do {
+                    try player.startPCMStream(sampleRate: sampleRate,
+                                              voiceKey: request.voiceId) { latch.signal() }
+                } catch {
+                    return   // engine refused → caller falls back
+                }
+                started = true
+            }
+            player.feedPCMStream(chunk)
+        }
+        switch result {
+        case .mp3(let data):
+            // Server returned a whole file — nothing streamed, so this is the
+            // buffered path with an extra hop. Cache it and let the caller play.
+            _ = PhraseAudioStore.shared.save(data, text: request.text, voiceId: request.voiceId)
+            return false
+        case .pcm(let full, let rate):
+            guard started else { return false }
+            player.finishPCMStream()
+            // Cache as WAV so a replay hits the buffered path for free — the
+            // pricier fidelity synthesis stays once per line, ever.
+            _ = PhraseAudioStore.shared.save(
+                AudioLoudness.wavData(fromPCM16: full, sampleRate: Int(rate)),
+                text: request.text, voiceId: request.voiceId)
+            await latch.wait()
+            return true
+        }
     }
 
     private func playAndWait(_ data: Data) async throws {
@@ -648,5 +837,29 @@ struct WatchView: View {
                 cont.resume(throwing: error)
             }
         }
+    }
+}
+
+/// One-shot "playback finished" signal for a streamed line. The player's
+/// completion can fire before the caller gets around to awaiting it (a short
+/// line finishes while the network stream is still closing), so the latch
+/// remembers a signal that arrives early instead of deadlocking on it.
+@MainActor
+private final class PlaybackLatch {
+    private var signalled = false
+    private var waiter: CheckedContinuation<Void, Never>?
+
+    func signal() {
+        if let w = waiter {
+            waiter = nil
+            w.resume()
+        } else {
+            signalled = true
+        }
+    }
+
+    func wait() async {
+        if signalled { return }
+        await withCheckedContinuation { waiter = $0 }
     }
 }

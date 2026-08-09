@@ -35,6 +35,12 @@ struct WatchTab: View {
     @State private var showingFind = false
     /// A Find-people stranger to start a live call with (fullScreenCover).
     @State private var callPerson: Counterpart?
+    /// A bookmarked stranger tapped in the stories row — opens their card
+    /// (intro, past talks, Preview/Talk) rather than the situation composer.
+    @State private var personCard: Counterpart?
+    /// Bookmarks live in UserDefaults, which publishes nothing — re-read them
+    /// whenever the tab appears or the Find sheet closes.
+    @State private var bookmarkedRemoteIds: Set<String> = []
 
     struct ComposerConfig: Identifiable {
         let id = UUID()
@@ -103,10 +109,33 @@ struct WatchTab: View {
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView().environmentObject(appState)
             }
-            .sheet(isPresented: $showingFind) {
+            .onAppear { bookmarkedRemoteIds = PublicPersonaService.bookmarkedIds() }
+            .sheet(item: $personCard) { person in
+                NavigationStack {
+                    FindPersonCard(
+                        person: person,
+                        bookmarks: $bookmarkedRemoteIds,
+                        onTalk: { p in personCard = nil; callPerson = p },
+                        onWatch: { p in
+                            personCard = nil
+                            watchScene = WatchTarget(scenario: freeTalkScenario(with: p),
+                                                     fresh: false)
+                        })
+                        .environmentObject(appState)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Done") { personCard = nil }
+                            }
+                        }
+                }
+            }
+            .sheet(isPresented: $showingFind,
+                   onDismiss: { bookmarkedRemoteIds = PublicPersonaService.bookmarkedIds() }) {
                 // Find people — strangers from the shared pool. Talk starts a
-                // live call in THEIR preset voice; Watch drops them into the
-                // same composer a tapped persona uses.
+                // live call in THEIR preset voice; Preview plays the fluent
+                // self and this person just TALKING — meeting a stranger is
+                // already the situation, so it never asks the user to invent
+                // one first (that's what "Make your own situation" is for).
                 FindPeopleSheet(
                     onTalk: { person in
                         showingFind = false
@@ -114,7 +143,8 @@ struct WatchTab: View {
                     },
                     onWatch: { person in
                         showingFind = false
-                        composer = ComposerConfig(person: person)
+                        watchScene = WatchTarget(scenario: freeTalkScenario(with: person),
+                                                 fresh: false)
                     })
                     .environmentObject(appState)
             }
@@ -129,20 +159,85 @@ struct WatchTab: View {
         }
     }
 
+    /// The scenario behind "Watch" on a Find-people card: no situation to
+    /// build, just the two of them talking. Reused (not re-minted) per person
+    /// so every watch lands in the SAME book — the study material from
+    /// meeting this person accumulates instead of scattering across one-shot
+    /// scenarios, and the second watch replays instead of regenerating.
+    ///
+    /// Kept DELIBERATELY short. The person's intro, background and style are
+    /// already injected by `ScenarioCurriculumEngine`'s counterpart block;
+    /// repeating them here only made the prompt longer, and a longer prompt is
+    /// a longer wait before the first line is spoken.
+    private func freeTalkScenario(with person: Counterpart) -> Scenario {
+        if let existing = appState.scenarios.first(where: {
+            $0.counterpartId == person.id && $0.category == Self.meetingCategory
+        }) {
+            return existing
+        }
+        var s = Scenario(
+            environment: "Talking with someone you've just met, already past the hellos",
+            role: person.relationship.isEmpty ? person.name : person.relationship,
+            // Without this every persona converged on the same
+            // name/job/hobbies interview — "getting to know each other" is a
+            // shape, and the model will fill it identically for a surf-hostel
+            // owner and a glaciologist. Naming the ONE specific thing as the
+            // subject is what makes the scene belong to this person.
+            notes: "Pick ONE concrete, specific thing from this person's life "
+                + "and actually get into it — a story, an opinion, a problem "
+                + "they're chewing on. NOT a get-to-know-you interview: no "
+                + "running through where are you from / what do you do / what "
+                + "are your hobbies. Land mid-subject, the way real talk does."
+        )
+        s.counterpartId = person.id
+        s.category = Self.meetingCategory
+        s.categoryIcon = "person.2.wave.2"
+        s.summary = "Free talk with \(person.name)"
+        appState.saveScenario(s)
+        return s
+    }
+
+    private static let meetingCategory = "Meeting"
+
+    /// Who the stories row shows: the people the user MADE, plus the Find
+    /// people strangers they bookmarked. Having talked with someone is not
+    /// enough to earn a slot here — one curious call would otherwise pin a
+    /// stranger next to the user's actual friends forever. Every person
+    /// talked with is still one tap away under Find people → "People you've
+    /// met"; the bookmark is what promotes them to this row.
+    private var rowPeople: [Counterpart] {
+        let own = appState.counterparts.filter { $0.remoteId == nil }
+        let kept = appState.counterparts.filter {
+            guard let rid = $0.remoteId else { return false }
+            return bookmarkedRemoteIds.contains(rid)
+        }
+        return own + kept
+    }
+
     // MARK: - 1. People (stories row)
 
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Find is a HEADER action, not a bubble: as a bubble it sat after
+            // every person and scrolled off the row the moment the user had a
+            // few, which hid the only way into the shared pool.
+            HStack(alignment: .firstTextBaseline) {
+                Text("People")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Button {
+                    showingFind = true
+                } label: {
+                    Label("Find people", systemImage: "magnifyingglass")
+                        .font(.subheadline)
+                }
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
-                    // Your OWN people only — strangers met via Find people
-                    // stay inside the Find sheet, so this row never crowds
-                    // out the people you actually know.
-                    ForEach(appState.counterparts.filter { $0.remoteId == nil }) { c in
+                    ForEach(rowPeople) { c in
                         personBubble(c)
                     }
                     addPersonBubble
-                    findPeopleBubble
                 }
                 // Full-bleed scroller: cancel the page's side padding so
                 // avatars run edge to edge, then restore it inside.
@@ -150,7 +245,7 @@ struct WatchTab: View {
                 .padding(.vertical, 6)
             }
             .padding(.horizontal, -20)
-            Text(explain("Tap someone — situations with them, in their voice."))
+            Text(explain("Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -158,7 +253,13 @@ struct WatchTab: View {
 
     private func personBubble(_ c: Counterpart) -> some View {
         Button {
-            composer = ComposerConfig(person: c)
+            // Own persona → build a situation with them. A bookmarked
+            // stranger → their card, where meeting them IS the situation.
+            if c.remoteId == nil {
+                composer = ComposerConfig(person: c)
+            } else {
+                personCard = c
+            }
         } label: {
             VStack(spacing: 6) {
                 PersonBubble(name: c.name)
@@ -191,27 +292,6 @@ struct WatchTab: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("New person")
-    }
-
-    private var findPeopleBubble: some View {
-        Button { showingFind = true } label: {
-            VStack(spacing: 6) {
-                ZStack {
-                    Circle()
-                        .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1.5, dash: [5]))
-                        .frame(width: 64, height: 64)
-                    Image(systemName: "magnifyingglass")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-                Text("Find")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 68)
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Find people")
     }
 
     // MARK: - Your scenarios (the same list Talk shows — watch them here too)

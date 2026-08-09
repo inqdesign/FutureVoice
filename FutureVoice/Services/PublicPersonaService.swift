@@ -76,6 +76,7 @@ enum PublicPersonaService {
     static func asCounterpart(_ p: PublicPersona, existing: [Counterpart]) -> Counterpart {
         if let known = existing.first(where: { $0.remoteId == p.id }) { return known }
         var c = Counterpart(
+            id: localId(forRemote: p.id),
             name: p.display_name,
             relationship: String(localized: "Met on Future Voice"),
             background: p.intro,
@@ -88,6 +89,51 @@ enum PublicPersonaService {
         c.remoteId = p.id
         c.intro = p.intro
         return c
+    }
+
+    /// Repair rows saved while `Counterpart.encode` was dropping `remoteId`:
+    /// they came back from disk looking like people the user made themselves,
+    /// which put every stranger they had ever talked to into Watch's own-people
+    /// row. The match is exact, never a guess — a stranger's local id IS its
+    /// remote id (see `localId`), so only rows whose id is literally a persona
+    /// in the pool are touched. Saving through the store also collapses any
+    /// twins the same bug left behind.
+    @MainActor
+    static func healRowsMissingRemoteId(pool: [PublicPersona],
+                                        counterparts: [Counterpart]) -> Bool {
+        guard !pool.isEmpty else { return false }
+        let byLocalId = Dictionary(pool.map { (localId(forRemote: $0.id), $0) },
+                                   uniquingKeysWith: { a, _ in a })
+        var healed = false
+        for c in counterparts where c.remoteId == nil {
+            guard let p = byLocalId[c.id] else { continue }
+            var fixed = c
+            fixed.remoteId = p.id
+            if fixed.intro.isEmpty { fixed.intro = p.intro }
+            CounterpartStore.shared.save(fixed)
+            healed = true
+        }
+        return healed
+    }
+
+    /// The local `Counterpart.id` for a remote persona, derived from its
+    /// remote id so it is the SAME every time — minting one is idempotent.
+    ///
+    /// Without this the id was a fresh `UUID()` per call, and `asCounterpart`
+    /// runs on every row render: a person saved from one render no longer
+    /// matched the value a later render pushed, so each talk filed a new
+    /// duplicate row (and its past talks, keyed on the old id, went missing
+    /// from the person's card). Remote ids are already UUID strings, so the
+    /// mapping is usually a straight parse; the hash path is a fallback for
+    /// any non-UUID id a future pool might use.
+    static func localId(forRemote remoteId: String) -> UUID {
+        if let direct = UUID(uuidString: remoteId) { return direct }
+        var bytes = [UInt8]()
+        var seed = SeededGenerator(seed: UInt64(bitPattern: Int64(remoteId.hashValue)))
+        for _ in 0..<2 { withUnsafeBytes(of: seed.next().bigEndian) { bytes.append(contentsOf: $0) } }
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5],
+                           bytes[6], bytes[7], bytes[8], bytes[9], bytes[10], bytes[11],
+                           bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 
     // MARK: - My own public intro (one row per owner + language)

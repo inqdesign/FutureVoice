@@ -1262,14 +1262,22 @@ private struct CarryoverRow: View {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 if hasAudio {
+                    Spacer(minLength: 8)
+                    // Icon only, pinned right. As a caption2 text button it
+                    // sat inline with the source label — same size, same
+                    // weight — so it read as one more piece of metadata
+                    // rather than a control, with a tap target to match. The
+                    // "Hear yourself" ↔ "Stop" swap also resized the row
+                    // mid-playback.
                     Button {
                         player.isPlaying ? player.stop() : play()
                     } label: {
-                        Label(player.isPlaying ? "Stop" : "Hear yourself",
-                              systemImage: player.isPlaying ? "stop.fill" : "play.fill")
-                            .font(.caption2)
+                        Image(systemName: player.isPlaying ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.hierarchical)
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel(player.isPlaying ? "Stop" : "Hear yourself")
                 }
             }
             .padding(.leading, 26)

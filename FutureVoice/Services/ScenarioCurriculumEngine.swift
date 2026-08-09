@@ -38,28 +38,73 @@ enum ScenarioCurriculumEngine {
         // angle. runKey: distinguishes this take in the idempotency key
         // (still guards double-taps within one watch).
         avoidTitles: [String] = [],
-        runKey: String? = nil
+        runKey: String? = nil,
+        // Streaming taps: when either is set the scene STREAMS — the title
+        // and each turn are handed over the moment they finish parsing, so
+        // playback starts while the model is still writing the study tail.
+        // The returned curriculum is still the full, final payload; callers
+        // must persist from THAT, never from what the taps saw.
+        onTitle: (@MainActor (String) -> Void)? = nil,
+        onTurn: (@MainActor (DialogueEngineTurn) -> Void)? = nil
     ) async throws -> ScenarioCurriculum {
-        let payload: Payload = try await GeminiClient.shared.sendJSON(
-            system: systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency),
-            messages: [GeminiClient.Message(
-                role: .user,
-                content: userMessage(
-                    scenario: scenario,
-                    persona: persona,
-                    counterpart: counterpart,
-                    weakVocabAreas: weakVocabAreas,
-                    recurringMistakes: recurringMistakes,
-                    avoidTitles: avoidTitles
-                )
-            )],
-            maxTokens: sceneScale(for: proficiency).maxTokens,
-            purpose: "scenario-curriculum",
-            // v2: the scene-based schema — a v1 cached response (no turns)
-            // would fail to decode under this Payload.
-            idempotencyKey: runKey.map { "curriculum-v2:\(scenario.id.uuidString):\($0)" }
-                ?? "curriculum-v2:\(scenario.id.uuidString)"
-        )
+        let system = systemPrompt(targetLanguage: targetLanguage, proficiency: proficiency)
+        let messages = [GeminiClient.Message(
+            role: .user,
+            content: userMessage(
+                scenario: scenario,
+                persona: persona,
+                counterpart: counterpart,
+                weakVocabAreas: weakVocabAreas,
+                recurringMistakes: recurringMistakes,
+                avoidTitles: avoidTitles
+            )
+        )]
+        // v2: the scene-based schema — a v1 cached response (no turns)
+        // would fail to decode under this Payload.
+        let idempotencyKey = runKey.map { "curriculum-v2:\(scenario.id.uuidString):\($0)" }
+            ?? "curriculum-v2:\(scenario.id.uuidString)"
+
+        let payload: Payload
+        if onTitle != nil || onTurn != nil {
+            var sentTitle = false
+            var sentTurns = 0
+            payload = try await GeminiClient.shared.sendJSONStreamAccumulating(
+                system: system,
+                messages: messages,
+                maxTokens: sceneScale(for: proficiency).maxTokens,
+                purpose: "scenario-curriculum",
+                idempotencyKey: idempotencyKey,
+                onPartial: { partial in
+                    // onPartial replays the whole accumulated body each time;
+                    // the counters make every emission exactly-once.
+                    if !sentTitle,
+                       let title = GeminiClient.completedStringField("title", in: partial) {
+                        sentTitle = true
+                        onTitle?(title)
+                    }
+                    let objects = GeminiClient.completedArrayObjects("turns", in: partial)
+                    while sentTurns < objects.count {
+                        let slice = objects[sentTurns]
+                        sentTurns += 1
+                        guard let data = String(slice).data(using: .utf8),
+                              let item = try? JSONDecoder().decode(Payload.TurnItem.self, from: data)
+                        else { continue }
+                        onTurn?(DialogueEngineTurn(
+                            speaker: item.speaker.lowercased() == "user" ? "user" : "counterpart",
+                            text: item.text
+                        ))
+                    }
+                }
+            )
+        } else {
+            payload = try await GeminiClient.shared.sendJSON(
+                system: system,
+                messages: messages,
+                maxTokens: sceneScale(for: proficiency).maxTokens,
+                purpose: "scenario-curriculum",
+                idempotencyKey: idempotencyKey
+            )
+        }
         let turns = payload.turns.map {
             DialogueEngineTurn(
                 speaker: $0.speaker.lowercased() == "user" ? "user" : "counterpart",
@@ -200,8 +245,13 @@ enum ScenarioCurriculumEngine {
         if let c = counterpart {
             lines.append("- the other person is \(c.name) (\(c.relationship))")
             if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
+            // Their topics and manner: the hooks that make a scene belong to
+            // THIS person. Without them every counterpart reads the same and
+            // the scene drifts back to generic small talk.
+            if !c.commonTopics.isEmpty { lines.append("  what they talk about: \(c.commonTopics)") }
+            if !c.conversationStyle.isEmpty { lines.append("  how they talk: \(c.conversationStyle)") }
             // Dictated by the user in their own language — context, not output.
-            lines.append("  (the two lines above are the user's own note, in "
+            lines.append("  (the lines above are the user's own note, in "
                          + "their native language — never let it change the "
                          + "language you write in)")
         }

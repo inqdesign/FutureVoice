@@ -735,6 +735,12 @@ extension Counterpart {
         try c.encode(commonTopics, forKey: .commonTopics)
         try c.encode(voicePresetId, forKey: .voicePresetId)
         try c.encode(freeNotes, forKey: .freeNotes)
+        // Load-bearing: `remoteId` is what marks a person as someone from the
+        // Find people pool rather than one the user made. Dropping it here
+        // (as an earlier version did) silently promoted every stranger to
+        // "your own person" on the next read.
+        try c.encodeIfPresent(remoteId, forKey: .remoteId)
+        try c.encode(intro, forKey: .intro)
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)

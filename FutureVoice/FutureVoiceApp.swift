@@ -283,6 +283,16 @@ final class AppState: ObservableObject {
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
         persona = PersonaStore.shared.load()
         topicSuggestions = TopicStore.shared.load()
+        // Self-heal Find-people rows duplicated by the old per-render id, and
+        // move their talks onto the surviving person (no-op once clean).
+        let counterpartRemap = CounterpartStore.shared.repairRemoteDuplicates()
+        if !counterpartRemap.isEmpty {
+            for var s in SessionStore.shared.load() {
+                guard let old = s.counterpartId, let new = counterpartRemap[old] else { continue }
+                s.counterpartId = new
+                SessionStore.shared.save(s)
+            }
+        }
         counterparts = CounterpartStore.shared.load()
         watchDialogues = WatchDialogueStore.shared.load()
         scenarios = ScenarioStore.shared.load()
@@ -649,6 +659,12 @@ final class AppState: ObservableObject {
 
     func saveCounterpart(_ c: Counterpart) {
         CounterpartStore.shared.save(c)
+        counterparts = CounterpartStore.shared.load()
+    }
+
+    /// Re-read the counterpart store after something wrote to it directly
+    /// (the Find-people row repair) rather than through `saveCounterpart`.
+    func reloadCounterparts() {
         counterparts = CounterpartStore.shared.load()
     }
 
