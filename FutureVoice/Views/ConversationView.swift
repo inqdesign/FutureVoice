@@ -61,6 +61,7 @@ struct ConversationView: View {
     init(initialTopic: String = "", initialBlurb: String = "",
          initialIsNews: Bool = false, initialOrigin: SessionOrigin = .free,
          initialScenarioId: UUID? = nil, initialNewsFacts: [String] = [],
+         initialCounterpart: Counterpart? = nil,
          resumeSession: Session? = nil,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
@@ -75,12 +76,14 @@ struct ConversationView: View {
             // Carry the original origin so a resumed talk keeps its badge.
             _sessionOrigin = State(initialValue: s.origin ?? (s.topic?.isEmpty == false ? .news : .free))
             _sessionScenarioId = State(initialValue: s.originScenarioId)
+            _sessionCounterpartId = State(initialValue: s.counterpartId)
         } else {
             _topic = State(initialValue: initialTopic)
             _topicBlurb = State(initialValue: initialBlurb)
             _topicIsNews = State(initialValue: initialIsNews)
             _sessionOrigin = State(initialValue: initialOrigin)
             _sessionScenarioId = State(initialValue: initialScenarioId)
+            _sessionCounterpartId = State(initialValue: initialCounterpart?.id)
             _newsFacts = State(initialValue: initialNewsFacts)
         }
     }
@@ -111,8 +114,15 @@ struct ConversationView: View {
     // LONG tier stays at 5s: it only fires on a hanging conjunction or filler,
     // where cutting in is exactly the failure mode this whole scheme exists to
     // avoid. Roll back if `final_timeout=1` starts appearing in telemetry.
-    private static let vadShortSeconds: Double   = 1.2
-    private static let vadDefaultSeconds: Double = 2.2
+    // 2026-08 second retune: measured `vad_wait_ms` averages 1.97s, the second
+    // biggest slice of the wait after Gemini itself, and `final_timeout` is
+    // still 0 across every logged turn — the recognizer is never the binding
+    // constraint. Default 2.2 → 1.6, short 1.2 → 0.8. The LONG tier stays at
+    // 5s for the same reason as before: it only fires on a hanging conjunction
+    // or filler, where cutting the learner off is the failure this whole
+    // scheme exists to prevent.
+    private static let vadShortSeconds: Double   = 0.8
+    private static let vadDefaultSeconds: Double = 1.6
     private static let vadLongSeconds: Double    = 5.0
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
@@ -123,10 +133,10 @@ struct ConversationView: View {
     /// meter reading "voiced" forever. If the TRANSCRIPT has been still this
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
-    /// How much true silence before warming the network path. Well under the
-    /// shortest VAD tier (1.2s), so by the time the turn actually fires the
-    /// TLS handshake + auth token are already in place.
-    private static let preconnectAfterSilenceSeconds: Double = 0.6
+    /// How much true silence before warming the network path. Must stay well
+    /// under the SHORTEST VAD tier (now 0.8s) so the TLS handshake + auth
+    /// token are in place by the time the turn actually fires.
+    private static let preconnectAfterSilenceSeconds: Double = 0.35
     /// One preconnect per listening phase — reset when the mic restarts.
     @State private var didPreconnectThisTurn = false
     /// Per-turn latency breadcrumbs, accumulated across the VAD → finalize →
@@ -138,6 +148,41 @@ struct ConversationView: View {
     @State private var turnTiming: [String: String] = [:]
     /// When the user finished speaking (endpoint fired) — anchor for total_ms.
     @State private var turnEndedSpeakingAt: Date?
+    /// Per user turn, the last text the RECOGNIZER put in that bubble. The
+    /// late rescored pass may only overwrite a line that still matches this,
+    /// so it can never clobber Gemini's audio-grounded rewrite. Entries are
+    /// dropped as soon as that rewrite resolves.
+    @State private var lastRecognizerText: [UUID: String] = [:]
+    /// The user's utterance being transcoded for the Gemini attachment, and
+    /// the turn it belongs to. Kicked off the moment the recording lands so
+    /// the encode runs CONCURRENTLY with everything else the turn has to do
+    /// (append, prompt build, auth token, TLS warm-up) instead of sitting in
+    /// front of the request on the main actor. Retry awaits the same task —
+    /// one transcode per turn, however many attempts.
+    @State private var turnAudioEncode: (turnId: UUID, task: Task<EncodedTurnAudio, Never>)?
+    /// The in-flight verbatim-transcription call. One per turn; cancelled when
+    /// the next turn starts or the call screen closes.
+    @State private var transcribeTask: Task<Void, Never>?
+
+    /// A reply whose OPENING SENTENCE is already playing on an open PCM stream
+    /// while the model finishes writing the rest. Non-nil only between
+    /// `beginSplitSpeech` and `finishSplitSpeech`.
+    struct SplitSpeech {
+        var fluentTurnId: UUID
+        var sampleRate: Double
+        /// PCM of the opening sentence, kept so the finished turn caches the
+        /// WHOLE line as one file.
+        var pcm: Data
+        var prefix: String
+    }
+    @State private var splitSpeech: SplitSpeech?
+
+    /// A turn's audio, ready to attach — or the reason there is none.
+    struct EncodedTurnAudio: Sendable {
+        var inline: GeminiClient.Message.InlineAudio?
+        /// "none" · "too_big" · "decode_fail" · "no_file"
+        var skip: String
+    }
     @State private var dashboard: PracticeStats.Snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -160,6 +205,9 @@ struct ConversationView: View {
     @State private var sessionOrigin: SessionOrigin = .free
     /// The scenario this talk launched from, carried onto the saved session.
     @State private var sessionScenarioId: UUID? = nil
+    /// The person this talk is WITH (Find people / personas) — carried onto
+    /// the saved session so their card can list every talk you've had.
+    @State private var sessionCounterpartId: UUID? = nil
     /// Real facts from the grounded news lookup — injected into every turn's
     /// system prompt so the future self actually knows the story.
     @State private var newsFacts: [String] = []
@@ -167,6 +215,20 @@ struct ConversationView: View {
     /// listening, playback RMS while speaking). Futureself interpolates it
     /// per frame, so no smoothing here.
     @State private var voiceLevel: Float = 0
+
+    /// Live lookup, not a copy — resolves through appState so edits to the
+    /// person elsewhere are picked up, and resume restores it from the saved
+    /// session's counterpartId with no extra plumbing.
+    private var counterpart: Counterpart? {
+        sessionCounterpartId.flatMap { id in appState.counterparts.first { $0.id == id } }
+    }
+
+    /// Who speaks the reply audio. A person-talk uses THAT person's preset
+    /// voice — the partner is the stranger, not the fluent self. Everything
+    /// else keeps the user's clone.
+    private var activeVoiceId: String? {
+        counterpart?.voicePresetId ?? appState.voiceCloneId
+    }
 
     private let userId = ProfileStore.localUserId
 
@@ -682,7 +744,7 @@ struct ConversationView: View {
             let opener: String
             if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
-            } else if topic.isEmpty,
+            } else if topic.isEmpty, counterpart == nil,
                       let canned = FreeTalkOpeners.shared.next(
                           language: appState.targetLanguage,
                           personaName: appState.persona?.displayName) {
@@ -691,7 +753,7 @@ struct ConversationView: View {
                 // the texts repeat verbatim, the TTS content cache makes the
                 // voice free after each line's first play.
                 opener = canned
-            } else if topic.isEmpty,
+            } else if topic.isEmpty, counterpart == nil,
                       let generated = try? await FreeTalkOpeners.shared.generatePool(
                           language: appState.targetLanguage,
                           personaName: appState.persona?.displayName,
@@ -712,11 +774,11 @@ struct ConversationView: View {
             guard !isTornDown else { return }
             // Session must be armed before playback OR the mic fallback below.
             await audioSessionReady.value
-            // Speak the opener in the cloned voice — a call starts with the
-            // fluent self TALKING, not a line to read. Repeated openers for
+            // Speak the opener in the active voice — a call starts with the
+            // other side TALKING, not a line to read. Repeated openers for
             // the same phrasing hit the content cache, and the idempotency
             // key keeps a re-open from billing ElevenLabs twice.
-            if let voiceId = appState.voiceCloneId {
+            if let voiceId = activeVoiceId {
                 do {
                     try await speakAndAppend(opener, voiceId: voiceId,
                                              idempotencyKey: "tts-opener:\(sessionId.uuidString)")
@@ -880,33 +942,50 @@ struct ConversationView: View {
         // language-model-rescored version, not the last raw partial.
         phase = .thinking
         let finalizeStarted = Date()
-        let finalText = await live.stopAndFinalize()
-        turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
-        // Whether the rescored FINAL pass actually landed before the turn
-        // shipped. `final_timeout=1` means the user's words went out as the
-        // recognizer's un-rescored partial — previously unobservable, and the
-        // only way to tell if `quietCommitThreshold` needs retuning next.
-        if let w = live.lastFinalizeWait {
-            turnTiming["final_pending"] = String(w.pendingSegments)
-            turnTiming["final_timeout"] = w.timedOut ? "1" : "0"
-            turnTiming["final_upgraded"] = w.upgradedText ? "1" : "0"
+        // The turn ships with the text the learner is ALREADY reading on
+        // screen. The recognizer's rescored final pass keeps running and edits
+        // the bubble in place if it improves — off the critical path, so the
+        // transcription costs the turn no time at all.
+        let turnId = UUID()
+        let finalText = live.stopAndFinalizeInBackground { [self] upgraded in
+            applyRecognizerUpgrade(upgraded, to: turnId)
         }
+        turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
+        lastRecognizerText[turnId] = finalText
         let fluency = live.fluencyStats()
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
 
         var userTurn = Turn(
-            id: UUID(), role: .user, audioURL: nil,
+            id: turnId, role: .user, audioURL: nil,
             transcript: finalText, durationMs: max(0, elapsedMs), timestamp: Date(),
             suggestion: nil,
             fluency: fluency
         )
         // Keep the user's own audio so they can listen back to how they
         // actually sounded (temp AAC from the mic tap → TurnAudioStore).
+        // `.m4a`, NOT the store's MP3 default: this file gets re-decoded for
+        // the Gemini audio attachment, and ExtAudioFile refuses M4A bytes
+        // behind an `.mp3` name (see the note on TurnAudioStore).
         if let rec = live.lastRecordingURL, let data = try? Data(contentsOf: rec) {
-            userTurn.audioURL = TurnAudioStore.shared.save(data, turnId: userTurn.id)
+            userTurn.audioURL = TurnAudioStore.shared.save(data, turnId: userTurn.id,
+                                                           fileExtension: "m4a")
             try? FileManager.default.removeItem(at: rec)
         }
+        // Transcode NOW, off the main actor, in parallel with the rest of the
+        // turn setup — decode + resample + AAC encode + base64 of a whole
+        // utterance used to run inline right before the Gemini call, which put
+        // it squarely on the critical path AND froze the UI while it ran.
+        turnAudioEncode = userTurn.audioURL.map { url in
+            (turnId, Task.detached(priority: .userInitiated) {
+                Self.encodeTurnAudio(at: url)
+            })
+        }
+        // With a recording in hand an audio-grounded rewrite is still coming.
+        // The bubble is NOT held for it — it shows the recognizer's line now
+        // and swaps when Gemini's lands. The flag only marks "better text is
+        // in flight" so late arrivals resolve in the right order.
+        userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
         didSaveCurrentSession = false
 
@@ -921,85 +1000,68 @@ struct ConversationView: View {
         failedTurnId = nil
         outOfCredits = false
         phase = .thinking
-        guard let voiceId = appState.voiceCloneId else { phase = .idle; return }
+        guard let voiceId = activeVoiceId else {
+            phase = .idle
+            resolvePendingTranscript(turnId)
+            return
+        }
+        // The learner's utterance is transcribed by its OWN call, running
+        // alongside this one — see `startTranscription`. It used to be a field
+        // on the turn call with the audio attached, which forced the model to
+        // ingest and transcribe before it could write the reply's first token:
+        // measured 4.1s to first reply vs 2.1s without the audio. The reply is
+        // the only thing the learner is waiting to HEAR, so it goes text-only
+        // and the corrected line catches up in the bubble a moment later.
+        startTranscription(forUserTurn: turnId)
         do {
-            // Attach the user's own recorded utterance so Gemini hears what
-            // was ACTUALLY said — on-device STT is the weak link for accented
-            // speech; the model returns its own verbatim transcript alongside
-            // the reply. AAC-ADTS at ~32 kbps (8–13× smaller than the old WAV
-            // path) so the upload survives weak cellular uplinks; WAV remains
-            // as the encode-failure fallback. On a constrained link (Low Data
-            // Mode / degraded path) skip the attachment entirely — a text-only
-            // turn NOW beats an audio turn that dies at the 40s timeout.
-            var turnAudio: GeminiClient.Message.InlineAudio?
-            let path = NetworkPathStatus.shared
-            if path.isSatisfied, !path.isConstrained,
-               let turn = turns.first(where: { $0.id == turnId }), turn.role == .user,
-               let url = turn.audioURL {
-                if let aac = AudioLoudness.aacADTS16kMono(fromFileAt: url),
-                   !aac.isEmpty, aac.count <= 600_000 {   // ~2min at 32kbps
-                    turnAudio = .init(mimeType: "audio/aac",
-                                      base64Data: aac.base64EncodedString())
-                } else if let wav = AudioLoudness.wav16kMono(fromFileAt: url),
-                          !wav.isEmpty, wav.count <= 3_000_000 {   // ~90s at 16kHz
-                    turnAudio = .init(mimeType: "audio/wav",
-                                      base64Data: wav.base64EncodedString())
-                }
-            }
-            switch turnAudio?.mimeType {
-            case "audio/aac": turnTiming["audio"] = "aac"
-            case "audio/wav": turnTiming["audio"] = "wav"
-            default:          turnTiming["audio"] = "none"
-            }
             let geminiStarted = Date()
-            // The reply is the FIRST field of the streamed turn JSON, so TTS
-            // starts the instant it closes — the suggestion and the verbatim
-            // transcript that follow it are written while the voice is already
-            // loading, instead of ahead of the first sound.
+            // TTS starts on the reply's FIRST SENTENCE, not the whole reply —
+            // `onReply` fires twice: once with the opening sentence the moment
+            // it closes, then once with the full text. The suggestion that
+            // follows is written while the voice is already loading.
             var speakTask: Task<Void, Error>?
-            let speakEarly: @MainActor (String) -> Void = { reply in
-                guard speakTask == nil, !isTornDown else { return }
+            var openingTask: Task<Void, Never>?
+            let speakEarly: @MainActor (String, Bool) -> Void = { reply, isComplete in
+                guard !isTornDown else { return }
                 let text = Self.stripLeakedSchemaTail(reply)
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 // A brace-opener is un-unwrappable JSON debris, never speech —
                 // stay silent and let the buffered decode / rescue path decide.
                 guard !text.isEmpty, !text.hasPrefix("{") else { return }
-                turnTiming["gemini_first_ms"] =
-                    String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
-                speakTask = Task { @MainActor in
-                    try await speakAndAppend(text, voiceId: voiceId,
-                                             idempotencyKey: "tts-turn:\(turnId.uuidString)")
+                if !isComplete {
+                    guard openingTask == nil, speakTask == nil else { return }
+                    turnTiming["gemini_first_ms"] =
+                        String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
+                    turnTiming["tts_split"] = "1"
+                    openingTask = Task { @MainActor in
+                        await beginSplitSpeech(text, voiceId: voiceId, turnId: turnId)
+                    }
+                    return
+                }
+                guard speakTask == nil else { return }
+                if let openingTask {
+                    // The opening sentence is already on its way to the
+                    // speaker. Wait for it to be airborne, then continue the
+                    // SAME audio stream with the rest — nothing restarts.
+                    speakTask = Task { @MainActor in
+                        await openingTask.value
+                        try await finishSplitSpeech(fullText: text, voiceId: voiceId,
+                                                    turnId: turnId)
+                    }
+                } else {
+                    turnTiming["gemini_first_ms"] =
+                        String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
+                    turnTiming["tts_split"] = "0"
+                    speakTask = Task { @MainActor in
+                        try await speakAndAppend(text, voiceId: voiceId,
+                                                 idempotencyKey: "tts-turn:\(turnId.uuidString)")
+                    }
                 }
             }
-            let payload: ConversationTurnPayload
-            do {
-                payload = try await turnPayload(audio: turnAudio, turnId: turnId,
-                                                onReply: speakEarly)
-            } catch where turnAudio != nil && !error.isOutOfCredits {
-                // The audio-attached call is the NEW, riskier path (bigger
-                // upload, audio ingestion, longer JSON). If it fails for any
-                // retryable reason, silently rerun the exact pre-audio call —
-                // same idempotency key, so no second charge — instead of
-                // showing the error chip. Worst case = old behavior.
-                Telemetry.log("talk_audio_rescue", [
-                    "error": (error as NSError).domain + ":\((error as NSError).code)",
-                ])
-                turnAudio = nil
-                payload = try await turnPayload(audio: nil, turnId: turnId,
-                                                onReply: speakEarly)
-            }
+            let payload = try await turnPayload(turnId: turnId, onReply: speakEarly)
             turnTiming["gemini_ms"] = String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
             // The screen may have closed while the reply was in flight.
             guard !isTornDown else { return }
-            // Upgrade the turn to what the model actually HEARD (audio is the
-            // ground truth) — the feed, session summary, drills, and profile
-            // all learn from the real utterance instead of the ASR guess.
-            if turnAudio != nil,
-               let heard = payload.transcript?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !heard.isEmpty,
-               let idx = turns.firstIndex(where: { $0.id == turnId }) {
-                turns[idx].transcript = heard
-            }
             let replyText = Self.stripLeakedSchemaTail(payload.reply)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             if let s = payload.turnSuggestion(),
@@ -1008,9 +1070,16 @@ struct ConversationView: View {
             }
             // Already speaking from the stream callback: adopt its result so a
             // TTS failure still reaches the catch below and offers Retry.
-            // Otherwise (no early fire — buffered fallback) speak now.
             if let speakTask {
                 try await speakTask.value
+            } else if let openingTask {
+                // The reply's closing quote never arrived (stream cut after the
+                // opening sentence shipped). The learner is already hearing
+                // this turn — finish it from whatever the payload recovered
+                // rather than restart the line from the top.
+                await openingTask.value
+                try await finishSplitSpeech(fullText: replyText, voiceId: voiceId,
+                                            turnId: turnId)
             } else {
                 // After unwrapping, a reply that is still empty or raw JSON
                 // must fail into the Retry chip — never reach TTS or the feed.
@@ -1038,14 +1107,130 @@ struct ConversationView: View {
         }
     }
 
+    /// Fire the verbatim-transcription call for a user turn. Fully detached
+    /// from the reply: it may land before it, after it, or not at all, and the
+    /// bubble is correct at every one of those moments.
+    private func startTranscription(forUserTurn turnId: UUID) {
+        guard let encode = turnAudioEncode, encode.turnId == turnId else {
+            turnTiming["audio"] = "no_file"
+            resolvePendingTranscript(turnId)
+            return
+        }
+        // On a constrained link (Low Data Mode / degraded path) the upload is
+        // the thing most likely to stall — and unlike before, skipping it costs
+        // the learner nothing but an unpolished line.
+        let path = NetworkPathStatus.shared
+        guard path.isSatisfied, !path.isConstrained else {
+            turnTiming["audio"] = "net"
+            resolvePendingTranscript(turnId)
+            return
+        }
+        let target = appState.targetLanguage
+        // The turn's timing row usually ships before this call resolves, so
+        // seed the field now — a missing "audio" key would read as a turn that
+        // never tried, which is exactly the ambiguity this key exists to kill.
+        turnTiming["audio"] = "pending"
+        transcribeTask?.cancel()
+        transcribeTask = Task { @MainActor in
+            let encoded = await encode.task.value
+            turnTiming["audio"] = encoded.inline.map {
+                $0.mimeType == "audio/aac" ? "aac" : "wav"
+            } ?? encoded.skip
+            guard let inline = encoded.inline, !Task.isCancelled else {
+                resolvePendingTranscript(turnId)
+                return
+            }
+            let started = Date()
+            let guess = turns.first(where: { $0.id == turnId })?.transcript ?? ""
+            let heard = await UtteranceTranscriber.transcribe(
+                audio: inline, asrGuess: guess, targetLanguage: target,
+                idempotencyKey: "asr-turn:\(turnId.uuidString)")
+            guard !Task.isCancelled, !isTornDown else { return }
+            applyGeminiTranscript(heard, to: turnId, guess: guess,
+                                  elapsedMs: Int(Date().timeIntervalSince(started) * 1000))
+        }
+    }
+
+    /// The audio-grounded line, once it lands. Wins over anything the
+    /// recognizer produced — this is the only place `turns` gets the version
+    /// the summary, drills and profile will learn from.
+    ///
+    /// Logged separately from `talk_turn_timing` because it resolves on its
+    /// own clock: by the time it arrives the turn's timing row has usually
+    /// already shipped.
+    private func applyGeminiTranscript(_ heard: String?, to turnId: UUID,
+                                       guess: String, elapsedMs: Int) {
+        defer { resolvePendingTranscript(turnId) }
+        var outcome = "missing"
+        if let heard, !heard.isEmpty, let idx = turns.firstIndex(where: { $0.id == turnId }) {
+            outcome = heard == turns[idx].transcript ? "same" : "fixed"
+            turns[idx].transcript = heard
+            // Ground truth — a late recognizer pass must not overwrite it.
+            lastRecognizerText[turnId] = nil
+        }
+        Telemetry.log("talk_asr_upgrade", [
+            "asr": outcome,
+            "ms": String(elapsedMs),
+            "guess_len": String(guess.count),
+        ])
+    }
+
+    /// Decode → 16 kHz mono → AAC-ADTS (~32 kbps, 8–13× smaller than WAV, so
+    /// the upload survives a weak uplink), with WAV as the encode-failure
+    /// fallback. Pure function, runs off the main actor.
+    nonisolated private static func encodeTurnAudio(at url: URL) -> EncodedTurnAudio {
+        if let aac = AudioLoudness.aacADTS16kMono(fromFileAt: url), !aac.isEmpty {
+            guard aac.count <= 600_000 else {          // ~2min at 32kbps
+                return EncodedTurnAudio(inline: nil, skip: "too_big")
+            }
+            return EncodedTurnAudio(
+                inline: .init(mimeType: "audio/aac", base64Data: aac.base64EncodedString()),
+                skip: "none")
+        }
+        if let wav = AudioLoudness.wav16kMono(fromFileAt: url), !wav.isEmpty {
+            guard wav.count <= 3_000_000 else {        // ~90s at 16kHz
+                return EncodedTurnAudio(inline: nil, skip: "too_big")
+            }
+            return EncodedTurnAudio(
+                inline: .init(mimeType: "audio/wav", base64Data: wav.base64EncodedString()),
+                skip: "none")
+        }
+        return EncodedTurnAudio(inline: nil, skip: "decode_fail")
+    }
+
+    /// Apply the recognizer's late rescored pass to a turn already on screen.
+    ///
+    /// Two upgrades race for this bubble: this one (local, fast, better than
+    /// the raw partial) and Gemini's audio-grounded transcript (slower, but
+    /// ground truth). Gemini always wins — which is exactly what "only touch
+    /// the line if it's still the text the recognizer originally produced"
+    /// enforces, with no extra state and no order assumptions.
+    private func applyRecognizerUpgrade(_ text: String, to turnId: UUID) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              let idx = turns.firstIndex(where: { $0.id == turnId }),
+              turns[idx].transcript != trimmed,
+              turns[idx].transcript == lastRecognizerText[turnId] else { return }
+        turns[idx].transcript = trimmed
+        lastRecognizerText[turnId] = trimmed
+    }
+
+    /// Stop holding a user turn's bubble for the audio-grounded rewrite —
+    /// either it landed and `transcript` is now Gemini's, or it never will and
+    /// the recognizer's guess is the best we have. Idempotent.
+    private func resolvePendingTranscript(_ turnId: UUID) {
+        guard let idx = turns.firstIndex(where: { $0.id == turnId }),
+              turns[idx].transcriptPending else { return }
+        turns[idx].transcriptPending = false
+    }
+
     /// One structured turn call: transcript + reply + optional inline
     /// correction (repopulates Turn.suggestion: chip UI, SRS ingest,
     /// weekly-report pairs, suggestion_rate metric). Throws on an empty
     /// reply so the caller's audio→text rescue (and the Retry chip) engage
     /// instead of silently dead-ending the turn.
-    private func turnPayload(audio: GeminiClient.Message.InlineAudio?,
-                             turnId: UUID,
-                             onReply: @MainActor @escaping (String) -> Void)
+    private func turnPayload(turnId: UUID,
+                             onReply: @MainActor @escaping (String, Bool) -> Void)
     async throws -> ConversationTurnPayload {
         do {
             let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSONStream(
@@ -1053,29 +1238,23 @@ struct ConversationView: View {
                     + ConversationEngine.turnOutputInstruction(
                         targetLanguage: appState.targetLanguage,
                         nativeLanguage: appState.nativeLanguage),
-                messages: ConversationEngine.geminiMessages(from: turns, lastUserAudio: audio),
-                // Headroom for transcript + reply + suggestion: a MAX_TOKENS
-                // truncation shows up here as a DecodingError-failed turn.
-                // gen-3 counts THINKING tokens against this ceiling too, so the
-                // budget is shared with reasoning the user never sees — and the
-                // transcript field scales with how long the user just spoke.
-                // At 1024 that combination truncated ~8% of turns into a dead
-                // Retry chip (evenly split across wifi/cellular, i.e. not a
-                // network fault). The ceiling is not billed, only tokens
-                // actually produced, so the headroom is free.
+                messages: ConversationEngine.geminiMessages(from: turns),
+                // Headroom for reply + suggestion: a MAX_TOKENS truncation
+                // shows up here as a DecodingError-failed turn. gen-3 counts
+                // THINKING tokens against this ceiling too, so the budget is
+                // shared with reasoning the user never sees. At 1024 that
+                // combination truncated ~8% of turns into a dead Retry chip
+                // (evenly split across wifi/cellular, i.e. not a network
+                // fault). The ceiling is not billed, only tokens actually
+                // produced, so the headroom is free.
                 maxTokens: 2048,
                 temperature: 0.7,
                 purpose: "turn",
-                // Keyed to the user turn: the inline Retry button and the
-                // audio→text rescue re-run this same logical request without
-                // a second charge.
+                // Keyed to the user turn: the inline Retry button re-runs this
+                // same logical request without a second charge.
                 idempotencyKey: "turn:\(turnId.uuidString)",
-                // Audio-attached calls get a short idle timeout so a stalled
-                // upload fails into the text-only rescue in seconds instead
-                // of eating the session-wide 40s window first.
-                requestTimeout: audio != nil ? 20 : nil,
-                // Speak as soon as "reply" closes; everything after it in the
-                // JSON (suggestion, transcript) lands while the voice loads.
+                // Speak as soon as the reply's FIRST SENTENCE closes; the rest
+                // of the reply and the suggestion land while the voice loads.
                 earlyField: "reply",
                 onEarlyField: onReply,
                 // Stream cut after the reply shipped: keep the turn the user
@@ -1143,6 +1322,144 @@ struct ConversationView: View {
         Telemetry.log("talk_turn_timing", props)
     }
 
+    /// Synthesize and start playing the reply's OPENING SENTENCE, leaving the
+    /// PCM stream open for `finishSplitSpeech` to continue. The point is to
+    /// spend the model's remaining writing time on the TTS round-trip instead
+    /// of after it.
+    ///
+    /// Leaves `splitSpeech` nil on any failure — the caller then speaks the
+    /// whole reply the ordinary way, so the worst case is the old behavior.
+    private func beginSplitSpeech(_ prefix: String, voiceId: String, turnId: UUID) async {
+        let ttsStarted = Date()
+        var streamId: UUID?
+        do {
+            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+                voiceId: voiceId, text: prefix,
+                modelId: ElevenLabsClient.conversationModelId,
+                idempotencyKey: "tts-turn:\(turnId.uuidString):open",
+                purpose: "turn"
+            ) { chunk, sampleRate in
+                if isTornDown { return }
+                if streamId == nil {
+                    do {
+                        try player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId) {
+                            Task { @MainActor in
+                                guard phase == .speaking else { return }
+                                phase = .idle
+                                if phoneCallActive { await startRecording() }
+                            }
+                        }
+                    } catch {
+                        return   // engine refused → no split, no audio yet
+                    }
+                    let id = UUID()
+                    streamId = id
+                    turns.append(Turn(id: id, role: .fluentSelf, audioURL: nil,
+                                      transcript: prefix, durationMs: 0,
+                                      timestamp: Date(), suggestion: nil))
+                    didSaveCurrentSession = false
+                    phase = .speaking
+                    splitSpeech = SplitSpeech(fluentTurnId: id, sampleRate: sampleRate,
+                                              pcm: Data(), prefix: prefix)
+                    logTurnTiming(tts: "stream",
+                                  ttsFirstMs: Int(Date().timeIntervalSince(ttsStarted) * 1000))
+                }
+                player.feedPCMStream(chunk)
+            }
+            guard streamId != nil else { splitSpeech = nil; return }
+            if case .pcm(let full, let rate) = result {
+                splitSpeech?.pcm = full
+                splitSpeech?.sampleRate = rate
+            }
+        } catch {
+            Telemetry.log("talk_tts_split_open_failed", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "mid_stream": streamId != nil ? "1" : "0",
+            ])
+            if let id = streamId {
+                player.stop()
+                turns.removeAll { $0.id == id }
+                phase = .thinking
+            }
+            splitSpeech = nil
+        }
+    }
+
+    /// Continue the open stream with everything after the opening sentence,
+    /// then close it. Falls back to speaking the whole reply when the opening
+    /// never got airborne.
+    private func finishSplitSpeech(fullText: String, voiceId: String,
+                                   turnId: UUID) async throws {
+        guard let split = splitSpeech else {
+            guard !isTornDown else { return }
+            try await speakAndAppend(fullText, voiceId: voiceId,
+                                     idempotencyKey: "tts-turn:\(turnId.uuidString)")
+            return
+        }
+        splitSpeech = nil
+        // `fullText` must literally extend what we already spoke, or the two
+        // halves can't be joined. If it doesn't, the honest move is to keep
+        // the bubble to what the learner actually HEARD rather than show a
+        // line whose second half was never voiced.
+        let rest = fullText.hasPrefix(split.prefix)
+            ? String(fullText.dropFirst(split.prefix.count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            : ""
+        guard !rest.isEmpty, !isTornDown else {
+            player.finishPCMStream()
+            finalizeSplitTurn(split, spokenText: split.prefix, voiceId: voiceId)
+            return
+        }
+        if let idx = turns.firstIndex(where: { $0.id == split.fluentTurnId }) {
+            turns[idx].transcript = fullText
+        }
+        var pcm = split.pcm
+        var spoken = fullText
+        do {
+            let result = try await ElevenLabsClient.shared.synthesizeStreaming(
+                voiceId: voiceId, text: rest,
+                modelId: ElevenLabsClient.conversationModelId,
+                idempotencyKey: "tts-turn:\(turnId.uuidString):rest",
+                purpose: "turn"
+            ) { chunk, _ in
+                guard !isTornDown else { return }
+                player.feedPCMStream(chunk)
+            }
+            if case .pcm(let more, _) = result { pcm.append(more) }
+        } catch {
+            // The remainder never arrived. The opening is already playing and
+            // the learner heard a complete sentence — end the turn there
+            // rather than restart it, and put the bubble back in sync.
+            Telemetry.log("talk_tts_split_rest_failed", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+            ])
+            spoken = split.prefix
+            if let idx = turns.firstIndex(where: { $0.id == split.fluentTurnId }) {
+                turns[idx].transcript = split.prefix
+            }
+        }
+        player.finishPCMStream()
+        finalizeSplitTurn(split, spokenText: spoken, voiceId: voiceId, pcm: pcm)
+    }
+
+    /// Cache what was actually spoken and hang it off the turn, so replay,
+    /// shadowing and the phrase cache behave exactly as on the single-shot
+    /// path. Timings come later from the free local alignment — never a paid
+    /// re-synthesis (see `ShadowDrillView.recoverTimings`).
+    private func finalizeSplitTurn(_ split: SplitSpeech, spokenText: String,
+                                   voiceId: String, pcm: Data? = nil) {
+        let audio = pcm ?? split.pcm
+        guard !audio.isEmpty else { return }
+        let wav = AudioLoudness.wavData(fromPCM16: audio, sampleRate: Int(split.sampleRate))
+        let durationMs = Int(Double(audio.count / 2) / split.sampleRate * 1000)
+        PhraseAudioStore.shared.save(wav, text: spokenText, voiceId: voiceId, timings: [])
+        let savedURL = TurnAudioStore.shared.save(wav, turnId: split.fluentTurnId)
+        if let idx = turns.firstIndex(where: { $0.id == split.fluentTurnId }) {
+            turns[idx].audioURL = savedURL
+            turns[idx].durationMs = durationMs
+        }
+    }
+
     private func speakAndAppend(_ text: String, voiceId: String,
                                 idempotencyKey: String? = nil) async throws {
         guard !isTornDown else { return }
@@ -1173,14 +1490,14 @@ struct ConversationView: View {
                 modelId: ElevenLabsClient.conversationModelId,
                 idempotencyKey: idempotencyKey,
                 purpose: "turn"
-            ) { chunk in
+            ) { chunk, sampleRate in
                 // Closed mid-stream: swallow the chunks — never (re)start
                 // playback on a dead screen.
                 if isTornDown { return }
                 if !receivedAnyChunk {
                     receivedAnyChunk = true
                     do {
-                        try player.startPCMStream(sampleRate: ElevenLabsClient.streamSampleRate,
+                        try player.startPCMStream(sampleRate: sampleRate,
                                                   voiceKey: voiceId) {
                             Task { @MainActor in
                                 guard phase == .speaking else { return }
@@ -1213,12 +1530,12 @@ struct ConversationView: View {
             }
 
             switch result {
-            case .pcm22050(let fullPCM) where streamTurnId != nil && !fullPCM.isEmpty:
+            case .pcm(let fullPCM, let sampleRate) where streamTurnId != nil && !fullPCM.isEmpty:
                 player.finishPCMStream()
                 let wav = AudioLoudness.wavData(
-                    fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
+                    fromPCM16: fullPCM, sampleRate: Int(sampleRate))
                 let durationMs = Int(Double(fullPCM.count / 2)
-                    / ElevenLabsClient.streamSampleRate * 1000)
+                    / sampleRate * 1000)
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 let savedURL = TurnAudioStore.shared.save(wav, turnId: streamTurnId!)
                 if let idx = turns.firstIndex(where: { $0.id == streamTurnId }) {
@@ -1241,9 +1558,9 @@ struct ConversationView: View {
                     }
                 }
                 return
-            case .pcm22050(let fullPCM) where !fullPCM.isEmpty:
+            case .pcm(let fullPCM, let sampleRate) where !fullPCM.isEmpty:
                 let wav = AudioLoudness.wavData(
-                    fromPCM16: fullPCM, sampleRate: Int(ElevenLabsClient.streamSampleRate))
+                    fromPCM16: fullPCM, sampleRate: Int(sampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
                 Task {
@@ -1383,7 +1700,8 @@ struct ConversationView: View {
             turns: turns,
             summary: nil,
             origin: sessionOrigin,
-            originScenarioId: sessionScenarioId
+            originScenarioId: sessionScenarioId,
+            counterpartId: sessionCounterpartId
         ))
         didSaveCurrentSession = true
         do {
@@ -1482,7 +1800,8 @@ struct ConversationView: View {
                 turns: turns,
                 summary: computed,
                 origin: sessionOrigin,
-                originScenarioId: sessionScenarioId
+                originScenarioId: sessionScenarioId,
+                counterpartId: sessionCounterpartId
             )
             SessionStore.shared.save(session)
             // Clear any cards from a previous end of THIS session (resume
@@ -1554,6 +1873,13 @@ struct ConversationView: View {
         if phoneCallActive { HapticEngine.phoneCallEnded() }
         phoneCallActive = false
         cancelSilenceTimer()
+        // The transcription runs on its own clock and can outlive the screen —
+        // it must not keep uploading (or write into `turns`) after the call
+        // has been hung up.
+        transcribeTask?.cancel()
+        transcribeTask = nil
+        turnAudioEncode?.task.cancel()
+        splitSpeech = nil
         _ = live.stop()
         player.stop()
         phase = .idle
@@ -1605,6 +1931,7 @@ struct ConversationView: View {
             weakVocabAreas: appState.learnerProfile.weakVocabAreas,
             topic: composedTopic,
             persona: appState.persona,
+            counterpart: counterpart,
             newsFacts: newsFacts
         )
     }
@@ -1629,8 +1956,26 @@ private struct TurnView: View {
         DialogueLine(speaker: speaker,
                      name: turn.role == .user ? "You" : "Future self",
                      scale: .call) {
-            Text(turn.transcript)
+            // The learner's line goes up the instant they stop talking — it is
+            // the text they were already watching build on screen, so there is
+            // nothing to wait for. Better transcriptions (the recognizer's
+            // rescored pass, then Gemini's audio-grounded one) land later and
+            // edit this in place; a placeholder + swap made a background
+            // refinement look like a step the learner had to sit through.
+            // Only a genuinely EMPTY line has nothing to show yet.
+            if turn.transcript.isEmpty && turn.transcriptPending {
+                Text(explain("Writing down what you said…"))
+                    .foregroundStyle(.secondary)
+                    .italic()
+            } else {
+                Text(turn.transcript)
+                    .animation(.easeInOut(duration: 0.2), value: turn.transcript)
+            }
         } accessory: {
+            // Nothing to translate or correct until there is a line.
+            if turn.transcript.isEmpty {
+                EmptyView()
+            } else {
             VStack(alignment: speaker.alignment, spacing: 6) {
                 Button(action: toggleMeaning) {
                     HStack(spacing: 4) {
@@ -1658,6 +2003,14 @@ private struct TurnView: View {
                                    nativeLanguage: nativeLanguage)
                 }
             }
+            }
+        }
+        // A late transcription upgrade rewrites the line under a translation
+        // that was fetched for the OLD wording. Drop it and, if the learner is
+        // looking at it, fetch the meaning of what the bubble now says.
+        .onChange(of: turn.transcript) { _, _ in
+            translation = nil
+            if showing { showing = false; toggleMeaning() }
         }
     }
 

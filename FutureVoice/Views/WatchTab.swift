@@ -32,6 +32,9 @@ struct WatchTab: View {
     }
     @State private var showingPeople = false
     @State private var showingNewVoice = false
+    @State private var showingFind = false
+    /// A Find-people stranger to start a live call with (fullScreenCover).
+    @State private var callPerson: Counterpart?
 
     struct ComposerConfig: Identifiable {
         let id = UUID()
@@ -100,6 +103,25 @@ struct WatchTab: View {
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView().environmentObject(appState)
             }
+            .sheet(isPresented: $showingFind) {
+                // Find people — strangers from the shared pool. Talk starts a
+                // live call in THEIR preset voice; Watch drops them into the
+                // same composer a tapped persona uses.
+                FindPeopleSheet(
+                    onTalk: { person in
+                        showingFind = false
+                        callPerson = person
+                    },
+                    onWatch: { person in
+                        showingFind = false
+                        composer = ComposerConfig(person: person)
+                    })
+                    .environmentObject(appState)
+            }
+            .fullScreenCover(item: $callPerson) { person in
+                ConversationView(initialCounterpart: person)
+                    .environmentObject(appState)
+            }
             .navigationDestination(item: $watchScene) { t in
                 SceneWatchView(scenarioId: t.scenario.id, freshTake: t.fresh)
                     .environmentObject(appState)
@@ -113,10 +135,14 @@ struct WatchTab: View {
         VStack(alignment: .leading, spacing: 8) {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
-                    ForEach(appState.counterparts) { c in
+                    // Your OWN people only — strangers met via Find people
+                    // stay inside the Find sheet, so this row never crowds
+                    // out the people you actually know.
+                    ForEach(appState.counterparts.filter { $0.remoteId == nil }) { c in
                         personBubble(c)
                     }
                     addPersonBubble
+                    findPeopleBubble
                 }
                 // Full-bleed scroller: cancel the page's side padding so
                 // avatars run edge to edge, then restore it inside.
@@ -165,6 +191,27 @@ struct WatchTab: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("New person")
+    }
+
+    private var findPeopleBubble: some View {
+        Button { showingFind = true } label: {
+            VStack(spacing: 6) {
+                ZStack {
+                    Circle()
+                        .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1.5, dash: [5]))
+                        .frame(width: 64, height: 64)
+                    Image(systemName: "magnifyingglass")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                Text("Find")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 68)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Find people")
     }
 
     // MARK: - Your scenarios (the same list Talk shows — watch them here too)

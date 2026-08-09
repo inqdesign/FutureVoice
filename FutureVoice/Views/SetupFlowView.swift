@@ -33,7 +33,8 @@ struct SetupFlowView: View {
         LanguageCatalog.selectableTargets.map(\.code).filter { $0 != nativeLanguage }
     }
 
-    private static let nativeChoices = LanguageCatalog.nativeLanguages
+    /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
+    private static let nativeChoices = LanguageCatalog.nativeChoices
 
     private static let totalSteps = 3
 
@@ -78,7 +79,10 @@ struct SetupFlowView: View {
 
     private var title: String {
         switch step {
-        case 0: return "Your language?"
+        // "Your language?" carried the same ambiguity the Me row did — on the
+        // very first screen, before any context, it reads as "which language
+        // am I here to learn?". Say native.
+        case 0: return "Your native language?"
         case 1: return "Learn which language?"
         default: return "Your level?"
         }

@@ -2,7 +2,7 @@
 //
 // Body: { model, system_instruction?, contents, generationConfig?, purpose?, stream? }
 // `purpose` (optional) lets the client tag the call as one of:
-//   "summary" | "weekly" | "enrichment" | undefined (= generic)
+//   "summary" | "weekly" | "enrichment" | "transcribe" | undefined (= generic)
 // so usage_ledger groups by intent and pricing can differ per intent.
 // `stream: true` switches the upstream call to `streamGenerateContent?alt=sse`
 // and pipes the SSE body straight through, so a conversation turn can start
@@ -42,6 +42,7 @@ Deno.serve(async (req) => {
     purpose === "summary"    ? "gemini_summary" :
     purpose === "weekly"     ? "gemini_weekly"  :
     purpose === "enrichment" ? "gemini_enrichment" :
+    purpose === "transcribe" ? "gemini_transcribe" :
     "gemini"
   const amount = priceFor(action)
 

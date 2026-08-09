@@ -1,0 +1,4 @@
+-- Placeholder. This version was applied directly on the remote database
+-- (dashboard SQL editor, 2026-07-31) and its source was never committed.
+-- The file exists only so `supabase db push` sees a consistent history —
+-- it is a no-op and must stay one.

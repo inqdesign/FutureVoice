@@ -287,10 +287,15 @@ final class GeminiClient {
 
     /// Streaming sibling of `sendJSON`, for the conversation turn.
     ///
-    /// The turn schema puts `reply` FIRST, so `onEarlyField` fires the moment
-    /// that field's closing quote arrives — the TTS request goes out while the
-    /// model is still writing the suggestion and the verbatim transcript, both
-    /// of which used to sit on the critical path before the first sound.
+    /// The turn schema puts `reply` FIRST, and `onEarlyField` fires up to
+    /// TWICE for it:
+    ///   1. `(firstSentence, isComplete: false)` — the opening sentence, the
+    ///      moment it is unambiguously finished, while the model is still
+    ///      writing the rest. The caller can start synthesizing here.
+    ///   2. `(fullValue, isComplete: true)` — the field's closing quote.
+    /// A reply with no sentence break before its close only fires step 2.
+    /// Either way the suggestion that follows is written while the voice is
+    /// already loading, instead of ahead of the first sound.
     ///
     /// Degrades in three silent steps:
     ///   • edge deploy without SSE support (no `X-Gemini-Stream` handshake) →
@@ -309,7 +314,7 @@ final class GeminiClient {
         idempotencyKey: String? = nil,
         requestTimeout: TimeInterval? = nil,
         earlyField: String,
-        onEarlyField: @MainActor @escaping (String) -> Void,
+        onEarlyField: @MainActor @escaping (String, Bool) -> Void,
         fallbackFromEarly: (String) -> T?
     ) async throws -> T {
         let request = try await makeRequest(
@@ -355,6 +360,7 @@ final class GeminiClient {
         var raw = ""                 // model text accumulated across events
         var finishReason: String?
         var early: String?
+        var earlyPrefix: String?     // first sentence, emitted before the close
         do {
             for try await line in bytes.lines {
                 guard line.hasPrefix("data:") else { continue }
@@ -368,20 +374,39 @@ final class GeminiClient {
                 let delta = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
                 guard !delta.isEmpty else { continue }
                 raw += delta
-                if early == nil, let value = Self.completedStringField(earlyField, in: raw) {
-                    early = value
-                    await MainActor.run { onEarlyField(value) }
+                guard early == nil,
+                      let field = Self.streamingStringField(earlyField, in: raw) else { continue }
+                if field.isComplete {
+                    early = field.value
+                    await MainActor.run { onEarlyField(field.value, true) }
+                } else if earlyPrefix == nil,
+                          let sentence = Self.firstSpeakableSentence(in: field.value) {
+                    // The opening sentence stands alone — hand it over now and
+                    // let the caller start synthesizing while the model is
+                    // still writing the rest.
+                    earlyPrefix = sentence
+                    await MainActor.run { onEarlyField(sentence, false) }
                 }
             }
         } catch {
-            if let early, let payload = fallbackFromEarly(early) { return payload }
+            // `earlyPrefix` counts too: if the stream died after the opening
+            // sentence went to TTS, the user is already HEARING this turn.
+            // Rebuilding from the prefix keeps the line they heard instead of
+            // dead-ending it on a Retry chip that would speak it twice.
+            if let early = early ?? earlyPrefix,
+               let payload = fallbackFromEarly(early) { return payload }
             throw error
         }
 
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         let truncated = finishReason == "MAX_TOKENS"
         guard let jsonData = Self.extractJSON(from: trimmed) else {
-            if let early, let payload = fallbackFromEarly(early) { return payload }
+            // `earlyPrefix` counts too: if the stream died after the opening
+            // sentence went to TTS, the user is already HEARING this turn.
+            // Rebuilding from the prefix keeps the line they heard instead of
+            // dead-ending it on a Retry chip that would speak it twice.
+            if let early = early ?? earlyPrefix,
+               let payload = fallbackFromEarly(early) { return payload }
             throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: trimmed)
         }
         do {
@@ -389,7 +414,12 @@ final class GeminiClient {
         } catch {
             // The reply already shipped; a malformed or cut-off tail must not
             // undo a turn the user has heard.
-            if let early, let payload = fallbackFromEarly(early) { return payload }
+            // `earlyPrefix` counts too: if the stream died after the opening
+            // sentence went to TTS, the user is already HEARING this turn.
+            // Rebuilding from the prefix keeps the line they heard instead of
+            // dead-ending it on a Retry chip that would speak it twice.
+            if let early = early ?? earlyPrefix,
+               let payload = fallbackFromEarly(early) { return payload }
             if truncated { throw GeminiError.truncated }
             throw error
         }
@@ -409,6 +439,21 @@ final class GeminiClient {
     /// keep scanning: the next `"reply"` key is the INNER, real one, so the
     /// turn recovers instead of speaking "{" (seen in beta 11 feedback).
     static func completedStringField(_ name: String, in partial: String) -> String? {
+        guard let found = streamingStringField(name, in: partial), found.isComplete else {
+            return nil
+        }
+        return found.value
+    }
+
+    /// Same scan as `completedStringField`, but also reports a value that is
+    /// still being written. `isComplete` says whether the closing quote has
+    /// arrived. Used to start speaking a reply's FIRST SENTENCE before the
+    /// model has finished writing the rest of it.
+    ///
+    /// Returns nil until the field's opening quote is on the wire, and for a
+    /// non-string value, so a `"suggestion": null` never reads as text.
+    static func streamingStringField(_ name: String, in partial: String)
+        -> (value: String, isComplete: Bool)? {
         var searchFrom = partial.startIndex
         scan: while let key = partial.range(of: "\"\(name)\"",
                                             range: searchFrom..<partial.endIndex) {
@@ -456,15 +501,68 @@ final class GeminiClient {
                     if out.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") {
                         continue scan
                     }
-                    return out
+                    return (out, true)
                 } else {
                     out.append(c)
                 }
                 i = partial.index(after: i)
             }
-            return nil              // still streaming
+            // Ran out of input: the value is still being written. A value that
+            // OPENS a nested body is schema debris, not speech — report it as
+            // absent rather than let a caller act on "{".
+            if out.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("{") { return nil }
+            return (out, false)
         }
         return nil
+    }
+
+    /// The first sentence of a still-streaming value, once it is unambiguously
+    /// finished — a terminator FOLLOWED BY whitespace, so "3.5" and "e.g. " are
+    /// not mistaken for sentence ends.
+    ///
+    /// Below `minSpeakableSentence` we don't split at all: the point is to get
+    /// a LONG reply talking sooner, and cutting "Sure." off the front of a
+    /// short one buys a few milliseconds in exchange for an audible seam.
+    ///
+    /// Measured in `speakableWeight`, not characters — a CJK/Hangul syllable
+    /// carries about twice the speech of a Latin letter, so a plain character
+    /// count would never split a Korean reply at all.
+    private static let minSpeakableSentence = 25
+
+    static func firstSpeakableSentence(in partial: String) -> String? {
+        let terminators: Set<Character> = [".", "!", "?", "。", "！", "？"]
+        var i = partial.startIndex
+        var weight = 0
+        while i < partial.endIndex {
+            let next = partial.index(after: i)
+            weight += speakableWeight(partial[i])
+            if terminators.contains(partial[i]), weight >= minSpeakableSentence,
+               next < partial.endIndex, partial[next].isWhitespace {
+                let sentence = String(partial[partial.startIndex...i])
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                return sentence.isEmpty ? nil : sentence
+            }
+            i = next
+        }
+        return nil
+    }
+
+    /// Rough "how much speech is this character" weight. Hangul syllables,
+    /// CJK ideographs and kana are whole syllables or words; Latin letters are
+    /// a fraction of one.
+    private static func speakableWeight(_ c: Character) -> Int {
+        guard let v = c.unicodeScalars.first?.value else { return 1 }
+        switch v {
+        case 0xAC00...0xD7A3,   // Hangul syllables
+             0x1100...0x11FF,   // Hangul jamo
+             0x3130...0x318F,   // Hangul compatibility jamo
+             0x3040...0x30FF,   // hiragana + katakana
+             0x3400...0x4DBF,   // CJK ext A
+             0x4E00...0x9FFF:   // CJK unified ideographs
+            return 2
+        default:
+            return 1
+        }
     }
 
     private static func extractJSON(from text: String) -> Data? {

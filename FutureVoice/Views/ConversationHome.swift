@@ -804,6 +804,11 @@ struct PeopleSheet: View {
     @Environment(\.dismiss) private var dismiss
     let onNew: () -> Void
 
+    /// Your OWN people — Find-people strangers are managed in the Find sheet.
+    private var ownPeople: [Counterpart] {
+        appState.counterparts.filter { $0.remoteId == nil }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -813,9 +818,9 @@ struct PeopleSheet: View {
                             .font(.body.weight(.medium))
                     }
                 }
-                if !appState.counterparts.isEmpty {
+                if !ownPeople.isEmpty {
                     Section("Your people") {
-                        ForEach(appState.counterparts) { c in
+                        ForEach(ownPeople) { c in
                             NavigationLink {
                                 CounterpartDetailView(counterpart: c).environmentObject(appState)
                             } label: {
@@ -833,7 +838,7 @@ struct PeopleSheet: View {
                             }
                         }
                         .onDelete { idx in
-                            for i in idx { appState.deleteCounterpart(id: appState.counterparts[i].id) }
+                            for i in idx { appState.deleteCounterpart(id: ownPeople[i].id) }
                         }
                     }
                 } else {

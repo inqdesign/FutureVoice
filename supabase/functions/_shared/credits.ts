@@ -30,6 +30,7 @@ export type ChargeableAction =
   | "gemini_summary"    // summary at end of session — same engine, separate tag
   | "gemini_weekly"     // weekly report
   | "gemini_enrichment" // drill enrichment
+  | "gemini_transcribe" // verbatim transcript of one spoken turn (flash-lite)
 
 /**
  * Returns the credit cost for a given action + parameters. Credit math here
@@ -61,6 +62,12 @@ export function priceFor(action: ChargeableAction, params: Record<string, unknow
     case "gemini_summary":  return 2
     case "gemini_weekly":   return 5
     case "gemini_enrichment": return 1
+    // Free — charged 0 so we still get a ledger row. This runs ALONGSIDE the
+    // turn call (which already costs 1) purely so the reply doesn't wait on
+    // the audio; billing the learner twice for one turn would make the
+    // latency win cost them money. Upstream is flash-lite over a few seconds
+    // of audio with a tiny prompt, so we absorb it.
+    case "gemini_transcribe": return 0
   }
 }
 

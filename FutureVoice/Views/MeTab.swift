@@ -16,10 +16,16 @@ struct MeTab: View {
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay
     /// user-confirmed: this only powers a suggestion row under the picker.
     @State private var aiLevel: CEFRLevel?
+    /// Level of every enrolled language, read once on open. Only the active
+    /// language's level is published on AppState; the rest live on disk, and
+    /// a `body` that hit ProfileStore per row per render would read the file
+    /// on every keystroke elsewhere in this list.
+    @State private var levelCache: [String: CEFRLevel] = [:]
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
     @State private var confirmingVoiceReset = false
+    @State private var confirmingVoiceRegenerate = false
     @State private var confirmingSignOut = false
     @State private var confirmingAccountDelete = false
     @State private var deletingAccount = false
@@ -90,85 +96,19 @@ struct MeTab: View {
                         : "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.")
                 }
 
-                Section {
-                    ForEach(appState.enrolledLanguages, id: \.self) { code in
-                        Button {
-                            appState.switchLanguage(to: code)
-                        } label: {
-                            HStack {
-                                row(icon: "globe",
-                                    title: LanguageCatalog.endonym(code),
-                                    subtitle: LanguageCatalog.englishName(code))
-                                Spacer()
-                                if code == appState.targetLanguage {
-                                    Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
-                                        .fontWeight(.semibold)
-                                }
-                            }
-                        }
-                        .deleteDisabled(appState.enrolledLanguages.count == 1)
-                    }
-                    .onDelete { indexSet in
-                        for i in indexSet { appState.removeLanguage(appState.enrolledLanguages[i]) }
-                    }
-                    Button {
-                        showingAddLanguage = true
-                    } label: {
-                        row(icon: "plus.circle",
-                            title: "Add a language",
-                            subtitle: "Same voice, new language")
-                    }
-                } header: {
-                    Text("Languages")
-                } footer: {
-                    Text(explain("Your cloned voice speaks every language you add. Removing one keeps its progress — re-add it anytime."))
-                }
+                learningLanguagesSection
 
                 Section {
-                    Picker(selection: $appState.proficiency) {
-                        ForEach(CEFRLevel.allCases, id: \.self) { level in
-                            Text(LanguageCatalog.levelLabel(level, target: appState.targetLanguage))
-                                .tag(level)
-                        }
+                    NavigationLink {
+                        PublicIntroView().environmentObject(appState)
                     } label: {
-                        row(icon: "chart.bar",
-                            title: "Level",
-                            subtitle: "Calibrates \(LanguageCatalog.englishName(appState.targetLanguage)) conversations")
+                        row(icon: "person.2.wave.2",
+                            title: "Find people",
+                            subtitle: "Publish your intro — others practice with \"you\"")
                     }
-                    Picker(selection: $appState.nativeLanguage) {
-                        ForEach(LanguageCatalog.nativeLanguages.filter { $0 != appState.targetLanguage },
-                                id: \.self) { code in
-                            Text(LanguageCatalog.endonym(code)).tag(code)
-                        }
-                    } label: {
-                        row(icon: "globe",
-                            title: "My language",
-                            subtitle: "Explanations and translations use this")
-                    }
-                    if let ai = aiLevel, ai != appState.proficiency {
-                        Button {
-                            appState.proficiency = ai
-                        } label: {
-                            row(icon: "sparkles",
-                                title: "AI read: \(ai.rawValue.uppercased()) — tap to apply",
-                                subtitle: "From your recent conversations")
-                        }
-                    }
-                    Picker(selection: $dailyGoalMinutes) {
-                        ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
-                            Text("\(m) min").tag(m)
-                        }
-                    } label: {
-                        row(icon: "target",
-                            title: "Daily goal",
-                            subtitle: "Minutes of speaking per day")
-                    }
-                } header: {
-                    Text("Learning")
-                } footer: {
-                    Text(explain("Your CEFR level shapes each conversation. The daily goal drives the ring on Home."))
                 }
+
+                appSection
 
                 Section {
                     Picker("Theme", selection: $appState.appearance) {
@@ -252,7 +192,11 @@ struct MeTab: View {
                     appState.resetVoiceClone()   // RootView swaps to onboarding
                 }
             } message: {
-                Text(explain("Your current clone will be deleted on ElevenLabs after the new one is created."))
+                // Ledger data showed users re-cloning many times without
+                // realizing each one bills and destroys the previous voice —
+                // all three consequences must be on the confirm, both here
+                // and on "Regenerate from saved recording".
+                Text(Self.recloneWarning)
             }
             .alert("Sign out?", isPresented: $confirmingSignOut) {
                 Button("Cancel", role: .cancel) {}
@@ -297,6 +241,7 @@ struct MeTab: View {
             #endif
             .task { account = await AccountStatus.fetch() }
             .task { aiLevel = recentAILevel() }
+            .task(id: appState.enrolledLanguages) { refreshLevelCache() }
         }
     }
 
@@ -308,6 +253,38 @@ struct MeTab: View {
             .sorted(by: { $0.generatedAt > $1.generatedAt })
             .compactMap({ $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } })
             .first
+    }
+
+    /// The app-language picker's two groups, in `nativeChoices` order (device
+    /// languages first). The active target is dropped from both — you can't
+    /// have the app explain a language in itself.
+    private var nativeChoiceGroups: (translated: [String], coachingOnly: [String]) {
+        let translated = Set(LanguageCatalog.translatedLanguages)
+        let choices = LanguageCatalog.nativeChoices.filter { $0 != appState.targetLanguage }
+        return (choices.filter { translated.contains($0) },
+                choices.filter { !translated.contains($0) })
+    }
+
+    private func refreshLevelCache() {
+        levelCache = Dictionary(uniqueKeysWithValues:
+            appState.enrolledLanguages.map { ($0, appState.level(for: $0)) })
+    }
+
+    /// Reads the active language's level straight off AppState so an outside
+    /// change (weekly assessment, the AI-read row) shows up immediately;
+    /// every other language answers from the cache.
+    private func levelBinding(for code: String) -> Binding<CEFRLevel> {
+        Binding(
+            get: {
+                code == appState.targetLanguage
+                    ? appState.proficiency
+                    : (levelCache[code] ?? .b1)
+            },
+            set: { level in
+                appState.setLevel(level, for: code)
+                levelCache[code] = level
+            }
+        )
     }
 
     /// Server first, local second: the Edge Function removes the clone,
@@ -345,7 +322,135 @@ struct MeTab: View {
         }
     }
 
+    // MARK: - Languages
+
+    /// There are exactly two kinds of language in this app: the ones you're
+    /// learning, and the one the app talks to you in. They used to be split
+    /// across a "Languages" list and a "Learning" section that ALSO held the
+    /// level — so the same language appeared twice and the level read as
+    /// global when it is per language. One section per kind now, and each
+    /// language wears its own level.
+    @ViewBuilder
+    private var learningLanguagesSection: some View {
+        Section {
+            ForEach(appState.enrolledLanguages, id: \.self) { code in
+                HStack {
+                    Button {
+                        appState.switchLanguage(to: code)
+                    } label: {
+                        row(icon: code == appState.targetLanguage ? "checkmark.circle.fill" : "circle",
+                            title: LanguageCatalog.endonym(code),
+                            subtitle: LanguageCatalog.englishName(code))
+                    }
+                    .buttonStyle(.plain)
+                    Spacer(minLength: 8)
+                    // The level belongs to the language, not to the app — an
+                    // inline menu keeps them on one line and lets you fix a
+                    // level without switching to it first.
+                    Picker(selection: levelBinding(for: code)) {
+                        ForEach(CEFRLevel.allCases, id: \.self) { level in
+                            Text(LanguageCatalog.levelLabel(level, target: code)).tag(level)
+                        }
+                    } label: {
+                        Text("Level")
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                }
+                .deleteDisabled(appState.enrolledLanguages.count == 1)
+            }
+            .onDelete { indexSet in
+                for i in indexSet { appState.removeLanguage(appState.enrolledLanguages[i]) }
+            }
+            if let ai = aiLevel, ai != appState.proficiency {
+                Button {
+                    appState.proficiency = ai
+                    levelCache[appState.targetLanguage] = ai
+                } label: {
+                    row(icon: "sparkles",
+                        title: "AI read: \(ai.rawValue.uppercased()) — tap to apply",
+                        subtitle: "From your recent \(LanguageCatalog.englishName(appState.targetLanguage)) conversations")
+                }
+            }
+            Button {
+                showingAddLanguage = true
+            } label: {
+                row(icon: "plus.circle",
+                    title: "Add a language",
+                    subtitle: "Same voice, new language")
+            }
+        } header: {
+            Text("Learning")
+        } footer: {
+            Text(explain("Tap a language to practice it. Its level calibrates every conversation in that language. Your cloned voice speaks all of them — removing one keeps its progress."))
+        }
+    }
+
+    /// App-wide preferences no single practice language owns.
+    @ViewBuilder
+    private var appSection: some View {
+        Section {
+            Picker(selection: $appState.nativeLanguage) {
+                // Two groups, because the app can only half-keep the promise
+                // its name makes: three languages have a catalog column and
+                // are translated end to end; the other 60-odd get LLM coaching
+                // text — corrections, notes, word meanings, which is most of
+                // what a learner reads — in their language, with the app's
+                // own static copy staying English. Splitting the list says
+                // that before the choice instead of after it.
+                let (translated, coachingOnly) = nativeChoiceGroups
+                Section {
+                    ForEach(translated, id: \.self) { code in
+                        Text(LanguageCatalog.endonym(code)).tag(code)
+                    }
+                } header: {
+                    Text(explain("App is translated"))
+                }
+                Section {
+                    ForEach(coachingOnly, id: \.self) { code in
+                        Text(LanguageCatalog.endonym(code)).tag(code)
+                    }
+                } header: {
+                    Text(explain("Corrections and notes only — app stays English"))
+                }
+            } label: {
+                // Names the EFFECT, not the fact. "My language" read as "the
+                // language I picked to learn"; what the setting actually
+                // decides is which language the app explains itself in.
+                row(icon: "globe",
+                    title: "App language",
+                    subtitle: "Corrections, notes and word meanings")
+            }
+            // A menu of 60+ languages is a scroll inside a popover; the push
+            // style gives the list a whole screen.
+            .pickerStyle(.navigationLink)
+            Picker(selection: $dailyGoalMinutes) {
+                ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
+                    Text("\(m) min").tag(m)
+                }
+            } label: {
+                row(icon: "target",
+                    title: "Daily goal",
+                    subtitle: "Minutes of speaking per day")
+            }
+        } header: {
+            Text("App")
+        } footer: {
+            Text(explain("Explanations and word meanings come back in your app language. The daily goal drives the ring on Home."))
+        }
+    }
+
     // MARK: - Voice
+
+    /// Every consequence of making a new clone, on one confirm: it bills, it
+    /// replaces, and the old voice is unrecoverable (the previous clone is
+    /// deleted on ElevenLabs after the new one succeeds — only audio that was
+    /// already synthesized keeps playing, via the PhraseAudioStore lineage).
+    /// The "5 credits" figure mirrors priceFor("voice_clone") in
+    /// supabase/functions/_shared/credits.ts — keep them in sync.
+    private static var recloneWarning: String {
+        explain("Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
+    }
 
     private var voiceSection: some View {
         Section("Voice") {
@@ -374,7 +479,7 @@ struct MeTab: View {
             }
             if VoiceSampleStore.shared.exists {
                 Button {
-                    regenerateFromSavedSample()
+                    confirmingVoiceRegenerate = true
                 } label: {
                     HStack {
                         row(icon: "arrow.triangle.2.circlepath",
@@ -388,6 +493,15 @@ struct MeTab: View {
                 }
                 .disabled(regeneratingVoice)
             }
+        }
+        .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {
+            Button("Cancel", role: .cancel) {}
+            Button("Rebuild", role: .destructive) { regenerateFromSavedSample() }
+        } message: {
+            // This path used to bill 5 credits and delete the previous clone
+            // with NO confirmation at all — same consequences as a re-record,
+            // so it gets the same warning.
+            Text(Self.recloneWarning)
         }
         .alert("Voice name", isPresented: $renamingVoice) {
             TextField("Future Self", text: $voiceNameDraft)

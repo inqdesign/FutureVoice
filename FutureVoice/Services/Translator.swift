@@ -1,10 +1,35 @@
 import Foundation
+import Supabase   // FunctionInvokeOptions for the free `translate` function
 
 /// On-demand translation of a single line into the user's native language, for
-/// "tap to see the meaning" in conversations. Cached (memory + disk) so the
-/// same line is never re-billed.
+/// "tap to see the meaning" in conversations. Goes through the FREE `translate`
+/// Edge Function (fixed server-side prompt — see the function for why free
+/// paths can't live on the credit-gated `gemini` function), and is cached
+/// (memory + disk) so the same line is never requested twice.
 @MainActor
 enum Translator {
+    private struct RequestBody: Encodable {
+        let kind: String
+        var text: String? = nil
+        var original: String? = nil
+        var alternative: String? = nil
+        let to_lang: String
+    }
+    private struct ResponseBody: Decodable { let text: String }
+
+    private static func invoke(_ body: RequestBody) async -> String? {
+        do {
+            let res: ResponseBody = try await SupabaseProvider.shared.functions.invoke(
+                "translate",
+                options: FunctionInvokeOptions(body: body)
+            )
+            let t = res.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return t.isEmpty ? nil : t
+        } catch {
+            return nil
+        }
+    }
+
     private static var memory: [String: String] = loadDisk()
 
     private static let fileURL: URL = {
@@ -24,27 +49,11 @@ enum Translator {
         let k = key(text, lang)
         if let c = memory[k] { return c }
 
-        let languageName = LanguageCatalog.englishName(lang)
-        do {
-            let out = try await GeminiClient.shared.send(
-                system: """
-                You are a translator. Translate the user's text into \(languageName). \
-                Output ONLY the translation — no quotes, no romanization, no notes, no original text.
-                """,
-                messages: [GeminiClient.Message(role: .user, content: text)],
-                model: .flashLite31,
-                maxTokens: 400,
-                temperature: 0.2,
-                purpose: "translate"
-            )
-            let t = out.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !t.isEmpty else { return nil }
-            memory[k] = t
-            saveDisk()
-            return t
-        } catch {
-            return nil
-        }
+        guard let t = await invoke(RequestBody(kind: "translate", text: text, to_lang: lang))
+        else { return nil }
+        memory[k] = t
+        saveDisk()
+        return t
     }
 
     // MARK: - Correction explanations
@@ -67,30 +76,14 @@ enum Translator {
         let k = explainKey(original, alternative, lang)
         if let c = memory[k] { return c }
 
-        let languageName = LanguageCatalog.englishName(lang)
-        do {
-            let out = try await GeminiClient.shared.send(
-                system: """
-                You are a language coach. The learner said something; a more natural \
-                version follows. Explain in \(languageName), in 2–3 short sentences, \
-                what was changed and why the natural version is better — quote the \
-                specific words that changed. Output only the explanation.
-                """,
-                messages: [GeminiClient.Message(
-                    role: .user,
-                    content: "Learner said: \(original)\nMore natural: \(alternative)")],
-                maxTokens: 500,
-                temperature: 0.3,
-                purpose: "translate"
-            )
-            let t = out.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !t.isEmpty else { return nil }
-            memory[k] = t
-            saveDisk()
-            return t
-        } catch {
-            return nil
-        }
+        guard let t = await invoke(RequestBody(kind: "explain",
+                                               original: original,
+                                               alternative: alternative,
+                                               to_lang: lang))
+        else { return nil }
+        memory[k] = t
+        saveDisk()
+        return t
     }
 
     // MARK: - Disk cache

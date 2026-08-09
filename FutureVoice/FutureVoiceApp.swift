@@ -676,6 +676,9 @@ final class AppState: ObservableObject {
         // so the next picker open regenerates against the updated context.
         TopicStore.shared.clear()
         topicSuggestions = []
+        // Keep the user's Find-people presence in step with their profile
+        // (no-op when they manage their public intro by hand).
+        Task { await PublicPersonaService.autoSyncMyPersona(p, language: targetLanguage) }
     }
 
     func updateTopicSuggestions(_ topics: [SuggestedTopic]) {
@@ -903,6 +906,30 @@ final class AppState: ObservableObject {
         reloadLanguageScopedState()
         StudyWidgetRefresher.refresh()
         Analytics.capture("language_switched", ["language": code])
+    }
+
+    /// Level of any enrolled language, active or not. The active one is live
+    /// in `proficiency`; the rest sit in their own profile row, which is why
+    /// the settings list can show a level per language without switching.
+    func level(for code: String) -> CEFRLevel {
+        code == targetLanguage
+            ? proficiency
+            : ProfileStore.shared.load(targetLanguage: code, proficiency: .b1).proficiencyLevel
+    }
+
+    /// Set the level of any enrolled language. For the active one this goes
+    /// through `proficiency` (whose didSet syncs the loaded profile); for the
+    /// others it writes that language's profile row straight to disk, so a
+    /// later switch picks it up via `reloadLanguageScopedState`.
+    func setLevel(_ level: CEFRLevel, for code: String) {
+        guard level != self.level(for: code) else { return }
+        if code == targetLanguage {
+            proficiency = level
+            return
+        }
+        var profile = ProfileStore.shared.load(targetLanguage: code, proficiency: level)
+        profile.proficiencyLevel = level
+        ProfileStore.shared.save(profile)
     }
 
     /// Enroll a new practice language and switch to it. Deliberately leaves

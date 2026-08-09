@@ -144,7 +144,17 @@ final class ElevenLabsClient {
     /// the only thing we give back is the ~200ms, against a turn whose STT +
     /// Gemini legs already dominate the wait. (Fidelity beyond turbo is a
     /// different trade — see `fidelityModelId`, which is NOT free.)
+    ///
+    /// DEBUG builds run turns on the fidelity model as a LOCAL A/B: feel the
+    /// similarity gain against the extra time-to-first-audio on-device.
+    /// Release/TestFlight stays on turbo — promoting multilingual to live
+    /// turns is a standing pricing decision (2x upstream, absorbed; see
+    /// `fidelityModelId`), not something this toggle decides.
+    #if DEBUG
+    static let conversationModelId = fidelityModelId
+    #else
     static let conversationModelId = "eleven_turbo_v2_5"
+    #endif
 
     /// Model for material the user LISTENS to as their own voice, where
     /// speaker similarity is the product (Watch scenes today).
@@ -230,22 +240,26 @@ final class ElevenLabsClient {
         return data
     }
 
-    /// Result of a streaming synthesis. `.pcm22050` means the server streamed
-    /// raw 16-bit LE mono PCM at 22.05 kHz and `onPCMChunk` already delivered
-    /// it incrementally; the payload is the FULL accumulated PCM for caching.
-    /// `.mp3` means the server doesn't support streaming yet (older edge
-    /// deploy) — the payload is the fully-buffered MP3, exactly like
-    /// `synthesize` returns, and `onPCMChunk` was never called.
+    /// Result of a streaming synthesis. `.pcm` means the server streamed raw
+    /// 16-bit LE mono PCM at `sampleRate` Hz and `onPCMChunk` already
+    /// delivered it incrementally; the payload is the FULL accumulated PCM
+    /// for caching. `.mp3` means the server doesn't support streaming yet
+    /// (older edge deploy) — the payload is the fully-buffered MP3, exactly
+    /// like `synthesize` returns, and `onPCMChunk` was never called.
     enum StreamedAudio {
-        case pcm22050(Data)
+        case pcm(Data, sampleRate: Double)
         case mp3(Data)
     }
 
-    static let streamSampleRate: Double = 22_050
+    /// PCM formats we can play, best first. Sent to the edge function, which
+    /// walks down until the ElevenLabs plan accepts one (pcm_44100 is
+    /// Pro-tier) — so conversation audio rides the highest rate the account
+    /// allows instead of being pinned to the 22.05 kHz floor.
+    private static let streamFormats = ["pcm_44100", "pcm_24000", "pcm_22050"]
 
     /// Streaming TTS: playback can start on the first chunk instead of after
     /// the full file. Chunks are delivered in order via `onPCMChunk` (16-bit
-    /// LE mono PCM, 22.05 kHz), sized ~8 KB (~0.18s of audio).
+    /// LE mono PCM at the callback's sample rate), sized ~8 KB.
     ///
     /// No word timings on this path — the shadow screen already re-synthesizes
     /// via `with-timestamps` when a line has no cached timings.
@@ -255,7 +269,7 @@ final class ElevenLabsClient {
         modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
         purpose: String? = nil,
-        onPCMChunk: @MainActor @escaping (Data) -> Void
+        onPCMChunk: @MainActor @escaping (Data, _ sampleRate: Double) -> Void
     ) async throws -> StreamedAudio {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -272,6 +286,7 @@ final class ElevenLabsClient {
             "model_id": modelId,
             "with_timestamps": false,
             "stream": true,
+            "stream_formats": Self.streamFormats,
         ]
         if let purpose { body["purpose"] = purpose }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -300,10 +315,12 @@ final class ElevenLabsClient {
 
         // The PCM header is the protocol handshake: without it we're talking
         // to an edge deploy that ignored `stream` and returned a whole MP3 —
-        // buffer it and let the caller take the classic path.
-        let isPCM = http.value(forHTTPHeaderField: "X-Audio-Format") == "pcm_22050"
-
-        if !isPCM {
+        // buffer it and let the caller take the classic path. The header also
+        // carries the rate the server actually got from ElevenLabs
+        // ("pcm_44100" on Pro, lower otherwise).
+        let format = http.value(forHTTPHeaderField: "X-Audio-Format") ?? ""
+        guard format.hasPrefix("pcm_"),
+              let sampleRate = Double(format.dropFirst("pcm_".count)) else {
             var all = Data()
             for try await b in bytes { all.append(b) }
             return .mp3(all)
@@ -311,8 +328,8 @@ final class ElevenLabsClient {
 
         var full = Data()
         var chunk = Data()
-        // ~8 KB = ~0.18s at 22.05 kHz s16 mono: small enough for a fast
-        // start, big enough to keep scheduling overhead trivial.
+        // ~8 KB ≈ 0.09–0.18s of s16 mono depending on rate: small enough for
+        // a fast start, big enough to keep scheduling overhead trivial.
         let flushSize = 8 * 1024
         for try await b in bytes {
             chunk.append(b)
@@ -323,7 +340,7 @@ final class ElevenLabsClient {
                 chunk.removeFirst(even)
                 full.append(contentsOf: out)
                 let send = Data(out)
-                await MainActor.run { onPCMChunk(send) }
+                await MainActor.run { onPCMChunk(send, sampleRate) }
             }
         }
         if !chunk.isEmpty {
@@ -331,10 +348,10 @@ final class ElevenLabsClient {
             if even > 0 {
                 let out = Data(chunk.prefix(even))
                 full.append(out)
-                await MainActor.run { onPCMChunk(out) }
+                await MainActor.run { onPCMChunk(out, sampleRate) }
             }
         }
-        return .pcm22050(full)
+        return .pcm(full, sampleRate: sampleRate)
     }
 
     /// Same TTS as `synthesize`, but uses the `with-timestamps` endpoint so we
@@ -410,16 +427,38 @@ final class ElevenLabsClient {
         guard let audio = Data(base64Encoded: decoded.audio_base64) else {
             throw ElevenLabsError.invalidResponse
         }
-        let align = decoded.normalized_alignment ?? decoded.alignment
-        let timings: [WordTiming]
+        // ElevenLabs returns TWO alignments: `alignment` indexes the text we
+        // SENT, while `normalized_alignment` indexes ElevenLabs' own normalized
+        // form of it — which for non-Latin scripts is ROMANIZED ("그러면" →
+        // "geureomyeon") and spells numbers out. Shadow practice renders these
+        // timing words AS the target sentence, so preferring the normalized one
+        // turned Korean shadowing into romaji. Raw alignment first, always.
+        let align = decoded.alignment ?? decoded.normalized_alignment
+        var timings: [WordTiming] = []
         if let align = align {
-            timings = Self.wordTimings(from: align.characters,
-                                       starts: align.character_start_times_seconds,
-                                       ends: align.character_end_times_seconds)
-        } else {
-            timings = []
+            let candidate = Self.wordTimings(from: align.characters,
+                                             starts: align.character_start_times_seconds,
+                                             ends: align.character_end_times_seconds)
+            // Belt and braces: if what came back doesn't spell out the line we
+            // asked for, it isn't safe to display. Empty timings make callers
+            // fall back to the local estimate, which uses the real text.
+            timings = Self.alignmentMatches(text: text, timings: candidate) ? candidate : []
         }
         return (audio, timings)
+    }
+
+    /// True when a timing set really spells out `text` — same characters,
+    /// ignoring whitespace, case and punctuation. The one thing this must
+    /// catch is a transliterated/normalized alignment being shown to the
+    /// learner as their target sentence.
+    static func alignmentMatches(text: String, timings: [WordTiming]) -> Bool {
+        guard !timings.isEmpty else { return false }
+        func squash(_ s: String) -> String {
+            String(String.UnicodeScalarView(
+                s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) }
+            ))
+        }
+        return squash(timings.map(\.word).joined()) == squash(text)
     }
 
     /// Group consecutive non-whitespace characters into words and collapse

@@ -143,6 +143,19 @@ struct Turn: Codable, Identifiable {
     /// every assessment path (scorecard metrics, weekly-read evidence,
     /// review material) — the recording stays in the transcript for context.
     var excludedFromScoring: Bool = false
+    /// True while `transcript` still holds only the on-device recognizer's
+    /// guess and the audio-grounded rewrite is in flight.
+    ///
+    /// On-device dictation is the weakest link in the app — it mishears
+    /// accented speech and, in Korean, writes the wrong numeral system
+    /// outright ("한번" → "1번", read "일번"). Gemini hears the actual
+    /// recording in the same call that writes the reply, so its transcript is
+    /// what the learner should ever SEE. The guess still lives in
+    /// `transcript` — it goes to Gemini as a hint and is the fallback when the
+    /// rewrite never lands — but a pending turn renders as a placeholder
+    /// instead of showing the learner words they didn't say. Never persisted:
+    /// a turn is only pending while its own reply is in flight.
+    var transcriptPending: Bool = false
 }
 
 extension Turn {
@@ -211,6 +224,11 @@ struct Session: Codable, Identifiable {
     /// The scenario this talk was launched from, when `origin == .scenario` —
     /// lets a Talk book tie back to its scenario.
     var originScenarioId: UUID? = nil
+    /// The Counterpart (local id) this talk was WITH, when it was launched
+    /// from a person — a Find-people stranger or an own persona. Lets the
+    /// person's card list every talk you've had with them. Optional so old
+    /// rows decode unchanged.
+    var counterpartId: UUID? = nil
 }
 
 extension Session {
@@ -606,6 +624,17 @@ struct Counterpart: Codable, Identifiable, Hashable {
     // Catch-all
     var freeNotes: String = ""             // anything that doesn't fit above
 
+    // Find people (public-persona pool)
+    /// Set when this person came from the shared `public_personas` pool (a
+    /// stranger "met" via Find people). nil = a person the user made
+    /// themselves. Remote personas are hidden from Watch's stories row —
+    /// they live in the Find sheet's "People you've met" section instead.
+    var remoteId: String? = nil
+    /// The self-introduction the persona's author wrote, verbatim, in the
+    /// target language. Kept alongside the parsed fields because it IS the
+    /// conversational substance — prompts quote it directly.
+    var intro: String = ""
+
     /// Persona-grounded scenario library specific to this counterpart, KEYED
     /// BY TARGET LANGUAGE. Fed by `TopicEngine.suggestForCounterpart` and
     /// cached so opening Watch for the same person doesn't re-bill Gemini
@@ -651,6 +680,7 @@ extension Counterpart {
     enum CodingKeys: String, CodingKey {
         case id, name, relationship, location, howWeMet, background
         case conversationStyle, commonTopics, voicePresetId, freeNotes
+        case remoteId, intro
         case scenariosByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
@@ -673,6 +703,8 @@ extension Counterpart {
         commonTopics = try c.decodeIfPresent(String.self, forKey: .commonTopics) ?? ""
         voicePresetId = try c.decode(String.self, forKey: .voicePresetId)
         freeNotes = try c.decodeIfPresent(String.self, forKey: .freeNotes) ?? ""
+        remoteId = try c.decodeIfPresent(String.self, forKey: .remoteId)
+        intro = try c.decodeIfPresent(String.self, forKey: .intro) ?? ""
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 

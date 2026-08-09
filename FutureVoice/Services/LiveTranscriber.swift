@@ -64,6 +64,10 @@ final class LiveTranscriber: ObservableObject {
     /// Diagnostics from the last `stopAndFinalize()`; nil until one has run.
     private(set) var lastFinalizeWait: FinalizeWait?
 
+    /// Bumped by every `start()`. A detached finalize task from the PREVIOUS
+    /// run must not report into — or tear down — the run that replaced it.
+    private var runGeneration = 0
+
     private var engine: AVAudioEngine?
     private var recognizer: SFSpeechRecognizer?
     private var currentRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -116,7 +120,18 @@ final class LiveTranscriber: ObservableObject {
     /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
     var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
 
-    private static let quietCommitThreshold: TimeInterval = 1.5
+    /// How long the partial text may sit unchanged before the segment is
+    /// frozen and recognition restarts.
+    ///
+    /// Every rotation throws away the recognizer's language-model context and
+    /// glues the pieces back with a space, so a seam costs both accuracy and
+    /// (in Korean) correct spacing. At 1.5s it fired on nearly every turn:
+    /// measured `text_quiet_ms` at turn end runs 1.7–2.2s, i.e. the watcher
+    /// was chopping the utterance moments before the turn ended anyway, for
+    /// no benefit. 2.6s clears the turn-taking tiers (1.2 / 2.2s of true
+    /// silence) while still catching the genuinely long mid-turn pause the
+    /// watcher exists for.
+    private static let quietCommitThreshold: TimeInterval = 2.6
 
     enum LiveError: Error, LocalizedError {
         case unavailable
@@ -221,6 +236,7 @@ final class LiveTranscriber: ObservableObject {
 
         self.engine = engine
         self.recognizer = rec
+        self.runGeneration += 1
         self.chunks = []
         self.finalizingGen = nil
         self.pendingFinalGens = []
@@ -303,6 +319,73 @@ final class LiveTranscriber: ObservableObject {
         currentTask = nil
         recognizer = nil
         return transcript
+    }
+
+    /// Same rescored FINAL pass as `stopAndFinalize()`, except NOTHING waits
+    /// for it. The mic stops and the text we already have is returned on the
+    /// spot; when the rescored pass lands (or its deadline passes) `onUpgrade`
+    /// fires with the improved transcript.
+    ///
+    /// Blocking on that pass used to sit in the critical path between "user
+    /// stops talking" and "fluent self answers", and it bought nothing the
+    /// caller couldn't apply late: the turn on screen is already showing the
+    /// live text, and Gemini re-transcribes from the attached audio anyway.
+    /// So the improvement now arrives as a quiet in-place edit instead of a
+    /// pause. `onUpgrade` is NOT called when the text didn't change, when the
+    /// pass timed out, or when a new `start()` has already superseded the run.
+    ///
+    /// The timeout is generous precisely BECAUSE it costs no wall-clock time.
+    func stopAndFinalizeInBackground(
+        timeout: TimeInterval = 2.0,
+        onUpgrade: @escaping @MainActor (String) -> Void
+    ) -> String {
+        guard isRunning else { return transcript }
+        isRunning = false
+        quietWatcher?.cancel()
+        quietWatcher = nil
+        appender.setRequest(nil)
+        engine?.stop()
+        engine?.inputNode.removeTap(onBus: 0)
+        lastRecordingURL = recorder.finish()
+        engine = nil
+        level = 0
+
+        // Same rule as `stopAndFinalize`: the live segment is worth a final
+        // only when it holds text; rotated segments always are.
+        if !lastSegmentText.isEmpty { finalizingGen = taskGeneration }
+        currentRequest?.endAudio()
+
+        let textBefore = transcript
+        let startedWaiting = Date()
+        let pendingAtStop = pendingFinalGens.count
+        let myRun = runGeneration
+        let deadline = startedWaiting.addingTimeInterval(timeout)
+
+        Task { @MainActor [weak self] in
+            while let self, self.runGeneration == myRun,
+                  self.finalizingGen != nil || !self.pendingFinalGens.isEmpty {
+                if Date() >= deadline { break }
+                try? await Task.sleep(nanoseconds: 60_000_000)
+            }
+            guard let self, self.runGeneration == myRun else { return }
+            let timedOut = self.finalizingGen != nil || !self.pendingFinalGens.isEmpty
+            self.lastFinalizeWait = FinalizeWait(
+                waitedMs: Int(Date().timeIntervalSince(startedWaiting) * 1000),
+                pendingSegments: pendingAtStop,
+                timedOut: timedOut,
+                upgradedText: self.transcript != textBefore
+            )
+            let upgraded = self.transcript
+            self.finalizingGen = nil
+            self.pendingFinalGens.removeAll()
+            self.currentTask?.cancel()
+            self.currentRequest = nil
+            self.currentTask = nil
+            self.recognizer = nil
+            if upgraded != textBefore, !upgraded.isEmpty { onUpgrade(upgraded) }
+        }
+
+        return textBefore
     }
 
     // MARK: - Segment lifecycle
@@ -633,16 +716,27 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
         url = file == nil ? nil : dest
     }
 
+    /// Writes INSIDE the lock on purpose. Copying the `AVAudioFile` reference
+    /// out and writing unlocked let a tap callback still hold (and write to)
+    /// the file after `finish()` released its own reference — so the m4a's
+    /// trailing atoms were flushed on the audio thread AFTER the caller had
+    /// already read the file back, yielding a truncated, unopenable capture.
+    /// That is the audio the Gemini turn attaches, so a lost flush costs the
+    /// user their verbatim transcript. Contention is start/finish only.
     func append(_ buffer: AVAudioPCMBuffer) {
-        lock.lock(); let f = file; lock.unlock()
-        guard let f else { return }
+        lock.lock(); defer { lock.unlock() }
+        guard let f = file else { return }
         try? f.write(from: buffer)
     }
 
+    /// Closes the capture and returns its URL. On return the file is fully
+    /// written: releasing the last `AVAudioFile` reference under the lock
+    /// finalizes the container synchronously, and no `append` can be in
+    /// flight because it holds the same lock.
     func finish() -> URL? {
         lock.lock(); defer { lock.unlock() }
         let u = url
-        file = nil    // AVAudioFile closes when released
+        file = nil    // AVAudioFile closes (and flushes) when released
         url = nil
         return u
     }

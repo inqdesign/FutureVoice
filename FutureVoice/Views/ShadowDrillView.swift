@@ -1228,9 +1228,17 @@ struct ShadowDrillView: View {
             }
         }
 
-        let storedTimings = TurnAudioStore.shared.timings(for: turn.id)
+        var storedTimings = TurnAudioStore.shared.timings(for: turn.id)
             ?? PhraseAudioStore.shared.timings(text: turn.transcript, voiceId: voiceId)
             ?? []
+        // Earlier builds cached ElevenLabs' NORMALIZED alignment, whose words
+        // are a romanization of non-Latin text — Korean lines came back as
+        // "geureomyeon". Those caches are still on disk, and these words are
+        // what the learner reads, so refuse any set that doesn't spell out the
+        // line; the estimate + free local alignment rebuild it in real script.
+        if !ElevenLabsClient.alignmentMatches(text: turn.transcript, timings: storedTimings) {
+            storedTimings = []
+        }
 
         // Audio already on disk → make the UI usable IMMEDIATELY, and karaoke
         // ALWAYS lights up: real timings when stored, otherwise an instant

@@ -1,0 +1,310 @@
+import SwiftUI
+
+/// Find people — browse the shared pool of public personas and start a talk
+/// with a stranger, like meeting someone new at a language school. Lives
+/// behind the Find bubble on Watch's stories row; the stories row itself
+/// stays your OWN people. Inside: the people you've already met, your
+/// bookmarks, a daily-shuffled handful of new faces, and search.
+///
+/// Talking to someone has no effect on them whatsoever — no notification,
+/// no shared record. Their words here are an AI playing their
+/// self-introduction, in a preset voice, never their own.
+struct FindPeopleSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    /// Start a live call with this (already saved) person.
+    let onTalk: (Counterpart) -> Void
+    /// Open the situation composer scoped to this person.
+    let onWatch: (Counterpart) -> Void
+
+    @State private var pool: [PublicPersonaService.PublicPersona] = []
+    @State private var isLoading = true
+    @State private var loadFailed = false
+    @State private var searchText = ""
+    @State private var bookmarks: Set<String> = []
+
+    private var metPeople: [Counterpart] {
+        appState.counterparts.filter { $0.remoteId != nil }
+            .sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private var metIds: Set<String> {
+        Set(metPeople.compactMap(\.remoteId))
+    }
+
+    private var bookmarkedNewFaces: [PublicPersonaService.PublicPersona] {
+        pool.filter { bookmarks.contains($0.id) && !metIds.contains($0.id) }
+    }
+
+    private var todaysPeople: [PublicPersonaService.PublicPersona] {
+        PublicPersonaService.todaysPeople(from: pool, excluding: metIds.union(bookmarks))
+    }
+
+    private var searchResults: [PublicPersonaService.PublicPersona] {
+        PublicPersonaService.search(searchText, in: pool)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    metSection
+                    bookmarksSection
+                    todaySection
+                } else {
+                    resultsSection
+                }
+            }
+            .navigationTitle("Find people")
+            .toolbarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: Text("Name, interests, place…"))
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .navigationDestination(for: Counterpart.self) { person in
+                FindPersonCard(person: person,
+                               bookmarks: $bookmarks,
+                               onTalk: onTalk, onWatch: onWatch)
+                    .environmentObject(appState)
+            }
+            .task { await loadPool() }
+            .onAppear { bookmarks = PublicPersonaService.bookmarkedIds() }
+        }
+    }
+
+    // MARK: - Sections
+
+    @ViewBuilder private var metSection: some View {
+        if !metPeople.isEmpty {
+            Section("People you've met") {
+                ForEach(metPeople) { c in
+                    NavigationLink(value: c) { metRow(c) }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var bookmarksSection: some View {
+        if !bookmarkedNewFaces.isEmpty {
+            Section("Bookmarked") {
+                ForEach(bookmarkedNewFaces) { p in
+                    personRow(p)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var todaySection: some View {
+        Section {
+            if isLoading {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            } else if loadFailed {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(explain("Couldn't load people — check your connection."))
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Button("Retry") { Task { await loadPool() } }
+                        .buttonStyle(.bordered)
+                }
+                .padding(.vertical, 4)
+            } else if pool.isEmpty {
+                // Loaded fine but the pool for this target language has no
+                // one yet — say so instead of a silent blank.
+                Text(explain("No one here yet for this language — check back soon."))
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                ForEach(todaysPeople) { p in
+                    personRow(p)
+                }
+            }
+        } header: {
+            Text("People today")
+        } footer: {
+            Text(explain("A few new people every day. Talking with someone doesn't notify them — it's an AI playing their introduction, in a stock voice, never theirs."))
+        }
+    }
+
+    @ViewBuilder private var resultsSection: some View {
+        Section {
+            if searchResults.isEmpty {
+                Text(explain("No one matches yet — try an interest, a job, or a city."))
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                ForEach(searchResults) { p in
+                    personRow(p)
+                }
+            }
+        }
+    }
+
+    // MARK: - Rows
+
+    private func personRow(_ p: PublicPersonaService.PublicPersona) -> some View {
+        NavigationLink(value: PublicPersonaService.asCounterpart(p, existing: appState.counterparts)) {
+            HStack(spacing: 12) {
+                PersonBubble(name: p.display_name, size: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(p.display_name).font(.body.weight(.medium))
+                        if bookmarks.contains(p.id) {
+                            Image(systemName: "bookmark.fill")
+                                .font(.caption2).foregroundStyle(.tint)
+                        }
+                    }
+                    Text(facetLine(occupation: p.occupation, location: p.location))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    Text(p.intro)
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func metRow(_ c: Counterpart) -> some View {
+        HStack(spacing: 12) {
+            PersonBubble(name: c.name, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(c.name).font(.body.weight(.medium))
+                    if let rid = c.remoteId, bookmarks.contains(rid) {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2).foregroundStyle(.tint)
+                    }
+                }
+                Text(facetLine(occupation: c.commonTopics, location: c.location))
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func facetLine(occupation: String, location: String) -> String {
+        [occupation, location].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    private func loadPool() async {
+        isLoading = true
+        loadFailed = false
+        do {
+            pool = try await PublicPersonaService.fetchPool(language: appState.targetLanguage)
+        } catch {
+            loadFailed = pool.isEmpty
+        }
+        isLoading = false
+    }
+}
+
+// MARK: - Person card
+
+/// One public persona, full screen: their introduction, a bookmark, the talks
+/// you've already had with them (each opens the regular talk book — replay,
+/// transcript, study material), and the two actions: Talk and Watch.
+struct FindPersonCard: View {
+    @EnvironmentObject private var appState: AppState
+
+    let person: Counterpart
+    @Binding var bookmarks: Set<String>
+    let onTalk: (Counterpart) -> Void
+    let onWatch: (Counterpart) -> Void
+
+    private var pastTalks: [Session] {
+        SessionStore.shared.load()
+            .filter { $0.counterpartId == person.id && $0.endedAt != nil }
+            .sorted { $0.startedAt > $1.startedAt }
+    }
+
+    var body: some View {
+        List {
+            Section {
+                HStack(spacing: 14) {
+                    PersonBubble(name: person.name, size: 64)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(person.name).font(.title3.weight(.semibold))
+                        if !person.location.isEmpty {
+                            Text(person.location).font(.subheadline).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+                .listRowSeparator(.hidden)
+
+                Text(person.intro.isEmpty ? person.background : person.intro)
+                    .font(.body)
+                    .padding(.vertical, 2)
+            }
+
+            if !person.commonTopics.isEmpty {
+                Section("Topics") {
+                    Text(person.commonTopics).font(.subheadline)
+                }
+            }
+
+            if !pastTalks.isEmpty {
+                Section("Your talks together") {
+                    ForEach(pastTalks) { s in
+                        NavigationLink {
+                            ConversationDetailView(session: s)
+                                .environmentObject(appState)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(s.displayTitle).font(.body).lineLimit(1)
+                                Text(s.startedAt.formatted(date: .abbreviated, time: .shortened))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("")
+        .toolbar {
+            if let rid = person.remoteId {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        _ = PublicPersonaService.toggleBookmark(rid)
+                        bookmarks = PublicPersonaService.bookmarkedIds()
+                    } label: {
+                        Image(systemName: bookmarks.contains(rid) ? "bookmark.fill" : "bookmark")
+                    }
+                    .accessibilityLabel("Bookmark")
+                }
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            HStack(spacing: 12) {
+                Button {
+                    onWatch(savedPerson())
+                } label: {
+                    Label("Watch", systemImage: "play.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    onTalk(savedPerson())
+                } label: {
+                    Label("Talk", systemImage: "phone.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(.bar)
+        }
+    }
+
+    /// First Talk/Watch is the moment you "meet" them — persist the person so
+    /// sessions can link to a stable local id and they join "People you've
+    /// met". Idempotent for someone already saved.
+    private func savedPerson() -> Counterpart {
+        if appState.counterparts.contains(where: { $0.id == person.id }) { return person }
+        appState.saveCounterpart(person)
+        return person
+    }
+}

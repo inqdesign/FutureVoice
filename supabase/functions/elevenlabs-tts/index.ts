@@ -21,6 +21,12 @@ import { chargePooledTTS, refund, insufficientCreditsResponse } from "../_shared
 
 const SOURCE_FN = "elevenlabs-tts"
 
+// Highest streaming PCM format known to work on this ElevenLabs plan, learned
+// by probing (pcm_44100 is Pro-tier; lower rates are open to all). Instance
+// memory only — a cold start re-probes once. Set ONLY from ladder requests,
+// so a legacy pcm_22050-only call can never pin new clients to 22.05 kHz.
+let cachedStreamFormat: string | null = null
+
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
   if (pre) return pre
@@ -39,6 +45,10 @@ Deno.serve(async (req) => {
     model_id?: string
     with_timestamps?: boolean
     stream?: boolean
+    // PCM output formats the client can play, best first (e.g.
+    // ["pcm_44100", "pcm_24000", "pcm_22050"]). Absent on older builds,
+    // which hard-expect pcm_22050 — so absence means exactly that.
+    stream_formats?: string[]
     // Client-supplied feature tag ("turn" | "scene" | "shadow" | "drill" |
     // "library" | "greeting" …) — recorded in the ledger metadata so spend
     // can be attributed per feature. Never forwarded upstream, never priced.
@@ -78,13 +88,8 @@ Deno.serve(async (req) => {
 
   const modelId = body.model_id ?? "eleven_turbo_v2_5"
   const streaming = body.stream === true && !body.with_timestamps
-  const path = body.with_timestamps
-    ? `/v1/text-to-speech/${body.voice_id}/with-timestamps`
-    : streaming
-    ? `/v1/text-to-speech/${body.voice_id}/stream?output_format=pcm_22050`
-    : `/v1/text-to-speech/${body.voice_id}`
 
-  const upstream = await fetch(`https://api.elevenlabs.io${path}`, {
+  const fetchOptions: RequestInit = {
     method: "POST",
     headers: {
       "xi-api-key": apiKey,
@@ -108,7 +113,48 @@ Deno.serve(async (req) => {
         use_speaker_boost: true,
       },
     }),
-  })
+  }
+
+  let upstream: Response
+  let streamFormatUsed = "pcm_22050"
+  if (streaming) {
+    // Highest PCM rate the client offers that the ElevenLabs plan allows.
+    // Tier-locked formats (pcm_44100 needs Pro) come back as an upstream
+    // error — walk down the client's ladder until one succeeds. The working
+    // format is remembered per edge instance so warm calls don't re-pay the
+    // failed round-trip on every turn. Legacy clients (no stream_formats)
+    // hard-expect pcm_22050 and never touch the probe or its cache.
+    const requested = (body.stream_formats ?? [])
+      .filter((f) => typeof f === "string" && /^pcm_(16000|22050|24000|44100)$/.test(f))
+    let ladder = requested.length ? requested : ["pcm_22050"]
+    const probing = requested.length > 0
+    if (probing && cachedStreamFormat && ladder.includes(cachedStreamFormat)) {
+      ladder = ladder.slice(ladder.indexOf(cachedStreamFormat))
+    }
+    let last: Response | null = null
+    for (const [i, format] of ladder.entries()) {
+      const r = await fetch(
+        `https://api.elevenlabs.io/v1/text-to-speech/${body.voice_id}/stream?output_format=${format}`,
+        fetchOptions,
+      )
+      last = r
+      if (r.ok) {
+        streamFormatUsed = format
+        if (probing) cachedStreamFormat = format
+        break
+      }
+      // Not the last rung → drain the error body and try the next format
+      // down. (A non-format failure — bad voice id, auth — fails every rung
+      // and surfaces through the shared error path below.)
+      if (i < ladder.length - 1) await r.text()
+    }
+    upstream = last!
+  } else {
+    const path = body.with_timestamps
+      ? `/v1/text-to-speech/${body.voice_id}/with-timestamps`
+      : `/v1/text-to-speech/${body.voice_id}`
+    upstream = await fetch(`https://api.elevenlabs.io${path}`, fetchOptions)
+  }
 
   if (!upstream.ok) {
     // Roll back this call's exact debit — user didn't actually get audio.
@@ -129,7 +175,7 @@ Deno.serve(async (req) => {
   const contentType = upstream.headers.get("Content-Type") ?? "application/octet-stream"
   headers.set("Content-Type", contentType)
   headers.set("X-Credits-Balance", String(ch.balanceAfter))
-  if (streaming) headers.set("X-Audio-Format", "pcm_22050")
+  if (streaming) headers.set("X-Audio-Format", streamFormatUsed)
 
   return new Response(upstream.body, { status: 200, headers })
 })

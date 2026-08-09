@@ -41,15 +41,22 @@ enum LanguageCatalog {
     }
 
     /// Best guess at the learner's native language from the device, used to
-    /// pre-select the setup picker. Falls back to Korean (the launch market)
-    /// when the device language isn't one we offer as a native language.
+    /// pre-select the setup picker.
+    ///
+    /// Falls back to English, NOT to the launch market. A wrong guess here is
+    /// not neutral: it decides which language every explanation is written in,
+    /// and it silently removes that language from the target picker (the two
+    /// can't coincide). Defaulting an unrecognized device to Korean told a
+    /// Spanish speaker they were Korean and then coached them in Korean;
+    /// English is the one guess that degrades to "a language I can probably
+    /// read" instead of "a language I've never seen".
     static var defaultNative: String {
         for identifier in Locale.preferredLanguages {
             let code = Locale(identifier: identifier).language.languageCode?.identifier
                 ?? identifier.split(separator: "-").first.map(String.init)
             if let code, nativeLanguages.contains(code) { return code }
         }
-        return "ko"
+        return "en"
     }
 
     /// Languages offered as a practice target (order = setup picker order).
@@ -82,18 +89,75 @@ enum LanguageCatalog {
     /// English included since multi-language: the practice target is
     /// user-selectable, so an English native learning Japanese is a real user.
     /// Pickers filter out whichever code sits on the other side.
-    /// Languages we currently SHIP. A native language needs a translated
-    /// column in `Localizable.xcstrings` — without one, every explanation
-    /// falls back to English, which reads as a broken app rather than an
-    /// untranslated one. So this list is exactly the columns we have.
     ///
-    /// Note what this costs: LLM coaching text (session notes, the weekly
-    /// report, correction explanations) is GENERATED per language and works
-    /// for any of them — only the static UI strings need a column. Widening
-    /// this list is one edit here plus that language's column; the full
-    /// 67-language list is in git history (see `nativeLanguages` before this
-    /// commit) if we want it back.
-    static let nativeLanguages: [String] = ["en", "ko", "de"]
+    /// This list was once narrowed to the three languages with a translated
+    /// `Localizable.xcstrings` column, on the theory that an untranslated
+    /// native language reads as a broken app. That trade was wrong, and the
+    /// filtering above is why: a Spanish speaker who honestly picked English
+    /// as their native language lost English from the TARGET picker, and the
+    /// only way back to it was to declare themselves Korean or German and take
+    /// every explanation in a language they don't speak. Narrowing the list
+    /// didn't lower the quality bar — it closed the market.
+    ///
+    /// What a language without a catalog column actually gets today:
+    /// - LLM coaching text — correction notes, scorecard commentary, weekly
+    ///   report prose, drill memory hooks, word glosses — is GENERATED from
+    ///   `CoachingLanguage.contract`, so it comes back in their real language.
+    ///   That's the majority of the words a learner reads.
+    /// - Static `explain()` copy falls back to English via `Bundle.explanations`
+    ///   (whose `.main` fallback is deliberate — see UILanguage).
+    /// - Chrome is unaffected: it follows the TARGET language, and every
+    ///   selectable target has a column.
+    ///
+    /// So the cost of listing a language here is bounded and known, and a
+    /// language earns its column by showing up in the numbers. Ordered by
+    /// region (East/SE Asia → South Asia → Middle East & Central Asia →
+    /// Europe → Africa).
+    static let nativeLanguages: [String] = [
+        // East & Southeast Asia
+        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
+        // South Asia
+        "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
+        // Middle East & Central Asia
+        "ar", "fa", "tr", "he", "kk", "uz", "az", "ka", "hy", "ps",
+        // Europe
+        "en", "es", "pt", "fr", "de", "it", "ru", "pl", "uk", "nl", "ro", "el", "cs",
+        "hu", "sv", "da", "fi", "no", "sk", "bg", "hr", "sr", "lt", "lv", "et",
+        "sl", "ca",
+        // Africa
+        "sw", "am", "af", "ha", "yo", "zu",
+    ]
+
+    /// `nativeLanguages` reordered so the device's own languages come first.
+    ///
+    /// Region order is the right *reference* order and the wrong *picker*
+    /// order: at 66 entries the honest answer is a scroll away for everyone
+    /// whose language isn't Korean. The device already knows, so the answer
+    /// rides at the top and the regional list follows unchanged for anyone
+    /// whose phone is set to a language they don't actually think in.
+    static var nativeChoices: [String] {
+        var seen = Set<String>()
+        let preferred = Locale.preferredLanguages
+            .compactMap { Locale(identifier: $0).language.languageCode?.identifier }
+            .filter { nativeLanguages.contains($0) && seen.insert($0).inserted }
+        return preferred + nativeLanguages.filter { !seen.contains($0) }
+    }
+
+    /// The languages the APP itself is written in — the ones with a real
+    /// column in `Localizable.xcstrings`, so `explain()` copy resolves instead
+    /// of falling back to English. Read from the built bundle's `.lproj`
+    /// folders rather than a hand-kept list: adding a column is still just a
+    /// catalog edit, and this can't drift from it.
+    ///
+    /// Everything in `nativeChoices` beyond these still gets LLM coaching text
+    /// in the learner's own language (see the note above) — the picker groups
+    /// on this so the difference is visible BEFORE they choose, not after.
+    static var translatedLanguages: [String] {
+        let bundled = Set(Bundle.main.localizations.compactMap {
+            Locale(identifier: $0).language.languageCode?.identifier
+        })
+        return nativeLanguages.filter { bundled.contains($0) }
+    }
 
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code

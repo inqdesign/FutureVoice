@@ -108,6 +108,13 @@ struct RootTabView: View {
             StudyWidgetRefresher.refresh()
             consumeFreeTalk()   // cold launch from the Free Talk widget
             Analytics.capture("screen_viewed", ["screen": Self.screenName(selection)])
+            // Existing users appear in Find people automatically — mirror the
+            // onboarding profile into the shared pool (skipped once the user
+            // manages their public intro by hand in Me → Find people).
+            Task {
+                await PublicPersonaService.autoSyncMyPersona(
+                    appState.persona, language: appState.targetLanguage)
+            }
         }
         // Feature usage: which tab the user is on.
         .onChange(of: selection) { _, tab in
