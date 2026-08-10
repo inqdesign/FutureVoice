@@ -1140,7 +1140,25 @@
         }
       }
     },
+    "A call every day" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeden Tag ein Anruf"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 한 통"
+          }
+        }
+      }
+    },
     "A few new people every day. Talking with someone doesn't notify them — it's an AI playing their introduction, in a stock voice, never theirs." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1428,6 +1446,22 @@
         }
       }
     },
+    "AI portrayals of real people who have died, built from what is publicly known about them. Not the person, and nothing they say here was actually said by them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Darstellungen realer, verstorbener Personen, gestützt auf öffentlich Bekanntes. Nicht die Person selbst — nichts davon wurde wirklich von ihr gesagt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실존했던 고인을 공개된 기록을 바탕으로 AI가 연기한 것이에요. 본인이 아니며, 여기서 하는 말은 실제로 그가 한 말이 아니에요."
+          }
+        }
+      }
+    },
     "All scenarios" : {
       "localizations" : {
         "de" : {
@@ -1476,6 +1510,22 @@
         }
       }
     },
+    "An AI portrayal, built from the public record. Nothing said here was actually said by them." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine KI-Darstellung auf Basis öffentlicher Quellen. Nichts hiervon wurde wirklich von ihr gesagt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개된 기록을 바탕으로 한 AI 연기예요. 여기서 하는 말은 실제로 그가 한 말이 아니에요."
+          }
+        }
+      }
+    },
     "Analyzing your week…" : {
       "localizations" : {
         "de" : {
@@ -1488,6 +1538,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이번 주를 분석하는 중…"
+          }
+        }
+      }
+    },
+    "Answer" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annehmen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "받기"
           }
         }
       }
@@ -1536,6 +1602,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "그 밖에 (선택)"
+          }
+        }
+      }
+    },
+    "Anything good today?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was Schönes heute?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 좋은 일 있었어요?"
           }
         }
       }
@@ -1989,6 +2071,22 @@
         }
       }
     },
+    "Busy today?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viel zu tun heute?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 바빠요?"
+          }
+        }
+      }
+    },
     "By level" : {
       "localizations" : {
         "de" : {
@@ -2005,6 +2103,135 @@
         }
       }
     },
+    "Call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anruf"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화"
+          }
+        }
+      }
+    },
+    "Call back" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zurückrufen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 걸기"
+          }
+        }
+      }
+    },
+    "Call back in %lld hours" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %lld Std. nochmal"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld시간 뒤에 다시"
+          }
+        }
+      }
+    },
+    "Call back in %lld min" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In %lld Min. nochmal"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld분 뒤에 다시"
+          }
+        }
+      }
+    },
+    "Call back in 1 hour" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In 1 Stunde nochmal"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1시간 뒤에 다시"
+          }
+        }
+      }
+    },
+    "Call me" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruf mich an"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화 걸어줘"
+          }
+        }
+      }
+    },
+    "Call me every day" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruf mich jeden Tag an"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 전화해줘"
+          }
+        }
+      }
+    },
+    "Calls at" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ruft an um"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화 시각"
+          }
+        }
+      }
+    },
     "Can't record now? No rush — this will wait." : {
       "localizations" : {
         "de" : {
@@ -2017,6 +2244,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "지금 녹음이 어려우세요? 급하지 않아요, 기다립니다."
+          }
+        }
+      }
+    },
+    "Can't talk now" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade keine Zeit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금은 곤란해"
           }
         }
       }
@@ -2117,6 +2360,22 @@
         }
       }
     },
+    "Characters" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Figuren"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가상 인물"
+          }
+        }
+      }
+    },
     "City" : {
       "localizations" : {
         "de" : {
@@ -2148,6 +2407,14 @@
           }
         }
       }
+    },
+    "Clear" : {
+      "comment" : "The text on a button that clears something.",
+      "isCommentAutoGenerated" : true
+    },
+    "Clear voice cache?" : {
+      "comment" : "A confirmation prompt for clearing the voice cache.",
+      "isCommentAutoGenerated" : true
     },
     "Clear, detailed talk on many topics, including some abstract ones." : {
       "localizations" : {
@@ -2729,6 +2996,10 @@
         }
       }
     },
+    "Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays, which costs credits." : {
+      "comment" : "Message in an alert shown in the Developer section, explaining that clearing the audio cache only deletes cached audio files, and does not affect the actual audio used in the app.",
+      "isCommentAutoGenerated" : true
+    },
     "Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too." : {
       "localizations" : {
         "de" : {
@@ -2789,6 +3060,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "말로 입력"
+          }
+        }
+      }
+    },
+    "Did you sleep well?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hast du gut geschlafen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잘 잤어요?"
           }
         }
       }
@@ -3476,6 +3763,22 @@
         }
       }
     },
+    "Figures" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persönlichkeiten"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "실존 인물"
+          }
+        }
+      }
+    },
     "Filing this under a category…" : {
       "localizations" : {
         "de" : {
@@ -3845,6 +4148,9 @@
         }
       }
     },
+    "Generate review material" : {
+
+    },
     "Generate scenarios for %@" : {
       "localizations" : {
         "de" : {
@@ -3889,6 +4195,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "목표"
+          }
+        }
+      }
+    },
+    "Goal met. How did it feel?" : {
+      "comment" : "Text displayed in a notification when a user's daily goal is met.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ziel erreicht. Wie war's?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목표 달성! 어땠어요?"
           }
         }
       }
@@ -3956,6 +4280,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "좋은 아침"
+          }
+        }
+      }
+    },
+    "Good to have you back." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schön, dass du wieder da bist."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 와줘서 반가워요."
           }
         }
       }
@@ -4329,6 +4669,38 @@
         }
       }
     },
+    "How did today go?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie ist es heute gelaufen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 어떻게 됐어요?"
+          }
+        }
+      }
+    },
+    "How does today look?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie sieht dein Tag aus?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 하루 어때 보여요?"
+          }
+        }
+      }
+    },
     "How it's assessed" : {
       "localizations" : {
         "de" : {
@@ -4457,6 +4829,38 @@
         }
       }
     },
+    "How was today?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie war heute?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 어땠어요?"
+          }
+        }
+      }
+    },
+    "How was your day?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie war dein Tag?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 하루 어땠어요?"
+          }
+        }
+      }
+    },
     "How was your first conversation?" : {
       "localizations" : {
         "de" : {
@@ -4537,6 +4941,107 @@
         }
       }
     },
+    "How's your day going?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wie läuft dein Tag?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 어떻게 지내요?"
+          }
+        }
+      }
+    },
+    "I called earlier." : {
+      "comment" : "One of the fallback \"I left you a message\" lines.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich habe vorhin angerufen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아까 전화했었어요."
+          }
+        }
+      }
+    },
+    "I left you a message." : {
+      "comment" : "Text displayed in a notification when a missed call is detected.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich habe dir eine Nachricht hinterlassen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지 남겨뒀어요."
+          }
+        }
+      }
+    },
+    "I'll help you keep it up" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ich helfe dir, dranzubleiben"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 계속하게 도와줄게"
+          }
+        }
+      }
+    },
+    "If you can't talk" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du nicht kannst"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "못 받으면"
+          }
+        }
+      }
+    },
+    "In an hour" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In einer Stunde"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1시간 뒤"
+          }
+        }
+      }
+    },
     "In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't." : {
       "localizations" : {
         "de" : {
@@ -4569,6 +5074,22 @@
         }
       }
     },
+    "Incoming call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingehender Anruf"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화가 왔어요"
+          }
+        }
+      }
+    },
     "Independent — I discuss most things with some ease" : {
       "localizations" : {
         "de" : {
@@ -4581,6 +5102,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "중상급 — 웬만한 주제는 어렵지 않게 이야기해요"
+          }
+        }
+      }
+    },
+    "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statt einer Erinnerung ruft dich dein fließendes Ich einmal am Tag an – mit einer Frage, die du laut beantwortest."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림 대신, 유창해진 내가 하루에 한 번 전화를 걸어 소리 내어 답할 질문을 남깁니다."
+          }
+        }
+      }
+    },
+    "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Statt einer Erinnerung ruft dich dein fließendes Ich einmal am Tag an – mit einer Frage, die du laut beantwortest. Es erinnert sich, wie das letzte Gespräch lief."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림 대신, 유창해진 내가 하루에 한 번 전화를 걸어 소리 내어 답할 질문을 남깁니다. 지난 통화가 어땠는지 기억하고 있습니다."
           }
         }
       }
@@ -4645,6 +5199,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "초대 코드"
+          }
+        }
+      }
+    },
+    "iOS is blocking the call. Turn on notifications for nawana in Settings, then switch it on again in Me." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS blockiert den Anruf. Aktiviere Mitteilungen für nawana in den Einstellungen und schalte es unter „Me“ wieder ein."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iOS가 전화를 막고 있습니다. 설정에서 nawana 알림을 켠 뒤, Me에서 다시 켜주세요."
+          }
+        }
+      }
+    },
+    "It rings even on silent, and I remember how the last call went." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es klingelt auch lautlos, und ich erinnere mich, wie das letzte Gespräch lief."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무음이어도 울리고, 지난 통화가 어땠는지 기억하고 있어."
+          }
+        }
+      }
+    },
+    "It's been a while." : {
+      "comment" : "Text displayed in a notification when a user returns after a break in their free talk habit.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ist eine Weile her."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오랜만이에요."
           }
         }
       }
@@ -5107,6 +5711,24 @@
         }
       }
     },
+    "Long time. Where were we?" : {
+      "comment" : "Text displayed in a notification when a user's daily goal is met.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lange her. Wo waren wir?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오랜만이네요. 어디까지 했죠?"
+          }
+        }
+      }
+    },
     "Looking it up…" : {
       "localizations" : {
         "de" : {
@@ -5397,6 +6019,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "잘못 들림 — 채점에서 제외"
+          }
+        }
+      }
+    },
+    "Missed call" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verpasster Anruf"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "부재중 전화"
           }
         }
       }
@@ -6079,13 +6717,29 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nicht jetzt"
+            "value" : "Jetzt nicht"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "나중에"
+            "value" : "지금은 안 할래요"
+          }
+        }
+      }
+    },
+    "Not today" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute nicht"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 그만"
           }
         }
       }
@@ -6154,6 +6808,22 @@
         }
       }
     },
+    "Nothing is lost by putting this off — no streak breaks and today still counts." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aufschieben kostet dich nichts – keine Serie reißt, und der Tag zählt weiterhin."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미뤄도 잃는 건 없습니다 — 연속 기록도 안 끊기고, 오늘도 그대로 인정됩니다."
+          }
+        }
+      }
+    },
     "Nothing to shadow yet" : {
       "localizations" : {
         "de" : {
@@ -6214,6 +6884,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "통화 중 · 누르면 종료"
+          }
+        }
+      }
+    },
+    "Once a day, your fluent self phones you with one question to answer out loud. It rings even on silent, and it remembers how the last call went." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal am Tag ruft dich dein fließendes Ich an – mit einer Frage, die du laut beantwortest. Es klingelt auch lautlos und erinnert sich an das letzte Gespräch."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루에 한 번, 유창해진 내가 전화를 걸어 소리 내어 답할 질문을 하나 남깁니다. 무음이어도 울리고, 지난 통화가 어땠는지 기억합니다."
           }
         }
       }
@@ -6411,6 +7098,22 @@
         }
       }
     },
+    "Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Andere Lernende, die eine Vorstellung veröffentlicht haben. Ein Gespräch benachrichtigt sie nicht — eine KI spricht ihre Vorstellung, mit einer Standardstimme, nie ihrer eigenen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "소개를 공개한 다른 학습자들이에요. 대화해도 상대에게 알림이 가지 않아요 — 그 사람의 소개를 AI가 기본 목소리로 말하는 것이고, 본인 목소리는 쓰이지 않아요."
+          }
+        }
+      }
+    },
     "Overall" : {
       "localizations" : {
         "de" : {
@@ -6503,6 +7206,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘의 사람들"
+          }
+        }
+      }
+    },
+    "People we invented to practice with — different jobs, places and ways of talking." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erfundene Leute zum Üben — verschiedene Berufe, Orte und Sprechweisen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연습용으로 만든 가상의 사람들이에요 — 직업도, 사는 곳도, 말투도 제각각이에요."
           }
         }
       }
@@ -7116,6 +7835,24 @@
         }
       }
     },
+    "Ready for your first talk?" : {
+      "comment" : "Text displayed in the hero when the user is on their first talk of the day.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bereit für dein erstes Gespräch?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "첫 대화, 시작해볼까요?"
+          }
+        }
+      }
+    },
     "Rebuild" : {
       "localizations" : {
         "de" : {
@@ -7569,6 +8306,9 @@
           }
         }
       }
+    },
+    "Review material missing" : {
+
     },
     "Reviewing your saved words, drills, and dialogues stays free during the beta." : {
       "localizations" : {
@@ -8158,6 +8898,24 @@
         }
       }
     },
+    "Shall we start small?" : {
+      "comment" : "One of the first-run greetings, asking if they're ready to start small.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fangen wir klein an?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가볍게 시작해볼까요?"
+          }
+        }
+      }
+    },
     "Share invite" : {
       "localizations" : {
         "de" : {
@@ -8367,6 +9125,22 @@
         }
       }
     },
+    "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einmal sprechen ist leicht. Schwer ist jeder Tag – also rufe ich dich an. Eine Frage am Tag, laut beantwortet, und der Tag ist erledigt."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 말하는 건 쉬워. 어려운 건 매일이지. 그래서 내가 전화할게. 하루에 질문 하나, 소리 내어 답하면 그날은 끝이야."
+          }
+        }
+      }
+    },
     "Specific enough — %@ it, or tap a breadcrumb to explore more." : {
       "localizations" : {
         "de" : {
@@ -8539,6 +9313,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "머무르기"
+          }
+        }
+      }
+    },
+    "Still up?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch wach?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 안 자요?"
           }
         }
       }
@@ -9299,6 +10089,9 @@
         }
       }
     },
+    "The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now." : {
+
+    },
     "The conversation, its score, review cards and audio are removed for good. To keep it but leave it out of your stats, archive it instead." : {
       "localizations" : {
         "de" : {
@@ -9359,6 +10152,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 대화에서 내가 한 말을 더 자연스럽게 고친 문장들이에요. 내 목소리로 따라 말해 %lld점 이상이면 완료입니다."
+          }
+        }
+      }
+    },
+    "The message stays on your Talk tab either way — you can listen whenever." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Nachricht bleibt so oder so im Talk-Tab – du kannst sie jederzeit anhören."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어느 쪽이든 메시지는 Talk 탭에 남습니다 — 언제든 들으시면 됩니다."
           }
         }
       }
@@ -9541,6 +10350,22 @@
         }
       }
     },
+    "Thinking about tomorrow?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denkst du an morgen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내일 생각 중이에요?"
+          }
+        }
+      }
+    },
     "Thinking of situations with them…" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -9622,6 +10447,23 @@
         }
       }
     },
+    "Time" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uhrzeit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시간"
+          }
+        }
+      }
+    },
     "Time speaking" : {
       "localizations" : {
         "de" : {
@@ -9650,6 +10492,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@까지 가려면"
+          }
+        }
+      }
+    },
+    "Today's done. One more?" : {
+      "comment" : "Text displayed in a notification when a user's daily goal is met.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute geschafft. Noch eins?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 몫은 끝. 한 번 더?"
           }
         }
       }
@@ -10141,6 +11001,22 @@
         }
       }
     },
+    "What did you do today?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was hast du heute gemacht?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 뭐 했어요?"
+          }
+        }
+      }
+    },
     "What each day was made of — talk turns, shadow takes, drill reviews." : {
       "localizations" : {
         "de" : {
@@ -10381,6 +11257,22 @@
         }
       }
     },
+    "What's the plan today?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Was steht heute an?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 계획 있어요?"
+          }
+        }
+      }
+    },
     "What's your native language?" : {
       "localizations" : {
         "de" : {
@@ -10409,6 +11301,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@가 가장 필요한 순간은 언제인가요?"
+          }
+        }
+      }
+    },
+    "When should I call?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wann soll ich anrufen?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제 다시 걸까?"
           }
         }
       }
@@ -10653,6 +11561,9 @@
         }
       }
     },
+    "Working…" : {
+
+    },
     "Wrapping up your session…" : {
       "localizations" : {
         "de" : {
@@ -10815,6 +11726,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "카드 %1$lld장을 끝냈어요. 라이트너 일정에 따라 다시 나타나요."
+          }
+        }
+      }
+    },
+    "You hit today's goal." : {
+      "comment" : "Text displayed in a notification when a free talk goal is met.",
+      "isCommentAutoGenerated" : true,
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du hast dein Tagesziel erreicht."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 목표 달성했어요."
           }
         }
       }
@@ -11131,6 +12060,9 @@
         }
       }
     },
+    "Your conversation is saved. Open it under Practice to generate its review material again." : {
+
+    },
     "Your current clone will be deleted on ElevenLabs after the new one is created." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -11256,6 +12188,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "유창한 내가 당신을 알고 싶어 해요"
+          }
+        }
+      }
+    },
+    "Your future self" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein zukünftiges Ich"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미래의 나"
           }
         }
       }
@@ -11528,6 +12476,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "내 페르소나가 자기 목소리로 이 장면을 연기해요."
+          }
+        }
+      }
+    },
+    "Your phone rings in your own voice with something to answer. Not now? Push it back an hour — up to three times, and missing it costs you nothing." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Telefon klingelt in deiner eigenen Stimme, mit etwas zum Antworten. Gerade ungünstig? Verschiebe es um eine Stunde – bis zu dreimal, und verpassen kostet dich nichts."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 목소리로 전화가 울리고, 답할 거리가 하나 있습니다. 지금 곤란하면 1시간 뒤로 미루세요 — 세 번까지 가능하고, 못 받아도 잃는 건 없습니다."
+          }
+        }
+      }
+    },
+    "Your phone rings once a day, even on silent. Can't talk? They ring back in an hour — and if you never pick up, the message waits for you instead of counting against you." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dein Telefon klingelt einmal am Tag, auch lautlos. Keine Zeit? Es wird in einer Stunde erneut angerufen – und wenn du nie rangehst, wartet die Nachricht auf dich, statt gegen dich zu zählen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하루에 한 번, 무음이어도 전화가 울립니다. 지금 곤란하면 1시간 뒤에 다시 걸고, 끝내 못 받아도 벌점 대신 메시지가 남아 기다립니다."
           }
         }
       }

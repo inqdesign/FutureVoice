@@ -634,6 +634,15 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// target language. Kept alongside the parsed fields because it IS the
     /// conversational substance — prompts quote it directly.
     var intro: String = ""
+    /// What KIND of remote persona this is: "user" (a real learner who
+    /// published an intro), "character" (an invented seed persona), or
+    /// "figure" (a real, deceased public person portrayed as themselves).
+    /// nil for people the user made. Figures carry an extra prompt guard and
+    /// an on-screen "AI portrayal" line — a made-up character can be anything,
+    /// but a real person's words have to stay inside the public record.
+    var personaKind: String? = nil
+
+    var isPublicFigure: Bool { personaKind == "figure" }
 
     /// Persona-grounded scenario library specific to this counterpart, KEYED
     /// BY TARGET LANGUAGE. Fed by `TopicEngine.suggestForCounterpart` and
@@ -680,7 +689,7 @@ extension Counterpart {
     enum CodingKeys: String, CodingKey {
         case id, name, relationship, location, howWeMet, background
         case conversationStyle, commonTopics, voicePresetId, freeNotes
-        case remoteId, intro
+        case remoteId, intro, personaKind
         case scenariosByLanguage, createdAt, updatedAt
         /// Pre-multi-language rows: one flat array, always English.
         case savedScenarios
@@ -705,6 +714,7 @@ extension Counterpart {
         freeNotes = try c.decodeIfPresent(String.self, forKey: .freeNotes) ?? ""
         remoteId = try c.decodeIfPresent(String.self, forKey: .remoteId)
         intro = try c.decodeIfPresent(String.self, forKey: .intro) ?? ""
+        personaKind = try c.decodeIfPresent(String.self, forKey: .personaKind)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try c.decodeIfPresent(Date.self, forKey: .updatedAt) ?? Date()
 
@@ -741,6 +751,7 @@ extension Counterpart {
         // "your own person" on the next read.
         try c.encodeIfPresent(remoteId, forKey: .remoteId)
         try c.encode(intro, forKey: .intro)
+        try c.encodeIfPresent(personaKind, forKey: .personaKind)
         try c.encode(scenariosByLanguage, forKey: .scenariosByLanguage)
         try c.encode(createdAt, forKey: .createdAt)
         try c.encode(updatedAt, forKey: .updatedAt)

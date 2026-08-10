@@ -22,10 +22,25 @@ enum PublicPersonaService {
         let conversation_style: String
         let language: String
         let voice_preset_id: String
+        let kind: String?
+
+        /// What the sheet groups this row under. A published learner is a
+        /// "user" whatever the column says — ownership is the fact, `kind`
+        /// only distinguishes the seeded rows from each other.
+        var group: Group {
+            if owner_user_id != nil { return .user }
+            return kind == "figure" ? .figure : .character
+        }
+    }
+
+    /// The three pools Find people shows behind its tabs.
+    enum Group: String, CaseIterable, Identifiable {
+        case user, character, figure
+        var id: String { rawValue }
     }
 
     private static let columns =
-        "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id"
+        "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id,kind"
 
     /// The whole active pool for one target language. The pool is curated-
     /// catalog sized (tens, not thousands), so one fetch + local shuffle/
@@ -50,6 +65,12 @@ enum PublicPersonaService {
     /// not Date.now-per-call, so re-opening the sheet doesn't reshuffle.
     static func todaysPeople(from pool: [PublicPersona], count: Int = 6,
                              excluding met: Set<String>, day: Int? = nil) -> [PublicPersona] {
+        // Figures are a small fixed cast the user picks from deliberately —
+        // hiding two thirds of them behind a daily shuffle would just make
+        // the one they came for missing.
+        if pool.allSatisfy({ $0.group == .figure }) {
+            return pool.sorted { $0.display_name < $1.display_name }
+        }
         let dayNumber = day ?? Int(Date().timeIntervalSince1970 / 86_400)
         var generator = SeededGenerator(seed: UInt64(dayNumber))
         let fresh = pool.filter { !met.contains($0.id) }
@@ -88,6 +109,7 @@ enum PublicPersonaService {
         c.commonTopics = p.interests
         c.remoteId = p.id
         c.intro = p.intro
+        c.personaKind = p.group.rawValue
         return c
     }
 

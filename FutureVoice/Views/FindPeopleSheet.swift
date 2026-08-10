@@ -24,30 +24,58 @@ struct FindPeopleSheet: View {
     @State private var searchText = ""
     @State private var bookmarks: Set<String> = []
 
+    /// Which pool the sheet is showing. Three kinds live in one table but
+    /// they are not interchangeable to a learner: a real person who published
+    /// an intro, an invented character, and a portrayal of someone who really
+    /// existed. Mixing them in one list would quietly ask the user to guess
+    /// which is which.
+    @State private var group: PublicPersonaService.Group = .user
+
+    /// The current tab's slice of the pool.
+    private var groupPool: [PublicPersonaService.PublicPersona] {
+        pool.filter { $0.group == group }
+    }
+
+    /// People already met, narrowed to the tab they belong to — each tab
+    /// stays a complete little world instead of repeating the same names.
     private var metPeople: [Counterpart] {
-        appState.counterparts.filter { $0.remoteId != nil }
+        appState.counterparts
+            .filter { $0.remoteId != nil && ($0.personaKind ?? "user") == group.rawValue }
             .sorted { $0.updatedAt > $1.updatedAt }
     }
 
     private var metIds: Set<String> {
-        Set(metPeople.compactMap(\.remoteId))
+        Set(appState.counterparts.compactMap(\.remoteId))
     }
 
     private var bookmarkedNewFaces: [PublicPersonaService.PublicPersona] {
-        pool.filter { bookmarks.contains($0.id) && !metIds.contains($0.id) }
+        groupPool.filter { bookmarks.contains($0.id) && !metIds.contains($0.id) }
     }
 
     private var todaysPeople: [PublicPersonaService.PublicPersona] {
-        PublicPersonaService.todaysPeople(from: pool, excluding: metIds.union(bookmarks))
+        PublicPersonaService.todaysPeople(from: groupPool, excluding: metIds.union(bookmarks))
     }
 
     private var searchResults: [PublicPersonaService.PublicPersona] {
-        PublicPersonaService.search(searchText, in: pool)
+        PublicPersonaService.search(searchText, in: groupPool)
     }
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Picker("", selection: $group) {
+                        Text("People").tag(PublicPersonaService.Group.user)
+                        Text("Characters").tag(PublicPersonaService.Group.character)
+                        Text("Figures").tag(PublicPersonaService.Group.figure)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                } footer: {
+                    Text(groupFooter)
+                }
+
                 if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                     metSection
                     bookmarksSection
@@ -72,6 +100,19 @@ struct FindPeopleSheet: View {
             }
             .task { await loadPool() }
             .onAppear { bookmarks = PublicPersonaService.bookmarkedIds() }
+        }
+    }
+
+    /// What this tab is, in one line — including the one thing a learner must
+    /// not be left to assume: a figure is a portrayal, not the person.
+    private var groupFooter: String {
+        switch group {
+        case .user:
+            return explain("Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs.")
+        case .character:
+            return explain("People we invented to practice with — different jobs, places and ways of talking.")
+        case .figure:
+            return explain("AI portrayals of real people who have died, built from what is publicly known about them. Not the person, and nothing they say here was actually said by them.")
         }
     }
 
@@ -109,9 +150,9 @@ struct FindPeopleSheet: View {
                         .buttonStyle(.bordered)
                 }
                 .padding(.vertical, 4)
-            } else if pool.isEmpty {
-                // Loaded fine but the pool for this target language has no
-                // one yet — say so instead of a silent blank.
+            } else if groupPool.isEmpty {
+                // Loaded fine but this tab's pool for the target language has
+                // no one yet — say so instead of a silent blank.
                 Text(explain("No one here yet for this language — check back soon."))
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
@@ -120,9 +161,9 @@ struct FindPeopleSheet: View {
                 }
             }
         } header: {
-            Text("People today")
-        } footer: {
-            Text(explain("A few new people every day. Talking with someone doesn't notify them — it's an AI playing their introduction, in a stock voice, never theirs."))
+            // Figures are a fixed cast, not a daily rotation — a header
+            // promising new faces every day would be a lie there.
+            Text(group == .figure ? "Figures" : "People today")
         }
     }
 
@@ -241,6 +282,13 @@ struct FindPersonCard: View {
                 Text(person.intro.isEmpty ? person.background : person.intro)
                     .font(.body)
                     .padding(.vertical, 2)
+            } footer: {
+                // Never let a portrayal pass for the person. This sits under
+                // the intro, where the learner reads it before deciding to
+                // treat anything said here as something they really said.
+                if person.isPublicFigure {
+                    Text(explain("An AI portrayal, built from the public record. Nothing said here was actually said by them."))
+                }
             }
 
             if !person.commonTopics.isEmpty {
