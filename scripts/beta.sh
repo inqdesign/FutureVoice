@@ -3,15 +3,15 @@
 # Ship a TestFlight build. Everything Xcode's Archive menu does, minus the
 # parts that are easy to get wrong by hand.
 #
-#   ./scripts/beta.sh              # bump, archive, export (+ upload if a key is set up)
-#   ./scripts/beta.sh --no-bump    # re-archive the current build number
+#   ./scripts/beta.sh              # bump, archive, export, upload
+#   ./scripts/beta.sh --no-bump    # re-archive + upload the current build number
 #
 # Why a script and not fastlane: the Fastfile has the same lane, but fastlane
 # 2.x doesn't run on this machine's Ruby 4.0 (default gems were removed and its
 # dependency set can't resolve). This needs nothing but Xcode.
 #
-# Upload is optional. It runs only when the App Store Connect API key is in
-# place — see the note printed at the end if it isn't.
+# Uploading needs NO API key: it goes through the Apple ID already signed into
+# Xcode, the same way the Organizer's Distribute button does.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -95,34 +95,49 @@ IPA=$(find "$EXPORT_DIR" -name '*.ipa' | head -1)
 [[ -n "$IPA" ]] || { echo "✗ Export produced no .ipa" >&2; exit 1; }
 echo "▸ Exported $IPA"
 
-# --- 5. Upload (only if the API key is set up) -----------------------------
-KEY_DIR="$HOME/.appstoreconnect/private_keys"
-if [[ -n "${ASC_KEY_ID:-}" && -n "${ASC_ISSUER_ID:-}" ]]; then
-  # altool looks the key up by ID in fixed locations; mirror ours into one.
-  if [[ -f "$ROOT/fastlane/AuthKey.p8" ]]; then
-    mkdir -p "$KEY_DIR"
-    cp -f "$ROOT/fastlane/AuthKey.p8" "$KEY_DIR/AuthKey_${ASC_KEY_ID}.p8"
-  fi
-  echo "▸ Uploading to App Store Connect…"
-  xcrun altool --upload-app -f "$IPA" -t ios \
-    --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
-  echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight after Apple finishes processing."
+# --- 5. Upload ------------------------------------------------------------
+# NO API KEY NEEDED. `-exportArchive` with `destination: upload` hands the
+# archive to App Store Connect using the Apple ID already signed into Xcode
+# (Settings → Accounts) — the same path the Organizer's Distribute button
+# takes. An earlier version of this script gated uploading on an ASC API key
+# and, finding none, stopped at the .ipa and told the operator to open
+# Transporter by hand. That was never necessary.
+#
+# The `.ipa` above is still exported first: it is the artifact to re-upload
+# from Transporter if this leg fails, and proof of what was signed.
+echo "▸ Uploading to App Store Connect…"
+cat > build/UploadOptions.plist <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>destination</key><string>upload</string>
+  <key>teamID</key><string>PXS8Q4NT67</string>
+  <key>uploadSymbols</key><true/>
+  <key>signingStyle</key><string>automatic</string>
+</dict>
+</plist>
+PLIST
+
+if xcodebuild -exportArchive \
+     -archivePath "$ARCHIVE" \
+     -exportOptionsPlist build/UploadOptions.plist \
+     -allowProvisioningUpdates \
+     | grep -E '^\*\* |Upload succeeded|error: ' ; then
+  echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight once Apple finishes processing."
   echo "  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST"
 else
   cat <<NOTE
 
-✓ $VERSION ($BUILD) is built and signed, but NOT uploaded.
+✗ Upload failed, but $VERSION ($BUILD) is built and signed:
   → $IPA
 
-  To upload by hand: open Transporter.app and drop that .ipa in.
+  Most likely the Apple ID in Xcode needs re-authenticating:
+  Xcode → Settings → Accounts → sign in again, then re-run:
+      ./scripts/beta.sh --no-bump
 
-  To upload from here next time, do the one-time key setup:
-    1. App Store Connect → Users and Access → Integrations → App Store Connect API
-       → Generate API Key (role: App Manager) → download the .p8 ONCE
-    2. Save it as fastlane/AuthKey.p8 (gitignored), then:
-         export ASC_KEY_ID="XXXXXXXXXX"
-         export ASC_ISSUER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-
-  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST
+  Or upload by hand: open Transporter.app and drop that .ipa in.
 NOTE
+  exit 1
 fi
