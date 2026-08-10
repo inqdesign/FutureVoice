@@ -1,9 +1,22 @@
-Welcome to the nawana beta.
+Build 3 — meet people, and get called.
 
-• Clone your voice in 60 seconds, then call your fluent self and just talk
-• Watch your fluent self live real situations before they happen
-• Shadow any line in your own voice with per-word scoring
-• Automatic drills, an ~8,000-word CEFR notebook, and a weekly progress report
-• Home-screen widgets for your vocabulary and expressions
+NEW · Find people
+Practice with someone you've never met, like meeting a stranger at a language school. Open Watch → Find people:
+• People — other learners who published an introduction
+• Characters — a surf hostel owner two months into a decision she keeps avoiding, a game tester who found a bug nobody wants fixed, a night-shift controller who just turned down the day shift and doesn't know why. Everyone here is in the middle of something.
+Talk with anyone live, or watch your fluent self talk with them first. Every talk becomes a book in Practice, with its own words and lines to master. Bookmark the ones you want to keep — they join your People row.
+Want others to practice with "you"? Me → Find people writes your introduction into the pool.
+
+NEW · Daily call
+Your fluent self can call you at a time you pick. Answer and you're straight into a conversation; miss it and there's a voicemail waiting.
+
+FASTER
+• Watch scenes start speaking while the voice is still being made, instead of after
+• News topics load from whichever category is ready first
+
+FIXED
+• Long conversations no longer lose their whole review — drills, scorecard and progress all survive
+• People met through Find people stayed themselves instead of turning into "your own people"
+• Conversations with different people no longer collapse into the same introductions
 
 Thanks for testing — reply with feedback anytime.

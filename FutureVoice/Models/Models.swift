@@ -635,14 +635,10 @@ struct Counterpart: Codable, Identifiable, Hashable {
     /// conversational substance — prompts quote it directly.
     var intro: String = ""
     /// What KIND of remote persona this is: "user" (a real learner who
-    /// published an intro), "character" (an invented seed persona), or
-    /// "figure" (a real, deceased public person portrayed as themselves).
-    /// nil for people the user made. Figures carry an extra prompt guard and
-    /// an on-screen "AI portrayal" line — a made-up character can be anything,
-    /// but a real person's words have to stay inside the public record.
+    /// published an intro) or "character" (an invented seed persona). nil for
+    /// people the user made. Find people's tabs group on this, so a person
+    /// stays in the tab they were met in.
     var personaKind: String? = nil
-
-    var isPublicFigure: Bool { personaKind == "figure" }
 
     /// Persona-grounded scenario library specific to this counterpart, KEYED
     /// BY TARGET LANGUAGE. Fed by `TopicEngine.suggestForCounterpart` and

@@ -24,11 +24,10 @@ struct FindPeopleSheet: View {
     @State private var searchText = ""
     @State private var bookmarks: Set<String> = []
 
-    /// Which pool the sheet is showing. Three kinds live in one table but
-    /// they are not interchangeable to a learner: a real person who published
-    /// an intro, an invented character, and a portrayal of someone who really
-    /// existed. Mixing them in one list would quietly ask the user to guess
-    /// which is which.
+    /// Which pool the sheet is showing. Two kinds live in one table and they
+    /// are not interchangeable to a learner: a real person who published an
+    /// intro, and someone we invented. One list would quietly ask the user to
+    /// guess which is which.
     @State private var group: PublicPersonaService.Group = .user
 
     /// The current tab's slice of the pool.
@@ -67,7 +66,6 @@ struct FindPeopleSheet: View {
                     Picker("", selection: $group) {
                         Text("People").tag(PublicPersonaService.Group.user)
                         Text("Characters").tag(PublicPersonaService.Group.character)
-                        Text("Figures").tag(PublicPersonaService.Group.figure)
                     }
                     .pickerStyle(.segmented)
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
@@ -103,16 +101,13 @@ struct FindPeopleSheet: View {
         }
     }
 
-    /// What this tab is, in one line — including the one thing a learner must
-    /// not be left to assume: a figure is a portrayal, not the person.
+    /// What this tab is, in one line.
     private var groupFooter: String {
         switch group {
         case .user:
             return explain("Other learners who published an introduction. Talking with someone doesn't notify them — it's an AI speaking their introduction, in a stock voice, never theirs.")
         case .character:
-            return explain("People we invented to practice with — different jobs, places and ways of talking.")
-        case .figure:
-            return explain("AI portrayals of real people who have died, built from what is publicly known about them. Not the person, and nothing they say here was actually said by them.")
+            return explain("People we invented to practice with — each one in the middle of something they'll want to talk about.")
         }
     }
 
@@ -161,9 +156,7 @@ struct FindPeopleSheet: View {
                 }
             }
         } header: {
-            // Figures are a fixed cast, not a daily rotation — a header
-            // promising new faces every day would be a lie there.
-            Text(group == .figure ? "Figures" : "People today")
+            Text("People today")
         }
     }
 
@@ -282,13 +275,6 @@ struct FindPersonCard: View {
                 Text(person.intro.isEmpty ? person.background : person.intro)
                     .font(.body)
                     .padding(.vertical, 2)
-            } footer: {
-                // Never let a portrayal pass for the person. This sits under
-                // the intro, where the learner reads it before deciding to
-                // treat anything said here as something they really said.
-                if person.isPublicFigure {
-                    Text(explain("An AI portrayal, built from the public record. Nothing said here was actually said by them."))
-                }
             }
 
             if !person.commonTopics.isEmpty {
