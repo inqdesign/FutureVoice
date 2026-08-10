@@ -1,11 +1,14 @@
-Build 3 — meet people, and get called.
+Build 4 — meet people, and get called.
 
 NEW · Find people
-Practice with someone you've never met, like meeting a stranger at a language school. Open Watch → Find people:
+Practice with someone you've never met, the way you'd meet a stranger at a language school. Watch → Find people, in two tabs:
+
 • People — other learners who published an introduction
-• Characters — a surf hostel owner two months into a decision she keeps avoiding, a game tester who found a bug nobody wants fixed, a night-shift controller who just turned down the day shift and doesn't know why. Everyone here is in the middle of something.
-Talk with anyone live, or watch your fluent self talk with them first. Every talk becomes a book in Practice, with its own words and lines to master. Bookmark the ones you want to keep — they join your People row.
-Want others to practice with "you"? Me → Find people writes your introduction into the pool.
+• Characters — the people you actually end up speaking this language with. A recruiter who'll ask the question about the gap in your CV. A landlord who says most disputes start with someone waiting four months to mention the damp. A nurse who needs to know if it's sharp or dull, and since when. A colleague who'd rather you disagreed in the meeting than at the coffee machine. And other learners, each here for their own reason — a pharmacist re-qualifying, a parent who couldn't follow the school meeting, someone whose team lead keeps adding work at the end of the call.
+
+Everyone arrives in the middle of something, so there's a real conversation to have. Talk with anyone live, or watch your fluent self talk with them first. Every talk becomes a book in Practice, with its own words and lines to master. Bookmark the ones you want to keep — they join your People row.
+
+Want others to practise with "you"? Me → Find people publishes your introduction.
 
 NEW · Daily call
 Your fluent self can call you at a time you pick. Answer and you're straight into a conversation; miss it and there's a voicemail waiting.
@@ -17,6 +20,6 @@ FASTER
 FIXED
 • Long conversations no longer lose their whole review — drills, scorecard and progress all survive
 • People met through Find people stayed themselves instead of turning into "your own people"
-• Conversations with different people no longer collapse into the same introductions
+• Conversations with different people no longer collapse into the same round of introductions
 
 Thanks for testing — reply with feedback anytime.
