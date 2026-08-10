@@ -57,6 +57,21 @@ final class PhraseAudioStore {
     }
 
     /// Account deletion / local wipe — the next user inherits no lineage.
+    /// Delete every cached synthesis, and NOTHING else.
+    ///
+    /// Scoped hard to `Documents/PhraseAudio` on purpose. Learning records —
+    /// sessions, drills, vocabulary, books, streak — are plain JSON in
+    /// `Documents` with no server copy, so "reinstall the app to clear the
+    /// audio cache" destroys everything the learner has ever done. This is the
+    /// only safe way to force a re-synthesis, which is why it exists.
+    ///
+    /// Costs real money to undo: every line played after this re-bills once.
+    func clearCachedAudio() {
+        let fm = FileManager.default
+        let files = (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        for url in files { try? fm.removeItem(at: url) }
+    }
+
     func clearOwnVoiceLineage() {
         ownVoiceLineage = []
         UserDefaults.standard.removeObject(forKey: lineageKey)

@@ -1,5 +1,7 @@
 import Supabase
 import SwiftUI
+import UIKit
+import UserNotifications
 
 /// User-selectable appearance. `.system` follows iOS; the app was dark-only
 /// before this existed, so every screen must stay system-color clean.
@@ -17,8 +19,31 @@ enum AppAppearance: String, CaseIterable {
     var label: String { rawValue.capitalized }
 }
 
+/// Exists for ONE reason: `UNUserNotificationCenter.current().delegate` has to
+/// be set before the app finishes launching, or a daily call answered from the
+/// lock screen (cold launch) arrives with nobody listening and silently does
+/// nothing. SwiftUI has no other hook that early.
+@MainActor
+final class AppDelegate: NSObject, UIApplicationDelegate {
+    /// Held strongly — `UNUserNotificationCenter.delegate` is a weak reference,
+    /// and a delegate that deallocates takes every future answer with it.
+    private let callDelegate = DailyCallNotificationDelegate()
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        UNUserNotificationCenter.current().delegate = callDelegate
+        // Categories are not persisted across launches — without this the
+        // Answer / In-an-hour buttons simply don't render.
+        DailyCallScheduler.registerCategory()
+        return true
+    }
+}
+
 @main
 struct FutureVoiceApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var appState = AppState()
     @StateObject private var auth = AuthService()
     @Environment(\.scenePhase) private var scenePhase
@@ -56,6 +81,15 @@ struct FutureVoiceApp: App {
             // the widget's study queue at both edges of a foreground stint.
             if phase == .active || phase == .background {
                 StudyWidgetRefresher.refresh()
+            }
+            // Re-arm the daily call. Cheap and idempotent: a plan that still
+            // matches the learner's language and clone and hasn't fired yet is
+            // reused untouched, so this costs nothing on the common path. It
+            // exists for the cases that would otherwise leave the phone
+            // silent forever — a reinstall (pending requests gone), a plan
+            // whose time passed unanswered, or a language switch.
+            if phase == .active {
+                appState.refreshDailyCall()
             }
         }
     }
@@ -304,6 +338,59 @@ final class AppState: ObservableObject {
         PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
 
         Task { await self.observeAuth() }
+    }
+
+    // MARK: - Daily call
+
+    /// Everything the voicemail can be grounded in, read off the stores the
+    /// learner has already filled. Assembled here rather than inside
+    /// `VoicemailEngine` so the engine never guesses which language's data to
+    /// read — it gets exactly the active scope's.
+    func voicemailContext() -> VoicemailEngine.Context {
+        let ended = SessionStore.shared.load()
+            .filter { $0.endedAt != nil }
+            .sorted { ($0.endedAt ?? .distantPast) > ($1.endedAt ?? .distantPast) }
+        let last = ended.first
+
+        // Phrases the FLUENT SELF handed over last time. Naming one back is
+        // what makes the call sound like a continuation rather than a
+        // generated greeting — and it puts the phrase in front of the learner
+        // one more time, which is the review this loop exists for.
+        let phrases = (last?.summary?.expressionsUsed ?? [])
+            + (last?.summary?.newWordsUsed ?? [])
+
+        let days = (last?.endedAt).map {
+            Calendar.current.dateComponents([.day], from: $0, to: Date()).day ?? 0
+        }
+
+        return VoicemailEngine.Context(
+            targetLanguage: targetLanguage,
+            nativeLanguage: nativeLanguage,
+            proficiency: proficiency,
+            personaName: persona?.displayName,
+            lastTopic: last?.displayTitle,
+            lastPhrases: Array(phrases.prefix(4)),
+            daysSinceLastTalk: days,
+            dueCount: DrillStore.shared.dueCount()
+        )
+    }
+
+    /// Write and schedule the next call. Fire-and-forget: the learner never
+    /// waits on it, and a failure just means tomorrow's ring falls back to the
+    /// plan already on disk.
+    ///
+    /// - Parameter force: rewrite the script even when a usable plan exists.
+    ///   Passed after a session ends — that talk is fresher context than
+    ///   whatever the standing plan was written from.
+    func refreshDailyCall(force: Bool = false) {
+        guard DailyCallStore.shared.isEnabled else { return }
+        let context = voicemailContext()
+        let voiceId = voiceCloneId
+        let caller = voiceDisplayName
+        Task {
+            await DailyCallScheduler.refresh(context: context, voiceId: voiceId,
+                                             callerName: caller, force: force)
+        }
     }
 
     /// Called from ConversationView after `endSession` finishes saving the

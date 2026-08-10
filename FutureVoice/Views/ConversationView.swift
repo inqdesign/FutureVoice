@@ -53,6 +53,15 @@ struct ConversationView: View {
     /// to the presenter so it can play the pill morph in reverse.
     private var onClose: (() -> Void)?
 
+    /// A line the fluent self has ALREADY said — the daily call's voicemail,
+    /// which the learner just heard ring on their lock screen. When set, the
+    /// call opens on exactly this instead of writing a fresh greeting: the
+    /// question they were asked is the question still waiting when they pick
+    /// up. Its audio is already in the phrase cache (`DailyCallScheduler`
+    /// stores the ringtone under the same text + voice), so speaking it costs
+    /// no second synthesis and the voice never changes mid-hand-off.
+    private let initialOpener: String?
+
     /// Presented as the immersive "talk seat" from ConversationHome. An initial
     /// topic launches a scenario; empty = free talk. Pass `resumeSession` to
     /// pick up a past conversation where it left off (same session id, prior
@@ -62,9 +71,11 @@ struct ConversationView: View {
          initialIsNews: Bool = false, initialOrigin: SessionOrigin = .free,
          initialScenarioId: UUID? = nil, initialNewsFacts: [String] = [],
          initialCounterpart: Counterpart? = nil,
+         initialOpener: String? = nil,
          resumeSession: Session? = nil,
          onClose: (() -> Void)? = nil) {
         self.onClose = onClose
+        self.initialOpener = initialOpener
         if let s = resumeSession {
             _topic = State(initialValue: s.topic ?? "")
             _topicBlurb = State(initialValue: "")
@@ -742,7 +753,12 @@ struct ConversationView: View {
         }
         do {
             let opener: String
-            if topicIsNews, let fromPool = openNewsConversation() {
+            if let initialOpener, !initialOpener.isEmpty {
+                // Answered the daily call: the voicemail already said its
+                // piece. Anything generated here would talk over a question
+                // the learner is mid-way through answering.
+                opener = initialOpener
+            } else if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
             } else if topic.isEmpty, counterpart == nil,
                       let canned = FreeTalkOpeners.shared.next(
@@ -1460,6 +1476,21 @@ struct ConversationView: View {
         }
     }
 
+    /// Speak one fluent-self line and append it as a turn.
+    ///
+    /// Karaoke timings are deliberately NOT fetched here. `42cafcc` used to
+    /// run a background `synthesizeWithTimestamps` on every line to get them,
+    /// on the reasoning that the shared idempotency key made it free. It isn't
+    /// free and it isn't correct:
+    ///   • it is a SECOND ElevenLabs render of audio we already have, which is
+    ///     the exact thing the no-duplicate-TTS rule forbids;
+    ///   • TTS is not deterministic, so that render's word onsets belong to
+    ///     audio the learner never hears. Shadow then highlighted words
+    ///     against a different take — drifting further the longer the line.
+    /// Timings now come from the audio that actually played: the free
+    /// on-device alignment in `LocalAlignment`, run by `ShadowDrillView` when
+    /// a line is first opened for shadowing, with the duration-proportional
+    /// estimate covering it until then.
     private func speakAndAppend(_ text: String, voiceId: String,
                                 idempotencyKey: String? = nil) async throws {
         guard !isTornDown else { return }
@@ -1542,68 +1573,18 @@ struct ConversationView: View {
                     turns[idx].audioURL = savedURL
                     turns[idx].durationMs = durationMs
                 }
-                Task {
-                    do {
-                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
-                            voiceId: voiceId, text: text,
-                            modelId: ElevenLabsClient.conversationModelId,
-                            idempotencyKey: idempotencyKey,
-                            purpose: "turn")
-                        if !timings.isEmpty {
-                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
-                            TurnAudioStore.shared.saveTimings(timings, for: streamTurnId!)
-                        }
-                    } catch {
-                        // Timing recovery failed — audio already cached, karaoke will use estimate
-                    }
-                }
+                // NO timing re-synthesis here. See `speakAndAppend`'s note.
                 return
             case .pcm(let fullPCM, let sampleRate) where !fullPCM.isEmpty:
                 let wav = AudioLoudness.wavData(
                     fromPCM16: fullPCM, sampleRate: Int(sampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
-                Task {
-                    do {
-                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
-                            voiceId: voiceId, text: text,
-                            modelId: ElevenLabsClient.conversationModelId,
-                            idempotencyKey: idempotencyKey,
-                            purpose: "turn")
-                        if !timings.isEmpty {
-                            PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: timings)
-                            let turnId = turns.last(where: { $0.transcript == text })?.id
-                            if let id = turnId {
-                                TurnAudioStore.shared.saveTimings(timings, for: id)
-                            }
-                        }
-                    } catch {
-                        // Timing recovery failed — audio already playing, karaoke will use estimate
-                    }
-                }
                 logTurnTiming(tts: "buffered")
                 return
             case .mp3(let data) where !data.isEmpty:
                 PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(data, timings: [], transcript: text)
-                Task {
-                    do {
-                        let (_, timings) = try await ElevenLabsClient.shared.synthesizeWithTimestamps(
-                            voiceId: voiceId, text: text,
-                            modelId: ElevenLabsClient.conversationModelId,
-                            idempotencyKey: idempotencyKey,
-                            purpose: "turn")
-                        if !timings.isEmpty {
-                            PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: timings)
-                            let turnId = turns.last(where: { $0.transcript == text })?.id
-                            if let id = turnId {
-                                TurnAudioStore.shared.saveTimings(timings, for: id)
-                            }
-                        }
-                    } catch {
-                        // Timing recovery failed — audio already playing, karaoke will use estimate
-                    }
-                }
                 logTurnTiming(tts: "buffered")
                 return
             default:
@@ -1688,8 +1669,10 @@ struct ConversationView: View {
         // Persist the raw conversation FIRST. The summary call below can fail
         // (network, credits, malformed JSON) and turns live only in memory —
         // without this draft save a failed summary used to lose the whole
-        // session. The full save further down overwrites this row (same id).
-        SessionStore.shared.save(Session(
+        // session. `SessionSummarizer` overwrites this row (same id) once the
+        // analysis lands; until then the talk sits in Practice with a
+        // "generate the review material" button instead of dead-ending here.
+        let draft = Session(
             id: sessionId,
             userId: userId,
             targetLanguage: appState.targetLanguage,
@@ -1702,149 +1685,16 @@ struct ConversationView: View {
             origin: sessionOrigin,
             originScenarioId: sessionScenarioId,
             counterpartId: sessionCounterpartId
-        ))
+        )
+        SessionStore.shared.save(draft)
         didSaveCurrentSession = true
         do {
-            let systemP = ConversationEngine.summarySystemPrompt(
-                targetLanguage: appState.targetLanguage,
-                nativeLanguage: appState.nativeLanguage,
-                profile: appState.learnerProfile
-            )
-            let transcript = ConversationEngine.formatTranscript(turns)
-            let metrics = ScorecardMetrics.compute(turns: turns)
-            let userMessage = """
-            transcript:
-            \(transcript)
-
-            metrics:
-            \(metrics.promptJSON())
-            """
-            // Stable idempotency key: re-tapping End after a failure with the
-            // same turn count retries the summary without a second charge.
-            let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
-                system: systemP,
-                messages: [GeminiClient.Message(role: .user, content: userMessage)],
-                // The schema's worst case is big: up to 15 grammar_errors
-                // (quote + correction + a NATIVE-language note each), 5
-                // phrases_used, 3-4 drills, expressions, and a 6-field
-                // scorecard whose notes are also native-language. On top of
-                // that gen-3 counts THINKING tokens against this same ceiling.
-                // At 1400 a long B2 session ran out mid-JSON and surfaced as
-                // "reply hit the token ceiling" on End — the talk was already
-                // saved, but its whole review yield (drills, scorecard,
-                // profile update) was lost. The ceiling is not billed, only
-                // tokens actually produced, so the headroom is free.
-                maxTokens: 4096,
-                purpose: "summary",
-                idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
-            )
-            var computed = payload.toDomain()
-
-            // Fold the user's spoken words into the long-term vocab pool; the
-            // freshly-used words ride along on the summary so the wrap-up can
-            // celebrate concrete progress.
-            let userTexts = turns.filter { $0.role == .user }.map { $0.transcript }
-            computed.newWordsUsed = VocabStore.shared.ingest(
-                sessionId: sessionId, userTexts: userTexts)
-
-            // Keep only expressions that literally appear in the user's own
-            // turns — the LLM occasionally paraphrases, and we never show or
-            // store an expression they didn't actually say.
-            let haystack = userTexts.joined(separator: " ").lowercased()
-            let verifiedExpressions = computed.expressionsUsed.filter { phrase in
-                let needle = phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                return !needle.isEmpty && haystack.contains(needle)
-            }
-            computed.expressionsUsed = verifiedExpressions
-            VocabStore.shared.ingestExpressions(
-                sessionId: sessionId, phrases: verifiedExpressions)
-
-            // Same guard for grammar evidence: a quote the user can't find in
-            // their own words destroys trust in the whole list. Compare with
-            // punctuation/casing stripped — STT and the LLM disagree on those
-            // even when the words match.
-            func normalized(_ s: String) -> String {
-                s.lowercased()
-                    .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "'")).inverted)
-                    .filter { !$0.isEmpty }
-                    .joined(separator: " ")
-            }
-            let normalizedHaystack = normalized(haystack)
-            computed.grammarIssues = computed.grammarIssues.filter {
-                let needle = normalized($0.quote)
-                // A "fix" that only touches punctuation/casing (normalized
-                // forms identical) is a transcription nitpick, not a spoken
-                // grammar error — drop it.
-                return !needle.isEmpty && normalizedHaystack.contains(needle)
-                    && needle != normalized($0.correction)
-            }
-
-            // Did anything they'd been studying actually come out of their
-            // mouth? Runs against the drill cards as they stood BEFORE this
-            // session's own corrections are ingested below, so a card minted
-            // tonight can't be credited as carried into tonight.
-            let carryovers = CarryoverDetector.detect(
-                in: turns, cards: DrillStore.shared.load(),
-                curriculumItems: appState.openCurriculumItems,
-                studyingExpressions: VocabStore.shared.studyingExpressions,
-                studyingWords: VocabStore.shared.studying,
-                sessionId: sessionId, sessionStartedAt: sessionStartedAt)
-            computed.carryovers = carryovers
-
-            summary = computed
+            let result = try await SessionSummarizer.summarize(session: draft,
+                                                               appState: appState)
+            summary = result.summary
             phase = .idle
-
-            // Free-talk sessions (no picked topic) take the summary's
-            // generated title so History/Practice lists don't fill with
-            // identical "Conversation" rows.
-            let generatedTitle = payload.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let resolvedTopic = topic.isEmpty ? (generatedTitle ?? "") : topic
-            let session = Session(
-                id: sessionId,
-                userId: userId,
-                targetLanguage: appState.targetLanguage,
-                mode: .conversation,
-                topic: resolvedTopic.isEmpty ? nil : resolvedTopic,
-                startedAt: sessionStartedAt,
-                endedAt: Date(),
-                turns: turns,
-                summary: computed,
-                origin: sessionOrigin,
-                originScenarioId: sessionScenarioId,
-                counterpartId: sessionCounterpartId
-            )
-            SessionStore.shared.save(session)
-            // Clear any cards from a previous end of THIS session (resume
-            // re-summarizes the whole thing) so they don't pile up.
-            DrillStore.shared.deleteForSession(sessionId)
-            DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
-            // Producing a card's phrase live outranks any flashcard tap —
-            // credit it against the SRS schedule, not just the wrap-up.
-            DrillStore.shared.markUsedInConversation(
-                ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
-            // Same principle for book material: producing it live masters it,
-            // wherever the book lives.
-            appState.markCurriculumItemsUsedInConversation(
-                itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
-            if !carryovers.isEmpty {
-                Analytics.capture("carryovers_detected", [
-                    "count": carryovers.count,
-                    "from_cards": carryovers.filter { $0.source == .drillCard }.count,
-                    "from_suggestions": carryovers.filter { $0.source == .suggestion }.count,
-                ])
-            }
-            // Grow the long-term learner profile — the next conversation's
-            // system prompt picks these patterns up.
-            appState.recordSessionOutcome(summary: computed, turns: turns)
             didSaveCurrentSession = true
             refreshDashboard()
-            // Kick off async weekly-report generation if unlock conditions
-            // are met. Fires-and-forgets — UI doesn't block on Gemini.
-            appState.maybeGenerateWeeklyReport()
-            // Fresh cards just landed in the queue — (re)schedule the due
-            // reminder. This is the one contextual moment where asking for
-            // notification permission makes sense.
-            Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
         } catch {
             // A failed summary costs the session its ENTIRE review yield, so
             // it needs the same visibility the per-turn failure has — a
@@ -1855,7 +1705,12 @@ struct ConversationView: View {
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
             ])
             outOfCredits = error.isOutOfCredits
-            self.error = error.localizedDescription
+            // The talk itself is safe on disk — say so, and say where the
+            // missing half is waiting. Without this the alert reads like the
+            // whole conversation was lost, and the learner's only move is to
+            // guess that re-tapping End retries.
+            self.error = error.localizedDescription + "\n\n"
+                + explain("Your conversation is saved. Open it under Practice to generate its review material again.")
             phase = .idle
         }
     }

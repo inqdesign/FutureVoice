@@ -202,12 +202,23 @@ final class ElevenLabsClient {
     ///   - voiceId: ElevenLabs voice id from `cloneVoice`
     ///   - text: text to speak. Should already be in the target language.
     ///   - modelId: defaults to multilingual model that handles non-English well.
+    ///   - previousText/nextText: the lines that surround this one in a longer
+    ///     stretch of speech. NOT spoken — they only condition prosody, and
+    ///     ElevenLabs does not bill their characters. Without them every line
+    ///     is synthesized as a standalone utterance: full sentence-final fall
+    ///     at the end, cold "starting to talk" energy at the start. Across a
+    ///     scene that reads as a series of separate announcements rather than
+    ///     a conversation. Pass them wherever consecutive lines play back to
+    ///     back (Watch scenes), regardless of who speaks each one — the point
+    ///     is that this line lands mid-conversation, not who said the last one.
     func synthesize(
         voiceId: String,
         text: String,
         modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
-        purpose: String? = nil
+        purpose: String? = nil,
+        previousText: String? = nil,
+        nextText: String? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -233,6 +244,10 @@ final class ElevenLabsClient {
         // Feature tag for the usage ledger (spend attribution) — the edge
         // function records it in metadata, never forwards it upstream.
         if let purpose { body["purpose"] = purpose }
+        // Prosody conditioning. An edge deploy that predates these simply
+        // drops them and the line synthesizes exactly as it used to.
+        if let previousText, !previousText.isEmpty { body["previous_text"] = previousText }
+        if let nextText, !nextText.isEmpty { body["next_text"] = nextText }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let (data, response) = try await session.dataWithRetry(for: request)

@@ -9,29 +9,104 @@ import Foundation
 /// loudness of the user's sample recording — typically a phone-mic capture
 /// 10+ dB quieter — so in Watch/Conversation the clone voice sounds tiny next
 /// to the preset voice. The TTS API exposes no output-gain knob, so we fix it
-/// at playback: decode, measure RMS, apply gain toward a single target.
+/// at playback: decode, measure the level, apply gain toward a single target.
+///
+/// ## One rule for every piece of TTS audio
+///
+/// Every voice, on every surface, through either playback path, lands on the
+/// SAME number: `speechRMS` at `targetRMSdBFS`. That single sentence is the
+/// contract, and it is deliberately the only one — the app used to hold three
+/// different ideas of "correct loudness" at once:
+///
+///   - the buffered path normalized WHOLE-FILE RMS, so how much silence a line
+///     happened to carry changed how loud its speech came out;
+///   - the streaming path gated voiced samples at an ABSOLUTE 0.02, which a
+///     quiet clone barely crosses — so it measured only the loudest peaks,
+///     read the voice as louder than it was, and under-boosted;
+///   - anything already near target was passed through untouched, which
+///     exempted the preset voices from the rule entirely.
+///
+/// Three rules meant Talk, Watch and the preset counterpart could each sit at
+/// a different level, and no amount of tuning one path could line them up.
+/// Both paths now measure with `speechRMS` and convert to gain with
+/// `gain(forSpeechRMS:)`; nothing is exempt.
 enum AudioLoudness {
-    /// Target RMS for all TTS playback, matching ElevenLabs premade mastering.
+    /// Target level for all TTS playback, measured on SPEECH (see `speechRMS`)
+    /// rather than whole-file average, so silence can't shift it.
     static let targetRMSdBFS: Float = -16
     /// Never boost more than this — keeps near-silent or pathological inputs
     /// from being amplified into pure noise.
     static let maxBoostDB: Float = 24
+    /// Nor cut more than this. Attenuation exists so an already-loud voice
+    /// joins the same target instead of being exempt from it; a large cut
+    /// would mean the measurement is wrong, not the audio.
+    static let maxCutDB: Float = 12
     /// Gains within ±1 dB of unity aren't audible; skip the re-render.
     private static let unityToleranceDB: Float = 1
-    /// Saturation knee: samples below this stay linear; above it they're
-    /// compressed to tame peaks / crest factor before the makeup-gain stage.
-    /// Lower = more compression (peaky clones get denser, so they read as loud
-    /// as the preset voices after makeup).
-    private static let softLimitKnee: Float = 0.5
+    /// Peak-limiter knee: samples below this stay LINEAR; only what would
+    /// otherwise clip is curved back.
+    ///
+    /// This used to sit at 0.5, which — against a -16 dBFS target, i.e. an RMS
+    /// of ~0.16 — put the knee only ~10 dB above the average level, inside the
+    /// normal crest of speech. Every plosive, breath and consonant attack was
+    /// tanh-compressed on its way through, and tanh compression is harmonic
+    /// distortion: it reads as a "pressed", gritty voice. And it only ever hit
+    /// the CLONE, because a preset voice arrives at target and returns early
+    /// at the unity-tolerance check — so the one voice that has to sound like
+    /// the user was the only one being distorted.
+    ///
+    /// At 0.85 the curve is a true safety limiter: transients keep their shape
+    /// up to ~14.5 dB of crest and only genuine overs are tamed. The original
+    /// reason for the stage still holds — a single peak must not pin the whole
+    /// phrase's gain (see stage 3) — and that works at any knee.
+    private static let softLimitKnee: Float = 0.85
+    /// Gate for the speech-level measurement, as a fraction of the signal's
+    /// own PEAK: anything more than 20 dB below the loudest moment is silence
+    /// or room tone, not speech.
+    ///
+    /// Relative, so it works at any input level — the absolute 0.02 floor the
+    /// streaming path used to apply simply stopped working on a clone quieter
+    /// than it, measuring only the peaks and reading the voice as louder than
+    /// it was. Relative to PEAK rather than to the mean, because peak is a
+    /// running maximum: the streaming path can compute the identical number
+    /// on a signal it has only partly received, which is what lets both paths
+    /// share one rule instead of approximating each other.
+    static let speechGateRatio: Float = 0.1
 
-    /// Decodes `data` (MP3 from ElevenLabs), applies gain so its RMS hits the
-    /// target, and returns the result as CAF data ready for `AVAudioPlayer`.
-    /// Sample count is unchanged, so karaoke word timings stay valid.
+    /// THE gain rule. Both playback paths convert a measured speech level into
+    /// a playback gain through this and nothing else, which is what makes a
+    /// clone in Talk, the same clone in Watch, and a preset counterpart in the
+    /// same scene all come out at one level.
+    static func gain(forSpeechRMS speech: Float) -> Float {
+        guard speech > 1e-6 else { return 1 }
+        let target = pow(10, targetRMSdBFS / 20)
+        return min(max(target / speech, pow(10, -maxCutDB / 20)),
+                   pow(10, maxBoostDB / 20))
+    }
+
+    /// The container `data` is in, as a file extension.
+    ///
+    /// This matters more than it looks: `AVAudioFile(forReading:)` trusts the
+    /// EXTENSION and picks its parser from it, so a WAV handed to a path that
+    /// names its temp file `.mp3` fails to open with
+    /// `MPEGAudioFile::OpenFromDataSource failed` — silently, since the caller
+    /// just falls back to the un-normalized audio. Everything here used to be
+    /// ElevenLabs MP3; the daily call's voicemail arrives as PCM wrapped in
+    /// WAV (`wavData(fromPCM16:)`), which is how that assumption got found.
+    private static func containerExtension(of data: Data) -> String {
+        data.count >= 12 && data.prefix(4).elementsEqual("RIFF".utf8) ? "wav" : "mp3"
+    }
+
+    /// Decodes `data` (MP3 or WAV), applies gain so its RMS hits the target,
+    /// and returns the result as CAF data ready for `AVAudioPlayer`.
+    /// Sample count and sample rate are unchanged, so karaoke word timings
+    /// stay valid and playback speed is untouched.
     /// Returns nil when decoding fails or the audio is already at target —
     /// callers should fall back to playing the original data.
     static func normalized(_ data: Data) -> Data? {
         let tmpDir = FileManager.default.temporaryDirectory
-        let inURL = tmpDir.appendingPathComponent("loudnorm-in-\(UUID().uuidString).mp3")
+        let inURL = tmpDir.appendingPathComponent(
+            "loudnorm-in-\(UUID().uuidString).\(containerExtension(of: data))")
         let outURL = tmpDir.appendingPathComponent("loudnorm-out-\(UUID().uuidString).caf")
         defer {
             try? FileManager.default.removeItem(at: inURL)
@@ -48,83 +123,7 @@ enum AudioLoudness {
             else { return nil }
             try inFile.read(into: buffer)
 
-            guard let channels = buffer.floatChannelData else { return nil }
-            let channelCount = Int(buffer.format.channelCount)
-            let frames = vDSP_Length(buffer.frameLength)
-            guard frames > 0 else { return nil }
-
-            // RMS and peak across all channels.
-            var sumSquares: Float = 0
-            var peak: Float = 0
-            for ch in 0..<channelCount {
-                var rms: Float = 0
-                var chPeak: Float = 0
-                vDSP_rmsqv(channels[ch], 1, &rms, frames)
-                vDSP_maxmgv(channels[ch], 1, &chPeak, frames)
-                sumSquares += rms * rms
-                peak = max(peak, chPeak)
-            }
-            let rms = sqrt(sumSquares / Float(channelCount))
-            guard rms > 1e-6, peak > 0 else { return nil }
-
-            let targetLinear = pow(10, targetRMSdBFS / 20)
-            var gain = targetLinear / rms
-            // Cap the absolute boost, but DON'T let one transient peak hold the
-            // whole phrase down. The old `min(gain, 0.99/peak)` cap was why
-            // instant voice clones (quiet RMS, occasional peaks) stayed far
-            // below the preset voices — a single peak pinned the gain. Instead
-            // we boost to target, then soft-limit so nothing hard-clips.
-            gain = min(gain, pow(10, maxBoostDB / 20))
-
-            let gainDB = 20 * log10(gain)
-            guard abs(gainDB) > unityToleranceDB else { return nil }
-
-            // Two voices at the SAME RMS still sound unequal when their crest
-            // factors differ — a peaky clone reads quieter than a dense preset.
-            // So: (1) boost to target, (2) soft-saturate to tame the peaks /
-            // crest, (3) makeup-gain back to target with a hard peak ceiling.
-            // Stage 2 lets stage 3 actually reach target instead of being held
-            // down by one transient, so every phrase lands at a consistent
-            // perceived loudness. Sample count is unchanged → timings valid.
-            let knee = Self.softLimitKnee
-            let kneeRange = 1 - knee
-            let intFrames = Int(buffer.frameLength)
-            for ch in 0..<channelCount {
-                // Stage 1: boost.
-                var g = gain
-                vDSP_vsmul(channels[ch], 1, &g, channels[ch], 1, frames)
-                // Stage 2: soft-saturate everything above the knee.
-                let p = channels[ch]
-                for n in 0..<intFrames {
-                    let x = p[n]
-                    let a = abs(x)
-                    if a > knee {
-                        let comp = knee + kneeRange * tanhf((a - knee) / kneeRange)
-                        p[n] = x < 0 ? -comp : comp
-                    }
-                }
-            }
-
-            // Stage 3: re-measure and apply makeup gain back toward target,
-            // clamped so the true peak stays just under full scale.
-            var rms2Sq: Float = 0
-            var peak2: Float = 0
-            for ch in 0..<channelCount {
-                var r: Float = 0, pk: Float = 0
-                vDSP_rmsqv(channels[ch], 1, &r, frames)
-                vDSP_maxmgv(channels[ch], 1, &pk, frames)
-                rms2Sq += r * r
-                peak2 = max(peak2, pk)
-            }
-            let rms2 = sqrt(rms2Sq / Float(channelCount))
-            if rms2 > 1e-6, peak2 > 0 {
-                var makeup = min(targetLinear / rms2, 0.985 / peak2)
-                if abs(20 * log10(makeup)) > 0.3 {
-                    for ch in 0..<channelCount {
-                        vDSP_vsmul(channels[ch], 1, &makeup, channels[ch], 1, frames)
-                    }
-                }
-            }
+            guard normalizeInPlace(buffer) else { return nil }
 
             // Scope the writer so the file is flushed/closed before we read
             // it back (AVAudioFile flushes on deinit).
@@ -138,6 +137,185 @@ enum AudioLoudness {
             return try Data(contentsOf: outURL)
         } catch {
             return nil
+        }
+    }
+
+    /// The gain staging itself, applied to `buffer` in place. Split out from
+    /// `normalized` so it can be exercised directly on synthesized signals —
+    /// the container round-trip around it needs a real encoded file and tests
+    /// nothing about the levels.
+    ///
+    /// Returns false when the audio is already at target (or unmeasurable),
+    /// meaning the caller should use the ORIGINAL audio untouched.
+    @discardableResult
+    static func normalizeInPlace(_ buffer: AVAudioPCMBuffer) -> Bool {
+        guard let channels = buffer.floatChannelData else { return false }
+        let channelCount = Int(buffer.format.channelCount)
+        let frames = vDSP_Length(buffer.frameLength)
+        guard frames > 0 else { return false }
+
+        var peak: Float = 0
+        for ch in 0..<channelCount {
+            var chPeak: Float = 0
+            vDSP_maxmgv(channels[ch], 1, &chPeak, frames)
+            peak = max(peak, chPeak)
+        }
+        guard peak > 0 else { return false }
+
+        // The one rule, on the one measurement. Every voice goes through this,
+        // including the presets that used to be waved past because their
+        // whole-file average happened to sit near target — their SPEECH sits
+        // above it, which is why a preset counterpart could jump out of a
+        // scene next to the user's own clone.
+        let targetLinear = pow(10, targetRMSdBFS / 20)
+        let speech = speechRMS(channels, channelCount: channelCount, frames: frames)
+        guard speech > 1e-6 else { return false }
+        // A transient peak must never pin the phrase's gain — we go to target
+        // and let the limiter below catch whatever that sends over.
+        let gain = gain(forSpeechRMS: speech)
+
+        let gainDB = 20 * log10(gain)
+        guard abs(gainDB) > unityToleranceDB else { return false }
+
+        // Two voices at the SAME RMS still sound unequal when their crest
+        // factors differ — a peaky clone reads quieter than a dense preset.
+        // So: (1) boost to target, (2) soft-saturate to tame the peaks /
+        // crest, (3) makeup-gain back to target with a hard peak ceiling.
+        // Stage 2 lets stage 3 actually reach target instead of being held
+        // down by one transient, so every phrase lands at a consistent
+        // perceived loudness. Sample count is unchanged → timings valid.
+        let knee = Self.softLimitKnee
+        let kneeRange = 1 - knee
+        let intFrames = Int(buffer.frameLength)
+        for ch in 0..<channelCount {
+            // Stage 1: to target.
+            var g = gain
+            vDSP_vsmul(channels[ch], 1, &g, channels[ch], 1, frames)
+            // Stage 2: limit only what is heading for clipping.
+            let p = channels[ch]
+            for n in 0..<intFrames {
+                let x = p[n]
+                let a = abs(x)
+                if a > knee {
+                    let comp = knee + kneeRange * tanhf((a - knee) / kneeRange)
+                    p[n] = x < 0 ? -comp : comp
+                }
+            }
+        }
+
+        // Stage 3: recover whatever level stage 2 took off, clamped so the
+        // true peak stays just under full scale.
+        //
+        // Measured on SPEECH, like stage 1 — and it has to be. Re-measuring
+        // the whole file here re-derives the boost from a number the
+        // silence dragged down, which silently undid the ceiling above and
+        // put the line right back at the inflated level (exactly, to the
+        // decibel). With both stages on the same measure, a line that lost
+        // nothing to the limiter sees a makeup of ~1 and is left alone.
+        var peak2: Float = 0
+        for ch in 0..<channelCount {
+            var pk: Float = 0
+            vDSP_maxmgv(channels[ch], 1, &pk, frames)
+            peak2 = max(peak2, pk)
+        }
+        let speech2 = speechRMS(channels, channelCount: channelCount, frames: frames)
+        if speech2 > 1e-6, peak2 > 0 {
+            var makeup = min(targetLinear / speech2, 0.985 / peak2)
+            if abs(20 * log10(makeup)) > 0.3 {
+                for ch in 0..<channelCount {
+                    vDSP_vsmul(channels[ch], 1, &makeup, channels[ch], 1, frames)
+                }
+            }
+        }
+
+        return true
+    }
+
+    /// RMS of the SPEECH in a buffer, ignoring the silence around and between
+    /// words. Two files with identical speech but different amounts of lead-in
+    /// silence measure the same here, where a whole-file RMS would not.
+    ///
+    /// Gate is relative to the file's own ungated level (BS.1770's approach),
+    /// so it needs no absolute threshold and travels across voices and rates.
+    /// Falls back to the ungated level if the gate would leave nothing.
+    static func speechRMS(
+        _ channels: UnsafePointer<UnsafeMutablePointer<Float>>,
+        channelCount: Int,
+        frames: vDSP_Length
+    ) -> Float {
+        var sumSquares: Float = 0
+        var peak: Float = 0
+        for ch in 0..<channelCount {
+            var r: Float = 0
+            var pk: Float = 0
+            vDSP_rmsqv(channels[ch], 1, &r, frames)
+            vDSP_maxmgv(channels[ch], 1, &pk, frames)
+            sumSquares += r * r
+            peak = max(peak, pk)
+        }
+        let ungated = sqrt(sumSquares / Float(channelCount))
+        guard ungated > 1e-6, peak > 1e-6 else { return ungated }
+
+        let gate = peak * speechGateRatio
+        var gatedSum: Double = 0
+        var counted = 0
+        let n = Int(frames)
+        for ch in 0..<channelCount {
+            let p = channels[ch]
+            for i in 0..<n where abs(p[i]) > gate {
+                gatedSum += Double(p[i]) * Double(p[i])
+                counted += 1
+            }
+        }
+        guard counted > 0 else { return ungated }
+        return Float((gatedSum / Double(counted)).squareRoot())
+    }
+
+    /// The same speech-level measurement as `speechRMS`, computed as the
+    /// audio arrives — for the streaming playback path, which never holds the
+    /// whole signal. Feeding it every sample of a stream and reading
+    /// `speechRMS` at the end yields what `AudioLoudness.speechRMS` would have
+    /// returned for that signal, so the two playback paths land on one level.
+    struct StreamingLevelEstimator {
+        private var peak: Float = 0
+        private var voicedSumSquares: Double = 0
+        private var voicedSamples: Int = 0
+        /// The peak the current accumulation was gated against. The gate rises
+        /// with the peak, and samples admitted under an earlier, lower gate
+        /// were measured against a different rule — so when the peak moves
+        /// materially, the estimate starts over rather than averaging two
+        /// rules together. Peaks settle within the first word, so in practice
+        /// this happens a couple of times at the very start and then never.
+        private var gateBasis: Float = 0
+        /// ~0.15 s of voice at any rate we stream, before the estimate is
+        /// worth acting on.
+        private static let minVoicedSamples = 3_000
+
+        init() {}
+
+        mutating func accumulate(_ samples: UnsafePointer<Float>, count: Int) {
+            guard count > 0 else { return }
+            for i in 0..<count { peak = max(peak, abs(samples[i])) }
+            guard peak > 1e-6 else { return }
+            if peak > gateBasis * 2 {
+                voicedSumSquares = 0
+                voicedSamples = 0
+                gateBasis = peak
+            }
+            let gate = peak * AudioLoudness.speechGateRatio
+            for i in 0..<count {
+                let a = abs(samples[i])
+                if a > gate {
+                    voicedSumSquares += Double(a) * Double(a)
+                    voicedSamples += 1
+                }
+            }
+        }
+
+        /// nil until enough voiced audio has arrived to trust the number.
+        var speechRMS: Float? {
+            guard voicedSamples > Self.minVoicedSamples else { return nil }
+            return Float((voicedSumSquares / Double(voicedSamples)).squareRoot())
         }
     }
 

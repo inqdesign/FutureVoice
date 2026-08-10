@@ -14,6 +14,10 @@ struct RootView: View {
     /// `Color.accentColor` chrome) matches the call button's living surface.
     /// Defaults to `.blue` — the same palette a fresh install starts on.
     @AppStorage("futureselfTheme") private var storedTheme = FutureselfTheme.blue.rawValue
+    /// Whether the daily-call step has been shown. Set by
+    /// `DailyCallOnboardingView` on BOTH exits (enabled or skipped), so
+    /// declining it doesn't turn the screen into a wall.
+    @AppStorage("futurevoice.dailyCall.onboarded") private var dailyCallOnboarded = false
 
     init() { Self.applyRoundedNavBar() }
 
@@ -86,6 +90,13 @@ struct RootView: View {
             // holdVoiceOnboarding keeps this screen up through the final act
             // (greeting + theme pick) after the clone id has already landed.
             VoiceCloneOnboardingView()
+        } else if !dailyCallOnboarded {
+            // AFTER the clone, because the daily call is the clone's first
+            // real job — they've just heard themselves speak fluently, so
+            // "they'll phone you tomorrow" reads as a promise instead of a
+            // permissions request. Existing installs see it once too; that's
+            // how they learn the feature exists.
+            DailyCallOnboardingView()
         } else {
             // A language switch swaps the entire scoped store set underneath
             // the tabs — rebuild the tree so every view re-reads from the new

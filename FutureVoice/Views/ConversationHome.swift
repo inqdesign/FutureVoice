@@ -70,6 +70,15 @@ struct ConversationHome: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     heroSection
+                    // A call that rang out doesn't just disappear the way a
+                    // dismissed alarm does — the message it left is still
+                    // here. This row IS the "someone tried to reach you"
+                    // trace, and it's the whole reason the call reads as a
+                    // person rather than a timer.
+                    if let plan = missedCall {
+                        missedCallRow(plan)
+                            .padding(.horizontal, 20)
+                    }
                     if sessionCount == 0 {
                         firstRunCard
                             .padding(.horizontal, 20)
@@ -121,7 +130,13 @@ struct ConversationHome: View {
             // Ring-path calls live in RootTabView's overlay — this view never
             // disappears, so onAppear can't refresh the stats. The token
             // bumps at call close, while the backdrop still covers the home.
-            .onChange(of: appState.talkHomeReloadToken) { _, _ in reload() }
+            // The hero line moves on to the next one here — a finished call is
+            // the only moment the home is covered (by the call's backdrop), so
+            // the swap is never seen happening.
+            .onChange(of: appState.talkHomeReloadToken) { _, _ in
+                HeroGreeting.advanceRotation()
+                reload()
+            }
             // The reveal after a call: the ring re-draws itself from zero as
             // the backdrop lifts, instead of popping in fully drawn.
             .onChange(of: appState.talkRingProxyActive) { _, active in
@@ -165,6 +180,7 @@ struct ConversationHome: View {
                     .environmentObject(appState)
             }
             .fullScreenCover(item: $callLaunch, onDismiss: {
+                HeroGreeting.advanceRotation()
                 reload()
                 drawRing()
                 maybePromptDeepen()
@@ -218,6 +234,58 @@ struct ConversationHome: View {
     /// The hero owns the whole first viewport: the ring sits at its center
     /// (≈ screen center at rest) and the question floats in the gap between
     /// the header and the ring; the list scrolls up from underneath.
+    // MARK: - Missed call
+
+    /// The last call, if it went unanswered and its message is still unplayed.
+    /// Cleared the moment they call back or listen — this is a trace, not a
+    /// standing reminder, and it must never accumulate into a guilt pile.
+    private var missedCall: DailyCallPlan? {
+        guard DailyCallStore.shared.isEnabled,
+              let plan = DailyCallStore.shared.load(),
+              plan.hasUnheardVoicemail else { return nil }
+        return plan
+    }
+
+    /// Tapping calls them back — same script, same cached audio, straight into
+    /// the talk. Not "review the notification you missed": returning a call.
+    @ViewBuilder
+    private func missedCallRow(_ plan: DailyCallPlan) -> some View {
+        Button {
+            DailyCallScheduler.markVoicemailHeard()
+            DailyCallInbox.shared.pendingAnswer = plan
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "phone.arrow.down.left.fill")
+                    .font(.title3)
+                    .foregroundStyle(.red)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Missed call")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    // The message itself, so the row carries a real sentence
+                    // of target-language material even unopened.
+                    Text(plan.script)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.secondarySystemGroupedBackground),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("Missed call"))
+        .accessibilityHint(Text(plan.script))
+    }
+
     private var heroSection: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -304,13 +372,20 @@ struct ConversationHome: View {
         max(380, UIScreen.main.bounds.height / 2 + 160 - heroTopY)
     }
 
+    /// See `HeroGreeting`. Cached in state because the hero re-evaluates on
+    /// every scroll frame (scrollOffset is @State) — but the FIRST frame
+    /// computes the real line itself (`HeroGreeting.live()` reads the stores
+    /// directly) rather than painting a placeholder that `onAppear` then
+    /// corrects. That correction was visible: a short clock line swapping to
+    /// something else a frame later.
+    @State private var heroLine = ""
+
     private var welcomeQuestion: String {
-        switch Calendar.current.component(.hour, from: Date()) {
-        case 5..<12:  return chrome("What's on your mind this morning?")
-        case 12..<17: return chrome("What's on your mind this afternoon?")
-        case 17..<22: return chrome("What's on your mind this evening?")
-        default:      return chrome("What's on your mind tonight?")
-        }
+        heroLine.isEmpty ? HeroGreeting.text(for: HeroGreeting.live()) : heroLine
+    }
+
+    private func refreshHeroLine() {
+        heroLine = HeroGreeting.text(for: HeroGreeting.live())
     }
 
     /// A thin, fully-closed goal ring (progress from 12 o'clock) around the
@@ -667,6 +742,8 @@ struct ConversationHome: View {
         todayTalks = todayCount
         // Keep the proxy's label copy in sync (see AppState.talkRingHeadline).
         appState.talkRingHeadline = goalHeadline
+        // Reads everything above, so it goes last.
+        refreshHeroLine()
     }
 }
 

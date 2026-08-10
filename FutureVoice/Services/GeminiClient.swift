@@ -439,7 +439,155 @@ final class GeminiClient {
         }
     }
 
+    /// Streaming sibling of `sendJSON` for payloads whose LEADING fields can
+    /// be used before the body closes — the Watch scene plays its title and
+    /// turns while the model is still writing the words/expressions tail.
+    ///
+    /// `onPartial` fires on the main actor with the full accumulated model
+    /// text after every chunk; callers parse it incrementally
+    /// (`completedStringField`, `completedArrayObjects`) and must tolerate
+    /// seeing the same prefix again. Returns the fully decoded payload —
+    /// persistence must wait for THAT, so a stream that dies mid-scene throws
+    /// instead of yielding half a book. A deploy without SSE support degrades
+    /// to buffering the one JSON body; `onPartial` then never fires and the
+    /// caller's incremental path just stays quiet.
+    func sendJSONStreamAccumulating<T: Decodable>(
+        system: String,
+        messages: [Message],
+        model: Model = .flash36,
+        maxTokens: Int = 1024,
+        purpose: String? = nil,
+        idempotencyKey: String? = nil,
+        requestTimeout: TimeInterval? = nil,
+        onPartial: @MainActor @escaping (String) -> Void
+    ) async throws -> T {
+        let request = try await makeRequest(
+            system: system, messages: messages, model: model, maxTokens: maxTokens,
+            temperature: 0.4, searchGrounding: false,
+            purpose: purpose, idempotencyKey: idempotencyKey,
+            jsonResponse: true, requestTimeout: requestTimeout, stream: true
+        )
+
+        // Same one-shot re-dial as the turn stream: a radio blip at stream
+        // OPEN is the common failure, and the idempotency key dedupes billing.
+        var opened: (URLSession.AsyncBytes, URLResponse)
+        do {
+            opened = try await session.bytes(for: request)
+        } catch where error.isTransientNetworkError {
+            opened = try await session.bytes(for: request)
+        }
+        let (bytes, response) = opened
+        guard let http = response as? HTTPURLResponse else { throw GeminiError.invalidResponse }
+        guard (200..<300).contains(http.statusCode) else {
+            var errBody = Data()
+            for try await b in bytes.prefix(512) { errBody.append(b) }
+            if http.statusCode == 402 { throw GeminiError.insufficientCredits }
+            throw GeminiError.httpError(status: http.statusCode,
+                                        body: String(data: errBody, encoding: .utf8) ?? "<binary>")
+        }
+
+        // No handshake → this deploy ignored `stream` and sent one JSON body.
+        guard http.value(forHTTPHeaderField: "X-Gemini-Stream") == "sse" else {
+            var all = Data()
+            for try await b in bytes { all.append(b) }
+            let decoded = try JSONDecoder().decode(APIResponse.self, from: all)
+            let candidate = decoded.candidates?.first
+            let text = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+            guard let jsonData = Self.extractJSON(from: text) else {
+                throw candidate?.finishReason == "MAX_TOKENS"
+                    ? GeminiError.truncated : GeminiError.jsonNotFound(raw: text)
+            }
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        }
+
+        var raw = ""
+        var finishReason: String?
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data:") else { continue }
+            let event = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+            guard !event.isEmpty, event != "[DONE]",
+                  let data = event.data(using: .utf8),
+                  let chunk = try? JSONDecoder().decode(APIResponse.self, from: data)
+            else { continue }
+            let candidate = chunk.candidates?.first
+            if let reason = candidate?.finishReason { finishReason = reason }
+            let delta = candidate?.content?.parts?.compactMap { $0.text }.joined() ?? ""
+            guard !delta.isEmpty else { continue }
+            raw += delta
+            let snapshot = raw
+            await MainActor.run { onPartial(snapshot) }
+        }
+
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let truncated = finishReason == "MAX_TOKENS"
+        guard let jsonData = Self.extractJSON(from: trimmed) else {
+            throw truncated ? GeminiError.truncated : GeminiError.jsonNotFound(raw: trimmed)
+        }
+        do {
+            return try JSONDecoder().decode(T.self, from: jsonData)
+        } catch {
+            if truncated { throw GeminiError.truncated }
+            throw error
+        }
+    }
+
     // MARK: - Helpers
+
+    /// Pulls the COMPLETE objects out of a named array in a JSON body that is
+    /// still being streamed — `"turns": [ {…}, {…}, {"speak` yields the two
+    /// closed objects and ignores the half-written third. Scanning stops at
+    /// the array's own `]`, so a later array (words, expressions) can never
+    /// leak elements into this one. Objects come back as raw JSON slices for
+    /// the caller to decode; non-object elements are skipped.
+    static func completedArrayObjects(_ name: String, in partial: String) -> [Substring] {
+        guard let key = partial.range(of: "\"\(name)\"") else { return [] }
+        var i = key.upperBound
+        func skipSpace() {
+            while i < partial.endIndex, partial[i].isWhitespace { i = partial.index(after: i) }
+        }
+        skipSpace()
+        guard i < partial.endIndex, partial[i] == ":" else { return [] }
+        i = partial.index(after: i)
+        skipSpace()
+        guard i < partial.endIndex, partial[i] == "[" else { return [] }
+        i = partial.index(after: i)
+
+        var objects: [Substring] = []
+        var objStart: String.Index?
+        var depth = 0
+        var inString = false
+        var escaped = false
+        while i < partial.endIndex {
+            let c = partial[i]
+            if inString {
+                if escaped { escaped = false }
+                else if c == "\\" { escaped = true }
+                else if c == "\"" { inString = false }
+            } else {
+                switch c {
+                case "\"":
+                    inString = true
+                case "{":
+                    if depth == 0 { objStart = i }
+                    depth += 1
+                case "}":
+                    if depth > 0 {
+                        depth -= 1
+                        if depth == 0, let s = objStart {
+                            objects.append(partial[s...i])
+                            objStart = nil
+                        }
+                    }
+                case "]":
+                    if depth == 0 { return objects }   // array closed — done
+                default:
+                    break
+                }
+            }
+            i = partial.index(after: i)
+        }
+        return objects
+    }
 
     /// Pulls a top-level string field out of a JSON body that is still being
     /// streamed, returning it only once its CLOSING quote has arrived. Returns

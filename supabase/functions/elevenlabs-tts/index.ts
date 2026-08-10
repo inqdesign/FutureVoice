@@ -53,6 +53,12 @@ Deno.serve(async (req) => {
     // "library" | "greeting" …) — recorded in the ledger metadata so spend
     // can be attributed per feature. Never forwarded upstream, never priced.
     purpose?: string
+    // Surrounding lines of a longer stretch of speech. Forwarded upstream to
+    // condition prosody so consecutive lines flow as one conversation instead
+    // of a series of standalone utterances. NOT spoken, and NOT billed — the
+    // charge below stays on `text` alone, which is what ElevenLabs prices.
+    previous_text?: string
+    next_text?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -101,6 +107,10 @@ Deno.serve(async (req) => {
     body: JSON.stringify({
       text: body.text,
       model_id: modelId,
+      // Omitted entirely when absent — sending empty strings would tell the
+      // model "silence preceded this", which is worse than saying nothing.
+      ...(body.previous_text ? { previous_text: body.previous_text } : {}),
+      ...(body.next_text ? { next_text: body.next_text } : {}),
       voice_settings: {
         stability: 0.55,
         similarity_boost: 0.90,

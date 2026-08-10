@@ -33,6 +33,10 @@ struct RootTabView: View {
     /// Opaque backdrop behind the call, raised fast on open so the home never
     /// shows through the call's opacity fade, dropped on close.
     @State private var callBackdropShown = false
+    /// Where an answered daily call lands. The notification delegate has no
+    /// view in reach (and on a cold launch from the lock screen, no view
+    /// exists yet), so it drops the plan here and this picks it up.
+    @ObservedObject private var callInbox = DailyCallInbox.shared
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -66,6 +70,24 @@ struct RootTabView: View {
                 ProgressTab()
                     .tabItem { Label("Progress", systemImage: "chart.bar.fill") }
                     .tag(Tab.progress)
+            }
+            // Answered the daily call. The voicemail's own line opens the
+            // conversation — its audio is already in the phrase cache, so the
+            // voice the learner heard on the lock screen keeps talking with
+            // no round trip and no second synthesis. Presented on the TabView
+            // rather than the outer chain so it can't collide with the beta
+            // welcome cover.
+            .fullScreenCover(item: $callInbox.pendingAnswer) { plan in
+                ConversationView(initialOpener: plan.script,
+                                 onClose: { callInbox.pendingAnswer = nil })
+                    .environmentObject(appState)
+            }
+            // Declined from the ALARM, which has no room to ask when to try
+            // again — so the app opens straight onto the question. (The
+            // notification fallback asks inline and never lands here.)
+            .sheet(item: $callInbox.pendingCallbackChoice) { plan in
+                DailyCallCallbackSheet(plan: plan,
+                                       onDone: { callInbox.pendingCallbackChoice = nil })
             }
 
             // Opaque cover that snaps in ahead of the call's fade so the home

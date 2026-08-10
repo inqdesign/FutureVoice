@@ -1,5 +1,17 @@
 import SwiftUI
 
+/// Live conduit from a streaming scene generation to the player: the title
+/// and each turn land here the moment they finish parsing, and `WatchView`
+/// plays them while the model is still writing the rest of the book.
+/// `isComplete` flips only after the FULL payload decoded and the book was
+/// saved — playback may not end the scene before that.
+@MainActor
+final class SceneFeed: ObservableObject {
+    @Published var title: String?
+    @Published var turns: [DialogueEngineTurn] = []
+    @Published var isComplete = false
+}
+
 /// The Watch EXECUTION surface — Home's Watch verb lands here and the scene
 /// just plays, exactly like Talk lands straight in the call. No curriculum
 /// checklist, no book chrome; that page (`ScenarioDetailView`) belongs to
@@ -20,6 +32,13 @@ struct SceneWatchView: View {
 
     @State private var generating = false
     @State private var generationError: String?
+    /// True from the moment a streaming generation starts, and kept true for
+    /// the life of this view once it succeeds — flipping to the saved-scene
+    /// branch after the save would recreate WatchView mid-playback.
+    @State private var streaming = false
+    /// The streaming conduit; reset per attempt so a retry never replays a
+    /// dead stream's turns.
+    @StateObject private var feed = SceneFeed()
     /// Held until the fresh take lands so the OLD scene never flashes first.
     @State private var awaitingFresh: Bool
     /// One take per view instance — keeps double-tap idempotency within the
@@ -41,7 +60,18 @@ struct SceneWatchView: View {
 
     var body: some View {
         Group {
-            if !awaitingFresh, let s = scenario, let c = s.curriculum, !(c.dialogue ?? []).isEmpty {
+            if streaming, let s = scenario {
+                // Streaming generation: turns play out of the feed while the
+                // model is still writing. Stays on this branch after the save
+                // so the player isn't recreated mid-scene.
+                WatchView(counterpart: watchCounterpart(for: s),
+                          customScenario: s.displayTitle,
+                          persist: false,
+                          handoff: .init(title: "Study this",
+                                         action: { studyPresented = true }),
+                          feed: feed)
+                    .environmentObject(appState)
+            } else if !awaitingFresh, let s = scenario, let c = s.curriculum, !(c.dialogue ?? []).isEmpty {
                 WatchView(counterpart: watchCounterpart(for: s),
                           savedDialogue: sceneDialogue(s, c),
                           // Came from Watch, so the book is somewhere this
@@ -103,6 +133,12 @@ struct SceneWatchView: View {
         guard !generating else { return }
         generating = true
         defer { generating = false }
+        // Fresh conduit per attempt, then flip to the streaming branch —
+        // WatchView starts playing turns the moment the model produces them.
+        feed.title = nil
+        feed.turns = []
+        feed.isComplete = false
+        streaming = true
         do {
             let counterpart = s.counterpartId.flatMap { id in
                 appState.counterparts.first { $0.id == id }
@@ -117,7 +153,9 @@ struct SceneWatchView: View {
                 weakVocabAreas: appState.learnerProfile.weakVocabAreas,
                 recurringMistakes: appState.learnerProfile.recurringMistakes,
                 avoidTitles: hasScene ? [s.curriculum?.dialogueTitle ?? ""] : [],
-                runKey: hasScene ? runKey : nil
+                runKey: hasScene ? runKey : nil,
+                onTitle: { [weak feed] in feed?.title = $0 },
+                onTurn: { [weak feed] in feed?.turns.append($0) }
             )
             guard var fresh = scenario else { return }
             if var book = fresh.curriculum, hasScene {
@@ -129,7 +167,17 @@ struct SceneWatchView: View {
             appState.saveScenario(fresh)
             appState.refreshScenarioMastery(id: scenarioId)
             awaitingFresh = false
+            // The book is saved — only now may playback end the scene. The
+            // feed keeps the FINAL turns as truth: a degraded (buffered)
+            // stream emitted nothing incrementally, and this one write is
+            // what puts its scene on screen.
+            feed.turns = curriculum.dialogue ?? []
+            feed.title = curriculum.dialogueTitle
+            feed.isComplete = true
         } catch {
+            // Back off the streaming branch: the error state owns the screen
+            // (any turns already heard were ephemeral — nothing persisted).
+            streaming = false
             generationError = error.localizedDescription
         }
     }

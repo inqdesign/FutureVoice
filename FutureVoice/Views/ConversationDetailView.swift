@@ -57,6 +57,14 @@ struct ConversationDetailView: View {
     private enum WordsTab { case you, futureSelf }
     @State private var wordsTab: WordsTab = .you
 
+    /// Re-running the analysis for a talk whose summary never landed.
+    @State private var isRegenerating = false
+    @State private var regenerateError: String?
+    @State private var showingPaywall = false
+    /// The failure was the 402 credit gate — retrying can only fail again, so
+    /// the alert leads to the paywall instead of a dead-end OK.
+    @State private var regenerateOutOfCredits = false
+
     var body: some View {
         List {
             // Same vertical story as the old analysis screen — score, note,
@@ -64,6 +72,7 @@ struct ConversationDetailView: View {
             // (header with progress + Continue/Replay on top, mastery +
             // drills at the bottom).
             headerSection
+            missingSummarySection
             if curriculum.isMastered && archivedAt == nil { masteredBanner }
             if let sc = session.summary?.scorecard { scoreSection(sc) }
             if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
@@ -112,6 +121,19 @@ struct ConversationDetailView: View {
                 .environmentObject(appState)
         }
         .safeAreaInset(edge: .bottom) { postTalkBar }
+        .alert("Something went wrong",
+               isPresented: Binding(get: { regenerateError != nil },
+                                    set: { if !$0 { regenerateError = nil } })) {
+            if regenerateOutOfCredits {
+                Button("See plans") { regenerateError = nil; showingPaywall = true }
+            }
+            Button("OK") { regenerateError = nil }
+        } message: {
+            Text(regenerateError ?? "")
+        }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(offerTrial: false)   // out-of-credits entry
+        }
         .confirmationDialog("Delete this talk?", isPresented: $showingDeleteConfirm,
                             titleVisibility: .visible) {
             Button("Delete talk", role: .destructive) {
@@ -186,6 +208,45 @@ struct ConversationDetailView: View {
             .padding(.vertical, 6)
         } footer: {
             Text(explain("Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation."))
+        }
+    }
+
+    /// The talk is here but its review material never got made — the analysis
+    /// call failed when the call ended (network, credits, a reply the token
+    /// ceiling cut off) and the raw conversation was saved without it.
+    ///
+    /// Everything below this section derives from that summary, so the page is
+    /// otherwise empty and the talk is stuck: no drills, no score, nothing
+    /// folded into the learner profile. This is the only way back.
+    @ViewBuilder
+    private var missingSummarySection: some View {
+        if SessionSummarizer.needsSummary(session) {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Label("Review material missing", systemImage: "exclamationmark.triangle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.orange)
+                    Text(explain("The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now."))
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button {
+                        Task { await regenerateSummary() }
+                    } label: {
+                        HStack {
+                            if isRegenerating {
+                                ProgressView().controlSize(.small)
+                                Text("Working…")
+                            } else {
+                                Label("Generate review material", systemImage: "sparkles")
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(isRegenerating)
+                }
+                .padding(.vertical, 4)
+            }
         }
     }
 
@@ -672,6 +733,31 @@ struct ConversationDetailView: View {
         archivedAt = SessionStore.shared.load().first { $0.id == session.id }?.archivedAt
             ?? session.archivedAt
         drillCount = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }.count
+    }
+
+    /// Run the analysis this talk never got. Same engine, same idempotency
+    /// key and same downstream ingestion as the end of a live call, so a
+    /// rescued talk is indistinguishable from one that worked first time.
+    private func regenerateSummary() async {
+        guard !isRegenerating else { return }
+        isRegenerating = true
+        defer { isRegenerating = false }
+        do {
+            let result = try await SessionSummarizer.summarize(session: session,
+                                                              appState: appState)
+            session = result.session
+            refresh()
+            Telemetry.log("talk_summary_regenerated", ["turns": String(session.turns.count)])
+        } catch {
+            regenerateOutOfCredits = error.isOutOfCredits
+            regenerateError = error.localizedDescription
+            Telemetry.log("talk_summary_error", [
+                "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "turns": String(session.turns.count),
+                "out_of_credits": error.isOutOfCredits ? "1" : "0",
+                "retry": "1",
+            ])
+        }
     }
 
     private func setArchived(_ flag: Bool) {

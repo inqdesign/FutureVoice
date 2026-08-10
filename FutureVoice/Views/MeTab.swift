@@ -21,6 +21,14 @@ struct MeTab: View {
     /// a `body` that hit ProfileStore per row per render would read the file
     /// on every keystroke elsewhere in this list.
     @State private var levelCache: [String: CEFRLevel] = [:]
+    /// Mirrors of `DailyCallStore`'s defaults so the controls can bind. The
+    /// store stays the source of truth — `onChange` writes back — because the
+    /// scheduler runs from a notification action with no view in memory.
+    @State private var dailyCallEnabled = DailyCallStore.shared.isEnabled
+    @State private var dailyCallTime = Calendar.current.date(
+        bySettingHour: DailyCallStore.shared.hour,
+        minute: DailyCallStore.shared.minute, second: 0, of: Date()) ?? Date()
+    @State private var callbackMinutes = DailyCallScheduler.defaultCallbackMinutes
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
@@ -37,6 +45,7 @@ struct MeTab: View {
     @State private var voiceRegenerateError: String?
     #if DEBUG
     @State private var confirmingOnboardingReset = false
+    @State private var confirmingAudioCacheClear = false
     #endif
 
     var body: some View {
@@ -108,6 +117,8 @@ struct MeTab: View {
                     }
                 }
 
+                dailyCallSection
+
                 appSection
 
                 Section {
@@ -158,6 +169,17 @@ struct MeTab: View {
                         row(icon: "arrow.counterclockwise",
                             title: "Replay onboarding",
                             subtitle: "Reset setup, voice & persona — stays signed in")
+                    }
+                    // Forces the next play of every line to re-synthesize.
+                    // Exists so nobody ever reaches for "delete the app" to
+                    // test cached audio: that wipes Documents, and the
+                    // learning records in there have no server copy.
+                    Button {
+                        confirmingAudioCacheClear = true
+                    } label: {
+                        row(icon: "waveform.slash",
+                            title: "Clear voice cache",
+                            subtitle: "Re-synthesize every line — learning data untouched")
                     }
                 } header: {
                     Text("Developer")
@@ -230,14 +252,12 @@ struct MeTab: View {
                 Text(accountDeleteError ?? "")
             }
             #if DEBUG
-            .alert("Replay onboarding?", isPresented: $confirmingOnboardingReset) {
-                Button("Cancel", role: .cancel) {}
-                Button("Reset", role: .destructive) {
-                    appState.resetOnboarding()   // RootView swaps to SetupFlowView
-                }
-            } message: {
-                Text(explain("Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in."))
-            }
+            // Extracted into a modifier: inline, these two tipped `body` past
+            // what the type-checker will solve in reasonable time.
+            .modifier(DeveloperAlerts(
+                confirmingOnboardingReset: $confirmingOnboardingReset,
+                confirmingAudioCacheClear: $confirmingAudioCacheClear,
+                onResetOnboarding: { appState.resetOnboarding() }))
             #endif
             .task { account = await AccountStatus.fetch() }
             .task { aiLevel = recentAILevel() }
@@ -440,6 +460,75 @@ struct MeTab: View {
         }
     }
 
+    // MARK: - Daily call
+
+    /// Opt-in and the hour. Deliberately two controls and no more: a call you
+    /// have to configure is a call you don't get.
+    private var dailyCallSection: some View {
+        Section {
+            Toggle(isOn: $dailyCallEnabled) {
+                row(icon: "phone.arrow.down.left",
+                    title: "Daily call",
+                    subtitle: "Your fluent self phones you")
+            }
+            if dailyCallEnabled {
+                DatePicker("Calls at", selection: $dailyCallTime, displayedComponents: .hourAndMinute)
+                // The ALARM screen has room for one button we control, so it
+                // can't offer a choice at ring time — this is that choice,
+                // made once. (The notification fallback, which takes an array
+                // of actions, does show all of them inline.)
+                Picker(selection: $callbackMinutes) {
+                    ForEach(DailyCallScheduler.callbackOptions, id: \.self) { m in
+                        Text(DailyCallScheduler.callbackLabel(m)).tag(m)
+                    }
+                } label: {
+                    Text("If you can't talk")
+                }
+            }
+        } header: {
+            Text("Call")
+        } footer: {
+            Text(explain(dailyCallEnabled
+                ? "Your phone rings once a day, even on silent. Can't talk? They ring back in an hour — and if you never pick up, the message waits for you instead of counting against you."
+                : "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went."))
+        }
+        .onChange(of: dailyCallEnabled) { _, on in
+            Task { await setDailyCall(enabled: on) }
+        }
+        .onChange(of: callbackMinutes) { _, minutes in
+            // No reschedule needed: this only decides how far the NEXT decline
+            // pushes the callback, and that's read at decline time.
+            DailyCallScheduler.defaultCallbackMinutes = minutes
+        }
+        .onChange(of: dailyCallTime) { _, when in
+            let parts = Calendar.current.dateComponents([.hour, .minute], from: when)
+            DailyCallStore.shared.hour = parts.hour ?? 8
+            DailyCallStore.shared.minute = parts.minute ?? 0
+            // The standing plan's fire time is stale now — rewrite it. Cheap:
+            // the script and audio are reused, only the trigger moves.
+            appState.refreshDailyCall(force: true)
+        }
+    }
+
+    /// Turning it on is the one contextual moment where the notification
+    /// prompt explains itself — the learner just asked to be called. A denial
+    /// flips the toggle back rather than leaving it on over a call that can
+    /// never ring.
+    private func setDailyCall(enabled: Bool) async {
+        guard enabled else {
+            DailyCallStore.shared.isEnabled = false
+            await DailyCallScheduler.cancel()
+            return
+        }
+        guard await DailyCallScheduler.requestPermission() else {
+            dailyCallEnabled = false
+            DailyCallStore.shared.isEnabled = false
+            return
+        }
+        DailyCallStore.shared.isEnabled = true
+        appState.refreshDailyCall(force: true)
+    }
+
     // MARK: - Voice
 
     /// Every consequence of making a new clone, on one confirm: it bills, it
@@ -590,3 +679,32 @@ struct MeTab: View {
         return email.isEmpty ? "Signed in with Apple" : email
     }
 }
+
+#if DEBUG
+/// The Developer section's confirmations, kept out of `MeTab.body` — that
+/// chain is long enough that adding two more `.alert`s to it made the
+/// expression un-type-checkable.
+private struct DeveloperAlerts: ViewModifier {
+    @Binding var confirmingOnboardingReset: Bool
+    @Binding var confirmingAudioCacheClear: Bool
+    var onResetOnboarding: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Clear voice cache?", isPresented: $confirmingAudioCacheClear) {
+                Button("Cancel", role: .cancel) {}
+                Button("Clear", role: .destructive) {
+                    PhraseAudioStore.shared.clearCachedAudio()
+                }
+            } message: {
+                Text(explain("Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays, which costs credits."))
+            }
+            .alert("Replay onboarding?", isPresented: $confirmingOnboardingReset) {
+                Button("Cancel", role: .cancel) {}
+                Button("Reset", role: .destructive) { onResetOnboarding() }
+            } message: {
+                Text(explain("Clears setup, voice clone and persona, then restarts the first-run flow. You stay signed in."))
+            }
+    }
+}
+#endif

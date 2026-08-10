@@ -913,12 +913,22 @@ struct ShadowDrillView: View {
     /// Vocabulary bias for both the live recognizer and the file re-score:
     /// the target line's words plus the whole line as one phrase. STT then
     /// resolves accented pronunciations to the words actually being practiced.
+    /// `SFSpeechRecognitionRequest.contextualStrings` is documented as "limit
+    /// to around 100" — past that the recognizer degrades instead of helping,
+    /// and the list here grows with the LINE, so a long shadow target blew
+    /// straight through it. Whole line first (the most informative hint),
+    /// then unique words until the budget runs out.
+    static let maxRecognitionHints = 100
+
     static func recognitionHints(for target: String) -> [String] {
-        var hints = target
-            .components(separatedBy: .whitespacesAndNewlines)
-            .map { $0.trimmingCharacters(in: .punctuationCharacters) }
-            .filter { $0.count > 1 }
-        hints.append(target)
+        var hints = [target]
+        var seen = Set<String>()
+        for word in target.components(separatedBy: .whitespacesAndNewlines) {
+            let w = word.trimmingCharacters(in: .punctuationCharacters)
+            guard w.count > 1, seen.insert(w.lowercased()).inserted else { continue }
+            hints.append(w)
+            if hints.count >= maxRecognitionHints { break }
+        }
         return hints
     }
 
@@ -1007,24 +1017,37 @@ struct ShadowDrillView: View {
         // in-sync. With the explicit 3-2-1 the user has a clean cue to
         // start exactly when the karaoke does.
         syncStartedAt = Date()
-        // Headroom past the target duration: learners start a beat after
-        // "go" and speak a touch slower — a tight cutoff truncated final
-        // words, which scored as deletions/garbage through no fault of
-        // theirs. Tapping stop early is always available.
-        let cutoffMs = max(3000, attemptTargetDurationMs + 2500)
+        // A 0 here means the duration lookup failed (unreadable container,
+        // audio still landing) — and the old `max(3000, 0 + 2500)` silently
+        // turned that into a THREE-SECOND cap on every line, however long.
+        // Fall back to the text's own length instead.
+        let targetMs = attemptTargetDurationMs > 0
+            ? attemptTargetDurationMs
+            : Self.durationFromText(attemptTargetText)
+        // Headroom past the target duration. It has to SCALE: a learner
+        // shadowing runs slower than the model line by a percentage, not by a
+        // constant, so the flat +2.5s that comfortably covered a 3s line was
+        // nowhere near enough on a 20s one — long attempts got cut off
+        // mid-sentence. Tapping stop early is always available.
+        let ceilingMs = Self.attemptCutoffMs(targetMs: targetMs)
+        let earliestMs = max(1000, targetMs)
         autoStopTask?.cancel()
         autoStopTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(cutoffMs) * 1_000_000)
+            // Nothing can end the attempt before the line's OWN length — the
+            // learner can't be finished sooner, so a pause before that is
+            // always mid-attempt, never the end.
+            try? await Task.sleep(nanoseconds: UInt64(earliestMs) * 1_000_000)
             guard !Task.isCancelled, phase == .syncing else { return }
-            // Never cut a speaker mid-word: while the mic still hears voice,
-            // extend in 200ms steps (up to +4s) and only stop once they've
-            // actually gone quiet. The fixed cutoff was truncating slow
-            // attempts' tails, which then scored as deletions of words the
-            // learner clearly said.
-            let hardCap = Date().addingTimeInterval(4)
-            while !Task.isCancelled, phase == .syncing, Date() < hardCap,
-                  let lastVoiced = live.lastVoicedAt,
-                  Date().timeIntervalSince(lastVoiced) < 0.5 {
+            // Past that, stop as soon as they have genuinely gone quiet, and
+            // never before. "Quiet" is 1.5s, not 0.5s — a mid-sentence BREATH
+            // runs 0.5–1.5s (the figure Talk's endpointer is built on), so the
+            // old threshold read an ordinary breath as "finished". On a long
+            // line, where breaths are unavoidable, that ended the recording in
+            // the middle of the sentence every time.
+            let hardStop = Date().addingTimeInterval(Double(ceilingMs - earliestMs) / 1000)
+            while !Task.isCancelled, phase == .syncing, Date() < hardStop {
+                guard let lastVoiced = live.lastVoicedAt else { break }
+                if Date().timeIntervalSince(lastVoiced) >= Self.stillSpeakingSeconds { break }
                 try? await Task.sleep(nanoseconds: 200_000_000)
             }
             guard !Task.isCancelled, phase == .syncing else { return }
@@ -1252,7 +1275,7 @@ struct ShadowDrillView: View {
         if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
             cachedAudioURL = ready
             targetDurationMs = Self.durationMs(of: ready)
-            timings = storedTimings
+            timings = Self.fits(storedTimings, durationMs: targetDurationMs) ? storedTimings : []
             phase = .idle
             if timings.isEmpty {
                 timings = Self.estimatedTimings(for: turn.transcript,
@@ -1300,10 +1323,28 @@ struct ShadowDrillView: View {
     /// recover timings, is what caused runaway duplicate generations.
     private func recoverTimings(url: URL, voiceId: String) async {
         let local = await LocalAlignment.wordTimings(
-            audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript)
+            audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript,
+            durationMs: targetDurationMs)
         if Task.isCancelled || local.isEmpty { return }
         TurnAudioStore.shared.saveTimings(local, for: turn.id)
         timings = local
+    }
+
+    /// Do these timings belong to THIS recording?
+    ///
+    /// Until now Talk stored timings fetched from a SECOND ElevenLabs render
+    /// of the same sentence. TTS isn't deterministic, so those word onsets
+    /// describe audio the learner never hears — the highlight ran ahead of or
+    /// behind the voice, drifting further the longer the line. Those caches
+    /// are still on disk, and the tell is that their last word ends nowhere
+    /// near where the file does. Anything off by more than 12% (min 300 ms)
+    /// is another take's timeline; drop it and let the free on-device
+    /// alignment rebuild from the audio that actually plays.
+    static func fits(_ timings: [WordTiming], durationMs: Int) -> Bool {
+        guard !timings.isEmpty else { return false }
+        guard durationMs > 0, let last = timings.last?.endMs else { return true }
+        let tolerance = max(300, Int(Double(durationMs) * 0.12))
+        return abs(last - durationMs) <= tolerance
     }
 
     /// Karaoke fallback when no real alignment exists yet: spread the audio
@@ -1323,6 +1364,29 @@ struct ShadowDrillView: View {
             return WordTiming(word: w, startMs: Int(start),
                               endMs: max(Int(start) + 1, Int(cursor) - 20))
         }
+    }
+
+    /// How much longer than the model line a learner's own attempt runs. They
+    /// hesitate, re-start words and articulate deliberately, and all of that
+    /// grows WITH the line — hence a multiplier rather than a constant.
+    static let slowLearnerFactor = 1.5
+
+    /// Silence that means "they've stopped", not "they took a breath".
+    /// Matches the range Talk's endpointer is built on (breaths run 0.5–1.5s).
+    static let stillSpeakingSeconds: TimeInterval = 1.5
+
+    /// Absolute ceiling on one attempt, given the model line's length. The
+    /// attempt normally ends before this, the moment the learner goes quiet;
+    /// this only catches a room noisy enough that they never read as quiet.
+    static func attemptCutoffMs(targetMs: Int) -> Int {
+        max(3000, Int(Double(targetMs) * slowLearnerFactor) + 2500)
+    }
+
+    /// Rough spoken length of a line, for when the real audio duration isn't
+    /// available. Only ever used to size a SAFETY cutoff, so it errs long.
+    static func durationFromText(_ text: String) -> Int {
+        let words = text.split(whereSeparator: \.isWhitespace).count
+        return max(6000, words * 400)
     }
 
     private static func durationMs(of url: URL) -> Int {

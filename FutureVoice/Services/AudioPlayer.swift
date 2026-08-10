@@ -40,8 +40,8 @@ final class AudioPlayer: NSObject, ObservableObject {
     // Streaming AGC toward AudioLoudness.targetRMSdBFS. Boost-only (clones
     // are quiet, never over-loud), rate-limited so it can't pump audibly.
     private var streamGain: Float = 1.0
-    private var streamVoicedSumSquares: Double = 0
-    private var streamVoicedSamples: Int = 0
+    /// Shared with the buffered path — same measurement, same target.
+    private var streamLevel = AudioLoudness.StreamingLevelEstimator()
     // Per-voice learned gain, persisted across streams and launches. Without a
     // seed every streamed line ramps up from unity (≤1.5 dB/chunk), so short
     // clone lines end before reaching target — audibly quieter than the
@@ -271,12 +271,14 @@ final class AudioPlayer: NSObject, ObservableObject {
         streamGain = 1.0
         if let voiceKey {
             let learned = UserDefaults.standard.float(forKey: Self.learnedGainKey(voiceKey))
-            if learned > 1.0 {
-                streamGain = min(learned, pow(10, AudioLoudness.maxBoostDB / 20))
+            // A learned CUT counts too: a voice that plays loud must start
+            // corrected, exactly like a quiet one starts boosted.
+            if learned > 0 {
+                streamGain = min(max(learned, pow(10, -AudioLoudness.maxCutDB / 20)),
+                                 pow(10, AudioLoudness.maxBoostDB / 20))
             }
         }
-        streamVoicedSumSquares = 0
-        streamVoicedSamples = 0
+        streamLevel = AudioLoudness.StreamingLevelEstimator()
         isPlaying = true
     }
 
@@ -331,14 +333,9 @@ final class AudioPlayer: NSObject, ObservableObject {
         // RMS, so the estimate is seed-independent) — the next stream starts
         // there instead of ramping up from unity. Same 0.15s-of-voice floor
         // as updateStreamGain before trusting the estimate.
-        if let voiceKey = streamVoiceKey, streamVoicedSamples > 3_000 {
-            let rms = Float((streamVoicedSumSquares / Double(streamVoicedSamples)).squareRoot())
-            if rms > 1e-6 {
-                let targetLinear = pow(10, AudioLoudness.targetRMSdBFS / 20)
-                let desired = max(1.0, min(targetLinear / rms,
-                                           pow(10, AudioLoudness.maxBoostDB / 20)))
-                UserDefaults.standard.set(desired, forKey: Self.learnedGainKey(voiceKey))
-            }
+        if let voiceKey = streamVoiceKey, let speech = streamLevel.speechRMS {
+            UserDefaults.standard.set(AudioLoudness.gain(forSpeechRMS: speech),
+                                      forKey: Self.learnedGainKey(voiceKey))
         }
         streamVoiceKey = nil
         streamEngine?.mainMixerNode.removeTap(onBus: 0)
@@ -356,26 +353,18 @@ final class AudioPlayer: NSObject, ObservableObject {
         if fireCompletion { done?() }
     }
 
-    /// Boost-only AGC: accumulate RMS over VOICED samples (skips the leading
-    /// silence that would otherwise explode the gain estimate), then step the
-    /// gain toward `AudioLoudness.targetRMSdBFS` at most ~1.5 dB per chunk so
-    /// adaptation is inaudible. Mirrors what `AudioLoudness.normalized` does
-    /// offline for the buffered path.
+    /// Streaming AGC. Measures with `AudioLoudness.StreamingLevelEstimator`
+    /// and converts through `AudioLoudness.gain(forSpeechRMS:)` — the SAME
+    /// measurement and the SAME rule the buffered path uses, so a voice lands
+    /// at one level whether it arrives as a stream (a live Talk turn) or as a
+    /// file (the same voice in a Watch scene).
+    ///
+    /// The only thing this adds is the ramp: the gain steps at most ~1.5 dB
+    /// per chunk so adaptation inside a line is inaudible.
     private func updateStreamGain(samples: UnsafePointer<Float>, count: Int) {
-        let voicedFloor: Float = 0.02
-        for i in 0..<count {
-            let a = abs(samples[i])
-            if a > voicedFloor {
-                streamVoicedSumSquares += Double(a * a)
-                streamVoicedSamples += 1
-            }
-        }
-        // Wait for ~0.15s of actual voice before trusting the estimate.
-        guard streamVoicedSamples > 3_000 else { return }
-        let rms = Float((streamVoicedSumSquares / Double(streamVoicedSamples)).squareRoot())
-        guard rms > 1e-6 else { return }
-        let targetLinear = pow(10, AudioLoudness.targetRMSdBFS / 20)
-        let desired = max(1.0, min(targetLinear / rms, pow(10, AudioLoudness.maxBoostDB / 20)))
+        streamLevel.accumulate(samples, count: count)
+        guard let speech = streamLevel.speechRMS else { return }
+        let desired = AudioLoudness.gain(forSpeechRMS: speech)
         let maxStep: Float = pow(10, 1.5 / 20)   // ≤1.5 dB per chunk
         if desired > streamGain {
             streamGain = min(desired, streamGain * maxStep)
