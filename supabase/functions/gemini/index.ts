@@ -1,20 +1,47 @@
-// Gemini generateContent proxy + credit gate.
+// Gemini generateContent proxy — FREE since 2026-08, rate-capped per purpose.
 //
 // Body: { model, system_instruction?, contents, generationConfig?, purpose?, stream? }
-// `purpose` (optional) lets the client tag the call as one of:
-//   "summary" | "weekly" | "enrichment" | "transcribe" | undefined (= generic)
-// so usage_ledger groups by intent and pricing can differ per intent.
+// `purpose` (optional) tags the call's intent ("turn" | "summary" | "weekly" |
+// "enrichment" | "transcribe" | "topics" | "scene" | …) so usage_ledger groups
+// by feature and each purpose gets its own daily request cap.
 // `stream: true` switches the upstream call to `streamGenerateContent?alt=sse`
 // and pipes the SSE body straight through, so a conversation turn can start
 // speaking on the first complete JSON field instead of the whole body.
-// Billing is unchanged — one charge per idempotency key either way.
+//
+// Why free: the 1-credit charge (~$0.04) sat on calls costing ~$0.002
+// upstream, and beta users reported per-click credit anxiety killing review
+// and exploration. Money is metered where cost actually lives (TTS chars →
+// talk minutes); Gemini is defended by invisible per-purpose daily caps that
+// a real learner can never hit. A 0-delta ledger row is still written per
+// call (record_free_usage), so per-feature attribution and abuse detection
+// keep working.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { priceFor, charge, refund, insufficientCreditsResponse,
+import { recordFreeUsage, rateLimitedResponse,
          type ChargeableAction } from "../_shared/credits.ts"
 
 const SOURCE_FN = "gemini"
+
+// Requests per user per day, by purpose. Sized ~5-10x above a very heavy real
+// user so only scripts ever collide with them. Unknown purposes get DEFAULT.
+const DAILY_CAPS: Record<string, number> = {
+  "turn": 800,                 // ≥60 min of talking plus retries
+  "transcribe": 800,           // paired 1:1 with turns
+  "opener": 120,
+  "freetalk-openers": 30,      // one pool per language/persona change
+  "topics": 200,
+  "scene": 60,
+  "scenario-curriculum": 60,
+  "shadow": 400,               // per-attempt coach bullets
+  "summary": 60,
+  "weekly": 10,
+  "enrichment": 200,
+  "parse": 60,
+  "daily-call-script": 20,
+  "clone-script": 20,
+}
+const DEFAULT_DAILY_CAP = 300
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -38,24 +65,25 @@ Deno.serve(async (req) => {
   const stream = body.stream === true
   const { model: _m, purpose: _p, stream: _s, ...geminiBody } = body
 
+  // Ledger action keys stay split for the historically-priced purposes so
+  // spend dashboards keep their series; everything else lands on "gemini".
   const action: ChargeableAction =
     purpose === "summary"    ? "gemini_summary" :
     purpose === "weekly"     ? "gemini_weekly"  :
     purpose === "enrichment" ? "gemini_enrichment" :
     purpose === "transcribe" ? "gemini_transcribe" :
     "gemini"
-  const amount = priceFor(action)
 
-  const ch = await charge({
-    supabase, userId: user.id, action, amount,
+  const purposeKey = purpose ?? "generic"
+  const rec = await recordFreeUsage({
+    supabase, userId: user.id, action, purpose: purposeKey,
+    dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
     metadata: { model, purpose: purpose ?? null },
   })
-  if (!ch.ok) {
-    if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
-      return insufficientCreditsResponse(cors())
-    }
-    return errorResponse(500, "charge failed", ch.detail)
+  if (!rec.ok) {
+    if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
+    return errorResponse(500, "usage record failed", rec.detail)
   }
 
   const endpoint = stream
@@ -71,11 +99,8 @@ Deno.serve(async (req) => {
   )
 
   if (!upstream.ok) {
-    await refund({
-      supabase, userId: user.id, amount, action,
-      sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
-      metadata: { reason: "upstream_error", status: upstream.status },
-    })
+    // Nothing was charged, so there is nothing to refund. The 0-delta ledger
+    // row stays — a failed upstream call is still a call worth counting.
     const detail = await upstream.text()
     return errorResponse(upstream.status, "gemini upstream error", detail.slice(0, 500))
   }
@@ -90,7 +115,6 @@ Deno.serve(async (req) => {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         "X-Gemini-Stream": "sse",
-        "X-Credits-Balance": String(ch.balanceAfter),
         ...cors(),
       },
     })
@@ -101,7 +125,6 @@ Deno.serve(async (req) => {
     status: 200,
     headers: {
       "Content-Type": "application/json",
-      "X-Credits-Balance": String(ch.balanceAfter),
       ...cors(),
     },
   })

@@ -1,55 +1,50 @@
 import SwiftUI
 
-/// "What uses credits?" — the transparency page. Costs here MUST stay in
-/// sync with supabase/functions/_shared/credits.ts (priceFor): a mismatch
-/// between what we show and what we charge is a trust-breaker.
+/// "What uses talk time?" — the transparency page. The rules here MUST stay
+/// in sync with the server (talk-tick + elevenlabs-tts routing): a mismatch
+/// between what we show and what we meter is a trust-breaker.
+///
+/// The model in one line: the meter runs only while you're talking (the
+/// in-call clock) or watching a scene play in your voice. Everything else —
+/// review, browsing, tapping around — is free.
 struct CreditGuideView: View {
     var body: some View {
         List {
             Section {
-                costRow(icon: "bubble.left.and.bubble.right.fill",
-                        title: "Conversation turn", cost: "~3",
-                        detail: "Your future voice's reply (voice + AI). A 10-minute talk is roughly 45 credits.")
+                costRow(icon: "phone.fill",
+                        title: "Talking", cost: "clock time",
+                        detail: "The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.")
                 costRow(icon: "play.circle.fill",
-                        title: "Watch dialogue", cost: "~10",
-                        detail: "Generating one full scenario dialogue in your voice.")
-                costRow(icon: "waveform.badge.mic",
-                        title: "New shadow line", cost: "1",
-                        detail: "Only for lines never spoken before. Lines from your conversations align on-device for free.")
-                costRow(icon: "doc.text.fill",
-                        title: "Session summary", cost: "2",
-                        detail: "The scorecard and drill cards after each talk.")
-                costRow(icon: "chart.line.uptrend.xyaxis",
-                        title: "Weekly report", cost: "5",
-                        detail: "When enough speaking time has accumulated.")
+                        title: "Watching a scene", cost: "~1 min",
+                        detail: "A scene costs its playback length in your voice — about a minute. Re-watching a saved scene generates a fresh take.")
                 costRow(icon: "person.wave.2.fill",
-                        title: "Voice clone", cost: "5",
-                        detail: "One-time, at setup. Re-recording costs the same.")
+                        title: "Re-cloning your voice", cost: "~1 min",
+                        detail: "Setup is free, including re-records in the first day. Later re-records cost a little.")
             } header: {
-                Text("Uses credits")
+                Text("Uses talk time")
             } footer: {
-                Text(explain("1 credit ≈ 100 characters spoken in your voice."))
+                Text(explain("Only new audio in your voice uses your minutes. The meter never runs outside a call or a scene."))
             }
 
             Section {
-                freeRow(icon: "repeat", title: "Replaying shadow lines",
-                        detail: "Audio is cached — loop and slow down as much as you want.")
-                freeRow(icon: "rectangle.stack.fill", title: "Review drills",
-                        detail: "Spaced repetition and speak-aloud grading run on your device.")
-                freeRow(icon: "play.rectangle.on.rectangle", title: "Re-listening Watch dialogues",
-                        detail: "Generated once, then cached.")
+                freeRow(icon: "rectangle.stack.fill", title: "All reviewing",
+                        detail: "Drills, shadowing (including coach feedback), word and expression playback — every review surface is free.")
+                freeRow(icon: "repeat", title: "Replays",
+                        detail: "Anything already synthesized is cached — loop it, slow it down, replay whole talks.")
+                freeRow(icon: "wand.and.stars", title: "Summaries & reports",
+                        detail: "Session scorecards, weekly reports, and the daily call are on the house.")
+                freeRow(icon: "square.grid.2x2", title: "Exploring",
+                        detail: "Building situations, browsing topics, translations, dictionaries — tap freely, nothing here is metered.")
                 freeRow(icon: "text.book.closed.fill", title: "Vocabulary & progress",
                         detail: "The word cloud, CEFR estimate, and stats never cost anything.")
-                freeRow(icon: "bookmark.fill", title: "Saved lines",
-                        detail: "Saving and browsing your archive is free.")
             } header: {
                 Text("Always free")
             } footer: {
-                Text(explain("In short: creating new audio in your voice costs credits. Practicing with what already exists doesn't."))
+                Text(explain("In short: minutes buy speaking time with your fluent self. Practicing with what already exists is always free."))
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("What uses credits?")
+        .navigationTitle("What uses talk time?")
         .navigationBarTitleDisplayMode(.inline)
     }
 

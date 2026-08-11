@@ -17,9 +17,31 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { chargePooledTTS, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
+         insufficientCreditsResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-tts"
+
+// REVIEW surfaces synthesize free (2026-08 free-learning-loop change): short
+// lines, cached forever client-side after first synthesis, and their material
+// only exists as the output of metered talk/scene activity — so the volume is
+// structurally bounded. Each call still burns the user's daily free-char pool
+// (charge_tts_free_pooled) and falls through to the PAID pooled charge past
+// it, which is what makes spoofing one of these tags pointless. Metered
+// purposes (turn / scene / opener) never touch the free pool.
+const FREE_PURPOSES = new Set([
+  "drill",          // SRS card + enrichment example playback
+  "library",        // vocabulary / expressions dictionaries
+  "shadow",         // first synthesis of a shadow line (with timestamps)
+  "voice_preview",  // counterpart preset voice preview
+  "daily-call",     // voicemail — the retention hook is on us, not the user
+])
+
+// TALK surfaces meter by wall-clock call time (talk-tick), so their TTS is
+// free under a chars-per-talk-minute floor (charge_turn_tts_floored) — the
+// floor is what makes under-reporting call time pointless. Includes the
+// free-talk greeting prewarm, which the floor's 2-minute grace covers.
+const TALK_PURPOSES = new Set(["turn", "opener"])
 
 // Highest streaming PCM format known to work on this ElevenLabs plan, learned
 // by probing (pcm_44100 is Pro-tier; lower rates are open to all). Instance
@@ -69,22 +91,40 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
 
-  const action = body.with_timestamps ? "tts_timestamps" : "tts"
+  const timestamped = body.with_timestamps === true
+  // Watch scenes meter by playback time — a dedicated pooled action whose
+  // rate makes ~1 min of scene audio ≈ 4.5 cr, the same scale as a talk
+  // minute. Scenes never use the timestamps endpoint; if one ever did, it
+  // falls back to the normal timestamps price.
+  const action = timestamped ? "tts_timestamps"
+    : body.purpose === "scene" ? "tts_scene"
+    : "tts"
   // Onboarding greeting is free: it's the clone's first words, part of the
   // product's entry experience — not usage. Length-capped so the tag can't
   // be abused to smuggle real synthesis for free.
   const isFreeGreeting = body.purpose === "greeting" && body.text.length <= 120
 
   // Daily character pooling — credits debit only when the day's running
-  // char total crosses a 100-char boundary, so short lines stop costing a
-  // full minimum credit each. `ch.charged` is this call's exact debit.
+  // char total crosses a rate boundary, so short lines stop costing a full
+  // minimum credit each. Review purposes route through the FREE pool
+  // (0 credits inside the daily char budget, paid pooled past it); talk
+  // purposes are free under the talk-minute floor. `ch.charged` is this
+  // call's exact debit either way.
+  const chargeArgs = {
+    supabase, userId: user.id, chars: body.text.length,
+    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+    metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
+  }
+  const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
   const ch = isFreeGreeting
     ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
-    : await chargePooledTTS({
-        supabase, userId: user.id, action, chars: body.text.length,
-        sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-        metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
-      })
+    : FREE_PURPOSES.has(body.purpose ?? "")
+    ? await chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
+    : action === "tts_scene"
+    ? await chargePooledTTS({ ...chargeArgs, action: "tts_scene" })
+    : TALK_PURPOSES.has(body.purpose ?? "")
+    ? await chargeTurnTTSFloored({ ...chargeArgs, action: baseAction })
+    : await chargePooledTTS({ ...chargeArgs, action: baseAction })
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
       return insufficientCreditsResponse(cors())

@@ -1,9 +1,43 @@
 # Billing & pricing — source of truth
 
-> Status: **2026-07-26 — decided for launch.**  
+> Status: **2026-08-11 — pivoting to the minutes model (below). Phase 1 live.**  
 > Owner: product/marketing. Ops (ElevenLabs tier) is separate — upgrade EL
 > whenever real beta/paid usage warrants it; do not let capacity math block
 > product or pricing decisions.
+
+---
+
+## 2026-08-11 revision — credits → minutes
+
+Beta feedback was unanimous: per-click credit charges ("복습만 해도 6~10씩
+사라져서… 클릭 한 번도 고민하게 되고 며칠 손을 놓았습니다") created taximeter
+anxiety on exactly the behaviours the app needs daily — review and
+exploration. The meter also sat in the wrong place: the click-fear surfaces
+were Gemini calls (~$0.002 real cost charged at 1 cr ≈ $0.04), while the real
+cost (TTS characters) drained invisibly (scene playback, post-call automatic
+spend). New model:
+
+**Meter ONE thing — talk time — where the user already expects a meter.
+Everything else is free, defended by invisible daily caps.**
+
+| Phase | What | Status |
+|-------|------|--------|
+| **1. Free the loop** (server-only, no app update) | All Gemini purposes → 0 credits, per-purpose daily request caps (`record_free_usage`). Review TTS (drill/library/shadow/voice_preview/daily-call) free inside a 12k-chars/day pool, falling through to the paid pooled charge past it (`charge_tts_free_pooled`) so purpose-spoofing gains at most the pool. 0-delta ledger rows keep attribution. Migration `20260811100000_free_learning_loop`. | **Shipped** |
+| **2. Minutes metering** | Talk debits **wall-clock active-call time** (the in-call timer IS the price; server floor `max(reported seconds, TTS chars ÷ 750 × 60)` against under-reporting clients). Watch scenes debit their audio length (≈1 min each). Conversion from credits: **4.5 cr = 1 min**. | Planned |
+| **3. Tiers & naming** | Tier = quantity, not features, and names say so: **데일리 / Daily** (€9.99, 5 min/day, resets midnight — the name and the habit anchor agree) and **무제한 / Unlimited** (€19.99, fair-use, invisible 60 min/day ceiling, NO meter UI at all). Apple product IDs (`pro_*`/`premium_*`) unchanged; display names only. Signup grant 300 cr → 66 min one-time pool. Beta balances convert at 4.5 cr/min. | Planned |
+
+Rationale in one line: flat-rate bias — subscription revenue comes from
+people who under-use, and a visible per-click meter destroys the willingness
+of exactly those people. Guardrails (caps) protect the tail; prices don't
+have to.
+
+What stays credit-priced until phase 2: TTS for `turn`/`scene`/`opener`
+purposes (pooled chars, as before) and voice re-clone (5 cr; first clone +
+24 h grace free). Onboarding greeting ≤120 chars stays free.
+
+> Sections below this line predate the revision — prices and free-tier
+> amounts still hold; the credit *charge table* semantics are superseded by
+> the phases above.
 
 ---
 

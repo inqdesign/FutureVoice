@@ -5,15 +5,15 @@
 // Returns: { text: string } (200)
 //
 // Why this is its own function instead of a "free purpose" on `gemini`:
-// same reason as `word-entry` — the prompts here are fixed server-side, so a
-// user CAN'T tag arbitrary generations (conversation turns, summaries) as
-// "translate" to dodge charges. The abuse surface left is volume, capped by a
-// per-user hourly limit (translation_log).
+// the prompts here are fixed server-side (same reason as `word-entry`), and
+// it predates the 2026-08 free-learning-loop change that made every `gemini`
+// purpose free anyway. It stays separate for the server-side prompt guarantee
+// and its own volume cap (translation_log).
 //
 // Why free at all: these ran through the credit-gated `gemini` function at
-// priceFor("gemini") = 1 credit — the same price as a full conversation turn —
-// while the upstream cost on flash-lite is fractions of a cent. Users reviewing
-// their talks burned more credits on meaning-taps than on the talk itself.
+// 1 credit — the same price as a full conversation turn — while the upstream
+// cost on flash-lite is fractions of a cent. Users reviewing their talks
+// burned more credits on meaning-taps than on the talk itself.
 // Unlike word_entry there is NO shared cache: the inputs are the user's own
 // conversation lines, which must not become globally readable. The client
 // caches per-device instead (Translator.swift, memory + disk).

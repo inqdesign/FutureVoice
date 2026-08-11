@@ -17,14 +17,14 @@ struct InviteView: View {
         List {
             Section {
                 HStack {
-                    Label("Credits left", systemImage: "bolt.fill")
+                    Label("Talk time left", systemImage: "bolt.fill")
                     Spacer()
-                    Text("\(balance)")
+                    Text("\(Int(Double(balance) / AccountStatus.creditsPerMinute)) min")
                         .font(.headline).monospacedDigit()
                         .foregroundStyle(balance > 0 ? Color.primary : Color.orange)
                 }
             } footer: {
-                Text(explain("Credits power voice synthesis and AI replies. There's no subscription during the beta — invite friends to earn more."))
+                Text(explain("Minutes are talk time with your fluent self. There's no subscription during the beta — invite friends to earn more."))
             }
 
             Section {
@@ -56,7 +56,7 @@ struct InviteView: View {
             } header: {
                 Text("Your invite code")
             } footer: {
-                Text(explain("You and your friend each get 300 credits when they join with your code — for up to 10 friends."))
+                Text(explain("You and your friend each get about an hour of talk time when they join with your code — for up to 10 friends."))
             }
 
             Section {
@@ -84,10 +84,10 @@ struct InviteView: View {
             } header: {
                 Text("Have a code?")
             } footer: {
-                Text(explain("Enter a friend's code once to get 300 bonus credits."))
+                Text(explain("Enter a friend's code once for about an hour of bonus talk time."))
             }
         }
-        .navigationTitle("Invite & credits")
+        .navigationTitle("Invite & talk time")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if !loaded { loaded = true; await reload() }
@@ -95,7 +95,7 @@ struct InviteView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get bonus credits."
+        "I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get bonus talk time."
     }
 
     private func reload() async {
@@ -110,7 +110,7 @@ struct InviteView: View {
         defer { redeeming = false }
         do {
             balance = try await ReferralService.redeem(code: codeInput)
-            redeemMessage = "Redeemed — 300 credits added."
+            redeemMessage = "Redeemed — about an hour of talk time added."
             codeInput = ""
             referral = await ReferralService.fetchMine()
         } catch let err as ReferralService.RedeemError {

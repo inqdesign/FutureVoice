@@ -18,6 +18,11 @@ struct LevelHeaderTitle: View {
     /// Which surface's copy the sheet should use — Talk and Watch shape
     /// output differently, and the sheet must not overstate either.
     let surface: LevelInfoSheet.Surface
+    /// Remaining talk minutes, shown after the level for the last stretch of
+    /// a metered call (nil = hidden). Lives in the subtitle because the bar's
+    /// leading/trailing slots have no room: next to End it fused into one
+    /// "7 min End" button, and either side truncated in wider locales.
+    var minutesLeft: Int? = nil
 
     @State private var showingInfo = false
 
@@ -36,6 +41,17 @@ struct LevelHeaderTitle: View {
                     // wider than the level it explains.
                     Image(systemName: "chevron.right")
                         .font(.system(size: 8, weight: .semibold))
+                    if let minutesLeft {
+                        Text("·")
+                            .font(.caption2.weight(.semibold))
+                        Image(systemName: "clock")
+                            .font(.system(size: 8, weight: .semibold))
+                        Text("\(minutesLeft) min")
+                            .font(.caption2.weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(minutesLeft <= 3 ? AnyShapeStyle(.orange)
+                                                              : AnyShapeStyle(.secondary))
+                    }
                 }
                 .foregroundStyle(.secondary)
             }

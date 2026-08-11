@@ -24,8 +24,11 @@ import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supa
 export type ChargeableAction =
   | "tts"               // per ElevenLabs synthesis (no timestamps)
   | "tts_timestamps"    // with-timestamps endpoint (slightly more expensive)
+  | "tts_scene"         // Watch scene lines — priced by playback time (~850 chars ≈ 1 min ≈ 4.5 cr)
+  | "talk_time"         // wall-clock call seconds (talk-tick) — 4.5 cr/min
   | "voice_clone"       // /v1/voices/add — one-shot
   | "voice_delete"      // free — but we charge 0 so we get a ledger row
+  | "voice_remix"       // accent remix (previews + save) — free, daily-capped
   | "gemini"            // generateContent
   | "gemini_summary"    // summary at end of session — same engine, separate tag
   | "gemini_weekly"     // weekly report
@@ -56,19 +59,167 @@ export function priceFor(action: ChargeableAction, params: Record<string, unknow
       // upstream cost) and shadow learners value the per-word alignment.
       return Math.max(1, Math.ceil((chars * 1.25) / 100))
     }
+    case "tts_scene": {
+      // Playback-time rate: ~850 chars ≈ 1 min of speech ≈ 4.5 credits.
+      // (Pooled path is the real charge; this mirrors its long-run rate.)
+      const chars = typeof params.chars === "number" ? params.chars : 850
+      return Math.max(1, Math.ceil((chars * 53) / 10000))
+    }
+    // Priced inside charge_talk_seconds (4.5 cr/min crossings) — never
+    // through priceFor.
+    case "talk_time":       return 0
     case "voice_clone":     return 5
     case "voice_delete":    return 0
-    case "gemini":          return 1
-    case "gemini_summary":  return 2
-    case "gemini_weekly":   return 5
-    case "gemini_enrichment": return 1
-    // Free — charged 0 so we still get a ledger row. This runs ALONGSIDE the
-    // turn call (which already costs 1) purely so the reply doesn't wait on
-    // the audio; billing the learner twice for one turn would make the
-    // latency win cost them money. Upstream is flash-lite over a few seconds
-    // of audio with a tiny prompt, so we absorb it.
+    // Free by the same logic as the clone's onboarding grace: the accent pick
+    // is part of getting a voice the user believes is theirs, not usage.
+    // Bounded by recordFreeUsage daily caps in elevenlabs-voice-remix.
+    case "voice_remix":     return 0
+    // Every Gemini action is FREE since 2026-08 (the free-learning-loop
+    // change): upstream cost is ~$0.002/call vs the 1 credit (~$0.04) we
+    // charged, and the per-click charge was measurably scaring users out of
+    // review and exploration. Abuse is bounded by per-purpose daily request
+    // caps (recordFreeUsage) instead of prices. Ledger rows keep being
+    // written at 0 so per-feature attribution survives.
+    case "gemini":          return 0
+    case "gemini_summary":  return 0
+    case "gemini_weekly":   return 0
+    case "gemini_enrichment": return 0
     case "gemini_transcribe": return 0
   }
+}
+
+/**
+ * Record a free (0-credit) call against the caller's per-purpose daily cap
+ * (the `record_free_usage` SQL function). Writes the 0-delta ledger row for
+ * attribution; raises past the cap. Rate-capped, never priced.
+ */
+export async function recordFreeUsage(opts: {
+  supabase: SupabaseClient
+  userId: string
+  action: ChargeableAction
+  purpose: string
+  dailyCap: number
+  sourceFn: string
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<{ ok: true } | { ok: false; reason: "rate_limited" | "db_error"; detail?: string }> {
+  const { supabase, userId, action, purpose, dailyCap, sourceFn, idempotencyKey, metadata } = opts
+  const { error } = await supabase.rpc("record_free_usage", {
+    p_user_id: userId,
+    p_action: action,
+    p_purpose: purpose,
+    p_source_fn: sourceFn,
+    p_idempotency_key: idempotencyKey,
+    p_metadata: metadata ?? null,
+    p_daily_cap: dailyCap,
+  })
+  if (error) {
+    if (error.message?.includes("RATE_LIMITED")) {
+      return { ok: false, reason: "rate_limited", detail: error.message }
+    }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  return { ok: true }
+}
+
+/**
+ * TTS charge for REVIEW surfaces (drill / library / shadow / previews /
+ * voicemail): free inside a daily char budget, falling through to the normal
+ * paid pooled charge past it (`charge_tts_free_pooled`). The fall-through is
+ * what keeps `purpose` spoofing pointless — a client tagging conversation
+ * audio as "drill" gains at most the daily budget. `charged` is this call's
+ * exact debit (0 while free) — refund it if upstream fails.
+ */
+export async function chargeFreePooledTTS(opts: {
+  supabase: SupabaseClient
+  userId: string
+  action: "tts" | "tts_timestamps"
+  chars: number
+  sourceFn: string
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<ChargeResult | ChargeError> {
+  const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
+  const { data, error } = await supabase.rpc("charge_tts_free_pooled", {
+    p_user_id: userId,
+    p_chars: chars,
+    p_action: action,
+    p_source_fn: sourceFn,
+    p_idempotency_key: idempotencyKey,
+    p_metadata: metadata ?? null,
+  })
+  if (error) {
+    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
+      await recordDepletion(userId, sourceFn)
+      return { ok: false, reason: "insufficient_credits", detail: error.message }
+    }
+    if (error.message?.includes("NO_CREDIT_ROW")) {
+      return { ok: false, reason: "no_credit_row", detail: error.message }
+    }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  const parsed = data as { balance?: number; charged?: number }
+  return {
+    ok: true,
+    balanceAfter: parsed?.balance ?? -1,
+    charged: parsed?.charged ?? 0,
+    idempotencyKey,
+  }
+}
+
+/**
+ * TTS charge for TALK surfaces (turn / opener): free while the day's chars
+ * stay under the chars-per-talk-minute floor tied to `talk-tick` seconds
+ * (`charge_turn_tts_floored`) — the audio is covered by the ticking minutes.
+ * Past the floor (a client feeding TTS while under-reporting call time) the
+ * whole call falls through to the paid pooled charge. `charged` is this
+ * call's exact debit (0 while free) — refund it if upstream fails.
+ */
+export async function chargeTurnTTSFloored(opts: {
+  supabase: SupabaseClient
+  userId: string
+  action: "tts" | "tts_timestamps"
+  chars: number
+  sourceFn: string
+  idempotencyKey: string
+  metadata?: Record<string, unknown>
+}): Promise<ChargeResult | ChargeError> {
+  const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
+  const { data, error } = await supabase.rpc("charge_turn_tts_floored", {
+    p_user_id: userId,
+    p_chars: chars,
+    p_action: action,
+    p_source_fn: sourceFn,
+    p_idempotency_key: idempotencyKey,
+    p_metadata: metadata ?? null,
+  })
+  if (error) {
+    if (error.message?.includes("INSUFFICIENT_CREDITS")) {
+      await recordDepletion(userId, sourceFn)
+      return { ok: false, reason: "insufficient_credits", detail: error.message }
+    }
+    if (error.message?.includes("NO_CREDIT_ROW")) {
+      return { ok: false, reason: "no_credit_row", detail: error.message }
+    }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  const parsed = data as { balance?: number; charged?: number }
+  return {
+    ok: true,
+    balanceAfter: parsed?.balance ?? -1,
+    charged: parsed?.charged ?? 0,
+    idempotencyKey,
+  }
+}
+
+export function rateLimitedResponse(corsHeaders: HeadersInit): Response {
+  return new Response(
+    JSON.stringify({
+      error: "rate_limited",
+      message: "Daily limit reached for this feature. It resets at midnight UTC.",
+    }),
+    { status: 429, headers: { "Content-Type": "application/json", ...corsHeaders } },
+  )
 }
 
 export interface ChargeResult {
@@ -134,7 +285,7 @@ export async function charge(opts: {
 export async function chargePooledTTS(opts: {
   supabase: SupabaseClient
   userId: string
-  action: "tts" | "tts_timestamps"
+  action: "tts" | "tts_timestamps" | "tts_scene"
   chars: number
   sourceFn: string
   idempotencyKey: string

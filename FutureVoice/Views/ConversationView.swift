@@ -35,6 +35,10 @@ struct ConversationView: View {
     /// The last failure was a 402 — the user is out of credits. Retry is
     /// pointless until they top up, so the recovery UI leads with the paywall.
     @State private var outOfCredits = false
+    /// Wall-clock talk metering (4.5 cr/min via `talk-tick`). Started when
+    /// the call seat opens, stopped on end/teardown; its 402 ends the call
+    /// gracefully through the same out-of-credits alert as a turn failure.
+    @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
     /// Unified beta feedback modal — set to a milestone to present it.
     @State private var feedbackContext: BetaFeedbackSheet.Context?
@@ -272,6 +276,20 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
+                // The in-call meter: wall-clock seconds tick to the server
+                // for the whole life of the seat. When the balance runs out
+                // mid-call the mic closes and the same out-of-credits alert
+                // a failed turn uses leads to the paywall — the line the
+                // fluent self is currently speaking is allowed to finish.
+                meter.onWallHit = {
+                    guard !isTornDown else { return }
+                    cancelSilenceTimer()
+                    if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+                    if phase == .listening || phase == .thinking { phase = .idle }
+                    outOfCredits = true
+                    error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                }
+                meter.start(sessionId: sessionId)
                 HapticEngine.phoneCallStarted()
                 Analytics.capture("conversation_started", [
                     "origin": sessionOrigin.rawValue,
@@ -357,9 +375,14 @@ struct ConversationView: View {
         // at. Replaces `.navigationTitle` — a principal item is the only way
         // to get a second line into an inline bar.
         ToolbarItem(placement: .principal) {
+            // `minutesLeft` stays nil (hidden) while there's plenty of talk
+            // time — a visible meter is exactly the anxiety the minutes model
+            // removed. The clock joins the subtitle for the last stretch so
+            // the wall never lands as a surprise.
             LevelHeaderTitle(title: topic.isEmpty ? "Let's talk" : topic,
                              level: appState.proficiency,
-                             surface: .talk)
+                             surface: .talk,
+                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil })
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -769,14 +792,20 @@ struct ConversationView: View {
                 // the texts repeat verbatim, the TTS content cache makes the
                 // voice free after each line's first play.
                 opener = canned
-            } else if topic.isEmpty, counterpart == nil,
-                      let generated = try? await FreeTalkOpeners.shared.generatePool(
-                          language: appState.targetLanguage,
-                          personaName: appState.persona?.displayName,
-                          proficiency: appState.proficiency) {
-                // First free talk (or language/persona changed): ONE call
-                // writes the whole pool; later sessions rotate through it.
-                opener = generated
+            } else if topic.isEmpty, counterpart == nil {
+                // First free talk (or language/persona changed — no pool
+                // yet): the bundled line opens the call NOW instead of
+                // holding the greeting hostage to a live Gemini call; the
+                // pool is written in the background for every later session.
+                opener = FreeTalkOpeners.fallbackOpener(language: appState.targetLanguage)
+                let language = appState.targetLanguage
+                let personaName = appState.persona?.displayName
+                let proficiency = appState.proficiency
+                Task.detached(priority: .utility) {
+                    _ = try? await FreeTalkOpeners.shared.generatePool(
+                        language: language, personaName: personaName,
+                        proficiency: proficiency)
+                }
             } else if let sid = sessionScenarioId,
                       let stored = appState.nextScenarioOpener(for: sid) {
                 // Scenario talk with a stored opener pool: rotate — instant
@@ -1658,6 +1687,8 @@ struct ConversationView: View {
     private func endSession() async {
         guard !turns.isEmpty else { return }
         phoneCallActive = false
+        // The call is over — summary generation isn't talk time.
+        meter.stop()
         cancelSilenceTimer()
         // If a call is still live, stop the mic/playback so the overlay isn't
         // fighting an open recording while the summary generates.
@@ -1745,6 +1776,7 @@ struct ConversationView: View {
         isTornDown = true
         if phoneCallActive { HapticEngine.phoneCallEnded() }
         phoneCallActive = false
+        meter.stop()
         cancelSilenceTimer()
         // The transcription runs on its own clock and can outlive the screen —
         // it must not keep uploading (or write into `turns`) after the call
@@ -1768,6 +1800,7 @@ struct ConversationView: View {
         phase = .idle
         if !topic.isEmpty {
             phoneCallActive = true   // stay in phone-call mode for continuity
+            meter.start(sessionId: sessionId)   // fresh session, fresh tick keys
             Task { await openConversation() }
         }
     }

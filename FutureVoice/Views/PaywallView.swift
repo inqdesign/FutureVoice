@@ -87,7 +87,7 @@ struct PaywallView: View {
         .alert("You're in", isPresented: purchasedBinding) {
             Button("Done") { dismiss() }
         } message: {
-            Text(explain("Your subscription is active. Credits land on your account as soon as Apple confirms the purchase."))
+            Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
         }
         .alert("Purchase failed", isPresented: failedBinding) {
             Button("OK") { store.purchaseState = .idle }
@@ -304,7 +304,7 @@ struct PaywallView: View {
                 .padding(.top, 12)
 
             if showsSurvey {
-                Label("You're in the beta — subscriptions aren't live yet. Your starting credits are final, but reviewing always stays free. Tell us what you'd want at launch on the next step.",
+                Label("You're in the beta — subscriptions aren't live yet. Your starting talk time is final, but reviewing always stays free. Tell us what you'd want at launch on the next step.",
                       systemImage: "info.circle")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -316,13 +316,15 @@ struct PaywallView: View {
             .pickerStyle(.segmented)
 
             VStack(spacing: 14) {
+                // Tier = amount of talk time, not features — the names say
+                // the quantity so the plans read as phone-plan sizes.
                 planCard(tier: "premium",
-                         name: "Premium",
-                         blurb: "Daily immersion in your voice — talks, Watch scenes, and shadowing without watching the meter.",
+                         name: "Unlimited",
+                         blurb: "Talk as much as you want — calls, Watch scenes, and shadowing without watching a meter.",
                          badge: "Best for launch")
                 planCard(tier: "pro",
-                         name: "Pro",
-                         blurb: "A light daily habit — enough for a short talk most days.",
+                         name: "Daily",
+                         blurb: "A light daily habit — about five minutes of talk a day.",
                          badge: nil)
             }
 
@@ -338,7 +340,7 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(explain("Credits power new voice synthesis and AI calls, and refill every cycle. Replays, drills, and progress stay free forever."))
+            Text(explain("Your minutes buy talk time with your fluent self, and refill every cycle. Reviewing, replays, drills, and progress stay free forever."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -368,9 +370,8 @@ struct PaywallView: View {
         }
     }
 
-    /// Rough conversation time per day this plan buys. A 10-minute talk costs
-    /// ~45 credits (the CreditGuideView numbers, which mirror the server's
-    /// priceFor) → ~4.5 credits per spoken minute.
+    /// Talk time per day this plan buys, at the server's metering rate
+    /// (`charge_talk_seconds`, mirrored by `AccountStatus.creditsPerMinute`).
     private func dailyTalkMinutes(credits: Int) -> Int {
         let days: Double
         switch period {
@@ -378,7 +379,7 @@ struct PaywallView: View {
         case .monthly: days = 30
         case .annual:  days = 365
         }
-        return max(1, Int((Double(credits) / days / 4.5).rounded()))
+        return max(1, Int((Double(credits) / days / AccountStatus.creditsPerMinute).rounded()))
     }
 
     private func option(tier: String) -> StoreKitService.PlanOption? {
@@ -437,12 +438,13 @@ struct PaywallView: View {
                 Text(blurb).font(.subheadline).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline) {
                     if let credits = opt?.plan.credits_per_cycle {
-                        // Lead with what the credits MEAN — minutes of talking
-                        // per day — and keep the raw number as the detail.
+                        // Lead with minutes per day; total minutes per cycle
+                        // as the detail. (Server plans still store credits —
+                        // 4.5 per minute — until the catalog moves over.)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("≈ \(dailyTalkMinutes(credits: credits)) min of conversation a day")
+                            Text("≈ \(dailyTalkMinutes(credits: credits)) min of talk a day")
                                 .font(.footnote.weight(.semibold))
-                            Text("\(credits.formatted()) credits / \(period.cycleNoun)")
+                            Text("\(Int(Double(credits) / AccountStatus.creditsPerMinute).formatted()) min / \(period.cycleNoun)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -498,11 +500,11 @@ struct PaywallView: View {
             surveyGroup("Which plan?") {
                 VStack(spacing: 10) {
                     surveyTierRow(tier: "premium",
-                                  name: "Premium",
-                                  detail: "Daily immersion — ~15 min of talk a day")
+                                  name: "Unlimited",
+                                  detail: "Talk as much as you want, every day")
                     surveyTierRow(tier: "pro",
-                                  name: "Pro",
-                                  detail: "Light habit — a short talk most days")
+                                  name: "Daily",
+                                  detail: "Light habit — ~5 min of talk a day")
                     surveyTierRow(tier: "none",
                                   name: "Neither",
                                   detail: "Too expensive or not for me")
