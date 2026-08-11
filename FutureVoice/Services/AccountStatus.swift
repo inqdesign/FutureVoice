@@ -48,22 +48,22 @@ struct AccountStatus {
     /// and the pro tier's `subscription_plans.daily_seconds`.
     static let dailyPlanMinutes = 5
 
-    /// Entitled to the Daily tier (plan ids `pro_*`) — the plan whose daily
+    /// Entitled to the Daily tier (plan ids `daily_*`) — the plan whose daily
     /// allowance doubles as the day's talk goal: the home ring's target
     /// becomes the 5 minutes the plan buys, so "goal met" and "today's
     /// minutes used" are the same event instead of two competing numbers.
     var isDailyPlan: Bool {
-        isEntitled && (planId?.hasPrefix("pro") ?? false)
+        isEntitled && (planId?.hasPrefix("daily") ?? false)
     }
 
-    /// Entitled to the Unlimited tier (plan ids `premium_*`). These accounts
+    /// Entitled to the Unlimited tier (plan ids `unlimited_*`). These accounts
     /// never see a minutes target: a goal number next to "Unlimited" reads
     /// as a cap, so the home ring's text counts UP instead ("12 min today",
     /// no "of N"). Deliberately does NOT include the admin `unlimited` flag —
     /// that account exists to watch real burn, so it sees what a free user
     /// sees (avatar ring included).
     var isUnlimitedPlan: Bool {
-        isEntitled && (planId?.hasPrefix("premium") ?? false)
+        isEntitled && (planId?.hasPrefix("unlimited") ?? false)
     }
 
     /// Seconds this account can still speak — today's allowance remainder
@@ -120,9 +120,7 @@ struct AccountStatus {
         guard isEntitled, let planId else { return "Free" }
         let parts = planId.split(separator: "_")
         let tier = parts.first.map(String.init) ?? planId
-        let name = tier == "premium" ? "Unlimited"
-                 : tier == "pro" ? "Daily"
-                 : tier.capitalized
+        let name = tier.capitalized    // 'daily' → "Daily", 'unlimited' → "Unlimited"
         let period = parts.dropFirst().first?.capitalized ?? ""
         return period.isEmpty ? name : "\(name) \(period)"
     }

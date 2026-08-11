@@ -608,23 +608,23 @@ footer a:hover { color: var(--ink); }
   </div>
   <div class="plans rv" style="--d:0.2s">
     <div class="plan">
-      <div><span class="p-name">Pro</span></div>
-      <div class="p-price" data-price="pro">—</div>
-      <div class="p-credits" data-credits="pro">—</div>
-      <p class="p-note">매일의 대화·샤도잉·복습 습관에 맞는 플랜입니다.</p>
-      <button class="btn btn-black p-buy" data-tier="pro" type="button">구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+      <div><span class="p-name">데일리</span></div>
+      <div class="p-price" data-price="daily">—</div>
+      <div class="p-credits" data-credits="daily">—</div>
+      <p class="p-note">하루 5분, 가볍게 매일 말하는 습관에 맞는 플랜입니다.</p>
+      <button class="btn btn-black p-buy" data-tier="daily" type="button">구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
-      <div><span class="p-name">Premium</span><span class="p-badge">인기</span></div>
-      <div class="p-price" data-price="premium">—</div>
-      <div class="p-credits" data-credits="premium">—</div>
-      <p class="p-note">더 긴 통화, 더 많은 대화 생성이 필요한 분들을 위한 플랜입니다.</p>
-      <button class="btn btn-black p-buy" data-tier="premium" type="button">구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+      <div><span class="p-name">무제한</span><span class="p-badge">인기</span></div>
+      <div class="p-price" data-price="unlimited">—</div>
+      <div class="p-credits" data-credits="unlimited">—</div>
+      <p class="p-note">미터 걱정 없이 마음껏 통화하고 싶은 분들을 위한 플랜입니다.</p>
+      <button class="btn btn-black p-buy" data-tier="unlimited" type="button">구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
-    <p class="p-fine">앱에서 쓰는 것과 같은 Apple 계정으로 로그인하면, 구독이 iPhone에 자동으로 적용됩니다. 크레딧은 대화·음성 생성·샤도잉에 사용됩니다. 언제든 해지할 수 있습니다.</p>
+    <p class="p-fine">앱에서 쓰는 것과 같은 Apple 계정으로 로그인하면, 구독이 iPhone에 자동으로 적용됩니다. 통화 시간만 차감되고, 복습·드릴·다시보기는 무제한 무료입니다. 언제든 해지할 수 있습니다.</p>
   </div>
 </section>
 
@@ -800,16 +800,16 @@ const BILLING = {
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
-// Locked launch prices — keep in sync with docs/launch-billing.md
-// (annual credits = exactly 12× monthly; "2 months free" is the sticker only).
+// Locked launch prices — keep in sync with docs/launch-billing.md.
+// Minutes-native: a plan buys a per-day talk allowance, not credits.
 const PLANS = {
-  pro: {
-    monthly: { id: "pro_monthly",     price: "€9.99",   per: "/ 월", credits: "월 500 크레딧" },
-    annual:  { id: "pro_annual",      price: "€79.99",  per: "/ 년",  credits: "연 6,000 크레딧" },
+  daily: {
+    monthly: { id: "daily_monthly",     price: "€9.99",   per: "/ 월", credits: "매일 5분 통화" },
+    annual:  { id: "daily_annual",      price: "€79.99",  per: "/ 년",  credits: "매일 5분 통화" },
   },
-  premium: {
-    monthly: { id: "premium_monthly", price: "€19.99",  per: "/ 월", credits: "월 1,500 크레딧" },
-    annual:  { id: "premium_annual",  price: "€199.99", per: "/ 년",  credits: "연 18,000 크레딧" },
+  unlimited: {
+    monthly: { id: "unlimited_monthly", price: "€19.99",  per: "/ 월", credits: "무제한 통화" },
+    annual:  { id: "unlimited_annual",  price: "€199.99", per: "/ 년",  credits: "무제한 통화" },
   },
 }
 
@@ -835,7 +835,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   function baseUrl() { return location.origin + location.pathname }
 
   function render() {
-    for (const tier of ["pro", "premium"]) {
+    for (const tier of ["daily", "unlimited"]) {
       const p = PLANS[tier][cycle]
       document.querySelector(`[data-price="${tier}"]`).innerHTML =
         p.price + ' <span>' + p.per + "</span>"

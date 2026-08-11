@@ -608,18 +608,18 @@ footer a:hover { color: var(--ink); }
   </div>
   <div class="plans rv" style="--d:0.2s">
     <div class="plan">
-      <div><span class="p-name">Pro</span></div>
-      <div class="p-price" data-price="pro">—</div>
-      <div class="p-credits" data-credits="pro">—</div>
+      <div><span class="p-name">Daily</span></div>
+      <div class="p-price" data-price="daily">—</div>
+      <div class="p-credits" data-credits="daily">—</div>
       <p class="p-note">For a steady daily habit — conversations, shadowing, and review.</p>
-      <button class="btn btn-black p-buy" data-tier="pro" type="button">Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+      <button class="btn btn-black p-buy" data-tier="daily" type="button">Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
-      <div><span class="p-name">Premium</span><span class="p-badge">POPULAR</span></div>
-      <div class="p-price" data-price="premium">—</div>
-      <div class="p-credits" data-credits="premium">—</div>
+      <div><span class="p-name">Unlimited</span><span class="p-badge">POPULAR</span></div>
+      <div class="p-price" data-price="unlimited">—</div>
+      <div class="p-credits" data-credits="unlimited">—</div>
       <p class="p-note">For heavy daily use — longer calls, more dialogues, more drills.</p>
-      <button class="btn btn-black p-buy" data-tier="premium" type="button">Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+      <button class="btn btn-black p-buy" data-tier="unlimited" type="button">Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
   <div class="inner">
@@ -802,13 +802,13 @@ const BILLING = {
 // Locked launch prices — keep in sync with docs/launch-billing.md
 // (annual credits = exactly 12× monthly; "2 months free" is the sticker only).
 const PLANS = {
-  pro: {
-    monthly: { id: "pro_monthly",     price: "€9.99",   per: "/ month", credits: "500 credits / month" },
-    annual:  { id: "pro_annual",      price: "€79.99",  per: "/ year",  credits: "6,000 credits / year" },
+  daily: {
+    monthly: { id: "daily_monthly",     price: "€9.99",   per: "/ month", credits: "5 min of talk a day" },
+    annual:  { id: "daily_annual",      price: "€79.99",  per: "/ year",  credits: "5 min of talk a day" },
   },
-  premium: {
-    monthly: { id: "premium_monthly", price: "€19.99",  per: "/ month", credits: "1,500 credits / month" },
-    annual:  { id: "premium_annual",  price: "€199.99", per: "/ year",  credits: "18,000 credits / year" },
+  unlimited: {
+    monthly: { id: "unlimited_monthly", price: "€19.99",  per: "/ month", credits: "Unlimited talk" },
+    annual:  { id: "unlimited_annual",  price: "€199.99", per: "/ year",  credits: "Unlimited talk" },
   },
 }
 
@@ -834,7 +834,7 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
   function baseUrl() { return location.origin + location.pathname }
 
   function render() {
-    for (const tier of ["pro", "premium"]) {
+    for (const tier of ["daily", "unlimited"]) {
       const p = PLANS[tier][cycle]
       document.querySelector(`[data-price="${tier}"]`).innerHTML =
         p.price + ' <span>' + p.per + "</span>"

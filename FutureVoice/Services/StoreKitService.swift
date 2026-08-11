@@ -16,8 +16,8 @@ import Supabase
 final class StoreKitService: ObservableObject {
 
     struct DBPlan: Decodable, Identifiable {
-        let id: String                 // 'pro_monthly'
-        let tier: String               // 'pro' | 'premium'
+        let id: String                 // 'daily_monthly'
+        let tier: String               // 'daily' | 'unlimited'
         let period: String             // 'weekly' | 'monthly' | 'annual'
         let daily_seconds: Int?        // per-day talk allowance (minutes-native model)
         let apple_product_id: String
@@ -39,19 +39,19 @@ final class StoreKitService: ObservableObject {
         // KRW App Store–style points for the locked EUR list prices in
         // docs/launch-billing.md. Live StoreKit localizes once products ship.
         static let plannedPrice: [String: String] = [
-            "pro_monthly":     "₩14,000",
-            "pro_annual":      "₩119,000",
-            "premium_monthly": "₩29,000",
-            "premium_annual":  "₩299,000",
+            "daily_monthly":     "₩14,000",
+            "daily_annual":      "₩119,000",
+            "unlimited_monthly": "₩29,000",
+            "unlimited_annual":  "₩299,000",
         ]
 
         /// Numeric price for math (annual-vs-monthly savings). Live products
         /// carry `product.price`; the fallback mirrors `plannedPrice`.
         static let plannedPriceValue: [String: Decimal] = [
-            "pro_monthly":     14_000,
-            "pro_annual":      119_000,
-            "premium_monthly": 29_000,
-            "premium_annual":  299_000,
+            "daily_monthly":     14_000,
+            "daily_annual":      119_000,
+            "unlimited_monthly": 29_000,
+            "unlimited_annual":  299_000,
         ]
 
         var priceValue: Decimal? { product?.price ?? PlanOption.plannedPriceValue[plan.id] }

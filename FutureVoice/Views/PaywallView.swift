@@ -19,11 +19,11 @@ struct PaywallView: View {
 
     @State private var step: Step = .pitch
     @State private var period: PlanPeriod = .annual
-    @State private var selectedTier: String = "premium"
+    @State private var selectedTier: String = "unlimited"
 
     // Beta subscription-preference survey (last step while `BetaConfig.isBeta`).
     // Answers are folded into one `beta_reviews` row so no migration is needed.
-    @State private var surveyTier: String = "premium"      // premium | pro | none
+    @State private var surveyTier: String = "unlimited"    // unlimited | daily | none
     @State private var surveyPeriod: PlanPeriod = .monthly
     @State private var surveyComment: String = ""
     @State private var surveySubmitting = false
@@ -318,11 +318,11 @@ struct PaywallView: View {
             VStack(spacing: 14) {
                 // Tier = amount of talk time, not features — the names say
                 // the quantity so the plans read as phone-plan sizes.
-                planCard(tier: "premium",
+                planCard(tier: "unlimited",
                          name: "Unlimited",
                          blurb: "Talk as much as you want — calls, Watch scenes, and shadowing without watching a meter.",
                          badge: "Best for launch")
-                planCard(tier: "pro",
+                planCard(tier: "daily",
                          name: "Daily",
                          blurb: "A light daily habit — about five minutes of talk a day.",
                          badge: nil)
@@ -486,10 +486,10 @@ struct PaywallView: View {
 
             surveyGroup("Which plan?") {
                 VStack(spacing: 10) {
-                    surveyTierRow(tier: "premium",
+                    surveyTierRow(tier: "unlimited",
                                   name: "Unlimited",
                                   detail: "Talk as much as you want, every day")
-                    surveyTierRow(tier: "pro",
+                    surveyTierRow(tier: "daily",
                                   name: "Daily",
                                   detail: "Light habit — ~5 min of talk a day")
                     surveyTierRow(tier: "none",
