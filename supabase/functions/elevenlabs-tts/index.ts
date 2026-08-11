@@ -18,7 +18,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
-         insufficientCreditsResponse } from "../_shared/credits.ts"
+         insufficientCreditsResponse, dailyCapResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-tts"
 
@@ -128,6 +128,9 @@ Deno.serve(async (req) => {
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
       return insufficientCreditsResponse(cors())
+    }
+    if (ch.reason === "daily_cap") {
+      return dailyCapResponse(cors())
     }
     return errorResponse(500, "charge failed", ch.detail)
   }

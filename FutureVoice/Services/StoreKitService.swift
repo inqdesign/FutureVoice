@@ -19,7 +19,7 @@ final class StoreKitService: ObservableObject {
         let id: String                 // 'pro_monthly'
         let tier: String               // 'pro' | 'premium'
         let period: String             // 'weekly' | 'monthly' | 'annual'
-        let credits_per_cycle: Int
+        let daily_seconds: Int?        // per-day talk allowance (minutes-native model)
         let apple_product_id: String
     }
 
@@ -102,7 +102,7 @@ final class StoreKitService: ObservableObject {
         do {
             plans = try await SupabaseProvider.shared
                 .from("subscription_plans")
-                .select("id,tier,period,credits_per_cycle,apple_product_id")
+                .select("id,tier,period,daily_seconds,apple_product_id")
                 .eq("is_active", value: true)
                 .execute()
                 .value

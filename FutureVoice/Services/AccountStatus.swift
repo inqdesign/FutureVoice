@@ -2,12 +2,13 @@ import Foundation
 import Supabase
 
 /// Server-side account/billing snapshot for the Me tab. The edge functions
-/// charge against `user_credits` / `user_subscriptions`; the client only
+/// meter against `user_credits` / `user_subscriptions`; the client only
 /// READS them for display — entitlement is never computed on-device.
 extension Error {
-    /// True when this failure is the server's 402 credit gate (from either
-    /// provider client). Screens use it to show the paywall instead of a
-    /// retry that can never succeed.
+    /// True when this failure is the server's 402 out-of-minutes gate (from
+    /// either provider client). Screens use it to show the paywall instead
+    /// of a retry that can never succeed. A subscriber's daily-cap 402 is
+    /// deliberately NOT this — that user already paid.
     var isOutOfCredits: Bool {
         if let g = self as? GeminiError, case .insufficientCredits = g { return true }
         if let e = self as? ElevenLabsError, case .insufficientCredits = e { return true }
@@ -17,14 +18,25 @@ extension Error {
 
 struct AccountStatus {
     var email: String?
-    var creditBalance: Int
+    /// SECONDS of talk left in the one-time free pool (the server's
+    /// `user_credits.balance`, seconds-native since 2026-08). Not what
+    /// entitles a subscriber — their plan buys a per-day allowance instead.
+    var secondsBalance: Int
     var planId: String?
     var subscriptionStatus: String    // 'trialing' | 'active' | 'grace' | 'expired' | 'inactive'
-    /// Admin/test accounts are charged for REAL but auto-reset to 500 when
-    /// they'd overdraw (server-side), so their traffic measures true spend.
-    /// The UI shows the live balance like anyone else's — watching it tick
-    /// down IS the point — and only the wall-related nudges are dropped.
+    /// Admin/test accounts are charged for REAL but auto-reset when they'd
+    /// overdraw (server-side), so their traffic measures true spend. The UI
+    /// shows the live balance like anyone else's — watching it tick down IS
+    /// the point — and only the wall-related nudges are dropped.
     var unlimited: Bool = false
+    /// Seconds of metered audio (talk + Watch scenes) consumed TODAY —
+    /// what's been used of a subscriber's daily allowance. From the
+    /// server's per-day pool; 0 when nothing ran today.
+    var secondsUsedToday: Int = 0
+    /// The plan's per-day allowance in seconds (300 for Daily, 3600 for
+    /// Unlimited), from `subscription_plans.daily_seconds`. Nil for free
+    /// users.
+    var dailyCapSeconds: Int?
 
     /// True while the subscription actually entitles (paid or in trial).
     var isEntitled: Bool {
@@ -32,7 +44,8 @@ struct AccountStatus {
     }
 
     /// The Daily plan's allowance, minutes per day. Keep in sync with the
-    /// plan catalog copy (PaywallView "about five minutes of talk a day").
+    /// plan catalog copy (PaywallView "about five minutes of talk a day")
+    /// and the pro tier's `subscription_plans.daily_seconds`.
     static let dailyPlanMinutes = 5
 
     /// Entitled to the Daily tier (plan ids `pro_*`) — the plan whose daily
@@ -53,34 +66,37 @@ struct AccountStatus {
         isEntitled && (planId?.hasPrefix("premium") ?? false)
     }
 
-    /// Server credit units per displayed talk minute — must mirror
-    /// `charge_talk_seconds` (4.5 credits / 60 s). Everything user-facing
-    /// speaks in minutes; credits stay a server-internal unit.
-    static let creditsPerMinute = 4.5
-
-    /// Whole talk minutes the balance still buys (floor).
-    var minutesRemaining: Int {
-        max(0, Int(Double(creditBalance) / Self.creditsPerMinute))
+    /// Seconds this account can still speak — today's allowance remainder
+    /// for subscribers, the one-time pool for everyone else.
+    var secondsRemaining: Int {
+        if isEntitled, let cap = dailyCapSeconds {
+            return max(0, cap - secondsUsedToday)
+        }
+        return max(0, secondsBalance)
     }
 
-    /// The free tier's full tank — the beta signup grant (300 credits ≈ 66
-    /// min).
-    static let freeGrantCredits = 300
-    /// The admin account's tank: the server auto-resets it to 500 when it
-    /// would overdraw, so 500 is what "full" means there.
-    static let adminResetCredits = 500
+    /// Whole talk minutes remaining (floor of `secondsRemaining`).
+    var minutesRemaining: Int {
+        secondsRemaining / 60
+    }
 
-    /// What a FULL ring means for this account, in credits — set per account
-    /// by `fetch()` (plan cycle grant for subscribers, 500 for admin, the
-    /// signup grant otherwise). A hardcoded 300 made the ring lie for any
-    /// account with a bigger tank.
-    var fullTankCredits: Int = freeGrantCredits
+    /// The free tier's full tank — the signup grant (3960 s = 66 min).
+    static let freeGrantSeconds = 3960
+    /// The admin account's tank: the server auto-resets it to 6600 s
+    /// (110 min) when it would overdraw, so that's what "full" means there.
+    static let adminResetSeconds = 6600
+
+    /// What a FULL ring means for this account, in seconds — set per account
+    /// by `fetch()` (daily allowance for subscribers, the auto-reset value
+    /// for admin, the signup grant otherwise). A hardcoded constant made the
+    /// ring lie for any account with a bigger tank.
+    var fullTankSeconds: Int = freeGrantSeconds
 
     /// 0…1 fraction of the tank remaining (clamped — referral bonuses can
-    /// push the balance past the reference; a full tank is the right story
-    /// there).
+    /// push a free balance past the reference; a full tank is the right
+    /// story there). For subscribers the "tank" is today's allowance.
     var talkTimeFraction: Double {
-        min(1, max(0, Double(creditBalance) / Double(max(1, fullTankCredits))))
+        min(1, max(0, Double(secondsRemaining) / Double(max(1, fullTankSeconds))))
     }
 
     /// 0…1 fraction of the tank USED — what the avatar ring draws: a fresh
@@ -88,6 +104,12 @@ struct AccountStatus {
     /// minutes are spent, like an activity gauge filling up.
     var talkTimeUsedFraction: Double {
         1 - talkTimeFraction
+    }
+
+    /// The tank in whole minutes — the denominator the learner needs to read
+    /// the ring: "58 min left" is meaningless without "of 66".
+    var tankMinutes: Int {
+        max(1, fullTankSeconds / 60)
     }
 
     /// "Free", or "Daily Monthly" / "Unlimited Annual" while the
@@ -112,10 +134,12 @@ struct AccountStatus {
         "\(minutesRemaining)"
     }
 
-    /// Below this, the plan card turns orange and nudges toward a top-up.
-    var isLowBalance: Bool { !unlimited && creditBalance <= 20 }
+    /// Below this, the plan card turns orange and nudges toward an upgrade.
+    /// Free users only — a subscriber's allowance refills at midnight, so
+    /// nudging a paying user toward money is wrong.
+    var isLowBalance: Bool { !unlimited && !isEntitled && secondsBalance <= 300 }
 
-    static let empty = AccountStatus(email: nil, creditBalance: 0,
+    static let empty = AccountStatus(email: nil, secondsBalance: 0,
                                      planId: nil, subscriptionStatus: "inactive")
 
     /// Best-effort fetch — billing display should never block or break the
@@ -136,7 +160,7 @@ struct AccountStatus {
             .limit(1)
             .execute()
             .value {
-            out.creditBalance = rows.first?.balance ?? 0
+            out.secondsBalance = rows.first?.balance ?? 0
             out.unlimited = rows.first?.unlimited ?? false
         }
 
@@ -157,20 +181,44 @@ struct AccountStatus {
         }
 
         // Tank size for the avatar ring: what "full" means for THIS account.
-        struct PlanRow: Decodable { let credits_per_cycle: Int }
+        struct PlanRow: Decodable { let daily_seconds: Int? }
         if out.unlimited {
-            out.fullTankCredits = adminResetCredits
+            out.fullTankSeconds = adminResetSeconds
         } else if out.isEntitled, let planId = out.planId,
                   let plans: [PlanRow] = try? await SupabaseProvider.shared
                       .from("subscription_plans")
-                      .select("credits_per_cycle")
+                      .select("daily_seconds")
                       .eq("id", value: planId)
                       .limit(1)
                       .execute()
                       .value,
-                  let plan = plans.first {
-            out.fullTankCredits = plan.credits_per_cycle
+                  let cap = plans.first?.daily_seconds {
+            out.dailyCapSeconds = cap
+            out.fullTankSeconds = cap
+        }
+
+        // Today's metered seconds (talk + Watch scenes) — the per-day pool
+        // the server accumulates into, owner-readable via RLS.
+        struct PoolRow: Decodable { let chars: Int }
+        if let rows: [PoolRow] = try? await SupabaseProvider.shared
+            .from("tts_char_pool")
+            .select("chars")
+            .eq("user_id", value: userId)
+            .eq("day", value: Self.utcDayString())
+            .in("action", values: ["talk_seconds", "scene_seconds"])
+            .execute()
+            .value {
+            out.secondsUsedToday = rows.reduce(0) { $0 + $1.chars }
         }
         return out
+    }
+
+    /// The server pools per `current_date` in UTC — mirror that exactly or
+    /// the "today" query misses around midnight.
+    private static func utcDayString() -> String {
+        let f = DateFormatter()
+        f.timeZone = TimeZone(identifier: "UTC")!
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
     }
 }

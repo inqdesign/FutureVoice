@@ -340,7 +340,7 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(explain("Your minutes buy talk time with your fluent self, and refill every cycle. Reviewing, replays, drills, and progress stay free forever."))
+            Text(explain("Your minutes buy talk time with your fluent self, and reset every day at midnight. Reviewing, replays, drills, and progress stay free forever."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -370,16 +370,10 @@ struct PaywallView: View {
         }
     }
 
-    /// Talk time per day this plan buys, at the server's metering rate
-    /// (`charge_talk_seconds`, mirrored by `AccountStatus.creditsPerMinute`).
-    private func dailyTalkMinutes(credits: Int) -> Int {
-        let days: Double
-        switch period {
-        case .weekly:  days = 7
-        case .monthly: days = 30
-        case .annual:  days = 365
-        }
-        return max(1, Int((Double(credits) / days / AccountStatus.creditsPerMinute).rounded()))
+    /// Talk time per day this plan buys — the server's per-day allowance
+    /// (`subscription_plans.daily_seconds`), shown in minutes.
+    private func dailyTalkMinutes(seconds: Int) -> Int {
+        max(1, seconds / 60)
     }
 
     private func option(tier: String) -> StoreKitService.PlanOption? {
@@ -437,17 +431,10 @@ struct PaywallView: View {
                 Text(name).font(.title3.weight(.bold))
                 Text(blurb).font(.subheadline).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline) {
-                    if let credits = opt?.plan.credits_per_cycle {
-                        // Lead with minutes per day; total minutes per cycle
-                        // as the detail. (Server plans still store credits —
-                        // 4.5 per minute — until the catalog moves over.)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("≈ \(dailyTalkMinutes(credits: credits)) min of talk a day")
-                                .font(.footnote.weight(.semibold))
-                            Text("\(Int(Double(credits) / AccountStatus.creditsPerMinute).formatted()) min / \(period.cycleNoun)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                    if let capSeconds = opt?.plan.daily_seconds {
+                        // The plan IS a daily allowance — say exactly that.
+                        Text("\(dailyTalkMinutes(seconds: capSeconds)) min of talk a day")
+                            .font(.footnote.weight(.semibold))
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {

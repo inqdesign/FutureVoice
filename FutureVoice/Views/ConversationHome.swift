@@ -149,7 +149,7 @@ struct ConversationHome: View {
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 // Only pitch the trial to someone who still has free credits;
                 // a spent balance means they've already used the free tier.
-                PaywallView(offerTrial: (account?.creditBalance ?? 0) > 0)
+                PaywallView(offerTrial: (account?.secondsBalance ?? 0) > 0)
             }
             .sheet(isPresented: $showingProfile) {
                 MeTab().environmentObject(appState).environmentObject(auth)
@@ -452,7 +452,7 @@ struct ConversationHome: View {
                 // authority); an unknown account (fetch not landed) passes
                 // too rather than blocking the tap on the network.
                 if let account, !account.unlimited, !account.isEntitled,
-                   account.creditBalance <= 0 {
+                   account.secondsBalance <= 0 {
                     showingPaywall = true
                 } else {
                     appState.pendingFreeTalk = true
@@ -675,7 +675,7 @@ struct ConversationHome: View {
         // Screenshot captures run signed-out — inject a half-tank account so
         // the avatar ring renders for design review.
         if UserDefaults.standard.string(forKey: "capture") != nil {
-            account = AccountStatus(email: nil, creditBalance: 150,
+            account = AccountStatus(email: nil, secondsBalance: 2000,
                                     planId: nil, subscriptionStatus: "inactive")
             return
         }

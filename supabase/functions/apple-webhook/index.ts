@@ -1,8 +1,10 @@
 // Apple App Store Server Notifications V2 webhook — the ONLY writer of
 // iOS-billed entitlements. The twin of stripe-webhook: verify the provider's
-// signature, upsert user_subscriptions, grant credits idempotently via
-// grant_credits(). The app itself never mints anything (StoreKitService just
-// finishes the transaction).
+// signature, upsert user_subscriptions. The subscription row IS the
+// entitlement (minutes-native model — per-day allowance via
+// subscription_plans.daily_seconds); nothing is granted on renewal. The app
+// itself never mints anything (StoreKitService just finishes the
+// transaction).
 //
 // Verification uses Apple's official JS library (SignedDataVerifier): the
 // signedPayload JWS is checked against Apple's pinned root CAs, and the
@@ -86,7 +88,7 @@ Deno.serve(async (req) => {
 
     const { data: plan } = await db
       .from("subscription_plans")
-      .select("id, credits_per_cycle")
+      .select("id")
       .eq("apple_product_id", tx.productId ?? "")
       .maybeSingle()
     if (!plan) {
@@ -118,42 +120,11 @@ Deno.serve(async (req) => {
       throw new Error(`user_subscriptions upsert: ${subErr.message}`)
     }
 
-    // Grant credits on entry + every renewal. Trial starts grant the full
-    // cycle too (schema doc: "the webhook just grants the same credits as a
-    // paid Pro Monthly when trial starts"). transactionId is unique per
-    // renewal, so the idempotency key makes Apple's redeliveries no-ops.
-    const grants = payload.notificationType === "SUBSCRIBED"
-      || payload.notificationType === "DID_RENEW"
-      || payload.notificationType === "OFFER_REDEEMED"
-    if (grants) {
-      const { error: rpcErr } = await db.rpc("grant_credits", {
-        p_user_id: userId,
-        p_credits: plan.credits_per_cycle,
-        p_kind: "grant",
-        p_action: "cycle_grant",
-        p_source_fn: SOURCE_FN,
-        p_idempotency_key: `apple_tx_${tx.transactionId}`,
-        p_metadata: {
-          apple_tx: tx.transactionId,
-          apple_original_tx: tx.originalTransactionId,
-          plan_id: plan.id,
-          environment,
-          notification: payload.notificationType,
-        },
-      })
-      if (rpcErr && rpcErr.code !== "23503") {
-        throw new Error(`grant_credits: ${rpcErr.message}`)
-      }
-      if (!rpcErr) {
-        const { error: credErr } = await db.from("user_credits").update({
-          period_start: tx.purchaseDate ? iso(tx.purchaseDate) : null,
-          period_end: tx.expiresDate ? iso(tx.expiresDate) : null,
-          cycle_grant: plan.credits_per_cycle,
-          updated_at: new Date().toISOString(),
-        }).eq("user_id", userId)
-        if (credErr) throw new Error(`user_credits period update: ${credErr.message}`)
-      }
-    }
+    // Minutes-native model: the subscription row upserted above IS the
+    // entitlement — an entitled status buys the plan's per-day allowance
+    // (subscription_plans.daily_seconds), checked live by
+    // consume_metered_seconds. Nothing to grant on entry or renewal; the
+    // seconds balance belongs to free users only.
   } catch (e) {
     // Non-2xx → Apple retries with backoff; grants are idempotent so that's safe.
     console.error("apple-webhook failed", payload?.notificationType, e)

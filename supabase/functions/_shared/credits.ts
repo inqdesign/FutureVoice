@@ -1,11 +1,21 @@
-// Credit-gate helpers shared by every paid Edge Function.
+// Metering helpers shared by every Edge Function that touches billing.
+//
+// THE UNIT IS SECONDS OF SYNTHESIZED TALK (2026-08 minutes-native change —
+// `user_credits.balance` holds seconds; "credits" survives only in table /
+// RPC / field NAMES so deployed clients keep working). Who pays what:
+//   * Subscribers consume their plan's per-day allowance
+//     (subscription_plans.daily_seconds) — no balance, resets at midnight
+//     UTC. Past it: DAILY_CAP_REACHED → 402 "daily_cap_reached".
+//   * Free users debit a one-time seconds pool (signup grant 3960 s).
+//     Spent: INSUFFICIENT_CREDITS → 402 "insufficient_credits" → paywall.
+//   * Everything that isn't Talk minutes or Watch scene audio is FREE,
+//     bounded by daily caps (recordFreeUsage / free char pools).
 //
 // Each provider call follows this pattern:
-//   1. estimate cost in credits via priceFor(action, params)
-//   2. charge() — atomic DB debit. If INSUFFICIENT_CREDITS, return 402.
-//   3. invoke upstream provider (ElevenLabs / Gemini)
-//   4. if upstream failed, refund() with the same idempotency key
-//   5. return result to client
+//   1. charge — atomic DB debit / allowance consume. On 402, stop.
+//   2. invoke upstream provider (ElevenLabs / Gemini)
+//   3. if upstream failed, refund() with the same idempotency key
+//   4. return result to client
 //
 // Idempotency keys are required so client retries don't double-charge.
 // Convention: hash(user_id + action + relevant_params + nonce) where nonce
@@ -13,13 +23,6 @@
 // generates one nonce per request and resends it on retry.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
-
-// One internal credit ≈ $0.04 of upstream cost at full retail. Pricing is
-// derived from this so changes to provider rates only need a single edit.
-//
-// IMPORTANT: keep these aligned with whatever copy the iOS PaywallView shows.
-// Mismatch between the credit cost a user sees in the UI and what we actually
-// charge is a trust-breaker.
 
 export type ChargeableAction =
   | "tts"               // per ElevenLabs synthesis (no timestamps)
@@ -36,39 +39,32 @@ export type ChargeableAction =
   | "gemini_transcribe" // verbatim transcript of one spoken turn (flash-lite)
 
 /**
- * Returns the credit cost for a given action + parameters. Credit math here
- * mirrors what's documented in the paywall — keep them in sync.
- *
- * For TTS we charge by character count rounded up (turbo v2.5 is billed
- * per character upstream). 100 chars ≈ 1 credit, so a typical 150-char
- * future-self response = 2 credits.
- *
- * For Gemini we treat each call as roughly equivalent — input + output
- * tokens vary but per-call cost is dominated by the fixed Gemini overhead
- * at our prompt sizes.
+ * Returns the SECONDS-of-talk cost for a given action + parameters. Only the
+ * pooled SQL functions do real pricing now (chars → seconds at 850 chars ≈
+ * 60 s); this exists for the few call sites that still ask.
  */
 export function priceFor(action: ChargeableAction, params: Record<string, unknown> = {}): number {
   switch (action) {
     case "tts": {
       const chars = typeof params.chars === "number" ? params.chars : 150
-      return Math.max(1, Math.ceil(chars / 100))
+      return Math.max(1, Math.ceil((chars * 706) / 10000))
     }
     case "tts_timestamps": {
       const chars = typeof params.chars === "number" ? params.chars : 150
-      // ~25% premium for the with-timestamps endpoint (it's slower + more
-      // upstream cost) and shadow learners value the per-word alignment.
-      return Math.max(1, Math.ceil((chars * 1.25) / 100))
+      return Math.max(1, Math.ceil((chars * 706) / 10000))
     }
     case "tts_scene": {
-      // Playback-time rate: ~850 chars ≈ 1 min of speech ≈ 4.5 credits.
-      // (Pooled path is the real charge; this mirrors its long-run rate.)
+      // Playback-time rate: ~850 chars ≈ 60 s of speech.
       const chars = typeof params.chars === "number" ? params.chars : 850
-      return Math.max(1, Math.ceil((chars * 53) / 10000))
+      return Math.max(1, Math.ceil((chars * 706) / 10000))
     }
-    // Priced inside charge_talk_seconds (4.5 cr/min crossings) — never
+    // Priced inside charge_talk_seconds (1 s of call = 1 s) — never
     // through priceFor.
     case "talk_time":       return 0
-    case "voice_clone":     return 5
+    // Free since the minutes-native change: the meter is talk minutes and
+    // nothing else. Re-clone churn is bounded by a daily cap in
+    // elevenlabs-voice-clone instead of a price.
+    case "voice_clone":     return 0
     case "voice_delete":    return 0
     // Free by the same logic as the clone's onboarding grace: the accent pick
     // is part of getting a voice the user believes is theirs, not usage.
@@ -153,6 +149,9 @@ export async function chargeFreePooledTTS(opts: {
       await recordDepletion(userId, sourceFn)
       return { ok: false, reason: "insufficient_credits", detail: error.message }
     }
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return { ok: false, reason: "daily_cap", detail: error.message }
+    }
     if (error.message?.includes("NO_CREDIT_ROW")) {
       return { ok: false, reason: "no_credit_row", detail: error.message }
     }
@@ -198,6 +197,9 @@ export async function chargeTurnTTSFloored(opts: {
       await recordDepletion(userId, sourceFn)
       return { ok: false, reason: "insufficient_credits", detail: error.message }
     }
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return { ok: false, reason: "daily_cap", detail: error.message }
+    }
     if (error.message?.includes("NO_CREDIT_ROW")) {
       return { ok: false, reason: "no_credit_row", detail: error.message }
     }
@@ -230,7 +232,7 @@ export interface ChargeResult {
 }
 export interface ChargeError {
   ok: false
-  reason: "insufficient_credits" | "no_credit_row" | "db_error"
+  reason: "insufficient_credits" | "daily_cap" | "no_credit_row" | "db_error"
   balanceAfter?: number
   detail?: string
 }
@@ -264,6 +266,9 @@ export async function charge(opts: {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {
       await recordDepletion(userId, sourceFn)
       return { ok: false, reason: "insufficient_credits", detail: error.message }
+    }
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return { ok: false, reason: "daily_cap", detail: error.message }
     }
     if (error.message?.includes("NO_CREDIT_ROW")) {
       return { ok: false, reason: "no_credit_row", detail: error.message }
@@ -304,6 +309,9 @@ export async function chargePooledTTS(opts: {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {
       await recordDepletion(userId, sourceFn)
       return { ok: false, reason: "insufficient_credits", detail: error.message }
+    }
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return { ok: false, reason: "daily_cap", detail: error.message }
     }
     if (error.message?.includes("NO_CREDIT_ROW")) {
       return { ok: false, reason: "no_credit_row", detail: error.message }
@@ -385,7 +393,23 @@ export function insufficientCreditsResponse(corsHeaders: HeadersInit): Response 
   return new Response(
     JSON.stringify({
       error: "insufficient_credits",
-      message: "You're out of credits. Upgrade or wait for your cycle reset.",
+      message: "You're out of talk minutes. Upgrade to keep talking.",
+    }),
+    { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
+  )
+}
+
+/**
+ * A SUBSCRIBER used up today's minutes (plan daily allowance). Same 402
+ * status as insufficient_credits so old clients still stop the call, but the
+ * `error` field lets new clients show "see you tomorrow" instead of a
+ * paywall — a paying user must never be asked to pay again.
+ */
+export function dailyCapResponse(corsHeaders: HeadersInit): Response {
+  return new Response(
+    JSON.stringify({
+      error: "daily_cap_reached",
+      message: "Today's talk minutes are used up. They reset at midnight UTC.",
     }),
     { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
   )

@@ -277,17 +277,23 @@ struct ConversationView: View {
                 didAutoStart = true
                 phoneCallActive = true
                 // The in-call meter: wall-clock seconds tick to the server
-                // for the whole life of the seat. When the balance runs out
-                // mid-call the mic closes and the same out-of-credits alert
-                // a failed turn uses leads to the paywall — the line the
-                // fluent self is currently speaking is allowed to finish.
+                // for the whole life of the seat. When today's minutes run
+                // out mid-call the mic closes; the line the fluent self is
+                // currently speaking is allowed to finish. A FREE user's
+                // spent pool leads to the paywall; a SUBSCRIBER's finished
+                // day never does — they already paid, the allowance just
+                // resets at midnight.
                 meter.onWallHit = {
                     guard !isTornDown else { return }
                     cancelSilenceTimer()
                     if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
                     if phase == .listening || phase == .thinking { phase = .idle }
-                    outOfCredits = true
-                    error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                    if meter.wallReason == .dailyCapReached {
+                        error = explain("Today's talk minutes are used up — they reset at midnight. This call is saved; pick it up tomorrow.")
+                    } else {
+                        outOfCredits = true
+                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                    }
                 }
                 meter.start(sessionId: sessionId)
                 HapticEngine.phoneCallStarted()

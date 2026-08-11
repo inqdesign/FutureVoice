@@ -71,7 +71,7 @@ struct MeTab: View {
                         // cycles 500 → 0 → 500 server-side, and watching the
                         // number move is how real burn gets gauged.
                         row(icon: "bolt.fill",
-                            title: "\(account.balanceLabel) min of talk",
+                            title: "\(account.balanceLabel) of \(account.tankMinutes) min of talk",
                             subtitle: account.planLabel)
                         Spacer()
                     }
@@ -202,7 +202,7 @@ struct MeTab: View {
                 Task { account = await AccountStatus.fetch() }
             }) {
                 // Trial pitch only while the free credits last.
-                PaywallView(offerTrial: account.creditBalance > 0)
+                PaywallView(offerTrial: account.secondsBalance > 0)
             }
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)

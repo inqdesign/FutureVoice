@@ -1,9 +1,10 @@
 // Stripe webhook — the ONLY writer of web-billed entitlements.
 //
-// Mirrors the design of the (upcoming) Apple server-notification webhook:
-// user_subscriptions is upserted from provider events, credits are granted
-// via the grant_credits() RPC with an idempotency key, and the client never
-// mints anything itself.
+// Mirrors the design of the Apple server-notification webhook:
+// user_subscriptions is upserted from provider events, and the client never
+// mints anything itself. Minutes-native model: the subscription row IS the
+// entitlement (per-day allowance via subscription_plans.daily_seconds) —
+// no credit grants on entry or renewal.
 //
 // verify_jwt = false (Stripe can't send a Supabase JWT) — authenticity comes
 // from the Stripe-Signature header, verified with the official SDK
@@ -14,10 +15,6 @@
 //   URL: https://<project>.supabase.co/functions/v1/stripe-webhook
 //   Events: checkout.session.completed, invoice.paid,
 //           customer.subscription.updated, customer.subscription.deleted
-//
-// Credits are granted on `invoice.paid` (billing_reason subscription_create /
-// subscription_cycle), keyed by invoice id — renewals therefore grant exactly
-// once no matter how many times Stripe retries the delivery.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import Stripe from "npm:stripe@17"
@@ -71,10 +68,6 @@ Deno.serve(async (req) => {
         if (!subId) break
         const sub = await stripe.subscriptions.retrieve(subId)
         await upsertSubscription(db, sub)
-        if (invoice.billing_reason === "subscription_create"
-          || invoice.billing_reason === "subscription_cycle") {
-          await grantCycleCredits(db, sub, String(invoice.id))
-        }
         break
       }
       case "customer.subscription.updated": {
@@ -133,46 +126,6 @@ async function upsertSubscription(db: any, sub: Stripe.Subscription, forceStatus
     }
     throw new Error(`user_subscriptions upsert: ${error.message}`)
   }
-}
-
-// deno-lint-ignore no-explicit-any
-async function grantCycleCredits(db: any, sub: Stripe.Subscription, invoiceId: string) {
-  const userId = sub.metadata?.user_id
-  const planId = sub.metadata?.plan_id
-  if (!userId || !planId) return
-
-  const { data: plan, error: planErr } = await db
-    .from("subscription_plans")
-    .select("credits_per_cycle")
-    .eq("id", planId)
-    .single()
-  if (planErr || !plan) throw new Error(`unknown plan ${planId}`)
-
-  const { error: rpcErr } = await db.rpc("grant_credits", {
-    p_user_id: userId,
-    p_credits: plan.credits_per_cycle,
-    p_kind: "grant",
-    p_action: "cycle_grant",
-    p_source_fn: SOURCE_FN,
-    p_idempotency_key: `stripe_invoice_${invoiceId}`,
-    p_metadata: { stripe_invoice: invoiceId, stripe_subscription: sub.id, plan_id: planId },
-  })
-  if (rpcErr) {
-    if (rpcErr.code === "23503") {
-      console.warn("user gone, dropping credit grant", sub.id)
-      return
-    }
-    throw new Error(`grant_credits: ${rpcErr.message}`)
-  }
-
-  const period = periodOf(sub)
-  const { error: credErr } = await db.from("user_credits").update({
-    period_start: period.start,
-    period_end: period.end,
-    cycle_grant: plan.credits_per_cycle,
-    updated_at: new Date().toISOString(),
-  }).eq("user_id", userId)
-  if (credErr) throw new Error(`user_credits period update: ${credErr.message}`)
 }
 
 // ── mapping helpers ────────────────────────────────────────────

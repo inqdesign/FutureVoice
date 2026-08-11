@@ -5,12 +5,15 @@
 // per tick so a retried request can't double-bill).
 //
 // The app calls this every 30 s while a call is active (plus a 1-second
-// preflight tick at call start, so an empty balance surfaces BEFORE the
+// preflight tick at call start, so an empty allowance surfaces BEFORE the
 // greeting speaks instead of granting a free minute per fresh session).
-// Seconds pool per (user, day) server-side and debit the credit balance at
-// 4.5 credits/minute on boundary crossings (`charge_talk_seconds`), so the
-// long-run price is exact regardless of tick cadence. 402 when the balance
-// is spent — the app ends the call gracefully on that.
+// Seconds pool per (user, day) server-side; subscribers consume their
+// plan's daily allowance and free users' seconds balance is debited 1:1
+// (`charge_talk_seconds` → consume_metered_seconds). Two 402s, told apart
+// by the body's `error` field:
+//   * insufficient_credits — free user's one-time pool is spent → paywall.
+//   * daily_cap_reached   — subscriber used today's minutes → "see you
+//     tomorrow", never a paywall.
 //
 // Turn/opener TTS is free under a chars-per-minute floor tied to the
 // seconds pooled here (see charge_turn_tts_floored) — that floor is what
@@ -18,7 +21,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { insufficientCreditsResponse } from "../_shared/credits.ts"
+import { insufficientCreditsResponse, dailyCapResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "talk-tick"
 
@@ -53,15 +56,21 @@ Deno.serve(async (req) => {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {
       return insufficientCreditsResponse(cors())
     }
+    if (error.message?.includes("DAILY_CAP_REACHED")) {
+      return dailyCapResponse(cors())
+    }
     return errorResponse(500, "talk tick failed", error.message)
   }
 
-  const parsed = data as { balance?: number; charged?: number; seconds_today?: number }
+  const parsed = data as {
+    balance?: number; charged?: number; seconds_today?: number; daily_cap?: number
+  }
   return new Response(
     JSON.stringify({
       balance: parsed?.balance ?? 0,
       charged: parsed?.charged ?? 0,
       seconds_today: parsed?.seconds_today ?? 0,
+      daily_cap: parsed?.daily_cap ?? null,
     }),
     { status: 200, headers: { "Content-Type": "application/json", ...cors() } },
   )

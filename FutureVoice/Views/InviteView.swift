@@ -19,7 +19,7 @@ struct InviteView: View {
                 HStack {
                     Label("Talk time left", systemImage: "bolt.fill")
                     Spacer()
-                    Text("\(Int(Double(balance) / AccountStatus.creditsPerMinute)) min")
+                    Text("\(balance / 60) min")
                         .font(.headline).monospacedDigit()
                         .foregroundStyle(balance > 0 ? Color.primary : Color.orange)
                 }
@@ -100,7 +100,7 @@ struct InviteView: View {
 
     private func reload() async {
         referral = await ReferralService.fetchMine()
-        balance = await AccountStatus.fetch().creditBalance
+        balance = await AccountStatus.fetch().secondsBalance
     }
 
     private func redeem() async {

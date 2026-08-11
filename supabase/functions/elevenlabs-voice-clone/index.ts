@@ -1,14 +1,14 @@
-// ElevenLabs voice-clone proxy + credit gate.
+// ElevenLabs voice-clone proxy.
 //
 // Multipart pass-through, then mirrors the new voice_id into voice_clones.
-// Charges 5 credits (priceFor("voice_clone")) — voice slot management is
-// expensive enough that we don't want users churning clones — EXCEPT during
-// onboarding, where getting a voice the user believes is theirs is the entry
-// ticket: see the allowance below.
+// Clones cost NOTHING (minutes-native model: the meter is talk minutes and
+// nothing else) — churn is bounded by a daily re-clone cap instead, with the
+// onboarding window fully exempt: getting a voice the user believes is
+// theirs is the entry ticket.
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { priceFor, charge, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-voice-clone"
 
@@ -65,21 +65,26 @@ Deno.serve(async (req) => {
     firstCloneAt !== null && Number.isFinite(firstCloneAt) &&
     Date.now() - firstCloneAt < ONBOARDING_GRACE_MS
   const isFree = isFirstClone || withinOnboardingGrace
-  const amount = isFree ? 0 : priceFor(action)
-  let balanceAfter = -1
-  if (amount > 0) {
-    const ch = await charge({
-      supabase, userId: user.id, action, amount,
-      sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+
+  // Minutes-native model: clones are never PRICED — the meter is talk
+  // minutes and nothing else. Re-clones past the onboarding window are
+  // bounded by a daily cap instead: the accent/retake flow needs a handful,
+  // a faucet needs more. (The cap row stamps this attempt's idempotency key
+  // BEFORE upstream, so a failed upstream burns one slot — acceptable for
+  // an abuse bound.)
+  if (!isFree) {
+    const rec = await recordFreeUsage({
+      supabase, userId: user.id, action, purpose: "voice_clone",
+      dailyCap: 5, sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+      metadata: { reclone: true },
     })
-    if (!ch.ok) {
-      if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
-        return insufficientCreditsResponse(cors())
-      }
-      return errorResponse(500, "charge failed", ch.detail)
+    if (!rec.ok) {
+      if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
+      return errorResponse(500, "usage record failed", rec.detail)
     }
-    balanceAfter = ch.balanceAfter ?? -1
-  } else {
+  }
+  let balanceAfter = -1
+  {
     const { data: row } = await supabase
       .from("user_credits").select("balance").eq("user_id", user.id).maybeSingle()
     balanceAfter = row?.balance ?? -1
@@ -99,13 +104,6 @@ Deno.serve(async (req) => {
   })
 
   if (!upstream.ok) {
-    if (amount > 0) {
-      await refund({
-        supabase, userId: user.id, amount, action,
-        sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
-        metadata: { reason: "upstream_error", status: upstream.status },
-      })
-    }
     const detail = await upstream.text()
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
