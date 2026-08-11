@@ -82,6 +82,9 @@ struct DrillView: View {
     /// A due pile in the hundreds is a lost game before the first card. Deal
     /// a hand this size instead; the empty state offers the next hand.
     private static let sessionCap = 20
+    /// A single talk's post-talk review run — short enough to finish in one
+    /// sitting right after the call.
+    private static let quickRunCap = 8
     /// Dead zone before any bin lights up — without it the card starts life
     /// straddling two bins and the first millimetre of movement buzzes.
     private static let binDeadZone: CGFloat = 28
@@ -869,9 +872,16 @@ private extension DrillView {
             queue = Array(due.prefix(Self.sessionCap))
             remainingDue = due.count - queue.count
         case .session(let sid):
-            queue = DrillStore.shared.load()
-                .filter { $0.sourceSessionId == sid }
-                .sorted { $0.createdAt < $1.createdAt }
+            // The post-talk run is a quick close-out, not a grind: the
+            // talk's first cards (corrections lead the ingestion order),
+            // capped small. Everything else surfaces through the due queue
+            // like any other card — nothing is lost by stopping here.
+            queue = Array(
+                DrillStore.shared.load()
+                    .filter { $0.sourceSessionId == sid }
+                    .sorted { $0.createdAt < $1.createdAt }
+                    .prefix(Self.quickRunCap)
+            )
         case .ahead(let limit):
             queue = Array(
                 DrillStore.shared.load()

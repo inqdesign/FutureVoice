@@ -313,7 +313,7 @@ struct ConversationView: View {
             // tabs in `RootTabView`. ConversationView now owns Talk only.
             .sheet(item: summaryBinding) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
-                             onDone: endAndClose, onStartNew: startNewSession)
+                             onDone: endAndClose)
                     .environmentObject(appState)
             }
             .alert("Something went wrong", isPresented: errorBinding) {
@@ -2247,7 +2247,6 @@ private struct SummarySheet: View {
     let summary: SessionSummary
     let sessionId: UUID
     let onDone: () -> Void
-    let onStartNew: () -> Void
     @EnvironmentObject private var appState: AppState
     @State private var session: Session?
 
@@ -2256,7 +2255,7 @@ private struct SummarySheet: View {
             if let session {
                 ConversationDetailView(
                     session: session,
-                    postTalk: .init(onDone: onDone, onStartNew: onStartNew))
+                    postTalk: .init(onDone: onDone))
             } else {
                 // Unreachable in practice: endSession saves before presenting.
                 ProgressView()

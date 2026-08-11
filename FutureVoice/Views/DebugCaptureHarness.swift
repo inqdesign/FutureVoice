@@ -343,12 +343,17 @@ enum DebugCapture {
             // sitting above the real tab bar.
             once("tabs") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(RootTabView())
-        case "talkdetail-words", "talkdetail-lines":
+        case "talkdetail-words", "talkdetail-lines", "talkdetail-cards":
             // The talk book opened straight onto one chapter's page.
             once("talkdetail") { seedVocab() }
+            let chapter: ConversationDetailView.Chapter = switch name {
+            case "talkdetail-words": .words
+            case "talkdetail-lines": .lines
+            default: .cards
+            }
             return AnyView(TalkBookCaptureHost(
                 session: talkDetailSession,
-                chapter: name == "talkdetail-words" ? .words : .lines)
+                chapter: chapter)
                 .environmentObject(appState))
         case "talkdetail", "talkdetail-mid", "talkdetail-low":
             // The ONE session detail page in post-talk mode — exactly what
@@ -372,7 +377,7 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 ConversationDetailView(
                     session: session,
-                    postTalk: .init(onDone: {}, onStartNew: {}))
+                    postTalk: .init(onDone: {}))
             })
         case "themes":
             // The settings grid of Futureself themes, in its List habitat.

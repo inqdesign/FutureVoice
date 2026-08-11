@@ -15,7 +15,7 @@ struct ConversationDetailView: View {
     /// review sheet or the transcript — reflect immediately in the score.
     @State private var session: Session
     /// Set when this page is the wrap-up shown right after the talk ends —
-    /// adds Done + start-new/practice actions and the fresh shadow material.
+    /// adds the Done close action and titles the page as the review book.
     /// Nil when opened from Practice: same page, browsing mode. ONE session
     /// detail page for both moments.
     var postTalk: PostTalkActions? = nil
@@ -32,7 +32,6 @@ struct ConversationDetailView: View {
 
     struct PostTalkActions {
         let onDone: () -> Void
-        let onStartNew: () -> Void
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -88,11 +87,14 @@ struct ConversationDetailView: View {
         ) {
             pageContent
         }
-        .padding(.leading, 16)
+        .padding(.trailing, 16)
         .padding(.top, 6)
         .padding(.bottom, 10)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle(session.displayTitle)
+        // Post-talk the cover already carries the talk's title — the bar
+        // names what this page IS instead. Browsing keeps the title: on a
+        // study chapter it's the only place saying which book is open.
+        .navigationTitle(postTalk == nil ? session.displayTitle : chrome("Review book"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
@@ -129,7 +131,6 @@ struct ConversationDetailView: View {
             ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
                 .environmentObject(appState)
         }
-        .safeAreaInset(edge: .bottom) { postTalkBar }
         .alert("Something went wrong",
                isPresented: Binding(get: { regenerateError != nil },
                                     set: { if !$0 { regenerateError = nil } })) {
@@ -336,10 +337,13 @@ struct ConversationDetailView: View {
     }
 
     private var studyChapters: [ChapterEntry] {
-        let hasLines = !curriculum.shadowLines.isEmpty
+        // Shadow = repeat the fluent self's lines; Drill = everything about
+        // fixing YOUR sentences (corrections to read, smoother versions to
+        // score, the card run that locks them in).
+        let hasShadow = !freshShadowLines.isEmpty
+        let hasDrill = drillCount > 0
             || !(session.summary?.phrasesUsed.isEmpty ?? true)
-            || !freshShadowLines.isEmpty
-        let cardCount = drillCount + (session.summary?.suggestedDrills.count ?? 0)
+            || !curriculum.shadowLines.isEmpty
 
         var entries: [ChapterEntry] = []
 
@@ -357,16 +361,19 @@ struct ConversationDetailView: View {
                                         icon: "quote.opening",
                                         count: usedExpressions.count))
         }
-        if hasLines {
-            entries.append(ChapterEntry(chapter: .lines, title: chrome("Your lines"),
-                                        icon: "waveform",
-                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
-                                        total: curriculum.shadowLines.count))
+        if hasShadow {
+            entries.append(ChapterEntry(chapter: .lines, title: chrome("Shadow"),
+                                        icon: "waveform.badge.mic",
+                                        count: freshShadowLines.count))
         }
-        if cardCount > 0 {
-            entries.append(ChapterEntry(chapter: .cards, title: chrome("Review"),
+        if hasDrill {
+            // The smoother-versions mastery is this chapter's progress; the
+            // plain card count is the fallback when a talk minted no lines.
+            entries.append(ChapterEntry(chapter: .cards, title: chrome("Drill"),
                                         icon: "rectangle.stack",
-                                        count: cardCount))
+                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.shadowLines.count,
+                                        count: drillCount))
         }
         return entries
     }
@@ -404,12 +411,12 @@ struct ConversationDetailView: View {
             expressionsPage
             pageFooter(explain("Expressions you actually used this talk."))
         case .lines:
-            pageTitle(chrome("Your lines"))
-            linesPage
-            pageFooter(explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+            pageTitle(chrome("Shadow"))
+            shadowPage
+            pageFooter(explain("Repeat your fluent self's lines from this talk."))
         case .cards:
-            pageTitle(chrome("Review"))
-            reviewPage
+            pageTitle(chrome("Drill"))
+            drillPage
         }
     }
 
@@ -514,151 +521,165 @@ struct ConversationDetailView: View {
         Color.clear.frame(height: 8)
     }
 
-    /// Everything about the learner's own sentences, in the order you'd work
-    /// them: see the correction, shadow the smoother version, then shadow
-    /// the fluent self's whole lines. Groups separated by dividers so the
-    /// three kinds of material read as distinct steps, not one pile.
+    /// The shadow chapter: repeat the fluent self's whole lines from this
+    /// talk. Everything about fixing the learner's OWN sentences lives in
+    /// the Drill chapter.
     @ViewBuilder
-    private var linesPage: some View {
-        let hasCorrections = !(session.summary?.phrasesUsed.isEmpty ?? true)
-        if let sum = session.summary, !sum.phrasesUsed.isEmpty {
-            groupLabel("Say it better", icon: "sparkles")
-            ForEach(sum.phrasesUsed) { p in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(p.userSaid)
+    private var shadowPage: some View {
+        ForEach(freshShadowLines) { turn in
+            let best = bestShadowScore(for: turn.id)
+            Button {
+                fluentShadowTurn = turn
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    // Same row grammar as every other study list: state up
+                    // front, score at the end — not a decorative icon.
+                    masteryMark((best ?? 0) >= ScenarioCurriculum.shadowMasteryScore)
+                    Text(turn.transcript)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .strikethrough()
+                        .foregroundStyle(.primary)
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
-                        .font(.subheadline)
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
+                    if let best {
+                        Text("\(best)")
+                            .font(.caption.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 9)
+                .contentShape(Rectangle())
             }
-        }
-        if !curriculum.shadowLines.isEmpty {
-            if hasCorrections {
-                Divider().padding(.leading, 20).padding(.top, 12)
-            }
-            groupLabel("Say it smoother", icon: "waveform")
-            ForEach(curriculum.shadowLines) { line in
-                Button {
-                    shadowLine = line
-                } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        masteryMark(line.masteredAt != nil)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(line.text)
-                                .font(.body)
-                                .foregroundStyle(line.masteredAt != nil ? .secondary : .primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            if !line.note.isEmpty {
-                                Text(line.note).font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer(minLength: 8)
-                        if let best = bestShadowScore(for: line.id) {
-                            Text("\(best)")
-                                .font(.caption.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
-                        }
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        if !freshShadowLines.isEmpty {
-            if hasCorrections || !curriculum.shadowLines.isEmpty {
-                Divider().padding(.leading, 20).padding(.top, 12)
-            }
-            groupLabel("Shadow this conversation", icon: "waveform.badge.mic")
-            ForEach(freshShadowLines) { turn in
-                Button {
-                    fluentShadowTurn = turn
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "waveform.badge.mic")
-                            .font(.subheadline)
-                            .foregroundStyle(.tint)
-                            .frame(width: 22)
-                        Text(turn.transcript)
-                            .font(.subheadline)
-                            .foregroundStyle(.primary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+            .buttonStyle(.plain)
         }
         Color.clear.frame(height: 8)
     }
 
-    /// The review chapter: what it is in one line, ONE clear action — run
-    /// the deck — and then the phrases queued from this talk.
+    /// One correction, whichever pipeline it came from (a live turn
+    /// suggestion or the summary's phrase feedback): the learner's original,
+    /// the fluent version to SAY, why, and where shadow attempts attach.
+    private struct CorrectionItem: Identifiable {
+        let id: UUID          // stable — shadow attempts + cached TTS attach here
+        let original: String?
+        let fluent: String
+        let reason: String
+        /// Curriculum-tracked mastery; summary-only corrections show their
+        /// best score instead.
+        let masteredAt: Date?
+    }
+
+    /// Turn-suggestion lines first (they carry the book's mastery), then any
+    /// summary corrections that aren't already the same sentence.
+    private var corrections: [CorrectionItem] {
+        var items: [CorrectionItem] = []
+        var seen = Set<String>()
+        for line in curriculum.shadowLines {
+            // The line id is its source turn's id with the first byte
+            // flipped (`TalkCurriculum.shadowLineId`) — flip it back to find
+            // the sentence the correction fixed.
+            var bytes = line.id.uuid
+            bytes.0 ^= 0xFF
+            let turnId = UUID(uuid: bytes)
+            let original = session.turns.first { $0.id == turnId }?.transcript
+            items.append(CorrectionItem(id: line.id, original: original,
+                                        fluent: line.text, reason: line.note,
+                                        masteredAt: line.masteredAt))
+            seen.insert(CarryoverDetector.normalized(line.text))
+        }
+        for p in session.summary?.phrasesUsed ?? [] {
+            guard seen.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
+            else { continue }
+            items.append(CorrectionItem(id: TalkCurriculum.shadowLineId(for: p.id),
+                                        original: p.userSaid,
+                                        fluent: p.fluentAlternative,
+                                        reason: p.reason,
+                                        masteredAt: nil))
+        }
+        return items
+    }
+
+    /// The drill chapter: fixing the learner's OWN sentences, one unit per
+    /// correction — read the diff and its reason, TAP to say the fluent
+    /// version aloud (scored, \(ScenarioCurriculum.shadowMasteryScore)+
+    /// masters it), then run the short capped deck for active recall. The
+    /// same fixes come back in future talks as carryover credit.
     @ViewBuilder
-    private var reviewPage: some View {
-        Text(explain("A quick active-recall run through this talk's saved phrases."))
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .lineSpacing(3)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, 20)
-            .padding(.top, 2)
+    private var drillPage: some View {
+        let all = corrections
+        if !all.isEmpty {
+            groupLabel("Say it better", icon: "sparkles")
+            ForEach(all) { item in
+                correctionRow(item)
+            }
+            pageFooter(explain("Each line is the smoother version of something you actually said. Tap one to say the fix out loud — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's yours. The same fixes come back as cards below."))
+        }
         if drillCount > 0 {
+            Divider().padding(.leading, 20).padding(.top, 12)
             NavigationLink {
                 sessionDeck
             } label: {
-                Label(drillCount == 1
-                      ? "Practice this card"
-                      : "Practice these \(drillCount) cards",
-                      systemImage: "rectangle.stack.fill")
+                Label("Review this talk", systemImage: "rectangle.stack.fill")
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .padding(.horizontal, 20)
-            .padding(.top, 14)
-        }
-        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
-            Divider().padding(.leading, 20).padding(.top, 18)
-            groupLabel("Drill next", icon: "text.badge.plus")
-            ForEach(drills, id: \.self) { drill in
-                NavigationLink {
-                    sessionDeck
-                } label: {
-                    HStack {
-                        Text(drill).font(.subheadline)
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
+            .padding(.top, 16)
+            pageFooter(explain("A quick run through this talk's key phrases — anything left joins your review queue in Practice."))
         }
         Color.clear.frame(height: 4)
+    }
+
+    private func correctionRow(_ item: CorrectionItem) -> some View {
+        let best = bestShadowScore(for: item.id)
+        let mastered = item.masteredAt != nil
+            || (best ?? 0) >= ScenarioCurriculum.shadowMasteryScore
+        return Button {
+            // The item id doubles as the synthetic Turn id, so attempts and
+            // cached TTS stay attached across opens.
+            shadowLine = ScenarioCurriculum.Item(id: item.id, text: item.fluent,
+                                                 note: item.reason)
+        } label: {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                masteryMark(mastered)
+                VStack(alignment: .leading, spacing: 4) {
+                    if let original = item.original, !original.isEmpty {
+                        Text(original)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .strikethrough()
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text(highlightedCorrection(item.fluent,
+                                               original: item.original ?? "",
+                                               baseFont: .subheadline))
+                        .font(.subheadline)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !item.reason.isEmpty {
+                        Text(item.reason).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer(minLength: 8)
+                if let best {
+                    Text("\(best)")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Session highlights (the analysis screen's core content)
@@ -734,50 +755,6 @@ struct ConversationDetailView: View {
         DrillView(source: .session(session.id))
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// Practice-first close-out, unchanged from the old wrap-up sheet: the
-    /// primary action reviews this talk's cards, the secondary starts a new
-    /// conversation.
-    @ViewBuilder
-    private var postTalkBar: some View {
-        if let postTalk {
-            VStack(spacing: 10) {
-                if drillCount > 0 {
-                    NavigationLink {
-                        sessionDeck
-                    } label: {
-                        Label(drillCount == 1
-                              ? "Practice this card"
-                              : "Practice these \(drillCount) cards",
-                              systemImage: "rectangle.stack.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                }
-                // Secondary once there are cards (Practice stays the clear
-                // primary); the sole prominent action otherwise.
-                if drillCount > 0 {
-                    startNewButton(postTalk).buttonStyle(.bordered)
-                } else {
-                    startNewButton(postTalk).buttonStyle(.borderedProminent)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.bar)
-        }
-    }
-
-    private func startNewButton(_ postTalk: PostTalkActions) -> some View {
-        Button {
-            postTalk.onStartNew()
-        } label: {
-            Label("Start a new conversation", systemImage: "arrow.uturn.left")
-                .frame(maxWidth: .infinity)
-        }
-        .controlSize(.large)
     }
 
     private func masteryMark(_ mastered: Bool) -> some View {

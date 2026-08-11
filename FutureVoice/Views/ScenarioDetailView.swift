@@ -128,7 +128,7 @@ struct ScenarioDetailView: View {
         ) {
             pageContent(s)
         }
-        .padding(.leading, 16)
+        .padding(.trailing, 16)
         .padding(.top, 6)
         .padding(.bottom, 10)
         .background(Color(.systemGroupedBackground).ignoresSafeArea())

@@ -28,6 +28,10 @@ struct BookmarkedPage<ID: Hashable, Content: View>: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 4) {
+                ForEach(tabs, id: \.id) { ribbon($0) }
+            }
+            .frame(width: 44, alignment: .trailing)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     content()
@@ -37,17 +41,13 @@ struct BookmarkedPage<ID: Hashable, Content: View>: View {
             }
             .scrollIndicators(.hidden)
             .background(Color(.secondarySystemGroupedBackground))
-            // Square where the ribbons attach (top trailing) — a rounded
+            // Square where the ribbons attach (top leading) — a rounded
             // corner there would curve away from the first ribbon and break
             // the tab-and-page-are-one-paper illusion.
             .clipShape(UnevenRoundedRectangle(
-                cornerRadii: .init(topLeading: 16, bottomLeading: 16,
-                                   bottomTrailing: 16, topTrailing: 0),
+                cornerRadii: .init(topLeading: 0, bottomLeading: 16,
+                                   bottomTrailing: 16, topTrailing: 16),
                 style: .continuous))
-            VStack(spacing: 4) {
-                ForEach(tabs, id: \.id) { ribbon($0) }
-            }
-            .frame(width: 44, alignment: .leading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -81,8 +81,8 @@ struct BookmarkedPage<ID: Hashable, Content: View>: View {
             .padding(.vertical, 10)
             .background(
                 UnevenRoundedRectangle(
-                    cornerRadii: .init(topLeading: 0, bottomLeading: 0,
-                                       bottomTrailing: 10, topTrailing: 10),
+                    cornerRadii: .init(topLeading: 10, bottomLeading: 10,
+                                       bottomTrailing: 0, topTrailing: 0),
                     style: .continuous)
                     // The selected ribbon is the page's own paper; the rest
                     // sit tucked behind, dimmer and slightly shorter.

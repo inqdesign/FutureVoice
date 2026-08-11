@@ -25,10 +25,9 @@ struct MeTab: View {
     /// store stays the source of truth — `onChange` writes back — because the
     /// scheduler runs from a notification action with no view in memory.
     @State private var dailyCallEnabled = DailyCallStore.shared.isEnabled
-    @State private var dailyCallTime = Calendar.current.date(
-        bySettingHour: DailyCallStore.shared.hour,
-        minute: DailyCallStore.shared.minute, second: 0, of: Date()) ?? Date()
     @State private var callbackMinutes = DailyCallScheduler.defaultCallbackMinutes
+    /// Working copy of `DailyCallStore.times`; written back on every edit.
+    @State private var callTimes = DailyCallStore.shared.times
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
@@ -44,6 +43,8 @@ struct MeTab: View {
     @State private var voiceRenameWarning: String?
     @State private var voiceRegenerateError: String?
     @State private var pickingAccent = false
+    @State private var importingBackup = false
+    @State private var backupResult: String?
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
@@ -136,6 +137,8 @@ struct MeTab: View {
                 }
 
                 voiceSection
+
+                backupSection
 
                 Section {
                     Button(role: .destructive) {
@@ -359,6 +362,57 @@ struct MeTab: View {
     /// global when it is per language. One section per kind now, and each
     /// language wears its own level.
     @ViewBuilder
+    /// Export/import of everything practiced on THIS device. Exists because
+    /// dev and release builds are separate sandboxes — practice done in one
+    /// never reaches the other by itself. See `BackupService`.
+    private var backupSection: some View {
+        Section {
+            ShareLink(item: BackupFile(),
+                      preview: SharePreview("FutureVoice backup")) {
+                Label("Export practice data", systemImage: "square.and.arrow.up")
+            }
+            Button {
+                importingBackup = true
+            } label: {
+                Label("Import practice data", systemImage: "square.and.arrow.down")
+            }
+        } header: {
+            Text("Practice data")
+        } footer: {
+            Text(explain("Everything you've practiced on this device — talks, drills, words, books — as one file. Use it to carry progress into another install. Your voice and minutes already follow your account."))
+        }
+        .fileImporter(isPresented: $importingBackup,
+                      allowedContentTypes: [.item]) { result in
+            switch result {
+            case .success(let url):
+                do {
+                    let count = try BackupService.restore(from: url)
+                    backupResult = explain("Restored \(count) files. Quit the app completely and reopen it — your practice will be there.")
+                } catch {
+                    backupResult = error.localizedDescription
+                }
+            case .failure(let error):
+                backupResult = error.localizedDescription
+            }
+        }
+        .alert("Import practice data",
+               isPresented: Binding(get: { backupResult != nil },
+                                    set: { if !$0 { backupResult = nil } })) {
+            Button("OK") { backupResult = nil }
+        } message: {
+            Text(backupResult ?? "")
+        }
+    }
+
+    /// Lazily builds the backup file the moment the share sheet asks for it.
+    private struct BackupFile: Transferable {
+        static var transferRepresentation: some TransferRepresentation {
+            FileRepresentation(exportedContentType: .data) { _ in
+                SentTransferredFile(try BackupService.export())
+            }
+        }
+    }
+
     private var learningLanguagesSection: some View {
         Section {
             ForEach(appState.enrolledLanguages, id: \.self) { code in
@@ -480,7 +534,31 @@ struct MeTab: View {
                     subtitle: "Your fluent self phones you")
             }
             if dailyCallEnabled {
-                DatePicker("Calls at", selection: $dailyCallTime, displayedComponents: .hourAndMinute)
+                // One row per call. More than one a day is the difference
+                // between a reminder and a habit — the learner decides how
+                // often somebody checks in on them, up to `maxTimes`.
+                ForEach(callTimes) { time in
+                    DatePicker(
+                        selection: binding(for: time),
+                        displayedComponents: .hourAndMinute
+                    ) {
+                        Label(explain("Call"), systemImage: "phone.arrow.down.left")
+                    }
+                }
+                .onDelete { offsets in
+                    // Deleting the last one would silently disable the call —
+                    // the toggle above is where that decision belongs.
+                    guard callTimes.count > offsets.count else { return }
+                    callTimes.remove(atOffsets: offsets)
+                    persistTimes()
+                }
+                if callTimes.count < DailyCallStore.maxTimes {
+                    Button {
+                        addCallTime()
+                    } label: {
+                        Label("Add a call", systemImage: "plus")
+                    }
+                }
                 // The ALARM screen has room for one button we control, so it
                 // can't offer a choice at ring time — this is that choice,
                 // made once. (The notification fallback, which takes an array
@@ -497,7 +575,7 @@ struct MeTab: View {
             Text("Call")
         } footer: {
             Text(explain(dailyCallEnabled
-                ? "Your phone rings once a day, even on silent. Can't talk? They ring back in an hour — and if you never pick up, the message waits for you instead of counting against you."
+                ? "Your phone rings at every time you set here, even on silent. Can't talk? They ring back later — and if you never pick up, the message waits for you instead of counting against you."
                 : "Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went."))
         }
         .onChange(of: dailyCallEnabled) { _, on in
@@ -507,14 +585,6 @@ struct MeTab: View {
             // No reschedule needed: this only decides how far the NEXT decline
             // pushes the callback, and that's read at decline time.
             DailyCallScheduler.defaultCallbackMinutes = minutes
-        }
-        .onChange(of: dailyCallTime) { _, when in
-            let parts = Calendar.current.dateComponents([.hour, .minute], from: when)
-            DailyCallStore.shared.hour = parts.hour ?? 8
-            DailyCallStore.shared.minute = parts.minute ?? 0
-            // The standing plan's fire time is stale now — rewrite it. Cheap:
-            // the script and audio are reused, only the trigger moves.
-            appState.refreshDailyCall(force: true)
         }
     }
 
@@ -695,6 +765,48 @@ struct MeTab: View {
     private var accountSubtitle: String {
         let email = account.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return email.isEmpty ? "Signed in with Apple" : email
+    }
+}
+
+extension MeTab {
+    /// Bridges one stored `CallTime` to the `Date` a `DatePicker` needs.
+    /// Editing writes straight back through to the store so a call the learner
+    /// just moved is rescheduled even if they close Me immediately.
+    func binding(for time: DailyCallStore.CallTime) -> Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(bySettingHour: time.hour, minute: time.minute,
+                                      second: 0, of: Date()) ?? Date()
+            },
+            set: { newValue in
+                guard let index = callTimes.firstIndex(of: time) else { return }
+                let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+                callTimes[index] = DailyCallStore.CallTime(hour: parts.hour ?? 8,
+                                                          minute: parts.minute ?? 0)
+                persistTimes()
+            })
+    }
+
+    /// A new call three hours after the last one — far enough that it reads as
+    /// a separate check-in rather than a repeat of the one just missed.
+    func addCallTime() {
+        let last = callTimes.max() ?? DailyCallStore.CallTime(hour: 8, minute: 0)
+        let proposed = (last.hour + 3) % 24
+        var candidate = DailyCallStore.CallTime(hour: proposed, minute: last.minute)
+        // Never collide: identical times dedupe in the store and the row would
+        // silently vanish.
+        while callTimes.contains(candidate) {
+            candidate = DailyCallStore.CallTime(hour: (candidate.hour + 1) % 24,
+                                                minute: candidate.minute)
+        }
+        callTimes.append(candidate)
+        persistTimes()
+    }
+
+    func persistTimes() {
+        DailyCallStore.shared.times = callTimes
+        callTimes = DailyCallStore.shared.times   // re-read: the store sorts and dedupes
+        appState.refreshDailyCall()
     }
 }
 
