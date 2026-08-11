@@ -32,15 +32,15 @@ struct ScenarioDetailView: View {
         var id: String { value }
     }
 
-    /// The book's study chapters, switched in place by the bookmark tabs —
-    /// the scene plays through the header's Watch button. Internal (not
-    /// private) so the DEBUG capture harness can open on a chapter.
+    /// The book's chapters, switched in place by the ribbon bookmarks. The
+    /// intro is the cover — title, progress, the Talk/Watch actions, and the
+    /// study record. Internal (not private) so the DEBUG capture harness can
+    /// open on a chapter.
     enum Chapter: Int, Hashable {
-        case words, expressions, shadow
+        case intro, words, expressions, shadow
     }
 
-    /// Which bookmark tab to open the book on — nil opens on the first
-    /// unfinished chapter (where the bookmark sits).
+    /// Which bookmark tab to open the book on — nil opens on the intro.
     var initialChapter: Chapter? = nil
     @State private var selectedChapter: Chapter?
 
@@ -116,49 +116,24 @@ struct ScenarioDetailView: View {
         }
     }
 
-    // MARK: - Content
+    // MARK: - Content (the fixed book)
 
+    /// The book's fixed layout: the page fills the screen, the ribbons never
+    /// move, and only the open chapter scrolls — inside the page.
     private func content(_ s: Scenario) -> some View {
-        List {
-            headerSection(s)
-            if s.isMastered && !s.isArchived { masteredBanner }
-            if let c = s.curriculum {
-                bookPageSection(c)
-            } else {
-                curriculumLoadingSection
-            }
-            historySection(s)
+        BookmarkedPage(
+            tabs: allTabs(s),
+            selection: activeChapter(s),
+            onSelect: { selectedChapter = $0 }
+        ) {
+            pageContent(s)
         }
-        .listStyle(.insetGrouped)
+        .padding(.leading, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .onAppear {
             if selectedChapter == nil { selectedChapter = initialChapter }
-        }
-    }
-
-    // MARK: - The bookmarked page
-
-    /// The study page with ribbon bookmarks on its right edge. Selecting a
-    /// ribbon swaps the page in place — the scene plays through the header's
-    /// Watch button. The book opens on the first unfinished chapter, like a
-    /// bookmark left in place.
-    private func bookPageSection(_ c: ScenarioCurriculum) -> some View {
-        Section {
-            BookmarkedPage(
-                tabs: studyChapters(c).map { entry in
-                    .init(id: entry.chapter, icon: entry.icon, title: entry.title,
-                          done: entry.done, total: entry.items.count)
-                },
-                selection: activeChapter(c),
-                onSelect: { selectedChapter = $0 }
-            ) {
-                pageContent(c)
-            }
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
-        } footer: {
-            if let footer = chapterFooter(c) {
-                Text(footer)
-            }
         }
     }
 
@@ -168,7 +143,19 @@ struct ScenarioDetailView: View {
         let icon: String
         let items: [ScenarioCurriculum.Item]
         var done: Int { items.filter { $0.masteredAt != nil }.count }
-        var isComplete: Bool { !items.isEmpty && done == items.count }
+    }
+
+    private func allTabs(_ s: Scenario) -> [BookmarkTab<Chapter>] {
+        var tabs: [BookmarkTab<Chapter>] = [
+            .init(id: .intro, icon: "book.closed", title: chrome("Overview"))
+        ]
+        if let c = s.curriculum {
+            tabs += studyChapters(c).map {
+                BookmarkTab(id: $0.chapter, icon: $0.icon, title: $0.title,
+                            done: $0.done, total: $0.items.count)
+            }
+        }
+        return tabs
     }
 
     private func studyChapters(_ c: ScenarioCurriculum) -> [ChapterEntry] {
@@ -182,153 +169,175 @@ struct ScenarioDetailView: View {
         ].filter { !$0.items.isEmpty }
     }
 
-    /// The chapter whose content shows: the learner's explicit pick when it
-    /// still exists, otherwise the first unfinished chapter (the bookmark),
-    /// otherwise the first chapter.
-    private func activeChapter(_ c: ScenarioCurriculum) -> Chapter? {
-        let chapters = studyChapters(c)
-        if let selectedChapter, chapters.contains(where: { $0.chapter == selectedChapter }) {
+    /// The open chapter: the learner's explicit pick when it still exists,
+    /// otherwise the intro (the cover).
+    private func activeChapter(_ s: Scenario) -> Chapter {
+        let ids = allTabs(s).map(\.id)
+        if let selectedChapter, ids.contains(selectedChapter) {
             return selectedChapter
         }
-        return (chapters.first { !$0.isComplete } ?? chapters.first)?.chapter
+        return .intro
     }
 
-    /// The selected chapter's page: a small title, then the same rows —
-    /// same taps, context menus and mastery marks as ever.
+    /// The open chapter's page content, scrolled inside the fixed page.
     @ViewBuilder
-    private func pageContent(_ c: ScenarioCurriculum) -> some View {
-        let active = activeChapter(c)
-        if let entry = studyChapters(c).first(where: { $0.chapter == active }) {
-            Text(entry.title)
-                .font(.headline)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 4)
-            switch entry.chapter {
-            case .words:
+    private func pageContent(_ s: Scenario) -> some View {
+        switch activeChapter(s) {
+        case .intro:
+            introPage(s)
+        case .words:
+            if let c = s.curriculum {
+                pageTitle(chrome("Words"))
                 itemRows(c.words, showExample: false) { item in
                     // Same lemma key every other word surface uses, so the
                     // card's I-know-it lands on the record mastery reads.
                     wordSheet = WordRef(value: VocabStore.lookupKey(for: item.text))
                 }
-            case .expressions:
+                pageFooter("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known.")
+            }
+        case .expressions:
+            if let c = s.curriculum {
+                pageTitle(chrome("Expressions"))
                 itemRows(c.expressions, showExample: true) { item in
                     expressionSheet = WordRef(value: item.text)
                 }
-            case .shadow:
+                pageFooter("Tap an expression for its card. It's mastered once you actually use it in a talk.")
+            }
+        case .shadow:
+            if let c = s.curriculum {
+                pageTitle(chrome("Your lines"))
                 shadowRows(c)
+                pageFooter(explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
             }
         }
     }
 
-    private func chapterFooter(_ c: ScenarioCurriculum) -> String? {
-        switch activeChapter(c) {
-        case .words:
-            return "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."
-        case .expressions:
-            return "Tap an expression for its card. It's mastered once you actually use it in a talk."
-        case .shadow:
-            return explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
-        case nil:
-            return nil
-        }
+    private func pageTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 6)
     }
 
-    // MARK: - Header (cover + progress + actions)
+    private func pageFooter(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineSpacing(3)
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+    }
 
-    private func headerSection(_ s: Scenario) -> some View {
-        Section {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle().fill(Color.accentColor.opacity(0.15))
-                            .frame(width: 56, height: 56)
-                        if let name = linkedPersonaName(s) {
-                            Text(Books.initials(name))
-                                .font(.headline.weight(.bold)).foregroundStyle(.tint)
-                        } else {
-                            Image(systemName: Books.roleIcon(for: s.role))
-                                .font(.title2).foregroundStyle(.tint)
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(s.environment).font(.title3.weight(.semibold))
-                        if let partner = linkedPersonaName(s)
-                            ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role) {
-                            Text("with \(partner)")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                        }
-                        if s.isArchived {
-                            Label("Archived", systemImage: "archivebox")
-                                .font(.caption.weight(.medium)).foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                }
-                if !s.notes.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text(s.notes).font(.footnote).foregroundStyle(.secondary)
-                }
-                if let c = s.curriculum, c.totalCount > 0 {
-                    VStack(alignment: .leading, spacing: 6) {
-                        ProgressView(value: c.progress)
-                            .tint(s.isMastered ? .green : .accentColor)
-                        Text("\(c.masteredCount) of \(c.totalCount) mastered")
-                            .font(.caption).foregroundStyle(.secondary)
+    private func groupLabel(_ title: LocalizedStringKey, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
+    }
+
+    // MARK: - Intro (cover + progress + actions + study record)
+
+    @ViewBuilder
+    private func introPage(_ s: Scenario) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15))
+                        .frame(width: 56, height: 56)
+                    if let name = linkedPersonaName(s) {
+                        Text(Books.initials(name))
+                            .font(.headline.weight(.bold)).foregroundStyle(.tint)
+                    } else {
+                        Image(systemName: Books.roleIcon(for: s.role))
+                            .font(.title2).foregroundStyle(.tint)
                     }
                 }
-                HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(s.environment)
+                        .font(.headline)
+                        .lineSpacing(2)
+                    if let partner = linkedPersonaName(s)
+                        ?? (s.role.trimmingCharacters(in: .whitespaces).isEmpty ? nil : s.role) {
+                        Text("with \(partner)")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if s.isArchived {
+                        Label("Archived", systemImage: "archivebox")
+                            .font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            if !s.notes.trimmingCharacters(in: .whitespaces).isEmpty {
+                Text(s.notes).font(.footnote).foregroundStyle(.secondary)
+                    .lineSpacing(3)
+            }
+            if let c = s.curriculum, c.totalCount > 0 {
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: c.progress)
+                        .tint(s.isMastered ? .green : .accentColor)
+                    Text("\(c.masteredCount) of \(c.totalCount) mastered")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            HStack(spacing: 10) {
+                Button {
+                    appState.markScenarioUsed(id: s.id)
+                    talkPresented = true
+                } label: {
+                    Label("Talk", systemImage: "mic.fill")
+                        // The prominent fill would swallow a tinted icon —
+                        // force the content white.
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                // Watch replays the book's ONE scene — the dialogue the
+                // chapters were extracted from. Hidden until it generated.
+                if !(s.curriculum?.dialogue ?? []).isEmpty {
                     Button {
-                        appState.markScenarioUsed(id: s.id)
-                        talkPresented = true
+                        watchPresented = true
                     } label: {
-                        Label("Talk", systemImage: "mic.fill")
-                            // Inside a List the label's icon inherits the row
-                            // tint (accent) — invisible on the prominent
-                            // button's accent fill. Force the content white.
-                            .foregroundStyle(.white)
+                        Label("Watch", systemImage: "play.fill")
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    // Watch replays the book's ONE scene — the dialogue the
-                    // checklist below was extracted from. Hidden until the
-                    // scene has generated.
-                    if !(s.curriculum?.dialogue ?? []).isEmpty {
-                        Button {
-                            watchPresented = true
-                        } label: {
-                            Label("Watch", systemImage: "play.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                    }
+                    .buttonStyle(.bordered)
                 }
-                .controlSize(.large)
             }
-            .padding(.vertical, 6)
-        } footer: {
-            Text(explain("Watch the scene, study its words and expressions, shadow your lines, then Talk it live."))
+            .controlSize(.large)
         }
+        .padding(20)
+        if s.isMastered && !s.isArchived {
+            masteredBanner
+        }
+        if s.curriculum == nil {
+            curriculumLoadingRows
+        }
+        studyRecordRows(s)
     }
 
     private var masteredBanner: some View {
-        Section {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.title2).foregroundStyle(.green)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Book mastered").font(.subheadline.weight(.semibold))
-                    Text(explain("Everything in this scenario is yours now."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Archive") {
-                    appState.setScenarioArchived(id: scenarioId, true)
-                }
-                .buttonStyle(.borderedProminent).tint(.green)
-                .controlSize(.small)
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.title2).foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Book mastered").font(.subheadline.weight(.semibold))
+                Text(explain("Everything in this scenario is yours now."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(.vertical, 4)
+            Spacer()
+            Button("Archive") {
+                appState.setScenarioArchived(id: scenarioId, true)
+            }
+            .buttonStyle(.borderedProminent).tint(.green)
+            .controlSize(.small)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Curriculum sections
@@ -443,29 +452,26 @@ struct ScenarioDetailView: View {
     // MARK: - Curriculum generation
 
     @ViewBuilder
-    private var curriculumLoadingSection: some View {
-        Section {
-            if generating {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Writing this scenario's scene…")
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-            } else if let e = generationError {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(e).font(.caption).foregroundStyle(.red)
-                    Button("Try again") {
-                        Task { await ensureCurriculum(force: true) }
-                    }
-                    .buttonStyle(.bordered).controlSize(.small)
-                }
-                .padding(.vertical, 4)
+    private var curriculumLoadingRows: some View {
+        if generating {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Writing this scenario's scene…")
+                    .foregroundStyle(.secondary)
             }
-        } footer: {
-            if generating {
-                Text(explain("One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book."))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            pageFooter(explain("One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book."))
+        } else if let e = generationError {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(e).font(.caption).foregroundStyle(.red)
+                Button("Try again") {
+                    Task { await ensureCurriculum(force: true) }
+                }
+                .buttonStyle(.bordered).controlSize(.small)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
         }
     }
 
@@ -505,27 +511,35 @@ struct ScenarioDetailView: View {
     // MARK: - History (study record under this book)
 
     @ViewBuilder
-    private func historySection(_ s: Scenario) -> some View {
+    private func studyRecordRows(_ s: Scenario) -> some View {
         let sessions = SessionStore.shared.load()
             .filter { $0.topic == s.displayTitle && $0.endedAt != nil }
             .sorted { $0.startedAt > $1.startedAt }
         if !sessions.isEmpty {
-            Section("Study record") {
-                ForEach(sessions.prefix(5), id: \.id) { session in
-                    NavigationLink {
-                        ConversationDetailView(session: session)
-                            .environmentObject(appState)
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(session.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
-                                    .font(.subheadline)
-                                Text("\(session.turns.filter { $0.role == .user }.count) turns spoken")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
+            Divider().padding(.leading, 20).padding(.top, 8)
+            groupLabel("Study record", icon: "clock")
+            ForEach(sessions.prefix(5), id: \.id) { session in
+                NavigationLink {
+                    ConversationDetailView(session: session)
+                        .environmentObject(appState)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.startedAt, format: .dateTime.month(.abbreviated).day().hour().minute())
+                                .font(.subheadline)
+                                .foregroundStyle(.primary)
+                            Text("\(session.turns.filter { $0.role == .user }.count) turns spoken")
+                                .font(.caption).foregroundStyle(.secondary)
                         }
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
         }
     }

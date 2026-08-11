@@ -1,53 +1,58 @@
 import SwiftUI
 
-/// A book page with ribbon bookmarks on its right edge — shared by the two
-/// book detail pages (ScenarioDetailView, ConversationDetailView) so both
-/// books read as the same object.
-///
-/// The selected ribbon shares the page's fill and sits flush against its
-/// edge, so tab and page read as one sheet of paper; the others sit dimmer
-/// behind it. Tapping a ribbon swaps the page's content IN PLACE — no
-/// navigation. Each ribbon carries its chapter's progress (`5/6`, a green
-/// check when complete, or a plain count for chapters without mastery).
-struct BookmarkedPage<ID: Hashable, Content: View>: View {
-    struct Tab {
-        let id: ID
-        let icon: String
-        /// Accessibility label + the page header when selected.
-        let title: String
-        var done: Int? = nil
-        var total: Int? = nil
-        var count: Int? = nil
-    }
+/// One ribbon bookmark's data — id, icon, and the progress it carries.
+struct BookmarkTab<ID: Hashable> {
+    let id: ID
+    let icon: String
+    /// Accessibility label for the ribbon.
+    let title: String
+    var done: Int? = nil
+    var total: Int? = nil
+    var count: Int? = nil
+}
 
-    let tabs: [Tab]
+/// A full-height book page with ribbon bookmarks fixed on its right edge —
+/// shared by the two book detail pages (ScenarioDetailView,
+/// ConversationDetailView) so both books read as the same object.
+///
+/// The book's layout is FIXED: the page fills the available space and the
+/// ribbons never move; only the page's content scrolls, inside the page.
+/// The selected ribbon shares the page's fill and sits flush against its
+/// edge, so tab and page read as one sheet of paper. Tapping a ribbon swaps
+/// the page's content in place — no navigation.
+struct BookmarkedPage<ID: Hashable, Content: View>: View {
+    let tabs: [BookmarkTab<ID>]
     let selection: ID?
     let onSelect: (ID) -> Void
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        // The page never ends above its last ribbon — bookmarks hanging off
-        // the bottom edge would read as attached to nothing.
-        let ribbonStackHeight = CGFloat(tabs.count) * 66 + 24
         HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 0) {
-                content()
-                Spacer(minLength: 0)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    content()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, 14)
             }
-            .frame(maxWidth: .infinity, minHeight: ribbonStackHeight, alignment: .topLeading)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(.secondarySystemGroupedBackground))
-            )
-            VStack(spacing: 8) {
+            .scrollIndicators(.hidden)
+            .background(Color(.secondarySystemGroupedBackground))
+            // Square where the ribbons attach (top trailing) — a rounded
+            // corner there would curve away from the first ribbon and break
+            // the tab-and-page-are-one-paper illusion.
+            .clipShape(UnevenRoundedRectangle(
+                cornerRadii: .init(topLeading: 16, bottomLeading: 16,
+                                   bottomTrailing: 16, topTrailing: 0),
+                style: .continuous))
+            VStack(spacing: 4) {
                 ForEach(tabs, id: \.id) { ribbon($0) }
             }
             .frame(width: 44, alignment: .leading)
-            .padding(.top, 18)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    private func ribbon(_ tab: Tab) -> some View {
+    private func ribbon(_ tab: BookmarkTab<ID>) -> some View {
         let selected = tab.id == selection
         return Button {
             onSelect(tab.id)
@@ -72,7 +77,7 @@ struct BookmarkedPage<ID: Hashable, Content: View>: View {
                         .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
                 }
             }
-            .frame(width: selected ? 42 : 36)
+            .frame(width: 40)
             .padding(.vertical, 10)
             .background(
                 UnevenRoundedRectangle(

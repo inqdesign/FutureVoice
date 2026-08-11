@@ -56,15 +56,15 @@ struct ConversationDetailView: View {
         var id: String { value }
     }
 
-    /// The book's study chapters, switched in place by the bookmark tabs —
-    /// the conversation itself replays through the header's Replay button.
-    /// Internal so the DEBUG capture harness can open on a chapter.
+    /// The book's chapters, switched in place by the ribbon bookmarks. The
+    /// intro is the cover — title, progress, the Continue/Replay actions,
+    /// the score and the coach's note. Internal so the DEBUG capture harness
+    /// can open on a chapter.
     enum Chapter: Int, Hashable {
-        case words, expressions, lines, cards
+        case intro, words, expressions, lines, cards
     }
 
-    /// Which bookmark tab to open the book on — nil opens on the first
-    /// unfinished chapter (where the bookmark sits).
+    /// Which bookmark tab to open the book on — nil opens on the intro.
     var initialChapter: Chapter? = nil
     @State private var selectedChapter: Chapter?
 
@@ -77,26 +77,21 @@ struct ConversationDetailView: View {
     @State private var regenerateOutOfCredits = false
 
     var body: some View {
-        List {
-            // The book's cover: the talk's report (score, note, what carried
-            // over) stays up front — it's the post-talk payoff — and the
-            // study material lives behind the table of contents below it.
-            headerSection
-            missingSummarySection
-            if curriculum.isMastered && archivedAt == nil { masteredBanner }
-            if postTalk != nil {
-                // Wrap-up: the score is the moment's payoff — report first,
-                // then the bookmark tabs.
-                reportSections
-                studySections
-            } else {
-                // Browsing from Practice: the learner came to study — the
-                // bookmark tabs first, the report below them.
-                studySections
-                reportSections
-            }
+        // The book's fixed layout: the page fills the screen, the ribbons
+        // never move, and only the open chapter scrolls — inside the page.
+        // The intro chapter is the cover AND the report (score, note,
+        // carryover): the post-talk payoff in one place.
+        BookmarkedPage(
+            tabs: allTabs,
+            selection: activeChapter,
+            onSelect: { selectedChapter = $0 }
+        ) {
+            pageContent
         }
-        .listStyle(.insetGrouped)
+        .padding(.leading, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
@@ -160,11 +155,36 @@ struct ConversationDetailView: View {
         }
     }
 
-    // MARK: - Header (cover + progress + actions)
+    // MARK: - Intro (cover + report)
 
-    private var headerSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 14) {
+    /// The intro chapter: cover (title, progress, actions), then the talk's
+    /// report — score, coach's note, what carried over from practice.
+    @ViewBuilder
+    private var introPage: some View {
+        coverBlock
+        missingSummaryBlock
+        if curriculum.isMastered && archivedAt == nil { masteredBanner }
+        if let sc = session.summary?.scorecard {
+            Divider().padding(.leading, 20)
+            scoreBlock(sc)
+        }
+        if let note = session.summary?.overallNote, !note.isEmpty {
+            Divider().padding(.leading, 20).padding(.top, 8)
+            groupLabel("Coach's note", icon: "text.bubble")
+            Text(note)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 20)
+                .padding(.top, 2)
+                .padding(.bottom, 8)
+        }
+        carryoverBlock
+    }
+
+    private var coverBlock: some View {
+            VStack(alignment: .leading, spacing: 18) {
                 HStack(spacing: 14) {
                     ZStack {
                         Circle().fill(Color.accentColor.opacity(0.15))
@@ -219,110 +239,66 @@ struct ConversationDetailView: View {
                 }
                 .controlSize(.large)
             }
-            .padding(.vertical, 6)
-        } footer: {
-            Text(explain("Replay the talk, pick up its words, shadow the smoother versions of your own lines — then continue the conversation."))
-        }
+            .padding(20)
     }
 
     /// The talk is here but its review material never got made — the analysis
     /// call failed when the call ended (network, credits, a reply the token
     /// ceiling cut off) and the raw conversation was saved without it.
     ///
-    /// Everything below this section derives from that summary, so the page is
-    /// otherwise empty and the talk is stuck: no drills, no score, nothing
-    /// folded into the learner profile. This is the only way back.
+    /// Everything below derives from that summary, so the book is otherwise
+    /// empty and the talk is stuck: no drills, no score, nothing folded into
+    /// the learner profile. This is the only way back.
     @ViewBuilder
-    private var missingSummarySection: some View {
+    private var missingSummaryBlock: some View {
         if SessionSummarizer.needsSummary(session) {
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Label("Review material missing", systemImage: "exclamationmark.triangle.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.orange)
-                    Text(explain("The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now."))
-                        .font(.caption).foregroundStyle(.secondary)
-                    Button {
-                        Task { await regenerateSummary() }
-                    } label: {
-                        HStack {
-                            if isRegenerating {
-                                ProgressView().controlSize(.small)
-                                Text("Working…")
-                            } else {
-                                Label("Generate review material", systemImage: "sparkles")
-                            }
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Review material missing", systemImage: "exclamationmark.triangle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text(explain("The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now."))
+                    .font(.caption).foregroundStyle(.secondary)
+                Button {
+                    Task { await regenerateSummary() }
+                } label: {
+                    HStack {
+                        if isRegenerating {
+                            ProgressView().controlSize(.small)
+                            Text("Working…")
+                        } else {
+                            Label("Generate review material", systemImage: "sparkles")
                         }
-                        .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(isRegenerating)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.vertical, 4)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .disabled(isRegenerating)
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
         }
     }
 
     private var masteredBanner: some View {
-        Section {
-            HStack(spacing: 12) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.title2).foregroundStyle(.green)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Talk mastered").font(.subheadline.weight(.semibold))
-                    Text(explain("Everything this conversation had to teach is yours."))
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button("Archive") { setArchived(true) }
-                    .buttonStyle(.borderedProminent).tint(.green)
-                    .controlSize(.small)
+        HStack(spacing: 12) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.title2).foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Talk mastered").font(.subheadline.weight(.semibold))
+                Text(explain("Everything this conversation had to teach is yours."))
+                    .font(.caption).foregroundStyle(.secondary)
             }
-            .padding(.vertical, 4)
+            Spacer()
+            Button("Archive") { setArchived(true) }
+                .buttonStyle(.borderedProminent).tint(.green)
+                .controlSize(.small)
         }
-    }
-
-    /// The talk's report — score, coach's note, and what carried over from
-    /// practice. One group so the cover can order it around the table of
-    /// contents by mode.
-    @ViewBuilder
-    private var reportSections: some View {
-        if let sc = session.summary?.scorecard { scoreSection(sc) }
-        if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
-        carryoverSection
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
     }
 
     // MARK: - The bookmarked page
-
-    /// The study page with ribbon bookmarks on its right edge. Selecting a
-    /// ribbon swaps the page in place — the conversation itself replays
-    /// through the header's Replay button. The book opens on the first
-    /// unfinished chapter, like a bookmark left in place.
-    @ViewBuilder
-    private var studySections: some View {
-        let chapters = studyChapters
-        if !chapters.isEmpty {
-            Section {
-                BookmarkedPage(
-                    tabs: chapters.map { entry in
-                        .init(id: entry.chapter, icon: entry.icon, title: entry.title,
-                              done: entry.done, total: entry.total, count: entry.count)
-                    },
-                    selection: activeChapter,
-                    onSelect: { selectedChapter = $0 }
-                ) {
-                    pageContent
-                }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-            } footer: {
-                if let footer = chapterFooter {
-                    Text(footer)
-                }
-            }
-        }
-    }
 
     private struct ChapterEntry {
         let chapter: Chapter
@@ -395,48 +371,64 @@ struct ConversationDetailView: View {
         return entries
     }
 
-    /// The chapter whose page shows: the learner's explicit pick when it
-    /// still exists, otherwise the first unfinished chapter (the bookmark),
-    /// otherwise the first chapter.
-    private var activeChapter: Chapter? {
-        let chapters = studyChapters
-        if let selectedChapter, chapters.contains(where: { $0.chapter == selectedChapter }) {
+    private var allTabs: [BookmarkTab<Chapter>] {
+        [BookmarkTab<Chapter>(id: .intro, icon: "book.closed", title: chrome("Overview"))]
+            + studyChapters.map {
+                BookmarkTab(id: $0.chapter, icon: $0.icon, title: $0.title,
+                            done: $0.done, total: $0.total, count: $0.count)
+            }
+    }
+
+    /// The open chapter: the learner's explicit pick when it still exists,
+    /// otherwise the intro (the cover).
+    private var activeChapter: Chapter {
+        let ids = allTabs.map(\.id)
+        if let selectedChapter, ids.contains(selectedChapter) {
             return selectedChapter
         }
-        return (chapters.first { !$0.isComplete } ?? chapters.first)?.chapter
+        return .intro
     }
 
-    /// The selected chapter's page: a small title, then the chapter's rows.
+    /// The open chapter's page content, scrolled inside the fixed page.
     @ViewBuilder
     private var pageContent: some View {
-        if let entry = studyChapters.first(where: { $0.chapter == activeChapter }) {
-            Text(entry.title)
-                .font(.headline)
-                .padding(.horizontal, 16)
-                .padding(.top, 14)
-                .padding(.bottom, 4)
-            switch entry.chapter {
-            case .words: wordsPage
-            case .expressions: expressionsPage
-            case .lines: linesPage
-            case .cards: reviewPage
-            }
+        switch activeChapter {
+        case .intro:
+            introPage
+        case .words:
+            pageTitle(chrome("Words"))
+            wordsPage
+            pageFooter("Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known.")
+        case .expressions:
+            pageTitle(chrome("Expressions"))
+            expressionsPage
+            pageFooter(explain("Expressions you actually used this talk."))
+        case .lines:
+            pageTitle(chrome("Your lines"))
+            linesPage
+            pageFooter(explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+        case .cards:
+            pageTitle(chrome("Review"))
+            reviewPage
         }
     }
 
-    private var chapterFooter: String? {
-        switch activeChapter {
-        case .words:
-            return "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."
-        case .expressions:
-            return explain("Expressions you actually used this talk.")
-        case .lines:
-            return explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
-        case .cards:
-            return explain("A quick active-recall run through this talk's saved phrases.")
-        case nil:
-            return nil
-        }
+    private func pageTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.headline)
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 6)
+    }
+
+    private func pageFooter(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineSpacing(3)
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
     }
 
     /// A small group label inside a page that stacks more than one kind of
@@ -445,9 +437,9 @@ struct ConversationDetailView: View {
         Label(title, systemImage: icon)
             .font(.footnote.weight(.semibold))
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 2)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
     }
 
     // MARK: - Chapter pages
@@ -524,27 +516,34 @@ struct ConversationDetailView: View {
 
     /// Everything about the learner's own sentences, in the order you'd work
     /// them: see the correction, shadow the smoother version, then shadow
-    /// the fluent self's whole lines.
+    /// the fluent self's whole lines. Groups separated by dividers so the
+    /// three kinds of material read as distinct steps, not one pile.
     @ViewBuilder
     private var linesPage: some View {
+        let hasCorrections = !(session.summary?.phrasesUsed.isEmpty ?? true)
         if let sum = session.summary, !sum.phrasesUsed.isEmpty {
             groupLabel("Say it better", icon: "sparkles")
             ForEach(sum.phrasesUsed) { p in
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(p.userSaid)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .strikethrough()
+                        .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
                         .font(.subheadline)
+                        .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 9)
             }
         }
         if !curriculum.shadowLines.isEmpty {
+            if hasCorrections {
+                Divider().padding(.leading, 20).padding(.top, 12)
+            }
             groupLabel("Say it smoother", icon: "waveform")
             ForEach(curriculum.shadowLines) { line in
                 Button {
@@ -578,6 +577,9 @@ struct ConversationDetailView: View {
             }
         }
         if !freshShadowLines.isEmpty {
+            if hasCorrections || !curriculum.shadowLines.isEmpty {
+                Divider().padding(.leading, 20).padding(.top, 12)
+            }
             groupLabel("Shadow this conversation", icon: "waveform.badge.mic")
             ForEach(freshShadowLines) { turn in
                 Button {
@@ -607,30 +609,17 @@ struct ConversationDetailView: View {
         Color.clear.frame(height: 8)
     }
 
-    /// The review chapter: what it is in one line, the phrases queued from
-    /// this talk, and ONE clear action — run the deck.
+    /// The review chapter: what it is in one line, ONE clear action — run
+    /// the deck — and then the phrases queued from this talk.
     @ViewBuilder
     private var reviewPage: some View {
-        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
-            groupLabel("Drill next", icon: "text.badge.plus")
-            ForEach(drills, id: \.self) { drill in
-                NavigationLink {
-                    sessionDeck
-                } label: {
-                    HStack {
-                        Text(drill).font(.subheadline)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 8)
-                        Image(systemName: "chevron.right")
-                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 9)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
+        Text(explain("A quick active-recall run through this talk's saved phrases."))
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 20)
+            .padding(.top, 2)
         if drillCount > 0 {
             NavigationLink {
                 sessionDeck
@@ -639,13 +628,35 @@ struct ConversationDetailView: View {
                       ? "Practice this card"
                       : "Practice these \(drillCount) cards",
                       systemImage: "rectangle.stack.fill")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.tint)
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .padding(.horizontal, 20)
+            .padding(.top, 14)
+        }
+        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
+            Divider().padding(.leading, 20).padding(.top, 18)
+            groupLabel("Drill next", icon: "text.badge.plus")
+            ForEach(drills, id: \.self) { drill in
+                NavigationLink {
+                    sessionDeck
+                } label: {
+                    HStack {
+                        Text(drill).font(.subheadline)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         Color.clear.frame(height: 4)
     }
@@ -667,16 +678,16 @@ struct ConversationDetailView: View {
     }
 
     @ViewBuilder
-    private var carryoverSection: some View {
+    private var carryoverBlock: some View {
         let hits = session.summary?.carryovers ?? []
         if !hits.isEmpty {
-            Section {
-                ForEach(hits) { CarryoverRow(carryover: $0) }
-            } header: {
-                Label("You used what you practiced", systemImage: "target")
-            } footer: {
-                Text(explain("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue."))
+            groupLabel("You used what you practiced", icon: "target")
+            ForEach(hits) {
+                CarryoverRow(carryover: $0)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
             }
+            pageFooter(explain("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue."))
         }
     }
 
@@ -781,46 +792,39 @@ struct ConversationDetailView: View {
     /// notes, the tappable grammar row (review sheet with highlighted slips +
     /// the user's own recordings), and the pronunciation row. Replaces the old
     /// bars-only rendering so past talks keep every detail the wrap-up showed.
-    private func scoreSection(_ sc: SessionScorecard) -> some View {
-        Section("Score") {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Overall").font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text("\(overall(sc))").font(.title3.weight(.bold)).monospacedDigit()
-                        .foregroundStyle(color(overall(sc)))
-                }
-                // The scores are feedback on THIS talk, graded against the
-                // user's LEVEL SETTING (Me tab) — say so precisely, or "your
-                // C1 level" reads as a level claim that can contradict the
-                // measured level.
-                Text(scoreContextLine(sc))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                ScorecardView(scorecard: sc,
-                              grammarIssues: session.summary?.grammarIssues ?? [],
-                              userTurns: session.turns.filter { $0.role == .user },
-                              sessionId: session.id,
-                              onSessionUpdated: {
-                                  session = $0
-                                  // Corrected evidence can void the latest
-                                  // level assessment — re-run it if this talk
-                                  // was part of its window.
-                                  appState.reassessAfterEvidenceChange(in: $0)
-                              })
+    @ViewBuilder
+    private func scoreBlock(_ sc: SessionScorecard) -> some View {
+        groupLabel("Score", icon: "chart.bar")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Overall").font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("\(overall(sc))").font(.title3.weight(.bold)).monospacedDigit()
+                    .foregroundStyle(color(overall(sc)))
             }
-            .padding(.vertical, 6)
-        }
-    }
-
-    private func noteSection(_ note: String) -> some View {
-        Section("Coach's note") {
-            Text(note)
-                .font(.subheadline)
+            // The scores are feedback on THIS talk, graded against the
+            // user's LEVEL SETTING (Me tab) — say so precisely, or "your
+            // C1 level" reads as a level claim that can contradict the
+            // measured level.
+            Text(scoreContextLine(sc))
+                .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            ScorecardView(scorecard: sc,
+                          grammarIssues: session.summary?.grammarIssues ?? [],
+                          userTurns: session.turns.filter { $0.role == .user },
+                          sessionId: session.id,
+                          onSessionUpdated: {
+                              session = $0
+                              // Corrected evidence can void the latest
+                              // level assessment — re-run it if this talk
+                              // was part of its window.
+                              appState.reassessAfterEvidenceChange(in: $0)
+                          })
         }
+        .padding(.horizontal, 20)
+        .padding(.top, 2)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Toolbar
