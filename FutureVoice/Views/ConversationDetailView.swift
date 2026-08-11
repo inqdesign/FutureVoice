@@ -42,7 +42,9 @@ struct ConversationDetailView: View {
     @State private var showingContinue = false
     @State private var showingTranscript = false
     @State private var wordSheet: WordRef?
-    @State private var shadowLine: ScenarioCurriculum.Item?
+    /// A correction opened as its drill card — the study surface (examples,
+    /// variants, memory hook) for the Drill chapter's pairs.
+    @State private var enrichmentCard: DrillCard?
     /// Fluent-self line being shadowed from the post-talk "while it's fresh"
     /// list (distinct from `shadowLine`, which is a corrected user sentence).
     @State private var fluentShadowTurn: Turn?
@@ -116,19 +118,12 @@ struct ConversationDetailView: View {
             WordSheet(initialWord: ref.value, words: ref.siblings)
                 .environmentObject(appState)
         }
-        .sheet(item: $shadowLine, onDismiss: refresh) { item in
-            // The item id doubles as the synthetic Turn id (stable, derived
-            // from the source turn), so attempts + cached TTS stay attached.
-            ShadowDrillView(
-                turn: Turn(id: item.id, role: .fluentSelf, audioURL: nil,
-                           transcript: item.text, durationMs: 0,
-                           timestamp: session.startedAt, suggestion: nil),
-                targetLanguage: appState.targetLanguage
-            )
-            .environmentObject(appState)
-        }
         .sheet(item: $fluentShadowTurn, onDismiss: refresh) { turn in
             ShadowDrillView(turn: turn, targetLanguage: appState.targetLanguage)
+                .environmentObject(appState)
+        }
+        .sheet(item: $enrichmentCard, onDismiss: refresh) { card in
+            DrillEnrichmentSheet(card: card)
                 .environmentObject(appState)
         }
         .alert("Something went wrong",
@@ -337,9 +332,9 @@ struct ConversationDetailView: View {
     }
 
     private var studyChapters: [ChapterEntry] {
-        // Shadow = repeat the fluent self's lines; Drill = everything about
-        // fixing YOUR sentences (corrections to read, smoother versions to
-        // score, the card run that locks them in).
+        // Shadow = repeat the fluent self's lines. Drill = the grammar and
+        // expression fixes — corrections studied as CARDS (saved, enriched,
+        // recalled), never as shadowing.
         let hasShadow = !freshShadowLines.isEmpty
         let hasDrill = drillCount > 0
             || !(session.summary?.phrasesUsed.isEmpty ?? true)
@@ -367,12 +362,8 @@ struct ConversationDetailView: View {
                                         count: freshShadowLines.count))
         }
         if hasDrill {
-            // The smoother-versions mastery is this chapter's progress; the
-            // plain card count is the fallback when a talk minted no lines.
             entries.append(ChapterEntry(chapter: .cards, title: chrome("Drill"),
                                         icon: "rectangle.stack",
-                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
-                                        total: curriculum.shadowLines.count,
                                         count: drillCount))
         }
         return entries
@@ -522,8 +513,8 @@ struct ConversationDetailView: View {
     }
 
     /// The shadow chapter: repeat the fluent self's whole lines from this
-    /// talk. Everything about fixing the learner's OWN sentences lives in
-    /// the Drill chapter.
+    /// talk. The corrections of the learner's OWN sentences are STUDY
+    /// material, not shadowing — they live in the Drill chapter as cards.
     @ViewBuilder
     private var shadowPage: some View {
         ForEach(freshShadowLines) { turn in
@@ -561,19 +552,18 @@ struct ConversationDetailView: View {
 
     /// One correction, whichever pipeline it came from (a live turn
     /// suggestion or the summary's phrase feedback): the learner's original,
-    /// the fluent version to SAY, why, and where shadow attempts attach.
+    /// the corrected form, and why. Studied as a CARD — see `openCard(for:)`.
     private struct CorrectionItem: Identifiable {
-        let id: UUID          // stable — shadow attempts + cached TTS attach here
+        let id: UUID
         let original: String?
         let fluent: String
         let reason: String
-        /// Curriculum-tracked mastery; summary-only corrections show their
-        /// best score instead.
-        let masteredAt: Date?
+        /// The user turn the correction fixed — how its drill card is found.
+        let sourceTurnId: UUID?
     }
 
-    /// Turn-suggestion lines first (they carry the book's mastery), then any
-    /// summary corrections that aren't already the same sentence.
+    /// Turn-suggestion corrections first, then any summary corrections that
+    /// aren't already the same sentence.
     private var corrections: [CorrectionItem] {
         var items: [CorrectionItem] = []
         var seen = Set<String>()
@@ -587,26 +577,56 @@ struct ConversationDetailView: View {
             let original = session.turns.first { $0.id == turnId }?.transcript
             items.append(CorrectionItem(id: line.id, original: original,
                                         fluent: line.text, reason: line.note,
-                                        masteredAt: line.masteredAt))
+                                        sourceTurnId: turnId))
             seen.insert(CarryoverDetector.normalized(line.text))
         }
         for p in session.summary?.phrasesUsed ?? [] {
             guard seen.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
             else { continue }
-            items.append(CorrectionItem(id: TalkCurriculum.shadowLineId(for: p.id),
+            items.append(CorrectionItem(id: p.id,
                                         original: p.userSaid,
                                         fluent: p.fluentAlternative,
                                         reason: p.reason,
-                                        masteredAt: nil))
+                                        sourceTurnId: nil))
         }
         return items
     }
 
-    /// The drill chapter: fixing the learner's OWN sentences, one unit per
-    /// correction — read the diff and its reason, TAP to say the fluent
-    /// version aloud (scored, \(ScenarioCurriculum.shadowMasteryScore)+
-    /// masters it), then run the short capped deck for active recall. The
-    /// same fixes come back in future talks as carryover credit.
+    /// The correction's drill card — every correction is ingested as one at
+    /// session end, so this is a lookup, with a save as the safety net for
+    /// cards the ingest filtered (and it stays a card from then on).
+    private func openCard(for item: CorrectionItem) {
+        let cards = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }
+        if let turnId = item.sourceTurnId,
+           let hit = cards.first(where: { $0.sourceTurnId == turnId }) {
+            enrichmentCard = hit
+            return
+        }
+        let needle = CarryoverDetector.normalized(item.fluent)
+        if let hit = cards.first(where: {
+            let target = CarryoverDetector.normalized($0.targetPhrase)
+            return target == needle || needle.contains(target)
+        }) {
+            enrichmentCard = hit
+            return
+        }
+        let card = DrillCard(sourcePhrase: item.original ?? "",
+                             targetPhrase: item.fluent,
+                             reason: item.reason,
+                             createdAt: Date(),
+                             nextReviewAt: Date(),
+                             box: 0,
+                             sourceSessionId: session.id,
+                             sourceTurnId: item.sourceTurnId)
+        DrillStore.shared.save(card)
+        enrichmentCard = card
+    }
+
+    /// The drill chapter: the talk's grammar and expression fixes. The
+    /// corrections are the DIAGNOSIS — read what changed and why — and the
+    /// card run below is the practice: it shows your original and asks you
+    /// to produce the fix from memory. Saying lines aloud lives in the
+    /// Shadow chapter; this one is about getting the form right.
     @ViewBuilder
     private var drillPage: some View {
         let all = corrections
@@ -615,7 +635,7 @@ struct ConversationDetailView: View {
             ForEach(all) { item in
                 correctionRow(item)
             }
-            pageFooter(explain("Each line is the smoother version of something you actually said. Tap one to say the fix out loud — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's yours. The same fixes come back as cards below."))
+            pageFooter(explain("Each pair is what you said and its corrected form. Tap one to study it as a card — examples, variants, a memory hook. The run below then asks you to produce the fix from memory."))
         }
         if drillCount > 0 {
             Divider().padding(.leading, 20).padding(.top, 12)
@@ -635,18 +655,15 @@ struct ConversationDetailView: View {
         Color.clear.frame(height: 4)
     }
 
+    /// One correction as STUDY material: the diagnosis pair, and a tap that
+    /// opens its drill card — examples, variants, memory hook. Never a
+    /// shadowing surface; a fix is learned by understanding and recalling
+    /// it, not by mimicking its sound.
     private func correctionRow(_ item: CorrectionItem) -> some View {
-        let best = bestShadowScore(for: item.id)
-        let mastered = item.masteredAt != nil
-            || (best ?? 0) >= ScenarioCurriculum.shadowMasteryScore
-        return Button {
-            // The item id doubles as the synthetic Turn id, so attempts and
-            // cached TTS stay attached across opens.
-            shadowLine = ScenarioCurriculum.Item(id: item.id, text: item.fluent,
-                                                 note: item.reason)
+        Button {
+            openCard(for: item)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                masteryMark(mastered)
                 VStack(alignment: .leading, spacing: 4) {
                     if let original = item.original, !original.isEmpty {
                         Text(original)
@@ -667,16 +684,11 @@ struct ConversationDetailView: View {
                     }
                 }
                 Spacer(minLength: 8)
-                if let best {
-                    Text("\(best)")
-                        .font(.caption.weight(.semibold).monospacedDigit())
-                        .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
-                }
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 20)
-            .padding(.vertical, 10)
+            .padding(.vertical, 9)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

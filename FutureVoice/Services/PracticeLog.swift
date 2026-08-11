@@ -12,12 +12,16 @@ final class PracticeLog {
     struct Day: Codable {
         var drillReps: Int = 0
         var shadowReps: Int = 0
-        var total: Int { drillReps + shadowReps }
+        var wordReps: Int = 0
+        var expressionReps: Int = 0
+        var total: Int { drillReps + shadowReps + wordReps + expressionReps }
     }
 
     enum Kind {
         case drill
         case shadow
+        case word
+        case expression
     }
 
     private var days: [String: Day]
@@ -38,8 +42,10 @@ final class PracticeLog {
         let key = Self.key(for: date)
         var day = days[key] ?? Day()
         switch kind {
-        case .drill:  day.drillReps += 1
-        case .shadow: day.shadowReps += 1
+        case .drill:      day.drillReps += 1
+        case .shadow:     day.shadowReps += 1
+        case .word:       day.wordReps += 1
+        case .expression: day.expressionReps += 1
         }
         days[key] = day
         save()
@@ -70,5 +76,22 @@ final class PracticeLog {
 
     private static func key(for date: Date) -> String {
         keyFormatter.string(from: date)
+    }
+}
+
+extension PracticeLog.Day {
+    // Lenient decoding: logs written before the word/expression counters
+    // existed lack those keys, and the loader treats a decode failure as an
+    // empty log — which would erase the whole history on first launch.
+    private enum CodingKeys: String, CodingKey {
+        case drillReps, shadowReps, wordReps, expressionReps
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        drillReps      = try c.decodeIfPresent(Int.self, forKey: .drillReps) ?? 0
+        shadowReps     = try c.decodeIfPresent(Int.self, forKey: .shadowReps) ?? 0
+        wordReps       = try c.decodeIfPresent(Int.self, forKey: .wordReps) ?? 0
+        expressionReps = try c.decodeIfPresent(Int.self, forKey: .expressionReps) ?? 0
     }
 }

@@ -80,8 +80,10 @@ struct DrillView: View {
     /// than a fumble. Below this the card springs home and nothing is graded.
     private static let commitThreshold: CGFloat = 64
     /// A due pile in the hundreds is a lost game before the first card. Deal
-    /// a hand this size instead; the empty state offers the next hand.
-    private static let sessionCap = 20
+    /// a hand this size instead; the empty state offers the next hand. Also
+    /// the Practice tab's Cards challenge target, so a 150-card backlog reads
+    /// as "clear today's deck", not "do 150".
+    static let sessionCap = 20
     /// A single talk's post-talk review run — short enough to finish in one
     /// sitting right after the call.
     private static let quickRunCap = 8

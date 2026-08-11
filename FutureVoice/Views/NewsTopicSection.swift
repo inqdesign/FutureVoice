@@ -42,7 +42,7 @@ struct DiscoverSection: View {
     /// News-born topic books stay out of here — they belong to the news
     /// taxonomy, not the scenario rail.
     private var scenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true }
+        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene }
             .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 

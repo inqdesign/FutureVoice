@@ -851,6 +851,19 @@ struct Scenario: Codable, Identifiable, Hashable {
     /// A short, clean summary of the situation for the card — NOT the raw
     /// prompt the user typed (which drives the conversation via `environment`).
     var summary: String? = nil
+    /// True for the scene behind a Find-people person's Watch. A `Scenario` is
+    /// the only container the scene machinery has, so meeting someone mints
+    /// one — but it isn't a situation the user BUILT, and listing it under
+    /// "Your scenarios" put a conversation with a person in among the
+    /// situations they wrote themselves. The book still lives in Practice,
+    /// where reviewing what came out of it belongs. Optional so old rows
+    /// decode unchanged.
+    var isMeeting: Bool? = nil
+
+    /// Rows minted before the flag existed carry only the category, so read
+    /// both — otherwise the meetings already on disk stay in the list this
+    /// flag was added to get them out of.
+    var isMeetingScene: Bool { isMeeting == true || category == "Meeting" }
 
     var isArchived: Bool { archivedAt != nil }
 

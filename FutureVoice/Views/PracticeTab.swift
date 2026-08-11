@@ -20,11 +20,14 @@ import SwiftUI
 struct PracticeTab: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var vocab = VocabStore.shared
+    @ObservedObject private var goals = GoalStore.shared
 
     /// Programmatic push of the vocabulary notebook, driven by the
     /// futurevoice://vocab deep link (study widget tap).
     @State private var showingVocabulary = false
     @State private var showingExpressions = false
+    @State private var showingShadowBrowser = false
+    @State private var showingGoalsEditor = false
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -142,6 +145,11 @@ struct PracticeTab: View {
                     .navigationTitle("Expressions")
                     .navigationBarTitleDisplayMode(.inline)
             }
+            .navigationDestination(isPresented: $showingShadowBrowser) {
+                ShadowBrowserView()
+                    .navigationTitle("Shadowing")
+                    .navigationBarTitleDisplayMode(.inline)
+            }
             .navigationDestination(item: $openScenario) { s in
                 ScenarioDetailView(scenarioId: s.id)
                     .environmentObject(appState)
@@ -157,6 +165,10 @@ struct PracticeTab: View {
             }
             .sheet(isPresented: $showingDrills, onDismiss: reload) {
                 DrillSheet().environmentObject(appState)
+            }
+            .sheet(isPresented: $showingGoalsEditor) {
+                StudyGoalsSheet()
+                    .presentationDetents([.medium])
             }
             .sheet(isPresented: $showingFinished, onDismiss: reload) {
                 FinishedBooksSheet(books: finishedBooks)
@@ -433,12 +445,10 @@ struct PracticeTab: View {
     }
 
     /// Everything that answers "where do I stand, and what can I open right
-    /// now" — whole-library mastery, the due-cards entry, and the three
-    /// practice-type shortcuts — in ONE grouped card. They were three separate
-    /// floating panels (five rects with the shortcuts), which read as clutter
-    /// above the book grid; the books below are the page's actual content, so
-    /// the status strip has to be a single object. Sections are separated by
-    /// hairlines the way a grouped List separates rows.
+    /// now" — whole-library mastery and the three practice-type shortcuts —
+    /// in ONE grouped card below the Today card. The due-cards entry moved up
+    /// into Today as the Cards challenge. Sections are separated by hairlines
+    /// the way a grouped List separates rows.
     private var studyCard: some View {
         let p = overallProgress
         return VStack(spacing: 0) {
@@ -446,13 +456,168 @@ struct PracticeTab: View {
                 overallSummary(mastered: p.mastered, total: p.total)
                 CardDivider(inset: 14)
             }
-            if dueDrillCount > 0 {
-                reviewRow
-                CardDivider(inset: 14)
-            }
             practiceShortcuts
         }
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    // MARK: - Today (daily challenges)
+
+    /// Reps logged so far today, read fresh on every render — the log is a
+    /// dictionary lookup, and each rep's write path already re-renders this
+    /// view (vocab is observed, shadow attempts publish through appState, the
+    /// drill sheet reloads on dismiss).
+    private var todayLog: PracticeLog.Day {
+        PracticeLog.shared.day(Date()) ?? PracticeLog.Day()
+    }
+
+    /// The daily challenges: a bounded plan for today instead of an unbounded
+    /// pile. One row per enabled goal (words / expressions / shadowing, set in
+    /// `GoalStore`) plus the due SRS deck, then the week strip that those
+    /// finished days accumulate into. The books below stay the supply; this
+    /// card is the ask.
+    private var todayCard: some View {
+        let today = todayLog
+        let streak = goals.streak()
+        return VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text("Today").font(.headline)
+                Spacer()
+                if streak > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill")
+                        Text("\(streak)").monospacedDigit()
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel("\(streak) day streak")
+                }
+                Button { showingGoalsEditor = true } label: {
+                    Image(systemName: "slider.horizontal.3")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel("Edit daily goals")
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 10)
+
+            // The SRS deck is its own challenge with a moving target: clear
+            // today's deck. The target is capped at one deck (DrillView.
+            // sessionCap) so a 150-card backlog asks for 20, not 150 — extra
+            // decks past the target just show as done. Hidden on a day with
+            // nothing due and nothing done.
+            if dueDrillCount > 0 || today.drillReps > 0 {
+                CardDivider(inset: 14)
+                let cardsGoal = max(today.drillReps,
+                                    min(today.drillReps + dueDrillCount, DrillView.sessionCap))
+                challengeRow(icon: "rectangle.stack", title: "Cards",
+                             done: today.drillReps, goal: cardsGoal) {
+                    showingDrills = true
+                }
+            }
+            if goals.wordsPerDay > 0 {
+                CardDivider(inset: 14)
+                challengeRow(icon: "text.book.closed.fill", title: "Words",
+                             done: today.wordReps, goal: goals.wordsPerDay) {
+                    showingVocabulary = true
+                }
+            }
+            if goals.expressionsPerDay > 0 {
+                CardDivider(inset: 14)
+                challengeRow(icon: "quote.bubble.fill", title: "Expressions",
+                             done: today.expressionReps, goal: goals.expressionsPerDay) {
+                    showingExpressions = true
+                }
+            }
+            if goals.shadowsPerDay > 0 {
+                CardDivider(inset: 14)
+                challengeRow(icon: "waveform.badge.mic", title: "Shadowing",
+                             done: today.shadowReps, goal: goals.shadowsPerDay) {
+                    showingShadowBrowser = true
+                }
+            }
+            if goals.anyEnabled {
+                CardDivider(inset: 14)
+                weekStrip
+            } else {
+                CardDivider(inset: 14)
+                Button { showingGoalsEditor = true } label: {
+                    Text(explain("No daily goals set — tap to pick how many words, expressions and shadow takes make a day."))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    /// One daily challenge: icon, title, progress bar, done/goal count. A
+    /// completed row swaps its chevron for a green check but keeps navigating
+    /// — done is a state, not a locked door (extra decks, more words).
+    private func challengeRow(icon: String, title: LocalizedStringKey,
+                              done: Int, goal: Int,
+                              action: @escaping () -> Void) -> some View {
+        let complete = done >= goal
+        return Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundStyle(complete ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tint))
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(title)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: 8)
+                        Text("\(done)/\(goal)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    ProgressView(value: Double(min(done, goal)), total: Double(max(goal, 1)))
+                        .tint(complete ? .green : .accentColor)
+                }
+                Image(systemName: complete ? "checkmark.circle.fill" : "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(complete ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tertiary))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The last seven days, today last — a filled check for each day every
+    /// enabled challenge was met. What the streak is made of, made visible.
+    private var weekStrip: some View {
+        let cal = Calendar.current
+        let days: [Date] = (0..<7).reversed()
+            .compactMap { cal.date(byAdding: .day, value: -$0, to: Date()) }
+        return HStack(spacing: 0) {
+            ForEach(days, id: \.self) { d in
+                let met = goals.met(on: d)
+                let isToday = cal.isDateInToday(d)
+                VStack(spacing: 5) {
+                    Text(d, format: .dateTime.weekday(.narrow))
+                        .font(.caption2)
+                        .foregroundStyle(isToday ? .primary : .secondary)
+                    Image(systemName: met ? "checkmark.circle.fill" : "circle")
+                        .font(.subheadline)
+                        .foregroundStyle(met ? AnyShapeStyle(Color.green)
+                                             : (isToday ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary)))
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     /// The whole-library progress section: big percent in the display face,
@@ -472,30 +637,6 @@ struct PracticeTab: View {
             }
         }
         .padding(14)
-    }
-
-    /// SRS review entry — rehomed here from the home Today card (whose slot
-    /// now shows the whole-library mastery bar). Only when cards are due.
-    private var reviewRow: some View {
-        Button { showingDrills = true } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "rectangle.stack")
-                    .font(.body)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                Text(dueDrillCount == 1 ? "Review 1 card" : "Review \(dueDrillCount) cards")
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     /// When a book came into existence. The one ordering the whole tab now
@@ -533,6 +674,7 @@ struct PracticeTab: View {
 
     private var studyingPage: some View {
         VStack(alignment: .leading, spacing: 20) {
+            todayCard
             studyCard
             if !talkRow.isEmpty {
                 bookRow(title: "Talk", shelf: .talk, count: talkRow.count) {
@@ -623,7 +765,10 @@ struct PracticeTab: View {
         CardDivider(inset: 10, axis: .vertical)
     }
 
-    private func shortcut<D: View>(icon: String, title: String, count: Int,
+    // title is a LocalizedStringKey, not String — a String parameter is the
+    // classic literal-through-a-variable localization hole (the Today card
+    // above resolved to the target language while this band stayed English).
+    private func shortcut<D: View>(icon: String, title: LocalizedStringKey, count: Int,
                                    @ViewBuilder destination: () -> D) -> some View {
         NavigationLink { destination() } label: {
             VStack(spacing: 6) {
@@ -874,6 +1019,55 @@ struct PracticeTab: View {
                                                  shadowAttempts: appState.shadowAttempts)
             }
             talkSnapshots = out
+        }
+    }
+}
+
+// MARK: - Daily goals editor
+
+/// Steppers for the three daily challenge targets. 0 = challenge off. Writes
+/// straight into `GoalStore`, so the Today card behind the sheet updates live.
+struct StudyGoalsSheet: View {
+    @ObservedObject private var goals = GoalStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Stepper(value: $goals.wordsPerDay, in: 0...50) {
+                        goalLabel("text.book.closed.fill", "Words", goals.wordsPerDay)
+                    }
+                    Stepper(value: $goals.expressionsPerDay, in: 0...30) {
+                        goalLabel("quote.bubble.fill", "Expressions", goals.expressionsPerDay)
+                    }
+                    Stepper(value: $goals.shadowsPerDay, in: 0...30) {
+                        goalLabel("waveform.badge.mic", "Shadowing", goals.shadowsPerDay)
+                    }
+                } footer: {
+                    Text(explain("A day counts once every goal here is met. Words and expressions count each \u{201C}keep\u{201D} or \u{201C}I know\u{201D} decision; shadowing counts recorded takes. Set a goal to 0 to leave it out."))
+                }
+            }
+            .navigationTitle("Daily goals")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func goalLabel(_ icon: String, _ title: LocalizedStringKey, _ value: Int) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundStyle(.tint)
+                .frame(width: 24)
+            Text(title)
+            Spacer()
+            Text(value == 0 ? "Off" : "\(value)")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
         }
     }
 }

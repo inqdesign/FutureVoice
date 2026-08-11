@@ -193,6 +193,7 @@ struct WatchTab: View {
                 + "mid-subject, the way real talk does."
         )
         s.counterpartId = person.id
+        s.isMeeting = true
         s.category = Self.meetingCategory
         s.categoryIcon = "person.2.wave.2"
         s.summary = "Free talk with \(person.name)"
@@ -300,7 +301,10 @@ struct WatchTab: View {
     // MARK: - Your scenarios (the same list Talk shows — watch them here too)
 
     private var savedScenarios: [Scenario] {
-        appState.scenarios.filter { $0.isTopic != true }
+        // Meetings are excluded: a talk with someone from Find people is
+        // not a situation the user built, and it belongs in Practice with the
+        // rest of the review material, not in this list.
+        appState.scenarios.filter { $0.isTopic != true && !$0.isMeetingScene }
             .sorted { ($0.lastUsedAt ?? $0.createdAt) > ($1.lastUsedAt ?? $1.createdAt) }
     }
 
