@@ -93,6 +93,32 @@ final class StoreKitService: ObservableObject {
         options.compactMap(\.trialDays).max() ?? 7
     }
 
+    // MARK: - App-lifetime transaction listener
+
+    private static var updatesTask: Task<Void, Never>?
+
+    /// Finishes transactions that arrive OUTSIDE `purchase()` — renewals, a
+    /// purchase made on another device, an Ask-to-Buy approval, or a payment
+    /// that was interrupted and completed later. Apple re-delivers every
+    /// unfinished transaction on each launch forever, and an Ask-to-Buy
+    /// approval never resolves in-app without this.
+    ///
+    /// Entitlement is NOT read from here: the server decides that from
+    /// Apple's server notifications (`apple-webhook`), so a jailbroken client
+    /// can't mint a subscription. This only clears Apple's queue.
+    ///
+    /// Must run for the app's whole life, so it lives on the type rather than
+    /// on the instance the paywall creates and throws away.
+    static func startTransactionListener() {
+        guard updatesTask == nil else { return }
+        updatesTask = Task.detached(priority: .background) {
+            for await update in Transaction.updates {
+                guard case .verified(let transaction) = update else { continue }
+                await transaction.finish()
+            }
+        }
+    }
+
     func load() async {
         guard options.isEmpty, !loading else { return }
         loading = true

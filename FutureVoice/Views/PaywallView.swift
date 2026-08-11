@@ -347,7 +347,46 @@ struct PaywallView: View {
                 freeRow("play.rectangle.on.rectangle", "Re-watch dialogues", "Generated once, then cached.")
             }
             .padding(.top, 4)
+
+            if !showsSurvey { subscriptionLegal }
         }
+    }
+
+    /// Required on any screen that sells an auto-renewable subscription (App
+    /// Store Review 3.1.2): what renews, when it's billed, how to stop it, and
+    /// links to the terms + privacy policy. Missing links are the single most
+    /// common subscription rejection — this block is not decoration.
+    private var subscriptionLegal: some View {
+        VStack(spacing: 8) {
+            Text(explain("Payment is charged to your Apple Account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Settings › Apple Account › Subscriptions."))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                Link("Terms of Use", destination: Self.termsURL)
+                Text("·").foregroundStyle(.secondary)
+                Link("Privacy Policy", destination: Self.privacyURL)
+            }
+            .font(.caption2)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 8)
+    }
+
+    /// Apple's standard EULA — the licence this app ships under. Swap this for
+    /// our own URL only if custom terms are ever written AND the same link is
+    /// set in App Store Connect; the two must agree.
+    private static let termsURL = URL(
+        string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
+
+    /// The privacy policy has a Korean edition — a policy you can't read isn't
+    /// disclosure, so follow the device's language rather than the app's
+    /// target-language chrome.
+    private static var privacyURL: URL {
+        let korean = Locale.preferredLanguages.first?.hasPrefix("ko") ?? false
+        return URL(string: korean ? "https://nawana.app/privacy-ko.html"
+                                  : "https://nawana.app/privacy.html")!
     }
 
     private func freeRow(_ icon: String, _ title: String, _ caption: String) -> some View {

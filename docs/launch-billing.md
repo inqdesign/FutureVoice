@@ -153,21 +153,29 @@ Later (if annual share is high): drip annual credits 1/12 per month via cron.
 
 ## 5. Go-live checklist
 
-Apple:
+Apple (blocking — nothing sells until these are done):
 
-- [ ] Migration applied for annual 12× credits (`20260726…_annual_credits_12x`)
-- [ ] `APPLE_BUNDLE_ID` / `APPLE_APP_ID` secrets
+- [ ] **Six products in ASC under the RENAMED ids** — `com.roro.futurevoice.daily_{weekly,monthly,annual}` / `unlimited_{…}` (renamed 2026-08-11; they must match `subscription_plans.apple_product_id`)
+- [ ] **7-day free-trial introductory offer on each** — the trial funnel reads `product.subscription.introductoryOffer`; with none, the paywall silently degrades to "Subscribe"
+- [ ] `APPLE_BUNDLE_ID` / `APPLE_APP_ID` secrets set
 - [ ] `apple-webhook` deployed; ASC Server Notifications V2 pointed at it
-- [ ] Six products in ASC matching `subscription_plans.apple_product_id` + 7-day free trial
-- [ ] TestFlight: purchase → `user_subscriptions` + ledger grant with `apple_tx_` key
+- [ ] TestFlight: purchase → `user_subscriptions` row goes `trialing`, and talk meters at 5 min/day
 - [ ] Ship only builds that set `appAccountToken` (older builds can't attribute)
 
 At launch day:
 
-- [ ] Signup grant 300 → **100** (SQL body swap; see historical snippet below)
-- [ ] Paywall leaves survey mode (`BetaConfig.isBeta = false`)
+- [ ] Paywall leaves survey mode (`BetaConfig.isBeta = false`) — **do this only after the ASC products exist**, or the paywall sells nothing while the hard paywall blocks talking
 - [ ] Web `PLANS` already match this doc; set Stripe price IDs + `BILLING.enabled`
 - [ ] MeTab shows live plan label (already wired)
+
+Done (2026-08-11):
+
+- [x] Hard paywall: signups start at 0 seconds; clone + onboarding greeting stay free
+- [x] Trial metered at the Daily allowance whatever plan it trials
+- [x] Paywall carries the auto-renew disclosure + Terms of Use (Apple standard EULA) and Privacy Policy links — App Store Review 3.1.2, the top subscription rejection cause
+- [x] App-lifetime `Transaction.updates` listener (`StoreKitService.startTransactionListener`, started in `AppDelegate`) so renewals / Ask-to-Buy / interrupted payments get finished
+- [x] Restore purchases button (was already there)
+- [ ] ~~Signup grant 300 → 100~~ — superseded by the hard paywall (grant is 0; snippet below kept for history)
 
 ### Launch signup grant (apply at production open)
 

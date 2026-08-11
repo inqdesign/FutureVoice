@@ -37,6 +37,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         // Categories are not persisted across launches — without this the
         // Answer / In-an-hour buttons simply don't render.
         DailyCallScheduler.registerCategory()
+        // StoreKit re-delivers unfinished transactions (renewals, Ask-to-Buy
+        // approvals, interrupted payments) at launch and keeps doing so until
+        // they're finished. The paywall's own service is gone the moment the
+        // sheet closes, so the listener has to start here.
+        StoreKitService.startTransactionListener()
         return true
     }
 }
