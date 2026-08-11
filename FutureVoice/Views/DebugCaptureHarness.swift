@@ -29,9 +29,17 @@ enum DebugCapture {
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
 
+    /// True while capturing a folder list: `DrillView` opens with the
+    /// Tomorrow folder sheet already presented — chips are tap-only.
+    static var previewDrillFolder = false
+
     /// True while capturing the scenario composer: it pre-selects a category
     /// and injects sample AI chips so the layout renders offline.
     static var composerPreview = false
+
+    /// The scenario seeded for the "book" capture, so the route can open its
+    /// detail page directly.
+    static var bookScenarioId: UUID?
     static let sampleCategoryIdeas: [SuggestedTopic] = [
         .init(title: "order came out wrong", blurb: "At a cafe: my order came out wrong and I want to point it out politely."),
         .init(title: "asking for a recommendation", blurb: "At a cafe: I can't decide, so I ask the barista what they'd recommend."),
@@ -105,6 +113,41 @@ enum DebugCapture {
                         }
                     }
             })
+        case "call-meter", "call-meter-low":
+            // The call toolbar with the remaining-talk-time chip, in both of
+            // its states (secondary at ≤10 min, orange at ≤3) — the chip is
+            // drag-only reachable in real use (needs a nearly-spent balance).
+            let mins = name == "call-meter-low" ? 2 : 7
+            return AnyView(NavigationStack {
+                VStack(alignment: .leading, spacing: 18) {
+                    DialogueLine(speaker: .other, name: "Future self") {
+                        Text("So — how did the interview go yesterday?")
+                    }
+                    DialogueLine(speaker: .user, name: "You") {
+                        Text("Honestly, it went really well. I felt prepared.")
+                    }
+                    Spacer()
+                }
+                .padding(20)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        LevelHeaderTitle(title: "Job interview",
+                                         level: .b1, surface: .talk,
+                                         minutesLeft: mins)
+                            .environmentObject(appState)
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Image(systemName: "xmark")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Text("End").fontWeight(.semibold)
+                            .foregroundStyle(.red)
+                    }
+                }
+            })
         case "level-sheet":
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
@@ -137,13 +180,19 @@ enum DebugCapture {
         case "drills":
             // The SRS review sheet, incl. a legacy card whose source is a whole
             // rambling turn — verifies the render-time fragment trim.
-            once("drills") { seedVocab() }
+            once("drills") { seedVocab(); seedDrillFolders() }
             return AnyView(DrillSheet().environmentObject(appState))
         case "drills-tray":
             // Same deck, frozen mid-drag: the bin tray is a drag-only surface,
             // so a screenshot can't reach it without this.
-            once("drills") { seedVocab() }
+            once("drills") { seedVocab(); seedDrillFolders() }
             previewDrillTray = true
+            return AnyView(DrillSheet().environmentObject(appState))
+        case "drills-folder":
+            // A folder opened over the deck — the sheet is reachable only by
+            // tapping a chip, which a screenshot run can't do.
+            once("drills") { seedVocab(); seedDrillFolders() }
+            previewDrillFolder = true
             return AnyView(DrillSheet().environmentObject(appState))
         case "watchtab":
             once("watchtab") { seedScenarios(into: appState) }
@@ -155,6 +204,35 @@ enum DebugCapture {
                 for s in appState.scenarios { appState.deleteScenario(id: s.id) }
             }
             return AnyView(WatchTab())
+        case "book", "book-words", "book-lines":
+            // One scenario book opened on its detail page — the table of
+            // contents (scene chapter + per-chapter progress + Up next).
+            // "-words"/"-lines" open pushed onto that chapter's page.
+            once("book") {
+                var c = curriculum(mastered: 5)
+                c.dialogueTitle = "Catching up with Sarah"
+                c.dialogue = [
+                    .init(speaker: "counterpart", text: "Oh my god, it's been forever! How have you been?"),
+                    .init(speaker: "user", text: "I know! Honestly, so much has happened — where do I even start?"),
+                    .init(speaker: "counterpart", text: "Start with the new job! How's it going?"),
+                    .init(speaker: "user", text: "It turned out to be a bit of a stretch at first, but I'm settling in."),
+                ]
+                let s = Scenario(environment: "At the café with Sarah: catching up after months apart — she asks what I've been up to and I keep the story going.",
+                                 role: "Sarah (close friend)", notes: "",
+                                 lastUsedAt: Date().addingTimeInterval(-5 * 3600),
+                                 curriculum: c, isTopic: false,
+                                 category: "Cafe", categoryIcon: "cup.and.saucer.fill",
+                                 summary: "Café · catching up")
+                appState.saveScenario(s)
+                bookScenarioId = s.id
+            }
+            let chapter: ScenarioDetailView.Chapter? = switch name {
+            case "book-words": .words
+            case "book-lines": .shadow
+            default: nil
+            }
+            return AnyView(BookCaptureHost(scenarioId: bookScenarioId, chapter: chapter)
+                .environmentObject(appState))
         case "intake-people":
             return AnyView(CounterpartVoiceIntakeView())
         case "deepen", "deepen-full":
@@ -265,6 +343,13 @@ enum DebugCapture {
             // sitting above the real tab bar.
             once("tabs") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(RootTabView())
+        case "talkdetail-words", "talkdetail-lines":
+            // The talk book opened straight onto one chapter's page.
+            once("talkdetail") { seedVocab() }
+            return AnyView(TalkBookCaptureHost(
+                session: talkDetailSession,
+                chapter: name == "talkdetail-words" ? .words : .lines)
+                .environmentObject(appState))
         case "talkdetail", "talkdetail-mid", "talkdetail-low":
             // The ONE session detail page in post-talk mode — exactly what
             // the wrap-up sheet presents when a talk ends. Lists don't honor
@@ -370,6 +455,40 @@ enum DebugCapture {
     }
 
     // MARK: - Vocabulary + expressions
+
+    /// Cards spread across the drill deck's folder buckets (Soon / Tomorrow /
+    /// Later / Learned) plus enough extra due cards to trip the session cap,
+    /// so the chips row and "· N waiting" counter render populated.
+    static func seedDrillFolders() {
+        let hour: TimeInterval = 3600
+        let day: TimeInterval = 24 * hour
+        let future: [(String, TimeInterval, Int)] = [
+            ("Could you say that one more time?", 10 * 60, 0),
+            ("I'm still getting the hang of it.", 2 * hour, 0),
+            ("That works for me.", day, 1),
+            ("Let me get back to you on that.", day + 2 * hour, 1),
+            ("I'd rather we met a bit earlier.", 3 * day, 2),
+            ("It slipped my mind completely.", 7 * day, 3),
+            ("We're on the same page.", 30 * day, 5),
+            ("That's a fair point.", 30 * day, 5),
+        ]
+        for (tgt, delay, box) in future {
+            DrillStore.shared.save(DrillCard(
+                sourcePhrase: "", targetPhrase: tgt, reason: "",
+                createdAt: Date().addingTimeInterval(-day),
+                lastReviewedAt: Date(),
+                nextReviewAt: Date().addingTimeInterval(delay), box: box))
+        }
+        for i in 0..<22 {
+            DrillStore.shared.save(DrillCard(
+                sourcePhrase: "I have went there \(i + 1) times",
+                targetPhrase: "I have been there \(i + 1) times",
+                reason: "past participle",
+                createdAt: Date().addingTimeInterval(TimeInterval(-i) * hour),
+                lastReviewedAt: nil,
+                nextReviewAt: Date().addingTimeInterval(-hour), box: 0))
+        }
+    }
 
     static func seedVocab() {
         let texts = [
@@ -662,6 +781,32 @@ enum DebugCapture {
              role: .fluentSelf, audioURL: nil,
              transcript: "I really appreciate you taking the time to help me.",
              durationMs: 3200, timestamp: Date(), suggestion: nil)
+    }
+}
+
+/// The talk book opened on one bookmark tab.
+private struct TalkBookCaptureHost: View {
+    let session: Session
+    let chapter: ConversationDetailView.Chapter
+
+    var body: some View {
+        NavigationStack {
+            ConversationDetailView(session: session, initialChapter: chapter)
+        }
+    }
+}
+
+/// The seeded scenario book, optionally opened on one bookmark tab.
+private struct BookCaptureHost: View {
+    let scenarioId: UUID?
+    let chapter: ScenarioDetailView.Chapter?
+
+    var body: some View {
+        NavigationStack {
+            if let id = scenarioId {
+                ScenarioDetailView(scenarioId: id, initialChapter: chapter)
+            }
+        }
     }
 }
 

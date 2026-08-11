@@ -268,6 +268,14 @@ enum ScenarioCurriculumEngine {
             }
             if !p.freeNotes.isEmpty { lines.append("- notes: \(p.freeNotes)") }
         }
+        // The learner and the counterpart went in as two separate blocks with
+        // nothing telling the model to cross them, so the scene's subject came
+        // off one side at random. What two people who just met actually talk
+        // about is the overlap.
+        if let c = counterpart {
+            lines.append("")
+            lines.append(CommonGround.block(learner: persona, counterpart: c))
+        }
         // Steer the study picks toward what this learner actually gets wrong,
         // so the book's words/expressions target known gaps — not generic ones.
         let weak = weakVocabAreas.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }

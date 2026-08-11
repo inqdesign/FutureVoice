@@ -67,10 +67,21 @@ struct DrillView: View {
     /// the fluent version in their head (or out loud) FIRST. Grading swipes
     /// are disabled until revealed, so "Got it" always means actual recall.
     @State private var topCardRevealed = false
+    /// Cards parked for later, bucketed by when they'll come back. The tray's
+    /// bins double as FOLDERS with live counts at rest — a graded card visibly
+    /// lands somewhere instead of vanishing, and any folder opens to a list.
+    @State private var folderCards: [DrillBin: [DrillCard]] = [:]
+    @State private var openFolder: DrillBin?
+    /// Due cards beyond today's hand — still waiting, just not dealt into
+    /// this deck.
+    @State private var remainingDue = 0
 
     /// How far the card must travel before a release counts as a drop rather
     /// than a fumble. Below this the card springs home and nothing is graded.
     private static let commitThreshold: CGFloat = 64
+    /// A due pile in the hundreds is a lost game before the first card. Deal
+    /// a hand this size instead; the empty state offers the next hand.
+    private static let sessionCap = 20
     /// Dead zone before any bin lights up — without it the card starts life
     /// straddling two bins and the first millimetre of movement buzzes.
     private static let binDeadZone: CGFloat = 28
@@ -114,9 +125,16 @@ struct DrillView: View {
             )
             .environmentObject(appState)
         }
+        .sheet(item: $openFolder) { bin in
+            folderSheet(bin)
+        }
         .onAppear {
             loadQueue()
+            refreshFolders()
             #if DEBUG
+            if DebugCapture.previewDrillFolder {
+                openFolder = .tomorrow
+            }
             if DebugCapture.previewDrillTray {
                 topCardRevealed = true
                 isDragging = true
@@ -174,6 +192,10 @@ struct DrillView: View {
             counterRow
             deck
             binHintRow
+            // The folders live where the tray will rise — at rest they're
+            // quiet counters, mid-drag the panel takes their place.
+            folderChipsRow
+                .opacity(isDragging ? 0 : 1)
         }
         .padding(.top, 12)
         .padding(.bottom, 8)
@@ -334,10 +356,95 @@ struct DrillView: View {
     }
 
     private var counterRow: some View {
-        Text("\(initialCount - queue.count + 1) of \(initialCount)")
-            .font(.footnote)
-            .foregroundStyle(.secondary)
-            .monospacedDigit()
+        HStack(spacing: 0) {
+            Text("\(initialCount - queue.count + 1) of \(initialCount)")
+            if remainingDue > 0 {
+                // The rest of the due pile didn't vanish — it's just not in
+                // this hand. Saying so here keeps the cap from reading as a
+                // miscount next to a 399-card queue.
+                Text(" · \(remainingDue) waiting")
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .monospacedDigit()
+    }
+
+    // MARK: - Folder chips
+
+    private var folderChipsRow: some View {
+        HStack(spacing: 8) {
+            ForEach(DrillBin.allCases) { bin in
+                folderChip(bin)
+            }
+        }
+    }
+
+    private func folderChip(_ bin: DrillBin) -> some View {
+        let count = folderCards[bin]?.count ?? 0
+        return Button {
+            openFolder = bin
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: bin.icon)
+                    .font(.caption)
+                Text("\(count)")
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .foregroundStyle(count == 0 ? AnyShapeStyle(.tertiary) : AnyShapeStyle(bin.tint))
+            .background(Capsule().fill(Color(.tertiarySystemFill)))
+        }
+        .buttonStyle(.plain)
+        .disabled(count == 0)
+        .animation(.snappy, value: count)
+        .accessibilityLabel("\(bin.folderTitle): \(count)")
+    }
+
+    private func folderSheet(_ bin: DrillBin) -> some View {
+        NavigationStack {
+            List {
+                ForEach(folderCards[bin] ?? []) { card in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(card.targetPhrase)
+                            .font(.subheadline)
+                            .lineLimit(2)
+                        Text("Back \(card.nextReviewAt, format: .relative(presentation: .named))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contextMenu {
+                        // Same three delays as the tray, so a card can be
+                        // pulled forward (or pushed back) without waiting for
+                        // it to come due.
+                        ForEach(DrillBin.allCases.filter { $0.manual != nil }) { target in
+                            Button {
+                                resnooze(card, to: target)
+                            } label: {
+                                Label(target.accessibilityTitle, systemImage: target.icon)
+                            }
+                        }
+                    }
+                }
+            }
+            .overlay {
+                if (folderCards[bin] ?? []).isEmpty {
+                    ContentUnavailableView(bin.folderTitle, systemImage: bin.icon)
+                }
+            }
+            .navigationTitle(bin.folderTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { openFolder = nil }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
 
@@ -492,6 +599,19 @@ enum DrillBin: String, CaseIterable, Identifiable {
         case .tomorrow:   return (1, 24 * 60 * 60)
         case .threeDays:  return (2, 3 * 24 * 60 * 60)
         case .gotIt:      return nil
+        }
+    }
+
+    /// Folder name at rest. Reads differently from the drop action that put
+    /// a card there: the folder holds every card whose RETURN falls in its
+    /// window, so "3 days" the action becomes "Later" the place, and box-5
+    /// graduates collect under "Learned".
+    var folderTitle: String {
+        switch self {
+        case .tenMinutes: return "Soon"
+        case .tomorrow:   return "Tomorrow"
+        case .threeDays:  return "Later"
+        case .gotIt:      return "Learned"
         }
     }
 
@@ -705,13 +825,34 @@ private extension DrillView {
     }
 
     private var emptyState: some View {
-        ContentUnavailableView(
-            initialCount == 0 ? "No drills due" : "Nice work",
-            systemImage: initialCount == 0 ? "lightbulb" : "checkmark.circle.fill",
-            description: Text(initialCount == 0
-                ? "Drills appear here after you end a conversation."
-                : "You finished \(initialCount) card\(initialCount == 1 ? "" : "s"). They'll surface again on the Leitner schedule.")
-        )
+        VStack(spacing: 16) {
+            ContentUnavailableView {
+                Label(initialCount == 0 ? "No drills due" : "Nice work",
+                      systemImage: initialCount == 0 ? "lightbulb" : "checkmark.circle.fill")
+            } description: {
+                if initialCount == 0 {
+                    Text("Drills appear here after you end a conversation.")
+                } else if remainingDue > 0 {
+                    Text("You finished \(initialCount) cards. \(remainingDue) more are waiting when you're ready.")
+                } else {
+                    Text("You finished \(initialCount) card\(initialCount == 1 ? "" : "s"). They'll surface again on the Leitner schedule.")
+                }
+            } actions: {
+                if remainingDue > 0 {
+                    Button {
+                        loadQueue()
+                        refreshFolders()
+                    } label: {
+                        Text("Next \(min(remainingDue, Self.sessionCap))")
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            // Folders stay reachable with nothing due — that's when "what's
+            // coming back tomorrow?" is the question being asked.
+            folderChipsRow
+                .padding(.bottom, 16)
+        }
     }
 
     private var errorBinding: Binding<Bool> {
@@ -721,9 +862,12 @@ private extension DrillView {
     // MARK: - Actions
 
     private func loadQueue() {
+        remainingDue = 0
         switch source {
         case .due:
-            queue = DrillStore.shared.due()
+            let due = DrillStore.shared.due()
+            queue = Array(due.prefix(Self.sessionCap))
+            remainingDue = due.count - queue.count
         case .session(let sid):
             queue = DrillStore.shared.load()
                 .filter { $0.sourceSessionId == sid }
@@ -752,7 +896,42 @@ private extension DrillView {
             DrillStore.shared.markCorrect(card)
         }
         PracticeLog.shared.record(.drill)
+        // The chip the card landed in ticks up as the deck advances — the
+        // visible "it went somewhere" that makes grading feel like sorting.
+        withAnimation(.snappy) { refreshFolders() }
         advance()
+    }
+
+    /// Rebucket every future-scheduled card into the folder it currently
+    /// sits in. Buckets are by WHEN the card comes back, not by which bin
+    /// last swallowed it — "Got it" from a low box honestly lands in
+    /// Tomorrow, because that's when the ladder will bring it back.
+    private func refreshFolders(now: Date = Date()) {
+        var buckets: [DrillBin: [DrillCard]] = [:]
+        for card in DrillStore.shared.load() where card.nextReviewAt > now {
+            let until = card.nextReviewAt.timeIntervalSince(now)
+            let bin: DrillBin
+            if card.box >= DrillStore.maxBox {
+                bin = .gotIt
+            } else if until <= 12 * 60 * 60 {
+                bin = .tenMinutes
+            } else if until <= 48 * 60 * 60 {
+                bin = .tomorrow
+            } else {
+                bin = .threeDays
+            }
+            buckets[bin, default: []].append(card)
+        }
+        folderCards = buckets.mapValues { $0.sorted { $0.nextReviewAt < $1.nextReviewAt } }
+    }
+
+    /// Reschedule straight from a folder list — the card never re-enters
+    /// the deck for this.
+    private func resnooze(_ card: DrillCard, to bin: DrillBin) {
+        guard let manual = bin.manual else { return }
+        DrillStore.shared.snooze(card, box: manual.box,
+                                 until: Date().addingTimeInterval(manual.delay))
+        withAnimation(.snappy) { refreshFolders() }
     }
 
     private func advance() {

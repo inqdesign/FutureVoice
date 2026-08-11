@@ -32,6 +32,18 @@ struct ScenarioDetailView: View {
         var id: String { value }
     }
 
+    /// The book's study chapters, switched in place by the bookmark tabs —
+    /// the scene plays through the header's Watch button. Internal (not
+    /// private) so the DEBUG capture harness can open on a chapter.
+    enum Chapter: Int, Hashable {
+        case words, expressions, shadow
+    }
+
+    /// Which bookmark tab to open the book on — nil opens on the first
+    /// unfinished chapter (where the bookmark sits).
+    var initialChapter: Chapter? = nil
+    @State private var selectedChapter: Chapter?
+
     /// Always read live from appState so saves (mastery, archive) reflect
     /// immediately without a local copy going stale.
     private var scenario: Scenario? {
@@ -111,25 +123,115 @@ struct ScenarioDetailView: View {
             headerSection(s)
             if s.isMastered && !s.isArchived { masteredBanner }
             if let c = s.curriculum {
-                itemSection(title: "Words", icon: "textformat", items: c.words,
-                            footer: "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known.",
-                            showExample: false) { item in
-                    // Same lemma key every other word surface uses, so the
-                    // card's I-know-it lands on the record mastery reads.
-                    wordSheet = WordRef(value: VocabStore.lookupKey(for: item.text))
-                }
-                itemSection(title: "Expressions", icon: "quote.opening", items: c.expressions,
-                            footer: "Tap an expression for its card. It's mastered once you actually use it in a talk.",
-                            showExample: true) { item in
-                    expressionSheet = WordRef(value: item.text)
-                }
-                shadowSection(c)
+                bookPageSection(c)
             } else {
                 curriculumLoadingSection
             }
             historySection(s)
         }
         .listStyle(.insetGrouped)
+        .onAppear {
+            if selectedChapter == nil { selectedChapter = initialChapter }
+        }
+    }
+
+    // MARK: - The bookmarked page
+
+    /// The study page with ribbon bookmarks on its right edge. Selecting a
+    /// ribbon swaps the page in place — the scene plays through the header's
+    /// Watch button. The book opens on the first unfinished chapter, like a
+    /// bookmark left in place.
+    private func bookPageSection(_ c: ScenarioCurriculum) -> some View {
+        Section {
+            BookmarkedPage(
+                tabs: studyChapters(c).map { entry in
+                    .init(id: entry.chapter, icon: entry.icon, title: entry.title,
+                          done: entry.done, total: entry.items.count)
+                },
+                selection: activeChapter(c),
+                onSelect: { selectedChapter = $0 }
+            ) {
+                pageContent(c)
+            }
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        } footer: {
+            if let footer = chapterFooter(c) {
+                Text(footer)
+            }
+        }
+    }
+
+    private struct ChapterEntry {
+        let chapter: Chapter
+        let title: String
+        let icon: String
+        let items: [ScenarioCurriculum.Item]
+        var done: Int { items.filter { $0.masteredAt != nil }.count }
+        var isComplete: Bool { !items.isEmpty && done == items.count }
+    }
+
+    private func studyChapters(_ c: ScenarioCurriculum) -> [ChapterEntry] {
+        [
+            ChapterEntry(chapter: .words, title: chrome("Words"),
+                         icon: "textformat", items: c.words),
+            ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
+                         icon: "quote.opening", items: c.expressions),
+            ChapterEntry(chapter: .shadow, title: chrome("Your lines"),
+                         icon: "waveform", items: c.shadowLines),
+        ].filter { !$0.items.isEmpty }
+    }
+
+    /// The chapter whose content shows: the learner's explicit pick when it
+    /// still exists, otherwise the first unfinished chapter (the bookmark),
+    /// otherwise the first chapter.
+    private func activeChapter(_ c: ScenarioCurriculum) -> Chapter? {
+        let chapters = studyChapters(c)
+        if let selectedChapter, chapters.contains(where: { $0.chapter == selectedChapter }) {
+            return selectedChapter
+        }
+        return (chapters.first { !$0.isComplete } ?? chapters.first)?.chapter
+    }
+
+    /// The selected chapter's page: a small title, then the same rows —
+    /// same taps, context menus and mastery marks as ever.
+    @ViewBuilder
+    private func pageContent(_ c: ScenarioCurriculum) -> some View {
+        let active = activeChapter(c)
+        if let entry = studyChapters(c).first(where: { $0.chapter == active }) {
+            Text(entry.title)
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+            switch entry.chapter {
+            case .words:
+                itemRows(c.words, showExample: false) { item in
+                    // Same lemma key every other word surface uses, so the
+                    // card's I-know-it lands on the record mastery reads.
+                    wordSheet = WordRef(value: VocabStore.lookupKey(for: item.text))
+                }
+            case .expressions:
+                itemRows(c.expressions, showExample: true) { item in
+                    expressionSheet = WordRef(value: item.text)
+                }
+            case .shadow:
+                shadowRows(c)
+            }
+        }
+    }
+
+    private func chapterFooter(_ c: ScenarioCurriculum) -> String? {
+        switch activeChapter(c) {
+        case .words:
+            return "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."
+        case .expressions:
+            return "Tap an expression for its card. It's mastered once you actually use it in a talk."
+        case .shadow:
+            return explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
+        case nil:
+            return nil
+        }
     }
 
     // MARK: - Header (cover + progress + actions)
@@ -231,12 +333,11 @@ struct ScenarioDetailView: View {
 
     // MARK: - Curriculum sections
 
-    private func itemSection(title: String, icon: String,
-                             items: [ScenarioCurriculum.Item], footer: String,
-                             showExample: Bool,
-                             onTap: @escaping (ScenarioCurriculum.Item) -> Void) -> some View {
-        Section {
-            ForEach(items) { item in
+    @ViewBuilder
+    private func itemRows(_ items: [ScenarioCurriculum.Item],
+                          showExample: Bool,
+                          onTap: @escaping (ScenarioCurriculum.Item) -> Void) -> some View {
+        ForEach(items) { item in
                 Button {
                     onTap(item)
                 } label: {
@@ -259,6 +360,8 @@ struct ScenarioDetailView: View {
                         Image(systemName: "chevron.right")
                             .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -271,17 +374,16 @@ struct ScenarioDetailView: View {
                         }
                     }
                 }
-            }
-        } header: {
-            sectionHeader(title: title, icon: icon, items: items)
-        } footer: {
-            Text(footer)
+                if item.id != items.last?.id {
+                    Divider().padding(.leading, 44)
+                }
         }
+        Color.clear.frame(height: 6)
     }
 
-    private func shadowSection(_ c: ScenarioCurriculum) -> some View {
-        Section {
-            ForEach(c.shadowLines) { line in
+    @ViewBuilder
+    private func shadowRows(_ c: ScenarioCurriculum) -> some View {
+        ForEach(c.shadowLines) { line in
                 Button {
                     // The line's id doubles as the synthetic Turn id, so
                     // attempts + cached TTS stay attached across opens.
@@ -311,6 +413,8 @@ struct ScenarioDetailView: View {
                         Image(systemName: "chevron.right")
                             .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 11)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
@@ -323,24 +427,11 @@ struct ScenarioDetailView: View {
                         }
                     }
                 }
-            }
-        } header: {
-            sectionHeader(title: "Shadow these lines", icon: "waveform", items: c.shadowLines)
-        } footer: {
-            Text(explain("Tap a line to shadow it in your own voice. Score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
+                if line.id != c.shadowLines.last?.id {
+                    Divider().padding(.leading, 44)
+                }
         }
-    }
-
-    private func sectionHeader(title: String, icon: String,
-                               items: [ScenarioCurriculum.Item]) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-            Spacer()
-            let done = items.filter { $0.masteredAt != nil }.count
-            Text("\(done)/\(items.count)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(done == items.count && !items.isEmpty ? .green : .secondary)
-        }
+        Color.clear.frame(height: 6)
     }
 
     private func masteryMark(_ mastered: Bool) -> some View {

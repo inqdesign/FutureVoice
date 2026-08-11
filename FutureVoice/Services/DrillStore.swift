@@ -249,7 +249,9 @@ final class DrillStore: LanguageScopedStore {
 
     // MARK: - Internals
 
-    private static let maxBox = 5
+    /// Top Leitner rung — box-5 cards are "learned" (30-day interval). The
+    /// drill deck's folder chips read this to bucket graduated cards.
+    static let maxBox = 5
 
     /// Leitner intervals (in seconds) per box. Box 0 stays due immediately so
     /// new cards surface in the next session.

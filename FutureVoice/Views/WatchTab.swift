@@ -119,7 +119,7 @@ struct WatchTab: View {
                         onWatch: { p in
                             personCard = nil
                             watchScene = WatchTarget(scenario: freeTalkScenario(with: p),
-                                                     fresh: false)
+                                                     fresh: true)
                         })
                         .environmentObject(appState)
                         .toolbar {
@@ -144,7 +144,7 @@ struct WatchTab: View {
                     onWatch: { person in
                         showingFind = false
                         watchScene = WatchTarget(scenario: freeTalkScenario(with: person),
-                                                 fresh: false)
+                                                 fresh: true)
                     })
                     .environmentObject(appState)
             }
@@ -178,16 +178,19 @@ struct WatchTab: View {
         var s = Scenario(
             environment: "Talking with someone you've just met, already past the hellos",
             role: person.relationship.isEmpty ? person.name : person.relationship,
-            // Without this every persona converged on the same
-            // name/job/hobbies interview — "getting to know each other" is a
-            // shape, and the model will fill it identically for a surf-hostel
-            // owner and a glaciologist. Naming the ONE specific thing as the
-            // subject is what makes the scene belong to this person.
-            notes: "Pick ONE concrete, specific thing from this person's life "
-                + "and actually get into it — a story, an opinion, a problem "
-                + "they're chewing on. NOT a get-to-know-you interview: no "
-                + "running through where are you from / what do you do / what "
-                + "are your hobbies. Land mid-subject, the way real talk does."
+            // Two rules, in order. FIRST the overlap (the engine computes it
+            // and hands it over): strangers open on what they share, and
+            // picking a fact off one side's biography at random is what made
+            // scenes land on strange subjects — especially against a real
+            // user's thin auto-published intro, where there was nothing to
+            // pick and the model filled the gap itself. THEN the ban on the
+            // interview, because "getting to know each other" is a shape the
+            // model will fill identically for everyone.
+            notes: "Build the scene on the COMMON GROUND given below — that is "
+                + "the subject. Get specific about it fast. NOT a "
+                + "get-to-know-you interview: no running through where are you "
+                + "from / what do you do / what are your hobbies. Land "
+                + "mid-subject, the way real talk does."
         )
         s.counterpartId = person.id
         s.category = Self.meetingCategory

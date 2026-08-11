@@ -911,6 +911,39 @@ final class AppState: ObservableObject {
         voiceCloneId = newId
         Analytics.capture("voice_clone_succeeded", ["first_time": isFirstClone])
         await cleanupPreviousVoiceClone()
+        warmFreeTalkOpeners()
+    }
+
+    /// Fire-and-forget: make the next free talk open instantly on the
+    /// CURRENT voice — opener pool text + audio, bundled fallback line
+    /// included (see FreeTalkOpeners.warmFirstCall). Called from every point
+    /// that mints a new voice id: the opener audio cache is keyed to
+    /// (text, voiceId), so a new id silently invalidates all of it at once —
+    /// without a re-warm, the first free talk after onboarding (and every
+    /// one right after a re-record or accent switch) waits on live TTS.
+    private func warmFreeTalkOpeners() {
+        let language = targetLanguage
+        let personaName = persona?.displayName
+        let level = proficiency
+        let voice = voiceCloneId
+        Task.detached(priority: .utility) {
+            await FreeTalkOpeners.shared.warmFirstCall(
+                language: language, personaName: personaName,
+                proficiency: level, voiceId: voice)
+        }
+    }
+
+    /// Swap the live clone for a remixed variant of it (the accent picker).
+    /// Same replacement contract as a re-record: the outgoing id is staged
+    /// and deleted only after the new voice is in place, and audio already
+    /// synthesized keeps playing through the PhraseAudioStore lineage.
+    func adoptRemixedVoice(_ newId: String, accentId: String) async {
+        guard newId != voiceCloneId else { return }
+        if let old = voiceCloneId { pendingDeleteVoiceId = old }
+        voiceCloneId = newId
+        Analytics.capture("voice_accent_applied", ["accent": accentId])
+        await cleanupPreviousVoiceClone()
+        warmFreeTalkOpeners()
     }
 
     /// WHY it failed, not just THAT it failed. Without the status + reason the

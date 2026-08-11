@@ -142,17 +142,10 @@ struct ConversationHome: View {
             .onChange(of: appState.talkRingProxyActive) { _, active in
                 if !active { drawRing() }
             }
-            // Warm the free-talk opener pool while the user is still on the
-            // launcher — the first "Let's talk" then greets from a canned
-            // line instead of blocking on a live Gemini call.
-            .task {
-                await FreeTalkOpeners.shared.warmUp(
-                    language: appState.targetLanguage,
-                    personaName: appState.persona?.displayName,
-                    proficiency: appState.proficiency
-                )
-                await prewarmFreeTalkOpenerAudio()
-            }
+            // Warm the free-talk opener pool + its audio while the user is
+            // still on the launcher — the first "Let's talk" then greets
+            // from cached audio instead of blocking on live calls.
+            .task { await prewarmFreeTalkOpenerAudio() }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
                 // Only pitch the trial to someone who still has free credits;
                 // a spent balance means they've already used the free tier.
@@ -201,8 +194,16 @@ struct ConversationHome: View {
 
     // MARK: - Hero (welcome question + the goal ring / call button)
 
+    /// The ring's target. Daily-plan subscribers' goal IS their allowance
+    /// (5 min/day) — a self-set 10-minute goal would be unreachable on a
+    /// 5-minute plan, and aligning them makes "goal met" and "today's
+    /// minutes used" the same event. Everyone else keeps the self-set goal.
+    private var effectiveGoalMinutes: Int {
+        account?.isDailyPlan == true ? AccountStatus.dailyPlanMinutes : dailyGoalMinutes
+    }
+
     private var goalProgress: Double {
-        min(1, Double(todaySpokenSeconds) / Double(max(1, dailyGoalMinutes * 60)))
+        min(1, Double(todaySpokenSeconds) / Double(max(1, effectiveGoalMinutes * 60)))
     }
     /// The arc fraction the ring actually draws — animated: it sweeps from 0
     /// up to `goalProgress` whenever the ring (re)takes the stage, instead
@@ -497,7 +498,9 @@ struct ConversationHome: View {
                 .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Let's talk — start a call. \(todaySpokenSeconds / 60) of \(dailyGoalMinutes) minutes today.")
+            .accessibilityLabel(account?.isUnlimitedPlan == true && !hasCustomGoal
+                ? "Let's talk — start a call. \(todaySpokenSeconds / 60) minutes today."
+                : "Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.")
         }
         .frame(width: 280, height: 280)
     }
@@ -527,11 +530,24 @@ struct ConversationHome: View {
         }
     }
 
+    /// True once the learner has picked a daily goal by hand (Me → goal).
+    /// The @AppStorage default of 10 is a default, not a choice — for
+    /// Unlimited accounts that distinction decides whether a target shows.
+    private var hasCustomGoal: Bool {
+        UserDefaults.standard.object(forKey: "futurevoice.dailyGoalMinutes") != nil
+    }
+
     private var goalHeadline: String {
         let mins = todaySpokenSeconds / 60
+        // Unlimited with no self-chosen goal counts UP — a minutes target
+        // next to "Unlimited" reads as a cap. Picking a goal in Me opts
+        // back into the target framing.
+        if account?.isUnlimitedPlan == true && !hasCustomGoal {
+            return mins == 0 ? chrome("Talk today") : chrome("\(mins) min today")
+        }
         if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
-        if mins == 0 { return chrome("Talk \(dailyGoalMinutes) min today") }
-        return chrome("\(mins) of \(dailyGoalMinutes) min today")
+        if mins == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
+        return chrome("\(mins) of \(effectiveGoalMinutes) min today")
     }
 
 
@@ -539,14 +555,16 @@ struct ConversationHome: View {
         s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
     }
 
-    /// Warm every pool greeting's TTS (see FreeTalkOpeners.warmAudio) — so
-    /// "Let's talk" always opens on cached audio, whatever the rotation
-    /// position. (Warming only the next line left every fresh line in the
-    /// rotation slow the first time it came up.)
+    /// Warm the opener pool and every pool greeting's TTS (see
+    /// FreeTalkOpeners.warmFirstCall) — so "Let's talk" always opens on
+    /// cached audio, whatever the rotation position. (Warming only the next
+    /// line left every fresh line in the rotation slow the first time it
+    /// came up.)
     private func prewarmFreeTalkOpenerAudio() async {
-        await FreeTalkOpeners.shared.warmAudio(
+        await FreeTalkOpeners.shared.warmFirstCall(
             language: appState.targetLanguage,
             personaName: appState.persona?.displayName,
+            proficiency: appState.proficiency,
             voiceId: appState.voiceCloneId)
     }
 
@@ -606,44 +624,62 @@ struct ConversationHome: View {
     }
 
     /// Profile + credits fused into one header unit — credits ALWAYS visible
-    /// (∞ on unlimited), account things live together up here. Each half
-    /// keeps its own tap: balance → billing, avatar → profile.
+    /// (admin sees the real cycling balance too), account things live
+    /// together up here. Each half keeps its own tap: balance → billing,
+    /// avatar → profile.
     private var headerControl: some View {
-        HStack(spacing: 8) {
-            if let account {
-                let tint: Color = !account.unlimited && account.isLowBalance
-                    ? .orange : .accentColor
-                Button { openBilling(account) } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "bolt.fill")
-                            .font(.caption2.weight(.bold))
-                        Text(account.unlimited ? "∞" : account.balanceLabel)
-                            .font(.footnote.weight(.semibold))
-                            .monospacedDigit()
-                    }
-                    .foregroundStyle(tint)
+        // No number up here anymore — a text chip pushed the streak leftward
+        // and put a meter on the home screen. Remaining talk time is a RING
+        // around the avatar instead: full tank = full ring, draining as
+        // minutes go, orange for the last stretch. The exact figure lives one
+        // tap away in Me. Unlimited/subscribed accounts get a clean avatar —
+        // no ring to watch is the point of that tier.
+        Button { showingProfile = true } label: {
+            // Ring INSIDE the 30 pt slot (avatar shrinks to make room) — the
+            // header buttons sit in glass capsules, and a ring drawn outside
+            // the frame gets clipped into broken arcs by the capsule edge.
+            ZStack {
+                // Ring for everyone except entitled subscribers — including
+                // the admin unlimited account, which exists to watch real
+                // burn and should see what a free user sees.
+                if let account, !account.isEntitled {
+                    // strokeBorder / inset keep the 3 pt stroke INSIDE the
+                    // 30 pt frame — a centered stroke overhangs it by half a
+                    // linewidth and the container clips the arc's caps flat.
+                    Circle()
+                        .strokeBorder(Color(.systemFill), lineWidth: 3)
+                    // Usage gauge: the arc grows clockwise from 12 o'clock
+                    // as minutes are SPENT — fresh tank = empty ring.
+                    Circle()
+                        .inset(by: 1.5)
+                        .trim(from: 0, to: account.talkTimeUsedFraction)
+                        .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 24)
+                } else {
+                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(account.unlimited
-                    ? "Unlimited credits"
-                    : "\(account.balanceLabel) credits, \(account.planLabel) plan")
             }
-            Button { showingProfile = true } label: {
-                ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Profile & settings")
+            .frame(width: 30, height: 30)
+            .padding(1)
         }
-    }
-
-    private func openBilling(_ a: AccountStatus) {
-        // Admin/subscribers manage in settings; only free users see the
-        // upgrade pitch. An unlimited account must never hit the trial paywall.
-        if a.unlimited || a.isEntitled { showingProfile = true }
-        else { showingPaywall = true }
+        .buttonStyle(.plain)
+        .accessibilityLabel(account.map {
+            "Profile & settings, \($0.balanceLabel) minutes of talk left"
+        } ?? "Profile & settings")
     }
 
     private func refreshAccount() {
+        #if DEBUG
+        // Screenshot captures run signed-out — inject a half-tank account so
+        // the avatar ring renders for design review.
+        if UserDefaults.standard.string(forKey: "capture") != nil {
+            account = AccountStatus(email: nil, creditBalance: 150,
+                                    planId: nil, subscriptionStatus: "inactive")
+            return
+        }
+        #endif
         Task { account = await AccountStatus.fetch() }
     }
 

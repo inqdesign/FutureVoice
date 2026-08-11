@@ -189,8 +189,20 @@ struct FindPeopleSheet: View {
                     }
                     Text(facetLine(occupation: p.occupation, location: p.location))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    Text(p.intro)
-                        .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    // A real learner's intro is whatever they typed into
+                    // onboarding, for onboarding's purposes — it is not a
+                    // profile, and putting it on a browsable card exposed
+                    // things like who lives in their house. Their row shows
+                    // the three facets a stranger has any business seeing;
+                    // the rest still reaches the model, so the conversation
+                    // loses nothing. Characters we wrote ARE their intro.
+                    if p.group == .character {
+                        Text(p.intro)
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    } else if !p.interests.isEmpty {
+                        Text(p.interests)
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
                 }
             }
             .padding(.vertical, 2)
@@ -272,9 +284,17 @@ struct FindPersonCard: View {
                 .padding(.vertical, 4)
                 .listRowSeparator(.hidden)
 
-                Text(person.intro.isEmpty ? person.background : person.intro)
-                    .font(.body)
-                    .padding(.vertical, 2)
+                // Written characters ARE their intro — that paragraph is the
+                // reason to talk to them. A real learner's "intro" is their
+                // onboarding profile, written for a different purpose and
+                // never meant to be browsed, so their card stays at who and
+                // where and what they're into. Everything else still goes to
+                // the model, so the conversation is no thinner for it.
+                if person.personaKind != "user" {
+                    Text(person.intro.isEmpty ? person.background : person.intro)
+                        .font(.body)
+                        .padding(.vertical, 2)
+                }
             }
 
             if !person.commonTopics.isEmpty {

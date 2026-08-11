@@ -11,7 +11,9 @@ import Foundation
 ///
 /// Topic/scenario/news openers stay dynamic — this pool is only for the
 /// no-topic free talk. The pool is keyed to language + persona name and
-/// regenerates when either changes.
+/// regenerates when either changes. Until a pool exists, `fallbackOpener`
+/// (bundled, per language) is what a call speaks — the first free talk must
+/// never wait on a live Gemini round trip.
 final class FreeTalkOpeners {
     static let shared = FreeTalkOpeners()
 
@@ -47,6 +49,29 @@ final class FreeTalkOpeners {
     private static func key(language: String, personaName: String?) -> String {
         "\(language)|\(personaName ?? "")"
     }
+
+    /// The line a free talk opens on while no pool exists yet — the very
+    /// first call, or the one right after a language/persona switch. Bundled
+    /// per target language so the greeting NEVER waits on a live Gemini call;
+    /// the pool is generated in the background instead. MATERIAL → target
+    /// language. Deliberately name-free: one cache entry serves every persona,
+    /// and its TTS can be warmed before a persona even exists.
+    static func fallbackOpener(language: String) -> String {
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return fallbackOpeners[code] ?? fallbackOpeners["en"]!
+    }
+
+    private static let fallbackOpeners: [String: String] = [
+        "en": "Hey, good to hear you. What's been going on today?",
+        "de": "Hey, schön dich zu hören. Was war heute bei dir los?",
+        "ko": "안녕, 목소리 들으니까 좋다. 오늘 하루 어땠어?",
+        "ja": "やあ、話せてうれしいよ。今日はどんな一日だった？",
+        "es": "Hola, qué bueno escucharte. ¿Cómo va tu día?",
+        "fr": "Salut, ça fait plaisir de t'entendre. Comment se passe ta journée ?",
+        "it": "Ciao, che bello sentirti. Com'è andata la tua giornata?",
+        "pt": "Oi, que bom te ouvir. Como está sendo o seu dia?",
+        "zh": "嘿，听到你的声音真好。今天过得怎么样？",
+    ]
 
     /// The next greeting in rotation, or nil when no valid pool exists yet
     /// (caller falls back to a generated opener). Advances and persists the
@@ -90,22 +115,44 @@ final class FreeTalkOpeners {
     /// still falls back to on-demand TTS.
     func warmAudio(language: String, personaName: String?, voiceId: String?) async {
         guard let voiceId else { return }
-        for line in lines(language: language, personaName: personaName) {
-            guard !Task.isCancelled else { return }
-            // `allowLineage: false` mirrors the live call's lookup — warming
-            // a line the call would still consider a miss is pointless.
-            guard PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
-                                               allowLineage: false) == nil else { continue }
-            do {
-                let audio = try await ElevenLabsClient.shared.synthesize(
-                    voiceId: voiceId, text: line,
-                    modelId: ElevenLabsClient.conversationModelId,
-                    purpose: "turn")
-                PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
-            } catch {
-                return
+        do {
+            for line in lines(language: language, personaName: personaName) {
+                guard !Task.isCancelled else { return }
+                try await warmLine(line, voiceId: voiceId)
             }
+        } catch {
+            return
         }
+    }
+
+    /// Synthesize ONE line into the phrase cache (no-op when already there).
+    /// `allowLineage: false` mirrors the live call's lookup — warming a line
+    /// the call would still consider a miss is pointless.
+    private func warmLine(_ line: String, voiceId: String) async throws {
+        guard PhraseAudioStore.shared.data(text: line, voiceId: voiceId,
+                                           allowLineage: false) == nil else { return }
+        let audio = try await ElevenLabsClient.shared.synthesize(
+            voiceId: voiceId, text: line,
+            modelId: ElevenLabsClient.conversationModelId,
+            purpose: "turn")
+        PhraseAudioStore.shared.save(audio, text: line, voiceId: voiceId)
+    }
+
+    /// One-stop warm-up: make the NEXT free talk open on cached assets
+    /// whatever state it finds. While no pool exists, the bundled fallback
+    /// line is what a call would speak — warm its audio FIRST (it's one short
+    /// line, the cheapest path to an instant first call), then generate the
+    /// pool text, then warm every pool line. Everything is cache-checked, so
+    /// repeat calls cost nothing. Called from the Talk launcher and from
+    /// every point that mints a new voice id (clone, re-record, accent remix)
+    /// — a new id invalidates all warmed audio at once.
+    func warmFirstCall(language: String, personaName: String?,
+                       proficiency: CEFRLevel, voiceId: String?) async {
+        if let voiceId, !hasPool(language: language, personaName: personaName) {
+            try? await warmLine(Self.fallbackOpener(language: language), voiceId: voiceId)
+        }
+        await warmUp(language: language, personaName: personaName, proficiency: proficiency)
+        await warmAudio(language: language, personaName: personaName, voiceId: voiceId)
     }
 
     /// True when a valid pool exists for this language/persona. Read-only —

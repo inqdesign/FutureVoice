@@ -98,6 +98,10 @@ struct VoiceCloneOnboardingView: View {
     /// accent transfer), so this is a choice, defaulted by self-rated level
     /// and switchable right on the script step. See `CloneScriptStore`.
     @State private var readInNative = false
+
+    /// Accent picker off the meet act — only offered after a NATIVE-language
+    /// take (see the button in `meetContent`).
+    @State private var pickingAccent = false
     /// The native-language script once it's on the device — nil until the
     /// generation lands (or forever, for a native language it never does,
     /// in which case the picker simply never appears).
@@ -661,9 +665,29 @@ struct VoiceCloneOnboardingView: View {
                     Label("Doesn't sound like you? Record again", systemImage: "mic.fill")
                         .font(.footnote)
                 }
+
+                // A native-language take carries no target-language accent at
+                // all — the TTS default (US English) fills that gap unless the
+                // learner picks one here. Target-language readers already gave
+                // the clone THEIR accent, so they get this from Me → Voice
+                // only, not as an onboarding beat.
+                if readInNative,
+                   !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
+                    Button {
+                        player.stop()
+                        pickingAccent = true
+                    } label: {
+                        Label("Choose your accent", systemImage: "globe")
+                            .font(.footnote)
+                    }
+                }
             }
         }
         .transition(.opacity)
+        .sheet(isPresented: $pickingAccent) {
+            VoiceAccentSheet(onApplied: { refreshGreetingForNewVoice() })
+                .environmentObject(appState)
+        }
         .confirmationDialog("Record your voice again?", isPresented: $confirmReRecord,
                             titleVisibility: .visible) {
             Button("Record again", role: .destructive) { beginReRecordFromMeet() }
@@ -1046,6 +1070,22 @@ struct VoiceCloneOnboardingView: View {
         guard let data = greetingData else { return }
         player.stop()
         try? player.play(data, forceSessionReset: true)
+    }
+
+    /// After an accent pick replaces the voice, the stored greeting still
+    /// speaks with the OLD voice — re-synthesize so "Hear it again" and the
+    /// theme-pick replay speak with the voice the user just chose. Same
+    /// fidelity-model reasoning as the original greeting: fires at most once
+    /// per accent adoption, at the exact moment the user judges the voice.
+    private func refreshGreetingForNewVoice() {
+        greetingData = nil
+        guard let voiceId = appState.voiceCloneId else { return }
+        Task {
+            greetingData = try? await ElevenLabsClient.shared.synthesize(
+                voiceId: voiceId, text: greetingLine,
+                modelId: ElevenLabsClient.fidelityModelId, purpose: "greeting")
+            playGreeting()
+        }
     }
 
     private func pick(_ theme: FutureselfTheme) {

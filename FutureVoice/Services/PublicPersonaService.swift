@@ -39,6 +39,17 @@ enum PublicPersonaService {
         var id: String { rawValue }
     }
 
+    /// The signed-in user's id in the form Postgres stores it. `UUID
+    /// .uuidString` is UPPERCASE and `uuid` columns come back lowercase, so
+    /// every comparison written the obvious way silently never matched: the
+    /// user's own row was never filtered out of their pool, and `fetchMine`
+    /// never found the row it was about to update — so each launch inserted
+    /// another copy of them into the pool.
+    private static func myUserId() async -> String? {
+        guard let id = try? await SupabaseProvider.shared.auth.session.user.id else { return nil }
+        return id.uuidString.lowercased()
+    }
+
     private static let columns =
         "id,owner_user_id,display_name,intro,location,occupation,interests,conversation_style,language,voice_preset_id,kind"
 
@@ -54,8 +65,8 @@ enum PublicPersonaService {
             .eq("is_active", value: true)
             .execute()
             .value
-        if let uid = try? await SupabaseProvider.shared.auth.session.user.id.uuidString {
-            rows.removeAll { $0.owner_user_id == uid }
+        if let uid = await myUserId() {
+            rows.removeAll { $0.owner_user_id?.lowercased() == uid }
         }
         return rows
     }
@@ -76,11 +87,12 @@ enum PublicPersonaService {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !q.isEmpty else { return [] }
         return pool.filter {
-            $0.display_name.lowercased().contains(q)
-                || $0.intro.lowercased().contains(q)
-                || $0.interests.lowercased().contains(q)
-                || $0.occupation.lowercased().contains(q)
-                || $0.location.lowercased().contains(q)
+            // A real learner's intro is not shown on their card, so it must
+            // not be searchable either — otherwise the field is queryable
+            // even though it's unreadable, which is a worse kind of exposed.
+            let searchable = [$0.display_name, $0.interests, $0.occupation, $0.location]
+                + ($0.group == .character ? [$0.intro] : [])
+            return searchable.contains { $0.lowercased().contains(q) }
         }
     }
 
@@ -156,11 +168,11 @@ enum PublicPersonaService {
 
     /// The signed-in user's own published intro for one target language, if any.
     static func fetchMine(language: String) async throws -> PublicPersona? {
-        let session = try await SupabaseProvider.shared.auth.session
+        guard let uid = await myUserId() else { return nil }
         let rows: [PublicPersona] = try await SupabaseProvider.shared
             .from("public_personas")
             .select(columns)
-            .eq("owner_user_id", value: session.user.id.uuidString)
+            .eq("owner_user_id", value: uid)
             .eq("language", value: language)
             .limit(1)
             .execute()
@@ -174,7 +186,7 @@ enum PublicPersonaService {
     static func publishMine(displayName: String, intro: String,
                             location: String, occupation: String, interests: String,
                             voicePresetId: String, language: String) async throws {
-        let session = try await SupabaseProvider.shared.auth.session
+        guard let uid = await myUserId() else { return }
         struct Row: Encodable {
             let owner_user_id: String
             let display_name: String
@@ -186,7 +198,7 @@ enum PublicPersonaService {
             let voice_preset_id: String
             let is_active: Bool
         }
-        let row = Row(owner_user_id: session.user.id.uuidString,
+        let row = Row(owner_user_id: uid,
                       display_name: displayName, intro: intro,
                       location: location, occupation: occupation, interests: interests,
                       language: language, voice_preset_id: voicePresetId,
@@ -207,11 +219,11 @@ enum PublicPersonaService {
 
     /// Take the user's intro out of the pool entirely.
     static func withdrawMine(language: String) async throws {
-        let session = try await SupabaseProvider.shared.auth.session
+        guard let uid = await myUserId() else { return }
         try await SupabaseProvider.shared
             .from("public_personas")
             .delete()
-            .eq("owner_user_id", value: session.user.id.uuidString)
+            .eq("owner_user_id", value: uid)
             .eq("language", value: language)
             .execute()
     }

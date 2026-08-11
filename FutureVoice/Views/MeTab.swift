@@ -43,6 +43,7 @@ struct MeTab: View {
     @State private var voiceNameDraft = ""
     @State private var voiceRenameWarning: String?
     @State private var voiceRegenerateError: String?
+    @State private var pickingAccent = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
@@ -65,12 +66,11 @@ struct MeTab: View {
 
                 Section {
                     HStack {
-                        // balanceLabel, not the raw number — an admin account
-                        // never spends, so its stored balance is cosmetic and
-                        // reads as "Unlimited" (the header chip already does
-                        // this; this row was showing the bare figure).
+                        // Admin accounts show the real balance too — it
+                        // cycles 500 → 0 → 500 server-side, and watching the
+                        // number move is how real burn gets gauged.
                         row(icon: "bolt.fill",
-                            title: "\(account.balanceLabel) credits",
+                            title: "\(account.balanceLabel) min of talk",
                             subtitle: account.planLabel)
                         Spacer()
                     }
@@ -79,7 +79,7 @@ struct MeTab: View {
                     } label: {
                         row(icon: "sparkles",
                             title: account.planLabel == "Free" ? "See plans" : "Manage plan",
-                            subtitle: "Credits land automatically every cycle")
+                            subtitle: "Talk time lands automatically every cycle")
                     }
                     NavigationLink {
                         CreditGuideView()
@@ -208,6 +208,13 @@ struct MeTab: View {
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)
             }
+            // List renders sections lazily, so a .sheet attached inside a
+            // Section loses its presentation as soon as it appears — present
+            // from the List like every other sheet here.
+            .sheet(isPresented: $pickingAccent) {
+                VoiceAccentSheet()
+                    .environmentObject(appState)
+            }
             .alert("Re-record your voice?", isPresented: $confirmingVoiceReset) {
                 Button("Cancel", role: .cancel) {}
                 Button("Start over", role: .destructive) {
@@ -276,11 +283,12 @@ struct MeTab: View {
     }
 
     /// The app-language picker's two groups, in `nativeChoices` order (device
-    /// languages first). The active target is dropped from both — you can't
-    /// have the app explain a language in itself.
+    /// languages first). The active target stays IN the list: explaining a
+    /// language in itself is full immersion, and some learners want exactly
+    /// that.
     private var nativeChoiceGroups: (translated: [String], coachingOnly: [String]) {
         let translated = Set(LanguageCatalog.translatedLanguages)
-        let choices = LanguageCatalog.nativeChoices.filter { $0 != appState.targetLanguage }
+        let choices = LanguageCatalog.nativeChoices
         return (choices.filter { translated.contains($0) },
                 choices.filter { !translated.contains($0) })
     }
@@ -558,6 +566,16 @@ struct MeTab: View {
                 row(icon: "person.wave.2",
                     title: "Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)",
                     subtitle: "For Watch scenes without a saved person")
+            }
+            if appState.voiceCloneId != nil,
+               !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
+                Button {
+                    pickingAccent = true
+                } label: {
+                    row(icon: "globe",
+                        title: "Accent",
+                        subtitle: "Same voice, the accent you choose")
+                }
             }
             Button(role: .destructive) {
                 confirmingVoiceReset = true

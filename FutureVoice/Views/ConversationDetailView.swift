@@ -20,9 +20,11 @@ struct ConversationDetailView: View {
     /// detail page for both moments.
     var postTalk: PostTalkActions? = nil
 
-    init(session: Session, postTalk: PostTalkActions? = nil) {
+    init(session: Session, postTalk: PostTalkActions? = nil,
+         initialChapter: Chapter? = nil) {
         _session = State(initialValue: session)
         self.postTalk = postTalk
+        self.initialChapter = initialChapter
     }
     // Observed so mastery rows restyle live when a word card marks a word
     // known / studying.
@@ -54,8 +56,17 @@ struct ConversationDetailView: View {
         var id: String { value }
     }
 
-    private enum WordsTab { case you, futureSelf }
-    @State private var wordsTab: WordsTab = .you
+    /// The book's study chapters, switched in place by the bookmark tabs —
+    /// the conversation itself replays through the header's Replay button.
+    /// Internal so the DEBUG capture harness can open on a chapter.
+    enum Chapter: Int, Hashable {
+        case words, expressions, lines, cards
+    }
+
+    /// Which bookmark tab to open the book on — nil opens on the first
+    /// unfinished chapter (where the bookmark sits).
+    var initialChapter: Chapter? = nil
+    @State private var selectedChapter: Chapter?
 
     /// Re-running the analysis for a talk whose summary never landed.
     @State private var isRegenerating = false
@@ -67,30 +78,33 @@ struct ConversationDetailView: View {
 
     var body: some View {
         List {
-            // Same vertical story as the old analysis screen — score, note,
-            // then the session highlights — wrapped in the book-page frame
-            // (header with progress + Continue/Replay on top, mastery +
-            // drills at the bottom).
+            // The book's cover: the talk's report (score, note, what carried
+            // over) stays up front — it's the post-talk payoff — and the
+            // study material lives behind the table of contents below it.
             headerSection
             missingSummarySection
             if curriculum.isMastered && archivedAt == nil { masteredBanner }
-            if let sc = session.summary?.scorecard { scoreSection(sc) }
-            if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
-            carryoverSection
-            freshShadowSection
-            newWordsSection
-            expressionsSection
-            sayItBetterSection
-            shadowSection
-            drillNextSection
-            drillsSection
+            if postTalk != nil {
+                // Wrap-up: the score is the moment's payoff — report first,
+                // then the bookmark tabs.
+                reportSections
+                studySections
+            } else {
+                // Browsing from Practice: the learner came to study — the
+                // bookmark tabs first, the report below them.
+                studySections
+                reportSections
+            }
         }
         .listStyle(.insetGrouped)
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
-        .onAppear(perform: refresh)
+        .onAppear {
+            refresh()
+            if selectedChapter == nil { selectedChapter = initialChapter }
+        }
         .navigationDestination(isPresented: $showingTranscript) {
             TalkTranscriptView(session: session)
                 .environmentObject(appState)
@@ -269,47 +283,374 @@ struct ConversationDetailView: View {
         }
     }
 
-    // MARK: - Session highlights (the analysis screen's core content)
-
-    /// "New words" — BOTH sides, exactly as the analysis screen always showed
-    /// them: words YOU used for the first time this talk (the win), and words
-    /// your future self used that you haven't yet (the next step — these are
-    /// also the book's word-mastery items). Level-grouped chips; chip state =
-    /// your relationship to the word (known / studying / untouched).
+    /// The talk's report — score, coach's note, and what carried over from
+    /// practice. One group so the cover can order it around the table of
+    /// contents by mode.
     @ViewBuilder
-    private var newWordsSection: some View {
-        // A notebook word used for the first time is also a first-time word —
-        // it's already told as the bigger story above, so don't repeat it here.
-        let credited = creditedItems
-        let mine = (session.summary?.newWordsUsed ?? [])
-            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
-        let theirs = curriculum.words.map(\.text)
-        if !mine.isEmpty || !theirs.isEmpty {
-            let tab: WordsTab = mine.isEmpty ? .futureSelf : (theirs.isEmpty ? .you : wordsTab)
+    private var reportSections: some View {
+        if let sc = session.summary?.scorecard { scoreSection(sc) }
+        if let note = session.summary?.overallNote, !note.isEmpty { noteSection(note) }
+        carryoverSection
+    }
+
+    // MARK: - The bookmarked page
+
+    /// The study page with ribbon bookmarks on its right edge. Selecting a
+    /// ribbon swaps the page in place — the conversation itself replays
+    /// through the header's Replay button. The book opens on the first
+    /// unfinished chapter, like a bookmark left in place.
+    @ViewBuilder
+    private var studySections: some View {
+        let chapters = studyChapters
+        if !chapters.isEmpty {
             Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    if !mine.isEmpty, !theirs.isEmpty {
-                        Picker("Source", selection: $wordsTab) {
-                            Text("You · \(mine.count)").tag(WordsTab.you)
-                            Text("Future self · \(theirs.count)").tag(WordsTab.futureSelf)
-                        }
-                        .pickerStyle(.segmented)
-                    }
-                    if tab == .you {
-                        levelGroupedChips(mine)
-                    } else {
-                        Text(explain("Your future self used these; you haven't yet. Tap one to study it — or mark it as known."))
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        levelGroupedChips(theirs)
-                    }
+                BookmarkedPage(
+                    tabs: chapters.map { entry in
+                        .init(id: entry.chapter, icon: entry.icon, title: entry.title,
+                              done: entry.done, total: entry.total, count: entry.count)
+                    },
+                    selection: activeChapter,
+                    onSelect: { selectedChapter = $0 }
+                ) {
+                    pageContent
                 }
-                .padding(.vertical, 6)
-            } header: {
-                Label("New words", systemImage: "text.book.closed")
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            } footer: {
+                if let footer = chapterFooter {
+                    Text(footer)
+                }
             }
         }
     }
+
+    private struct ChapterEntry {
+        let chapter: Chapter
+        let title: String
+        let icon: String
+        var done: Int? = nil
+        var total: Int? = nil
+        var count: Int? = nil
+        var isComplete: Bool {
+            guard let done, let total, total > 0 else { return false }
+            return done == total
+        }
+    }
+
+    /// The fluent-self lines the wrap-up offers for fresh shadowing — also
+    /// what decides whether the lines chapter exists.
+    private var freshShadowLines: [Turn] {
+        Array(session.turns.filter { $0.role == .fluentSelf
+            && $0.transcript.split(separator: " ").count >= 4 }
+            .suffix(4))
+    }
+
+    /// Words the learner used for the first time this talk (the win), minus
+    /// anything the carryover section already tells.
+    private var mineWords: [String] {
+        let credited = creditedItems
+        return (session.summary?.newWordsUsed ?? [])
+            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
+    }
+
+    private var usedExpressions: [String] {
+        let credited = creditedItems
+        return (session.summary?.expressionsUsed ?? [])
+            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
+    }
+
+    private var studyChapters: [ChapterEntry] {
+        let hasLines = !curriculum.shadowLines.isEmpty
+            || !(session.summary?.phrasesUsed.isEmpty ?? true)
+            || !freshShadowLines.isEmpty
+        let cardCount = drillCount + (session.summary?.suggestedDrills.count ?? 0)
+
+        var entries: [ChapterEntry] = []
+
+        if !mineWords.isEmpty || !curriculum.words.isEmpty {
+            // Mastery tracks the future self's words; a talk with only your
+            // own first-time words still shows how many there are to look at.
+            entries.append(ChapterEntry(chapter: .words, title: chrome("Words"),
+                                        icon: "textformat",
+                                        done: curriculum.words.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.words.count,
+                                        count: mineWords.count))
+        }
+        if !usedExpressions.isEmpty {
+            entries.append(ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
+                                        icon: "quote.opening",
+                                        count: usedExpressions.count))
+        }
+        if hasLines {
+            entries.append(ChapterEntry(chapter: .lines, title: chrome("Your lines"),
+                                        icon: "waveform",
+                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.shadowLines.count))
+        }
+        if cardCount > 0 {
+            entries.append(ChapterEntry(chapter: .cards, title: chrome("Review"),
+                                        icon: "rectangle.stack",
+                                        count: cardCount))
+        }
+        return entries
+    }
+
+    /// The chapter whose page shows: the learner's explicit pick when it
+    /// still exists, otherwise the first unfinished chapter (the bookmark),
+    /// otherwise the first chapter.
+    private var activeChapter: Chapter? {
+        let chapters = studyChapters
+        if let selectedChapter, chapters.contains(where: { $0.chapter == selectedChapter }) {
+            return selectedChapter
+        }
+        return (chapters.first { !$0.isComplete } ?? chapters.first)?.chapter
+    }
+
+    /// The selected chapter's page: a small title, then the chapter's rows.
+    @ViewBuilder
+    private var pageContent: some View {
+        if let entry = studyChapters.first(where: { $0.chapter == activeChapter }) {
+            Text(entry.title)
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.top, 14)
+                .padding(.bottom, 4)
+            switch entry.chapter {
+            case .words: wordsPage
+            case .expressions: expressionsPage
+            case .lines: linesPage
+            case .cards: reviewPage
+            }
+        }
+    }
+
+    private var chapterFooter: String? {
+        switch activeChapter {
+        case .words:
+            return "Tap a word for its card — meaning, pronunciation, your sentences. It's mastered once you use it in a talk or mark it known."
+        case .expressions:
+            return explain("Expressions you actually used this talk.")
+        case .lines:
+            return explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered.")
+        case .cards:
+            return explain("A quick active-recall run through this talk's saved phrases.")
+        case nil:
+            return nil
+        }
+    }
+
+    /// A small group label inside a page that stacks more than one kind of
+    /// material.
+    private func groupLabel(_ title: LocalizedStringKey, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 2)
+    }
+
+    // MARK: - Chapter pages
+
+    /// One checklist, same anatomy as the Watch book's words: the future
+    /// self's words to master, then the learner's own first-time words as
+    /// chips underneath — the win stays visible without its own chapter.
+    @ViewBuilder
+    private var wordsPage: some View {
+        let theirs = curriculum.words
+        let keys = theirs.map { VocabStore.lookupKey(for: $0.text) }
+        ForEach(theirs) { item in
+            Button {
+                wordSheet = WordRef(value: VocabStore.lookupKey(for: item.text), siblings: keys)
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    masteryMark(item.masteredAt != nil)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(item.text)
+                            .font(.body)
+                            .foregroundStyle(item.masteredAt != nil ? .secondary : .primary)
+                        if !item.note.isEmpty {
+                            Text(item.note).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer(minLength: 8)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 11)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if item.id != theirs.last?.id {
+                Divider().padding(.leading, 44)
+            }
+        }
+        if !mineWords.isEmpty {
+            if !theirs.isEmpty { Divider().padding(.leading, 16) }
+            Text("Words you used first")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+            FlowLayout(spacing: 8, lineSpacing: 8) {
+                ForEach(mineWords, id: \.self) { w in
+                    wordChip(w, siblings: mineWords)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        Color.clear.frame(height: 6)
+    }
+
+    @ViewBuilder
+    private var expressionsPage: some View {
+        ForEach(usedExpressions, id: \.self) { e in
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "checkmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .padding(.top, 3)
+                Text(e).font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        Color.clear.frame(height: 8)
+    }
+
+    /// Everything about the learner's own sentences, in the order you'd work
+    /// them: see the correction, shadow the smoother version, then shadow
+    /// the fluent self's whole lines.
+    @ViewBuilder
+    private var linesPage: some View {
+        if let sum = session.summary, !sum.phrasesUsed.isEmpty {
+            groupLabel("Say it better", icon: "sparkles")
+            ForEach(sum.phrasesUsed) { p in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(p.userSaid)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .strikethrough()
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+            }
+        }
+        if !curriculum.shadowLines.isEmpty {
+            groupLabel("Say it smoother", icon: "waveform")
+            ForEach(curriculum.shadowLines) { line in
+                Button {
+                    shadowLine = line
+                } label: {
+                    HStack(alignment: .firstTextBaseline, spacing: 12) {
+                        masteryMark(line.masteredAt != nil)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(line.text)
+                                .font(.body)
+                                .foregroundStyle(line.masteredAt != nil ? .secondary : .primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            if !line.note.isEmpty {
+                                Text(line.note).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer(minLength: 8)
+                        if let best = bestShadowScore(for: line.id) {
+                            Text("\(best)")
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
+                        }
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        if !freshShadowLines.isEmpty {
+            groupLabel("Shadow this conversation", icon: "waveform.badge.mic")
+            ForEach(freshShadowLines) { turn in
+                Button {
+                    fluentShadowTurn = turn
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "waveform.badge.mic")
+                            .font(.subheadline)
+                            .foregroundStyle(.tint)
+                            .frame(width: 22)
+                        Text(turn.transcript)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        Color.clear.frame(height: 8)
+    }
+
+    /// The review chapter: what it is in one line, the phrases queued from
+    /// this talk, and ONE clear action — run the deck.
+    @ViewBuilder
+    private var reviewPage: some View {
+        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
+            groupLabel("Drill next", icon: "text.badge.plus")
+            ForEach(drills, id: \.self) { drill in
+                NavigationLink {
+                    sessionDeck
+                } label: {
+                    HStack {
+                        Text(drill).font(.subheadline)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Image(systemName: "chevron.right")
+                            .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        if drillCount > 0 {
+            NavigationLink {
+                sessionDeck
+            } label: {
+                Label(drillCount == 1
+                      ? "Practice this card"
+                      : "Practice these \(drillCount) cards",
+                      systemImage: "rectangle.stack.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        Color.clear.frame(height: 4)
+    }
+
+    // MARK: - Session highlights (the analysis screen's core content)
 
     /// The one thing a learner cannot notice about themselves: material they'd
     /// already been given — a correction card from an earlier talk, a
@@ -335,82 +676,6 @@ struct ConversationDetailView: View {
                 Label("You used what you practiced", systemImage: "target")
             } footer: {
                 Text(explain("No prompt, no card on screen — you reached for these yourself. Cards you produce live jump ahead in the review queue."))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var expressionsSection: some View {
-        let credited = creditedItems
-        let expressions = (session.summary?.expressionsUsed ?? [])
-            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
-        if !expressions.isEmpty {
-            Section {
-                ForEach(expressions, id: \.self) { e in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "checkmark")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tint)
-                            .padding(.top, 3)
-                        Text(e).font(.subheadline)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            } header: {
-                Label("Expressions you used", systemImage: "quote.bubble")
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var sayItBetterSection: some View {
-        if let sum = session.summary, !sum.phrasesUsed.isEmpty {
-            Section {
-                ForEach(sum.phrasesUsed) { p in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(p.userSaid)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .strikethrough()
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text(highlightedCorrection(p.fluentAlternative, original: p.userSaid, baseFont: .subheadline))
-                            .font(.subheadline)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 2)
-                }
-            } header: {
-                Label("Say it better", systemImage: "sparkles")
-            }
-        }
-    }
-
-    /// Word chips grouped by CEFR level (same grouping as the post-talk
-    /// summary sheet) — each chip opens the word's dictionary card.
-    private func levelGroupedChips(_ words: [String]) -> some View {
-        let grouped = Dictionary(grouping: words) { CoreVocabulary.level(of: $0) }
-        // Flattened display order — the word sheet's chevrons walk this same
-        // order, so "next" in the sheet matches "next chip" on screen.
-        let ordered = CEFRLevel.allCases.flatMap { grouped[$0] ?? [] } + (grouped[nil] ?? [])
-        return VStack(alignment: .leading, spacing: 10) {
-            ForEach(CEFRLevel.allCases, id: \.self) { lv in
-                if let ws = grouped[lv], !ws.isEmpty {
-                    levelChipRow(lv.rawValue.uppercased(), ws, ordered: ordered)
-                }
-            }
-            if let other = grouped[nil], !other.isEmpty {
-                levelChipRow("Other", other, ordered: ordered)
-            }
-        }
-    }
-
-    private func levelChipRow(_ label: String, _ words: [String], ordered: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.caption2.weight(.bold).monospaced())
-                .foregroundStyle(.secondary)
-            FlowLayout(spacing: 8, lineSpacing: 8) {
-                ForEach(words, id: \.self) { w in wordChip(w, siblings: ordered) }
             }
         }
     }
@@ -452,112 +717,12 @@ struct ConversationDetailView: View {
 
     // MARK: - Review material
 
-    @ViewBuilder
-    private var shadowSection: some View {
-        if !curriculum.shadowLines.isEmpty {
-            Section {
-                ForEach(curriculum.shadowLines) { line in
-                    Button {
-                        shadowLine = line
-                    } label: {
-                        HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            masteryMark(line.masteredAt != nil)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(line.text)
-                                    .font(.body)
-                                    .foregroundStyle(line.masteredAt != nil ? .secondary : .primary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                if !line.note.isEmpty {
-                                    Text(line.note).font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            Spacer(minLength: 8)
-                            if let best = bestShadowScore(for: line.id) {
-                                Text("\(best)")
-                                    .font(.caption.weight(.semibold).monospacedDigit())
-                                    .foregroundStyle(best >= ScenarioCurriculum.shadowMasteryScore ? .green : .secondary)
-                            }
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            } header: {
-                sectionHeader(title: "Say it smoother", icon: "waveform", items: curriculum.shadowLines)
-            } footer: {
-                Text(explain("The fluent versions of your own sentences from this talk. Shadow one in your voice — score \(ScenarioCurriculum.shadowMasteryScore)+ and it's mastered."))
-            }
-        }
-    }
-
     /// This session's cards as a swipe deck — shared destination for the
     /// drills rows and the post-talk practice CTA.
     private var sessionDeck: some View {
         DrillView(source: .session(session.id))
             .navigationTitle("Review")
             .navigationBarTitleDisplayMode(.inline)
-    }
-
-    /// The wrap-up's "shadow this conversation" list: the last substantial
-    /// fluent-self lines of THIS talk, shadowable in one tap (the full
-    /// per-line list lives in Replay).
-    @ViewBuilder
-    private var freshShadowSection: some View {
-        let lines = Array(
-            session.turns.filter { $0.role == .fluentSelf
-                && $0.transcript.split(separator: " ").count >= 4 }
-            .suffix(4)
-        )
-        if !lines.isEmpty {
-            Section {
-                ForEach(lines) { turn in
-                    Button {
-                        fluentShadowTurn = turn
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "waveform.badge.mic")
-                                .font(.subheadline)
-                                .foregroundStyle(.tint)
-                                .frame(width: 22)
-                            Text(turn.transcript)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            Spacer(minLength: 8)
-                            Image(systemName: "chevron.right")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            } header: {
-                Text("Shadow this conversation")
-            } footer: {
-                Text(explain("Repeat your fluent self's lines from this talk."))
-            }
-        }
-    }
-
-    /// The wrap-up's "Drill next" list — phrases slightly above the user's
-    /// level to practice NEXT (already ingested as cards; each row drops into
-    /// this session's deck).
-    @ViewBuilder
-    private var drillNextSection: some View {
-        if let drills = session.summary?.suggestedDrills, !drills.isEmpty {
-            Section("Drill next") {
-                ForEach(drills, id: \.self) { drill in
-                    NavigationLink {
-                        sessionDeck
-                    } label: {
-                        Text(drill)
-                    }
-                }
-            }
-        }
     }
 
     /// Practice-first close-out, unchanged from the old wrap-up sheet: the
@@ -602,39 +767,6 @@ struct ConversationDetailView: View {
                 .frame(maxWidth: .infinity)
         }
         .controlSize(.large)
-    }
-
-    @ViewBuilder
-    private var drillsSection: some View {
-        if drillCount > 0 {
-            Section {
-                NavigationLink {
-                    sessionDeck
-                } label: {
-                    HStack {
-                        Label("Cards from this talk", systemImage: "rectangle.stack")
-                        Spacer()
-                        Text("\(drillCount)")
-                            .font(.subheadline.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            } footer: {
-                Text(explain("A quick active-recall run through this talk's saved phrases."))
-            }
-        }
-    }
-
-    private func sectionHeader(title: String, icon: String,
-                               items: [ScenarioCurriculum.Item]) -> some View {
-        HStack {
-            Label(title, systemImage: icon)
-            Spacer()
-            let done = items.filter { $0.masteredAt != nil }.count
-            Text("\(done)/\(items.count)")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(done == items.count && !items.isEmpty ? .green : .secondary)
-        }
     }
 
     private func masteryMark(_ mastered: Bool) -> some View {

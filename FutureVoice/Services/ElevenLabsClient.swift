@@ -128,6 +128,71 @@ final class ElevenLabsClient {
         try Self.validate(response: response, data: data)
     }
 
+    // MARK: - Voice remixing (accent picker)
+
+    /// One remix candidate: a voice that exists upstream only transiently
+    /// until saved. `id` is the ElevenLabs `generated_voice_id`.
+    struct RemixPreview: Identifiable {
+        let id: String
+        let audio: Data
+    }
+
+    /// Generates accent-remix previews of an existing clone. Same person,
+    /// instructed accent — see `VoiceAccentCatalog` for the descriptions.
+    /// `text` is what the previews speak (upstream wants 100–1000 chars).
+    func remixVoicePreviews(voiceId: String, voiceDescription: String,
+                            text: String) async throws -> [RemixPreview] {
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "voice_id": voiceId,
+            "voice_description": voiceDescription,
+            "text": text,
+        ])
+        // Preview generation runs tens of seconds upstream and returns a few
+        // MB of base64 audio — the roomier upload session, not the 60s one.
+        let (data, response) = try await uploadSession.dataWithRetry(for: request)
+        try Self.validate(response: response, data: data)
+
+        struct Preview: Decodable {
+            let generated_voice_id: String
+            let audio_base_64: String
+        }
+        struct Resp: Decodable { let previews: [Preview] }
+        let decoded = try JSONDecoder().decode(Resp.self, from: data)
+        return decoded.previews.compactMap { p in
+            guard let audio = Data(base64Encoded: p.audio_base_64) else { return nil }
+            return RemixPreview(id: p.generated_voice_id, audio: audio)
+        }
+    }
+
+    /// Promotes the picked preview into a permanent voice and returns its
+    /// voice_id. The edge function mirrors the new id into `voice_clones`,
+    /// so the swap-and-delete machinery treats it exactly like a re-record.
+    func saveRemixedVoice(generatedVoiceId: String, name: String,
+                          voiceDescription: String) async throws -> String {
+        let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: [
+            "generated_voice_id": generatedVoiceId,
+            "voice_name": name,
+            "voice_description": voiceDescription,
+        ])
+        let (data, response) = try await session.dataWithRetry(for: request)
+        try Self.validate(response: response, data: data)
+
+        struct Resp: Decodable { let voice_id: String }
+        return try JSONDecoder().decode(Resp.self, from: data).voice_id
+    }
+
     // MARK: - Text-to-Speech
 
     /// Model for live conversation turns (Talk).
