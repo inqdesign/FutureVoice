@@ -61,8 +61,10 @@ enum DailyCallAlarm {
     /// notification rather than leaving the learner with no call at all.
     @available(iOS 26.1, *)
     @discardableResult
-    static func schedule(_ plan: DailyCallPlan, callerName: String) async -> Bool {
-        guard plan.scheduledFor > Date() else { return false }
+    static func schedule(_ plan: DailyCallPlan, at dates: [Date],
+                         callerName: String) async -> Bool {
+        let upcoming = dates.filter { $0 > Date() }.sorted()
+        guard !upcoming.isEmpty else { return false }
         guard await isAuthorized() else { return false }
 
         cancelAll()
@@ -93,8 +95,9 @@ enum DailyCallAlarm {
             metadata: CallMetadata(callerName: callerName),
             tintColor: .accentColor)
 
-        let configuration = AlarmManager.AlarmConfiguration.alarm(
-            schedule: .fixed(plan.scheduledFor),
+        func configuration(for date: Date) -> AlarmManager.AlarmConfiguration<CallMetadata> {
+            AlarmManager.AlarmConfiguration.alarm(
+            schedule: .fixed(date),
             attributes: attributes,
             // Mirrors the button mapping above: system button = decline,
             // our labelled one = answer. The decline delay is whatever they
@@ -104,13 +107,42 @@ enum DailyCallAlarm {
             // A phone ringing, from the app bundle — see the note at the top
             // of this file for why it can't be the learner's own voice.
             sound: .named(DailyCallStore.ringtoneFilename))
-
-        do {
-            _ = try await AlarmManager.shared.schedule(id: plan.id, configuration: configuration)
-            return true
-        } catch {
-            return false
         }
+
+        // One alarm per remaining slot today, all holding the same unheard
+        // message. A `.fixed` schedule fires once, so more than one call a day
+        // means more than one alarm — and they must be armed now, because the
+        // app won't be running between them to arm the next.
+        //
+        // Each needs its own id, derived from the plan's so `cancelAll` and a
+        // re-schedule stay idempotent. Partial success still counts: if the
+        // second alarm trips AlarmKit's ceiling, the first one ringing is far
+        // better than falling back to a banner for the whole day.
+        var scheduledAny = false
+        for (index, date) in upcoming.enumerated() {
+            let id = alarmId(for: plan, slot: index)
+            do {
+                _ = try await AlarmManager.shared.schedule(id: id,
+                                                           configuration: configuration(for: date))
+                scheduledAny = true
+            } catch {
+                break
+            }
+        }
+        return scheduledAny
+    }
+
+    /// Deterministic per-slot id: the plan's UUID with its last byte replaced
+    /// by the slot index, so the same plan always maps to the same ids.
+    @available(iOS 26.1, *)
+    private static func alarmId(for plan: DailyCallPlan, slot: Int) -> UUID {
+        guard slot > 0 else { return plan.id }
+        var bytes = withUnsafeBytes(of: plan.id.uuid) { Array($0) }
+        bytes[15] = bytes[15] ^ UInt8(slot & 0xFF)
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3],
+                           bytes[4], bytes[5], bytes[6], bytes[7],
+                           bytes[8], bytes[9], bytes[10], bytes[11],
+                           bytes[12], bytes[13], bytes[14], bytes[15]))
     }
 
     /// Drop every alarm this app owns. `AlarmManager.alarms` only ever returns
@@ -136,10 +168,11 @@ enum DailyCallAlarm {
     /// Version-erased entry points, so `DailyCallScheduler` never carries an
     /// `#available` ladder of its own.
     @discardableResult
-    static func scheduleIfSupported(_ plan: DailyCallPlan, callerName: String) async -> Bool {
+    static func scheduleIfSupported(_ plan: DailyCallPlan, at dates: [Date],
+                                    callerName: String) async -> Bool {
         #if canImport(AlarmKit)
         if #available(iOS 26.1, *) {
-            return await schedule(plan, callerName: callerName)
+            return await schedule(plan, at: dates, callerName: callerName)
         }
         #endif
         return false

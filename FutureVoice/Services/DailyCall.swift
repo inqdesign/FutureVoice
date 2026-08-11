@@ -98,19 +98,60 @@ final class DailyCallStore {
         set { UserDefaults.standard.set(newValue, forKey: Self.enabledKey) }
     }
 
-    /// Hour of day (0–23) the call comes in. Defaults to 08:00 — before the
-    /// day fills up, which is when a five-minute call actually happens.
-    var hour: Int {
+    /// One time of day the call comes in.
+    struct CallTime: Codable, Hashable, Comparable, Identifiable {
+        var hour: Int
+        var minute: Int
+        var id: Int { hour * 60 + minute }
+        static func < (a: CallTime, b: CallTime) -> Bool { a.id < b.id }
+    }
+
+    private static let timesKey = "futurevoice.dailyCall.times"
+
+    /// How many calls a day the learner may schedule.
+    ///
+    /// Capped, and not arbitrarily: every slot is a separate OS alarm holding
+    /// the same unheard message, and AlarmKit throws `maximumLimitReached`
+    /// past its own ceiling. Four also happens to be the point where a caller
+    /// stops reading as a person and starts reading as a nagging app.
+    static let maxTimes = 4
+
+    /// Every time of day the call comes in, ascending. Never empty — an
+    /// enabled call with no times would be a feature that silently does
+    /// nothing.
+    var times: [CallTime] {
         get {
-            guard UserDefaults.standard.object(forKey: Self.hourKey) != nil else { return 8 }
-            return min(23, max(0, UserDefaults.standard.integer(forKey: Self.hourKey)))
+            if let data = UserDefaults.standard.data(forKey: Self.timesKey),
+               let decoded = try? JSONDecoder().decode([CallTime].self, from: data),
+               !decoded.isEmpty {
+                return decoded.sorted()
+            }
+            // Migration: installs from when the call had a single hour/minute.
+            // Read those keys rather than defaulting, or an existing learner's
+            // 07:00 call silently jumps to 08:00 on update.
+            let h = UserDefaults.standard.object(forKey: Self.hourKey) != nil
+                ? min(23, max(0, UserDefaults.standard.integer(forKey: Self.hourKey))) : 8
+            let m = min(59, max(0, UserDefaults.standard.integer(forKey: Self.minuteKey)))
+            return [CallTime(hour: h, minute: m)]
         }
-        set { UserDefaults.standard.set(min(23, max(0, newValue)), forKey: Self.hourKey) }
+        set {
+            // Dedupe: two alarms at the same minute would ring twice.
+            let cleaned = Array(Set(newValue)).sorted().prefix(Self.maxTimes)
+            let final = cleaned.isEmpty ? [CallTime(hour: 8, minute: 0)] : Array(cleaned)
+            UserDefaults.standard.set(try? JSONEncoder().encode(final), forKey: Self.timesKey)
+        }
+    }
+
+    /// The first call of the day. Kept as a property because onboarding and
+    /// the widget only ever deal with one time.
+    var hour: Int {
+        get { times.first?.hour ?? 8 }
+        set { times = [CallTime(hour: min(23, max(0, newValue)), minute: minute)] }
     }
 
     var minute: Int {
-        get { min(59, max(0, UserDefaults.standard.integer(forKey: Self.minuteKey))) }
-        set { UserDefaults.standard.set(min(59, max(0, newValue)), forKey: Self.minuteKey) }
+        get { times.first?.minute ?? 0 }
+        set { times = [CallTime(hour: hour, minute: min(59, max(0, newValue)))] }
     }
 
     // MARK: - The ring

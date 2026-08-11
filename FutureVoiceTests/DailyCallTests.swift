@@ -117,6 +117,74 @@ final class DailyCallTests: XCTestCase {
         XCTAssertEqual(cal.dateComponents([.day, .hour], from: fire).hour, 8)
     }
 
+    // MARK: - More than one call a day
+
+    /// Every remaining slot has to be armed AT ONCE. A plan is written while
+    /// the app is in the foreground, but the gap between an 08:00 call slept
+    /// through and a 13:00 one happens with the app closed and nothing running
+    /// to schedule the second — so arming only the next slot would silently
+    /// make extra calls a no-op for exactly the learner who needs them.
+    @MainActor
+    func testEveryRemainingSlotIsArmedUpFront() throws {
+        let cal = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(DateComponents(
+            calendar: cal, year: 2026, month: 8, day: 10, hour: 9, minute: 0).date)
+
+        DailyCallStore.shared.times = [
+            .init(hour: 8, minute: 0), .init(hour: 13, minute: 0), .init(hour: 20, minute: 0)
+        ]
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+
+        let dates = DailyCallScheduler.fireDates(after: now, calendar: cal)
+
+        XCTAssertEqual(dates.count, 2, "08:00 has passed; 13:00 and 20:00 remain")
+        XCTAssertEqual(dates.map { cal.component(.hour, from: $0) }, [13, 20])
+        XCTAssertEqual(dates, dates.sorted(), "soonest first")
+    }
+
+    /// Past the last call of the day, there must still be something armed —
+    /// tomorrow's first — or the feature dies quietly every evening.
+    @MainActor
+    func testPastTheLastCallItRollsToTomorrowsFirst() throws {
+        let cal = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(DateComponents(
+            calendar: cal, year: 2026, month: 8, day: 10, hour: 22, minute: 0).date)
+
+        DailyCallStore.shared.times = [.init(hour: 8, minute: 0), .init(hour: 20, minute: 0)]
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+
+        let dates = DailyCallScheduler.fireDates(after: now, calendar: cal)
+
+        XCTAssertEqual(dates.count, 1)
+        XCTAssertEqual(cal.component(.day, from: try XCTUnwrap(dates.first)), 11)
+        XCTAssertEqual(cal.component(.hour, from: try XCTUnwrap(dates.first)), 8)
+    }
+
+    /// Two alarms at the same minute would ring twice over each other, and an
+    /// unbounded list would blow past AlarmKit's own ceiling.
+    @MainActor
+    func testTimesAreDedupedSortedAndCapped() {
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+
+        DailyCallStore.shared.times = [
+            .init(hour: 20, minute: 0), .init(hour: 8, minute: 0), .init(hour: 20, minute: 0)
+        ]
+        XCTAssertEqual(DailyCallStore.shared.times,
+                       [.init(hour: 8, minute: 0), .init(hour: 20, minute: 0)])
+
+        DailyCallStore.shared.times = (0..<10).map { .init(hour: $0, minute: 0) }
+        XCTAssertEqual(DailyCallStore.shared.times.count, DailyCallStore.maxTimes)
+    }
+
+    /// Emptying the list must not become a silent off switch — the toggle is
+    /// where turning the call off belongs.
+    @MainActor
+    func testClearingTimesFallsBackToOneCall() {
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+        DailyCallStore.shared.times = []
+        XCTAssertEqual(DailyCallStore.shared.times.count, 1)
+    }
+
     // MARK: - Plan validity
 
     /// A language switch or a re-record must invalidate the standing plan —

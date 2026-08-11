@@ -327,8 +327,10 @@ enum DailyCallScheduler {
     /// upgrade) — dropping only the one we're about to use would leave the
     /// other still armed and the learner called twice.
     private static func cancelPendingRequest() async {
-        UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [requestId])
+        // One id per slot (see `schedule`), plus the legacy single id so an
+        // install updating mid-day can't leave an orphaned ring behind.
+        let ids = [requestId] + (0..<DailyCallStore.maxTimes).map { "\(requestId).\($0)" }
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         DailyCallAlarm.cancelIfSupported()
     }
 
@@ -338,12 +340,49 @@ enum DailyCallScheduler {
                              calendar: Calendar = .current,
                              hour: Int? = nil,
                              minute: Int? = nil) -> Date? {
-        let h = hour ?? DailyCallStore.shared.hour
-        let m = minute ?? DailyCallStore.shared.minute
-        guard let today = calendar.date(bySettingHour: h, minute: m, second: 0, of: now)
+        if let hour {
+            return fireDate(hour: hour, minute: minute ?? 0, after: now, calendar: calendar)
+        }
+        return fireDates(after: now, calendar: calendar).first
+    }
+
+    /// Every upcoming call, soonest first: the rest of today's times, then
+    /// tomorrow's first — so there is always at least one.
+    ///
+    /// This is what makes more than one call a day actually work. A plan is
+    /// written while the app is in the FOREGROUND (session end), but a call
+    /// the learner sleeps through happens with the app closed and nothing
+    /// running to write the next one. So every remaining slot is armed up
+    /// front, all carrying the same still-unheard message — which is also how
+    /// a person behaves: they try again later with the same thing to say.
+    /// Answering cancels the rest, and the session that follows writes the
+    /// next call fresh.
+    static func fireDates(after now: Date, calendar: Calendar = .current) -> [Date] {
+        let times = DailyCallStore.shared.times
+        let todays = times.compactMap {
+            fireDateToday(hour: $0.hour, minute: $0.minute, on: now, calendar: calendar)
+        }
+        let remaining = todays.filter { $0 > now }.sorted()
+        if !remaining.isEmpty { return remaining }
+        // Past the last one: tomorrow's first.
+        guard let first = times.first,
+              let today = fireDateToday(hour: first.hour, minute: first.minute,
+                                        on: now, calendar: calendar),
+              let tomorrow = calendar.date(byAdding: .day, value: 1, to: today)
+        else { return [] }
+        return [tomorrow]
+    }
+
+    private static func fireDateToday(hour: Int, minute: Int,
+                                      on day: Date, calendar: Calendar) -> Date? {
+        calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)
+    }
+
+    private static func fireDate(hour: Int, minute: Int,
+                                 after now: Date, calendar: Calendar) -> Date? {
+        guard let today = fireDateToday(hour: hour, minute: minute, on: now, calendar: calendar)
         else { return nil }
-        if today > now { return today }
-        return calendar.date(byAdding: .day, value: 1, to: today)
+        return today > now ? today : calendar.date(byAdding: .day, value: 1, to: today)
     }
 
     /// One pending call at a time, always replaced rather than stacked — the
@@ -357,10 +396,22 @@ enum DailyCallScheduler {
     /// banner.
     private static func schedule(_ plan: DailyCallPlan, callerName: String?) async {
         await cancelPendingRequest()
-        guard plan.scheduledFor > Date() else { return }
+
+        // Every remaining slot today, not just the plan's own time — see
+        // `fireDates`. They all carry this same still-unheard message;
+        // whichever rings first and gets answered cancels the rest.
+        let now = Date()
+        var dates = fireDates(after: now)
+        if plan.scheduledFor > now, !dates.contains(plan.scheduledFor) {
+            // A callback ("call me back in 30 min") lands between slots — it
+            // still has to ring at the time the learner picked.
+            dates.append(plan.scheduledFor)
+        }
+        dates = Array(Set(dates)).sorted().prefix(DailyCallStore.maxTimes).map { $0 }
+        guard !dates.isEmpty else { return }
 
         let caller = callerName ?? cachedCallerName ?? explain("Your future self")
-        if await DailyCallAlarm.scheduleIfSupported(plan, callerName: caller) {
+        if await DailyCallAlarm.scheduleIfSupported(plan, at: dates, callerName: caller) {
             if let callerName { cachedCallerName = callerName }
             return
         }
@@ -387,11 +438,16 @@ enum DailyCallScheduler {
 
         if let callerName { cachedCallerName = callerName }
 
-        let comps = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute], from: plan.scheduledFor)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
-        try? await UNUserNotificationCenter.current().add(
-            UNNotificationRequest(identifier: requestId, content: content, trigger: trigger))
+        // One request per slot — a notification trigger fires once, so more
+        // than one call a day means more than one pending request.
+        for (index, date) in dates.enumerated() {
+            let comps = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: date)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
+            try? await UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: "\(requestId).\(index)",
+                                      content: content, trigger: trigger))
+        }
     }
 
     /// Remembered so a snooze — which happens with the app closed and no
