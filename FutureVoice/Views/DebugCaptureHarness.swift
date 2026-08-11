@@ -73,6 +73,13 @@ enum DebugCapture {
             once("vocab") { seedVocab() }
             previewWordCard = true
             return AnyView(NavigationStack { VocabularyView() })
+        case "daily-words":
+            // The Words challenge session (the dealt hand of recommendations).
+            once("vocab") { seedVocab() }
+            return AnyView(DailyWordsView().environmentObject(appState))
+        case "daily-expressions":
+            once("vocab") { seedVocab() }
+            return AnyView(DailyExpressionsView().environmentObject(appState))
         case "scene-end":
             previewSceneFinished = true
             let cp = Counterpart(name: "Barista", relationship: "at the cafe",
@@ -244,7 +251,7 @@ enum DebugCapture {
         case "paywall":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
-            return AnyView(PaywallView(offerTrial: false).environmentObject(appState))
+            return AnyView(PaywallView().environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
             // the fluent self can't reply because credits ran out.
@@ -516,6 +523,10 @@ enum DebugCapture {
                   "straightforward", "reschedule", "nuanced", "hesitate"] {
             VocabStore.shared.addStudying(w)
         }
+        _ = VocabStore.shared.ingestExpressions(
+            sessionId: UUID(uuidString: "00000000-0000-0000-0000-0000000000A1")!,
+            phrases: ["walk you through", "catch up on", "think it through",
+                      "turned out to be", "handled it with grace"])
         _ = VocabStore.shared.addExpression("catch up on")
         _ = VocabStore.shared.addExpression("walk you through")
         _ = VocabStore.shared.addExpression("turned out to be")

@@ -129,7 +129,7 @@ struct ShadowDrillView: View {
                 Text(error ?? "")
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView(offerTrial: false)   // out-of-credits entry
+                PaywallView()
             }
             .onChange(of: live.currentWordTimings) { _, new in
                 applyWordTimings(new)

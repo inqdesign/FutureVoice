@@ -7,13 +7,6 @@ import Supabase
 /// prices last. Pure SwiftUI + system colors; prices and trial length come
 /// live from StoreKit, credits-per-cycle from the server plan catalog.
 struct PaywallView: View {
-    /// Whether to pitch the free trial at all. Callers pass `false` when the
-    /// user has already used their free credits (out-of-credits blocks, or a
-    /// zero balance) — "Try for free" makes no sense to someone who's already
-    /// spent the free tier, regardless of what Apple's intro-offer flag says
-    /// (that only tracks subscription history, not credit usage).
-    var offerTrial: Bool = true
-
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = StoreKitService()
 
@@ -45,10 +38,12 @@ struct PaywallView: View {
         }
     }
 
-    /// Show the trial funnel only when the caller allows it AND Apple still
-    /// offers this account an intro offer. Either being false means: skip the
-    /// pitch, open on plans, and say "Subscribe" instead of "Try for free".
-    private var showsTrial: Bool { offerTrial && store.trialEligible && !BetaConfig.isBeta }
+    /// Show the trial funnel when Apple still offers this account an intro
+    /// offer. That flag IS the truth now — under the hard paywall there are no
+    /// free credits to have "already spent", and Apple already returns false
+    /// once a trial has been used. False means: skip the pitch, open on plans,
+    /// and say "Subscribe" instead of "Try for free".
+    private var showsTrial: Bool { store.trialEligible && !BetaConfig.isBeta }
 
     /// During the beta the paywall can't sell, so it ends in a preference
     /// survey rather than a purchase. `.plans` → `.survey` → submit.
@@ -75,8 +70,8 @@ struct PaywallView: View {
         .background(Color(.systemBackground))
         .task {
             await store.load()
-            // No trial to pitch (out of credits, zero balance, or Apple says
-            // the intro offer is spent): skip the pitch and open on plans.
+            // No trial to pitch (Apple says the intro offer is spent, or the
+            // beta can't sell): skip the pitch and open on plans.
             if !showsTrial { step = .plans }
         }
         .onChange(of: store.purchaseState) { _, state in

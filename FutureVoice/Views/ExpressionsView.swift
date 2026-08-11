@@ -178,6 +178,13 @@ struct ExpressionCard: View {
     @Binding var currentPhrase: String?
     /// Sibling list the header chevrons walk; nil hides them.
     var navigationPhrases: [String]? = nil
+    /// Title as "3 of 10" instead of the collection count — the daily
+    /// expressions session walks a dealt hand, not the collection, so the
+    /// collection's count would be a lie there.
+    var titleByPosition: Bool = false
+    /// Fires on an AFFIRMATIVE judgment only — Study or I know it, never
+    /// their un-taps. Mirrors `WordCard.onJudged`.
+    var onJudged: ((String) -> Void)? = nil
 
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
@@ -246,7 +253,9 @@ struct ExpressionCard: View {
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle("My expressions · \(store.expressionCount)")
+        .navigationTitle(titleByPosition && navIndex != nil
+                         ? Text("\((navIndex ?? 0) + 1) of \(navList.count)")
+                         : Text("My expressions · \(store.expressionCount)"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let i = navIndex {
@@ -344,14 +353,20 @@ struct ExpressionCard: View {
                        tint: isStudying ? .accentColor : .primary) {
                 // Bookmark to keep studying — mirrors adding a word to the
                 // notebook; the phrase then shows on the Expressions widget.
-                store.setStudyingExpression(phrase, !isStudying)
+                // (Capture the pre-toggle state: isStudying is computed off
+                // the store, so it flips the moment the set lands.)
+                let wasStudying = isStudying
+                store.setStudyingExpression(phrase, !wasStudying)
+                if !wasStudying { onJudged?(phrase) }
             }
             blurButton(isKnown ? "Known" : "I know it",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
                 // Toggle known — stay on the phrase so it visibly flips, same
                 // as WordCard.
-                store.setKnownExpression(phrase, !isKnown)
+                let wasKnown = isKnown
+                store.setKnownExpression(phrase, !wasKnown)
+                if !wasKnown { onJudged?(phrase) }
             }
         }
         .padding(.horizontal, 16)

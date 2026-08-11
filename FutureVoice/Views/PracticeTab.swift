@@ -28,6 +28,11 @@ struct PracticeTab: View {
     @State private var showingExpressions = false
     @State private var showingShadowBrowser = false
     @State private var showingGoalsEditor = false
+    /// The Words challenge session (a dealt hand of recommended words) —
+    /// distinct from showingVocabulary, which is the explore cloud.
+    @State private var showingDailyWords = false
+    /// The Expressions challenge session — same dealt-hand shape.
+    @State private var showingDailyExpressions = false
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -169,6 +174,14 @@ struct PracticeTab: View {
             .sheet(isPresented: $showingGoalsEditor) {
                 StudyGoalsSheet()
                     .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $showingDailyWords) {
+                DailyWordsView()
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingDailyExpressions) {
+                DailyExpressionsView()
+                    .environmentObject(appState)
             }
             .sheet(isPresented: $showingFinished, onDismiss: reload) {
                 FinishedBooksSheet(books: finishedBooks)
@@ -503,32 +516,38 @@ struct PracticeTab: View {
             .padding(.top, 12)
             .padding(.bottom, 10)
 
-            // The SRS deck is its own challenge with a moving target: clear
-            // today's deck. The target is capped at one deck (DrillView.
-            // sessionCap) so a 150-card backlog asks for 20, not 150 — extra
-            // decks past the target just show as done. Hidden on a day with
-            // nothing due and nothing done.
+            // The SRS deck's challenge, named for its CONTENT — the corrected
+            // sentences from your talks — not its format ("Cards" was a
+            // method, the way every other row is a category). Moving target:
+            // clear today's deck, capped at one deck (DrillView.sessionCap)
+            // so a 150-card backlog asks for 20, not 150 — extra decks past
+            // the target just show as done. Hidden on a day with nothing due
+            // and nothing done.
             if dueDrillCount > 0 || today.drillReps > 0 {
                 CardDivider(inset: 14)
                 let cardsGoal = max(today.drillReps,
                                     min(today.drillReps + dueDrillCount, DrillView.sessionCap))
-                challengeRow(icon: "rectangle.stack", title: "Cards",
+                challengeRow(icon: "rectangle.stack", title: "Sentences",
                              done: today.drillReps, goal: cardsGoal) {
                     showingDrills = true
                 }
             }
             if goals.wordsPerDay > 0 {
                 CardDivider(inset: 14)
+                // Lands in the dealt-hand session, not the explore cloud — a
+                // challenge hands you today's ten, it doesn't open a map.
                 challengeRow(icon: "text.book.closed.fill", title: "Words",
                              done: today.wordReps, goal: goals.wordsPerDay) {
-                    showingVocabulary = true
+                    showingDailyWords = true
                 }
             }
             if goals.expressionsPerDay > 0 {
                 CardDivider(inset: 14)
+                // Dealt-hand session, same as Words; the full collection
+                // stays reachable from the shortcuts band.
                 challengeRow(icon: "quote.bubble.fill", title: "Expressions",
                              done: today.expressionReps, goal: goals.expressionsPerDay) {
-                    showingExpressions = true
+                    showingDailyExpressions = true
                 }
             }
             if goals.shadowsPerDay > 0 {

@@ -102,7 +102,7 @@ struct WatchSetupSheet: View {
                 }
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView(offerTrial: false)   // out-of-credits entry
+                PaywallView()
             }
             .navigationTitle("Watch")
             .navigationBarTitleDisplayMode(.inline)
@@ -358,7 +358,7 @@ struct WatchView: View {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView(offerTrial: false)   // out-of-credits entry
+            PaywallView()
         }
         .sheet(item: $bridge) { b in
             ShadowDrillView(turn: b.turn, targetLanguage: appState.targetLanguage)

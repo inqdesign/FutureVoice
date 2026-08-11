@@ -147,9 +147,7 @@ struct ConversationHome: View {
             // from cached audio instead of blocking on live calls.
             .task { await prewarmFreeTalkOpenerAudio() }
             .sheet(isPresented: $showingPaywall, onDismiss: refreshAccount) {
-                // Only pitch the trial to someone who still has free credits;
-                // a spent balance means they've already used the free tier.
-                PaywallView(offerTrial: (account?.secondsBalance ?? 0) > 0)
+                PaywallView()
             }
             .sheet(isPresented: $showingProfile) {
                 MeTab().environmentObject(appState).environmentObject(auth)

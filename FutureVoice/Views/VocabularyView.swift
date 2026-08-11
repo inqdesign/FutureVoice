@@ -410,6 +410,10 @@ struct WordCard: View {
     /// Pull the containing sheet to full height. nil where the card is already
     /// full-screen (ConversationDetailView), which also means no peek there.
     var onExpand: (() -> Void)? = nil
+    /// Fires on an AFFIRMATIVE judgment only — Keep or I know, never their
+    /// un-taps. The daily words session uses it to mark the word counted
+    /// (the store logs the rep itself; this is just bookkeeping).
+    var onJudged: ((String) -> Void)? = nil
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @StateObject private var player = AudioPlayer()
@@ -438,7 +442,12 @@ struct WordCard: View {
                 peekCard
             }
         }
-        .navigationTitle("My words · \(store.studying.count)")
+        // Walking a dealt list (daily words, a session's chip siblings) titles
+        // by position — "3 of 10" — because that list isn't the notebook and
+        // its count would be a lie there. Notebook browsing keeps the count.
+        .navigationTitle(navigationWords != nil && navIndex != nil
+                         ? Text("\((navIndex ?? 0) + 1) of \(navList.count)")
+                         : Text("My words · \(store.studying.count)"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { cardToolbar }
         .safeAreaInset(edge: .bottom) { if isExpanded { actionBar } }
@@ -582,14 +591,24 @@ struct WordCard: View {
             if !isExpanded {
                 ToolbarItemGroup(placement: .topBarLeading) {
                     Button {
-                        store.isStudying(word) ? store.removeStudying(word) : store.addStudying(word)
+                        if store.isStudying(word) {
+                            store.removeStudying(word)
+                        } else {
+                            store.addStudying(word)
+                            onJudged?(word)
+                        }
                     } label: {
                         Image(systemName: store.isStudying(word) ? "bookmark.fill" : "bookmark")
                     }
                     .tint(store.isStudying(word) ? .accentColor : .secondary)
 
                     Button {
-                        isKnown ? store.unmark(word) : store.markKnown(word)
+                        if isKnown {
+                            store.unmark(word)
+                        } else {
+                            store.markKnown(word)
+                            onJudged?(word)
+                        }
                     } label: {
                         Image(systemName: isKnown ? "checkmark.circle.fill" : "checkmark.circle")
                     }
@@ -762,7 +781,12 @@ struct WordCard: View {
             blurButton("Keep",
                        icon: studying ? "bookmark.fill" : "bookmark",
                        tint: studying ? .accentColor : .primary) {
-                studying ? store.removeStudying(word) : store.addStudying(word)
+                if studying {
+                    store.removeStudying(word)
+                } else {
+                    store.addStudying(word)
+                    onJudged?(word)
+                }
             }
             .accessibilityLabel(studying ? "Studying this word" : "Keep studying this word")
 
@@ -772,7 +796,12 @@ struct WordCard: View {
                 // Toggle: tap to mark known, tap again to clear it. Stay on the
                 // word so it visibly flips — confirmation the tap worked.
                 // Deliberately NO jump to the next study word.
-                isKnown ? store.unmark(word) : store.markKnown(word)
+                if isKnown {
+                    store.unmark(word)
+                } else {
+                    store.markKnown(word)
+                    onJudged?(word)
+                }
             }
             .accessibilityLabel(isKnown ? "Marked as known" : "Mark as known")
 

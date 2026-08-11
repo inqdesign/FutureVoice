@@ -332,7 +332,7 @@ struct ConversationView: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 // Reached here from an out-of-credits failure → no trial pitch.
-                PaywallView(offerTrial: false)
+                PaywallView()
             }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }

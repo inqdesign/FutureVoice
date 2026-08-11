@@ -137,7 +137,7 @@ struct ConversationDetailView: View {
             Text(regenerateError ?? "")
         }
         .sheet(isPresented: $showingPaywall) {
-            PaywallView(offerTrial: false)   // out-of-credits entry
+            PaywallView()
         }
         .confirmationDialog("Delete this talk?", isPresented: $showingDeleteConfirm,
                             titleVisibility: .visible) {
