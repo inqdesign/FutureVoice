@@ -192,14 +192,18 @@ struct ScenarioComposerSheet: View {
             // the field's own card is turned off (clear) so the breadcrumb
             // row and the field share the section's native rounded box —
             // stacking a second radius inside it read as two welded cards.
-            // No locale toggle here: on-device STT can't auto-detect the
-            // spoken language, so dictation is pinned to the user's native
-            // language (how situations get described anyway). Typing is
-            // language-agnostic regardless.
+            // The locale toggle is SHOWN. On-device STT can't auto-detect the
+            // spoken language, so dictation has to be told which one to
+            // expect — and pinning it silently to the native language meant a
+            // learner who described the situation in the language they're
+            // learning got nonsense back, with nothing on screen explaining
+            // why. It still opens on the native language (that is how people
+            // describe a situation), but the choice is now visible and one
+            // tap away. Typing is language-agnostic regardless.
             SpeakOrTypeField(text: $situation,
                              locale: $dictationLocale,
                              placeholder: "Describe the scenario — or tap the mic and say it",
-                             showsLocalePicker: false,
+                             showsLocalePicker: true,
                              lineRange: 2...6,
                              externalFocus: $situationFocused,
                              cardBackground: Color.clear)

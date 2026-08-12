@@ -201,11 +201,17 @@ enum ScenarioCurriculumEngine {
 
         Return STRICT JSON only — no prose, no code fences:
         {
-          "title": "...",
           "turns": [ { "speaker": "user" | "counterpart", "text": "..." } ],
+          "title": "...",
           "words": [ { "text": "...", "note": "...", "example": "..." } ],
           "expressions": [ { "text": "...", "note": "...", "example": "..." } ]
         }
+
+        FIELD ORDER IS FIXED, and "turns" comes FIRST for a reason: playback
+        starts on the first turn the moment it closes, while you are still
+        writing the rest. Every character emitted before it — a title, a
+        preamble, anything — is silence the learner sits through. Write the
+        scene first and name it afterwards.
         """
     }
 

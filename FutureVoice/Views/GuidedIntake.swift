@@ -145,6 +145,21 @@ struct SpeakOrTypeField: View {
     @EnvironmentObject private var appState: AppState
     @Binding var text: String
     @Binding var locale: String
+
+    /// Languages this field can actually dictate in: the learner's own and
+    /// the one they're practising, minus any iOS has no recognizer for.
+    /// Dictation used to be offered in every native language, but only the
+    /// nine that double as practice targets had a locale mapped — a Vietnamese
+    /// or Turkish speaker got a mic that produced nothing and no reason why.
+    private var dictationChoices: [String] {
+        var codes: [String] = []
+        for code in [appState.nativeLanguage, appState.targetLanguage]
+        where !codes.contains(code) && LanguageCatalog.canDictate(code) {
+            codes.append(code)
+        }
+        return codes
+    }
+
     /// Flips true once any dictation lands in `text` — callers use it to
     /// decide whether the answer needs an LLM cleanup pass on finish.
     var usedVoice: Binding<Bool>? = nil
@@ -197,12 +212,11 @@ struct SpeakOrTypeField: View {
                         }
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    } else if showsLocalePicker {
+                    } else if showsLocalePicker, dictationChoices.count > 1 {
                         Picker("Language", selection: $locale) {
-                            Text(LanguageCatalog.endonym(appState.nativeLanguage))
-                                .tag(appState.nativeLanguage)
-                            Text(LanguageCatalog.endonym(appState.targetLanguage))
-                                .tag(appState.targetLanguage)
+                            ForEach(dictationChoices, id: \.self) { code in
+                                Text(LanguageCatalog.endonym(code)).tag(code)
+                            }
                         }
                         .pickerStyle(.segmented)
                         .frame(width: 150)
@@ -270,6 +284,16 @@ struct SpeakOrTypeField: View {
             return
         }
         error = nil
+        // Never open a recognizer for a language iOS can't do — it fails with
+        // a bare "unavailable" that reads as the mic being broken. Move to a
+        // language we know works and say which one is listening.
+        if !LanguageCatalog.canDictate(locale), let fallback = dictationChoices.first {
+            locale = fallback
+        }
+        guard LanguageCatalog.canDictate(locale) else {
+            error = String(localized: "Dictation isn't available in this language on your device — you can still type.")
+            return
+        }
         do {
             try live.start(locale: locale)
             preTakeText = text

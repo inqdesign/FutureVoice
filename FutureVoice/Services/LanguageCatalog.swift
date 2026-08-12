@@ -1,4 +1,5 @@
 import Foundation
+import Speech
 
 /// Single source of truth for everything that varies per TARGET language.
 /// The app stores bare BCP-47 codes ("en", "ko") in settings; every
@@ -192,8 +193,44 @@ enum LanguageCatalog {
 
     /// Concrete locale for SFSpeechRecognizer. Bare codes like "zh" don't
     /// reliably resolve to a supported recognizer; map to a real region.
+    /// The concrete locale to hand `SFSpeechRecognizer`.
+    ///
+    /// The `targets` table only covers the nine languages the app teaches,
+    /// but dictation also runs in the learner's NATIVE language — and that
+    /// list is sixty-odd. Falling back to the bare code ("vi", "th") built a
+    /// recognizer iOS refuses to make, so dictation silently did nothing for
+    /// everyone whose native language happened not to also be a practice
+    /// target. Ask the system what it actually supports instead of keeping a
+    /// second table that would drift.
     static func sttLocale(_ code: String) -> String {
-        language(code)?.sttLocale ?? code
+        if let known = language(code)?.sttLocale { return known }
+        return systemRecognizerLocale(for: code) ?? code
+    }
+
+    /// True when iOS can dictate in this language at all. Callers use it to
+    /// avoid offering a mic that can only fail.
+    static func canDictate(_ code: String) -> Bool {
+        language(code) != nil || systemRecognizerLocale(for: code) != nil
+    }
+
+    /// Best supported recognizer locale for a bare language code — the
+    /// device's own region first ("pt-BR" for a Brazilian), else whichever
+    /// region the system lists. Cached: `supportedLocales()` walks every
+    /// installed locale and this is called per dictation start.
+    private static var recognizerLocaleCache: [String: String?] = [:]
+    private static func systemRecognizerLocale(for code: String) -> String? {
+        let base = code.split(separator: "-").first.map(String.init) ?? code
+        if let cached = recognizerLocaleCache[base] { return cached }
+        let supported = SFSpeechRecognizer.supportedLocales()
+        let matches = supported.filter {
+            ($0.language.languageCode?.identifier ?? "") == base
+        }
+        let preferredRegion = Locale.current.region?.identifier
+        let pick = matches.first { $0.region?.identifier == preferredRegion }
+            ?? matches.sorted { $0.identifier < $1.identifier }.first
+        let result = pick?.identifier
+        recognizerLocaleCache[base] = result
+        return result
     }
 
     static func tokenStyle(_ code: String) -> TokenStyle {
