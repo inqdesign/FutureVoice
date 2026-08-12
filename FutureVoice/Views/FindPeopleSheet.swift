@@ -17,6 +17,8 @@ struct FindPeopleSheet: View {
     let onTalk: (Counterpart) -> Void
     /// Watch a scene of the fluent self and this person just talking.
     let onWatch: (Counterpart) -> Void
+    /// Build a specific situation with them (the composer).
+    var onCompose: ((Counterpart) -> Void)? = nil
 
     @State private var pool: [PublicPersonaService.PublicPersona] = []
     @State private var isLoading = true
@@ -93,7 +95,8 @@ struct FindPeopleSheet: View {
             .navigationDestination(for: Counterpart.self) { person in
                 FindPersonCard(person: person,
                                bookmarks: $bookmarks,
-                               onTalk: onTalk, onWatch: onWatch)
+                               onTalk: onTalk, onWatch: onWatch,
+                               onCompose: onCompose)
                     .environmentObject(appState)
             }
             .task { await loadPool() }
@@ -262,6 +265,11 @@ struct FindPersonCard: View {
     @Binding var bookmarks: Set<String>
     let onTalk: (Counterpart) -> Void
     let onWatch: (Counterpart) -> Void
+    /// Build a situation with this person (the composer). Every person gets
+    /// it: meeting a stranger is a situation on its own, but once you've kept
+    /// someone there are specific things to rehearse with them too. Passing
+    /// nil hides the row.
+    var onCompose: ((Counterpart) -> Void)? = nil
 
     private var pastTalks: [Session] {
         SessionStore.shared.load()
@@ -300,6 +308,18 @@ struct FindPersonCard: View {
             if !person.commonTopics.isEmpty {
                 Section("Topics") {
                     Text(person.commonTopics).font(.subheadline)
+                }
+            }
+
+            if let onCompose {
+                Section {
+                    Button {
+                        onCompose(person)
+                    } label: {
+                        Label("Make a situation", systemImage: "square.and.pencil")
+                    }
+                } footer: {
+                    Text(explain("Something specific coming up with them — a talk you're dreading, news you have to break."))
                 }
             }
 

@@ -59,10 +59,12 @@ struct ScenarioComposerSheet: View {
     @State private var customEmoji = ""
     @State private var customCategories: [Category] = []
 
-    // Who the user talks to — ALWAYS set. Either one of the preset voices
-    // (a nameless counterpart the scene infers) or a saved person. Defaults
-    // to the user's scene voice from Me → Voice.
+    /// The person this scenario is WITH, when it was opened from their card.
+    /// The composer no longer offers a cast list — attaching someone is that
+    /// card's job — but an existing scenario keeps whoever it was built with.
     @State private var attachedPersonId: UUID?
+    /// How the other person sounds when no person is attached. Defaults to
+    /// the user's scene voice from Me → Voice.
     @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
     @FocusState private var situationFocused: Bool
     /// Dictation language for the speak-or-type field — seeded from the
@@ -487,9 +489,7 @@ struct ScenarioComposerSheet: View {
     }
 
     private var attachSection: some View {
-        TalkingWithSection(selectedVoiceId: $selectedVoiceId,
-                           attachedPersonId: $attachedPersonId,
-                           counterparts: appState.counterparts)
+        TalkingWithSection(selectedVoiceId: $selectedVoiceId)
     }
 
     // MARK: - Navigation / drill
@@ -649,53 +649,39 @@ struct ScenarioComposerSheet: View {
     }
 }
 
-// MARK: - "Talking with" picker (shared by both composers)
+// MARK: - Scene voice picker (shared by both composers)
 
-/// Always-set counterpart picker: one chip — a preset voice OR a saved
-/// person — is selected at all times. Voices leave the scene free to infer
-/// the counterpart's identity (the chip only decides who it SOUNDS like);
-/// a person chip casts that person, in their own voice. Used by the
-/// scenario builder and Watch's situation composer.
+/// Who the other person SOUNDS like — nothing more. The scene infers who they
+/// are from the situation itself, which is what the composer is for.
+///
+/// This used to double as a cast list: your saved people appeared as chips
+/// beside the voices, and picking one made that person play the scene. It
+/// made the composer answer two different questions in one control, and it
+/// duplicated a choice that now belongs to the person's own card ("Make a
+/// situation" arrives with the person already attached). What's left is the
+/// one thing the composer genuinely needs.
 struct TalkingWithSection: View {
     @Binding var selectedVoiceId: String
-    @Binding var attachedPersonId: UUID?
-    let counterparts: [Counterpart]
 
     var body: some View {
         Section {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
                       alignment: .leading, spacing: 8) {
-                // Saved people lead — they're the user's own cast, so they
-                // outrank the generic voices visually. Selection still
-                // DEFAULTS to a voice; leading placement is not a pre-pick.
-                ForEach(counterparts) { c in
-                    let on = attachedPersonId == c.id
-                    Button {
-                        attachedPersonId = c.id
-                    } label: {
-                        chip(c.name, icon: "person.fill", on: on)
-                    }
-                    .buttonStyle(.plain)
-                }
                 ForEach(VoicePreset.catalog) { preset in
-                    let on = attachedPersonId == nil && selectedVoiceId == preset.id
                     Button {
-                        attachedPersonId = nil
                         selectedVoiceId = preset.id
                     } label: {
-                        chip("\(preset.displayName) · \(preset.accent == "British" ? "UK" : "US")",
-                             icon: "waveform", on: on)
+                        chip(preset.displayName, icon: "waveform",
+                             on: selectedVoiceId == preset.id)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.vertical, 2)
         } header: {
-            Text("Talking with")
+            Text("Voice")
         } footer: {
-            Text(counterparts.isEmpty
-                 ? "A voice for the other person. Add people under Watch to have someone specific play the scene."
-                 : "Pick a voice, or one of your people to have them play the scene as themselves.")
+            Text(explain("How the other person sounds. Who they are comes from the situation you describe."))
         }
     }
 

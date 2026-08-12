@@ -120,6 +120,10 @@ struct WatchTab: View {
                             personCard = nil
                             watchScene = WatchTarget(scenario: freeTalkScenario(with: p),
                                                      fresh: true)
+                        },
+                        onCompose: { p in
+                            personCard = nil
+                            composer = ComposerConfig(person: p)
                         })
                         .environmentObject(appState)
                         .toolbar {
@@ -145,6 +149,10 @@ struct WatchTab: View {
                         showingFind = false
                         watchScene = WatchTarget(scenario: freeTalkScenario(with: person),
                                                  fresh: true)
+                    },
+                    onCompose: { person in
+                        showingFind = false
+                        composer = ComposerConfig(person: person)
                     })
                     .environmentObject(appState)
             }
@@ -257,13 +265,14 @@ struct WatchTab: View {
 
     private func personBubble(_ c: Counterpart) -> some View {
         Button {
-            // Own persona → build a situation with them. A bookmarked
-            // stranger → their card, where meeting them IS the situation.
-            if c.remoteId == nil {
-                composer = ComposerConfig(person: c)
-            } else {
-                personCard = c
-            }
+            // EVERY bubble opens the person's card. They sit in one row, so
+            // they have to answer a tap the same way — one used to jump
+            // straight into the situation composer while the other opened a
+            // card, which made two identical-looking circles behave like two
+            // different controls. The card is the richer answer: who they are,
+            // the talks so far, and every action they support (the composer
+            // among them, for the people the user made).
+            personCard = c
         } label: {
             VStack(spacing: 6) {
                 PersonBubble(name: c.name)
