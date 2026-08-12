@@ -11,6 +11,8 @@ struct MeTab: View {
     /// Fallback voice for Watch scenes with no linked persona — same key
     /// `ScenarioDetailView.syntheticCounterpart` reads via `VoicePreset.sceneDefault`.
     @AppStorage(VoicePreset.sceneDefaultKey) private var defaultSceneVoiceId = VoicePreset.catalog[0].id
+    /// Talk-call playback gain (0.25–1.0). Same key `AudioPlayer` reads.
+    @AppStorage(AudioPlayer.talkVoiceVolumeKey) private var talkVoiceVolume = 1.0
     @State private var account: AccountStatus = .empty
     /// AI's holistic CEFR read of the last few conversations (mode of the
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay
@@ -73,7 +75,7 @@ struct MeTab: View {
                     } label: {
                         row(icon: "bolt.fill",
                             title: "Plan & talk time",
-                            subtitle: "\(account.balanceLabel) of \(account.tankMinutes) min · \(account.planLabel)")
+                            subtitle: "\(account.talkTimeLabel) · \(account.planLabel)")
                     }
                 }
 
@@ -143,7 +145,7 @@ struct MeTab: View {
                     }
                     .disabled(deletingAccount)
                 } footer: {
-                    Text(explain("Deleting your account permanently removes your voice clone, credits, and account data. Practice data on this device is erased too."))
+                    Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
                 }
 
                 #if DEBUG
@@ -227,13 +229,13 @@ struct MeTab: View {
                     }
                 }
             } message: {
-                Text(explain("Your practice data stays on this device. Your voice clone and credits stay with your account."))
+                Text(explain("Your practice data stays on this device. Your voice clone and talk time stay with your account."))
             }
             .alert("Delete your account?", isPresented: $confirmingAccountDelete) {
                 Button("Cancel", role: .cancel) {}
                 Button("Delete forever", role: .destructive) { deleteAccount() }
             } message: {
-                Text(explain("This permanently deletes your voice clone, credits, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions."))
+                Text(explain("This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active App Store subscription must be canceled separately in Settings → Apple ID → Subscriptions."))
             }
             .alert("Couldn't delete account", isPresented: Binding(
                 get: { accountDeleteError != nil },
@@ -592,7 +594,7 @@ struct MeTab: View {
     /// The "5 credits" figure mirrors priceFor("voice_clone") in
     /// supabase/functions/_shared/credits.ts — keep them in sync.
     private static var recloneWarning: String {
-        explain("Cloning again uses 5 credits. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
+        explain("Cloning again uses a few minutes of talk time. Your current voice is replaced and deleted on ElevenLabs — you can't go back to it. Audio already generated keeps playing.")
     }
 
     private var voiceSection: some View {
@@ -605,6 +607,22 @@ struct MeTab: View {
                     title: "Voice name: \(appState.voiceDisplayName)",
                     subtitle: "What your clone is called, here and on ElevenLabs")
             }
+            // On Bluetooth, a Talk call plays through the earphone's CALL
+            // chain, which iOS's "Reduce Loud Sounds" headphone-safety cap
+            // does NOT limit — so with the cap on, Talk can tower over every
+            // listening surface. We can't detect the cap and won't tell
+            // anyone to disable a hearing-safety setting; this slider lets
+            // the call voice come DOWN to match instead.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Label("Call voice volume", systemImage: "speaker.wave.2")
+                    Spacer()
+                    Text("\(Int(talkVoiceVolume * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: $talkVoiceVolume, in: 0.25...1.0, step: 0.05)
+            }
             NavigationLink {
                 VoicePresetPickerView(selection: $defaultSceneVoiceId)
                     .environmentObject(appState)
@@ -615,11 +633,13 @@ struct MeTab: View {
             }
             if appState.voiceCloneId != nil,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
+                let applied = VoiceAccentCatalog.options(for: appState.targetLanguage)
+                    .first { $0.id == appState.voiceAccentId }
                 Button {
                     pickingAccent = true
                 } label: {
                     row(icon: "globe",
-                        title: "Accent",
+                        title: applied.map { "Accent: \($0.label)" } ?? "Accent",
                         subtitle: "Same voice, the accent you choose")
                 }
             }
@@ -725,13 +745,15 @@ struct MeTab: View {
     private var planPage: some View {
         List {
             Section {
-                HStack {
-                    // Admin accounts show the real balance too — watching the
-                    // number move is how real burn gets gauged.
+                // Tapping the balance opens the receipt: what spent minutes,
+                // and what didn't. "N of M min" alone is the same opacity
+                // that made beta users afraid to tap.
+                NavigationLink {
+                    UsageDetailView(account: account)
+                } label: {
                     row(icon: "bolt.fill",
-                        title: "\(account.balanceLabel) of \(account.tankMinutes) min of talk",
-                        subtitle: account.planLabel)
-                    Spacer()
+                        title: account.talkTimeLabel,
+                        subtitle: "\(account.planLabel) · see where it went")
                 }
                 Button {
                     showingPaywall = true
@@ -905,7 +927,7 @@ private struct DeveloperAlerts: ViewModifier {
                     PhraseAudioStore.shared.clearCachedAudio()
                 }
             } message: {
-                Text(explain("Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays, which costs credits."))
+                Text(explain("Deletes cached voice audio only. Your talks, drills, words and books are untouched. Every line synthesizes again the next time it plays."))
             }
             .alert("Replay onboarding?", isPresented: $confirmingOnboardingReset) {
                 Button("Cancel", role: .cancel) {}

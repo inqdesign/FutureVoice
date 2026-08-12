@@ -107,6 +107,18 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
+        case "usage":
+            // The talk-time receipt. Captures run signed-out, so the page
+            // gets a representative account (a Daily subscriber mid-day).
+            return AnyView(NavigationStack {
+                UsageDetailView(
+                    account: AccountStatus(
+                        email: nil, secondsBalance: 0,
+                        planId: "daily_monthly", subscriptionStatus: "active",
+                        secondsUsedToday: 655, dailyCapSeconds: 1800,
+                        fullTankSeconds: 1800),
+                    previewUsage: .sample)
+            })
         case "level-header":
             // The two-line conversation title in a real inline bar.
             return AnyView(NavigationStack {

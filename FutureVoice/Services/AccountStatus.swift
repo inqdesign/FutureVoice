@@ -43,6 +43,21 @@ struct AccountStatus {
         ["trialing", "active", "grace"].contains(subscriptionStatus)
     }
 
+    /// In the 7-day trial. Metered at the DAILY allowance whatever plan is
+    /// being trialed (`consume_metered_seconds`), so the trial IS the Daily
+    /// experience — someone trialing Unlimited must not be shown 60 min.
+    var isTrialing: Bool { subscriptionStatus == "trialing" }
+
+    /// Signed up, no subscription, and nothing left in the pool — since the
+    /// hard paywall there is no free tier, so this account simply cannot
+    /// talk yet. (Cloning the voice and hearing it say hello stay free;
+    /// they're the entry ticket, not usage.)
+    var needsSubscription: Bool { !isEntitled && secondsBalance <= 0 && !unlimited }
+
+    /// A beta tester's leftover one-time pool: real seconds, no plan. Kept
+    /// when the free grant was removed — those minutes were already theirs.
+    var hasLegacyPool: Bool { !isEntitled && secondsBalance > 0 }
+
     /// The Daily plan's allowance, minutes per day. Keep in sync with the
     /// plan catalog copy (PaywallView "about five minutes of talk a day")
     /// and the pro tier's `subscription_plans.daily_seconds`.
@@ -117,10 +132,18 @@ struct AccountStatus {
     /// feature ranks — the plans differ only in how much talk time they buy.
     var planLabel: String {
         if unlimited { return "Admin" }
-        guard isEntitled, let planId else { return "Free" }
+        guard isEntitled, let planId else {
+            // No free tier since the hard paywall: an account without a
+            // subscription is either a beta tester spending leftovers or
+            // someone who hasn't started.
+            return hasLegacyPool ? String(localized: "Beta") : String(localized: "No plan")
+        }
         let parts = planId.split(separator: "_")
         let tier = parts.first.map(String.init) ?? planId
         let name = tier.capitalized    // 'daily' → "Daily", 'unlimited' → "Unlimited"
+        // The trial is metered as Daily whatever plan is being trialed, so
+        // naming the trialed plan's tier here would promise the wrong size.
+        if isTrialing { return String(localized: "\(name) trial") }
         let period = parts.dropFirst().first?.capitalized ?? ""
         return period.isEmpty ? name : "\(name) \(period)"
     }
@@ -130,6 +153,41 @@ struct AccountStatus {
     /// real burn.
     var balanceLabel: String {
         "\(minutesRemaining)"
+    }
+
+    /// Minutes of metered audio spent today.
+    var minutesUsedToday: Int { secondsUsedToday / 60 }
+
+    /// The one-line read of talk time for the settings row and the usage
+    /// page header. Unlimited NEVER shows a denominator: its
+    /// `daily_seconds` is an invisible abuse guard, and printing "32 of 60"
+    /// next to the word "Unlimited" reads as a cap the learner was sold out
+    /// of. Daily's allowance IS the product promise, so it keeps the "of N".
+    /// (The admin `unlimited` flag is NOT included: that account is charged
+    /// for real and auto-resets, so its countdown is the point.)
+    ///
+    /// Every case must READ differently, not just count differently —
+    /// whether the number refills is the thing a learner most needs to know,
+    /// and one shared "N of M" shape hid exactly that.
+    var talkTimeLabel: String {
+        if unlimited { return String(localized: "\(minutesRemaining) min left") }
+        if isUnlimitedPlan {
+            return minutesUsedToday == 0
+                ? String(localized: "No talk time used today")
+                : String(localized: "\(minutesUsedToday) min used today")
+        }
+        if isEntitled {
+            // Daily and trial both refill at midnight — "today" is what
+            // stops the number reading as a dwindling lifetime balance.
+            return String(localized: "\(minutesRemaining) of \(tankMinutes) min left today")
+        }
+        if hasLegacyPool {
+            // Beta leftovers: a one-time pool with nothing to refill toward,
+            // so no denominator.
+            return String(localized: "\(minutesRemaining) min of beta talk left")
+        }
+        // Hard paywall — there is no free tier to count down from.
+        return String(localized: "No talk time yet")
     }
 
     /// Below this, the plan card turns orange and nudges toward an upgrade.
@@ -182,6 +240,13 @@ struct AccountStatus {
         struct PlanRow: Decodable { let daily_seconds: Int? }
         if out.unlimited {
             out.fullTankSeconds = adminResetSeconds
+        } else if out.isTrialing {
+            // The server meters a trial at the DAILY tier's allowance no
+            // matter which plan is being trialed (consume_metered_seconds).
+            // Reading the trialed plan's own cap here would have shown an
+            // Unlimited trialist 60 min while the server cut them off at 5.
+            out.dailyCapSeconds = dailyPlanMinutes * 60
+            out.fullTankSeconds = dailyPlanMinutes * 60
         } else if out.isEntitled, let planId = out.planId,
                   let plans: [PlanRow] = try? await SupabaseProvider.shared
                       .from("subscription_plans")
