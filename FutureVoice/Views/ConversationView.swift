@@ -941,10 +941,12 @@ struct ConversationView: View {
         do {
             // Conversation keeps the Bluetooth (HFP) mic allowed: the whole
             // point of earphones is phone-in-pocket, where the built-in mic
-            // hears nothing. Accuracy comes from the server recognition
-            // model + the contextual hints below — modern earphones negotiate
-            // 16 kHz mSBC, which server ASR handles fine (it's what Siri
-            // uses through AirPods too).
+            // hears nothing. NON-NEGOTIABLE product-wise (forcing the
+            // built-in mic was tried 2026-08 and reverted same day) even
+            // though HFP puts Talk's output on the earphone's CALL volume
+            // domain while listening surfaces play on the media domain —
+            // that gap is compensated in signal (`a2dpBoostDB`), not by
+            // giving up the earphone mic.
             try live.start(locale: appState.targetLanguage,
                            contextualStrings: recognitionHints(),
                            captureToFile: true)   // keep the user's own audio for listen-back
@@ -1393,7 +1395,10 @@ struct ConversationView: View {
                 if isTornDown { return }
                 if streamId == nil {
                     do {
-                        try player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId) {
+                        // configureSession: false — mid-call streaming must
+                        // inherit LiveTranscriber's live session untouched.
+                        try player.startPCMStream(sampleRate: sampleRate, voiceKey: voiceId,
+                                                  configureSession: false) {
                             Task { @MainActor in
                                 guard phase == .speaking else { return }
                                 phase = .idle
@@ -1563,8 +1568,11 @@ struct ConversationView: View {
                 if !receivedAnyChunk {
                     receivedAnyChunk = true
                     do {
+                        // configureSession: false — mid-call streaming must
+                        // inherit LiveTranscriber's live session untouched.
                         try player.startPCMStream(sampleRate: sampleRate,
-                                                  voiceKey: voiceId) {
+                                                  voiceKey: voiceId,
+                                                  configureSession: false) {
                             Task { @MainActor in
                                 guard phase == .speaking else { return }
                                 phase = .idle

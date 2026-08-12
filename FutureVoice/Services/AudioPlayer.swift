@@ -40,6 +40,23 @@ final class AudioPlayer: NSObject, ObservableObject {
     // Streaming AGC toward AudioLoudness.targetRMSdBFS. Boost-only (clones
     // are quiet, never over-loud), rate-limited so it can't pump audibly.
     private var streamGain: Float = 1.0
+    /// Route-conditional extra gain (linear) captured at stream start — the
+    /// A2DP-vs-HFP loudness compensation (`playbackBoostDB`). 1.0 on
+    /// speaker/wired and during a Talk call's HFP route.
+    private var streamRouteBoost: Float = 1.0
+
+    /// User-set Talk-call voice volume (Me → Voice, 0.25–1.0). Exists
+    /// because iOS's "Reduce Loud Sounds" headphone cap limits media audio
+    /// but NOT the call chain a Bluetooth Talk uses — with the cap on, the
+    /// call voice towers over every listening surface and the honest fix is
+    /// letting it come DOWN, never telling users to disable hearing safety.
+    static let talkVoiceVolumeKey = "futurevoice.talkVoiceVolume"
+    static var talkVoiceVolume: Float {
+        let v = UserDefaults.standard.double(forKey: talkVoiceVolumeKey)
+        return v == 0 ? 1 : Float(min(max(v, 0.25), 1))
+    }
+    /// The live value applied to the CURRENT stream (captured at start).
+    private var streamUserGain: Float = 1.0
     /// Shared with the buffered path — same measurement, same target.
     private var streamLevel = AudioLoudness.StreamingLevelEstimator()
     // Per-voice learned gain, persisted across streams and launches. Without a
@@ -79,10 +96,15 @@ final class AudioPlayer: NSObject, ObservableObject {
         // Equalize loudness across voices: IVC clones come back much quieter
         // than premade preset voices (see AudioLoudness). Falls back to the
         // raw data when decoding fails or the level is already on target.
-        let playData = AudioLoudness.normalized(data) ?? data
+        // The A2DP boost closes the loudness gap against Talk's HFP route —
+        // see AudioSessionRouting.playbackBoostDB.
+        let boost = AudioSessionRouting.playbackBoostDB()
+        let playData = AudioLoudness.normalized(data, extraGainDB: boost) ?? data
 
         let p = try AVAudioPlayer(data: playData)
-        p.volume = 1.0
+        // The user's call-voice volume applies to conversation playback only
+        // (see talkVoiceVolumeKey); every other surface plays at unity.
+        p.volume = source == "conversation" ? Self.talkVoiceVolume : 1.0
         p.enableRate = true
         p.rate = rate
         p.delegate = self
@@ -123,7 +145,8 @@ final class AudioPlayer: NSObject, ObservableObject {
     /// timeline UI can show duration and seek before the first play.
     func prepare(_ data: Data, forceSessionReset: Bool = false) {
         configureForPlayback(forceSessionReset: forceSessionReset)
-        let playData = AudioLoudness.normalized(data) ?? data
+        let playData = AudioLoudness.normalized(
+            data, extraGainDB: AudioSessionRouting.playbackBoostDB()) ?? data
         guard let p = try? AVAudioPlayer(data: playData) else { return }
         p.volume = 1.0
         p.enableRate = true
@@ -229,9 +252,30 @@ final class AudioPlayer: NSObject, ObservableObject {
     /// - Parameter voiceKey: identity of the voice being streamed (voiceId).
     ///   When provided, the AGC starts at the gain the last stream of this
     ///   voice converged to instead of ramping up from unity.
+    /// - Parameter configureSession: when true (playback surfaces — Watch),
+    ///   set up the same playback session the buffered path uses, so a scene
+    ///   plays uniformly on hi-fi A2DP from its first line. A conversation
+    ///   passes false: mid-call streaming MUST inherit LiveTranscriber's
+    ///   live session (HFP mic and all) untouched. Sniffing the category was
+    ///   tried and wrong — a finished Talk leaves `.playAndRecord` behind,
+    ///   so Watch's first streamed line inherited the CALL profile (loud),
+    ///   then flipped to A2DP mid-scene (quiet): the "volume suddenly drops
+    ///   on the second line" bug.
     func startPCMStream(sampleRate: Double, voiceKey: String? = nil,
+                        configureSession: Bool = true,
                         completion: (() -> Void)? = nil) throws {
         stop()   // clear any AVAudioPlayer/stream leftovers first
+
+        if configureSession {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playAndRecord, mode: .default,
+                                     options: AudioSessionRouting.playbackOptions)
+            try? session.setActive(true)
+            AudioSessionRouting.applyOutputRoute(session)
+        }
+        // configureSession == false means a live Talk call — the one place
+        // the user's call-voice volume applies.
+        streamUserGain = configureSession ? 1 : Self.talkVoiceVolume
 
         guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
                                          sampleRate: sampleRate,
@@ -279,6 +323,7 @@ final class AudioPlayer: NSObject, ObservableObject {
             }
         }
         streamLevel = AudioLoudness.StreamingLevelEstimator()
+        streamRouteBoost = pow(10, AudioSessionRouting.playbackBoostDB() / 20)
         isPlaying = true
     }
 
@@ -364,7 +409,19 @@ final class AudioPlayer: NSObject, ObservableObject {
     private func updateStreamGain(samples: UnsafePointer<Float>, count: Int) {
         streamLevel.accumulate(samples, count: count)
         guard let speech = streamLevel.speechRMS else { return }
-        let desired = AudioLoudness.gain(forSpeechRMS: speech)
+        let desired = AudioLoudness.gain(forSpeechRMS: speech) * streamRouteBoost * streamUserGain
+        // FAST ATTACK inside the line's first syllable (~0.3 s of voice):
+        // jump straight to the measured gain. The learned seed can be WRONG —
+        // it's keyed per voice, and the same clone streams quieter through
+        // the fidelity model (Watch) than through turbo (Talk) — and a ramp
+        // limited to 1.5 dB/chunk leaves a short line at the wrong level for
+        // its whole duration. A jump this early lands inside the first word
+        // and is inaudible; after the window the slow ramp guards against
+        // audible pumping as ever.
+        if streamLevel.voicedCount < 7_200 {   // ~0.3 s at 24 kHz
+            streamGain = desired
+            return
+        }
         let maxStep: Float = pow(10, 1.5 / 20)   // ≤1.5 dB per chunk
         if desired > streamGain {
             streamGain = min(desired, streamGain * maxStep)

@@ -1087,7 +1087,14 @@ struct TalkTranscriptView: View {
             do {
                 try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
                     do {
-                        try player.play(data) { cont.resume(returning: ()) }
+                        // forceSessionReset on the first line: a preceding
+                        // shadow/scoring run can leave `.measurement` mode
+                        // bleeding into this playback, which plays QUIET
+                        // (see AudioPlayer.play). Reset once, then let the
+                        // rest of the sequence inherit the clean session.
+                        try player.play(data, forceSessionReset: i == index) {
+                            cont.resume(returning: ())
+                        }
                     } catch {
                         cont.resume(throwing: error)
                     }

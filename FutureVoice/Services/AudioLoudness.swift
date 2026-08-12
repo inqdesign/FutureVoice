@@ -97,13 +97,14 @@ enum AudioLoudness {
         data.count >= 12 && data.prefix(4).elementsEqual("RIFF".utf8) ? "wav" : "mp3"
     }
 
-    /// Decodes `data` (MP3 or WAV), applies gain so its RMS hits the target,
-    /// and returns the result as CAF data ready for `AVAudioPlayer`.
+    /// Decodes `data` (MP3 or WAV), applies gain so its RMS hits the target
+    /// (+ `extraGainDB`, see `AudioSessionRouting.playbackBoostDB`), and
+    /// returns the result as CAF data ready for `AVAudioPlayer`.
     /// Sample count and sample rate are unchanged, so karaoke word timings
     /// stay valid and playback speed is untouched.
     /// Returns nil when decoding fails or the audio is already at target —
     /// callers should fall back to playing the original data.
-    static func normalized(_ data: Data) -> Data? {
+    static func normalized(_ data: Data, extraGainDB: Float = 0) -> Data? {
         let tmpDir = FileManager.default.temporaryDirectory
         let inURL = tmpDir.appendingPathComponent(
             "loudnorm-in-\(UUID().uuidString).\(containerExtension(of: data))")
@@ -123,7 +124,7 @@ enum AudioLoudness {
             else { return nil }
             try inFile.read(into: buffer)
 
-            guard normalizeInPlace(buffer) else { return nil }
+            guard normalizeInPlace(buffer, extraGainDB: extraGainDB) else { return nil }
 
             // Scope the writer so the file is flushed/closed before we read
             // it back (AVAudioFile flushes on deinit).
@@ -148,7 +149,7 @@ enum AudioLoudness {
     /// Returns false when the audio is already at target (or unmeasurable),
     /// meaning the caller should use the ORIGINAL audio untouched.
     @discardableResult
-    static func normalizeInPlace(_ buffer: AVAudioPCMBuffer) -> Bool {
+    static func normalizeInPlace(_ buffer: AVAudioPCMBuffer, extraGainDB: Float = 0) -> Bool {
         guard let channels = buffer.floatChannelData else { return false }
         let channelCount = Int(buffer.format.channelCount)
         let frames = vDSP_Length(buffer.frameLength)
@@ -167,12 +168,12 @@ enum AudioLoudness {
         // whole-file average happened to sit near target — their SPEECH sits
         // above it, which is why a preset counterpart could jump out of a
         // scene next to the user's own clone.
-        let targetLinear = pow(10, targetRMSdBFS / 20)
+        let targetLinear = pow(10, (targetRMSdBFS + extraGainDB) / 20)
         let speech = speechRMS(channels, channelCount: channelCount, frames: frames)
         guard speech > 1e-6 else { return false }
         // A transient peak must never pin the phrase's gain — we go to target
         // and let the limiter below catch whatever that sends over.
-        let gain = gain(forSpeechRMS: speech)
+        let gain = gain(forSpeechRMS: speech) * pow(10, extraGainDB / 20)
 
         let gainDB = 20 * log10(gain)
         guard abs(gainDB) > unityToleranceDB else { return false }
@@ -317,6 +318,10 @@ enum AudioLoudness {
             guard voicedSamples > Self.minVoicedSamples else { return nil }
             return Float((voicedSumSquares / Double(voicedSamples)).squareRoot())
         }
+
+        /// How much voiced audio has been measured so far — lets the AGC
+        /// know it is still inside the line's first syllable.
+        var voicedCount: Int { voicedSamples }
     }
 
     /// Wraps raw 16-bit LE mono PCM (streaming TTS output) in a standard WAV

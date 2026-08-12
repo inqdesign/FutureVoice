@@ -82,4 +82,41 @@ enum AudioSessionRouting {
             try? session.overrideOutputAudioPort(.speaker)
         }
     }
+
+    /// Extra playback gain (dB) for the CURRENT route.
+    ///
+    /// On the same pair of earphones the app plays through two different
+    /// Bluetooth profiles: a Talk call allows HFP (for the earphone mic), and
+    /// HFP runs the earphone's CALL loudness chain; every listening surface
+    /// (Watch, drills, shadow, replay) deliberately stays on hi-fi A2DP —
+    /// which sits in the quieter MEDIA domain. Identical signal, audibly
+    /// different loudness, and no session option can bridge the two domains.
+    /// So the A2DP surfaces compensate in the signal instead. Speaker and
+    /// wired routes play both kinds of surface identically — no boost.
+    /// Compensates the A2DP (media-domain) surfaces against Talk's HFP
+    /// call-domain loudness on the same earphones. The earphone mic is
+    /// non-negotiable for Talk, so signal gain is the only lever; 9 dB is
+    /// as far as it goes before the limiter starts audibly pressing the
+    /// voice. The rest of the gap is the user's media-volume slider.
+    static let a2dpBoostDB: Float = 9
+
+    static func playbackBoostDB(_ session: AVAudioSession = .sharedInstance()) -> Float {
+        session.currentRoute.outputs.contains { $0.portType == .bluetoothA2DP } ? a2dpBoostDB : 0
+    }
+
+    #if DEBUG
+    /// One console line describing everything that decides loudness at this
+    /// moment — category, mode, options, route, and the hardware volume.
+    /// Temporary diagnostics for the "Talk is loud, everything else is quiet"
+    /// hunt; grep the console for 🔊.
+    static func debugSnapshot(_ tag: String) {
+        let s = AVAudioSession.sharedInstance()
+        let outs = s.currentRoute.outputs.map { "\($0.portType.rawValue)" }.joined(separator: "+")
+        let ins = s.currentRoute.inputs.map { "\($0.portType.rawValue)" }.joined(separator: "+")
+        print("🔊 [\(tag)] cat=\(s.category.rawValue) mode=\(s.mode.rawValue) " +
+              "opts=\(s.categoryOptions.rawValue) out=\(outs) in=\(ins) " +
+              "vol=\(String(format: "%.2f", s.outputVolume)) " +
+              "gain=\(String(format: "%.2f", s.inputGain))")
+    }
+    #endif
 }

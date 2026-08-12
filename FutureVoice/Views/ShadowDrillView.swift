@@ -982,7 +982,14 @@ struct ShadowDrillView: View {
             // Bias recognition toward the exact line being shadowed — we know
             // what the learner is TRYING to say, so accented pronunciations
             // resolve to the right words instead of soundalikes.
+            // measurementMode: false — `.measurement` disables iOS output
+            // processing, which made the karaoke line (and everything after)
+            // noticeably QUIETER than a Talk call. Conversation already opts
+            // out for the same reason; recognition runs fine in `.default`
+            // (it's the live call's own STT mode). Input still forces the
+            // built-in mic.
             try live.start(locale: targetLanguage, preferBuiltInMic: true,
+                           measurementMode: false,
                            contextualStrings: Self.recognitionHints(for: attemptTargetText))
         } catch {
             self.error = "STT failed: \(error.localizedDescription)"
