@@ -4,15 +4,19 @@ import SwiftUI
 /// user answers a few things so the app knows what to teach and how to
 /// calibrate, BEFORE the heavier voice-clone recording step.
 ///
-/// Three cards, one tap each:
+/// Four cards, one tap each:
 ///   1. Native language   ← explanations/translations speak this
 ///   2. Target language   ← what the fluent self speaks (multi-language:
 ///                          more can be enrolled later from the Talk header)
 ///   3. Level             ← CEFR self-rating; calibrates every conversation
+///   4. Daily goal        ← minutes of talk per day; the Talk home ring's
+///                          100%. The learner's own number — plans decide
+///                          what you CAN talk, this is what you INTEND to.
 ///
 /// Native language leads — it's a plain fact with an obvious answer, so the
 /// very first question never reads like a test. The target comes next (it
-/// scopes the level labels, e.g. TOPIK for Korean), the self-rating last.
+/// scopes the level labels, e.g. TOPIK for Korean), then the self-rating,
+/// and the goal closes on a commitment the learner chose themselves.
 ///
 /// Flips `appState.setupComplete` on finish; RootView then routes to the
 /// persona cards (voice clone comes last).
@@ -23,6 +27,9 @@ struct SetupFlowView: View {
     @State private var level: CEFRLevel = .b1
     @State private var nativeLanguage: String = LanguageCatalog.defaultNative
     @State private var targetLanguage: String = "en"
+    /// Same key the Talk home ring and Me's picker read — the ring's 100%.
+    @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
+    @State private var goalMinutes = 10
     /// Backing out of step one crosses the auth boundary (Welcome lives
     /// before sign-in), so it asks first instead of silently signing out.
     @State private var confirmingSignOut = false
@@ -36,7 +43,7 @@ struct SetupFlowView: View {
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
     private static let nativeChoices = LanguageCatalog.nativeChoices
 
-    private static let totalSteps = 3
+    private static let totalSteps = 4
 
     var body: some View {
         NavigationStack {
@@ -48,7 +55,8 @@ struct SetupFlowView: View {
                     switch step {
                     case 0: nativeStep
                     case 1: targetStep
-                    default: levelStep
+                    case 2: levelStep
+                    default: goalStep
                     }
                 }
                 Spacer(minLength: 0)
@@ -61,6 +69,7 @@ struct SetupFlowView: View {
             nativeLanguage = appState.nativeLanguage
             targetLanguage = appState.targetLanguage
             level = appState.proficiency
+            goalMinutes = dailyGoalMinutes
             // Native and target can't coincide; targets step re-checks after
             // the native pick too (see advance()). The target moves, not the
             // native — the native seed came from the device and is the better
@@ -84,7 +93,8 @@ struct SetupFlowView: View {
         // am I here to learn?". Say native.
         case 0: return "Your native language?"
         case 1: return "Learn which language?"
-        default: return "Your level?"
+        case 2: return "Your level?"
+        default: return "Your daily goal?"
         }
     }
 
@@ -128,6 +138,36 @@ struct SetupFlowView: View {
             Text(explain("How comfortable are you right now?"))
         } footer: {
             Text(explain("You're about to build your fluent self — another you that already speaks fluent \(Self.englishName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk."))
+        }
+    }
+
+    // MARK: - Step 4 · Daily goal
+
+    /// Minutes of talking per day — the learner's own commitment, and the
+    /// 100% of the Talk home's goal ring. Changeable any time in Me.
+    private var goalStep: some View {
+        Section {
+            ForEach([5, 10, 15, 20, 30], id: \.self) { m in
+                pickRow(
+                    title: "\(m) min a day",
+                    subtitle: Self.goalBlurb(m),
+                    selected: goalMinutes == m
+                ) { goalMinutes = m }
+            }
+        } header: {
+            Text(explain("How much will you talk each day?"))
+        } footer: {
+            Text(explain("Your goal, your call — the ring on the Talk screen fills toward it. You can change it any time in settings."))
+        }
+    }
+
+    private static func goalBlurb(_ minutes: Int) -> String {
+        switch minutes {
+        case 5:  return explain("A quick daily habit — one short call")
+        case 10: return explain("The sweet spot for steady progress")
+        case 15: return explain("Building real momentum")
+        case 20: return explain("Serious about this")
+        default: return explain("Full immersion pace")
         }
     }
 
@@ -271,6 +311,9 @@ struct SetupFlowView: View {
     }
 
     private func finish() {
+        // The chosen goal becomes the Talk home ring's 100% (same key Me
+        // edits later).
+        dailyGoalMinutes = goalMinutes
         // Persist the answers and enroll the chosen target as the ONLY
         // language (replacing the fresh install's default enrollment), then
         // open the gate so RootView moves on to the persona cards.

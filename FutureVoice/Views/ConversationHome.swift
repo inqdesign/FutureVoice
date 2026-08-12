@@ -196,8 +196,11 @@ struct ConversationHome: View {
     /// (5 min/day) — a self-set 10-minute goal would be unreachable on a
     /// 5-minute plan, and aligning them makes "goal met" and "today's
     /// minutes used" the same event. Everyone else keeps the self-set goal.
+    /// The big ring's 100% is the learner's OWN daily talk goal (Me → goal,
+    /// default 10 min) — for every tier. Plans decide what you CAN talk;
+    /// the goal is what you INTEND to talk, and only the learner sets it.
     private var effectiveGoalMinutes: Int {
-        account?.isDailyPlan == true ? AccountStatus.dailyPlanMinutes : dailyGoalMinutes
+        dailyGoalMinutes
     }
 
     private var goalProgress: Double {
@@ -496,9 +499,7 @@ struct ConversationHome: View {
                 .contentShape(Circle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(account?.isUnlimitedPlan == true && !hasCustomGoal
-                ? "Let's talk — start a call. \(todaySpokenSeconds / 60) minutes today."
-                : "Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.")
+            .accessibilityLabel("Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.")
         }
         .frame(width: 280, height: 280)
     }
@@ -528,21 +529,8 @@ struct ConversationHome: View {
         }
     }
 
-    /// True once the learner has picked a daily goal by hand (Me → goal).
-    /// The @AppStorage default of 10 is a default, not a choice — for
-    /// Unlimited accounts that distinction decides whether a target shows.
-    private var hasCustomGoal: Bool {
-        UserDefaults.standard.object(forKey: "futurevoice.dailyGoalMinutes") != nil
-    }
-
     private var goalHeadline: String {
         let mins = todaySpokenSeconds / 60
-        // Unlimited with no self-chosen goal counts UP — a minutes target
-        // next to "Unlimited" reads as a cap. Picking a goal in Me opts
-        // back into the target framing.
-        if account?.isUnlimitedPlan == true && !hasCustomGoal {
-            return mins == 0 ? chrome("Talk today") : chrome("\(mins) min today")
-        }
         if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
         if mins == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
         return chrome("\(mins) of \(effectiveGoalMinutes) min today")

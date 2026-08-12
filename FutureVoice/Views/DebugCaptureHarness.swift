@@ -104,6 +104,9 @@ enum DebugCapture {
                           handoff: .init(title: "Study this", action: {}))
                     .environmentObject(appState)
             })
+        case "me":
+            // The reorganized settings list, for IA review.
+            return AnyView(MeTab().environmentObject(appState))
         case "level-header":
             // The two-line conversation title in a real inline bar.
             return AnyView(NavigationStack {

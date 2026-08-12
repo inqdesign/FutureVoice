@@ -65,50 +65,37 @@ struct MeTab: View {
                     }
                 }
 
+                // One row per topic, current state in the subtitle, details
+                // behind a push — the flat 25-row list buried what mattered.
                 Section {
-                    HStack {
-                        // Admin accounts show the real balance too — it
-                        // cycles 500 → 0 → 500 server-side, and watching the
-                        // number move is how real burn gets gauged.
-                        row(icon: "bolt.fill",
-                            title: "\(account.balanceLabel) of \(account.tankMinutes) min of talk",
-                            subtitle: account.planLabel)
-                        Spacer()
-                    }
-                    Button {
-                        showingPaywall = true
-                    } label: {
-                        row(icon: "sparkles",
-                            title: account.planLabel == "Free" ? "See plans" : "Manage plan",
-                            subtitle: "Talk time lands automatically every cycle")
-                    }
                     NavigationLink {
-                        CreditGuideView()
+                        planPage
                     } label: {
-                        row(icon: "questionmark.circle",
-                            title: "What uses credits?",
-                            subtitle: "And what's always free")
+                        row(icon: "bolt.fill",
+                            title: "Plan & talk time",
+                            subtitle: "\(account.balanceLabel) of \(account.tankMinutes) min · \(account.planLabel)")
                     }
-                    if BetaConfig.invitesAvailable {
-                        NavigationLink {
-                            InviteView()
-                        } label: {
-                            row(icon: "gift",
-                                title: "Invite & earn credits",
-                                subtitle: "You both get 300 per friend")
-                        }
-                    }
-                } header: {
-                    Text("Account")
-                } footer: {
-                    Text(BetaConfig.invitesAvailable
-                        ? "Credits power voice synthesis and AI replies. Invite friends to earn more."
-                        : "Credits power voice synthesis and AI replies. Reviewing your words, drills, and dialogues always stays free.")
                 }
 
+                // Learning stays expanded — languages, level, goal and app
+                // language are the settings people actually return to.
                 learningLanguagesSection
 
                 Section {
+                    NavigationLink {
+                        dailyCallPage
+                    } label: {
+                        row(icon: "phone.arrow.down.left",
+                            title: "Daily call",
+                            subtitle: dailyCallSummary)
+                    }
+                    NavigationLink {
+                        voicePage
+                    } label: {
+                        row(icon: "person.wave.2",
+                            title: "Voice",
+                            subtitle: appState.voiceDisplayName)
+                    }
                     NavigationLink {
                         PublicIntroView().environmentObject(appState)
                     } label: {
@@ -118,27 +105,22 @@ struct MeTab: View {
                     }
                 }
 
-                dailyCallSection
-
-                appSection
-
                 Section {
-                    Picker("Theme", selection: $appState.appearance) {
-                        ForEach(AppAppearance.allCases, id: \.self) { mode in
-                            Text(mode.label).tag(mode)
-                        }
+                    NavigationLink {
+                        appearancePage
+                    } label: {
+                        row(icon: "paintpalette",
+                            title: "Appearance",
+                            subtitle: appState.appearance.label)
                     }
-                    .pickerStyle(.segmented)
-                    FutureselfThemePicker()
-                } header: {
-                    Text("Appearance")
-                } footer: {
-                    Text(explain("Future self is the pixel surface behind every call button — tap a theme to feel it."))
+                    NavigationLink {
+                        dataPage
+                    } label: {
+                        row(icon: "externaldrive",
+                            title: "Practice data",
+                            subtitle: "Export or import this device's practice")
+                    }
                 }
-
-                voiceSection
-
-                backupSection
 
                 Section {
                     Button(role: .destructive) {
@@ -461,23 +443,22 @@ struct MeTab: View {
                     title: "Add a language",
                     subtitle: "Same voice, new language")
             }
-        } header: {
-            Text("Learning")
-        } footer: {
-            Text(explain("Tap a language to practice it. Its level calibrates every conversation in that language. Your cloned voice speaks all of them — removing one keeps its progress."))
-        }
-    }
-
-    /// App-wide preferences no single practice language owns.
-    @ViewBuilder
-    private var appSection: some View {
-        Section {
+            // Goal + app language live WITH the languages: they're the other
+            // two answers to "how do I learn here", not app chrome.
+            Picker(selection: $dailyGoalMinutes) {
+                ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
+                    Text("\(m) min").tag(m)
+                }
+            } label: {
+                row(icon: "target",
+                    title: "Daily goal",
+                    subtitle: "Minutes of speaking per day")
+            }
             Picker(selection: $appState.nativeLanguage) {
                 // Two groups, because the app can only half-keep the promise
-                // its name makes: three languages have a catalog column and
-                // are translated end to end; the other 60-odd get LLM coaching
-                // text — corrections, notes, word meanings, which is most of
-                // what a learner reads — in their language, with the app's
+                // its name makes: three languages are translated end to end;
+                // the other 60-odd get LLM coaching text — corrections,
+                // notes, word meanings — in their language, with the app's
                 // own static copy staying English. Splitting the list says
                 // that before the choice instead of after it.
                 let (translated, coachingOnly) = nativeChoiceGroups
@@ -496,9 +477,8 @@ struct MeTab: View {
                     Text(explain("Corrections and notes only — app stays English"))
                 }
             } label: {
-                // Names the EFFECT, not the fact. "My language" read as "the
-                // language I picked to learn"; what the setting actually
-                // decides is which language the app explains itself in.
+                // Names the EFFECT, not the fact: what this decides is which
+                // language the app explains itself in.
                 row(icon: "globe",
                     title: "App language",
                     subtitle: "Corrections, notes and word meanings")
@@ -506,19 +486,10 @@ struct MeTab: View {
             // A menu of 60+ languages is a scroll inside a popover; the push
             // style gives the list a whole screen.
             .pickerStyle(.navigationLink)
-            Picker(selection: $dailyGoalMinutes) {
-                ForEach([5, 10, 15, 20, 30, 45, 60], id: \.self) { m in
-                    Text("\(m) min").tag(m)
-                }
-            } label: {
-                row(icon: "target",
-                    title: "Daily goal",
-                    subtitle: "Minutes of speaking per day")
-            }
         } header: {
-            Text("App")
+            Text("Learning")
         } footer: {
-            Text(explain("Explanations and word meanings come back in your app language. The daily goal drives the ring on Home."))
+            Text(explain("Tap a language to practice it. Its level calibrates every conversation. The daily goal drives the ring on Home; explanations come back in your app language."))
         }
     }
 
@@ -733,6 +704,97 @@ struct MeTab: View {
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: - Subpages
+
+    /// "08:00 · 13:00" while enabled, "Off" otherwise — the main list's
+    /// one-line read of the call schedule.
+    private var dailyCallSummary: String {
+        guard dailyCallEnabled else { return "Off" }
+        return callTimes
+            .map { String(format: "%02d:%02d", $0.hour, $0.minute) }
+            .joined(separator: " · ")
+    }
+
+    private var planPage: some View {
+        List {
+            Section {
+                HStack {
+                    // Admin accounts show the real balance too — watching the
+                    // number move is how real burn gets gauged.
+                    row(icon: "bolt.fill",
+                        title: "\(account.balanceLabel) of \(account.tankMinutes) min of talk",
+                        subtitle: account.planLabel)
+                    Spacer()
+                }
+                Button {
+                    showingPaywall = true
+                } label: {
+                    row(icon: "sparkles",
+                        title: account.planLabel == "Free" ? "See plans" : "Manage plan",
+                        subtitle: "Talk time lands automatically every cycle")
+                }
+                NavigationLink {
+                    CreditGuideView()
+                } label: {
+                    row(icon: "questionmark.circle",
+                        title: "What uses talk time?",
+                        subtitle: "And what's always free")
+                }
+                if BetaConfig.invitesAvailable {
+                    NavigationLink {
+                        InviteView()
+                    } label: {
+                        row(icon: "gift",
+                            title: "Invite & earn talk time",
+                            subtitle: "About an hour each, per friend")
+                    }
+                }
+            } footer: {
+                Text(BetaConfig.invitesAvailable
+                    ? "Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free."
+                    : "Minutes buy talk time with your fluent self. Reviewing your words, drills, and dialogues always stays free.")
+            }
+        }
+        .navigationTitle("Plan & talk time")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var dailyCallPage: some View {
+        List { dailyCallSection }
+            .navigationTitle("Daily call")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var voicePage: some View {
+        List { voiceSection }
+            .navigationTitle("Voice")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var appearancePage: some View {
+        List {
+            Section {
+                Picker("Theme", selection: $appState.appearance) {
+                    ForEach(AppAppearance.allCases, id: \.self) { mode in
+                        Text(mode.label).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                FutureselfThemePicker()
+            } footer: {
+                Text(explain("Future self is the pixel surface behind every call button — tap a theme to feel it."))
+            }
+        }
+        .navigationTitle("Appearance")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var dataPage: some View {
+        List { backupSection }
+            .navigationTitle("Practice data")
+            .navigationBarTitleDisplayMode(.inline)
     }
 
     /// The top-of-settings identity block: avatar + name, with the signed-in
