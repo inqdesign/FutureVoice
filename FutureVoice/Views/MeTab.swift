@@ -508,9 +508,14 @@ struct MeTab: View {
                 // One row per call. More than one a day is the difference
                 // between a reminder and a habit — the learner decides how
                 // often somebody checks in on them, up to `maxTimes`.
-                ForEach(callTimes) { time in
+                // Identity is the POSITION, not the time: CallTime's id is
+                // its hour*60+minute, so keying rows on the value tore down
+                // the row (and its open picker popover) on every wheel tick —
+                // hour, minute and AM/PM each needed a fresh open. Sorting
+                // and dedupe wait until the page closes for the same reason.
+                ForEach(callTimes.indices, id: \.self) { index in
                     DatePicker(
-                        selection: binding(for: time),
+                        selection: binding(at: index),
                         displayedComponents: .hourAndMinute
                     ) {
                         Label(explain("Call"), systemImage: "phone.arrow.down.left")
@@ -765,6 +770,9 @@ struct MeTab: View {
         List { dailyCallSection }
             .navigationTitle("Daily call")
             .navigationBarTitleDisplayMode(.inline)
+            // Editing persists un-sorted so open pickers keep their row (see
+            // persistTimes); pick up the store's sorted, deduped read here.
+            .onDisappear { callTimes = DailyCallStore.shared.times }
     }
 
     private var voicePage: some View {
@@ -833,18 +841,22 @@ struct MeTab: View {
 extension MeTab {
     /// Bridges one stored `CallTime` to the `Date` a `DatePicker` needs.
     /// Editing writes straight back through to the store so a call the learner
-    /// just moved is rescheduled even if they close Me immediately.
-    func binding(for time: DailyCallStore.CallTime) -> Binding<Date> {
+    /// just moved is rescheduled even if they close Me immediately. Index-
+    /// addressed so an edit updates the row IN PLACE — resolving by value
+    /// broke the moment the value changed under the open picker.
+    func binding(at index: Int) -> Binding<Date> {
         Binding(
             get: {
-                Calendar.current.date(bySettingHour: time.hour, minute: time.minute,
-                                      second: 0, of: Date()) ?? Date()
+                guard callTimes.indices.contains(index) else { return Date() }
+                let time = callTimes[index]
+                return Calendar.current.date(bySettingHour: time.hour, minute: time.minute,
+                                             second: 0, of: Date()) ?? Date()
             },
             set: { newValue in
-                guard let index = callTimes.firstIndex(of: time) else { return }
+                guard callTimes.indices.contains(index) else { return }
                 let parts = Calendar.current.dateComponents([.hour, .minute], from: newValue)
                 callTimes[index] = DailyCallStore.CallTime(hour: parts.hour ?? 8,
-                                                          minute: parts.minute ?? 0)
+                                                           minute: parts.minute ?? 0)
                 persistTimes()
             })
     }
@@ -865,9 +877,13 @@ extension MeTab {
         persistTimes()
     }
 
+    /// Persist WITHOUT re-reading: the store sorts and dedupes internally
+    /// (the scheduler always sees clean times), but syncing that back into
+    /// `callTimes` mid-edit reordered rows under the learner's finger and
+    /// closed the open picker. The working copy re-syncs when the page
+    /// closes (`dailyCallPage.onDisappear`).
     func persistTimes() {
         DailyCallStore.shared.times = callTimes
-        callTimes = DailyCallStore.shared.times   // re-read: the store sorts and dedupes
         appState.refreshDailyCall()
     }
 }
