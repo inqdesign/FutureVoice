@@ -5,6 +5,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Apple
+import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
@@ -54,6 +55,20 @@ class AuthRepository {
 
     suspend fun signInWithApple() {
         Supa.client.auth.signInWith(Apple)
+    }
+
+    /**
+     * DEBUG BUILDS ONLY (enforced at the call site — the UI for this exists
+     * only behind `BuildConfig.DEBUG`). Email+password sign-in for the
+     * dedicated test account, so the emulator can run the Talk loop while
+     * Apple's web-OAuth setup (Services ID + secret) is still pending.
+     * Production accounts are Apple-only; email auth reaches nothing real.
+     */
+    suspend fun devSignIn(email: String, password: String) {
+        Supa.client.auth.signInWith(Email) {
+            this.email = email
+            this.password = password
+        }
     }
 
     suspend fun signOut() {

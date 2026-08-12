@@ -14,10 +14,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import com.roro.futurevoice.BuildConfig
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +38,11 @@ fun RootScreen(app: AppViewModel = viewModel()) {
 
     when {
         state.resolvingSession -> Loading()
-        !state.signedIn -> SignInScreen(state, onSignIn = app::signIn)
+        !state.signedIn -> SignInScreen(
+            state,
+            onSignIn = app::signIn,
+            onDevSignIn = app::devSignIn,
+        )
         inCall && state.voiceId != null ->
             TalkScreen(
                 voiceId = state.voiceId!!,
@@ -62,7 +68,13 @@ private fun Loading() {
 }
 
 @Composable
-private fun SignInScreen(state: AppState, onSignIn: () -> Unit) {
+private fun SignInScreen(
+    state: AppState,
+    onSignIn: () -> Unit,
+    onDevSignIn: (String, String) -> Unit,
+) {
+    var devEmail by remember { mutableStateOf("") }
+    var devPassword by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -80,6 +92,29 @@ private fun SignInScreen(state: AppState, onSignIn: () -> Unit) {
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
+            }
+            // Emulator escape hatch while Apple web-OAuth setup is pending.
+            // Debug builds only — this whole block is compiled out of release,
+            // and production accounts are Apple-only so email reaches nothing real.
+            if (BuildConfig.DEBUG) {
+                OutlinedTextField(
+                    value = devEmail,
+                    onValueChange = { devEmail = it },
+                    label = { Text("Dev email") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = devPassword,
+                    onValueChange = { devPassword = it },
+                    label = { Text("Dev password") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                TextButton(
+                    onClick = { onDevSignIn(devEmail, devPassword) },
+                    enabled = devEmail.isNotBlank() && devPassword.isNotBlank() && !state.busy,
+                ) { Text("Dev sign-in") }
             }
         }
     }

@@ -80,6 +80,16 @@ class AppViewModel : ViewModel() {
         }
     }
 
+    /** Debug-only — see [AuthRepository.devSignIn]. */
+    fun devSignIn(email: String, password: String) {
+        _state.update { it.copy(busy = true, error = null) }
+        viewModelScope.launch {
+            runCatching { auth.devSignIn(email.trim(), password) }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+            _state.update { it.copy(busy = false) }
+        }
+    }
+
     fun dismissError() = _state.update { it.copy(error = null) }
 
     /**
