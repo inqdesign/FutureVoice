@@ -23,20 +23,31 @@ enum FutureselfTheme: Int, CaseIterable, Identifiable {
     /// surface — the call button's outline, the orbiting highlight. Each is
     /// the palette's vivid step (kPalette[theme][*][3] in Futureself.metal);
     /// keep in sync if the shader palettes change.
+    /// Every accent is ADAPTIVE: the deep light-mode hues sat below dark
+    /// mode's legibility floor (deep blue on near-black read as noise), so
+    /// dark mode gets a brighter, higher-luminance variant of the same hue —
+    /// the same treatment the system colors get.
     var tint: Color {
         switch self {
-        case .blue:    return Color(red: 0.040, green: 0.360, blue: 0.960)
+        case .blue:    return Self.adaptive(light: UIColor(red: 0.040, green: 0.360, blue: 0.960, alpha: 1),
+                                            dark:  UIColor(red: 0.300, green: 0.560, blue: 1.000, alpha: 1))
         // Mono's accent leans near-black so tinted chrome reads as ink, not a
-        // washed-out gray. Adaptive: deep charcoal in light, bright gray in
-        // dark — a single fixed near-black would vanish on a dark background.
-        case .mono:    return Color(UIColor { $0.userInterfaceStyle == .dark
-                                        ? UIColor(white: 0.86, alpha: 1)
-                                        : UIColor(white: 0.16, alpha: 1) })
-        case .emerald: return Color(red: 0.050, green: 0.640, blue: 0.420)
-        case .amber:   return Color(red: 0.960, green: 0.560, blue: 0.050)
-        case .coral:   return Color(red: 0.950, green: 0.230, blue: 0.320)
-        case .aqua:    return Color(red: 0.040, green: 0.640, blue: 0.760)
+        // washed-out gray: deep charcoal in light, bright gray in dark.
+        case .mono:    return Self.adaptive(light: UIColor(white: 0.16, alpha: 1),
+                                            dark:  UIColor(white: 0.86, alpha: 1))
+        case .emerald: return Self.adaptive(light: UIColor(red: 0.050, green: 0.640, blue: 0.420, alpha: 1),
+                                            dark:  UIColor(red: 0.200, green: 0.800, blue: 0.560, alpha: 1))
+        case .amber:   return Self.adaptive(light: UIColor(red: 0.960, green: 0.560, blue: 0.050, alpha: 1),
+                                            dark:  UIColor(red: 1.000, green: 0.680, blue: 0.220, alpha: 1))
+        case .coral:   return Self.adaptive(light: UIColor(red: 0.950, green: 0.230, blue: 0.320, alpha: 1),
+                                            dark:  UIColor(red: 1.000, green: 0.440, blue: 0.500, alpha: 1))
+        case .aqua:    return Self.adaptive(light: UIColor(red: 0.040, green: 0.640, blue: 0.760, alpha: 1),
+                                            dark:  UIColor(red: 0.260, green: 0.800, blue: 0.920, alpha: 1))
         }
+    }
+
+    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        Color(UIColor { $0.userInterfaceStyle == .dark ? dark : light })
     }
 }
 
