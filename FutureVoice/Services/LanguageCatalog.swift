@@ -213,6 +213,28 @@ enum LanguageCatalog {
         language(code) != nil || systemRecognizerLocale(for: code) != nil
     }
 
+    /// EVERY language this device can dictate in, as bare codes.
+    ///
+    /// Dictation choice used to be "your native language or the one you're
+    /// learning" — a made-up pair. A Japanese speaker living in Germany and
+    /// learning English may well find it easiest to describe a situation in
+    /// German, and there is no reason the app should refuse. The device
+    /// already knows what it can hear; offer that.
+    static func dictatableLanguages() -> [String] {
+        if let cached = dictatableCache { return cached }
+        var seen = Set<String>()
+        var codes: [String] = []
+        for locale in SFSpeechRecognizer.supportedLocales() {
+            guard let base = locale.language.languageCode?.identifier,
+                  seen.insert(base).inserted else { continue }
+            codes.append(base)
+        }
+        let sorted = codes.sorted { endonym($0).localizedCaseInsensitiveCompare(endonym($1)) == .orderedAscending }
+        dictatableCache = sorted
+        return sorted
+    }
+    private static var dictatableCache: [String]?
+
     /// Best supported recognizer locale for a bare language code — the
     /// device's own region first ("pt-BR" for a Brazilian), else whichever
     /// region the system lists. Cached: `supportedLocales()` walks every

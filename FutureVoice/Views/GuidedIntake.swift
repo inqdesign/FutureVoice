@@ -146,18 +146,33 @@ struct SpeakOrTypeField: View {
     @Binding var text: String
     @Binding var locale: String
 
-    /// Languages this field can actually dictate in: the learner's own and
-    /// the one they're practising, minus any iOS has no recognizer for.
-    /// Dictation used to be offered in every native language, but only the
-    /// nine that double as practice targets had a locale mapped — a Vietnamese
-    /// or Turkish speaker got a mic that produced nothing and no reason why.
+    /// Every language the device can dictate in, with the learner's own and
+    /// the one they're practising lifted to the top.
+    ///
+    /// This was a two-way toggle between exactly those two, which is a pair
+    /// the app invented: someone Japanese living in Germany and learning
+    /// English may find it easiest to say the situation in German, and being
+    /// told to pick one of two is just a wall. The device knows what it can
+    /// hear; the list is that, ordered so the likely picks are first.
+    /// What dictation opens on: the app language (Me → App language — the
+    /// one the learner reads and thinks in), falling back to a language the
+    /// device can actually hear. Hosts used to seed their own `@State
+    /// locale = "ko"`, so every screen but one started in Korean no matter
+    /// who was holding the phone.
+    static func defaultLocale(appLanguage: String, targetLanguage: String) -> String {
+        for code in [appLanguage, targetLanguage]
+        where LanguageCatalog.canDictate(code) { return code }
+        return LanguageCatalog.dictatableLanguages().first ?? "en"
+    }
+
     private var dictationChoices: [String] {
-        var codes: [String] = []
+        let all = LanguageCatalog.dictatableLanguages()
+        var preferred: [String] = []
         for code in [appState.nativeLanguage, appState.targetLanguage]
-        where !codes.contains(code) && LanguageCatalog.canDictate(code) {
-            codes.append(code)
+        where !preferred.contains(code) && all.contains(code) {
+            preferred.append(code)
         }
-        return codes
+        return preferred + all.filter { !preferred.contains($0) }
     }
 
     /// Flips true once any dictation lands in `text` — callers use it to
@@ -213,13 +228,17 @@ struct SpeakOrTypeField: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     } else if showsLocalePicker, dictationChoices.count > 1 {
+                        // A menu, not a segmented control: the list is every
+                        // language the device can hear, which never fits in
+                        // two slots.
                         Picker("Language", selection: $locale) {
                             ForEach(dictationChoices, id: \.self) { code in
                                 Text(LanguageCatalog.endonym(code)).tag(code)
                             }
                         }
-                        .pickerStyle(.segmented)
-                        .frame(width: 150)
+                        .pickerStyle(.menu)
+                        .labelsHidden()
+                        .tint(.secondary)
                     }
                     Spacer()
                     Button {

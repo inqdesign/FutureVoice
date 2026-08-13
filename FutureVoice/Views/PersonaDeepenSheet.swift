@@ -19,7 +19,9 @@ struct PersonaDeepenSheet: View {
     @State private var occupation = ""
     @State private var household = ""
     @State private var freeNotes = ""
-    @State private var locale = "ko"
+    /// Seeded from the app language on appear; "en" is only the value held
+    /// for the instant before that runs.
+    @State private var locale = "en"
     @State private var workVoiced = false
     @State private var peopleVoiced = false
     @State private var extrasVoiced = false
@@ -114,7 +116,9 @@ struct PersonaDeepenSheet: View {
                 .background(.bar)
             }
             .onAppear {
-                locale = appState.nativeLanguage
+                locale = SpeakOrTypeField.defaultLocale(
+                    appLanguage: appState.nativeLanguage,
+                    targetLanguage: appState.targetLanguage)
                 // Editing (from the Talk-home row) starts from what's already
                 // saved, not blank fields that would overwrite it with "".
                 if let p = appState.persona {

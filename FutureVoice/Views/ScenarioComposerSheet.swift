@@ -67,10 +67,10 @@ struct ScenarioComposerSheet: View {
     /// the user's scene voice from Me → Voice.
     @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
     @FocusState private var situationFocused: Bool
-    /// Dictation language for the speak-or-type field — seeded from the
-    /// user's native language on appear (describing a situation comes out
-    /// most naturally in your own language; the LLM handles either).
-    @State private var dictationLocale = "ko"
+    /// Dictation language for the speak-or-type field. Seeded from the app
+    /// language on appear; "en" is only what it holds for the instant before
+    /// that runs. Every language the device can hear is one tap away.
+    @State private var dictationLocale = "en"
 
     /// True once the user has TYPED their own scenario (vs building via chips).
     /// In custom mode the chip grid hides and the category is DERIVED from the
@@ -152,7 +152,9 @@ struct ScenarioComposerSheet: View {
                     selectedVoiceId = e.voicePresetId ?? VoicePreset.sceneDefault.id
                 }
                 if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
-                dictationLocale = appState.nativeLanguage
+                dictationLocale = SpeakOrTypeField.defaultLocale(
+                    appLanguage: appState.nativeLanguage,
+                    targetLanguage: appState.targetLanguage)
             }
             #if DEBUG
             .onAppear {

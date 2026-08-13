@@ -20,7 +20,9 @@ struct CounterpartVoiceIntakeView: View {
     }
 
     @State private var step: Step = .who
-    @State private var locale = "ko"
+    /// Seeded from the app language on appear; "en" is only the value held
+    /// for the instant before that runs.
+    @State private var locale = "en"
     @State private var name = ""
     @State private var kind: RelationshipKind?
     @State private var kindDetail = ""
@@ -91,7 +93,9 @@ struct CounterpartVoiceIntakeView: View {
                     .environmentObject(appState)
             }
             .onAppear {
-                locale = appState.nativeLanguage
+                locale = SpeakOrTypeField.defaultLocale(
+                    appLanguage: appState.nativeLanguage,
+                    targetLanguage: appState.targetLanguage)
                 #if DEBUG
                 // Screenshot harness: `-intakeStep <n>` jumps to a card with stand-in data.
                 if let raw = UserDefaults.standard.string(forKey: "intakeStep"),
