@@ -17,51 +17,82 @@ import UserNotifications
 enum DrillReminder {
 
     private static let requestId = "futurevoice.drill-due"
+    /// Tapping a reminder must land ON the due items — the delegate matches
+    /// this category to route into the review deck.
+    static let categoryId = "futurevoice.review-due"
     private static let dayStartHour = 9
     private static let dayEndHour = 21
 
-    /// Recompute and replace the pending reminder from current queue state.
+    /// Recompute and replace the pending reminder from current queue state —
+    /// drill cards AND the words/expressions the daily deck snoozed
+    /// (`StudyScheduleStore`); a "10 min" drop is a promise either way.
     /// - Parameter allowPermissionPrompt: pass true only from a foreground,
-    ///   contextual moment (e.g. right after a session created cards).
+    ///   contextual moment (e.g. right after a session created cards, or a
+    ///   deck session that just snoozed items).
     static func reschedule(allowPermissionPrompt: Bool = false, now: Date = Date()) async {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [requestId])
 
-        let cards = DrillStore.shared.load()
-        guard !cards.isEmpty else { return }
+        let cardDates = DrillStore.shared.load().map(\.nextReviewAt)
+        // Live entries only — an item marked known elsewhere must not be
+        // counted, or the reminder promises cards the deck won't deal.
+        let studyDates = ReviewQueue.returnDates()
+        let allDates = cardDates + studyDates
+        guard !allDates.isEmpty else { return }
 
         switch await center.notificationSettings().authorizationStatus {
         case .notDetermined:
-            guard allowPermissionPrompt else { return }
+            guard allowPermissionPrompt else {
+                #if DEBUG
+                NSLog("REVIEWNOTIF skipped: permission not asked yet")
+                #endif
+                return
+            }
             let granted = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
-            guard granted else { return }
+            guard granted else {
+                #if DEBUG
+                NSLog("REVIEWNOTIF skipped: permission refused")
+                #endif
+                return
+            }
         case .denied:
+            #if DEBUG
+            NSLog("REVIEWNOTIF skipped: notifications denied in Settings")
+            #endif
             return
         default:
             break
         }
 
-        let hasDueNow = cards.contains { $0.nextReviewAt <= now }
-        let nextFutureDue = cards.map(\.nextReviewAt).filter { $0 > now }.min()
+        let hasDueNow = allDates.contains { $0 <= now }
+        let nextFutureDue = allDates.filter { $0 > now }.min()
         guard let fireDate = fireDate(now: now, nextDue: nextFutureDue, hasDueNow: hasDueNow),
               fireDate > now else { return }
 
-        // How many cards will be waiting at fire time.
-        let countAtFire = cards.filter { $0.nextReviewAt <= fireDate }.count
+        // How many items will be waiting at fire time.
+        let countAtFire = allDates.filter { $0 <= fireDate }.count
         guard countAtFire > 0 else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = "Drills are due"
+        content.title = String(localized: "Ready to review")
+        // Counts everything waiting at fire time, not just the snooze that
+        // triggered it — so the body says "waiting", not "you asked for
+        // this": with a backlog, most of them are simply due.
         content.body = countAtFire == 1
-            ? "1 phrase is ready to review."
-            : "\(countAtFire) phrases are ready to review."
+            ? String(localized: "1 word, phrase or line is waiting.")
+            : String(localized: "\(countAtFire) words, phrases and lines are waiting.")
         content.sound = .default
+        content.categoryIdentifier = categoryId
 
         let comps = Calendar.current.dateComponents(
             [.year, .month, .day, .hour, .minute], from: fireDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
         let request = UNNotificationRequest(identifier: requestId, content: content, trigger: trigger)
         try? await center.add(request)
+        #if DEBUG
+        NSLog("REVIEWNOTIF scheduled at %@ for %d item(s)",
+              fireDate.description, countAtFire)
+        #endif
     }
 
     /// Picks when to fire, clamped into the waking-hours window.
@@ -84,11 +115,11 @@ enum DrillReminder {
             return nil
         }
 
-        // A due time inside the next 12 hours can only have come from the
-        // learner picking one in the bin tray — every ladder interval is a
-        // day or longer, and box 0 is "due now" (handled above). They asked
-        // for it, at an hour they were awake to ask: fire exactly then rather
-        // than parking a 10-minute snooze until 9am.
+        // A due time inside the next 12 hours came from an explicit choice in
+        // a bin tray — every ladder interval is a day or longer, and box 0 is
+        // "due now" (handled above). Fire exactly then rather than parking a
+        // short snooze until 9am. `ItemReminder` relies on this branch for
+        // its per-item callbacks (it always passes hasDueNow: false).
         if candidate.timeIntervalSince(now) < 12 * 60 * 60 { return candidate }
 
         let hour = calendar.component(.hour, from: candidate)

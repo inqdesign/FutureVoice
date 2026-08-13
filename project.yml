@@ -120,6 +120,20 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.tests
         GENERATE_INFOPLIST_FILE: YES
 
+  # Gesture-level tests driven through the DebugCapture harness — things unit
+  # tests can't see (drag-to-bin, sheet interactions).
+  FutureVoiceUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: FutureVoiceUITests
+    dependencies:
+      - target: FutureVoice
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.roro.futurevoice.uitests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   FutureVoice:
     build:
@@ -128,3 +142,4 @@ schemes:
     test:
       targets:
         - FutureVoiceTests
+        - FutureVoiceUITests

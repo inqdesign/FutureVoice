@@ -120,6 +120,13 @@ final class LiveTranscriber: ObservableObject {
     /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
     var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
 
+    /// Whether the current — or, once stopped, the most recent — run actually
+    /// got iOS's voice processing unit (see `start(voiceProcessing:)`).
+    /// Requested ≠ granted: some routes refuse it, and the engine falls back
+    /// to the raw mic. Deliberately NOT cleared by `stop()`, because the turn
+    /// telemetry that reports it is assembled after the mic is already down.
+    private(set) var voiceProcessingActive = false
+
     /// How long the partial text may sit unchanged before the segment is
     /// frozen and recognition restarts.
     ///
@@ -177,10 +184,16 @@ final class LiveTranscriber: ObservableObject {
     /// - Parameter captureToFile: also write the mic audio to a compact AAC
     ///   file (`lastRecordingURL` after `stop()`) so the user can listen back
     ///   to their own turn.
+    /// - Parameter voiceProcessing: run the mic through iOS's voice processing
+    ///   unit (noise suppression + AGC + echo cancellation) — the same block
+    ///   Siri and FaceTime use. OFF by default because its AGC rescales the
+    ///   signal, and the shadow/"say it" surfaces score deterministically off
+    ///   raw levels. Conversation turns it ON: see the note in `start`.
     func start(locale: String, preferBuiltInMic: Bool = false,
                measurementMode: Bool? = nil,
                contextualStrings: [String] = [],
-               captureToFile: Bool = false) throws {
+               captureToFile: Bool = false,
+               voiceProcessing: Bool = false) throws {
         guard !isRunning else { return }
         self.contextualStrings = Array(contextualStrings.prefix(50))
         let rec = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(locale)))
@@ -209,30 +222,85 @@ final class LiveTranscriber: ObservableObject {
 
         let engine = AVAudioEngine()
         let input = engine.inputNode
-        let format = input.outputFormat(forBus: 0)
+        // iOS's voice processing unit (AEC + noise suppression + AGC). Until
+        // 2026-08 nothing in the app used it — every surface tapped the RAW
+        // mic — which is why a café or a street cost recognition accuracy
+        // twice over:
+        //   • the noise went straight into Apple STT *and* into the AAC the
+        //     Gemini transcription call re-reads;
+        //   • `FluencyMeter`'s noise floor rose with the room, so the user's
+        //     voice stopped clearing `noiseFloor + 6 dB`, energy endpointing
+        //     never fired, and the turn fell through to ConversationView's 6s
+        //     transcript-quiet fallback — the "slow outside" learners report.
+        // Suppressing the noise before either consumer sees it fixes both.
+        // Echo cancellation is a bonus and only best-effort here: the fluent
+        // self plays through a SEPARATE node, so the unit has no guaranteed
+        // render reference to subtract. NS and AGC don't depend on that.
+        // Mode stays `.default` — `.voiceChat` would also move output into the
+        // call-volume domain, and this app's loudness alignment is hard-won.
+        var vpActive = false
+        if voiceProcessing {
+            do {
+                try input.setVoiceProcessingEnabled(true)
+                vpActive = true
+            } catch {
+                // Some routes/devices refuse it. Raw mic is a fine fallback —
+                // it's exactly what every run did before this existed.
+            }
+        }
+        // AFTER the toggle: the unit re-negotiates the input format (typically
+        // to 48 kHz mono float), and a tap installed with the pre-toggle format
+        // would throw at runtime.
         let localAppender = self.appender
         let localFluency = self.fluency
         let localRecorder = self.recorder
-        let sampleRate = format.sampleRate
         fluency.reset()
         lastRecordingURL = nil
-        if captureToFile { recorder.begin(format: format) }
-        input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            localAppender.append(buffer)
-            localRecorder.append(buffer)
-            let rms = Self.rms(of: buffer)
-            localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
-            Task { @MainActor [weak self] in
-                self?.level = rms
+
+        // Re-runnable so the VPIO fallback below can rebuild the tap against
+        // the format the raw mic hands back.
+        let arm: (Bool) -> Void = { capture in
+            let format = input.outputFormat(forBus: 0)
+            let sampleRate = format.sampleRate
+            if capture { localRecorder.begin(format: format) }
+            input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+                localAppender.append(buffer)
+                localRecorder.append(buffer)
+                let rms = Self.rms(of: buffer)
+                localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
+                Task { @MainActor [weak self] in
+                    self?.level = rms
+                }
             }
         }
+
+        arm(captureToFile)
         engine.prepare()
         do {
             try engine.start()
         } catch {
             input.removeTap(onBus: 0)
-            throw LiveError.engineFailed
+            // The voice processing unit is a whole I/O unit swap; a route that
+            // accepted the toggle can still fail to start under it. Losing
+            // noise suppression is a bad turn — failing to open the mic at all
+            // is a dead call — so retry once on the raw mic.
+            guard vpActive else { throw LiveError.engineFailed }
+            try? input.setVoiceProcessingEnabled(false)
+            vpActive = false
+            // Discard the capture opened at the VPIO format — `arm` reopens one.
+            if let stale = localRecorder.finish() {
+                try? FileManager.default.removeItem(at: stale)
+            }
+            arm(captureToFile)
+            engine.prepare()
+            do {
+                try engine.start()
+            } catch {
+                input.removeTap(onBus: 0)
+                throw LiveError.engineFailed
+            }
         }
+        self.voiceProcessingActive = vpActive
 
         self.engine = engine
         self.recognizer = rec
@@ -705,11 +773,18 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
     func begin(format: AVAudioFormat) {
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent("user-turn-\(UUID().uuidString).m4a")
+        // 64 kbps, not the 32 it was until 2026-08. This file is not just
+        // listen-back material — it is the audio `UtteranceTranscriber` sends
+        // to Gemini, i.e. the ground truth the on-device guess gets corrected
+        // against. At 32 kbps a quiet room is fine, but in traffic or a café
+        // the encoder spends its bits on the noise and smears the speech,
+        // degrading exactly the environment we need the audio path for. A
+        // 2-minute turn is still well under a megabyte.
         let settings: [String: Any] = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
             AVSampleRateKey: format.sampleRate,
             AVNumberOfChannelsKey: Int(format.channelCount),
-            AVEncoderBitRateKey: 32_000
+            AVEncoderBitRateKey: 64_000
         ]
         lock.lock(); defer { lock.unlock() }
         file = try? AVAudioFile(forWriting: dest, settings: settings)

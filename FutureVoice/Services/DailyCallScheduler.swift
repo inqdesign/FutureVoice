@@ -475,6 +475,14 @@ final class DailyCallInbox: ObservableObject {
     /// notification fallback asks inline (its category takes an array of
     /// actions) and never sets this.
     @Published var pendingCallbackChoice: DailyCallPlan?
+    /// Set when a review reminder is tapped — `RootTabView` opens the due
+    /// deck from here. Same handoff shape as the call: the notification
+    /// delegate has no AppState to write to, and on a cold launch the tab
+    /// isn't mounted yet when the tap arrives.
+    @Published var pendingReview = false
+    /// Set when a per-item callback is tapped — the app opens that exact
+    /// word / phrase / line.
+    @Published var pendingReviewItem: ItemReminder.Target?
 }
 
 /// Routes notification taps. Installed as the app's `UNUserNotificationCenter`
@@ -508,8 +516,41 @@ final class DailyCallNotificationDelegate: NSObject, UNUserNotificationCenterDel
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        guard response.notification.request.content.categoryIdentifier
-                == DailyCallScheduler.categoryId else {
+        let category = response.notification.request.content.categoryIdentifier
+
+        // Review reminders land on the due items themselves, not just "the
+        // app": a reminder that opens wherever you left off is the reason a
+        // schedule stops feeling real. Dismissals stay silent.
+        if category == DrillReminder.categoryId {
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                DailyCallInbox.shared.pendingReview = true
+            }
+            return
+        }
+
+        // A per-item callback: it named a specific word / phrase / line, so
+        // the tap opens THAT card, not a queue it might be buried in.
+        if category == ItemReminder.categoryId {
+            let info = response.notification.request.content.userInfo
+            Task { @MainActor in
+                defer { completionHandler() }
+                guard response.actionIdentifier != UNNotificationDismissActionIdentifier else { return }
+                guard let kind = info["kind"] as? String,
+                      let value = info["value"] as? String,
+                      let target = ItemReminder.Target(kind: kind, value: value) else {
+                    // Unreadable payload — still better to open the queue than
+                    // to swallow the tap.
+                    DailyCallInbox.shared.pendingReview = true
+                    return
+                }
+                DailyCallInbox.shared.pendingReviewItem = target
+            }
+            return
+        }
+
+        guard category == DailyCallScheduler.categoryId else {
             completionHandler()
             return
         }

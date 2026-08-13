@@ -50,6 +50,13 @@ struct ScenarioDetailView: View {
         appState.scenarios.first { $0.id == scenarioId }
     }
 
+    /// Curriculum context by phrase, for the expression card's "In this scene".
+    private var expressionContext: [String: ExpressionCard.Context] {
+        guard let items = scenario?.curriculum?.expressions else { return [:] }
+        return Dictionary(items.map { ($0.text, ExpressionCard.Context(note: $0.note, example: $0.example)) },
+                          uniquingKeysWith: { first, _ in first })
+    }
+
     var body: some View {
         Group {
             if let s = scenario {
@@ -100,8 +107,11 @@ struct ScenarioDetailView: View {
             // Same treatment as a word: the expression's card — meaning,
             // examples, pronunciation, shadow, I-know-it — with chevrons
             // walking the scenario's expression list.
+            // The curriculum's own note + example ride along: they were
+            // written WITH this scene, so they say what a dictionary can't.
             ExpressionSheet(initialPhrase: ref.value,
-                            phrases: scenario?.curriculum?.expressions.map(\.text) ?? [])
+                            phrases: scenario?.curriculum?.expressions.map(\.text) ?? [],
+                            context: expressionContext)
                 .environmentObject(appState)
         }
         .task { await ensureCurriculum() }

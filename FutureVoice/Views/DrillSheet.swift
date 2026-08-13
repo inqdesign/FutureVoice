@@ -31,6 +31,10 @@ struct DrillView: View {
         case session(UUID)
         case ahead(Int)
         case scenario
+        /// Exactly one card — a per-item callback named this line, so the
+        /// deck opens on it instead of wherever the due queue happens to
+        /// start (`ItemReminder`).
+        case card(UUID)
     }
     var source: Source = .due
     /// Fired the moment the last card is graded. Lets `PracticeSessionView`
@@ -568,9 +572,28 @@ enum DrillBin: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    // The shortest "show me again" delay, in one place so the label can never
+    // disagree with what actually happens.
+    //
+    // DEBUG shortens it to a minute: the whole point of the shortest bin is
+    // the round trip (drop → notification → review deck), and a 10-minute
+    // wait makes that untestable by hand. Release keeps the real interval —
+    // a one-minute callback would be a nag, not a schedule.
+    #if DEBUG
+    static let soonDelay: TimeInterval = 60
+    static let soonTitle = "1 min"
+    static let soonHint = "Back in 1 minute"
+    static let soonAccessibilityTitle = "Show again in 1 minute"
+    #else
+    static let soonDelay: TimeInterval = 10 * 60
+    static let soonTitle = "10 min"
+    static let soonHint = "Back in 10 minutes"
+    static let soonAccessibilityTitle = "Show again in 10 minutes"
+    #endif
+
     var title: String {
         switch self {
-        case .tenMinutes: return "10 min"
+        case .tenMinutes: return Self.soonTitle
         case .tomorrow:   return "Tomorrow"
         case .threeDays:  return "3 days"
         case .gotIt:      return "Got it"
@@ -600,7 +623,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
     /// card back to the ladder (`DrillStore.markCorrect`).
     var manual: (box: Int, delay: TimeInterval)? {
         switch self {
-        case .tenMinutes: return (0, 10 * 60)
+        case .tenMinutes: return (0, Self.soonDelay)
         case .tomorrow:   return (1, 24 * 60 * 60)
         case .threeDays:  return (2, 3 * 24 * 60 * 60)
         case .gotIt:      return nil
@@ -622,7 +645,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
 
     var dropHint: String {
         switch self {
-        case .tenMinutes: return "Back in 10 minutes"
+        case .tenMinutes: return Self.soonHint
         case .tomorrow:   return "Back tomorrow"
         case .threeDays:  return "Back in 3 days"
         case .gotIt:      return explain("Got it — moves up the ladder")
@@ -631,7 +654,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
 
     var accessibilityTitle: String {
         switch self {
-        case .tenMinutes: return "Show again in 10 minutes"
+        case .tenMinutes: return Self.soonAccessibilityTitle
         case .tomorrow:   return "Show again tomorrow"
         case .threeDays:  return "Show again in 3 days"
         case .gotIt:      return "Got it"
@@ -894,6 +917,10 @@ private extension DrillView {
             queue = DrillStore.shared.load()
                 .filter { $0.sourceSessionId == nil }
                 .sorted { $0.createdAt < $1.createdAt }
+        case .card(let id):
+            // Deleted between the promise and the tap → empty state, which
+            // reads honestly ("nothing here") instead of opening a stranger.
+            queue = DrillStore.shared.load().filter { $0.id == id }
         }
         initialCount = queue.count
     }
@@ -902,10 +929,17 @@ private extension DrillView {
     private func apply(_ bin: DrillBin) {
         guard let card = queue.first else { return }
         if let manual = bin.manual {
-            DrillStore.shared.snooze(card, box: manual.box,
-                                     until: Date().addingTimeInterval(manual.delay))
+            let at = Date().addingTimeInterval(manual.delay)
+            DrillStore.shared.snooze(card, box: manual.box, until: at)
+            // A folder drop is a promise about THIS line — the callback names
+            // it and opens it (see ItemReminder).
+            Task {
+                await ItemReminder.schedule(.sentence(card.id),
+                                            text: card.targetPhrase, at: at)
+            }
         } else {
             DrillStore.shared.markCorrect(card)
+            ItemReminder.cancel(.sentence(card.id))
         }
         PracticeLog.shared.record(.drill)
         // The chip the card landed in ticks up as the deck advances — the

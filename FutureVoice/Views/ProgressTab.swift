@@ -78,6 +78,10 @@ struct ProgressTab: View {
     @State private var avgShadowScore = 0
     @State private var shadowTrend: PracticeStats.ShadowTrend?
     @State private var carryover = PracticeStats.CarryoverSummary()
+    /// Whole-library mastery (moved here from Practice) — filled in the same
+    /// second pass the Practice tab used, because deriving a talk book's
+    /// material is too heavy to block first paint with.
+    @State private var material: (mastered: Int, total: Int) = (0, 0)
     /// CEFR level of each weekly read, oldest first — the level's history.
     @State private var levelHistory: [LevelPoint] = []
     /// Same key Home's goal ring uses — the dashed line in the time chart.
@@ -188,6 +192,11 @@ struct ProgressTab: View {
                                     .ignoresSafeArea(edges: .top)
                             }
                     }
+                    // …and the same panel mirrored at the bottom, so a page
+                    // dissolves into the tab bar the way Talk's and Watch's do.
+                    // Nested scroll views never get the system's own scroll
+                    // edge effect.
+                    .tabBarScrollFeather()
                     // NOT .toolbarBackground(.hidden): that drops the rounded
                     // title font (see TransparentRoundedNavBar). The shim hides
                     // the bar background the same way, fonts intact.
@@ -388,6 +397,8 @@ struct ProgressTab: View {
             }
 
             carryoverPanel
+
+            materialPanel
 
             if dailyEffort.contains(where: { $0.totalReps > 0 }) {
                 activityPanel
@@ -641,6 +652,43 @@ struct ProgressTab: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Material (whole-library mastery — moved from Practice)
+
+    /// How much of everything your talks and watches generated is mastered.
+    ///
+    /// Lived on the Practice tab until it sat directly under the Today card's
+    /// Words / Expressions / Shadowing rows — two cards deep in the same three
+    /// nouns, one asking "what today", the other "how far overall". Measuring
+    /// is this tab's job, so the question moved to where it's answered.
+    ///
+    /// Note what the percentage does: the denominator GROWS every time you
+    /// talk or watch, so an active week can push it down. The count leads and
+    /// the bar follows precisely because the count only ever goes up.
+    @ViewBuilder
+    private var materialPanel: some View {
+        if material.total > 0 {
+            panel {
+                Text("Your material").font(.headline)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(material.mastered)")
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                    Text(material.mastered == 1
+                         ? "word or line mastered, out of \(material.total) your talks and watches have made"
+                         : "words and lines mastered, out of \(material.total) your talks and watches have made")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                ProgressView(value: Double(material.mastered), total: Double(material.total))
+                    .tint(material.mastered == material.total ? .green : .accentColor)
+            }
+            // Identifier, not the title: the chrome follows the TARGET
+            // language, so a test matching "Your material" passes only until
+            // that string gets translated.
+            .accessibilityIdentifier("progress.materialPanel")
         }
     }
 
@@ -1441,6 +1489,34 @@ struct ProgressTab: View {
         let todayStart = effortCal.startOfDay(for: effortNow)
         let allEnded = SessionStore.shared.load().filter { $0.endedAt != nil }
         carryover = PracticeStats.carryoverSummary(sessions: allEnded)
+
+        // Whole-library mastery. Talk books DERIVE their material (nothing is
+        // persisted), so this walks TalkCurriculum for every finished talk —
+        // off the first-paint path for that reason.
+        let scenarios = appState.scenarios
+        let proficiency = appState.proficiency
+        let attempts = appState.shadowAttempts
+        Task { @MainActor in
+            var mastered = 0, total = 0
+            for session in allEnded {
+                let snap = TalkCurriculum.build(session: session,
+                                                proficiency: proficiency,
+                                                shadowAttempts: attempts)
+                mastered += snap.masteredCount
+                total += snap.totalCount
+            }
+            for sc in scenarios {
+                if let c = sc.curriculum {
+                    mastered += c.masteredCount
+                    total += c.totalCount
+                }
+            }
+            material = (mastered, total)
+            #if DEBUG
+            NSLog("MATERIALPANEL sessions=%d mastered=%d total=%d",
+                  allEnded.count, mastered, total)
+            #endif
+        }
         var effort: [DayEffort] = []
         for offset in (0..<14).reversed() {
             guard let d = effortCal.date(byAdding: .day, value: -offset, to: todayStart) else { continue }

@@ -33,6 +33,22 @@ struct PracticeTab: View {
     @State private var showingDailyWords = false
     /// The Expressions challenge session — same dealt-hand shape.
     @State private var showingDailyExpressions = false
+    /// The due-items review (what a review reminder opens), plus the count
+    /// that makes it visible without one.
+    @State private var showingDueReview = false
+    @State private var dueReviewCount = 0
+    /// A per-item callback was tapped — open exactly this card. Word/phrase
+    /// items ride in a one-card review deck; a sentence opens its drill card.
+    @State private var focusedReviewItem: StudyDeckItem?
+    /// Wrapped because `sheet(item:)` needs Identifiable and a retroactive
+    /// conformance on UUID would leak into every other file.
+    private struct DrillCardRef: Identifiable { let id: UUID }
+    @State private var focusedDrillCard: DrillCardRef?
+    /// The Shadowing challenge session: today's picks, one guided line at a
+    /// time (PracticeSessionView) — the full browser stays behind the
+    /// shortcuts band.
+    @State private var todayShadowPicks: [PracticeStats.ShadowPick] = []
+    @State private var showingShadowSession = false
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -130,6 +146,10 @@ struct PracticeTab: View {
                             .ignoresSafeArea(edges: .top)
                     }
             }
+            // …and the same panel mirrored at the bottom, so a page dissolves
+            // into the tab bar the way Talk's and Watch's do. Nested scroll
+            // views never get the system's own scroll edge effect.
+            .tabBarScrollFeather()
             .background(TransparentRoundedNavBar())
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Practice")
@@ -175,13 +195,61 @@ struct PracticeTab: View {
                 StudyGoalsSheet()
                     .presentationDetents([.medium])
             }
-            .sheet(isPresented: $showingDailyWords) {
+            // Deck sessions write snoozes ("back in 10 minutes") — honor them
+            // with the shared review reminder the moment the sheet closes.
+            // This is a contextual foreground moment, so it may also ask for
+            // notification permission the first time (same rule as
+            // SessionSummarizer's post-session reschedule).
+            .sheet(isPresented: $showingDailyWords, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) {
                 DailyWordsView()
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingDailyExpressions) {
+            .sheet(isPresented: $showingDailyExpressions, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) {
                 DailyExpressionsView()
                     .environmentObject(appState)
+            }
+            // The named card from a per-item callback, on its own.
+            .sheet(item: $focusedReviewItem, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule() }
+            }) { item in
+                DueReviewView(focus: item)
+                    .environmentObject(appState)
+            }
+            .sheet(item: $focusedDrillCard, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule() }
+            }) { ref in
+                NavigationStack {
+                    DrillView(source: .card(ref.id))
+                        .navigationTitle("Review")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") { focusedDrillCard = nil }
+                            }
+                        }
+                        .environmentObject(appState)
+                }
+            }
+            .sheet(isPresented: $showingDueReview, onDismiss: {
+                reload()
+                Task { await DrillReminder.reschedule(allowPermissionPrompt: true) }
+            }) {
+                DueReviewView()
+                    .environmentObject(appState)
+            }
+            .sheet(isPresented: $showingShadowSession, onDismiss: reload) {
+                NavigationStack {
+                    PracticeSessionView(shadowPicks: todayShadowPicks, includeCards: false)
+                        .environmentObject(appState)
+                }
             }
             .sheet(isPresented: $showingFinished, onDismiss: reload) {
                 FinishedBooksSheet(books: finishedBooks)
@@ -204,6 +272,26 @@ struct PracticeTab: View {
             showingVocabulary = false
             showingExpressions = false
             withAnimation { shelf = .studying }
+        case let .reviewItem(kind, value):
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            switch kind {
+            case "word":       focusedReviewItem = .word(value)
+            case "expression": focusedReviewItem = .expression(value)
+            case "sentence":   focusedDrillCard = UUID(uuidString: value).map(DrillCardRef.init)
+            default:           showingDueReview = true
+            }
+        case .review:
+            // Review reminder tap → straight into the due items. If they were
+            // already reviewed elsewhere the deck says so rather than dealing
+            // unrelated material.
+            appState.pendingPracticeRoute = nil
+            showingVocabulary = false
+            showingExpressions = false
+            shelf = .studying
+            showingDueReview = true
         case .vocabulary:
             appState.pendingPracticeRoute = nil
             showingVocabulary = true
@@ -437,43 +525,6 @@ struct PracticeTab: View {
         return (fromTalks + fromScenarios).sorted { $0.finishedAt > $1.finishedAt }
     }
 
-    /// Aggregate mastery across EVERY book the activities ever generated —
-    /// active and archived, Talk and Watch. Per-book progress lives on each
-    /// card; this is the one number for "how much of all my material is done".
-    private var overallProgress: (mastered: Int, total: Int) {
-        var mastered = 0, total = 0
-        for s in talks + archivedTalks {
-            if let snap = talkSnapshots[s.id] {
-                mastered += snap.masteredCount
-                total += snap.totalCount
-            }
-        }
-        for sc in appState.scenarios {
-            if let c = sc.curriculum {
-                mastered += c.masteredCount
-                total += c.totalCount
-            }
-        }
-        return (mastered, total)
-    }
-
-    /// Everything that answers "where do I stand, and what can I open right
-    /// now" — whole-library mastery and the three practice-type shortcuts —
-    /// in ONE grouped card below the Today card. The due-cards entry moved up
-    /// into Today as the Cards challenge. Sections are separated by hairlines
-    /// the way a grouped List separates rows.
-    private var studyCard: some View {
-        let p = overallProgress
-        return VStack(spacing: 0) {
-            if p.total > 0 {
-                overallSummary(mastered: p.mastered, total: p.total)
-                CardDivider(inset: 14)
-            }
-            practiceShortcuts
-        }
-        .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
-    }
-
     // MARK: - Today (daily challenges)
 
     /// Reps logged so far today, read fresh on every render — the log is a
@@ -516,6 +567,15 @@ struct PracticeTab: View {
             .padding(.top, 12)
             .padding(.bottom, 10)
 
+            // Items whose snooze ran out — the same thing a review reminder
+            // opens, visible without one. Above the goals because it's a
+            // promise the learner already made ("show me this again"), not a
+            // target the app set; hidden when nothing is waiting.
+            if dueReviewCount > 0 {
+                CardDivider(inset: 14)
+                dueReviewRow
+            }
+
             // The SRS deck's challenge, named for its CONTENT — the corrected
             // sentences from your talks — not its format ("Cards" was a
             // method, the way every other row is a category). Moving target:
@@ -552,9 +612,22 @@ struct PracticeTab: View {
             }
             if goals.shadowsPerDay > 0 {
                 CardDivider(inset: 14)
+                // Today's PICKS, not the full browser — the same dealt-hand
+                // rule as Words and Expressions. Falls back to the browser
+                // only when there's nothing to pick from yet.
                 challengeRow(icon: "waveform.badge.mic", title: "Shadowing",
                              done: today.shadowReps, goal: goals.shadowsPerDay) {
-                    showingShadowBrowser = true
+                    let picks = PracticeStats.shadowPicks(
+                        sessions: talks + archivedTalks,
+                        attempts: appState.shadowAttempts,
+                        level: appState.proficiency,
+                        limit: max(goals.shadowsPerDay, 1))
+                    if picks.isEmpty {
+                        showingShadowBrowser = true
+                    } else {
+                        todayShadowPicks = picks
+                        showingShadowSession = true
+                    }
                 }
             }
             if goals.anyEnabled {
@@ -572,8 +645,74 @@ struct PracticeTab: View {
                 }
                 .buttonStyle(.plain)
             }
+            // The way into the collections, in BOTH states — a fresh install
+            // with no goals set still has to be able to reach them.
+            CardDivider(inset: 14)
+            libraryRow
         }
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+    }
+
+    /// "You asked to see these again" — words and expressions whose snooze
+    /// has run out. No progress bar: this isn't a goal with a target, it's a
+    /// pile that empties as you clear it.
+    private var dueReviewRow: some View {
+        Button { showingDueReview = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.body)
+                    .foregroundStyle(.orange)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Back from earlier")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(explain("You asked to see these again"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 8)
+                Text("\(dueReviewCount)")
+                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(.orange)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The dictionaries, as the card's quiet footer rather than a second card
+    /// of three tiles. Those tiles repeated Words / Expressions / Shadowing
+    /// directly under the challenge rows with numbers counting something else
+    /// entirely (kept-to-study vs ever-collected vs saved) — the same noun
+    /// twice on one screen is what made this page hard to read.
+    private var libraryRow: some View {
+        NavigationLink {
+            LibraryView().environmentObject(appState)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "books.vertical")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+                Text("Library")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// One daily challenge: icon, title, progress bar, done/goal count. A
@@ -639,25 +778,6 @@ struct PracticeTab: View {
         .padding(.vertical, 10)
     }
 
-    /// The whole-library progress section: big percent in the display face,
-    /// the bar, and the raw count.
-    private func overallSummary(mastered: Int, total: Int) -> some View {
-        let done = mastered == total
-        return HStack(alignment: .center, spacing: 14) {
-            Text("\(Int((Double(mastered) / Double(total) * 100).rounded()))%")
-                .geistPixel(30)
-                .foregroundStyle(done ? .green : .primary)
-            VStack(alignment: .leading, spacing: 5) {
-                ProgressView(value: Double(mastered), total: Double(total))
-                    .tint(done ? .green : .accentColor)
-                Text("\(mastered) of \(total) mastered · everything from your talks and watches")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(14)
-    }
-
     /// When a book came into existence. The one ordering the whole tab now
     /// uses — see `talkRow`.
     private func created(_ book: StudyBook) -> Date {
@@ -693,8 +813,11 @@ struct PracticeTab: View {
 
     private var studyingPage: some View {
         VStack(alignment: .leading, spacing: 20) {
+            // ONE card: today's work, the week it adds up to, and the way into
+            // the library. Whole-library mastery moved to Progress — "how far
+            // along am I" is that tab's question, and mixing it in here was
+            // the other half of what made this page hard to read.
             todayCard
-            studyCard
             if !talkRow.isEmpty {
                 bookRow(title: "Talk", shelf: .talk, count: talkRow.count) {
                     ForEach(talkRow) { session in
@@ -753,60 +876,6 @@ struct PracticeTab: View {
         }
     }
 
-    /// The three dictionaries, as the bottom band of `studyCard` — segments
-    /// divided by hairlines rather than three standalone tiles.
-    private var practiceShortcuts: some View {
-        HStack(spacing: 0) {
-            shortcut(icon: "text.book.closed.fill", title: "Words",
-                     count: vocab.studying.count) {
-                VocabularyView()
-            }
-            shortcutDivider
-            shortcut(icon: "waveform.badge.mic", title: "Shadowing",
-                     count: appState.savedLines.count) {
-                ShadowBrowserView()
-                    .navigationTitle("Shadowing")
-                    .navigationBarTitleDisplayMode(.inline)
-            }
-            shortcutDivider
-            shortcut(icon: "quote.bubble.fill", title: "Expressions",
-                     count: vocab.expressionEntries().count) {
-                ExpressionsView()
-                    .navigationTitle("Expressions")
-                    .navigationBarTitleDisplayMode(.inline)
-            }
-        }
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// Vertical hairline between shortcut segments, inset from the card edges.
-    private var shortcutDivider: some View {
-        CardDivider(inset: 10, axis: .vertical)
-    }
-
-    // title is a LocalizedStringKey, not String — a String parameter is the
-    // classic literal-through-a-variable localization hole (the Today card
-    // above resolved to the target language while this band stayed English).
-    private func shortcut<D: View>(icon: String, title: LocalizedStringKey, count: Int,
-                                   @ViewBuilder destination: () -> D) -> some View {
-        NavigationLink { destination() } label: {
-            VStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.primary)
-                Text("\(count)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
 
     // MARK: - Books (the shelves)
 
@@ -1017,6 +1086,7 @@ struct PracticeTab: View {
     private func reload() {
         vocab.backfillFromSessions()
         dueDrillCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
+        dueReviewCount = DueReviewView.dueDeck().count
 
         // Same rule as the Watch shelf: newest talk first, by when it was
         // STARTED. `endedAt` moves when a talk is continued, which pushed old
@@ -1049,6 +1119,7 @@ struct PracticeTab: View {
 struct StudyGoalsSheet: View {
     @ObservedObject private var goals = GoalStore.shared
     @Environment(\.dismiss) private var dismiss
+    @State private var notifications: ReviewNotifications.Status?
 
     var body: some View {
         NavigationStack {
@@ -1066,13 +1137,70 @@ struct StudyGoalsSheet: View {
                 } footer: {
                     Text(explain("A day counts once every goal here is met. Words and expressions count each \u{201C}keep\u{201D} or \u{201C}I know\u{201D} decision; shadowing counts recorded takes. Set a goal to 0 to leave it out."))
                 }
+                // Whether the schedule can actually ring. Without this the
+                // learner drops a card on "10 min", nothing comes back, and
+                // the feature looks broken instead of unpermitted.
+                Section {
+                    remindersRow
+                } footer: {
+                    Text(explain("When you send a card to 10 minutes, tomorrow or 3 days, this is what brings it back. One reminder at a time, at the earliest thing waiting."))
+                }
             }
+            .task { notifications = await ReviewNotifications.status() }
             .navigationTitle("Daily goals")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var remindersRow: some View {
+        switch notifications {
+        case .allowed:
+            HStack(spacing: 10) {
+                Image(systemName: "bell.badge.fill")
+                    .foregroundStyle(.green)
+                    .frame(width: 24)
+                Text("Reminders on")
+                Spacer()
+                Image(systemName: "checkmark").foregroundStyle(.green)
+            }
+        case .notAsked:
+            Button {
+                Task { notifications = await ReviewNotifications.request() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bell").foregroundStyle(.tint).frame(width: 24)
+                    Text("Turn on reminders")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+            }
+        case .denied:
+            Button {
+                ReviewNotifications.openSettings()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bell.slash").foregroundStyle(.orange).frame(width: 24)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Reminders are off")
+                        Text(explain("Turn them on in Settings"))
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.forward.app")
+                        .font(.footnote).foregroundStyle(.tertiary)
+                }
+            }
+        case nil:
+            HStack(spacing: 10) {
+                ProgressView().controlSize(.mini).frame(width: 24)
+                Text("Reminders").foregroundStyle(.secondary)
             }
         }
     }

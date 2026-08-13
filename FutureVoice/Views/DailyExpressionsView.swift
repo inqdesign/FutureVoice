@@ -1,37 +1,27 @@
 import SwiftUI
 
-/// The Expressions challenge session — today's recommended expressions, one
-/// card at a time. The exact same shape as `DailyWordsView`: a hand dealt on
-/// appear, fixed for the session, each card the full `ExpressionCard` so a
-/// judgment here is a real collection judgment (the store logs the rep), and
-/// a card you read and move past counts too — one rep per phrase, never two.
+/// The Expressions challenge session — the same deck as `DailyWordsView`
+/// (card stack, tap to flip the meaning, drag into Later / Keep / I know),
+/// dealt from the expression pool instead of the word sources. A rep is a
+/// resolved card; Later requeues within today's hand.
 struct DailyExpressionsView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var picks: [String] = []
-    @State private var current: String?
-    /// Lowercased phrases already counted toward today's goal this session.
-    @State private var counted: Set<String> = []
+    @State private var dealt = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if let first = picks.first {
-                    // Same identity trick as ExpressionSheet: the card view is
-                    // never torn down, its content just swaps as `current` moves.
-                    ExpressionCard(phrase: current ?? first,
-                                   currentPhrase: Binding(
-                                       get: { current ?? first },
-                                       set: { if let p = $0 { current = p } }
-                                   ),
-                                   navigationPhrases: picks,
-                                   titleByPosition: true,
-                                   onJudged: { counted.insert(key($0)) })
-                } else {
+                if dealt && picks.isEmpty {
                     emptyState
+                } else if dealt {
+                    StudyDeckView(items: picks.map(StudyDeckItem.expression), onResolve: resolve)
                 }
             }
+            .navigationTitle("Expressions")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -39,25 +29,30 @@ struct DailyExpressionsView: View {
             }
         }
         .onAppear {
-            guard picks.isEmpty else { return }
+            guard !dealt else { return }
             picks = Self.pick(goal: max(GoalStore.shared.expressionsPerDay, 1),
                               appState: appState)
-            current = picks.first
+            dealt = true
         }
-        .onChange(of: current) { old, _ in countIfViewed(old) }
-        .onDisappear { countIfViewed(current ?? picks.first) }
     }
 
-    private func key(_ phrase: String) -> String {
-        phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
-    private func countIfViewed(_ phrase: String?) {
-        guard let phrase else { return }
-        let k = key(phrase)
-        guard !counted.contains(k) else { return }
-        counted.insert(k)
-        PracticeLog.shared.record(.expression)
+    /// Mirrors `DailyWordsView.resolve`: a delay bin bookmarks the phrase and
+    /// schedules its return; "Got it" marks it known and clears the schedule.
+    /// Exactly one rep per drop. (`setKnownExpression(_, true)` always logs.)
+    private func resolve(_ item: StudyDeckItem, _ bin: DrillBin) {
+        let phrase = item.text
+        let store = VocabStore.shared
+        if let manual = bin.manual {
+            if store.isStudyingExpression(phrase) {
+                PracticeLog.shared.record(.expression)
+            } else {
+                store.setStudyingExpression(phrase, true)
+            }
+            ReviewQueue.snooze(.expression, phrase, for: manual.delay)
+        } else {
+            store.setKnownExpression(phrase, true)
+            ReviewQueue.retire(.expression, phrase)
+        }
     }
 
     private var emptyState: some View {
@@ -93,11 +88,21 @@ struct DailyExpressionsView: View {
             out.append(p)
         }
 
-        let studying = store.studyingExpressions.filter { !store.isKnownExpression($0) }
-        if !studying.isEmpty {
+        // Bookmarked phrases, honoring the deck's schedule — same rule as the
+        // words session: snoozed-and-not-due stays out, overdue comes first.
+        let schedule = StudyScheduleStore.shared
+        let studying = store.studyingExpressions
+            .filter { !store.isKnownExpression($0) && schedule.isDue(.expression, $0, now: now) }
+        let scheduled = studying
+            .compactMap { p in schedule.nextReview(.expression, p).map { (p, $0) } }
+            .sorted { $0.1 < $1.1 }
+            .map(\.0)
+        for p in scheduled { add(p) }
+        let unscheduled = studying.filter { schedule.nextReview(.expression, $0) == nil }
+        if !unscheduled.isEmpty {
             let day = calendar.ordinality(of: .day, in: .year, for: now) ?? 0
-            let offset = day % studying.count
-            let ordered = Array(studying.reversed())   // oldest bookmark first
+            let offset = day % unscheduled.count
+            let ordered = Array(unscheduled.reversed())   // oldest bookmark first
             for p in ordered[offset...] + ordered[..<offset] { add(p) }
         }
 

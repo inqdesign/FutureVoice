@@ -705,6 +705,10 @@ struct ConversationView: View {
                     "vad_path": audioSettled ? "audio" : "noisy",
                     "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
                     "noise": String(format: "%.2f", live.ambientNoiseLevel),
+                    // Requested is not granted — some routes refuse the unit.
+                    // Without this, a `vad_path=noisy` turn can't be told apart
+                    // from one where noise suppression simply never engaged.
+                    "voice_proc": live.voiceProcessingActive ? "1" : "0",
                 ]
                 turnEndedSpeakingAt = Date()
                 HapticEngine.voiceSent()
@@ -947,9 +951,17 @@ struct ConversationView: View {
             // domain while listening surfaces play on the media domain —
             // that gap is compensated in signal (`a2dpBoostDB`), not by
             // giving up the earphone mic.
+            // `voiceProcessing: true` — Talk is the surface people use OUTSIDE
+            // (walking, cafés, transit), and it is the only mic surface with no
+            // deterministic score riding on raw levels, so it is where iOS's
+            // noise suppression belongs. It cleans the audio for BOTH consumers
+            // (Apple STT and the Gemini transcription call) and, by keeping the
+            // energy meter's noise floor down, lets real endpointing fire
+            // instead of the 6s `noisyRoomFallbackSeconds` crawl.
             try live.start(locale: appState.targetLanguage,
                            contextualStrings: recognitionHints(),
-                           captureToFile: true)   // keep the user's own audio for listen-back
+                           captureToFile: true,   // keep the user's own audio for listen-back
+                           voiceProcessing: true)
             userSpeechStartedAt = Date()
             lastTranscriptChangeAt = nil
             didPreconnectThisTurn = false

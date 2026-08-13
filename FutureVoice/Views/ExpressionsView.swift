@@ -153,16 +153,21 @@ struct ExpressionSheet: View {
     /// Sibling phrases in display order for the header chevrons; empty →
     /// no navigation, just the one card.
     let phrases: [String]
+    /// Where each phrase came from, when the caller knows: the scene cue and
+    /// the line that used it. A book has this; the library doesn't.
+    var context: [String: ExpressionCard.Context] = [:]
     @State private var current: String?
 
     var body: some View {
         NavigationStack {
-            ExpressionCard(phrase: current ?? initialPhrase,
+            let phrase = current ?? initialPhrase
+            ExpressionCard(phrase: phrase,
                            currentPhrase: Binding(
                                get: { current ?? initialPhrase },
                                set: { if let p = $0 { current = p } }
                            ),
-                           navigationPhrases: phrases.isEmpty ? nil : phrases)
+                           navigationPhrases: phrases.isEmpty ? nil : phrases,
+                           context: context[phrase])
         }
     }
 }
@@ -174,17 +179,21 @@ struct ExpressionSheet: View {
 /// where they actually said it, chevron navigation top-right, and the action
 /// bar pinned at the bottom.
 struct ExpressionCard: View {
+    /// What the book already knows about this phrase. A scenario's curriculum
+    /// is generated WITH its scene, so it holds the one thing a dictionary
+    /// can never have: when this chunk came up here, and the line that used
+    /// it. Shown above the generic entry — the card used to drop it on the
+    /// floor and lead with a lookup.
+    struct Context: Equatable {
+        var note: String
+        var example: String?
+    }
+
     let phrase: String
     @Binding var currentPhrase: String?
     /// Sibling list the header chevrons walk; nil hides them.
     var navigationPhrases: [String]? = nil
-    /// Title as "3 of 10" instead of the collection count — the daily
-    /// expressions session walks a dealt hand, not the collection, so the
-    /// collection's count would be a lie there.
-    var titleByPosition: Bool = false
-    /// Fires on an AFFIRMATIVE judgment only — Study or I know it, never
-    /// their un-taps. Mirrors `WordCard.onJudged`.
-    var onJudged: ((String) -> Void)? = nil
+    var context: Context? = nil
 
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
@@ -205,11 +214,37 @@ struct ExpressionCard: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 HStack(alignment: .center, spacing: 14) {
-                    Text(ExpressionsView.display(phrase))
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(ExpressionsView.display(phrase))
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .fixedSize(horizontal: false, vertical: true)
+                        // What kind of chunk it is + its register — the
+                        // expression's answer to a word's part of speech.
+                        if let pos = entry?.pos, !pos.isEmpty {
+                            Text(pos).font(.subheadline).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                     Spacer(minLength: 0)
                     if appState.voiceCloneId != nil { pronounceButton }
+                }
+
+                if let c = context, !c.note.isEmpty || !(c.example ?? "").isEmpty {
+                    section("In this scene") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !c.note.isEmpty {
+                                Text(c.note)
+                                    .font(.callout)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            if let ex = c.example, !ex.isEmpty {
+                                Text("“\(ex)”")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
                 }
 
                 section("Meaning") {
@@ -242,6 +277,24 @@ struct ExpressionCard: View {
                     }
                 }
 
+                // Near-variants — the same move said another way, for when
+                // this phrasing doesn't fit. Same slot a word card gives to
+                // "Common phrases".
+                if let variants = entry?.phrases, !variants.isEmpty {
+                    section("Another way to say it") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            ForEach(variants) { v in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(v.phrase).font(.callout.weight(.medium))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                    Text(v.meaning).font(.footnote).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if !sentences.isEmpty {
                     section("From your talks") {
                         VStack(spacing: 8) { ForEach(sentences) { sentenceRow($0) } }
@@ -253,9 +306,7 @@ struct ExpressionCard: View {
             .padding(.bottom, 24)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .navigationTitle(titleByPosition && navIndex != nil
-                         ? Text("\((navIndex ?? 0) + 1) of \(navList.count)")
-                         : Text("My expressions · \(store.expressionCount)"))
+        .navigationTitle("My expressions · \(store.expressionCount)")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if let i = navIndex {
@@ -353,20 +404,14 @@ struct ExpressionCard: View {
                        tint: isStudying ? .accentColor : .primary) {
                 // Bookmark to keep studying — mirrors adding a word to the
                 // notebook; the phrase then shows on the Expressions widget.
-                // (Capture the pre-toggle state: isStudying is computed off
-                // the store, so it flips the moment the set lands.)
-                let wasStudying = isStudying
-                store.setStudyingExpression(phrase, !wasStudying)
-                if !wasStudying { onJudged?(phrase) }
+                store.setStudyingExpression(phrase, !isStudying)
             }
             blurButton(isKnown ? "Known" : "I know it",
                        icon: isKnown ? "checkmark.circle.fill" : "checkmark.circle",
                        tint: isKnown ? .green : .primary) {
                 // Toggle known — stay on the phrase so it visibly flips, same
                 // as WordCard.
-                let wasKnown = isKnown
-                store.setKnownExpression(phrase, !wasKnown)
-                if !wasKnown { onJudged?(phrase) }
+                store.setKnownExpression(phrase, !isKnown)
             }
         }
         .padding(.horizontal, 16)
@@ -402,7 +447,10 @@ struct ExpressionCard: View {
         entry = nil
         sentences = store.sentences(containing: phrase)
         loading = true
-        entry = await WordLore.entry(for: phrase, native: appState.nativeLanguage)
+        // .expression, always — this card only ever holds multi-word chunks,
+        // and the word prompt would gloss one word out of the middle of it.
+        entry = await WordLore.entry(for: phrase, native: appState.nativeLanguage,
+                                     target: appState.targetLanguage, kind: .expression)
         loading = false
     }
 

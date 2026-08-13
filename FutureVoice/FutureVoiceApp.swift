@@ -95,6 +95,11 @@ struct FutureVoiceApp: App {
             // whose time passed unanswered, or a language switch.
             if phase == .active {
                 appState.refreshDailyCall()
+                // The Core has no push infrastructure, so an arrival is
+                // noticed here and announced locally. Late by design — the
+                // 28/30 entry bar keeps arrivals rare enough that "next time
+                // you open the app" still reads as news.
+                Task { await CoreClubService.announceArrivals() }
             }
         }
     }
@@ -115,6 +120,9 @@ final class AppState: ObservableObject {
         case vocabulary(word: String? = nil)
         case expressions(phrase: String? = nil)
         case book(kind: String, id: UUID)   // Continue widget → a book's detail page
+        case review                         // review reminder → the due deck
+        /// A per-item callback → open exactly that card.
+        case reviewItem(kind: String, value: String)
     }
     @Published var pendingPracticeRoute: PracticeRoute?
 
@@ -159,6 +167,15 @@ final class AppState: ObservableObject {
             // already synthesized in this voice — see PhraseAudioStore.
             PhraseAudioStore.shared.registerOwnVoice(voiceCloneId)
         }
+    }
+    /// The accent last APPLIED to the clone (`VoiceAccent.id`), nil when the
+    /// clone speaks with whatever the TTS model guesses. A remixed voice id
+    /// carries no record of the accent it was remixed WITH, so without this
+    /// the picker reopens with nothing checked and the learner can't tell
+    /// what they already chose. Cleared by anything that mints a clone
+    /// straight from the recording again — that drops the remix with it.
+    @Published var voiceAccentId: String? {
+        didSet { UserDefaults.standard.set(voiceAccentId, forKey: Self.voiceAccentIdKey) }
     }
     /// Transient (never persisted): true while the voice-clone onboarding is
     /// playing its final act (cloned-voice greeting + theme pick). Setting
@@ -291,6 +308,7 @@ final class AppState: ObservableObject {
 
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
     private static let voiceNameKey = "futurevoice.voiceName"
+    private static let voiceAccentIdKey = "futurevoice.voiceAccentId"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
     private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
@@ -317,6 +335,7 @@ final class AppState: ObservableObject {
             .flatMap(AppAppearance.init(rawValue:)) ?? .system
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         voiceName = UserDefaults.standard.string(forKey: Self.voiceNameKey) ?? ""
+        voiceAccentId = UserDefaults.standard.string(forKey: Self.voiceAccentIdKey)
         pendingDeleteVoiceId = UserDefaults.standard.string(forKey: Self.pendingDeleteVoiceIdKey)
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
@@ -812,6 +831,7 @@ final class AppState: ObservableObject {
     func resetVoiceClone() {
         pendingDeleteVoiceId = voiceCloneId
         voiceCloneId = nil
+        voiceAccentId = nil
     }
 
     /// Post-account-deletion local wipe — the device should look factory-fresh
@@ -838,6 +858,7 @@ final class AppState: ObservableObject {
         // which is exactly what a first-run install would look like.
         voiceCloneId = nil
         voiceName = ""
+        voiceAccentId = nil
         pendingDeleteVoiceId = nil
         PhraseAudioStore.shared.clearOwnVoiceLineage()
         persona = nil
@@ -914,6 +935,9 @@ final class AppState: ObservableObject {
         }
         if let old = voiceCloneId, old != newId { pendingDeleteVoiceId = old }
         voiceCloneId = newId
+        // A clone straight off the recording is un-remixed again, whatever
+        // accent the outgoing one carried.
+        voiceAccentId = nil
         Analytics.capture("voice_clone_succeeded", ["first_time": isFirstClone])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()
@@ -946,6 +970,7 @@ final class AppState: ObservableObject {
         guard newId != voiceCloneId else { return }
         if let old = voiceCloneId { pendingDeleteVoiceId = old }
         voiceCloneId = newId
+        voiceAccentId = accentId
         Analytics.capture("voice_accent_applied", ["accent": accentId])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()

@@ -80,6 +80,20 @@ enum DebugCapture {
         case "daily-expressions":
             once("vocab") { seedVocab() }
             return AnyView(DailyExpressionsView().environmentObject(appState))
+        case "review-due":
+            // What a review reminder opens: items whose snooze already ran
+            // out. Seeded in the past so they're due the moment it appears.
+            once("review-due") {
+                seedVocab()
+                let past = Date().addingTimeInterval(-600)
+                StudyScheduleStore.shared.snooze(.word, "appreciate", until: past)
+                StudyScheduleStore.shared.snooze(.word, "reschedule", until: past)
+                StudyScheduleStore.shared.snooze(.expression, "catch up on", until: past)
+                // Still waiting — must NOT appear in the due deck.
+                StudyScheduleStore.shared.snooze(.word, "nuanced",
+                                                 until: Date().addingTimeInterval(3 * 86_400))
+            }
+            return AnyView(DueReviewView().environmentObject(appState))
         case "scene-end":
             previewSceneFinished = true
             let cp = Counterpart(name: "Barista", relationship: "at the cafe",
@@ -196,6 +210,56 @@ enum DebugCapture {
         case "practice-watch":
             once("practice-watch") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .watch).environmentObject(appState))
+        case "practice-due":
+            // The Today card with items back from an earlier snooze — the
+            // non-notification entry point into the review deck.
+            once("practice-due") {
+                seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                let past = Date().addingTimeInterval(-900)
+                StudyScheduleStore.shared.snooze(.word, "reschedule", until: past)
+                StudyScheduleStore.shared.snooze(.word, "overwhelmed", until: past)
+                StudyScheduleStore.shared.snooze(.expression, "walk you through", until: past)
+            }
+            return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))
+        case "practice-review-route":
+            // The half a notification tap actually drives: the staged route
+            // is consumed and the due deck opens on top of the tab.
+            // (RootTabView owns the URL→route mapping and isn't in this
+            // hierarchy, so the route is staged directly here.)
+            once("practice-due") {
+                seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                let past = Date().addingTimeInterval(-900)
+                StudyScheduleStore.shared.snooze(.word, "reschedule", until: past)
+                StudyScheduleStore.shared.snooze(.word, "overwhelmed", until: past)
+            }
+            // Staged in a .task, NOT here: writing @Published state during
+            // body evaluation corrupts the render (blank screen).
+            return AnyView(PracticeTab(initialShelf: .studying)
+                .environmentObject(appState)
+                .task { appState.pendingPracticeRoute = .review })
+        case "library":
+            // The three collections behind one door (was a three-tile band
+            // under the Practice mastery card).
+            once("vocab") { seedVocab() }
+            return AnyView(NavigationStack { LibraryView().environmentObject(appState) })
+        case "review-item-word":
+            // A per-item callback for a WORD: the staged route must open that
+            // one card, not the whole queue.
+            once("vocab") { seedVocab() }
+            return AnyView(PracticeTab(initialShelf: .studying)
+                .environmentObject(appState)
+                .task { appState.pendingPracticeRoute = .reviewItem(kind: "word", value: "genuinely") })
+        case "review-item-sentence":
+            // Same for a SENTENCE — its drill card opens on its own.
+            once("drills") { seedVocab(); seedDrillFolders() }
+            let firstCard = DrillStore.shared.load().first?.id
+            return AnyView(PracticeTab(initialShelf: .studying)
+                .environmentObject(appState)
+                .task {
+                    guard let firstCard else { return }
+                    appState.pendingPracticeRoute =
+                        .reviewItem(kind: "sentence", value: firstCard.uuidString)
+                })
         case "practice-studying":
             once("practice-studying") { seedSessions(scored: true); seedScenarios(into: appState) }
             return AnyView(PracticeTab(initialShelf: .studying).environmentObject(appState))

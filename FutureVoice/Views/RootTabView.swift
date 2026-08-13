@@ -144,6 +144,12 @@ struct RootTabView: View {
         }
         // Free Talk widget tap while the app is already up.
         .onChange(of: appState.pendingFreeTalk) { _, _ in consumeFreeTalk() }
+        // Review reminder tapped — the delegate can't reach AppState, so it
+        // posts to the inbox and the route is staged from here. Covers both a
+        // cold launch (onAppear) and a tap while the app is already up.
+        .onAppear { consumeReviewTap() }
+        .onChange(of: callInbox.pendingReview) { _, _ in consumeReviewTap() }
+        .onChange(of: callInbox.pendingReviewItem) { _, _ in consumeReviewTap() }
         // In-app jumps to Practice (Home's Practice row) stage a route instead
         // of opening a URL — see ConversationHome.practiceProgressRow. Bring
         // the tab along; PracticeTab consumes the route once it's up.
@@ -172,6 +178,11 @@ struct RootTabView: View {
             case "practice":
                 selection = .practice
                 appState.pendingPracticeRoute = .studying   // land on the Studying shelf, not wherever it was left
+            case "review":
+                // Review reminder (and any future surface that means "the
+                // things you set aside are back").
+                selection = .practice
+                appState.pendingPracticeRoute = .review
             case "book":
                 // Continue widget: open a specific book's detail page.
                 let comps = URLComponents(url: url, resolvingAgainstBaseURL: false)
@@ -273,6 +284,19 @@ struct RootTabView: View {
         appState.pendingFreeTalk = false
         guard freeTalkCallId == nil, !freeTalkClosing else { return }
         startFreeTalk()
+    }
+
+    private func consumeReviewTap() {
+        if let item = callInbox.pendingReviewItem {
+            callInbox.pendingReviewItem = nil
+            selection = .practice
+            appState.pendingPracticeRoute = .reviewItem(kind: item.kind, value: item.value)
+            return
+        }
+        guard callInbox.pendingReview else { return }
+        callInbox.pendingReview = false
+        selection = .practice
+        appState.pendingPracticeRoute = .review
     }
 
     private func startFreeTalk() {

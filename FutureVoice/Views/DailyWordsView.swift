@@ -1,38 +1,31 @@
 import SwiftUI
 
-/// The Words challenge session — today's recommended words, one card at a
-/// time, drill-style. The Today card's Words row lands HERE, not in the
-/// explore cloud: a challenge needs a bounded hand dealt for you, the way the
-/// sentence deck deals its 20.
+/// The Words challenge session — today's recommended words as a DECK, the
+/// same card-stack-and-bins grammar as the sentence drill: front of the card
+/// is the word alone (recall first), tap flips the meaning, then drag it into
+/// Later (back of today's deck) / Keep (study notebook) / I know.
 ///
-/// The hand is picked once on appear and stays fixed for the session (judging
-/// a word can't reshuffle the deck under your thumb). Each card is the full
-/// `WordCard` — meaning, examples, your own sentences, Keep / I know — so a
-/// judgment here IS a notebook judgment, and the store logs the rep. A word
-/// you just read and move past counts too: in a dealt hand of recommendations,
-/// working through a card is the rep, same as flipping a drill card.
+/// The hand is picked once on appear and stays fixed for the session. A rep
+/// is a RESOLVED card — Keep or I know — so "Later" costs nothing until the
+/// card comes around again and gets a real judgment.
 struct DailyWordsView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
     @State private var picks: [String] = []
-    @State private var currentWord: String?
-    /// Lowercased words already counted toward today's goal — via the card's
-    /// buttons (the store logged that rep) or by being viewed and moved past
-    /// (we log it here). One rep per word per session, never two.
-    @State private var counted: Set<String> = []
+    @State private var dealt = false
 
     var body: some View {
         NavigationStack {
             Group {
-                if let w = currentWord {
-                    WordCard(word: w, currentWord: $currentWord, isExpanded: true,
-                             navigationWords: picks,
-                             onJudged: { counted.insert($0.lowercased()) })
-                } else {
+                if dealt && picks.isEmpty {
                     emptyState
+                } else if dealt {
+                    StudyDeckView(items: picks.map(StudyDeckItem.word), onResolve: resolve)
                 }
             }
+            .navigationTitle("Words")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -40,20 +33,31 @@ struct DailyWordsView: View {
             }
         }
         .onAppear {
-            guard picks.isEmpty else { return }
+            guard !dealt else { return }
             picks = Self.pick(goal: max(GoalStore.shared.wordsPerDay, 1), appState: appState)
-            currentWord = picks.first
+            dealt = true
         }
-        .onChange(of: currentWord) { old, _ in countIfViewed(old) }
-        .onDisappear { countIfViewed(currentWord) }
     }
 
-    private func countIfViewed(_ word: String?) {
-        guard let word else { return }
-        let key = word.lowercased()
-        guard !counted.contains(key) else { return }
-        counted.insert(key)
-        PracticeLog.shared.record(.word)
+    /// Exactly one rep per dropped card, same as the drill deck logs every
+    /// grade. A delay bin means "still learning": the word joins the notebook
+    /// (if it wasn't there) and its return is written into the schedule the
+    /// daily pick reads. "Got it" files it as known and clears the schedule.
+    /// The store logs the rep on a state change (addStudying / markKnown);
+    /// re-snoozing an already-kept word is a review, logged directly.
+    private func resolve(_ item: StudyDeckItem, _ bin: DrillBin) {
+        let word = item.text
+        if let manual = bin.manual {
+            if VocabStore.shared.isStudying(word) {
+                PracticeLog.shared.record(.word)
+            } else {
+                VocabStore.shared.addStudying(word)
+            }
+            ReviewQueue.snooze(.word, word, for: manual.delay)
+        } else {
+            VocabStore.shared.markKnown(word)
+            ReviewQueue.retire(.word, word)
+        }
     }
 
     private var emptyState: some View {
@@ -91,12 +95,23 @@ struct DailyWordsView: View {
             out.append(w)
         }
 
-        let studying = store.studying
-        if !studying.isEmpty {
+        // Notebook words, honoring the deck's own schedule: a word snoozed to
+        // "3 days" stays out of the hand until it's due again. Overdue
+        // scheduled words come first (earliest return first); never-scheduled
+        // ones follow, oldest-first and rotated by the day so a big notebook
+        // doesn't deal the same hand forever.
+        let schedule = StudyScheduleStore.shared
+        let studying = store.studying.filter { schedule.isDue(.word, $0, now: now) }
+        let scheduled = studying
+            .compactMap { w in schedule.nextReview(.word, w).map { (w, $0) } }
+            .sorted { $0.1 < $1.1 }
+            .map(\.0)
+        for w in scheduled { add(w) }
+        let unscheduled = studying.filter { schedule.nextReview(.word, $0) == nil }
+        if !unscheduled.isEmpty {
             let day = calendar.ordinality(of: .day, in: .year, for: now) ?? 0
-            let offset = day % studying.count
-            // Oldest-first (the list is newest-first), then rotate by the day.
-            let ordered = Array(studying.reversed())
+            let offset = day % unscheduled.count
+            let ordered = Array(unscheduled.reversed())
             for w in ordered[offset...] + ordered[..<offset] { add(w) }
         }
 

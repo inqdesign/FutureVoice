@@ -73,9 +73,14 @@ struct PracticeSessionView: View {
         VStack(spacing: 20) {
             Spacer()
             VStack(alignment: .leading, spacing: 14) {
-                Label("Cards done — now say it out loud", systemImage: "checkmark.circle.fill")
+                // "Cards done" only makes sense when a deck actually preceded
+                // this — entered straight from the Shadowing challenge there
+                // were no cards.
+                Label(includeCards ? "Cards done — now say it out loud"
+                                   : "Say it out loud",
+                      systemImage: includeCards ? "checkmark.circle.fill" : "waveform.badge.mic")
                     .font(.footnote.weight(.medium))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(includeCards ? .green : .secondary)
                 Text("\u{201C}\(pick.turn.transcript)\u{201D}")
                     .font(DrillView.targetFont(for: pick.turn.transcript))
                     .fixedSize(horizontal: false, vertical: true)

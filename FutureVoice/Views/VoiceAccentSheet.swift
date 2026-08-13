@@ -29,6 +29,11 @@ struct VoiceAccentSheet: View {
         VoiceAccentCatalog.options(for: appState.targetLanguage)
     }
 
+    /// The accent the live clone was remixed with, if any.
+    private var appliedAccent: VoiceAccent? {
+        options.first { $0.id == appState.voiceAccentId }
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -37,6 +42,12 @@ struct VoiceAccentSheet: View {
                     takesSection
                     applySection
                 }
+            }
+            .onAppear {
+                // Show what's already live. `accent` doubles as "whose takes
+                // are on screen", but previews are empty here, so this only
+                // checkmarks the applied one.
+                if accent == nil { accent = appliedAccent }
             }
             .navigationTitle("Accent")
             .navigationBarTitleDisplayMode(.inline)
@@ -162,7 +173,9 @@ struct VoiceAccentSheet: View {
             } catch {
                 guard accent == option else { return }
                 self.error = error.localizedDescription
-                self.accent = nil
+                // Back to whatever is actually live — dropping to nil would
+                // read as "you have no accent" after a failed remix.
+                self.accent = appliedAccent
             }
         }
     }

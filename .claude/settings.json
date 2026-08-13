@@ -12,7 +12,25 @@
       "Bash(swift pill_render.swift)",
       "Bash(mv pill_states.png pill_states2.png)",
       "Bash(swift pill2_render.swift)",
-      "Bash(mv pill_theme.png pill_theme2.png)"
+      "Bash(mv pill_theme.png pill_theme2.png)",
+      "Bash(xcodebuild -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/b7e21657-11e0-4630-93dc-78486c18fa6a/scratchpad/loc8 -exportLanguage ko -project FutureVoice.xcodeproj)",
+      "Bash(python3 -c ' *)",
+      "Bash(xcodebuild -exportLocalizations -project FutureVoice.xcodeproj -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/18655f18-51fa-4333-a7d8-c96825580e80/scratchpad/loc -exportLanguage ko)",
+      "Bash(python3 -c \"import json;json.load\\(open\\('FutureVoice/Resources/Localizable.xcstrings'\\)\\);print\\('json ok'\\)\")",
+      "Bash(xcodebuild -version)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -target FutureVoice -configuration Debug -showBuildSettings)",
+      "Bash(plutil -p /Users/eunggyuelee/FutureVoice/build/Build/Products/Debug-iphonesimulator/FutureVoice.app/Info.plist)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -destination 'id=04102B16-A178-4527-A094-759B50B2A36D' -derivedDataPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/769e452c-cb8a-468f-be13-b65c447f55b3/scratchpad/dd build)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath \"/private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/e086c0c8-e38e-4d29-9d58-08205a060171/scratchpad/locF\" -exportLanguage ko)",
+      "Bash(psql --version)",
+      "Bash(python3 -c \"import pglast; print\\('pglast', pglast.__version__\\)\")",
+      "Bash(python3 /tmp/audit.py)",
+      "Bash(./venv/bin/python -c ' *)",
+      "Bash(./venv/bin/python check_bodies.py)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/708acb36-c2f6-4811-a679-a4c7ec3ac447/scratchpad/loc -exportLanguage ko)",
+      "Bash(node /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/af72ec2c-fc2c-4f19-b3b1-3086f8a5aa21/scratchpad/test_expr_prompt.mjs)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/708acb36-c2f6-4811-a679-a4c7ec3ac447/scratchpad/loc2 -exportLanguage ko)",
+      "Bash(zsh \"/private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/af72ec2c-fc2c-4f19-b3b1-3086f8a5aa21/scratchpad/live_test.sh\")"
     ]
   }
 }

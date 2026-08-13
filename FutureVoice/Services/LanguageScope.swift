@@ -64,6 +64,7 @@ enum LanguageScope {
             ScenarioStore.shared,
             WatchDialogueStore.shared,
             ShadowAttemptStore.shared,
+            StudyScheduleStore.shared,
             SavedLineStore.shared,
             TopicStore.shared,
             NewsTopicStore.shared,

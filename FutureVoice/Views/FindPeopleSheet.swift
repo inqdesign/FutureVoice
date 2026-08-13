@@ -26,6 +26,11 @@ struct FindPeopleSheet: View {
     @State private var searchText = ""
     @State private var bookmarks: Set<String> = []
 
+    /// Core badges for the pool's owners, keyed by lowercase user id. This
+    /// sheet is the only place a learner is ever seen by a stranger, so it's
+    /// the only place the seal is real status rather than a receipt.
+    @State private var coreBadges: [String: CoreClubService.Badge] = [:]
+
     /// Which pool the sheet is showing. Two kinds live in one table and they
     /// are not interchangeable to a learner: a real person who published an
     /// intro, and someone we invented. One list would quietly ask the user to
@@ -185,6 +190,9 @@ struct FindPeopleSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(p.display_name).font(.body.weight(.medium))
+                        if let badge = coreBadge(ownerId: p.owner_user_id) {
+                            CoreSeal(seated: badge.seated)
+                        }
                         if bookmarks.contains(p.id) {
                             Image(systemName: "bookmark.fill")
                                 .font(.caption2).foregroundStyle(.tint)
@@ -218,6 +226,9 @@ struct FindPeopleSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(c.name).font(.body.weight(.medium))
+                    if let badge = coreBadge(ownerId: ownerId(forRemote: c.remoteId)) {
+                        CoreSeal(seated: badge.seated)
+                    }
                     if let rid = c.remoteId, bookmarks.contains(rid) {
                         Image(systemName: "bookmark.fill")
                             .font(.caption2).foregroundStyle(.tint)
@@ -232,6 +243,18 @@ struct FindPeopleSheet: View {
 
     private func facetLine(occupation: String, location: String) -> String {
         [occupation, location].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    private func coreBadge(ownerId: String?) -> CoreClubService.Badge? {
+        guard let ownerId else { return nil }
+        return coreBadges[ownerId.lowercased()]
+    }
+
+    /// A met person is stored as a `Counterpart` keyed by the PERSONA id, so
+    /// their badge has to be found back through the pool row that minted them.
+    private func ownerId(forRemote remoteId: String?) -> String? {
+        guard let remoteId else { return nil }
+        return pool.first { $0.id == remoteId }?.owner_user_id
     }
 
     private func loadPool() async {
@@ -250,6 +273,10 @@ struct FindPeopleSheet: View {
             loadFailed = pool.isEmpty
         }
         isLoading = false
+        // Badges last and unguarded: the sheet is fully usable without them,
+        // so a Core outage must never keep anyone from meeting people.
+        coreBadges = await CoreClubService.fetchBadges(
+            ownerIds: pool.compactMap(\.owner_user_id))
     }
 }
 

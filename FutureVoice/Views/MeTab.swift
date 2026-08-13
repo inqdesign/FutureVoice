@@ -30,6 +30,9 @@ struct MeTab: View {
     @State private var callbackMinutes = DailyCallScheduler.defaultCallbackMinutes
     /// Working copy of `DailyCallStore.times`; written back on every edit.
     @State private var callTimes = DailyCallStore.shared.times
+    /// Nil while loading or when the learner hasn't qualified — the row still
+    /// shows, because a club nobody can see is a club nobody joins.
+    @State private var coreMembership: CoreClubService.Membership?
     @State private var showingPersonaEdit = false
     @State private var showingPaywall = false
     @State private var showingAddLanguage = false
@@ -104,6 +107,13 @@ struct MeTab: View {
                         row(icon: "person.2.wave.2",
                             title: "Find people",
                             subtitle: "Publish your intro — others practice with \"you\"")
+                    }
+                    NavigationLink {
+                        CoreClubView()
+                    } label: {
+                        row(icon: "seal",
+                            title: "The Core",
+                            subtitle: coreClubSummary)
                     }
                 }
 
@@ -254,6 +264,7 @@ struct MeTab: View {
                 onResetOnboarding: { appState.resetOnboarding() }))
             #endif
             .task { account = await AccountStatus.fetch() }
+            .task { coreMembership = await CoreClubService.fetchMine() }
             .task { aiLevel = recentAILevel() }
             .task(id: appState.enrolledLanguages) { refreshLevelCache() }
         }
@@ -456,38 +467,22 @@ struct MeTab: View {
                     title: "Daily goal",
                     subtitle: "Minutes of speaking per day")
             }
-            Picker(selection: $appState.nativeLanguage) {
-                // Two groups, because the app can only half-keep the promise
-                // its name makes: three languages are translated end to end;
-                // the other 60-odd get LLM coaching text — corrections,
-                // notes, word meanings — in their language, with the app's
-                // own static copy staying English. Splitting the list says
-                // that before the choice instead of after it.
-                let (translated, coachingOnly) = nativeChoiceGroups
-                Section {
-                    ForEach(translated, id: \.self) { code in
-                        Text(LanguageCatalog.endonym(code)).tag(code)
-                    }
-                } header: {
-                    Text(explain("App is translated"))
-                }
-                Section {
-                    ForEach(coachingOnly, id: \.self) { code in
-                        Text(LanguageCatalog.endonym(code)).tag(code)
-                    }
-                } header: {
-                    Text(explain("Corrections and notes only — app stays English"))
-                }
+            // A menu of 60+ languages is a scroll inside a popover, so this
+            // wants a whole pushed screen. It is NOT a `.navigationLink`
+            // Picker: that style flattens Sections inside it, and the two
+            // group headers came out looking like two untappable language
+            // rows sitting among the languages. Hand-rolled list, real
+            // headers and footers.
+            NavigationLink {
+                AppLanguagePage(selection: $appState.nativeLanguage,
+                                groups: nativeChoiceGroups)
             } label: {
                 // Names the EFFECT, not the fact: what this decides is which
                 // language the app explains itself in.
                 row(icon: "globe",
                     title: "App language",
-                    subtitle: "Corrections, notes and word meanings")
+                    subtitle: LanguageCatalog.endonym(appState.nativeLanguage))
             }
-            // A menu of 60+ languages is a scroll inside a popover; the push
-            // style gives the list a whole screen.
-            .pickerStyle(.navigationLink)
         } header: {
             Text("Learning")
         } footer: {
@@ -742,6 +737,16 @@ struct MeTab: View {
             .joined(separator: " · ")
     }
 
+    /// The row's one line. Someone who hasn't qualified still sees the club
+    /// and its bar — the door has to be visible from outside or nobody walks
+    /// toward it.
+    private var coreClubSummary: String {
+        guard let m = coreMembership else { return chrome("100 seats · 28 of 30 days to enter") }
+        return m.seated
+            ? chrome("Member #\(m.joinNumber) · \(m.daysTotal) days")
+            : chrome("Member #\(m.joinNumber) · no seat right now")
+    }
+
     private var planPage: some View {
         List {
             Section {
@@ -907,6 +912,59 @@ extension MeTab {
     func persistTimes() {
         DailyCallStore.shared.times = callTimes
         appState.refreshDailyCall()
+    }
+}
+
+/// The app-language list, split in two because the app can only half-keep the
+/// promise its name makes: a handful of languages are translated end to end;
+/// the other 60-odd get LLM coaching text — corrections, notes, word meanings
+/// — in their language, with the app's own static copy staying English. The
+/// split has to say that BEFORE the choice, which is what the group footers
+/// are for; a header alone reads as a category name, not a caveat.
+private struct AppLanguagePage: View {
+    @Binding var selection: String
+    let groups: (translated: [String], coachingOnly: [String])
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(groups.translated, id: \.self, content: choice)
+            } header: {
+                Text(explain("Fully translated"))
+            } footer: {
+                Text(explain("Everything you read in the app — menus, buttons, corrections, notes — is in this language."))
+            }
+            Section {
+                ForEach(groups.coachingOnly, id: \.self, content: choice)
+            } header: {
+                Text(explain("Corrections and notes only"))
+            } footer: {
+                Text(explain("Your corrections, notes and word meanings come back in this language. The app's own menus and buttons stay English."))
+            }
+        }
+        .navigationTitle("App language")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Picking pops back, the way a pushed Settings list does — staying put
+    /// after a checkmark moves leaves the learner wondering if it took.
+    private func choice(_ code: String) -> some View {
+        Button {
+            selection = code
+            dismiss()
+        } label: {
+            HStack {
+                Text(LanguageCatalog.endonym(code))
+                    .foregroundStyle(.primary)
+                Spacer()
+                if code == selection {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(.tint)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
     }
 }
 
