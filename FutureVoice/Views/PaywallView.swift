@@ -306,9 +306,14 @@ struct PaywallView: View {
             }
 
             Picker("Billing period", selection: $period) {
-                ForEach(PlanPeriod.allCases) { Text($0.label).tag($0) }
+                ForEach(availablePeriods) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
+            .onChange(of: availablePeriods) { _, periods in
+                // A period whose SKU vanished must not stay selected, or the
+                // cards below render a plan nobody can buy.
+                if !periods.contains(period), let first = periods.first { period = first }
+            }
 
             VStack(spacing: 14) {
                 // Tier = amount of talk time, not features — the names say
@@ -372,6 +377,20 @@ struct PaywallView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 8)
+    }
+
+    /// Billing periods the picker offers: only those with a product actually
+    /// on sale, so a SKU that doesn't exist in App Store Connect can't be
+    /// selected into "This plan isn't available" (weekly is exactly that today
+    /// — it lives in the DB catalog with no locked price and no ASC product).
+    /// Data-driven on purpose: creating the weekly products later makes the
+    /// segment appear with no code change. With nothing loaded — the beta, or
+    /// products not yet created — fall back to the two the catalog sells.
+    private var availablePeriods: [PlanPeriod] {
+        let live = PlanPeriod.allCases.filter { p in
+            store.options.contains { $0.plan.period == p.rawValue && $0.product != nil }
+        }
+        return live.isEmpty ? [.monthly, .annual] : live
     }
 
     /// Apple's standard EULA — the licence this app ships under. Swap this for

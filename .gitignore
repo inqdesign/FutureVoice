@@ -60,3 +60,6 @@ android/.gradle/
 android/.kotlin/
 android/captures/
 .cxx/
+
+# Release build output (xcodebuild -derivedDataPath)
+build-release/
