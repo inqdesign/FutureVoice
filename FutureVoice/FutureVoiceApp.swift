@@ -565,6 +565,8 @@ final class AppState: ObservableObject {
     func resetOnboarding() {
         resetVoiceClone()              // stashes voiceCloneId for later delete, sets nil
         PersonaStore.shared.clear()
+        // Or the replay skips the two screens most likely to need re-testing.
+        ConsentStore.shared.reset()
         persona = nil
         setupComplete = false
     }
@@ -861,6 +863,10 @@ final class AppState: ObservableObject {
         voiceAccentId = nil
         pendingDeleteVoiceId = nil
         PhraseAudioStore.shared.clearOwnVoiceLineage()
+        // The defaults are gone above, but this singleton's published values
+        // would stay warm until relaunch — and a warm `isAgeVerified` waves
+        // whoever signs in next straight past the age gate.
+        ConsentStore.shared.reset()
         persona = nil
         setupComplete = false
         learnerProfile = ProfileStore.shared.load(targetLanguage: targetLanguage, proficiency: proficiency)

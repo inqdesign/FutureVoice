@@ -37,15 +37,16 @@
   <a class="lang" href="/privacy-ko.html">한국어</a>
   <a class="top" href="/">← nawana</a>
   <h1>Privacy Policy</h1>
-  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective July 23, 2026</p>
+  <p class="meta">nawana · Dear RoRo, Munich, Germany · Effective August 14, 2026</p>
 
   <p>nawana is a language-learning app that clones your voice — once, with your explicit consent — so you can practice speaking with a fluent version of yourself. Your voice is the most personal data there is, and this policy explains exactly what we do and don't do with it.</p>
 
   <h2>The short version</h2>
   <ul>
+    <li><strong>You must be 16 or older.</strong> Building a voice model means processing biometric data, so you confirm your age before recording — we keep the confirmation, never a birth date.</li>
     <li><strong>One 60-second recording at setup.</strong> The app never records you outside a conversation or exercise you started yourself.</li>
     <li><strong>Your learning data stays on your iPhone.</strong> Sessions, transcripts, drill cards, vocabulary, and progress are stored on your device, not on our servers.</li>
-    <li><strong>No ads, no tracking, no analytics SDKs.</strong> We don't sell or share your data for advertising, and the app contains no third-party tracking.</li>
+    <li><strong>No ads, no cross-app tracking.</strong> We don't sell or share your data for advertising. The app measures its own usage (which screens people reach, whether a talk finished) through PostHog — see below — and nothing else.</li>
     <li><strong>Delete anytime.</strong> Re-recording your voice permanently deletes the old clone. Deleting your account removes your voice clone and account data.</li>
   </ul>
 
@@ -56,14 +57,18 @@
     <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by ElevenLabs; the app keeps only a reference to your voice</td></tr>
     <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Transcribed on-device where possible; conversation text is processed per-request and results are stored on your iPhone</td></tr>
     <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple (purchase) + our backend (balance)</td></tr>
+    <tr><td>Product usage events (e.g. "a talk ended", "a scene played")</td><td>Understanding which parts of the app work, and fixing the parts that don't</td><td>PostHog, on EU servers, keyed to a random account identifier</td></tr>
   </table>
+  <p>The usage events carry no advertising identifier, no screen recording, and no automatic screen tracking — only events we wrote by hand, tagged with the random UUID of your account. They never contain what you said or what your fluent self replied.</p>
 
-  <h2>Your voice, treated carefully</h2>
+  <h2>Your voice is biometric data</h2>
+  <p>A model built from a recording of your voice can identify you, so we treat it as what the law calls it: special-category biometric data under GDPR Art. 9, a "voiceprint" under the Illinois Biometric Information Privacy Act, and sensitive information under Korea's PIPA. Every one of those regimes requires a consent that is <strong>separate</strong> from the general terms, informed, and recorded — so it is its own screen with its own toggle, shown before the microphone is ever requested, and the date you gave it is stored and shown back to you in Settings → Privacy.</p>
   <ul>
     <li>Voice cloning happens only after you deliberately record the 60-second setup sample. There is no passive listening.</li>
     <li>Your clone reproduces <strong>only your own voice</strong>. nawana cannot be used to clone anyone else.</li>
+    <li>The model is used for exactly one purpose: speaking your practice lines back in your own voice. It is never sold, shared, or used to train any model.</li>
     <li>Re-record anytime — creating a new clone permanently deletes the previous one.</li>
-    <li>Delete your voice or your entire account anytime from the app (Me → Account).</li>
+    <li>Withdraw your consent at any time in the app (Settings → Privacy → Withdraw consent &amp; delete my voice). Withdrawal deletes the model here and at ElevenLabs. You can also delete your entire account.</li>
   </ul>
 
   <h2>Who processes data on our behalf</h2>
@@ -73,13 +78,14 @@
     <li><strong>ElevenLabs</strong> — voice cloning and speech synthesis of your fluent lines.</li>
     <li><strong>Google (Gemini)</strong> — conversation replies, fluent rewrites, and session analysis. Text only; your audio is not sent to Google.</li>
     <li><strong>Apple</strong> — Sign in with Apple, subscriptions, and on-device speech recognition.</li>
+    <li><strong>PostHog</strong> — product usage events, hosted in the EU. No advertising identifiers, no session replay, no automatic screen tracking.</li>
   </ul>
   <p>These processors act under contract for us and may not use your data for their own purposes.</p>
 
   <h2>What we don't do</h2>
   <ul>
-    <li>No advertising, no data sales, no cross-app tracking.</li>
-    <li>No third-party analytics SDKs inside the app.</li>
+    <li>No advertising, no data sales, no cross-app tracking. Nothing is shared with data brokers, and the app never asks for tracking permission because it does not track you across other companies' apps or sites.</li>
+    <li>No session replay, no screen recording, no advertising identifier.</li>
     <li>No recording outside an activity you started.</li>
     <li>No use of your voice or conversations to train our own or third-party AI models.</li>
   </ul>
@@ -87,15 +93,17 @@
   <h2>Retention and deletion</h2>
   <ul>
     <li>Learning data (sessions, drills, progress) lives on your device and disappears when you delete the app.</li>
-    <li>Your voice clone exists until you replace it, delete it, or delete your account.</li>
+    <li>Your voice clone exists until you replace it, delete it, or delete your account. We do not keep it on any other schedule and we do not archive superseded clones.</li>
+    <li>The record of your consent — the date you gave it, and the fact that you confirmed your age — is kept while your account exists, because we are required to be able to show that consent was given. It is deleted with your account.</li>
     <li>Account deletion (in the app: Me → Account → Delete account) removes your voice clone, account record, and credit balance. Purchase records are retained by Apple per their policy.</li>
   </ul>
 
   <h2>Your rights (GDPR)</h2>
-  <p>Dear RoRo (Munich, Germany) is the data controller. You have the right to access, correct, export, restrict, or delete your personal data, and to lodge a complaint with a supervisory authority. Voice data is processed on the basis of your explicit consent, which you can withdraw at any time by deleting your voice or account.</p>
+  <p>Dear RoRo (Munich, Germany) is the data controller. You have the right to access, correct, export, restrict, or delete your personal data, and to lodge a complaint with a supervisory authority. Voice data is processed on the basis of your explicit consent (Art. 9(2)(a)), which you can withdraw at any time — in the app under Settings → Privacy, or by deleting your account. Withdrawal is as easy as consent was, and does not affect processing that already happened.</p>
 
-  <h2>Children</h2>
-  <p>nawana is not directed at children under 13 (or the minimum age in your country), and we do not knowingly collect their data.</p>
+  <h2>Age</h2>
+  <p><strong>nawana is for people aged 16 and over.</strong> Before your voice is recorded, setup asks you to confirm you are 16 or older, on the same screen that explains what happens to your voice. We store that confirmation and nothing else — <strong>we never ask for or keep your date of birth</strong>, because the only fact the app needs is "old enough". We do not knowingly collect data from anyone below that age; if you believe we have, write to us and we will delete it.</p>
+  <p>Sixteen is not an arbitrary number. It is the age of digital consent under GDPR Art. 8 in Germany, where we are established; and ElevenLabs, which builds the voice model, does not permit its service to be made available to anyone under 13, or to 13–17-year-olds without a parent or guardian's consent, which we have no way to verify.</p>
 
   <h2>Changes and contact</h2>
   <p>If this policy changes materially, we'll note it in the app or on this page. Questions or requests: <a href="mailto:hello.dearroroapp@gmail.com">hello.dearroroapp@gmail.com</a></p>

@@ -13,6 +13,9 @@ struct RootTabView: View {
     /// (no subscription during the beta). Explains the free quota + invites.
     @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
     @State private var showingBetaWelcome = false
+    /// Retroactive age declaration for pre-consent-step installs — see
+    /// `AgeCheckSheet`. Never shown to anyone who came through onboarding.
+    @State private var showingAgeCheck = false
     /// Non-nil while the free-talk call is up. A fresh UUID per call gives
     /// ConversationView a clean view identity each time (same reason
     /// ConversationHome presents by item, not Bool).
@@ -121,8 +124,16 @@ struct RootTabView: View {
                     .zIndex(2)
             }
         }
+        // Installs that cloned a voice before the consent step existed never
+        // pass back through onboarding, so the age declaration comes to them.
+        // Presented from onAppear rather than a computed binding so a swipe-away
+        // is honoured for this run and simply asks again next launch.
+        .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
         .onAppear {
             if !betaWelcomeSeen { showingBetaWelcome = true }
+            if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
+                showingAgeCheck = true
+            }
             // Populate the home-screen widgets on first entry. The scenePhase
             // refresh only fires on background↔active transitions, so a cold
             // launch that goes straight to foreground wouldn't otherwise

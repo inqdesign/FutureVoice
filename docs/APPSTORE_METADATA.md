@@ -16,7 +16,7 @@
 | **Primary Category** | Education |
 | **Secondary Category** | Productivity |
 | **Price** | Free (with In-App Purchases / subscriptions) |
-| **Age Rating** | 4+ |
+| **Age Rating** | **16+** (see §4 — was 4+, which was wrong on three counts) |
 
 ### Support / URLs
 | Field | Value |
@@ -215,10 +215,34 @@ nawana 베타에 오신 걸 환영합니다.
 
 ### 3. App Privacy labels
 - [ ] Audio data (voice clone — linked to user, app functionality)
+- [ ] **Sensitive Info** — the voice model is biometric data (GDPR Art. 9 / BIPA voiceprint / PIPA sensitive). Declare it; "Audio Data" alone under-declares what a *cloneable* voice is.
 - [ ] Email/name (Sign in with Apple) · Purchase history · User content (conversations)
 - [ ] Tracking: none
 
-### 4. Age rating questionnaire → 4+
+### 4. Age rating questionnaire → **16+**
+
+`4+` was the old answer and it does not survive the 2025 questionnaire overhaul
+(4+ / 9+ / 13+ / 16+ / 18+; 12+ and 17+ are gone, and answering the new
+questions became mandatory 2026-01-31). Three separate things push it up:
+
+- **AI-generated content.** Apple explicitly says to account for "artificial
+  intelligence assistants and chatbot functionality" when judging what the app
+  can surface. Every Talk turn and Watch scene is Gemini output — there is no
+  4+ guarantee behind it.
+- **Social media capability.** Find people (`public_personas`) lets a learner
+  browse self-introductions written by strangers. Apple's July 2026 questions
+  define that capability as redistributing or interacting with user-generated
+  content through a feed or similar discovery, and it fixes a **13+ floor**;
+  the answers became mandatory September 2026.
+- **The 16+ minimum we now enforce ourselves.** `ConsentStore.minimumAge` is
+  16 (ElevenLabs' under-13 ban and 13–17 parental-consent rule, plus GDPR
+  Art. 8's German age of digital consent). An App Store rating that says a
+  9-year-old may install an app whose own gate turns them away is a
+  contradiction the reviewer will find.
+
+Answer the questionnaire honestly to those three and take whatever it returns,
+but do not ship below 16 — the app's own gate is the binding number.
+
 ### 5. Pricing: Free + country availability
 
 ### 6. Version metadata (copy from this doc, EN + KR)

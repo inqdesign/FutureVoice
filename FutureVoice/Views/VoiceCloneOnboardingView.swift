@@ -11,22 +11,26 @@ import SwiftUI
 /// entering a page):
 ///
 ///   1. **Intro**   — the narrative: another you, already fluent; you follow.
-///   2. **Mic**     — never Bluetooth earbuds; the mic permission is asked
+///   2. **Consent** — the voice model is biometric data, so its permission is
+///                    its own screen with its own toggle, before the mic is
+///                    even asked for. Skipped once consent is on record (a
+///                    re-record is the same permission). See `ConsentStore`.
+///   3. **Mic**     — never Bluetooth earbuds; the mic permission is asked
 ///                    HERE, on its own step, not mid-flow.
-///   3. **Spot**    — LIVE quiet-spot finder: ambient monitoring drives the
+///   4. **Spot**    — LIVE quiet-spot finder: ambient monitoring drives the
 ///                    orb (noise stirs it, calm settles it) plus a verdict
 ///                    line, so the user walks the phone to the right room.
 ///                    Can't record now → it waits; bad take → re-record.
-///   4. **Script**  — read the script; mistakes are fine, keep going. Only
+///   5. **Script**  — read the script; mistakes are fine, keep going. Only
 ///                    the explicit "Record my voice" tap starts recording.
 ///
 /// Then the performance half:
 ///
-///   5. **Recording** — the orb ignites with the LIVE mic level while the
+///   6. **Recording** — the orb ignites with the LIVE mic level while the
 ///                      teleprompter scrolls; a ring tracks the 60–90s window.
-///   6. **Review**    — listen back + the deterministic quality verdict.
-///   7. **Becoming**  — uploading: the orb thinks, cycling all six palettes.
-///   8. **Meet**      — the clone SPEAKS its first words in the user's own
+///   7. **Review**    — listen back + the deterministic quality verdict.
+///   8. **Becoming**  — uploading: the orb thinks, cycling all six palettes.
+///   9. **Meet**      — the clone SPEAKS its first words in the user's own
 ///                      voice; they pick the theme their fluent self wears.
 struct VoiceCloneOnboardingView: View {
     @EnvironmentObject private var appState: AppState
@@ -36,6 +40,12 @@ struct VoiceCloneOnboardingView: View {
     @StateObject private var player = AudioPlayer()
 
     @State private var status: Status = .intro
+    /// The two toggles on the `.consent` step, which together arm its Next.
+    /// Never pre-checked: a consent that arrives already ticked is not a
+    /// consent — so they start false every time the step is shown, and the
+    /// step is only shown when there's nothing on record (see `stepAfterIntro`).
+    @State private var agreedToAge = false
+    @State private var agreedToVoiceCloning = false
     @State private var error: String?
     @State private var startedAt: Date?
     @State private var elapsedSeconds: Double = 0
@@ -83,7 +93,9 @@ struct VoiceCloneOnboardingView: View {
     private static let pendingTakeKey = "futurevoice.pendingCloneTake"
 
     enum Status: Int, Equatable {
-        case intro, mic, spot, script   // the wizard — one idea per screen
+        // Order is load-bearing: `prepareNativeScript` compares rawValues to
+        // decide whether the script choice is still ahead of the reader.
+        case intro, consent, mic, spot, script   // the wizard — one idea per screen
         case recording
         case reviewing   // recorded; user can listen + see quality before cloning
         case account     // sign-up moment: the clone needs the server NOW
@@ -230,6 +242,7 @@ struct VoiceCloneOnboardingView: View {
     private var stageTitle: String {
         switch status {
         case .intro:     return "Your fluent self"
+        case .consent:   return "Your voice, your call"
         case .spot:      return "Find a quiet spot"
         case .mic:       return "Mic check"
         case .script:    return "Read this aloud"
@@ -243,7 +256,7 @@ struct VoiceCloneOnboardingView: View {
 
     private var orbMode: Futureself.Mode {
         switch status {
-        case .intro, .mic, .script, .account:
+        case .intro, .consent, .mic, .script, .account:
             return .idle
         // The spot step wears listening: ambient noise visibly stirs the
         // surface, and finding a quiet room visibly settles it.
@@ -257,7 +270,7 @@ struct VoiceCloneOnboardingView: View {
 
     private var orbLevel: Float {
         switch status {
-        case .intro, .mic, .script, .account:
+        case .intro, .consent, .mic, .script, .account:
             return 0
         case .spot:      return recorder.levels
         case .recording: return recorder.levels
@@ -301,6 +314,7 @@ struct VoiceCloneOnboardingView: View {
     private var content: some View {
         switch status {
         case .intro:     introContent
+        case .consent:   consentContent
         case .mic:       micContent
         case .spot:      spotContent
         case .script:    scriptContent
@@ -352,7 +366,79 @@ struct VoiceCloneOnboardingView: View {
             .transition(.opacity)
     }
 
-    // Step 2 — the mic. Permission is asked here, on its own step, so the
+    // Step 2 — age + biometric consent, on one screen, gating the CTA.
+    //
+    // A voice model is GDPR Art. 9 special-category data, an Illinois BIPA
+    // "voiceprint", and PIPA sensitive information; all three want a consent
+    // that is SEPARATE from the general terms, informed about who processes it
+    // and for how long, and recorded. The age sits here rather than on a screen
+    // of its own because it exists for the same reason the consent does — the
+    // provider that builds the model forbids under-16s and forbids us passing
+    // its service on under looser terms than we got it — and because a lone
+    // "how old are you?" screen in front of a language app reads as a form to
+    // get past, not as a fact about what happens next.
+    //
+    // Both toggles start OFF and Next is dead until both are on. Neither is
+    // ever pre-ticked: a consent that arrives already agreed is not a consent,
+    // and an age box that does is not a check.
+    //
+    // It sits between the narrative and the mic on purpose: after the user
+    // knows what the clone is FOR (an agreement to something unexplained isn't
+    // informed) and before anything has been recorded.
+    private var consentContent: some View {
+        VStack(spacing: 22) {
+            stepHeader(explain("Before the mic."),
+                       explain("A voice model is personal in a way a password isn't. Here's exactly what happens to it."))
+
+            VoiceConsentDetail()
+
+            VStack(alignment: .leading, spacing: 14) {
+                Toggle(isOn: $agreedToAge) {
+                    Text(explain("I'm \(ConsentStore.minimumAge) or older."))
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Toggle(isOn: $agreedToVoiceCloning) {
+                    Text(explain("I agree to my recording being used to build my voice model."))
+                        .font(.subheadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: 340)
+
+            Link(explain("Privacy Policy"), destination: ConsentStore.privacyURL)
+                .font(.footnote)
+        }
+        .padding(.horizontal, 8)
+        .transition(.opacity)
+    }
+
+    /// The plain-language description of what happens to a voice recording:
+    /// who processes it, what comes out, how long it lives, and how it ends.
+    /// Sits above the toggles because consent to something unexplained isn't
+    /// informed consent — this IS the disclosure the toggles agree to.
+    private struct VoiceConsentDetail: View {
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                row("waveform", explain("Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data."))
+                row("person.fill.viewfinder", explain("It is used for one thing: speaking your practice lines back in your own voice. It is never sold, shared, or used to train anyone else's model."))
+                row("trash", explain("It lives until you replace it or delete it. Deleting your account deletes it too."))
+            }
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: 340)
+        }
+
+        private func row(_ symbol: String, _ text: String) -> some View {
+            Label {
+                Text(text).fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(.tint)
+            }
+        }
+    }
+
+    // Step 3 — the mic. Permission is asked here, on its own step, so the
     // system dialog never interrupts anything else (and so the next step can
     // listen to the room).
     private var micContent: some View {
@@ -707,6 +793,18 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
+    /// Where Next goes from the intro, and where Back returns to from the mic.
+    ///
+    /// The consent step is SKIPPED once both answers are on record — a
+    /// re-record builds a new model from a new take, but it's the same
+    /// permission and the same person, and re-showing the screen would mean
+    /// either asking twice for one thing or (worse) showing pre-ticked boxes,
+    /// which isn't a consent at all.
+    private var stepAfterIntro: Status {
+        let consent = ConsentStore.shared
+        return consent.hasVoiceConsent && consent.isAgeVerified ? .mic : .consent
+    }
+
     // MARK: - Action bar
 
     @ViewBuilder
@@ -717,10 +815,25 @@ struct VoiceCloneOnboardingView: View {
                 // Cross-stage back: reopen the persona cards. The published
                 // persona is only nil-ed — the store keeps the data, and the
                 // intake reopens pre-filled from it.
-                wizardBar(next: "Next", onBack: { appState.persona = nil }) { status = .mic }
+                wizardBar(next: "Next", onBack: { appState.persona = nil }) {
+                    agreedToAge = false
+                    agreedToVoiceCloning = false
+                    status = stepAfterIntro
+                }
+
+            case .consent:
+                // Next is dead until BOTH toggles are on — the whole point of
+                // an explicit consent is that it can't be walked past.
+                wizardBar(next: "Next",
+                          nextDisabled: !(agreedToAge && agreedToVoiceCloning),
+                          backTo: .intro) {
+                    ConsentStore.shared.confirmAge()
+                    ConsentStore.shared.recordVoiceConsent()
+                    status = .mic
+                }
 
             case .mic:
-                wizardBar(next: "Next", backTo: .intro) { handleMicPermission() }
+                wizardBar(next: "Next", backTo: stepAfterIntro) { handleMicPermission() }
 
             case .spot:
                 wizardBar(next: "Next", backTo: .mic) { status = .script }
@@ -842,6 +955,7 @@ struct VoiceCloneOnboardingView: View {
     /// same grammar SetupFlowView uses, so onboarding reads as one flow.
     @ViewBuilder
     private func wizardBar(next: String, nextIcon: String? = nil,
+                           nextDisabled: Bool = false,
                            backTo: Status? = nil, onBack: (() -> Void)? = nil,
                            action: @escaping () -> Void) -> some View {
         HStack(spacing: 12) {
@@ -869,6 +983,9 @@ struct VoiceCloneOnboardingView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+            // Only the primary — Back must stay live, or a step that gates
+            // its Next (the consent toggle) becomes a wall.
+            .disabled(nextDisabled)
         }
     }
 
@@ -1231,6 +1348,7 @@ struct VoiceCloneOnboardingView: View {
         guard let stage = UserDefaults.standard.string(forKey: "cloneStage") else { return }
         switch stage {
         case "spot":      status = .spot
+        case "consent":   status = .consent
         case "mic":       status = .mic
         case "script":    status = .script
         case "recording":

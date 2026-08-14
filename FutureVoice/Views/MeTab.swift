@@ -7,6 +7,10 @@ struct MeTab: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    /// The consent record written during onboarding — read back and revocable
+    /// on the Privacy page. Singleton, so `@ObservedObject`.
+    @ObservedObject private var consent = ConsentStore.shared
     @AppStorage("futurevoice.dailyGoalMinutes") private var dailyGoalMinutes = 10
     /// Fallback voice for Watch scenes with no linked persona — same key
     /// `ScenarioDetailView.syntheticCounterpart` reads via `VoicePreset.sceneDefault`.
@@ -50,6 +54,8 @@ struct MeTab: View {
     @State private var pickingAccent = false
     @State private var importingBackup = false
     @State private var backupResult: String?
+    @State private var confirmingConsentWithdrawal = false
+    @State private var withdrawingConsent = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
@@ -131,6 +137,13 @@ struct MeTab: View {
                         row(icon: "externaldrive",
                             title: "Practice data",
                             subtitle: "Export or import this device's practice")
+                    }
+                    NavigationLink {
+                        privacyPage
+                    } label: {
+                        row(icon: "hand.raised",
+                            title: "Privacy",
+                            subtitle: privacySummary)
                     }
                 }
 
@@ -830,6 +843,99 @@ struct MeTab: View {
         List { backupSection }
             .navigationTitle("Practice data")
             .navigationBarTitleDisplayMode(.inline)
+    }
+
+    // MARK: - Privacy
+
+    private var privacySummary: String {
+        consent.hasVoiceConsent
+            ? chrome("Voice consent · policy")
+            : chrome("Policy")
+    }
+
+    /// Where a consent given during onboarding can be READ BACK and TAKEN
+    /// AWAY. GDPR Art. 7(3) requires withdrawal to be as easy as giving, and
+    /// the only honest withdrawal for a voice model is deleting it — so that
+    /// button does exactly that, upstream at ElevenLabs included.
+    private var privacyPage: some View {
+        List {
+            Section {
+                if let given = consent.voiceConsentAt {
+                    row(icon: "waveform.badge.checkmark",
+                        title: "Voice model consent",
+                        subtitle: chrome("Given \(given.formatted(date: .abbreviated, time: .omitted))"))
+                }
+                if consent.ageConfirmedAt != nil {
+                    row(icon: "person.badge.shield.checkmark",
+                        title: "Age confirmed",
+                        subtitle: chrome("At least \(ConsentStore.minimumAge)"))
+                }
+            } header: {
+                Text("Consent")
+            } footer: {
+                Text(explain("Your voice model is biometric data. It's used only to speak your practice lines back in your own voice — never sold, never shared, never used to train anyone else's model."))
+            }
+
+            if consent.hasVoiceConsent || appState.voiceCloneId != nil {
+                Section {
+                    Button(role: .destructive) {
+                        confirmingConsentWithdrawal = true
+                    } label: {
+                        HStack {
+                            Label("Withdraw consent & delete my voice",
+                                  systemImage: "waveform.slash")
+                            if withdrawingConsent {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(withdrawingConsent)
+                } footer: {
+                    Text(explain("This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can't hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely."))
+                }
+            }
+
+            Section {
+                Link(destination: ConsentStore.privacyURL) {
+                    row(icon: "doc.text", title: "Privacy Policy",
+                        subtitle: "nawana.app/privacy")
+                }
+                Button {
+                    if let url = URL(string: "mailto:\(ConsentStore.contactEmail)") {
+                        openURL(url)
+                    }
+                } label: {
+                    row(icon: "envelope", title: "Contact us",
+                        subtitle: ConsentStore.contactEmail)
+                }
+            } footer: {
+                Text(explain("Write to us to see or correct what we hold about you, including the date you gave consent."))
+            }
+        }
+        .navigationTitle("Privacy")
+        .navigationBarTitleDisplayMode(.inline)
+        .alert("Delete your voice?", isPresented: $confirmingConsentWithdrawal) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { withdrawVoiceConsent() }
+        } message: {
+            Text(explain("Your voice model is deleted here and at ElevenLabs, and this can't be undone. You'll be asked to record a new one before your next call."))
+        }
+    }
+
+    /// Forget the permission first, then drop the model. Order matters: if the
+    /// delete fails upstream the consent is still gone, and the id stays queued
+    /// in `pendingDeleteVoiceId` so the next launch retries — the learner's
+    /// "no" takes effect immediately either way.
+    private func withdrawVoiceConsent() {
+        withdrawingConsent = true
+        consent.withdrawVoiceConsent()
+        appState.resetVoiceClone()
+        Task {
+            await appState.cleanupPreviousVoiceClone()
+            withdrawingConsent = false
+            dismiss()
+        }
     }
 
     /// The top-of-settings identity block: avatar + name, with the signed-in
