@@ -18,6 +18,9 @@ enum StudyWidgetRefresher {
         // Mirror the app's Futureself palette so the widget's pixel surface
         // wears the same theme the user picked in-app.
         StudyWidgetSnapshotStore.themeIndex = UserDefaults.standard.integer(forKey: "futureselfTheme")
+        // …and the language it wears. The extension can't read the app's
+        // defaults, so the chrome language rides along with the theme.
+        StudyWidgetSnapshotStore.chromeLanguage = UILanguage.chromeLanguage
         refreshWords()
         refreshExpressions()
         refreshProgress()
@@ -134,7 +137,9 @@ enum StudyWidgetRefresher {
             candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
                 updatedAt: Date(), hasBook: true, kind: "talk",
                 id: session.id.uuidString, title: session.displayTitle,
-                subtitle: "Talk", mastered: cur.masteredCount, total: cur.totalCount)))
+                // Subtitles are DATA by the time the widget sees them, so they
+                // have to be resolved here — the extension can only draw them.
+                subtitle: chrome("Talk"), mastered: cur.masteredCount, total: cur.totalCount)))
         }
 
         // Watch books — scenarios with progress that aren't archived/mastered.
@@ -143,8 +148,9 @@ enum StudyWidgetRefresher {
             let masteryDate = (cur.words + cur.expressions + cur.shadowLines)
                 .compactMap(\.masteredAt).max()
             let date = masteryDate ?? sc.lastUsedAt ?? sc.createdAt
-            let subtitle = sc.role.isEmpty ? (sc.isTopic == true ? "News topic" : "Situation")
-                                           : "with \(sc.role)"
+            let subtitle = sc.role.isEmpty
+                ? (sc.isTopic == true ? chrome("News topic") : chrome("Situation"))
+                : String(format: chrome("with %@"), sc.role)
             candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(
                 updatedAt: Date(), hasBook: true, kind: "watch",
                 id: sc.id.uuidString, title: sc.cardTitle,

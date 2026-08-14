@@ -185,6 +185,50 @@ final class DailyCallTests: XCTestCase {
         XCTAssertEqual(DailyCallStore.shared.times.count, 1)
     }
 
+    // MARK: - Rang out vs. still armed
+
+    /// A plan now owns SEVERAL fire times (`fireDates` arms every remaining
+    /// slot at once), but it carries only one `scheduledFor`. So "did this
+    /// ring out?" cannot be judged from that single field: at 08:05 the 08:00
+    /// slot is done while 13:00 and 20:00 are still armed with this very plan,
+    /// and settling it as missed makes both intents — which guard on
+    /// `!plan.isSettled` — no-ops when those alarms fire.
+    @MainActor
+    func testPlanIsNotRungOutWhileLaterSlotsAreStillArmed() throws {
+        let cal = Calendar(identifier: .gregorian)
+        let now = try XCTUnwrap(DateComponents(
+            calendar: cal, year: 2026, month: 8, day: 14, hour: 8, minute: 30).date)
+
+        DailyCallStore.shared.times = [
+            .init(hour: 8, minute: 0), .init(hour: 13, minute: 0), .init(hour: 20, minute: 0)
+        ]
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+
+        XCTAssertTrue(
+            DailyCallScheduler.hasSlotRemainingToday(after: now, calendar: cal),
+            "13:00 and 20:00 are still armed with this plan — it has not rung out")
+
+        // …and once the last one has passed, it has.
+        let evening = try XCTUnwrap(DateComponents(
+            calendar: cal, year: 2026, month: 8, day: 14, hour: 20, minute: 30).date)
+        XCTAssertFalse(
+            DailyCallScheduler.hasSlotRemainingToday(after: evening, calendar: cal),
+            "nothing left today — the call has genuinely rung out")
+    }
+
+    /// The single-call case must be unchanged: one slot, past its time, is a
+    /// missed call the moment the grace period is up.
+    @MainActor
+    func testOneCallADayStillRingsOutAsBefore() throws {
+        let cal = Calendar(identifier: .gregorian)
+        DailyCallStore.shared.times = [.init(hour: 8, minute: 0)]
+        defer { DailyCallStore.shared.times = [.init(hour: 8, minute: 0)] }
+
+        let now = try XCTUnwrap(DateComponents(
+            calendar: cal, year: 2026, month: 8, day: 14, hour: 8, minute: 30).date)
+        XCTAssertFalse(DailyCallScheduler.hasSlotRemainingToday(after: now, calendar: cal))
+    }
+
     // MARK: - Plan validity
 
     /// A language switch or a re-record must invalidate the standing plan —

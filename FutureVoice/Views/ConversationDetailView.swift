@@ -42,6 +42,11 @@ struct ConversationDetailView: View {
     @State private var showingContinue = false
     @State private var showingTranscript = false
     @State private var wordSheet: WordRef?
+    /// An expression from this talk, opened as its card. Words in this book
+    /// have always been tappable; expressions were static text with a
+    /// checkmark, which is why the chapter read as a dead list.
+    private struct PhraseRef: Identifiable { let value: String; var id: String { value } }
+    @State private var phraseSheet: PhraseRef?
     /// A correction opened as its drill card — the study surface (examples,
     /// variants, memory hook) for the Drill chapter's pairs.
     @State private var enrichmentCard: DrillCard?
@@ -116,6 +121,12 @@ struct ConversationDetailView: View {
             // The app's ONE word surface — same card the scenario books open.
             // Chevrons walk the list the word was tapped from.
             WordSheet(initialWord: ref.value, words: ref.siblings)
+                .environmentObject(appState)
+        }
+        .sheet(item: $phraseSheet, onDismiss: refresh) { ref in
+            // The app's ONE expression surface — same card the scenario books
+            // and the library open. Chevrons walk this talk's expressions.
+            ExpressionSheet(initialPhrase: ref.value, phrases: usedExpressions)
                 .environmentObject(appState)
         }
         .sheet(item: $fluentShadowTurn, onDismiss: refresh) { turn in
@@ -400,7 +411,7 @@ struct ConversationDetailView: View {
         case .expressions:
             pageTitle(chrome("Expressions"))
             expressionsPage
-            pageFooter(explain("Expressions you actually used this talk."))
+            pageFooter(explain("Expressions you actually used this talk. Tap one for its card — meaning, examples, and the sentences you said it in."))
         case .lines:
             pageTitle(chrome("Shadow"))
             shadowPage
@@ -497,17 +508,29 @@ struct ConversationDetailView: View {
     @ViewBuilder
     private var expressionsPage: some View {
         ForEach(usedExpressions, id: \.self) { e in
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "checkmark")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tint)
-                    .padding(.top, 3)
-                Text(e).font(.subheadline)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
+            Button {
+                phraseSheet = PhraseRef(value: e)
+            } label: {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tint)
+                        .padding(.top, 3)
+                    Text(ExpressionsView.display(e))
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .buttonStyle(.plain)
         }
         Color.clear.frame(height: 8)
     }

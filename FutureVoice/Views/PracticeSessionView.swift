@@ -24,9 +24,15 @@ struct PracticeSessionView: View {
         _stage = State(initialValue: includeCards ? 0 : 1)
     }
     @State private var activeShadow: PracticeStats.ShadowPick?
-    /// Reps already logged today when the session began — the done screen
-    /// reports THIS session's work, not the whole day's.
-    @State private var repsAtStart = -1
+    /// SHADOW reps already logged today when the session began — the done
+    /// screen reports THIS session's work, not the whole day's. Shadow reps
+    /// only: the old version compared the day's TOTAL, so a word judged in
+    /// another sheet could credit a session where nothing was said out loud.
+    @State private var shadowRepsAtStart = -1
+    /// Lines the learner tapped Skip on. Skipping used to be indistinguishable
+    /// from finishing — both just advanced the stage — so skipping every line
+    /// still ended on a green "That's your session".
+    @State private var skipped = 0
 
     private var isDone: Bool { stage > shadowPicks.count }
 
@@ -45,8 +51,8 @@ struct PracticeSessionView: View {
         .navigationTitle(stageTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if repsAtStart < 0 {
-                repsAtStart = PracticeLog.shared.day(Date())?.total ?? 0
+            if shadowRepsAtStart < 0 {
+                shadowRepsAtStart = PracticeLog.shared.day(Date())?.shadowReps ?? 0
             }
             // Stale entry (cards got cleared elsewhere) → skip to shadowing.
             if stage == 0, DrillStore.shared.due().isEmpty {
@@ -63,7 +69,7 @@ struct PracticeSessionView: View {
 
     private var stageTitle: String {
         if stage == 0 { return "Review" }
-        if isDone { return "Session done" }
+        if isDone { return saidSomething ? "Session done" : "Nothing said" }
         return shadowPicks.count > 1 ? "Shadow \(stage) of \(shadowPicks.count)" : "Shadow"
     }
 
@@ -109,6 +115,7 @@ struct PracticeSessionView: View {
             .padding(.horizontal, 16)
 
             Button("Skip") {
+                skipped += 1
                 withAnimation(.easeInOut(duration: 0.25)) { stage += 1 }
             }
             .font(.subheadline)
@@ -120,13 +127,22 @@ struct PracticeSessionView: View {
 
     // MARK: - Done stage
 
+    /// Did the learner actually say anything out loud in THIS session? A
+    /// recorded shadow attempt is the only evidence that counts — opening the
+    /// drill and backing out isn't practice, and neither is Skip.
+    private var saidSomething: Bool { sessionReps > 0 }
+
+    private var sessionReps: Int {
+        max(0, (PracticeLog.shared.day(Date())?.shadowReps ?? 0) - max(0, shadowRepsAtStart))
+    }
+
     private var doneStage: some View {
         VStack(spacing: 16) {
             Spacer()
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: saidSomething ? "checkmark.circle.fill" : "waveform.badge.mic")
                 .font(.system(size: 56))
-                .foregroundStyle(.green)
-            Text("That's your session")
+                .foregroundStyle(saidSomething ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tertiary))
+            Text(saidSomething ? "That's your session" : "Nothing said out loud")
                 .font(.title2.weight(.semibold))
             Text(sessionSummaryText)
                 .font(.subheadline)
@@ -150,10 +166,14 @@ struct PracticeSessionView: View {
     }
 
     private var sessionSummaryText: String {
-        let sessionReps = max(0, (PracticeLog.shared.day(Date())?.total ?? 0) - max(0, repsAtStart))
         if sessionReps > 0 {
             return "\(sessionReps) rep\(sessionReps == 1 ? "" : "s") this session — it all counts toward your level."
         }
-        return explain("Come back when the next cards are due.")
+        // Never "come back when the next cards are due" here: launched from
+        // the Shadowing challenge there are no cards, and the learner skipped
+        // — saying so plainly beats congratulating them for nothing.
+        return skipped > 0
+            ? explain("You skipped every line. They'll be waiting whenever you want to say them.")
+            : explain("Nothing recorded this time — shadowing only counts once you say the line.")
     }
 }

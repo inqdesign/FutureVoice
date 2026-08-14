@@ -263,7 +263,7 @@ struct ExpressionCard: View {
                             }
                         }
                     } else {
-                        Text(loading ? "…" : "—").font(.body).foregroundStyle(.secondary)
+                        lookupPlaceholder
                     }
                 }
 
@@ -273,7 +273,7 @@ struct ExpressionCard: View {
                             ForEach(examples) { exampleRow($0) }
                         }
                     } else {
-                        Text(loading ? "…" : "—").font(.body).foregroundStyle(.secondary)
+                        lookupPlaceholder
                     }
                 }
 
@@ -444,13 +444,19 @@ struct ExpressionCard: View {
     // MARK: - Logic
 
     private func load() async {
+        // `loading` FIRST: clearing the entry before flipping it flashed the
+        // "—" no-entry glyph for a frame on every phrase swap.
+        loading = true
         entry = nil
         sentences = store.sentences(containing: phrase)
-        loading = true
         // .expression, always — this card only ever holds multi-word chunks,
         // and the word prompt would gloss one word out of the middle of it.
-        entry = await WordLore.entry(for: phrase, native: appState.nativeLanguage,
-                                     target: appState.targetLanguage, kind: .expression)
+        let fetched = await WordLore.entry(for: phrase, native: appState.nativeLanguage,
+                                           target: appState.targetLanguage, kind: .expression)
+        // Same rule as the word card: a cancelled lookup must not clear the
+        // loading flag for the phrase that replaced it.
+        guard !Task.isCancelled else { return }
+        entry = fetched
         loading = false
     }
 
@@ -462,6 +468,26 @@ struct ExpressionCard: View {
     private func play(_ url: URL) {
         guard let data = try? Data(contentsOf: url) else { return }
         try? player.play(data, forceSessionReset: true)
+    }
+
+
+    /// While a dictionary entry is being generated, say so — with the same
+    /// spinner every other generation in the app uses. A bare "…" was
+    /// pixel-identical to the "—" no-entry state, so a slow first lookup
+    /// (a cold word runs a full LLM generation server-side) read as a frozen
+    /// screen rather than as work in progress.
+    @ViewBuilder
+    private var lookupPlaceholder: some View {
+        if loading {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.mini)
+                Text("Looking it up…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("—").font(.body).foregroundStyle(.secondary)
+        }
     }
 
     private func speakPhrase() async {

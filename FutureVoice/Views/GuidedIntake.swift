@@ -310,7 +310,7 @@ struct SpeakOrTypeField: View {
             locale = fallback
         }
         guard LanguageCatalog.canDictate(locale) else {
-            error = String(localized: "Dictation isn't available in this language on your device — you can still type.")
+            error = explain("Dictation isn't available in this language on your device — you can still type.")
             return
         }
         do {

@@ -86,11 +86,23 @@ enum SessionSummarizer {
         // Keep only expressions that literally appear in the user's own
         // turns — the LLM occasionally paraphrases, and we never show or
         // store an expression they didn't actually say.
-        let haystack = userTexts.joined(separator: " ").lowercased()
+        //
+        // Compared with punctuation and casing stripped, the SAME way the
+        // grammar quotes below are checked. A raw substring match silently
+        // dropped good expressions over a comma, an apostrophe form or a
+        // capital letter, which is why a talk full of usable phrases could
+        // end up with one odd survivor.
+        let haystack = CarryoverDetector.normalized(userTexts.joined(separator: " "))
         let verifiedExpressions = computed.expressionsUsed.filter { phrase in
-            let needle = phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let needle = CarryoverDetector.normalized(phrase)
             return !needle.isEmpty && haystack.contains(needle)
         }
+        #if DEBUG
+        let dropped = computed.expressionsUsed.count - verifiedExpressions.count
+        if dropped > 0 {
+            NSLog("EXPRCAPTURE dropped %d of %d as not-verbatim", dropped, computed.expressionsUsed.count)
+        }
+        #endif
         computed.expressionsUsed = verifiedExpressions
         VocabStore.shared.ingestExpressions(
             sessionId: sessionId, phrases: verifiedExpressions)

@@ -105,7 +105,7 @@ enum PublicPersonaService {
         var c = Counterpart(
             id: localId(forRemote: p.id),
             name: p.display_name,
-            relationship: String(localized: "Met on Future Voice"),
+            relationship: chrome("Met on Future Voice"),
             background: p.intro,
             conversationStyle: p.conversation_style,
             voicePresetId: VoicePreset.catalog.contains(where: { $0.id == p.voice_preset_id })

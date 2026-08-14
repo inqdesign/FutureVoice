@@ -12,43 +12,30 @@ import os
 ///   SwiftUI `Text("literal")` follows with no per-call code.
 /// - **Explanations** — anything the learner has to actually parse to act on:
 ///   why a score moved, what a credit is, what happens if they delete this.
-///   These are written in the learner's OWN language while their level is low,
-///   and switch to the target language once they can read them without effort.
-///   Resolved per call through `Bundle.explanations`.
+///   These are ALWAYS written in the language the learner picked as their own,
+///   whatever their level. Resolved per call through `Bundle.explanations`.
 ///
 /// Nothing here names a specific language. Adding German is a `de` column in
 /// `Localizable.xcstrings` — no code change, here or anywhere else.
 enum UILanguage {
-
-    /// The highest level that still gets explanations in their own language.
-    /// At B2 the learner reads target-language prose without it costing them
-    /// anything, and the exposure is worth more than the shortcut. A learner
-    /// who disagrees can move their level in Me.
-    static let nativeExplanationsThrough: CEFRLevel = .b1
-
-    /// Mirrors AppState's key so non-UI code can resolve the explanation
-    /// language without reaching into AppState.
-    static let proficiencyDefaultsKey = "futurevoice.proficiency"
 
     /// The language chrome is written in — always the language being learned.
     static var chromeLanguage: String {
         UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
     }
 
-    /// The language explanatory copy is written in: the learner's own language
-    /// until they outgrow needing it, the target language after.
+    /// The language explanatory copy is written in: the one the learner chose,
+    /// full stop.
+    ///
+    /// This used to flip to the target language above B1, on the theory that an
+    /// advanced learner reads target-language prose for free. Proficiency in
+    /// SPEAKING says nothing about wanting to decode a destructive-action
+    /// confirmation, and the flip silently overrode a setting the learner had
+    /// made by hand — a level they moved for calibration reasons quietly
+    /// changed what language the app talked to them in. An explicit choice
+    /// outranks an inference about it.
     static var explanationLanguage: String {
-        let level = UserDefaults.standard.string(forKey: proficiencyDefaultsKey)
-            .flatMap(CEFRLevel.init(rawValue:)) ?? .b1
-        return needsNativeExplanations(at: level) ? LanguageCatalog.currentNative : chromeLanguage
-    }
-
-    /// Ordering comes from `CEFRLevel: CaseIterable`, declared a1…c2.
-    static func needsNativeExplanations(at level: CEFRLevel) -> Bool {
-        let order = CEFRLevel.allCases
-        guard let here = order.firstIndex(of: level),
-              let cutoff = order.firstIndex(of: nativeExplanationsThrough) else { return true }
-        return here <= cutoff
+        LanguageCatalog.currentNative
     }
 }
 

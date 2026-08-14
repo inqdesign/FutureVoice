@@ -245,10 +245,14 @@ struct StudyDeckView: View {
                     // A mixed deck holds both kinds; each card must be looked
                     // up as what it is or an expression comes back glossed as
                     // one of its words.
-                    entry = await WordLore.entry(
+                    let fetched = await WordLore.entry(
                         for: top.text, native: appState.nativeLanguage,
                         target: appState.targetLanguage,
                         kind: top.kind == .expression ? .expression : .word)
+                    // The deck advances mid-lookup all the time; a cancelled
+                    // fetch must not clear the next card's loading flag.
+                    guard !Task.isCancelled else { return }
+                    entry = fetched
                     loadingEntry = false
                 }
         }
@@ -381,9 +385,20 @@ struct StudyDeckView: View {
                 exampleRow(ex)
             }
         } else {
-            Text(loadingEntry ? "…" : "—")
-                .font(.body)
-                .foregroundStyle(Self.onCardSecondary)
+            if loadingEntry {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(Self.onCard)
+                    Text("Looking it up…")
+                        .font(.subheadline)
+                        .foregroundStyle(Self.onCardSecondary)
+                }
+            } else {
+                Text("—")
+                    .font(.body)
+                    .foregroundStyle(Self.onCardSecondary)
+            }
         }
     }
 

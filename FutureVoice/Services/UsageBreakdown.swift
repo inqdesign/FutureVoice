@@ -24,8 +24,8 @@ struct UsageBreakdown {
         var minutes: Int { seconds / 60 }
         /// "12 min" / "40 sec" — under a minute must not read as "0 min".
         var durationLabel: String {
-            seconds >= 60 ? String(localized: "\(seconds / 60) min")
-                          : String(localized: "\(seconds) sec")
+            seconds >= 60 ? chrome("\(seconds / 60) min")
+                          : chrome("\(seconds) sec")
         }
     }
 
@@ -102,8 +102,8 @@ struct UsageBreakdown {
     /// `tts_scene` is Watch scene playback — the only two things that spend.
     private static func meterTitle(_ action: String) -> (String, String)? {
         switch action {
-        case "talk_time": return (String(localized: "Talking"), "phone.fill")
-        case "tts_scene": return (String(localized: "Watch scenes"), "play.circle.fill")
+        case "talk_time": return (chrome("Talking"), "phone.fill")
+        case "tts_scene": return (chrome("Watch scenes"), "play.circle.fill")
         default: return nil
         }
     }
@@ -113,15 +113,15 @@ struct UsageBreakdown {
     private static func freeTitle(action: String, purpose: String?) -> (String, String, String)? {
         switch purpose {
         case "drill", "enrichment":
-            return ("drills", String(localized: "Review drills"), "rectangle.stack.fill")
+            return ("drills", chrome("Review drills"), "rectangle.stack.fill")
         case "shadow":
-            return ("shadow", String(localized: "Shadowing"), "waveform")
+            return ("shadow", chrome("Shadowing"), "waveform")
         case "library":
-            return ("library", String(localized: "Word & phrase playback"), "text.book.closed.fill")
+            return ("library", chrome("Word & phrase playback"), "text.book.closed.fill")
         case "summary", "weekly":
-            return ("reports", String(localized: "Summaries & reports"), "doc.text.fill")
+            return ("reports", chrome("Summaries & reports"), "doc.text.fill")
         case "topics", "scenario-curriculum", "scene", "parse", "freetalk-openers":
-            return ("ideas", String(localized: "Building situations & topics"), "square.grid.2x2")
+            return ("ideas", chrome("Building situations & topics"), "square.grid.2x2")
         case "transcribe", "turn", "opener":
             // Part of a call — already counted under Talking; listing it
             // again as "free" would double-tell the same story.
@@ -129,7 +129,7 @@ struct UsageBreakdown {
         default:
             // Anything unmapped still deserves a line, but a generic one.
             return action.hasPrefix("gemini") || action.hasPrefix("tts")
-                ? ("other", String(localized: "Other free activity"), "sparkles")
+                ? ("other", chrome("Other free activity"), "sparkles")
                 : nil
         }
     }
@@ -197,19 +197,19 @@ struct UsageBreakdown {
         var out = UsageBreakdown()
         out.loaded = true
         out.today = [
-            Meter(key: "talk_time", title: String(localized: "Talking"),
+            Meter(key: "talk_time", title: chrome("Talking"),
                   icon: "phone.fill", seconds: 512, count: 18),
-            Meter(key: "tts_scene", title: String(localized: "Watch scenes"),
+            Meter(key: "tts_scene", title: chrome("Watch scenes"),
                   icon: "play.circle.fill", seconds: 143, count: 22),
         ]
         out.freeToday = [
-            FreeItem(key: "drills", title: String(localized: "Review drills"),
+            FreeItem(key: "drills", title: chrome("Review drills"),
                      icon: "rectangle.stack.fill", count: 34),
-            FreeItem(key: "shadow", title: String(localized: "Shadowing"),
+            FreeItem(key: "shadow", title: chrome("Shadowing"),
                      icon: "waveform", count: 12),
-            FreeItem(key: "ideas", title: String(localized: "Building situations & topics"),
+            FreeItem(key: "ideas", title: chrome("Building situations & topics"),
                      icon: "square.grid.2x2", count: 7),
-            FreeItem(key: "reports", title: String(localized: "Summaries & reports"),
+            FreeItem(key: "reports", title: chrome("Summaries & reports"),
                      icon: "doc.text.fill", count: 3),
         ]
         let today = dayKey(Date())
@@ -236,8 +236,8 @@ struct UsageBreakdown {
         parser.timeZone = TimeZone(identifier: "UTC")!
         parser.dateFormat = "yyyy-MM-dd"
         guard let date = parser.date(from: key) else { return key }
-        if key == dayKey(Date()) { return String(localized: "Today") }
-        if key == dayKey(Date().addingTimeInterval(-86_400)) { return String(localized: "Yesterday") }
+        if key == dayKey(Date()) { return chrome("Today") }
+        if key == dayKey(Date().addingTimeInterval(-86_400)) { return chrome("Yesterday") }
         let out = DateFormatter()
         out.timeZone = TimeZone(identifier: "UTC")!
         out.setLocalizedDateFormatFromTemplate("EEE d MMM")

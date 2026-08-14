@@ -27,6 +27,21 @@ Everything else is free, defended by invisible daily caps.**
 | **3. Minutes-NATIVE unit + tiers** | Credits stop existing as a unit: `user_credits.balance` holds **seconds** (beta balances converted ×40/3), and subscribers have **no balance at all** — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (**데일리 / Daily** `daily_*` = 300 s, resets midnight UTC; **무제한 / Unlimited** `unlimited_*` = 3600 s fair-use, no meter UI). Webhooks grant nothing on renewal. Signup/referral grants = 3960 s (66 min). Subscriber cap-out returns 402 `daily_cap_reached` (never a paywall); free pool spent returns 402 `insufficient_credits` (paywall). Clones free, capped 5/day past onboarding. Migration `20260811160000_minutes_native`. Caveat: pre-2026-08-11 builds divide the balance by 4.5 for display — numbers inflate until users update. | **Shipped 2026-08-11** |
 | **4. Hard paywall + trial** | No free tier: new signups get 0 seconds (`handle_new_user_credits` creates the row at zero), so the first talk 402s into the paywall — voice clone + onboarding greeting stay free as the hook. The 7-day trial is Apple's intro offer (`status='trialing'` via apple-webhook) and is metered at the **Daily** allowance (300 s/day) regardless of which plan is being trialed, so a trial-then-cancel can't cost 7 × 60 min. `PaywallView.offerTrial` removed — Apple's `isEligibleForIntroOffer` is the only trial gate now. Migration `20260811180000_hard_paywall_trial`. **BLOCKED on ASC**: products must exist under the new ids (`com.roro.futurevoice.daily_monthly` …) with a 7-day free-trial intro offer, and `BetaConfig.isBeta` must flip to false — until then a NEW signup can neither talk nor pay. | **Server shipped 2026-08-11 / app gated** |
 
+| **5. Watch leaves the talk meter** | Talk seconds meter against `daily_seconds` ALONE. Watch scenes meter by **count** against a new `subscription_plans.daily_scenes` (**Daily 2/day**, **Unlimited 20/day** fair-use), claimed once per scene via `begin_scene_play(user, scene_key)` — one key across every line of a scene, so a ten-line scene costs one count and a scene under way is never cut off. Cap-out returns 402 `scene_cap_reached` (never a paywall). Cached scenes never reach the server, so replays cost nothing, as promised. Backward compatible: a client that sends no `scene_key` stays on the `scene_seconds` pool and keeps today's economics exactly — only a registered scene moves to `scene_counted`, which the daily-seconds cap ignores. Migration `20260814100000_watch_scenes_by_count`. | **Shipped 2026-08-14 (server) / app in this build** |
+
+Why: measured on 2026-08-13, the one active Daily subscriber spent 101/164/95 s
+a day on scenes — about a fifth of a 300 s allowance — so someone using Watch
+as intended bought 5 minutes of talk and got three, with nothing on screen
+saying why. That is the taximeter-on-exploration failure the 2026-08-11
+revision existed to remove, regrown inside the new unit.
+
+Why a COUNT and not a bigger seconds pool: scene audio uses `fidelityModelId`
+(~2x per character upstream, model-blind pricing on our side), so a scene
+second costs roughly two talk seconds. The shared pool was accidentally acting
+as the Daily tier's cost ceiling; a count is what replaces that bound. At 2
+scenes/day a maxed Daily subscriber lands near €7.10 net rather than above it.
+Do NOT raise `daily_scenes` on the Daily tier without redoing that arithmetic.
+
 Rationale in one line: flat-rate bias — subscription revenue comes from
 people who under-use, and a visible per-click meter destroys the willingness
 of exactly those people. Guardrails (caps) protect the tail; prices don't

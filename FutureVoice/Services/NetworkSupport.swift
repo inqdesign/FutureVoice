@@ -88,6 +88,25 @@ extension URLSession {
         return URLSession(configuration: config)
     }()
 
+    /// Edge-function work whose result NOBODY is waiting to hear — today just
+    /// the per-turn verbatim transcription.
+    ///
+    /// Same settings as `edgeFunctions`; the point is the separate SESSION.
+    /// URLSession keeps its connection pool per instance, so the ~100 KB
+    /// base64 audio upload this carries gets its own connection instead of
+    /// sharing one HTTP/2 connection's stream window and send buffer with the
+    /// turn reply and the ElevenLabs stream — which both live on
+    /// `edgeFunctions` and both point at the same Supabase host. Measured
+    /// same-day, turns that carried the upload reached the reply's first
+    /// sentence 0.8–2.2 s later than turns that didn't.
+    static let edgeFunctionsBackground: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.waitsForConnectivity = true
+        config.timeoutIntervalForRequest = 40
+        config.timeoutIntervalForResource = 60
+        return URLSession(configuration: config)
+    }()
+
     /// Voice-clone sample upload: ~1–2 MB of WAV on a possibly-slow cellular
     /// uplink. Same connectivity behavior, roomier ceiling.
     static let edgeFunctionUploads: URLSession = {

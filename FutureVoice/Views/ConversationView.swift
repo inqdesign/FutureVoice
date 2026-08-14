@@ -158,8 +158,9 @@ struct ConversationView: View {
     /// Gemini → first-TTS-chunk pipeline and logged once when the fluent
     /// self actually starts SPEAKING (the moment users experience as "the
     /// answer arrived"). Keys: vad_wait_ms, finalize_ms, gemini_ms,
-    /// audio ("aac"/"wav"/"none"/KB), tts ("stream"/"buffered"/"cache"),
-    /// tts_first_ms, total_ms.
+    /// tts ("stream"/"buffered"/"cache"), tts_first_ms, total_ms. The audio
+    /// path moved to `talk_asr_upgrade` when the transcription call was
+    /// deferred past this row's ship time.
     @State private var turnTiming: [String: String] = [:]
     /// When the user finished speaking (endpoint fired) — anchor for total_ms.
     @State private var turnEndedSpeakingAt: Date?
@@ -178,6 +179,26 @@ struct ConversationView: View {
     /// The in-flight verbatim-transcription call. One per turn; cancelled when
     /// the next turn starts or the call screen closes.
     @State private var transcribeTask: Task<Void, Never>?
+
+    /// Turn work that is deliberately held until the fluent self is AUDIBLE.
+    ///
+    /// Both pieces used to run in the gap between "learner stops talking" and
+    /// "fluent self starts talking", and both made that gap worse:
+    ///   • the transcription upload shared one connection with the reply call
+    ///     and the TTS stream (all three are the same host + session), so the
+    ///     reply's first sentence measured 0.8–2.2 s later on turns that
+    ///     carried it — the learner waited on their own correction;
+    ///   • the recognizer's rescored line rewrote the bubble mid-wait, which
+    ///     reads as "it corrects me FIRST, then answers" even though nothing
+    ///     was ever waiting on it.
+    /// Neither is time-critical. Held here and flushed by `voiceDidStart()`,
+    /// they become what they were always meant to be: background work.
+    private struct DeferredTurnWork {
+        let turnId: UUID
+        /// The recognizer's late rescored line, if it landed during the wait.
+        var recognizerUpgrade: String?
+    }
+    @State private var deferredTurnWork: DeferredTurnWork?
 
     /// A reply whose OPENING SENTENCE is already playing on an open PCM stream
     /// while the model finishes writing the rest. Non-nil only between
@@ -1070,14 +1091,21 @@ struct ConversationView: View {
             resolvePendingTranscript(turnId)
             return
         }
-        // The learner's utterance is transcribed by its OWN call, running
-        // alongside this one — see `startTranscription`. It used to be a field
-        // on the turn call with the audio attached, which forced the model to
-        // ingest and transcribe before it could write the reply's first token:
-        // measured 4.1s to first reply vs 2.1s without the audio. The reply is
-        // the only thing the learner is waiting to HEAR, so it goes text-only
-        // and the corrected line catches up in the bubble a moment later.
-        startTranscription(forUserTurn: turnId)
+        // The learner's utterance is transcribed by its OWN call — see
+        // `startTranscription`. It used to be a field on the turn call with
+        // the audio attached, which forced the model to ingest and transcribe
+        // before it could write the reply's first token: measured 4.1s to
+        // first reply vs 2.1s without the audio. The reply is the only thing
+        // the learner is waiting to HEAR, so it goes text-only and the
+        // corrected line catches up in the bubble a moment later.
+        //
+        // That call is now also deferred until the voice is out. Running it
+        // HERE made it concurrent in control flow but not in resources: its
+        // audio upload shared a connection with the request below, and the
+        // reply's first sentence arrived 0.8–2.2s later for it. Held work
+        // resumes in `voiceDidStart()`; the failure paths below flush it too,
+        // so a turn that never speaks still gets its corrected transcript.
+        deferredTurnWork = DeferredTurnWork(turnId: turnId)
         do {
             let geminiStarted = Date()
             // TTS starts on the reply's FIRST SENTENCE, not the whole reply —
@@ -1169,15 +1197,25 @@ struct ConversationView: View {
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
             phase = .idle
+            // No voice will start for this turn, so nothing else will release
+            // the held work. The learner still deserves the corrected line —
+            // and Retry reuses this same user turn.
+            flushDeferredTurnWork()
         }
     }
 
     /// Fire the verbatim-transcription call for a user turn. Fully detached
     /// from the reply: it may land before it, after it, or not at all, and the
     /// bubble is correct at every one of those moments.
+    ///
+    /// Started only once the fluent self is audible (see `DeferredTurnWork`),
+    /// so the audio path is reported on `talk_asr_upgrade` rather than
+    /// `talk_turn_timing` — by the time it is known, the turn's timing row has
+    /// already shipped and writing into it would leak the value onto the NEXT
+    /// turn's row.
     private func startTranscription(forUserTurn turnId: UUID) {
         guard let encode = turnAudioEncode, encode.turnId == turnId else {
-            turnTiming["audio"] = "no_file"
+            logTranscriptionSkip("no_file")
             resolvePendingTranscript(turnId)
             return
         }
@@ -1186,22 +1224,19 @@ struct ConversationView: View {
         // the learner nothing but an unpolished line.
         let path = NetworkPathStatus.shared
         guard path.isSatisfied, !path.isConstrained else {
-            turnTiming["audio"] = "net"
+            logTranscriptionSkip("net")
             resolvePendingTranscript(turnId)
             return
         }
         let target = appState.targetLanguage
-        // The turn's timing row usually ships before this call resolves, so
-        // seed the field now — a missing "audio" key would read as a turn that
-        // never tried, which is exactly the ambiguity this key exists to kill.
-        turnTiming["audio"] = "pending"
         transcribeTask?.cancel()
         transcribeTask = Task { @MainActor in
             let encoded = await encode.task.value
-            turnTiming["audio"] = encoded.inline.map {
+            let audioPath = encoded.inline.map {
                 $0.mimeType == "audio/aac" ? "aac" : "wav"
             } ?? encoded.skip
             guard let inline = encoded.inline, !Task.isCancelled else {
+                logTranscriptionSkip(audioPath)
                 resolvePendingTranscript(turnId)
                 return
             }
@@ -1211,9 +1246,16 @@ struct ConversationView: View {
                 audio: inline, asrGuess: guess, targetLanguage: target,
                 idempotencyKey: "asr-turn:\(turnId.uuidString)")
             guard !Task.isCancelled, !isTornDown else { return }
-            applyGeminiTranscript(heard, to: turnId, guess: guess,
+            applyGeminiTranscript(heard, to: turnId, guess: guess, audio: audioPath,
                                   elapsedMs: Int(Date().timeIntervalSince(started) * 1000))
         }
+    }
+
+    /// A turn whose audio never made it as far as the transcription call.
+    /// Same event as a successful one so "how often is a turn left on the raw
+    /// on-device guess" is one query, not two.
+    private func logTranscriptionSkip(_ audio: String) {
+        Telemetry.log("talk_asr_upgrade", ["asr": "skipped", "audio": audio])
     }
 
     /// The audio-grounded line, once it lands. Wins over anything the
@@ -1224,7 +1266,7 @@ struct ConversationView: View {
     /// own clock: by the time it arrives the turn's timing row has usually
     /// already shipped.
     private func applyGeminiTranscript(_ heard: String?, to turnId: UUID,
-                                       guess: String, elapsedMs: Int) {
+                                       guess: String, audio: String, elapsedMs: Int) {
         defer { resolvePendingTranscript(turnId) }
         var outcome = "missing"
         if let heard, !heard.isEmpty, let idx = turns.firstIndex(where: { $0.id == turnId }) {
@@ -1237,6 +1279,7 @@ struct ConversationView: View {
             "asr": outcome,
             "ms": String(elapsedMs),
             "guess_len": String(guess.count),
+            "audio": audio,
         ])
     }
 
@@ -1263,6 +1306,22 @@ struct ConversationView: View {
         return EncodedTurnAudio(inline: nil, skip: "decode_fail")
     }
 
+    /// Release the work held since the turn was sent, now that the fluent
+    /// self is audible (or has definitively failed to become audible).
+    /// Idempotent — every caller may fire, only the first one does anything.
+    ///
+    /// The recognizer's line is applied BEFORE the transcription starts on
+    /// purpose: that call passes the bubble's current text as its ASR hint,
+    /// so the better line makes a better hint.
+    private func flushDeferredTurnWork() {
+        guard let work = deferredTurnWork else { return }
+        deferredTurnWork = nil
+        if let upgrade = work.recognizerUpgrade {
+            applyRecognizerUpgrade(upgrade, to: work.turnId)
+        }
+        startTranscription(forUserTurn: work.turnId)
+    }
+
     /// Apply the recognizer's late rescored pass to a turn already on screen.
     ///
     /// Two upgrades race for this bubble: this one (local, fast, better than
@@ -1271,6 +1330,13 @@ struct ConversationView: View {
     /// the line if it's still the text the recognizer originally produced"
     /// enforces, with no extra state and no order assumptions.
     private func applyRecognizerUpgrade(_ text: String, to turnId: UUID) {
+        // Still waiting on the fluent self: hold it. A bubble that rewrites
+        // itself during the wait is what makes the correction FEEL like a
+        // step the learner has to sit through.
+        if deferredTurnWork?.turnId == turnId {
+            deferredTurnWork?.recognizerUpgrade = text
+            return
+        }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               let idx = turns.firstIndex(where: { $0.id == turnId }),
@@ -1370,11 +1436,18 @@ struct ConversationView: View {
         Task { await requestReply(forUserTurn: id) }
     }
 
-    /// Log the accumulated per-turn latency breadcrumbs exactly once, at the
-    /// moment the fluent self's voice starts (what the user experiences as
-    /// "the answer arrived"). No-op for non-turn speech (openers) — their
-    /// timing dict is empty.
-    private func logTurnTiming(tts: String, ttsFirstMs: Int? = nil) {
+    /// The fluent self's voice just reached the speaker — the moment the
+    /// learner experiences as "the answer arrived". Called exactly once per
+    /// spoken line, from every TTS path (split stream, plain stream, buffered,
+    /// cache hit).
+    ///
+    /// Two things hang off it. Releasing the held turn work comes FIRST and is
+    /// deliberately outside the timing guard: openers carry no timing dict but
+    /// a turn must never lose its correction to a logging condition.
+    private func voiceDidStart(tts: String, ttsFirstMs: Int? = nil) {
+        // The critical path is over — the uplink is free and the bubble can
+        // change without reading as "correcting before answering".
+        flushDeferredTurnWork()
         guard !turnTiming.isEmpty else { return }
         var props = turnTiming
         props["tts"] = tts
@@ -1429,7 +1502,7 @@ struct ConversationView: View {
                     phase = .speaking
                     splitSpeech = SplitSpeech(fluentTurnId: id, sampleRate: sampleRate,
                                               pcm: Data(), prefix: prefix)
-                    logTurnTiming(tts: "stream",
+                    voiceDidStart(tts: "stream",
                                   ttsFirstMs: Int(Date().timeIntervalSince(ttsStarted) * 1000))
                 }
                 player.feedPCMStream(chunk)
@@ -1556,7 +1629,7 @@ struct ConversationView: View {
             let timings = PhraseAudioStore.shared.timings(text: text, voiceId: voiceId,
                                                           allowLineage: false) ?? []
             try appendTurnAndPlay(cached, timings: timings, transcript: text)
-            logTurnTiming(tts: "cache")
+            voiceDidStart(tts: "cache")
             return
         }
         let ttsStarted = Date()
@@ -1604,7 +1677,7 @@ struct ConversationView: View {
                         ))
                         didSaveCurrentSession = false
                         phase = .speaking
-                        logTurnTiming(tts: "stream",
+                        voiceDidStart(tts: "stream",
                                       ttsFirstMs: Int(Date().timeIntervalSince(ttsStarted) * 1000))
                     } catch {
                         // Engine refused to start — keep collecting the PCM;
@@ -1635,12 +1708,12 @@ struct ConversationView: View {
                     fromPCM16: fullPCM, sampleRate: Int(sampleRate))
                 PhraseAudioStore.shared.save(wav, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(wav, timings: [], transcript: text)
-                logTurnTiming(tts: "buffered")
+                voiceDidStart(tts: "buffered")
                 return
             case .mp3(let data) where !data.isEmpty:
                 PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
                 try appendTurnAndPlay(data, timings: [], transcript: text)
-                logTurnTiming(tts: "buffered")
+                voiceDidStart(tts: "buffered")
                 return
             default:
                 break   // empty payload → buffered fallback below
@@ -1674,7 +1747,7 @@ struct ConversationView: View {
                                       purpose: "turn")
         PhraseAudioStore.shared.save(newAudio, text: text, voiceId: voiceId, timings: newTimings)
         try appendTurnAndPlay(newAudio, timings: newTimings, transcript: text)
-        logTurnTiming(tts: "buffered")
+        voiceDidStart(tts: "buffered")
     }
 
     /// Buffered playback path: append the fluent-self turn and play the full
@@ -1723,6 +1796,21 @@ struct ConversationView: View {
         phase = .thinking
         withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
         defer { withAnimation(.easeInOut(duration: 0.2)) { isEnding = false } }
+        // Hanging up is the one exit where deferring the transcription could
+        // COST something: the last turn's voice may never start, and the draft
+        // below freezes `turns` for the summary, the drills and the profile.
+        // So release the held work and give it a bounded moment to land. Only
+        // waits when a call is genuinely in flight, on a screen that is
+        // already showing the wrap-up.
+        flushDeferredTurnWork()
+        if let pending = transcribeTask {
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await pending.value }
+                group.addTask { try? await Task.sleep(nanoseconds: 2_500_000_000) }
+                await group.next()
+                group.cancelAll()   // cancels the WAITER, never `pending` itself
+            }
+        }
         // Persist the raw conversation FIRST. The summary call below can fail
         // (network, credits, malformed JSON) and turns live only in memory —
         // without this draft save a failed summary used to lose the whole

@@ -38,6 +38,9 @@ struct ShadowDrillView: View {
     /// trust-calibrating footnote on the result.
     @State private var usedRoughTranscript = false
     @State private var recordingFileURL: URL?
+    /// Wall-clock t=0 of `recordingFileURL`. Paired with `syncStartedAt` it
+    /// gives the countdown's length INSIDE the scored file.
+    @State private var recordingStartedAt: Date?
     @State private var feedback: ShadowFeedback?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
     /// Word-onset timing comparison for the last attempt — nil whenever the
@@ -988,9 +991,23 @@ struct ShadowDrillView: View {
             // out for the same reason; recognition runs fine in `.default`
             // (it's the live call's own STT mode). Input still forces the
             // built-in mic.
+            //
+            // voiceProcessing: true (2026-08-14) — this ran on the RAW mic
+            // until now, on the reasoning that shadow scores deterministically
+            // off raw levels. Nothing here actually does: the match score is a
+            // token-level Levenshtein over the TRANSCRIPT, the rhythm card is
+            // built from STT word TIMINGS, and the only real raw-level
+            // analysis in the app (`AudioSampleQuality`) is voice-clone-only.
+            // Meanwhile the room was costing this surface three times over —
+            // noise into the recognizer (which the score is computed from),
+            // noise counted as voiced time (which inflates the pace card), and
+            // a noise floor high enough that `lastVoicedAt` never went stale,
+            // so the auto-stop below could only ever fire on its hard ceiling.
+            // Talk made exactly this trade earlier in 2026-08.
             try live.start(locale: targetLanguage, preferBuiltInMic: true,
                            measurementMode: false,
-                           contextualStrings: Self.recognitionHints(for: attemptTargetText))
+                           contextualStrings: Self.recognitionHints(for: attemptTargetText),
+                           voiceProcessing: true)
         } catch {
             self.error = "STT failed: \(error.localizedDescription)"
             phase = .idle
@@ -1000,7 +1017,13 @@ struct ShadowDrillView: View {
         // Save the raw mic input to a WAV so the learner can play their
         // attempt back after analysis. AVAudioRecorder runs alongside the
         // AVAudioEngine tap LiveTranscriber sets up; both see the same mic.
+        //
+        // This file is ALSO what `analyze` re-recognizes to score the attempt,
+        // and it starts here — before the 3-2-1. Stamp t=0 so the pre-beat
+        // stretch can be dropped from the scored words; without it, anything
+        // the learner said during the countdown scored as insertions.
         recordingFileURL = (try? recorder.start(quality: .sttOptimal))
+        recordingStartedAt = recordingFileURL == nil ? nil : Date()
 
         // Countdown 3-2-1-0 with haptic ticks; "0" IS the go beat so the
         // start lands on a visible number instead of an unmarked pause after
@@ -1097,9 +1120,21 @@ struct ShadowDrillView: View {
                 contextualStrings: Self.recognitionHints(for: attemptTargetText)
             )
             if let rescored, !rescored.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                scoredText = rescored.text
-                prevTranscript = rescored.text
-                learnerTimings = rescored.wordTimings
+                // The file opened before the countdown, so its first seconds
+                // are not part of the attempt. Segment timestamps are
+                // file-relative, which is exactly what's needed to cut them.
+                let trimmed = Self.dropPreBeatWords(
+                    text: rescored.text, timings: rescored.wordTimings,
+                    preRollMs: preBeatMs())
+                if trimmed.timings.count != rescored.wordTimings.count {
+                    Telemetry.log("shadow_pre_beat_trimmed", [
+                        "dropped": String(rescored.wordTimings.count - trimmed.timings.count),
+                        "pre_roll_ms": String(preBeatMs()),
+                    ])
+                }
+                scoredText = trimmed.text
+                prevTranscript = trimmed.text
+                learnerTimings = trimmed.timings
                 usedRoughTranscript = false
             }
         }
@@ -1124,14 +1159,23 @@ struct ShadowDrillView: View {
             learnerTimings: learnerTimings
         )
         // Learner duration = measured utterance span (first voice → last
-        // voice, incl. mid-speech pauses) from the mic energy meter — NOT the
-        // wall clock, which includes lead-in silence and the auto-stop tail
-        // and systematically inflated the pace ratio. Wall clock stays as the
-        // fallback when the meter heard nothing.
+        // voice, incl. mid-speech pauses) — NOT the wall clock, which includes
+        // lead-in silence and the auto-stop tail and systematically inflated
+        // the pace ratio.
+        //
+        // The SCORED words' own span is the best source: it begins at the
+        // first word that survived the pre-beat cut, so it cannot carry
+        // countdown speech. The energy meter can — it has been running since
+        // before the 3-2-1 — so it drops to second, ahead of the wall clock.
         let stats = live.fluencyStats()
         let spokenMs = Int((stats.speakingSeconds + stats.pauseSeconds) * 1000)
         let wallMs = Int((syncStartedAt.map { Date().timeIntervalSince($0) } ?? 0) * 1000)
-        let learnerDurMs = spokenMs > 0 ? min(spokenMs, wallMs) : wallMs
+        let scoredSpanMs = learnerTimings.first.map { first in
+            max(0, (learnerTimings.last?.endMs ?? first.endMs) - first.startMs)
+        } ?? 0
+        let learnerDurMs = scoredSpanMs > 0
+            ? scoredSpanMs
+            : (spokenMs > 0 ? min(spokenMs, wallMs) : wallMs)
         lastAttemptDurationMs = learnerDurMs   // surfaces in durationCard
 
         // The deterministic score + diff are already computed. The Gemini
@@ -1333,9 +1377,19 @@ struct ShadowDrillView: View {
             audioURL: url, languageCode: targetLanguage, expectedText: turn.transcript,
             durationMs: targetDurationMs)
         if Task.isCancelled || local.isEmpty { return }
+        // The SAME gate the load path applies. Persisting a timeline that
+        // reload would reject is what made every open re-run this 15s
+        // recognition and show the estimate in the meantime — the write side
+        // has to agree with the read side or the cache never converges.
+        guard Self.fits(local, durationMs: targetDurationMs) else { return }
         TurnAudioStore.shared.saveTimings(local, for: turn.id)
         timings = local
     }
+
+    /// A timeline built from THIS audio can never end after the file does, and
+    /// legitimately ends BEFORE it. Undershoot must be tolerated: the smallest
+    /// unit that must cover the file is 1 - `minTimingCoverage`.
+    static let minTimingCoverage = 0.6
 
     /// Do these timings belong to THIS recording?
     ///
@@ -1343,15 +1397,27 @@ struct ShadowDrillView: View {
     /// of the same sentence. TTS isn't deterministic, so those word onsets
     /// describe audio the learner never hears — the highlight ran ahead of or
     /// behind the voice, drifting further the longer the line. Those caches
-    /// are still on disk, and the tell is that their last word ends nowhere
-    /// near where the file does. Anything off by more than 12% (min 300 ms)
-    /// is another take's timeline; drop it and let the free on-device
-    /// alignment rebuild from the audio that actually plays.
+    /// are still on disk, and this is what keeps them out.
+    ///
+    /// It used to reject on `abs(last - durationMs) > max(300ms, 12%)`, which
+    /// measured the wrong thing (2026-08-14). `LocalAlignment.fill` ends its
+    /// timeline at the last WORD, not the last sample, so every alignment this
+    /// app produces is legitimately shorter than the file by whatever silent
+    /// tail the render carries. That symmetric test threw those away — and
+    /// since `recoverTimings` persisted them without the same check, each open
+    /// went: align → store → reject on reload → fall back to the estimate →
+    /// re-align, forever. The learner saw the ESTIMATE, which spreads the words
+    /// across the full duration INCLUDING the silent tail, so the highlight
+    /// trailed the voice and the timeline outran the speech.
+    ///
+    /// Overshoot is the honest tell: words cannot end after the audio does, so
+    /// only a foreign take can do it. Undershoot is bounded by coverage alone.
     static func fits(_ timings: [WordTiming], durationMs: Int) -> Bool {
         guard !timings.isEmpty else { return false }
         guard durationMs > 0, let last = timings.last?.endMs else { return true }
         let tolerance = max(300, Int(Double(durationMs) * 0.12))
-        return abs(last - durationMs) <= tolerance
+        if last > durationMs + tolerance { return false }
+        return Double(last) >= Double(durationMs) * minTimingCoverage
     }
 
     /// Karaoke fallback when no real alignment exists yet: spread the audio
@@ -1371,6 +1437,48 @@ struct ShadowDrillView: View {
             return WordTiming(word: w, startMs: Int(start),
                               endMs: max(Int(start) + 1, Int(cursor) - 20))
         }
+    }
+
+    /// How long the scored file ran BEFORE the go beat — the countdown, plus
+    /// whatever setup preceded it. 0 when either stamp is missing, which
+    /// leaves the transcript untouched.
+    private func preBeatMs() -> Int {
+        guard let recStart = recordingStartedAt, let syncStart = syncStartedAt else { return 0 }
+        return max(0, Int(syncStart.timeIntervalSince(recStart) * 1000))
+    }
+
+    /// A word straddling the beat belongs to the attempt. Losing a real first
+    /// word is the exact failure the hot-mic start exists to prevent, so the
+    /// cut leans toward keeping.
+    static let preBeatKeepMarginMs = 150
+
+    /// Drop what the learner said during the countdown from the scored words.
+    ///
+    /// The mic and the WAV both open BEFORE the 3-2-1 on purpose: starting
+    /// them on the beat clipped the first words of anyone who spoke right on
+    /// it, and those came back as deletions. But `analyze` scores by
+    /// re-recognizing that whole file, so the assumption baked into the old
+    /// comment — "the countdown's lead-in silence is harmless" — only held
+    /// while the learner stayed quiet. A throat-clear, a false start, or
+    /// reading the line to themselves during the 3-2-1 landed in the
+    /// transcript as INSERTIONS and cost them match score for words they had
+    /// said early, not wrong.
+    ///
+    /// Only a leading run is dropped: nothing after the beat can predate it,
+    /// and `drop(while:)` keeps the cut monotonic. Text and timings come back
+    /// consistent — `analyzeRhythm` requires the diff steps and the timing
+    /// array to consume each other exactly.
+    static func dropPreBeatWords(text: String, timings: [WordTiming],
+                                 preRollMs: Int) -> (text: String, timings: [WordTiming]) {
+        guard preRollMs > 0, !timings.isEmpty else { return (text, timings) }
+        let cutoff = preRollMs - preBeatKeepMarginMs
+        let kept = timings.drop { $0.endMs <= cutoff }
+        guard kept.count != timings.count else { return (text, timings) }
+        // Rebuilt from the recognizer's own tokens. Punctuation from
+        // `formattedString` is lost, which scoring doesn't read — ShadowEngine
+        // canonicalizes before diffing — and keeping the untrimmed string
+        // would defeat the whole point.
+        return (kept.map(\.word).joined(separator: " "), Array(kept))
     }
 
     /// How much longer than the model line a learner's own attempt runs. They

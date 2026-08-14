@@ -168,7 +168,7 @@ struct VoiceAccentSheet: View {
                 guard accent == option else { return }
                 previews = takes
                 if takes.isEmpty {
-                    error = String(localized: "No takes came back. Please try again.")
+                    error = explain("No takes came back. Please try again.")
                 }
             } catch {
                 guard accent == option else { return }

@@ -295,8 +295,16 @@ export async function chargePooledTTS(opts: {
   sourceFn: string
   idempotencyKey: string
   metadata?: Record<string, unknown>
+  /**
+   * Which daily pool these seconds land in. `scene_counted` means the scene
+   * was already charged as ONE count by `beginScenePlay`, so its seconds must
+   * not also be taken off the talk allowance. Anything else keeps the legacy
+   * behaviour where scene seconds share the talk meter — which is what an
+   * un-updated client (no scene key) still gets.
+   */
+  pool?: "scene_seconds" | "scene_counted"
 }): Promise<ChargeResult | ChargeError> {
-  const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
+  const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata, pool } = opts
   const { data, error } = await supabase.rpc("charge_tts_pooled", {
     p_user_id: userId,
     p_chars: chars,
@@ -304,6 +312,7 @@ export async function chargePooledTTS(opts: {
     p_source_fn: sourceFn,
     p_idempotency_key: idempotencyKey,
     p_metadata: metadata ?? null,
+    p_pool: pool ?? "scene_seconds",
   })
   if (error) {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {
@@ -413,6 +422,61 @@ export function dailyCapResponse(corsHeaders: HeadersInit): Response {
     }),
     { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
   )
+}
+
+/**
+ * A SUBSCRIBER used up today's Watch scenes (plan `daily_scenes`). Like the
+ * daily talk cap this is NEVER a paywall — they already paid, and the answer
+ * is "tomorrow", not "pay again". Distinct from `daily_cap_reached` so the
+ * app can say which of the two allowances ran out; an older client that
+ * doesn't know this string still sees a 402 and stops.
+ */
+export function sceneCapResponse(corsHeaders: HeadersInit): Response {
+  return new Response(
+    JSON.stringify({
+      error: "scene_cap_reached",
+      message: "Today's Watch scenes are used up. They reset at midnight UTC.",
+    }),
+    { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
+  )
+}
+
+/**
+ * Claim one of today's Watch scenes for this user.
+ *
+ * Called once per scene LINE with a key that is stable across the whole
+ * scene, so the first line claims the slot and the rest ride along — a scene
+ * costs one count no matter how many lines it has, and a scene already in
+ * progress is never cut off half way through.
+ *
+ * `counted: false` means the user has no entitlement, so scenes stay priced
+ * in seconds out of their balance and no count applies.
+ */
+export async function beginScenePlay(opts: {
+  supabase: SupabaseClient
+  userId: string
+  sceneKey: string
+}): Promise<
+  | { ok: true; counted: boolean; used?: number; cap?: number }
+  | { ok: false; reason: "scene_cap" | "db_error"; detail?: string }
+> {
+  const { data, error } = await opts.supabase.rpc("begin_scene_play", {
+    p_user_id: opts.userId,
+    p_scene_key: opts.sceneKey,
+  })
+  if (error) {
+    if (error.message?.includes("SCENE_CAP_REACHED")) {
+      return { ok: false, reason: "scene_cap", detail: error.message }
+    }
+    return { ok: false, reason: "db_error", detail: error.message }
+  }
+  const parsed = data as { metered_by?: string; used?: number; cap?: number }
+  return {
+    ok: true,
+    counted: parsed?.metered_by === "scenes",
+    used: parsed?.used,
+    cap: parsed?.cap,
+  }
 }
 
 /**

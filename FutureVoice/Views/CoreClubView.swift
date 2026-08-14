@@ -27,7 +27,15 @@ struct CoreClubView: View {
                 } header: {
                     Text("Last 30 days")
                 } footer: {
-                    Text(explain("A missed day pushes your date back by one. Nothing resets to zero."))
+                    VStack(alignment: .leading, spacing: 6) {
+                        // Watch now has its own visible daily allowance, which
+                        // makes it reasonable to assume scenes count here too.
+                        // They never have and never will — say so rather than
+                        // let someone watch their way toward a seat that isn't
+                        // coming.
+                        Text(explain("Only talking counts. Watching a scene doesn't — the Core is about speaking."))
+                        Text(explain("A missed day pushes your date back by one. Nothing resets to zero."))
+                    }
                 }
                 Section {
                     LabeledContent("Seats") {

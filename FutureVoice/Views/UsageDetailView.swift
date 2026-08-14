@@ -109,8 +109,8 @@ struct UsageDetailView: View {
 
     private func countLabel(_ meter: UsageBreakdown.Meter) -> String {
         meter.key == "tts_scene"
-            ? String(localized: "\(meter.count) lines played")
-            : String(localized: "\(meter.count) check-ins")
+            ? chrome("\(meter.count) lines played")
+            : chrome("\(meter.count) check-ins")
     }
 
     // MARK: - Free
@@ -122,8 +122,8 @@ struct UsageDetailView: View {
                 ForEach(usage.freeToday) { item in
                     row(icon: item.icon,
                         title: item.title,
-                        detail: String(localized: "\(item.count) times today"),
-                        trailing: String(localized: "Free"),
+                        detail: chrome("\(item.count) times today"),
+                        trailing: chrome("Free"),
                         trailingTint: .green)
                 }
             } header: {
@@ -178,8 +178,8 @@ struct UsageDetailView: View {
     // MARK: - Shared
 
     private func totalLabel(_ seconds: Int) -> String {
-        seconds >= 60 ? String(localized: "\(seconds / 60) min")
-                      : String(localized: "\(seconds) sec")
+        seconds >= 60 ? chrome("\(seconds / 60) min")
+                      : chrome("\(seconds) sec")
     }
 
     private func row(icon: String, title: String, detail: String,

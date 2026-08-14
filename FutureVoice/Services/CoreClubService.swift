@@ -218,7 +218,7 @@ enum CoreClubService {
 
         if let full {
             await post(
-                title: String(localized: "The Core"),
+                title: chrome("The Core"),
                 body: explain("The Core is full — all \(full.club_size) seats taken."),
                 id: "core.full")
         }
@@ -227,7 +227,7 @@ enum CoreClubService {
         // Coalesced: several arrivals in one poll are one line, not a pile.
         if arrivals.count > 1, let last = arrivals.last {
             await post(
-                title: String(localized: "The Core"),
+                title: chrome("The Core"),
                 body: explain("\(arrivals.count) new members joined — \(last.club_size) seats taken."),
                 id: "core.arrivals.\(last.id)")
             return
@@ -239,7 +239,7 @@ enum CoreClubService {
         let body = name.map {
             explain("\($0) joined as member \(number) — \(one.club_size) seats taken.")
         } ?? explain("Member \(number) joined — \(one.club_size) seats taken.")
-        await post(title: String(localized: "The Core"), body: body, id: "core.arrival.\(one.id)")
+        await post(title: chrome("The Core"), body: body, id: "core.arrival.\(one.id)")
     }
 
     /// A member's published persona name, when they have one. Members who

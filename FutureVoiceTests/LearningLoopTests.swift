@@ -124,28 +124,53 @@ final class DrillStoreTests: XCTestCase {
         XCTAssertEqual(store.load().first?.sourcePhrase, "how I can say this")
     }
 
-    func testLeitnerPromoteAndDemote() {
+    func testGotItGraduatesInOneDrop() {
         let now = Date()
         store.ingest(summary: summary(drills: ["Could you say that again?"]),
                      turns: [], sessionId: UUID(), now: now)
         var card = store.due(now: now).first!
         XCTAssertEqual(card.box, 0)
 
-        // Correct → box 1, due in ~1 day (not due now).
-        store.markCorrect(card, at: now)
+        // "Got it" GRADUATES — the learner said they know it, so the card goes
+        // to the top rung in one drop (it used to climb one box at a time,
+        // which meant five Got-its before anything left the to-study pile).
+        // Back in ~30 days, the top rung's own interval.
+        store.markKnown(card, at: now)
         XCTAssertTrue(store.due(now: now).isEmpty)
         card = store.load().first!
-        XCTAssertEqual(card.box, 1)
+        XCTAssertEqual(card.box, DrillStore.maxBox)
         XCTAssertEqual(card.timesCorrect, 1)
-        let oneDay: TimeInterval = 24 * 60 * 60
-        XCTAssertEqual(card.nextReviewAt.timeIntervalSince(now), oneDay, accuracy: 1)
+        let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
+        XCTAssertEqual(card.nextReviewAt.timeIntervalSince(now), thirtyDays, accuracy: 1)
+    }
 
-        // Incorrect → back to box 0, due immediately.
-        store.markIncorrect(card, at: now)
-        card = store.load().first!
+    func testIncorrectDropsARungAndComesBackNow() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        let fresh = store.due(now: now).first!
+        // Start from a rung above the floor, the way a card that has been
+        // reviewed once sits.
+        store.snooze(fresh, box: 1, until: now.addingTimeInterval(24 * 60 * 60), at: now)
+
+        store.markIncorrect(store.load().first!, at: now)
+        let card = store.load().first!
         XCTAssertEqual(card.box, 0)
         XCTAssertEqual(card.timesSeen, 2)
         XCTAssertFalse(store.due(now: now).isEmpty)
+    }
+
+    /// The delay bins are the "not yet" answers — they must NOT graduate, or
+    /// the ladder stops meaning anything and every drop empties the pile.
+    func testSnoozeKeepsTheCardBelowTheTopRung() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        let card = store.due(now: now).first!
+        store.snooze(card, box: 1, until: now.addingTimeInterval(24 * 60 * 60), at: now)
+
+        let updated = store.load().first!
+        XCTAssertLessThan(updated.box, DrillStore.maxBox)
     }
 }
 

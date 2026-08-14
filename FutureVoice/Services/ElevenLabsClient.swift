@@ -283,7 +283,8 @@ final class ElevenLabsClient {
         idempotencyKey: String? = nil,
         purpose: String? = nil,
         previousText: String? = nil,
-        nextText: String? = nil
+        nextText: String? = nil,
+        sceneKey: String? = nil
     ) async throws -> Data {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
 
@@ -309,6 +310,11 @@ final class ElevenLabsClient {
         // Feature tag for the usage ledger (spend attribution) — the edge
         // function records it in metadata, never forwards it upstream.
         if let purpose { body["purpose"] = purpose }
+        // One Watch scene = one key across all its lines, so the plan's daily
+        // scene COUNT is charged once and the scene's seconds stop coming out
+        // of the talk allowance. An edge deploy that predates this ignores it
+        // and the scene meters in seconds exactly as it used to.
+        if let sceneKey { body["scene_key"] = sceneKey }
         // Prosody conditioning. An edge deploy that predates these simply
         // drops them and the line synthesizes exactly as it used to.
         if let previousText, !previousText.isEmpty { body["previous_text"] = previousText }
@@ -349,6 +355,7 @@ final class ElevenLabsClient {
         modelId: String = "eleven_turbo_v2_5",
         idempotencyKey: String? = nil,
         purpose: String? = nil,
+        sceneKey: String? = nil,
         onPCMChunk: @MainActor @escaping (Data, _ sampleRate: Double) -> Void
     ) async throws -> StreamedAudio {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-tts")
@@ -369,6 +376,7 @@ final class ElevenLabsClient {
             "stream_formats": Self.streamFormats,
         ]
         if let purpose { body["purpose"] = purpose }
+        if let sceneKey { body["scene_key"] = sceneKey }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         // One immediate re-dial on a transient connect failure: a cellular
@@ -388,8 +396,11 @@ final class ElevenLabsClient {
         guard (200..<300).contains(http.statusCode) else {
             var errBody = Data()
             for try await b in bytes.prefix(512) { errBody.append(b) }
-            if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
             let snippet = String(data: errBody, encoding: .utf8) ?? "<binary>"
+            if http.statusCode == 402 {
+                throw snippet.contains("scene_cap_reached")
+                    ? ElevenLabsError.sceneCapReached : ElevenLabsError.insufficientCredits
+            }
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
 
@@ -588,8 +599,11 @@ final class ElevenLabsClient {
             throw ElevenLabsError.invalidResponse
         }
         guard (200..<300).contains(http.statusCode) else {
-            if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
+            if http.statusCode == 402 {
+                throw snippet.contains("scene_cap_reached")
+                    ? ElevenLabsError.sceneCapReached : ElevenLabsError.insufficientCredits
+            }
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
     }
@@ -599,6 +613,9 @@ enum ElevenLabsError: Error, LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
     case insufficientCredits
+    /// A SUBSCRIBER used up today's Watch scenes. Never a paywall — they
+    /// already paid, so `isOutOfCredits` deliberately does not match this.
+    case sceneCapReached
 
     var errorDescription: String? {
         switch self {
@@ -613,6 +630,8 @@ enum ElevenLabsError: Error, LocalizedError {
             }
             return "ElevenLabs HTTP \(status): \(body)"
         case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
+        case .sceneCapReached:
+            return explain("You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free.")
         }
     }
 

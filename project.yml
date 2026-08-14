@@ -6,11 +6,11 @@ options:
   createIntermediateGroups: true
   groupSortPosition: top
   developmentLanguage: en
-  # Interface languages the app ships. The UI follows the DEVICE language (iOS
-  # picks the closest match, falling back to en); the learner's `nativeLanguage`
-  # setting is a separate thing — it's what LLM coaching text is written in.
-  # Adding a language = one entry here + its column in Localizable.xcstrings.
-  knownRegions: [en, ko, Base]
+  # Interface languages the app ships. NOT the device language: chrome resolves
+  # in the learner's TARGET language and explanatory copy in their NATIVE one —
+  # see UILanguage.swift. Adding a language = one entry here + its column in
+  # Localizable.xcstrings.
+  knownRegions: [en, ko, de, Base]
 
 settings:
   base:

@@ -25,6 +25,10 @@ enum DebugCapture {
     /// its notebook sheet at full height instead of the peek.
     static var previewWordCard = false
 
+    /// Seconds to stall every dictionary lookup, so a capture run can hold the
+    /// loading state open. 0 = off (every case except `vocab-loading`).
+    static var slowLookupSeconds = 0
+
     /// True while capturing the drill bin tray: `DrillView` opens already
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
@@ -67,6 +71,17 @@ enum DebugCapture {
         case "vocab":
             once("vocab") { seedVocab() }
             return AnyView(NavigationStack { VocabularyView() })
+        case "vocab-loading":
+            // The word card mid-lookup: WordLore has no entry cached for this
+            // word and the capture run is offline, so the peek stays in its
+            // loading state for the screenshot.
+            once("vocab") { seedVocab() }
+            previewWordCard = true
+            slowLookupSeconds = 30
+            // Staged in a .task — writing @Published state during body
+            // evaluation blanks the render (learned the hard way twice).
+            return AnyView(NavigationStack { VocabularyView() }
+                .task { appState.focusWord = "zzz-uncached-word" })
         case "vocab-card":
             // The word card at full height — the peek is the default, so a
             // screenshot can't reach the expanded state without this.
@@ -237,11 +252,6 @@ enum DebugCapture {
             return AnyView(PracticeTab(initialShelf: .studying)
                 .environmentObject(appState)
                 .task { appState.pendingPracticeRoute = .review })
-        case "library":
-            // The three collections behind one door (was a three-tile band
-            // under the Practice mastery card).
-            once("vocab") { seedVocab() }
-            return AnyView(NavigationStack { LibraryView().environmentObject(appState) })
         case "review-item-word":
             // A per-item callback for a WORD: the staged route must open that
             // one card, not the whole queue.

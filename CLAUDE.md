@@ -14,7 +14,7 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 - **Watch** (`WatchTab`) — simulate a specific situation BEFORE it happens and mine ideas (how the fluent self handles it, which expressions it uses). Three entries, all landing in the `SituationComposerSheet` bottom sheet: ① a stories-style People row (tap a persona → composer scoped to them, with relationship-grounded ideas from `TopicEngine.suggestForCounterpart`, cached on the counterpart), ② "Make your own situation" — the DEFAULT: describe the real upcoming thing in a blank composer (no person needed; empty `Scenario.role` makes the scene infer its own counterpart), ③ "Likely situations" — a drill-down chain (cafe → ordering → order came out wrong) whose leaves prefill the composer, always editable. **Watch** mints the `Scenario` and plays its scene in `SceneWatchView` (`ScenarioCurriculumEngine` — the same generation stocks the book Practice reviews). A saved `Scenario` is a reusable TEMPLATE: tapping it under "Your scenarios" writes a FRESH take every time (`SceneWatchView(freshTake:)` — per-run idempotency key, previous titles passed as `avoidTitles`), and the new take is `absorb`ed into the scenario's book — latest scene replaces the old, study items accumulate, mastery survives. Replaying past material is Practice's job, never Watch's. No browsing here; books live in Practice. The People row's last bubble is **Find people** (`FindPeopleSheet`) — see below.
 - **Practice** (`PracticeTab`) — the REVIEW home; everything here came out of an activity. Three layers: today's cross-cutting SRS queue (`DrillStore` Leitner boxes 0–5 + shadow picks), the **Books** shelves behind chips (**Talks · Topics · Scenarios**), and the Library dictionaries (vocabulary / expressions / shadowing). Every book has the same anatomy — one scene + words/lines to master, then archive. Watch books = `Scenario` + `ScenarioCurriculum` (`ScenarioDetailView`; scene behind its Watch button). Talk books = a finished `Session` whose material is DERIVED by `TalkCurriculum` (fluent-self pickup words + corrected lines as shadow material, mastery via `VocabStore`/shadow attempts — never persisted); their page is `ConversationDetailView` (Continue / Replay; raw transcript + sequential audio replay behind Replay in `TalkTranscriptView`).
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
-- **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`).
+- **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app's chrome language, not the phone's — see "UI text follows the same split" below.
 
 ## Find people (shared persona pool)
 
@@ -50,6 +50,63 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
 - `interruptionLevel = .timeSensitive` is set but inert until the Time Sensitive capability is added to the App ID — harmless without the entitlement, no signing change needed today.
 
+## The Core (100 seats)
+
+A 100-seat club of learners who actually speak most days. It exists to build
+and KEEP a core, not to run a contest — so membership is a BAR, never a rank,
+and its two halves are deliberately asymmetric (`20260813120000_core_club`):
+
+- **Qualifying** — 28 of the last 30 days over the daily bar. Once, hard, and
+  the badge it grants is PERMANENT: `qualified_at` + `join_number` are never
+  revoked. A low join number IS the founding story, which is why there is no
+  separate "founding" flag and no sealing date.
+- **Keeping a seat** — 5 of the last 7 days. Loose on purpose: one missed day
+  costs nothing. **A seat is only ever vacated by its holder, never taken by a
+  newcomer** — `settle_core_club` releases before it promotes, so an arrival is
+  pure good news to the people already inside. If qualified people pile up
+  waiting, the answer is to raise the keep bar, not to evict anyone.
+- **Re-entry** — within 90 days of leaving you return on the WEEK bar, not the
+  month; the month is asked of first-timers only. Recently departed members
+  outrank first-timers for a vacancy for 14 days.
+
+Rolling windows, never streaks: a missed day defers by a day instead of
+resetting to zero, and the UI must say so (`CoreClubView` shows a DISTANCE —
+"6 days to go" — and never the words "failed" or "start over").
+
+- **Badge vs seat are separate facts, shown in one glyph** (`CoreSeal`): filled
+  `seal.fill` = seated now, outlined `seal` = qualified but currently seatless.
+  Losing a seat reads as dormancy, not a scar. **`Color.coreClub` (systemIndigo)
+  is reserved — nothing else in the app may use indigo.** The UI rules allow
+  only system colours, so scarcity of the colour IS the badge.
+- **The badge's real home is `FindPeopleSheet`** — the one place a learner is
+  seen by a stranger. A stranger sees the seal and nothing else: no number, no
+  rank, no talk time. Rank decides who gets in; inside the club everyone is
+  equal.
+- **Reward** = `bonus_seconds` added to that day's cap in
+  `consume_metered_seconds`, for as long as the seat is held. Never written to
+  a balance — it must not accumulate into a liability, and a non-subscriber
+  must not be able to spend it (the hard paywall stays hard).
+- **Only talking counts.** `core_daily_activity` reads `talk_seconds` alone;
+  Watch scenes (`scene_seconds` / `scene_counted`) can never move anyone
+  toward a seat. Upgrade path: point that view at per-turn utterance seconds
+  once the client reports them — wall-clock is farmable, speech is not.
+- **Settlement is a daily UTC job** (`settle_core_club`, pg_cron 00:05) and is
+  idempotent per day via `core_settlement_log`. Everything the client sees
+  comes from `core_my_progress()`; `core_daily_activity` is REVOKED from
+  clients because it would expose everyone's talk time.
+- **Arrivals are public, departures are NOT** — the `core_events` read policy
+  filters `kind = 'left'`, so nobody can work out whose seat they took. There
+  is no push infrastructure, so `CoreClubService.announceArrivals()` polls on
+  foreground and posts a quiet LOCAL notification (no sound; the daily call is
+  the habit anchor and must not be competed with).
+
+The bar (`core_club_config.daily_bar_seconds`, 240 s since
+`20260814110000`) is tunable without a migration, but it must stay BELOW the
+Daily tier's `daily_seconds` — at the cap there is no slack, and a call that
+ends at 4 min 52 s would fail the day. It is currently derived from the plan's
+shape, not from behaviour: `TalkMeter` only shipped 2026-08-11, so almost no
+account emits `talk_seconds` yet. Re-derive it once real days exist.
+
 ## The learning loop (keep it closed)
 
 ```
@@ -67,13 +124,20 @@ Every feature should feed this loop. Per-turn suggestions come back in the SAME 
 
 Do not re-attach audio to the reply call, and do not add a THIRD per-turn call. Ordering between the two is not guaranteed: `lastRecognizerText` is what keeps the recognizer's late rescored pass from clobbering the audio-grounded line (`applyRecognizerUpgrade`).
 
+**The transcription is deferred past the voice** (2026-08-14). Concurrent in control flow is not concurrent in RESOURCES: it was fired first, and its ~100 KB audio upload shared one `URLSession` — and therefore one HTTP/2 connection to one Supabase host — with the reply call *and* the ElevenLabs stream. Measured same-day, turns carrying the upload reached the reply's first sentence **0.8–2.2 s later** (5 of 5 days, same direction). Two changes keep it genuinely in the background:
+
+- `DeferredTurnWork` holds both the transcription call and the recognizer's rescored line until `voiceDidStart()` — the single choke point every TTS path (split stream, plain stream, buffered, cache hit) runs through when audio actually reaches the speaker. Holding the recognizer line too is a PERCEPTION fix: a bubble that rewrites itself mid-wait reads as "it corrects me first, then answers" even though nothing ever waited on it.
+- `GeminiClient.background` / `URLSession.edgeFunctionsBackground` gives the upload its own connection pool. Use it for any future call whose result nobody is waiting to hear.
+
+Three consequences to preserve when touching this: the failure path in `requestReply` and `endSession` must both flush (a turn that never speaks still needs its correction, and `endSession` freezes `turns` for the summary — it waits ≤2.5 s for an in-flight call); `voiceDidStart` flushes BEFORE its `turnTiming.isEmpty` guard, so a logging condition can never cost a turn its transcript; and the audio-path field moved from `talk_turn_timing` to `talk_asr_upgrade` because it is now known only after the timing row has shipped.
+
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
-- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = wall-clock call time (`talk-tick`), Watch scenes = audio length (~850 chars ≈ 60 s); everything else is free behind daily caps. Two different 402s: `insufficient_credits` → paywall, `daily_cap_reached` → "see you tomorrow", NEVER a paywall. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = wall-clock call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → "see you tomorrow", NEVER a paywall. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
 ## Build / run
@@ -107,16 +171,18 @@ Two cases that look like exceptions but aren't:
 
 ### UI text follows the same split, on two different axes
 
-`Localizable.xcstrings` (+ `SWIFT_EMIT_LOC_STRINGS`) holds every UI string; the build extracts SwiftUI literals automatically, so the catalog can't drift from the code. `UILanguage.swift` decides which language each string resolves in:
+Four string catalogs (+ `SWIFT_EMIT_LOC_STRINGS`) hold every UI string, and the build extracts SwiftUI literals into them automatically, so they can't drift from the code: `FutureVoice/Resources/Localizable.xcstrings` (the app), `FutureVoiceWidget/Localizable.xcstrings` (the extension — `StudyWidgetShared.swift` compiles into both targets, so its literals land in BOTH and must be translated identically), and an `InfoPlist.xcstrings` beside each Info.plist (permission alerts and the Home-screen name — OS-drawn, so they follow the DEVICE language; an alert is not our surface). `UILanguage.swift` decides which language each string resolves in:
 
 - **Chrome → the TARGET language.** Tabs, labels, buttons, titles, chips. One-word A1 vocabulary the learner meets dozens of times a day next to an icon: free exposure at no comprehension cost, and the same chrome serves every target language. Wired once at the app root as `.environment(\.locale, targetLanguage)` — every `Text("literal")` follows with **no per-call code**.
-- **Explanations → the NATIVE language, until the learner outgrows it.** Why a number moved, what a control does, what a term means, what a confirm will destroy, empty states that instruct, error recovery. Wrap these in `explain("…")` (which resolves through `Bundle.explanations`). At or below `UILanguage.nativeExplanationsThrough` (B1) they render in the learner's own language; above it they render in the target language.
+- **Explanations → the NATIVE language, always.** Why a number moved, what a control does, what a term means, what a confirm will destroy, empty states that instruct, error recovery. Wrap these in `explain("…")` (which resolves through `Bundle.explanations`), which resolves `LanguageCatalog.currentNative` — the language the learner picked in setup and can change in Me. There is no level gate: this used to flip to the target language above B1, and it was removed (2026-08-14) because speaking proficiency doesn't imply wanting to decode a delete-confirmation, and because a level moved for calibration reasons silently changed the app's language. An explicit setting outranks an inference about it.
 
 `explain()` is the ONLY marker — an unwrapped literal is chrome by default. When adding UI text, ask "does the learner have to parse this to act, or do they recognize it by shape?" Parse → `explain()`. Recognize → plain `Text`.
 
+**Never write a bare `String(localized:)`.** It compiles, extracts, and then resolves against the main bundle and the SYSTEM locale — so it ignores both axes above and follows the phone's language instead of the learner's. Use `chrome(…)` or `explain(…)`, which are the same call with the right bundle. The one sanctioned exception is `StudyWidgetSection.displayName` / `.galleryDescription`, which are drawn by iOS in the Add Widget sheet. Inside the widget extension the app-side helpers don't exist: `Text("literal")` follows `\.locale` (set to `.widgetChrome` at each widget's root) and `String`-typed labels go through `widgetChrome(…)`, both reading `StudyWidgetSnapshotStore.chromeLanguage` — the target language, mirrored into the App Group by `StudyWidgetRefresher` because an extension can't read the app's defaults. Anything the widget shows that is DATA (a book's subtitle) has to be resolved app-side at write time; the extension can only draw it.
+
 **Refreshing the catalog:** a plain `xcodebuild build` does NOT write newly-added strings back into `Localizable.xcstrings` — it only compiles what's already there. Run `xcodebuild -exportLocalizations -localizationPath <tmp> -exportLanguage ko` to merge new keys in, then translate them. Skipping this is why a string can look wired up and still be missing from the catalog.
 
-Nothing here names a language. Adding German is a `de` column in the catalog — no code change. Two gaps remain: most explanatory strings are still unwrapped, and literals that flow through a `String` variable (`source = "Free talk"`, `case .words: return "Vocabulary"`) aren't `LocalizedStringKey`, so they neither extract nor localize until converted to `String(localized:)`.
+Nothing here names a language. Adding German is a `de` column in the catalogs plus its code in `project.yml`'s `knownRegions` — no other code change. All four catalogs are fully translated for ko and de as of 2026-08-14 (verify with a re-export: extracted count == repo count, and no entry missing a language unless it carries `shouldTranslate: false`, which marks punctuation, format shells and dev samples). One gap remains: most explanatory strings are still unwrapped, so they read as chrome. Literals that flow through a `String` variable (`source = "Free talk"`) still neither extract nor localize until they go through `chrome(…)`/`explain(…)`.
 
 ## Hard rules
 

@@ -157,4 +157,132 @@ final class LocalAlignmentTests: XCTestCase {
         XCTAssertLessThanOrEqual(hints.count, ShadowDrillView.maxRecognitionHints)
         XCTAssertEqual(hints.first, long, "the whole line is the most useful hint")
     }
+
+    // MARK: - fits
+
+    /// THE REGRESSION. `fill` ends its timeline at the last WORD, so a render
+    /// with a silent tail legitimately stops short of the file. The old
+    /// symmetric tolerance rejected exactly that — and because the estimate it
+    /// fell back to spreads words across the FULL duration, the highlight
+    /// trailed the voice and the timeline outran the speech.
+    func testAlignmentEndingAtTheLastWordSurvivesASilentTail() {
+        // Three words spoken over 3.2s, inside a 4.0s file: an 800ms tail.
+        let timings = LocalAlignment.fill(
+            expected: ["i", "went", "there"],
+            pairing: [0, 1, 2],
+            heardSpans: spans([(0.0, 0.9), (1.0, 2.0), (2.2, 3.2)]),
+            durationMs: 4_000)
+        XCTAssertEqual(timings.last?.endMs, 3_200)
+        XCTAssertTrue(ShadowDrillView.fits(timings, durationMs: 4_000),
+                      "a real alignment must never be thrown away for its silent tail")
+    }
+
+    /// The guard's actual job: a timeline from a DIFFERENT render, whose words
+    /// keep going after this file has ended.
+    func testTimelineRunningPastTheFileIsRejected() {
+        let foreign = [WordTiming(word: "i", startMs: 0, endMs: 1_500),
+                       WordTiming(word: "went", startMs: 1_500, endMs: 5_200)]
+        XCTAssertFalse(ShadowDrillView.fits(foreign, durationMs: 4_000),
+                       "words cannot end after the audio does")
+    }
+
+    /// Undershoot is tolerated, but not without limit — timings covering a
+    /// sliver of the file describe some other, shorter line.
+    func testTimelineCoveringAlmostNoneOfTheFileIsRejected() {
+        let stub = [WordTiming(word: "i", startMs: 0, endMs: 900)]
+        XCTAssertFalse(ShadowDrillView.fits(stub, durationMs: 4_000))
+    }
+
+    /// The write side must agree with the read side, or the cache never
+    /// converges: `recoverTimings` persists only what a reload will accept.
+    /// Anything `fill` produces from real spans has to clear that bar.
+    func testFillOutputIsAcceptedAcrossRealisticTailLengths() {
+        for tailMs in [0, 150, 400, 800] {
+            let speechEnd = 3.2
+            let durationMs = Int(speechEnd * 1000) + tailMs
+            let timings = LocalAlignment.fill(
+                expected: ["i", "went", "there"],
+                pairing: [0, 1, 2],
+                heardSpans: spans([(0.0, 0.9), (1.0, 2.0), (2.2, speechEnd)]),
+                durationMs: durationMs)
+            XCTAssertTrue(ShadowDrillView.fits(timings, durationMs: durationMs),
+                          "a \(tailMs)ms tail would re-trigger alignment on every open")
+        }
+    }
+
+    /// An unknown duration can't judge anything — keep what we have rather
+    /// than drop to the estimate on a failed lookup.
+    func testUnknownDurationAcceptsStoredTimings() {
+        let timings = [WordTiming(word: "i", startMs: 0, endMs: 900)]
+        XCTAssertTrue(ShadowDrillView.fits(timings, durationMs: 0))
+        XCTAssertFalse(ShadowDrillView.fits([], durationMs: 0), "empty is never usable")
+    }
+
+    // MARK: - dropPreBeatWords
+
+    /// The scored WAV opens before the 3-2-1, so anything said during the
+    /// countdown used to score as insertions against the target line.
+    func testWordsSpokenDuringTheCountdownAreDropped() {
+        let timings = [WordTiming(word: "wait", startMs: 200, endMs: 700),      // countdown
+                       WordTiming(word: "i", startMs: 2_500, endMs: 2_800),     // attempt
+                       WordTiming(word: "went", startMs: 2_800, endMs: 3_300)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "wait i went", timings: timings, preRollMs: 2_450)
+        XCTAssertEqual(out.timings.map(\.word), ["i", "went"])
+        XCTAssertEqual(out.text, "i went")
+    }
+
+    /// A silent countdown — the overwhelmingly common case — must come
+    /// through completely untouched, punctuation included.
+    func testSilentCountdownLeavesTheTranscriptAlone() {
+        let timings = [WordTiming(word: "i", startMs: 2_500, endMs: 2_800),
+                       WordTiming(word: "went", startMs: 2_800, endMs: 3_300)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "I went.", timings: timings, preRollMs: 2_450)
+        XCTAssertEqual(out.text, "I went.", "no drop must mean no rebuild")
+        XCTAssertEqual(out.timings.count, 2)
+    }
+
+    /// Dropping a real first word is the failure the hot-mic start exists to
+    /// prevent, so a word straddling the beat is kept.
+    func testWordStraddlingTheBeatIsKept() {
+        let timings = [WordTiming(word: "i", startMs: 2_300, endMs: 2_600),
+                       WordTiming(word: "went", startMs: 2_600, endMs: 3_100)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "i went", timings: timings, preRollMs: 2_450)
+        XCTAssertEqual(out.timings.map(\.word), ["i", "went"])
+    }
+
+    /// Only a LEADING run is cut — a mid-attempt word can never predate the
+    /// beat, and filtering the whole array would desync it from the diff
+    /// steps `analyzeRhythm` walks in lockstep.
+    func testOnlyTheLeadingRunIsDropped() {
+        let timings = [WordTiming(word: "um", startMs: 100, endMs: 500),
+                       WordTiming(word: "i", startMs: 2_500, endMs: 2_800),
+                       WordTiming(word: "eh", startMs: 2_900, endMs: 3_000),
+                       WordTiming(word: "went", startMs: 3_100, endMs: 3_400)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "um i eh went", timings: timings, preRollMs: 2_450)
+        XCTAssertEqual(out.timings.map(\.word), ["i", "eh", "went"])
+    }
+
+    /// No stamps (an older attempt, or a recorder that failed to open) means
+    /// no cut — never guess at a pre-roll.
+    func testMissingPreRollLeavesEverything() {
+        let timings = [WordTiming(word: "i", startMs: 0, endMs: 300)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "i", timings: timings, preRollMs: 0)
+        XCTAssertEqual(out.timings.count, 1)
+        XCTAssertEqual(out.text, "i")
+    }
+
+    /// A learner who says nothing but clears their throat during the 3-2-1
+    /// scores an empty attempt, not a wrong one.
+    func testCountdownOnlySpeechLeavesNothingBehind() {
+        let timings = [WordTiming(word: "ahem", startMs: 200, endMs: 700)]
+        let out = ShadowDrillView.dropPreBeatWords(
+            text: "ahem", timings: timings, preRollMs: 2_450)
+        XCTAssertTrue(out.timings.isEmpty)
+        XCTAssertEqual(out.text, "")
+    }
 }

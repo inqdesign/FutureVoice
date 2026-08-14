@@ -186,9 +186,14 @@ final class LiveTranscriber: ObservableObject {
     ///   to their own turn.
     /// - Parameter voiceProcessing: run the mic through iOS's voice processing
     ///   unit (noise suppression + AGC + echo cancellation) — the same block
-    ///   Siri and FaceTime use. OFF by default because its AGC rescales the
-    ///   signal, and the shadow/"say it" surfaces score deterministically off
-    ///   raw levels. Conversation turns it ON: see the note in `start`.
+    ///   Siri and FaceTime use. Both mic surfaces that SCORE (Talk, Shadow)
+    ///   now pass true: nothing in either reads absolute amplitude — match
+    ///   scores are token-level over the transcript, rhythm comes from STT
+    ///   word timings, and the meter's own thresholds adapt to the floor —
+    ///   while the room degrades the recognizer that every one of those
+    ///   numbers is derived from. The default stays OFF so a future caller
+    ///   that genuinely needs the raw signal (the way `AudioSampleQuality`
+    ///   does for voice cloning) gets it by not asking.
     func start(locale: String, preferBuiltInMic: Bool = false,
                measurementMode: Bool? = nil,
                contextualStrings: [String] = [],

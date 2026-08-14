@@ -82,7 +82,7 @@ enum ItemReminder {
         }
 
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Ready to review")
+        content.title = chrome("Ready to review")
         content.body = trimmed(text)
         content.sound = .default
         content.categoryIdentifier = categoryId

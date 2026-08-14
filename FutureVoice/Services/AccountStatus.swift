@@ -35,8 +35,14 @@ struct AccountStatus {
     var secondsUsedToday: Int = 0
     /// The plan's per-day allowance in seconds (300 for Daily, 3600 for
     /// Unlimited), from `subscription_plans.daily_seconds`. Nil for free
-    /// users.
+    /// users. TALK only since 2026-08-14 — Watch has its own allowance below.
     var dailyCapSeconds: Int?
+    /// Watch scenes started today, and the plan's daily ceiling
+    /// (`subscription_plans.daily_scenes`: 2 on Daily, 20 fair-use on
+    /// Unlimited). Nil cap = no entitlement, so scenes are still priced in
+    /// seconds out of the balance and no count applies.
+    var scenesUsedToday: Int = 0
+    var dailyScenesCap: Int?
 
     /// True while the subscription actually entitles (paid or in trial).
     var isEntitled: Bool {
@@ -136,14 +142,14 @@ struct AccountStatus {
             // No free tier since the hard paywall: an account without a
             // subscription is either a beta tester spending leftovers or
             // someone who hasn't started.
-            return hasLegacyPool ? String(localized: "Beta") : String(localized: "No plan")
+            return hasLegacyPool ? chrome("Beta") : chrome("No plan")
         }
         let parts = planId.split(separator: "_")
         let tier = parts.first.map(String.init) ?? planId
         let name = tier.capitalized    // 'daily' → "Daily", 'unlimited' → "Unlimited"
         // The trial is metered as Daily whatever plan is being trialed, so
         // naming the trialed plan's tier here would promise the wrong size.
-        if isTrialing { return String(localized: "\(name) trial") }
+        if isTrialing { return chrome("\(name) trial") }
         let period = parts.dropFirst().first?.capitalized ?? ""
         return period.isEmpty ? name : "\(name) \(period)"
     }
@@ -170,24 +176,24 @@ struct AccountStatus {
     /// whether the number refills is the thing a learner most needs to know,
     /// and one shared "N of M" shape hid exactly that.
     var talkTimeLabel: String {
-        if unlimited { return String(localized: "\(minutesRemaining) min left") }
+        if unlimited { return chrome("\(minutesRemaining) min left") }
         if isUnlimitedPlan {
             return minutesUsedToday == 0
-                ? String(localized: "No talk time used today")
-                : String(localized: "\(minutesUsedToday) min used today")
+                ? chrome("No talk time used today")
+                : chrome("\(minutesUsedToday) min used today")
         }
         if isEntitled {
             // Daily and trial both refill at midnight — "today" is what
             // stops the number reading as a dwindling lifetime balance.
-            return String(localized: "\(minutesRemaining) of \(tankMinutes) min left today")
+            return chrome("\(minutesRemaining) of \(tankMinutes) min left today")
         }
         if hasLegacyPool {
             // Beta leftovers: a one-time pool with nothing to refill toward,
             // so no denominator.
-            return String(localized: "\(minutesRemaining) min of beta talk left")
+            return chrome("\(minutesRemaining) min of beta talk left")
         }
         // Hard paywall — there is no free tier to count down from.
-        return String(localized: "No talk time yet")
+        return chrome("No talk time yet")
     }
 
     /// Below this, the plan card turns orange and nudges toward an upgrade.
@@ -260,18 +266,37 @@ struct AccountStatus {
             out.fullTankSeconds = cap
         }
 
-        // Today's metered seconds (talk + Watch scenes) — the per-day pool
-        // the server accumulates into, owner-readable via RLS.
+        // Today's TALK seconds — the per-day pool the server accumulates
+        // into, owner-readable via RLS.
+        //
+        // Watch scenes are excluded since 2026-08-14: they are metered by
+        // COUNT against `subscription_plans.daily_scenes`, not by seconds off
+        // the talk allowance. Leaving them in here is what made "5 minutes of
+        // talk" quietly display as three on a day with any Watch use.
+        // `scene_seconds` still appears in the pool for un-updated clients
+        // and for free users, so it is filtered out by name rather than by
+        // assuming the pool only holds talk.
         struct PoolRow: Decodable { let chars: Int }
         if let rows: [PoolRow] = try? await SupabaseProvider.shared
             .from("tts_char_pool")
             .select("chars")
             .eq("user_id", value: userId)
             .eq("day", value: Self.utcDayString())
-            .in("action", values: ["talk_seconds", "scene_seconds"])
+            .eq("action", value: "talk_seconds")
             .execute()
             .value {
             out.secondsUsedToday = rows.reduce(0) { $0 + $1.chars }
+        }
+
+        // Today's Watch allowance, so the count can be shown before a scene
+        // starts rather than as a surprise mid-playback.
+        struct SceneRow: Decodable { let used: Int; let cap: Int? }
+        if let scenes: SceneRow = try? await SupabaseProvider.shared
+            .rpc("scene_allowance")
+            .execute()
+            .value {
+            out.scenesUsedToday = scenes.used
+            out.dailyScenesCap = scenes.cap
         }
         return out
     }

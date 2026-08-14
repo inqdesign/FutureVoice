@@ -4,9 +4,14 @@ import SwiftUI
 /// in sync with the server (talk-tick + elevenlabs-tts routing): a mismatch
 /// between what we show and what we meter is a trust-breaker.
 ///
-/// The model in one line: the meter runs only while you're talking (the
-/// in-call clock) or watching a scene play in your voice. Everything else —
-/// review, browsing, tapping around — is free.
+/// The model in one line: talk minutes are spent by the in-call clock and by
+/// NOTHING else; Watch has its own separate daily count of scenes. Everything
+/// else — review, browsing, tapping around — is free.
+///
+/// Scenes used to come out of the same daily minutes as talking, which meant
+/// buying "5 minutes of talk" and silently getting three on any day you also
+/// watched something. Since 2026-08-14 the two allowances are separate, and
+/// this page has to say so or the meter and the explanation disagree.
 struct CreditGuideView: View {
     var body: some View {
         List {
@@ -14,16 +19,23 @@ struct CreditGuideView: View {
                 costRow(icon: "phone.fill",
                         title: "Talking", cost: "clock time",
                         detail: "The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.")
-                costRow(icon: "play.circle.fill",
-                        title: "Watching a scene", cost: "~1 min",
-                        detail: "A scene costs its playback length in your voice — about a minute. Re-watching a saved scene generates a fresh take.")
                 costRow(icon: "person.wave.2.fill",
                         title: "Re-cloning your voice", cost: "~1 min",
                         detail: "Setup is free, including re-records in the first day. Later re-records cost a little.")
             } header: {
                 Text("Uses talk time")
             } footer: {
-                Text(explain("Only new audio in your voice uses your minutes. The meter never runs outside a call or a scene."))
+                Text(explain("Only the call clock spends your talk minutes. Watching a scene never takes a second off them."))
+            }
+
+            Section {
+                costRow(icon: "play.circle.fill",
+                        title: "Watching a scene", cost: "1 scene",
+                        detail: "Watch has its own daily count, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.")
+            } header: {
+                Text("Watch scenes")
+            } footer: {
+                Text(explain("Scenes you've already watched replay free forever and never use a new one."))
             }
 
             Section {

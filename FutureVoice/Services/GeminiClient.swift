@@ -11,6 +11,11 @@ import Supabase
 final class GeminiClient {
     static let shared = GeminiClient()
 
+    /// For calls the learner is NOT waiting on — see
+    /// `URLSession.edgeFunctionsBackground`. Its own connection pool, so a
+    /// bulky upload here can't slow the turn reply down.
+    static let background = GeminiClient(session: .edgeFunctionsBackground)
+
     private let session: URLSession
     init(session: URLSession = .edgeFunctions) {
         self.session = session

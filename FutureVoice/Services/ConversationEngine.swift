@@ -348,14 +348,17 @@ enum ConversationEngine {
           collocations, connectors, more precise word choices. Skip trivial
           phrases they obviously already command. Each is a full, speakable
           sentence, and the 3-4 should be varied (not near-duplicates).
-        - expressions_used: 0-4 REUSABLE multi-word expressions the user
-          ACTUALLY said this session — idioms, phrasal verbs, or set phrases
-          a fluent speaker would reach for in completely unrelated
+        - expressions_used: up to 6 REUSABLE multi-word expressions the user
+          ACTUALLY said this session — idioms, phrasal verbs, collocations or
+          set phrases a fluent speaker would reach for in completely unrelated
           conversations (e.g. "push back", "at the end of the day", "flag it
-          early"). The test: would this exact phrase be useful next week on
-          a different topic? Quote them VERBATIM from the user's turns —
-          never invent or paraphrase. Most sessions have none — empty is a
-          normal answer.
+          early", "catch up on", "end up -ing"). The test: would this exact
+          phrase be useful next week on a different topic? Quote them VERBATIM
+          from the user's turns — never invent or paraphrase; a paraphrase is
+          dropped on arrival. Prefer the strongest ones first. Return an empty
+          list only when the user genuinely produced nothing reusable (very
+          short or single-word turns) — in a normal conversation there are
+          usually several.
         - grammar_errors: EVERY clear grammatical error in the user's turns
           (up to 15) — articles, tense, subject-verb agreement, prepositions,
           plurals, word order, wrong verb forms. This is the EVIDENCE behind

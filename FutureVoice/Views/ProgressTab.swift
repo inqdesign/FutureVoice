@@ -707,7 +707,7 @@ struct ProgressTab: View {
         dailyEffort.flatMap { d in
             [MixEntry(day: d.day, kind: "Talk", count: d.talkTurns),
              MixEntry(day: d.day, kind: "Shadowing", count: d.shadowReps),
-             MixEntry(day: d.day, kind: "Drills", count: d.drillReps)]
+             MixEntry(day: d.day, kind: "Sentences", count: d.drillReps)]
         }
         .filter { $0.count > 0 }
     }
@@ -735,7 +735,7 @@ struct ProgressTab: View {
             .chartForegroundStyleScale([
                 "Talk": Color(.systemBlue),
                 "Shadowing": Color(.systemGreen),
-                "Drills": Color(.systemOrange),
+                "Sentences": Color(.systemOrange),
             ])
             .chartLegend(position: .bottom, spacing: 8)
             .chartXAxis {
@@ -1512,10 +1512,6 @@ struct ProgressTab: View {
                 }
             }
             material = (mastered, total)
-            #if DEBUG
-            NSLog("MATERIALPANEL sessions=%d mastered=%d total=%d",
-                  allEnded.count, mastered, total)
-            #endif
         }
         var effort: [DayEffort] = []
         for offset in (0..<14).reversed() {

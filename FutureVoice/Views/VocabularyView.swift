@@ -504,11 +504,17 @@ struct WordCard: View {
                 }
             }
         } else if loading {
-            // Shaped like the gloss it's about to become, so the peek doesn't
-            // resize under the reader when the lookup lands.
-            Text("Looking it up…")
-                .font(.body).foregroundStyle(.secondary)
-                .redacted(reason: .placeholder)
+            // Same spinner + wording as everywhere else a lookup runs. It was
+            // redacted (greeked) text alone, which reads as a rendering glitch
+            // rather than as work in progress — and this peek is the FIRST
+            // thing a tapped word shows, so it's where the app most looked
+            // stuck.
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.mini)
+                Text("Looking it up…")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
         } else {
             Text(explain("No dictionary entry yet — tap to open the card."))
                 .font(.footnote).foregroundStyle(.secondary)
@@ -536,7 +542,7 @@ struct WordCard: View {
                             }
                         }
                     } else {
-                        Text(loading ? "…" : "—").font(.body).foregroundStyle(.secondary)
+                        lookupPlaceholder
                     }
                 }
 
@@ -546,7 +552,7 @@ struct WordCard: View {
                             ForEach(examples) { exampleRow($0) }
                         }
                     } else {
-                        Text(loading ? "…" : "—").font(.body).foregroundStyle(.secondary)
+                        lookupPlaceholder
                     }
                 }
 
@@ -630,6 +636,26 @@ struct WordCard: View {
         }
         .buttonStyle(.plain)
         .disabled(speaking)
+    }
+
+
+    /// While a dictionary entry is being generated, say so — with the same
+    /// spinner every other generation in the app uses. A bare "…" was
+    /// pixel-identical to the "—" no-entry state, so a slow first lookup
+    /// (a cold word runs a full LLM generation server-side) read as a frozen
+    /// screen rather than as work in progress.
+    @ViewBuilder
+    private var lookupPlaceholder: some View {
+        if loading {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.mini)
+                Text("Looking it up…")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            Text("—").font(.body).foregroundStyle(.secondary)
+        }
     }
 
     private func speakWord() async {
@@ -873,12 +899,19 @@ struct WordCard: View {
     }
 
     private func load() async {
+        // `loading` FIRST, same as the expression card: clearing the entry
+        // before flipping it shows the no-entry state for a frame every time
+        // the card walks to the next word.
+        loading = true
         entry = nil
         nlPos = WordLore.partOfSpeech(word)
         sentences = store.sentences(using: word)
-        loading = true
-        entry = await WordLore.entry(for: word, native: appState.nativeLanguage,
+        let fetched = await WordLore.entry(for: word, native: appState.nativeLanguage,
                                      target: appState.targetLanguage, kind: .word)
+        // A newer word already owns this card — its own load is in flight, so
+        // neither the stale entry nor the stale `loading = false` may land.
+        guard !Task.isCancelled else { return }
+        entry = fetched
         loading = false
     }
 }
@@ -949,6 +982,13 @@ enum WordLore {
     ///   - kind: `.expression` for anything multi-word.
     static func entry(for word: String, native: String,
                       target: String, kind: Kind = .word) async -> WordEntry? {
+        #if DEBUG
+        // Capture seam: the loading state is invisible offline (the lookup
+        // fails instantly), so a screenshot run can hold it open.
+        if DebugCapture.slowLookupSeconds > 0 {
+            try? await Task.sleep(nanoseconds: UInt64(DebugCapture.slowLookupSeconds) * 1_000_000_000)
+        }
+        #endif
         let key = [native, target, kind.rawValue, word].joined(separator: "|")
         if let c = cache[key] { return c }
         // 1. Shared cache — a direct read is free and skips a function cold

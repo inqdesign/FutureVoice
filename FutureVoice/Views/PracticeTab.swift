@@ -37,6 +37,15 @@ struct PracticeTab: View {
     /// that makes it visible without one.
     @State private var showingDueReview = false
     @State private var dueReviewCount = 0
+    /// Expressions not yet marked known — same "to study" meaning as the
+    /// other tiles.
+    @State private var expressionsToStudy = 0
+    /// Fluent-self lines never shadowed yet. This is what the shadow browser
+    /// actually lists under its default lens; the tile used to show
+    /// `savedLines.count` — manual bookmarks, normally 0, whose only
+    /// affordances live INSIDE that browser — so the number and the screen it
+    /// opened were counting different things.
+    @State private var shadowToStudy = 0
     /// A per-item callback was tapped — open exactly this card. Word/phrase
     /// items ride in a one-card review deck; a sentence opens its drill card.
     @State private var focusedReviewItem: StudyDeckItem?
@@ -72,6 +81,10 @@ struct PracticeTab: View {
     /// SRS review (rehomed from the home Today card): cards due now + the
     /// review sheet itself.
     @State private var dueDrillCount = 0
+    /// Sentence cards not yet learned (box < maxBox) — the Sentences tile's
+    /// "to study" count. The raw card total counted cards the learner has
+    /// already retired, which is why 500+ showed up next to a goal of 20.
+    @State private var sentencesToStudy = 0
     @State private var showingDrills = false
     @State private var showingFinished = false
     @State private var talks: [Session] = []
@@ -104,6 +117,8 @@ struct PracticeTab: View {
     }
 
     private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    /// The Today card's 2×2 of category tiles.
+    private let tileColumns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
 
     var body: some View {
         NavigationStack {
@@ -572,69 +587,90 @@ struct PracticeTab: View {
             // promise the learner already made ("show me this again"), not a
             // target the app set; hidden when nothing is waiting.
             if dueReviewCount > 0 {
-                CardDivider(inset: 14)
                 dueReviewRow
             }
 
-            // The SRS deck's challenge, named for its CONTENT — the corrected
-            // sentences from your talks — not its format ("Cards" was a
-            // method, the way every other row is a category). Moving target:
-            // clear today's deck, capped at one deck (DrillView.sessionCap)
-            // so a 150-card backlog asks for 20, not 150 — extra decks past
-            // the target just show as done. Hidden on a day with nothing due
-            // and nothing done.
-            if dueDrillCount > 0 || today.drillReps > 0 {
-                CardDivider(inset: 14)
-                let cardsGoal = max(today.drillReps,
-                                    min(today.drillReps + dueDrillCount, DrillView.sessionCap))
-                challengeRow(icon: "rectangle.stack", title: "Sentences",
-                             done: today.drillReps, goal: cardsGoal) {
-                    showingDrills = true
+            // The four categories as a 2×2 grid. Stacked full-width rows made
+            // the card tall and gave each bar more room than a bar deserves;
+            // a tile carries the same numbers in half the height, and its
+            // second dimension is what lets "today" and "all" each have their
+            // own tap target without an invented split control.
+            LazyVGrid(columns: tileColumns, spacing: 10) {
+                // Sentences is the only conditional one: it's a moving target
+                // (clear today's deck, capped at DrillView.sessionCap so a
+                // 400-card backlog asks for 20), and on a day with nothing due
+                // and nothing done there's nothing to ask for.
+                if dueDrillCount > 0 || today.drillReps > 0 {
+                    let cardsGoal = max(today.drillReps,
+                                        min(today.drillReps + dueDrillCount, DrillView.sessionCap))
+                    challengeTile(icon: "rectangle.stack", title: "Sentences",
+                                  done: today.drillReps, goal: cardsGoal,
+                                  allCount: sentencesToStudy,
+                                  all: {
+                                      DrillsBySessionView()
+                                          .navigationTitle("Sentences")
+                                          .navigationBarTitleDisplayMode(.inline)
+                                          .environmentObject(appState)
+                                  }) {
+                        showingDrills = true
+                    }
                 }
-            }
-            if goals.wordsPerDay > 0 {
-                CardDivider(inset: 14)
-                // Lands in the dealt-hand session, not the explore cloud — a
-                // challenge hands you today's ten, it doesn't open a map.
-                challengeRow(icon: "text.book.closed.fill", title: "Words",
-                             done: today.wordReps, goal: goals.wordsPerDay) {
-                    showingDailyWords = true
+                if goals.wordsPerDay > 0 {
+                    // Lands in the dealt-hand session, not the explore cloud —
+                    // a challenge hands you today's ten, it doesn't open a map.
+                    challengeTile(icon: "text.book.closed.fill", title: "Words",
+                                  done: today.wordReps, goal: goals.wordsPerDay,
+                                  allCount: vocab.studying.count,
+                                  all: { VocabularyView().environmentObject(appState) }) {
+                        showingDailyWords = true
+                    }
                 }
-            }
-            if goals.expressionsPerDay > 0 {
-                CardDivider(inset: 14)
-                // Dealt-hand session, same as Words; the full collection
-                // stays reachable from the shortcuts band.
-                challengeRow(icon: "quote.bubble.fill", title: "Expressions",
-                             done: today.expressionReps, goal: goals.expressionsPerDay) {
-                    showingDailyExpressions = true
+                if goals.expressionsPerDay > 0 {
+                    challengeTile(icon: "quote.bubble.fill", title: "Expressions",
+                                  done: today.expressionReps, goal: goals.expressionsPerDay,
+                                  allCount: expressionsToStudy,
+                                  all: {
+                                      ExpressionsView()
+                                          .navigationTitle("Expressions")
+                                          .navigationBarTitleDisplayMode(.inline)
+                                          .environmentObject(appState)
+                                  }) {
+                        showingDailyExpressions = true
+                    }
                 }
-            }
-            if goals.shadowsPerDay > 0 {
-                CardDivider(inset: 14)
-                // Today's PICKS, not the full browser — the same dealt-hand
-                // rule as Words and Expressions. Falls back to the browser
-                // only when there's nothing to pick from yet.
-                challengeRow(icon: "waveform.badge.mic", title: "Shadowing",
-                             done: today.shadowReps, goal: goals.shadowsPerDay) {
-                    let picks = PracticeStats.shadowPicks(
-                        sessions: talks + archivedTalks,
-                        attempts: appState.shadowAttempts,
-                        level: appState.proficiency,
-                        limit: max(goals.shadowsPerDay, 1))
-                    if picks.isEmpty {
-                        showingShadowBrowser = true
-                    } else {
-                        todayShadowPicks = picks
-                        showingShadowSession = true
+                if goals.shadowsPerDay > 0 {
+                    // Today's PICKS, not the full browser — the same dealt-hand
+                    // rule as Words and Expressions. Falls back to the browser
+                    // only when there's nothing to pick from yet.
+                    challengeTile(icon: "waveform.badge.mic", title: "Shadowing",
+                                  done: today.shadowReps, goal: goals.shadowsPerDay,
+                                  allCount: shadowToStudy,
+                                  all: {
+                                      ShadowBrowserView()
+                                          .navigationTitle("Shadowing")
+                                          .navigationBarTitleDisplayMode(.inline)
+                                          .environmentObject(appState)
+                                  }) {
+                        let picks = PracticeStats.shadowPicks(
+                            sessions: talks + archivedTalks,
+                            attempts: appState.shadowAttempts,
+                            level: appState.proficiency,
+                            limit: max(goals.shadowsPerDay, 1))
+                        if picks.isEmpty {
+                            showingShadowBrowser = true
+                        } else {
+                            todayShadowPicks = picks
+                            showingShadowSession = true
+                        }
                     }
                 }
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 4)
             if goals.anyEnabled {
-                CardDivider(inset: 14)
                 weekStrip
             } else {
-                CardDivider(inset: 14)
                 Button { showingGoalsEditor = true } label: {
                     Text(explain("No daily goals set — tap to pick how many words, expressions and shadow takes make a day."))
                         .font(.caption)
@@ -645,10 +681,6 @@ struct PracticeTab: View {
                 }
                 .buttonStyle(.plain)
             }
-            // The way into the collections, in BOTH states — a fresh install
-            // with no goals set still has to be able to reach them.
-            CardDivider(inset: 14)
-            libraryRow
         }
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
@@ -686,70 +718,89 @@ struct PracticeTab: View {
         .buttonStyle(.plain)
     }
 
-    /// The dictionaries, as the card's quiet footer rather than a second card
-    /// of three tiles. Those tiles repeated Words / Expressions / Shadowing
-    /// directly under the challenge rows with numbers counting something else
-    /// entirely (kept-to-study vs ever-collected vs saved) — the same noun
-    /// twice on one screen is what made this page hard to read.
-    private var libraryRow: some View {
-        NavigationLink {
-            LibraryView().environmentObject(appState)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "books.vertical")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 28)
-                Text("Library")
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// One daily challenge: icon, title, progress bar, done/goal count. A
-    /// completed row swaps its chevron for a green check but keeps navigating
-    /// — done is a state, not a locked door (extra decks, more words).
-    private func challengeRow(icon: String, title: LocalizedStringKey,
-                              done: Int, goal: Int,
-                              action: @escaping () -> Void) -> some View {
+    /// One category as a TILE: today's ask on top, the whole collection at the
+    /// bottom, each its own tap target.
+    ///
+    /// Rows didn't survive contact with two destinations — side by side in a
+    /// 44pt row they needed an invented split control, and the inventory
+    /// count ended up louder than the ask. A tile has a second dimension, so
+    /// the two live in the natural places (what to do now above, what you
+    /// have below) separated by the same hairline every card uses.
+    private func challengeTile<D: View>(
+        icon: String, title: LocalizedStringKey,
+        done: Int, goal: Int,
+        allCount: Int,
+        @ViewBuilder all: () -> D,
+        action: @escaping () -> Void
+    ) -> some View {
         let complete = done >= goal
-        return Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.body)
-                    .foregroundStyle(complete ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tint))
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .firstTextBaseline) {
+        return VStack(spacing: 0) {
+            Button(action: action) {
+                VStack(alignment: .leading, spacing: 7) {
+                    HStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .font(.footnote)
+                            .foregroundStyle(complete ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tint))
                         Text(title)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.primary)
-                        Spacer(minLength: 8)
-                        Text("\(done)/\(goal)")
-                            .font(.caption.monospacedDigit())
+                            .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                        Spacer(minLength: 0)
                     }
+                    HStack(alignment: .firstTextBaseline, spacing: 5) {
+                        Text("\(done)/\(goal)")
+                            .font(.title3.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(.primary)
+                        if complete {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(Color.green)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    // Slim by design: the fraction above already carries the
+                    // number, so the bar only has to be glanceable.
                     ProgressView(value: Double(min(done, goal)), total: Double(max(goal, 1)))
                         .tint(complete ? .green : .accentColor)
+                        .scaleEffect(x: 1, y: 0.7, anchor: .center)
                 }
-                Image(systemName: complete ? "checkmark.circle.fill" : "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(complete ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tertiary))
+                .padding(.horizontal, 12)
+                .padding(.top, 11)
+                .padding(.bottom, 9)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 11)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+
+            CardDivider(inset: 10)
+
+            NavigationLink { all() } label: {
+                HStack(spacing: 4) {
+                    // Every tile's number means the SAME thing: how many are
+                    // still to study. They used to be all-cards / bookmarked-
+                    // words / all-expressions / saved-lines under one "All"
+                    // label — four meanings, one word, no way to tell.
+                    Text("To study")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Text("\(allCount)")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(allCount == 0 ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.secondary))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("practice.all.\(icon)")
         }
-        .buttonStyle(.plain)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Color(.tertiarySystemFill)))
     }
 
     /// The last seven days, today last — a filled check for each day every
@@ -1085,8 +1136,12 @@ struct PracticeTab: View {
 
     private func reload() {
         vocab.backfillFromSessions()
-        dueDrillCount = DrillStore.shared.load().filter { $0.nextReviewAt <= Date() }.count
+        let cards = DrillStore.shared.load()
+        dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count
+        sentencesToStudy = cards.filter { $0.box < DrillStore.maxBox }.count
         dueReviewCount = DueReviewView.dueDeck().count
+        expressionsToStudy = vocab.expressionEntries()
+            .filter { !vocab.isKnownExpression($0.text) }.count
 
         // Same rule as the Watch shelf: newest talk first, by when it was
         // STARTED. `endedAt` moves when a talk is continued, which pushed old
@@ -1096,6 +1151,14 @@ struct PracticeTab: View {
             .sorted { $0.startedAt > $1.startedAt }
         talks = finished.filter { $0.archivedAt == nil }
         archivedTalks = finished.filter { $0.archivedAt != nil }
+
+        // Exactly what ShadowBrowserView lists under its default lens: every
+        // fluent-self line that has never been attempted.
+        let practiced = Set(appState.shadowAttempts.map(\.turnId))
+        shadowToStudy = finished
+            .flatMap { $0.turns }
+            .filter { $0.role == .fluentSelf && !practiced.contains($0.id) }
+            .count
 
         // Second pass: derived talk-book progress (pickup-word extraction is
         // too heavy to block first paint with).

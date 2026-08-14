@@ -997,7 +997,10 @@ final class AppState: ObservableObject {
     private static func failureStatus(_ error: Error) -> Int {
         if let e = error as? ElevenLabsError {
             switch e {
-            case .insufficientCredits: return 402
+            // Both walls are 402 on the wire; a clone can only ever hit the
+            // credit one, but the status has to stay faithful to what the
+            // server actually answered.
+            case .insufficientCredits, .sceneCapReached: return 402
             case .httpError(let status, _): return status
             case .invalidResponse: return -1
             }

@@ -281,6 +281,17 @@ struct WatchView: View {
     private static let prefetchDepth = 2
     @State private var prefetches: [Int: Task<Data, Error>] = [:]
 
+    /// One key for this whole scene run. Every line sends it, so the plan's
+    /// daily scene COUNT is charged once no matter how many lines play — and
+    /// a scene already under way is never cut off part-heard. A fresh view
+    /// (a replay, a new take) mints a new key, but a fully cached scene never
+    /// reaches the server and so never spends one.
+    @State private var sceneRunKey = UUID().uuidString
+
+    /// Today's Watch allowance is spent. Not a paywall: they already paid,
+    /// and the answer is tomorrow.
+    @State private var sceneCapReached = false
+
     /// Everything needed to synthesize one line, resolved on the main actor
     /// before any concurrency so a prefetch can't race `turns` growing under
     /// it while a streamed scene is still arriving.
@@ -357,6 +368,14 @@ struct WatchView: View {
             }
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
+        // Deliberately NOT the error alert and deliberately no "See plans":
+        // this learner is a subscriber who used up today's scenes. The answer
+        // is tomorrow, and everything already generated still replays free.
+        .alert("That's today's scenes", isPresented: $sceneCapReached) {
+            Button("OK") { sceneCapReached = false }
+        } message: {
+            Text(explain("New scenes unlock at midnight. Replaying the ones you already have is always free."))
+        }
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
         }
@@ -713,6 +732,12 @@ struct WatchView: View {
                     // Streaming unavailable — classic fetch-then-play.
                     try await playAndWait(try await loadOrSynthesize(request))
                 }
+            } catch ElevenLabsError.sceneCapReached {
+                // Out of today's scenes. Say so where the scene was going to
+                // play, and never send them to the paywall for it.
+                sceneCapReached = true
+                isPlaying = false
+                return
             } catch {
                 self.error = error.localizedDescription
                 isPlaying = false
@@ -771,7 +796,8 @@ struct WatchView: View {
             modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
             purpose: "scene",
             previousText: request.previousText,
-            nextText: request.nextText)
+            nextText: request.nextText,
+            sceneKey: sceneRunKey)
         PhraseAudioStore.shared.save(audio, text: text, voiceId: voiceId)
         return audio
     }
@@ -795,7 +821,8 @@ struct WatchView: View {
             voiceId: request.voiceId,
             text: request.text,
             modelId: isOwnVoice ? ElevenLabsClient.fidelityModelId : "eleven_turbo_v2_5",
-            purpose: "scene"
+            purpose: "scene",
+            sceneKey: sceneRunKey
         ) { chunk, sampleRate in
             if !started {
                 do {

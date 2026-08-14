@@ -25,9 +25,15 @@
 -- THE DAILY BAR IS DELIBERATELY BELOW THE CHEAPEST PLAN'S ALLOWANCE.
 -- Daily (`daily_*`) buys 300 s/day. If the bar were 300 s, only Unlimited
 -- subscribers could ever clear it — the reward would be unreachable for
--- exactly the people it is worth something to. 180 s leaves headroom on the
--- cheapest plan. Never raise `daily_bar_seconds` to or above the Daily tier's
--- `daily_seconds`.
+-- exactly the people it is worth something to — and there would be no slack:
+-- a call that ends at 4 min 52 s would fail the day, and at 28/30 a couple of
+-- near misses lose the month. Never raise `daily_bar_seconds` to or above the
+-- Daily tier's `daily_seconds`.
+--
+-- The value itself moved to 240 s in 20260814110000, once Watch stopped
+-- sharing the talk pool; read that file before touching this number, and note
+-- that it is still derived from the plan's shape rather than from measured
+-- behaviour.
 --
 -- THE REWARD IS A DAILY ALLOWANCE BUMP, NOT A BALANCE GRANT. Seated members
 -- get `bonus_seconds` added to their per-day cap in `consume_metered_seconds`
@@ -41,8 +47,11 @@
 --
 -- Activity is measured from `tts_char_pool` rows tagged 'talk_seconds' (the
 -- column is named `chars` for credit-era reasons; for this action it holds
--- SECONDS). Scene playback is listening, not speaking, and is excluded on
--- purpose. Upgrade path: when the client starts reporting per-turn utterance
+-- SECONDS). Watch is excluded on purpose and stays excluded: scene playback
+-- is listening, not speaking, and the Core is about speaking. Since
+-- 20260814100000 scenes land in 'scene_seconds' (legacy clients) or
+-- 'scene_counted' (current ones) — neither is read here, so no amount of
+-- watching can move anyone toward a seat. Upgrade path: when the client starts reporting per-turn utterance
 -- seconds, point `core_daily_activity` at that instead — nothing else here
 -- needs to change.
 
@@ -54,8 +63,10 @@ create table if not exists public.core_club_config (
   id                     boolean primary key default true check (id),
   seats                  integer not null default 100,
   -- Daily bar: seconds of talk that make a day "met". Must stay below the
-  -- Daily tier's daily_seconds (see header).
-  daily_bar_seconds      integer not null default 180,
+  -- Daily tier's daily_seconds (see header). Raised 180 → 240 in
+  -- 20260814110000; kept in step here so a fresh database starts where
+  -- production already is.
+  daily_bar_seconds      integer not null default 240,
   -- Qualifying (once): met days required inside the entry window.
   entry_window_days      integer not null default 30,
   entry_required_days    integer not null default 28,
@@ -143,6 +154,7 @@ create index if not exists core_events_created_idx
 
 alter table public.core_events enable row level security;
 drop policy if exists "core_events: read" on public.core_events;
+drop policy if exists "core_events: read arrivals" on public.core_events;
 -- Arrivals are public; DEPARTURES ARE NOT. Nobody gets to see who lost a
 -- seat, and nobody gets to work out whose seat they took — that is how a
 -- club turns into a scoreboard people resent. 'left' rows exist only so the
@@ -586,6 +598,13 @@ begin
     into v_qualified, v_seated, v_last_left, v_member
     from core_membership m
    where m.user_id = v_uid;
+
+  -- SELECT INTO with no matching row sets its targets to NULL, not to their
+  -- initialisers — so a learner who hasn't qualified leaves v_qualified NULL,
+  -- `not v_qualified` evaluates to NULL, and the challenger countdown below
+  -- silently never runs. Pin them back to booleans.
+  v_qualified := coalesce(v_qualified, false);
+  v_seated    := coalesce(v_seated, false);
 
   select count(*) into v_club from core_membership where seated;
 

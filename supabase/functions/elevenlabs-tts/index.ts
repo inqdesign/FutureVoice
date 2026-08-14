@@ -18,7 +18,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
-         insufficientCreditsResponse, dailyCapResponse } from "../_shared/credits.ts"
+         beginScenePlay, insufficientCreditsResponse, dailyCapResponse,
+         sceneCapResponse } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-tts"
 
@@ -81,6 +82,12 @@ Deno.serve(async (req) => {
     // charge below stays on `text` alone, which is what ElevenLabs prices.
     previous_text?: string
     next_text?: string
+    // Stable across every line of ONE Watch scene (a per-playback UUID from
+    // the client). Present only on `purpose: "scene"`. With it, the scene
+    // costs one of the plan's daily scene counts and its seconds stop coming
+    // out of the talk allowance; without it — an un-updated app — the scene
+    // is metered in seconds against the talk allowance exactly as before.
+    scene_key?: string
   }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
 
@@ -115,13 +122,30 @@ Deno.serve(async (req) => {
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
     metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
   }
+  // Watch: claim one of today's scenes BEFORE synthesizing anything. Doing
+  // it first means the cap is hit on the line that would have started a
+  // third scene, not after we already paid ElevenLabs for it.
+  let scenePool: "scene_seconds" | "scene_counted" = "scene_seconds"
+  if (action === "tts_scene" && body.scene_key) {
+    const claim = await beginScenePlay({
+      supabase, userId: user.id, sceneKey: body.scene_key,
+    })
+    if (!claim.ok) {
+      if (claim.reason === "scene_cap") return sceneCapResponse(cors())
+      return errorResponse(500, "scene claim failed", claim.detail)
+    }
+    // Only an entitled user's scene was paid for with a count; a free user's
+    // scene still owes seconds against their balance.
+    if (claim.counted) scenePool = "scene_counted"
+  }
+
   const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
   const ch = isFreeGreeting
     ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
     : FREE_PURPOSES.has(body.purpose ?? "")
     ? await chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
     : action === "tts_scene"
-    ? await chargePooledTTS({ ...chargeArgs, action: "tts_scene" })
+    ? await chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: scenePool })
     : TALK_PURPOSES.has(body.purpose ?? "")
     ? await chargeTurnTTSFloored({ ...chargeArgs, action: baseAction })
     : await chargePooledTTS({ ...chargeArgs, action: baseAction })

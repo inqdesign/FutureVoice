@@ -620,7 +620,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
     }
 
     /// Box + delay for the manual choices; nil for `.gotIt`, which hands the
-    /// card back to the ladder (`DrillStore.markCorrect`).
+    /// card straight to the top rung (`DrillStore.markKnown`).
     var manual: (box: Int, delay: TimeInterval)? {
         switch self {
         case .tenMinutes: return (0, Self.soonDelay)
@@ -633,13 +633,13 @@ enum DrillBin: String, CaseIterable, Identifiable {
     /// Folder name at rest. Reads differently from the drop action that put
     /// a card there: the folder holds every card whose RETURN falls in its
     /// window, so "3 days" the action becomes "Later" the place, and box-5
-    /// graduates collect under "Learned".
+    /// graduates collect under "Known".
     var folderTitle: String {
         switch self {
         case .tenMinutes: return "Soon"
         case .tomorrow:   return "Tomorrow"
         case .threeDays:  return "Later"
-        case .gotIt:      return "Learned"
+        case .gotIt:      return "Known"
         }
     }
 
@@ -648,7 +648,7 @@ enum DrillBin: String, CaseIterable, Identifiable {
         case .tenMinutes: return Self.soonHint
         case .tomorrow:   return "Back tomorrow"
         case .threeDays:  return "Back in 3 days"
-        case .gotIt:      return explain("Got it — moves up the ladder")
+        case .gotIt:      return explain("Marked as known")
         }
     }
 
@@ -683,7 +683,7 @@ struct DrillSheet: View {
     var body: some View {
         NavigationStack {
             DrillView()
-                .navigationTitle("Drills")
+                .navigationTitle("Sentences")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -938,7 +938,7 @@ private extension DrillView {
                                             text: card.targetPhrase, at: at)
             }
         } else {
-            DrillStore.shared.markCorrect(card)
+            DrillStore.shared.markKnown(card)
             ItemReminder.cancel(.sentence(card.id))
         }
         PracticeLog.shared.record(.drill)

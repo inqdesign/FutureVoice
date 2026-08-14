@@ -2,6 +2,17 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
+/// Every widget renders in the app's chrome language — the language being
+/// learned — not the phone's. A widget is one of the app's surfaces, and the
+/// learner reading "Words" on the home screen is getting the same free
+/// exposure the tab bar gives them. Read per timeline render, so switching
+/// target language in the app repaints the widgets in the new language.
+extension Locale {
+    static var widgetChrome: Locale {
+        Locale(identifier: StudyWidgetSnapshotStore.chromeLanguage)
+    }
+}
+
 @main
 struct FutureVoiceWidgetBundle: WidgetBundle {
     var body: some Widget {
@@ -26,6 +37,7 @@ struct StreakWidget: Widget {
             StreakWidgetView(entry: entry)
                 // Grid cells match the mascot's pixels — one coherent display.
                 .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme, step: streakPixel) }
+                .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Streak")
         .description("Keep your daily talking streak alive.")
@@ -118,6 +130,7 @@ struct BookWidget: Widget {
                             provider: BookProvider()) { entry in
             BookWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+                .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Continue studying")
         .description("Jump back into the book you're working through.")
@@ -183,6 +196,7 @@ struct ProgressWidget: Widget {
                             provider: ProgressProvider()) { entry in
             ProgressWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+                .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Progress")
         .description("Today's goal, streak, and what's left to study.")
@@ -248,6 +262,7 @@ struct FreeTalkWidget: Widget {
             FreeTalkWidgetView(theme: entry.theme)
                 // Same surface as the Words/Phrases widgets — themed grid + bezel.
                 .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+                .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Free Talk")
         .description("One tap to call your fluent self.")
@@ -315,6 +330,7 @@ struct StudyWidgetConfiguration {
         ) { entry in
             StudyWidgetView(entry: entry)
                 .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
+                .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName(section.displayName)
         .description(section.galleryDescription)
@@ -450,7 +466,7 @@ struct StudyWidgetView: View {
         }
     }
 
-    private var emptyText: String {
+    private var emptyText: LocalizedStringKey {
         entry.section == .words
             ? "Save words to study them here"
             : "Bookmark phrases to study them here"

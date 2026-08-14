@@ -26,7 +26,10 @@ enum UtteranceTranscriber {
                            idempotencyKey: String) async -> String? {
         struct Payload: Decodable { let transcript: String? }
         do {
-            let payload: Payload = try await GeminiClient.shared.sendJSON(
+            // `.background`, not `.shared`: this upload must never contend
+            // with the turn reply for the shared connection — nothing is
+            // waiting to HEAR this call's result.
+            let payload: Payload = try await GeminiClient.background.sendJSON(
                 system: prompt(targetLanguage: targetLanguage),
                 messages: [.init(role: .user, content: asrGuess, inlineAudio: audio)],
                 model: .flashLite31,

@@ -6,15 +6,48 @@ import SwiftUI
 struct DrillsBySessionView: View {
     @State private var sessions: [Session] = []
     @State private var allCards: [DrillCard] = []
+    @State private var filter: Filter = .toStudy
+
+    /// Same two lenses the expression list uses, for the same reason: a flat
+    /// "520 cards" hides the only thing worth knowing — how much is still
+    /// ahead of you. "Known" is box 5, the top of the Leitner ladder.
+    enum Filter: String, CaseIterable, Identifiable {
+        case toStudy, known
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .toStudy: return "To study"
+            case .known:   return "Known"
+            }
+        }
+        func matches(_ card: DrillCard) -> Bool {
+            switch self {
+            case .toStudy: return card.box < DrillStore.maxBox
+            case .known:   return card.box >= DrillStore.maxBox
+            }
+        }
+    }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            Picker("Filter", selection: $filter) {
+                ForEach(Filter.allCases) { Text($0.label).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            Group {
             if sessionsWithCards.isEmpty && scenarioCardCount == 0 {
                 ContentUnavailableView(
-                    "No session cards yet",
-                    systemImage: "tray",
-                    description: Text(explain("After you end a conversation, the corrections it surfaces show up here grouped by session."))
+                    filter == .toStudy ? "Nothing left to study" : "Nothing learned yet",
+                    systemImage: filter == .toStudy ? "checkmark.circle" : "tray",
+                    description: Text(filter == .toStudy
+                        ? explain("Every sentence from your talks is at the top of the ladder. New ones arrive when you finish a conversation.")
+                        : explain("A sentence lands here once it reaches the top of the review ladder."))
                 )
+                .frame(maxHeight: .infinity)
             } else {
                 List {
                     ForEach(sessionsWithCards) { s in
@@ -49,6 +82,7 @@ struct DrillsBySessionView: View {
                 }
                 .listStyle(.insetGrouped)
             }
+            }
         }
         .onAppear { reload() }
     }
@@ -74,12 +108,17 @@ struct DrillsBySessionView: View {
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
     }
 
+    /// Cards in the current lens — everything below counts and lists from here.
+    private var visibleCards: [DrillCard] {
+        allCards.filter { filter.matches($0) }
+    }
+
     private func cardCount(for id: UUID) -> Int {
-        allCards.filter { $0.sourceSessionId == id }.count
+        visibleCards.filter { $0.sourceSessionId == id }.count
     }
 
     private var scenarioCardCount: Int {
-        allCards.filter { $0.sourceSessionId == nil }.count
+        visibleCards.filter { $0.sourceSessionId == nil }.count
     }
 
     private func reload() {

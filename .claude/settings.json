@@ -30,7 +30,12 @@
       "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/708acb36-c2f6-4811-a679-a4c7ec3ac447/scratchpad/loc -exportLanguage ko)",
       "Bash(node /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/af72ec2c-fc2c-4f19-b3b1-3086f8a5aa21/scratchpad/test_expr_prompt.mjs)",
       "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/708acb36-c2f6-4811-a679-a4c7ec3ac447/scratchpad/loc2 -exportLanguage ko)",
-      "Bash(zsh \"/private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/af72ec2c-fc2c-4f19-b3b1-3086f8a5aa21/scratchpad/live_test.sh\")"
+      "Bash(zsh \"/private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/af72ec2c-fc2c-4f19-b3b1-3086f8a5aa21/scratchpad/live_test.sh\")",
+      "Bash(xcrun xcresulttool *)",
+      "Bash(rm -rf __TRACKED_VAR__/result2.xcresult __TRACKED_VAR__/attach2)",
+      "Bash(mkdir -p __TRACKED_VAR__/attach2)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/708acb36-c2f6-4811-a679-a4c7ec3ac447/scratchpad/loc3 -exportLanguage ko)",
+      "Bash(xcodebuild -project FutureVoice.xcodeproj -scheme FutureVoice -exportLocalizations -localizationPath /private/tmp/claude-502/-Users-eunggyuelee-FutureVoice/d3474004-ac31-4dcc-b518-a96a169f3a80/scratchpad/loc -exportLanguage ko -exportLanguage de)"
     ]
   }
 }

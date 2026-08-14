@@ -112,12 +112,22 @@ final class DrillStore: LanguageScopedStore {
     }
 
     /// Promote the card one Leitner box and reschedule.
-    func markCorrect(_ card: DrillCard, at now: Date = Date()) {
+    /// "Got it" — the learner asserting they know this line. It GRADUATES the
+    /// card to the top rung rather than climbing one, which is what the word
+    /// and expression decks have always meant by the same bin: drop on Got it,
+    /// the item is known.
+    ///
+    /// Climbing one rung per correct answer meant five separate "Got it"s
+    /// before a card left the to-study pile, so the pile never visibly
+    /// shrank and the To study / Known filter looked broken. The three delay
+    /// bins are the "not yet" answers and still carry the spacing; the top
+    /// rung's own 30-day interval brings a known card back once, much later.
+    func markKnown(_ card: DrillCard, at now: Date = Date()) {
         var c = card
         c.timesSeen += 1
         c.timesCorrect += 1
         c.lastReviewedAt = now
-        c.box = min(c.box + 1, Self.maxBox)
+        c.box = Self.maxBox
         c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
         save(c)
         Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])

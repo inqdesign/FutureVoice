@@ -1,0 +1,97 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleDisplayName" : {
+      "comment" : "Bundle display name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "nawana dev"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "FutureVoice"
+          }
+        }
+      },
+      "shouldTranslate" : false
+    },
+    "NSAlarmKitUsageDescription" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana plant deinen täglichen Anruf als Wecker, damit dein fließendes Ich dich zur gewählten Zeit erreicht — auch wenn das Telefon stumm ist."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나와나는 매일 전화를 알람으로 예약해, 무음 모드에서도 유창한 내가 정해진 시각에 연락할 수 있게 합니다."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription" : {
+      "comment" : "Privacy - Microphone Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nawana nimmt deine Stimme auf, um sie zu klonen und dich in einer anderen Sprache fließend sprechen zu hören."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나와나가 목소리를 녹음해 클론을 만들고, 다른 언어를 유창하게 말하는 내 목소리를 들려줍니다."
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "comment" : "Privacy - Speech Recognition Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "nawana transkribiert deine Sprache auf dem Gerät, um sie mit der fließenden Version deiner Stimme zu vergleichen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "나와나가 말한 내용을 기기 안에서 텍스트로 옮겨, 유창한 내 목소리와 비교합니다."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.1"
+}

@@ -297,9 +297,26 @@ enum DailyCallScheduler {
     /// missed while the learner is reaching for the phone.
     private static func settleIfRangOut(now: Date) {
         guard let plan = DailyCallStore.shared.load(), !plan.isSettled,
-              now.timeIntervalSince(plan.scheduledFor) > rangOutGrace else { return }
+              now.timeIntervalSince(plan.scheduledFor) > rangOutGrace,
+              // A plan owns EVERY remaining slot, not just `scheduledFor` (see
+              // `fireDates`) — so one slot passing is not the day ending. At
+              // 08:05 with calls at 13:00 and 20:00, those alarms are still
+              // armed and carrying THIS plan; settling it here would make
+              // Answer and Decline no-ops when they ring, because both intents
+              // guard on `!plan.isSettled`.
+              !hasSlotRemainingToday(after: now) else { return }
         Analytics.capture("daily_call_missed", ["callbacks": plan.callbackCount])
         settle(plan, as: .missed)
+    }
+
+    /// Whether any call is still due to ring TODAY.
+    ///
+    /// `fireDates` rolls to tomorrow's first call once today's are spent, so
+    /// "the next one is not today" is exactly "nothing left is armed today".
+    static func hasSlotRemainingToday(after now: Date,
+                                      calendar: Calendar = .current) -> Bool {
+        guard let next = fireDates(after: now, calendar: calendar).first else { return false }
+        return calendar.isDate(next, inSameDayAs: now)
     }
 
     /// Turned off, or no longer possible. Drops the pending ring and the plan.

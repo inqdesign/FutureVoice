@@ -1,8 +1,35 @@
 import Foundation
+import os
 import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
+
+/// Resolves a label in the app's CHROME language — the language being learned,
+/// mirrored into the App Group by the app because an extension can't read the
+/// app's `UserDefaults`.
+///
+/// A widget's `Text("literal")` follows `\.locale`, which each widget sets once
+/// at its root; this is for the few labels that have to become a `String`
+/// before they reach a `Text`. It resolves against the CURRENT target's bundle,
+/// so the same call site works in the app and in the extension.
+func widgetChrome(_ key: String.LocalizationValue) -> String {
+    String(localized: key, bundle: .widgetChrome)
+}
+
+extension Bundle {
+    /// `.main` fallback is deliberate: the source language ships no `.lproj`,
+    /// so a learner practicing English correctly degrades to the catalog keys.
+    static var widgetChrome: Bundle {
+        let code = StudyWidgetSnapshotStore.chromeLanguage
+        if let cached = chromeBundleCache.withLock({ $0[code] }) { return cached ?? .main }
+        let resolved = Bundle.main.path(forResource: code, ofType: "lproj").flatMap(Bundle.init(path:))
+        chromeBundleCache.withLock { $0[code] = resolved }
+        return resolved ?? .main
+    }
+
+    private static let chromeBundleCache = OSAllocatedUnfairLock(initialState: [String: Bundle?]())
+}
 
 /// Data contract between the app and the home-screen widgets. Compiled into
 /// BOTH targets (app + FutureVoiceWidget) — keep it dependency-free: no
@@ -45,23 +72,28 @@ enum StudyWidgetSection: String, CaseIterable {
         case .expressions: return "FutureVoiceExpressionsWidget"
         }
     }
+    /// Gallery copy — the "Add Widget" sheet. Resolved in the DEVICE language
+    /// (plain `String(localized:)`), unlike everything drawn inside the widget:
+    /// that sheet is iOS's own UI, listed next to system widgets, and the
+    /// learner is browsing it in their phone's language.
     var displayName: String {
         switch self {
-        case .words:       return "Vocabulary"
-        case .expressions: return "Expressions"
+        case .words:       return String(localized: "Vocabulary")
+        case .expressions: return String(localized: "Expressions")
         }
     }
     var galleryDescription: String {
         switch self {
-        case .words:       return "Words from your notebook to keep studying."
-        case .expressions: return "Phrases you've picked up in your talks."
+        case .words:       return String(localized: "Words from your notebook to keep studying.")
+        case .expressions: return String(localized: "Phrases you've picked up in your talks.")
         }
     }
-    /// Header label inside the widget.
+    /// Header label inside the widget — OUR surface, so it speaks the app's
+    /// chrome language like every other label the learner sees in the app.
     var shortLabel: String {
         switch self {
-        case .words:       return "Words"
-        case .expressions: return "Phrases"
+        case .words:       return widgetChrome("Words")
+        case .expressions: return widgetChrome("Phrases")
         }
     }
     var systemImage: String {
@@ -167,6 +199,15 @@ enum StudyWidgetSnapshotStore {
     static var themeIndex: Int {
         get { defaults?.integer(forKey: "widget_theme") ?? 0 }
         set { defaults?.set(newValue, forKey: "widget_theme") }
+    }
+
+    /// The app's chrome language (its TARGET language), written by the app on
+    /// refresh. The widget is one of the app's surfaces, so it speaks the same
+    /// language the tabs and labels do — and it can't read that setting itself,
+    /// living in another process with its own `UserDefaults`.
+    static var chromeLanguage: String {
+        get { defaults?.string(forKey: "widget_chrome_language") ?? "en" }
+        set { defaults?.set(newValue, forKey: "widget_chrome_language") }
     }
 
     /// The currently-shown item index for a section — bumped ±1 by the widget's
@@ -390,7 +431,10 @@ struct StudyCard<Prev: View, Next: View>: View {
     let label: String        // "Words" / "Phrases"
     let word: String         // the single item; empty → empty state
     let note: String         // CEFR level / usage count, shown small
-    let emptyText: String
+    /// A KEY, not a String: the empty state is the one line here that has to be
+    /// translated, and a `String` would neither extract into the catalog nor
+    /// follow the widget's locale.
+    let emptyText: LocalizedStringKey
     var compact: Bool = false
     /// The pixel word's colour — the theme's vivid tone.
     var wordColor: Color = .white

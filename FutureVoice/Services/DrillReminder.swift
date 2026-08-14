@@ -74,13 +74,13 @@ enum DrillReminder {
         guard countAtFire > 0 else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = String(localized: "Ready to review")
+        content.title = chrome("Ready to review")
         // Counts everything waiting at fire time, not just the snooze that
         // triggered it — so the body says "waiting", not "you asked for
         // this": with a backlog, most of them are simply due.
         content.body = countAtFire == 1
-            ? String(localized: "1 word, phrase or line is waiting.")
-            : String(localized: "\(countAtFire) words, phrases and lines are waiting.")
+            ? explain("1 word, phrase or line is waiting.")
+            : explain("\(countAtFire) words, phrases and lines are waiting.")
         content.sound = .default
         content.categoryIdentifier = categoryId
 
