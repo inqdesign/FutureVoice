@@ -78,10 +78,15 @@ Credits only gate *creating new audio/AI* — never practicing with what exists.
 
 | Plan | EUR (list, incl. VAT) | KRW (App Store fallback) | Net ~Apple SB (71%) |
 |------|----------------------|---------------------------|---------------------|
-| pro monthly | **€9.99** | **₩14,000** | ~€7.10 |
-| pro annual | **€79.99** | **₩119,000** | ~€57 (~29% off 12× monthly) |
+| daily monthly | **€9.99** | **₩15,000** | ~€7.10 |
+| daily annual | **€79.99** | **₩110,000** | ~€57 (33% off 12× monthly; 39% in KRW) |
 | premium monthly | **€19.99** | **₩29,000** | ~€14.30 |
 | premium annual | **€199.99** | **₩299,000** | ~€143 (~17% off 12× monthly) |
+
+KRW for the **daily** pair is Apple's own suggested price point for the EUR
+base, read off App Store Connect on 2026-08-11 — so the annual discount is
+deeper in KRW (39%) than in EUR (33%). The **unlimited** pair is still our
+estimate; replace it with the ASC suggestion when those products are created.
 
 Annual story = **cheaper sticker price** (“~2 months free”), **not** extra credits.
 

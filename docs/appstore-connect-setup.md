@@ -46,7 +46,7 @@
 | **Product ID** | `com.roro.futurevoice.daily_monthly` |
 | Duration | 1 Month |
 | Price (기준) | **€9.99** |
-| Price (한국) | **₩14,000** |
+| Price (한국) | **₩15,000** — Apple 제안가 |
 | Display Name — English | `Daily Monthly` |
 | Display Name — 한국어 | `데일리 월간` |
 | Description — English | `5 minutes of talk a day in your own voice` |
@@ -60,7 +60,7 @@
 | **Product ID** | `com.roro.futurevoice.daily_annual` |
 | Duration | 1 Year |
 | Price (기준) | **€79.99** |
-| Price (한국) | **₩119,000** |
+| Price (한국) | **₩110,000** — Apple 제안가 |
 | Display Name — English | `Daily Annual` |
 | Display Name — 한국어 | `데일리 연간` |
 | Description — English | `5 minutes of talk a day, 2 months free` |
@@ -74,7 +74,7 @@
 | **Product ID** | `com.roro.futurevoice.unlimited_monthly` |
 | Duration | 1 Month |
 | Price (기준) | **€19.99** |
-| Price (한국) | **₩29,000** |
+| Price (한국) | **₩29,000** — 추정치, ASC 제안가로 교체 필요 |
 | Display Name — English | `Unlimited Monthly` |
 | Display Name — 한국어 | `무제한 월간` |
 | Description — English | `Talk as much as you want, every day` |
@@ -88,7 +88,7 @@
 | **Product ID** | `com.roro.futurevoice.unlimited_annual` |
 | Duration | 1 Year |
 | Price (기준) | **€199.99** |
-| Price (한국) | **₩299,000** |
+| Price (한국) | **₩299,000** — 추정치, ASC 제안가로 교체 필요 |
 | Display Name — English | `Unlimited Annual` |
 | Display Name — 한국어 | `무제한 연간` |
 | Description — English | `Unlimited talk, 2 months free` |

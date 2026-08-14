@@ -36,11 +36,14 @@ final class StoreKitService: ObservableObject {
         /// Weekly is an impulse tier with no fixed price yet → nil ("—").
         var localizedPrice: String? { product?.displayPrice ?? PlanOption.plannedPrice[plan.id] }
 
-        // KRW App Store–style points for the locked EUR list prices in
-        // docs/launch-billing.md. Live StoreKit localizes once products ship.
+        // KRW price points for the locked EUR list prices in
+        // docs/launch-billing.md. The Daily pair are Apple's own suggested
+        // points for the EUR base (taken from App Store Connect 2026-08-11);
+        // the Unlimited pair are still our estimates until the same screen
+        // is read for them. Live StoreKit localizes once products ship.
         static let plannedPrice: [String: String] = [
-            "daily_monthly":     "₩14,000",
-            "daily_annual":      "₩119,000",
+            "daily_monthly":     "₩15,000",
+            "daily_annual":      "₩110,000",
             "unlimited_monthly": "₩29,000",
             "unlimited_annual":  "₩299,000",
         ]
@@ -48,8 +51,8 @@ final class StoreKitService: ObservableObject {
         /// Numeric price for math (annual-vs-monthly savings). Live products
         /// carry `product.price`; the fallback mirrors `plannedPrice`.
         static let plannedPriceValue: [String: Decimal] = [
-            "daily_monthly":     14_000,
-            "daily_annual":      119_000,
+            "daily_monthly":     15_000,
+            "daily_annual":      110_000,
             "unlimited_monthly": 29_000,
             "unlimited_annual":  299_000,
         ]
