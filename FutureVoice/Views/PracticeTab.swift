@@ -40,6 +40,10 @@ struct PracticeTab: View {
     /// Expressions not yet marked known — same "to study" meaning as the
     /// other tiles.
     @State private var expressionsToStudy = 0
+    /// Notebook words plus the words your Watch books are still asking for.
+    /// The tile used to count `studying` alone, so a book could hand you eight
+    /// words, the daily deck could deal them, and this number never moved.
+    @State private var wordsToStudy = 0
     /// Fluent-self lines never shadowed yet. This is what the shadow browser
     /// actually lists under its default lens; the tile used to show
     /// `savedLines.count` — manual bookmarks, normally 0, whose only
@@ -620,7 +624,7 @@ struct PracticeTab: View {
                     // a challenge hands you today's ten, it doesn't open a map.
                     challengeTile(icon: "text.book.closed.fill", title: "Words",
                                   done: today.wordReps, goal: goals.wordsPerDay,
-                                  allCount: vocab.studying.count,
+                                  allCount: wordsToStudy,
                                   all: { VocabularyView().environmentObject(appState) }) {
                         showingDailyWords = true
                     }
@@ -1140,8 +1144,25 @@ struct PracticeTab: View {
         dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count
         sentencesToStudy = cards.filter { $0.box < DrillStore.maxBox }.count
         dueReviewCount = DueReviewView.dueDeck().count
-        expressionsToStudy = vocab.expressionEntries()
-            .filter { !vocab.isKnownExpression($0.text) }.count
+        // The SAME list the Expressions page shows — said-it phrases plus the
+        // ones watched scenes handed over. Counting only the store's rows
+        // meant the tile ignored every expression a Watch book taught.
+        expressionsToStudy = ExpressionCatalog.toStudy(scenarios: appState.scenarios,
+                                                       store: vocab).count
+
+        // Same union for words: the notebook plus unmastered book words the
+        // learner hasn't retired yet. Deduped case-insensitively — a book word
+        // the learner has already kept must not count twice.
+        var wordKeys = Set(vocab.studying.map { $0.lowercased() })
+        for scenario in appState.scenarios where !scenario.isArchived {
+            for item in scenario.curriculum?.words ?? [] where item.masteredAt == nil {
+                let key = item.text.lowercased()
+                guard vocab.state(of: VocabStore.lookupKey(for: item.text)) == nil,
+                      vocab.state(of: key) == nil else { continue }
+                wordKeys.insert(key)
+            }
+        }
+        wordsToStudy = wordKeys.count
 
         // Same rule as the Watch shelf: newest talk first, by when it was
         // STARTED. `endedAt` moves when a talk is continued, which pushed old
@@ -1155,10 +1176,19 @@ struct PracticeTab: View {
         // Exactly what ShadowBrowserView lists under its default lens: every
         // fluent-self line that has never been attempted.
         let practiced = Set(appState.shadowAttempts.map(\.turnId))
-        shadowToStudy = finished
+        let talkLines = finished
             .flatMap { $0.turns }
             .filter { $0.role == .fluentSelf && !practiced.contains($0.id) }
             .count
+        // Scene lines from Watch books count too — the browser lists them now,
+        // and the book asks for them. A curriculum item's id IS its shadow
+        // turn id, so "practiced" means the same thing on both sides.
+        let sceneLines = appState.scenarios
+            .filter { !$0.isArchived }
+            .flatMap { $0.curriculum?.shadowLines ?? [] }
+            .filter { !practiced.contains($0.id) }
+            .count
+        shadowToStudy = talkLines + sceneLines
 
         // Second pass: derived talk-book progress (pickup-word extraction is
         // too heavy to block first paint with).

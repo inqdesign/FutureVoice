@@ -1,7 +1,15 @@
 import SwiftUI
 
-/// Browse every fluent-self line your future self has ever spoken, grouped by
-/// session, and tap any line to drop into a shadow-practice flow. Lives in its
+/// Browse every line your fluent self has ever spoken — the lines from your
+/// TALKS and the lines from the scenes you WATCHED — and tap any of them to
+/// drop into a shadow-practice flow.
+///
+/// Scene lines used to be missing entirely: they live on a `Scenario`'s
+/// curriculum, and this browser only ever read `SessionStore`. A Watch book
+/// would show six lines to shadow that the shadow archive had never heard of.
+/// They're merged in here rather than copied anywhere, and because a
+/// curriculum item's id doubles as its synthetic `Turn.id`, attempts made from
+/// either surface are the same attempts. Lives in its
 /// own sheet (separate from `DrillSheet`'s SRS queue) because the two are
 /// fundamentally different practice modes — corrections vs prosody reps.
 /// Reusable body view. Parent (tab or sheet) supplies the NavigationStack.
@@ -29,6 +37,26 @@ struct ShadowBrowserView: View {
     /// Turn ids with at least one shadow attempt — "what have I practiced".
     private var practicedIds: Set<UUID> {
         Set(appState.shadowAttempts.map(\.turnId))
+    }
+
+    /// A Watch book's scene lines, as shadowable turns. Same id trick
+    /// `ScenarioDetailView` uses, so an attempt here checks the book's line
+    /// off too.
+    private var sceneSections: [(scenario: Scenario, lines: [Turn])] {
+        appState.scenarios
+            .filter { !$0.isArchived }
+            .compactMap { scenario in
+                let lines = (scenario.curriculum?.shadowLines ?? []).map {
+                    Turn(id: $0.id, role: .fluentSelf, audioURL: nil,
+                         transcript: $0.text, durationMs: 0,
+                         timestamp: scenario.lastUsedAt ?? scenario.createdAt,
+                         suggestion: nil)
+                }
+                .filter { passes($0) }
+                return lines.isEmpty ? nil : (scenario, lines)
+            }
+            .sorted { ($0.scenario.lastUsedAt ?? $0.scenario.createdAt)
+                    > ($1.scenario.lastUsedAt ?? $1.scenario.createdAt) }
     }
 
     private func passes(_ turn: Turn) -> Bool {
@@ -94,14 +122,29 @@ private extension ShadowBrowserView {
     @ViewBuilder
     private var content: some View {
         let totalLines = sessions.reduce(0) { $0 + $1.turns.filter { $0.role == .fluentSelf }.count }
+            + appState.scenarios.reduce(0) { $0 + ($1.curriculum?.shadowLines.count ?? 0) }
         if totalLines == 0 {
             ContentUnavailableView(
                 "Nothing to shadow yet",
                 systemImage: "waveform.badge.mic",
-                description: Text(explain("Finish a conversation, then come back to shadow any line your fluent self said."))
+                description: Text(explain("Have a conversation or watch a scene, then come back to shadow any line your fluent self said."))
             )
         } else {
             List {
+                // Watched scenes first — their lines are the ones a book is
+                // currently asking for.
+                ForEach(sceneSections, id: \.scenario.id) { section in
+                    Section(header: sceneHeader(section.scenario)) {
+                        ForEach(section.lines) { turn in
+                            Button {
+                                shadowTarget = ShadowTarget(turn: turn)
+                            } label: {
+                                ShadowRow(turn: turn, isSaved: appState.isLineSaved(turn.id))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
                 ForEach(sessions) { session in
                     let lines = session.turns.filter {
                         $0.role == .fluentSelf && passes($0)
@@ -130,6 +173,17 @@ private extension ShadowBrowserView {
                 }
             }
             .listStyle(.insetGrouped)
+        }
+    }
+
+    /// A scene's header names the book, so a line's origin is never a guess.
+    private func sceneHeader(_ scenario: Scenario) -> some View {
+        HStack {
+            Label(scenario.environment, systemImage: "film")
+                .lineLimit(1)
+            Spacer()
+            Text(relativeDate(scenario.lastUsedAt ?? scenario.createdAt))
+                .foregroundStyle(.secondary)
         }
     }
 

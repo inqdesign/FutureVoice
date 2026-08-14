@@ -83,6 +83,11 @@ struct ScenarioDetailView: View {
             if let s = scenario, let c = s.curriculum {
                 WatchView(counterpart: watchCounterpart(for: s),
                           savedDialogue: sceneDialogue(s, c),
+                          // So a "Shadow this" tap on a bubble lands on the
+                          // book's own line rather than a throwaway id.
+                          shadowLineIds: c.shadowLines.reduce(into: [:]) { map, line in
+                              map[CarryoverDetector.normalized(line.text)] = line.id
+                          },
                           // Already ON the book — pushing it again would
                           // stack the same page twice, so pop back to it.
                           handoff: .init(title: "Back to the book",

@@ -192,3 +192,50 @@ final class ItemReminderTargetTests: XCTestCase {
                           ItemReminder.Target.expression("appreciate").requestId)
     }
 }
+
+/// A book's material has to reach its category's library, not just sit on the
+/// book. Watch books were the disconnected half: their expressions, words and
+/// scene lines lived on the `Scenario` and no library, count or browser knew
+/// about them.
+@MainActor
+final class BookMaterialReachesLibraryTests: XCTestCase {
+
+    private func scenario(words: [String] = [],
+                          expressions: [String] = [],
+                          lines: [String] = []) -> Scenario {
+        var s = Scenario(environment: "At the pharmacy", role: "pharmacist",
+                         notes: "picking up a prescription")
+        var c = ScenarioCurriculum()
+        c.words = words.map { .init(text: $0, note: "") }
+        c.expressions = expressions.map { .init(text: $0, note: "") }
+        c.shadowLines = lines.map { .init(text: $0, note: "") }
+        s.curriculum = c
+        return s
+    }
+
+    /// Unique fixtures: `VocabStore` is a singleton reading the real files, so
+    /// the catalog legitimately also contains whatever this simulator has
+    /// collected. The claim under test is about THESE phrases.
+    private let scenePhrase = "zz-pick-up-a-prescription"
+    private let otherScenePhrase = "zz-over-the-counter"
+
+    func testSceneExpressionsAppearInTheExpressionCatalog() {
+        let s = scenario(expressions: [scenePhrase, otherScenePhrase])
+        let all = ExpressionCatalog.all(scenarios: [s])
+
+        for phrase in [scenePhrase, otherScenePhrase] {
+            guard let item = all.first(where: { $0.key == phrase }) else {
+                return XCTFail("\(phrase) never reached the catalog")
+            }
+            XCTAssertTrue(item.isFromScene, "a scene expression must say where it came from")
+        }
+    }
+
+    /// An archived book stops asking.
+    func testArchivedScenariosDropOutOfTheCatalog() {
+        var s = scenario(expressions: [scenePhrase])
+        s.archivedAt = Date()          // `isArchived` is derived from this
+        XCTAssertNil(ExpressionCatalog.all(scenarios: [s]).first { $0.key == scenePhrase },
+                     "an archived book must stop asking")
+    }
+}

@@ -178,6 +178,12 @@ struct WatchView: View {
     let customScenario: String
     /// When set, skip Gemini generation and just replay this saved dialogue.
     let savedDialogue: WatchDialogue?
+    /// Normalized line text → the book's shadow-line id, when this scene came
+    /// from a book. Shadowing a bubble then writes its attempt against the
+    /// BOOK's line: without it `asTurn` minted a throwaway UUID, so the take
+    /// was orphaned — it never checked the line off and no browser could find
+    /// it again.
+    var shadowLineIds: [String: UUID] = [:]
     /// Whether a freshly generated dialogue is archived for replay.
     /// False for scenario-watch (the book already owns its scene) — those
     /// are one-shot, audio still caches for in-session replay.
@@ -211,6 +217,7 @@ struct WatchView: View {
          topic: SuggestedTopic? = nil,
          customScenario: String = "",
          savedDialogue: WatchDialogue? = nil,
+         shadowLineIds: [String: UUID] = [:],
          persist: Bool = true,
          handoff: SceneHandoff? = nil,
          feed: SceneFeed? = nil) {
@@ -218,6 +225,7 @@ struct WatchView: View {
         self.topic = topic
         self.customScenario = customScenario
         self.savedDialogue = savedDialogue
+        self.shadowLineIds = shadowLineIds
         self.persist = persist
         self.handoff = handoff
         self.feed = feed
@@ -618,7 +626,7 @@ struct WatchView: View {
         // a line in your own voice). Refine later if needed.
         _ = voiceId
         return Turn(
-            id: UUID(),
+            id: shadowLineIds[CarryoverDetector.normalized(d.text)] ?? UUID(),
             role: .fluentSelf,
             audioURL: nil,
             transcript: d.text,

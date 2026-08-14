@@ -31,8 +31,12 @@ struct ExpressionsView: View {
         }
     }
 
-    private var entries: [VocabStore.ExpressionEntry] {
-        let all = store.expressionEntries()
+    /// Both sources in one list — phrases you SAID (VocabStore) and the ones
+    /// your Watch books handed you (scene curricula). They used to be separate
+    /// worlds: a book could show six expressions that this page had never
+    /// heard of, while the daily deck dealt them anyway.
+    private var entries: [ExpressionCatalog.Item] {
+        let all = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
         switch filter {
         case .toStudy: return all.filter { !store.isKnownExpression($0.text) }
         case .known:   return all.filter { store.isKnownExpression($0.text) }
@@ -69,13 +73,13 @@ struct ExpressionsView: View {
                         }
                     } footer: {
                         Text(filter == .toStudy
-                             ? "Captured automatically from what you say. Mark the ones you've got down as known."
+                             ? explain("Captured from what you say, plus the expressions your watched scenes teach. Mark the ones you've got down as known.")
                              : "\(entries.count) known")
                     }
                 }
             }
         }
-        .navigationTitle("\(store.expressionCount) expressions")
+        .navigationTitle("\(ExpressionCatalog.all(scenarios: appState.scenarios, store: store).count) expressions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
@@ -105,12 +109,12 @@ struct ExpressionsView: View {
     }
     private var emptyMessage: String {
         switch filter {
-        case .toStudy: return explain("Expressions you use in your talks will collect here.")
+        case .toStudy: return explain("Expressions you use in your talks — and the ones your watched scenes hand you — collect here.")
         case .known:   return explain("Mark expressions you've got down as known.")
         }
     }
 
-    private func row(_ entry: VocabStore.ExpressionEntry) -> some View {
+    private func row(_ entry: ExpressionCatalog.Item) -> some View {
         let studying = store.isStudyingExpression(entry.text)
         let known = store.isKnownExpression(entry.text)
         return HStack(spacing: 12) {
@@ -126,9 +130,21 @@ struct ExpressionsView: View {
                 Text(Self.display(entry.text))
                     .font(.body)
                     .foregroundStyle(.primary)
-                Text("Used \(entry.count) time\(entry.count == 1 ? "" : "s") · \(entry.lastAt.formatted(.dateTime.month().day()))")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                // Say which kind of row this is. "Used N times" on a phrase
+                // that came from a scene the learner hasn't spoken yet would
+                // be a lie, and it's the reason scene expressions aren't
+                // simply copied into the store.
+                switch entry.origin {
+                case .said(let count):
+                    Text("Used \(count) time\(count == 1 ? "" : "s") · \(entry.at.formatted(.dateTime.month().day()))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                case .scene(let title):
+                    Label(title, systemImage: "film")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
