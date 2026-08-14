@@ -752,15 +752,33 @@ struct ShadowDrillView: View {
                 micButton(diameter: 64)
             }
         }
+        // Feedback scrolls UNDER this panel and the trimmer card's edge used to
+        // slice the last line clean in half. Feather the seam so a line
+        // dissolves on its way down, the way it does under the tab bar
+        // elsewhere. A wash of the PAGE colour, not `.bar`: this page is plain
+        // `systemBackground`, where a material would sit as a visible grey band.
+        .overlay(alignment: .top) {
+            ScrollEdgeFeather(fill: Color(.systemBackground), ramp: Self.feather)
+                .frame(height: Self.feather)
+                .offset(y: -Self.feather)
+                .allowsHitTesting(false)
+        }
         // Sheet-like: the card hugs the screen edges (small side inset) with a
         // generous corner radius. No status caption — the mic's own state
-        // (idle / red-pulsing / countdown overlay) already says enough.
+        // (idle / red-pulsing / countdown overlay) already says enough. No
+        // bottom padding — the panel sits as low as the home indicator allows.
         .padding(.horizontal, 8)
-        .padding(.vertical, 16)
+        .padding(.top, 16)
         .frame(maxWidth: .infinity)
-        // No outer material — the trimmer's own rounded card is the only
-        // container; a second full-width background read as a box-in-a-box.
+        // Still no outer MATERIAL — the trimmer's own rounded card is the only
+        // container, and a second full-width one read as a box-in-a-box. This
+        // is the page colour continuing through the home-indicator strip, so
+        // content can't scroll past the panel into the bottom corner.
+        .background { Color(.systemBackground).ignoresSafeArea(edges: .bottom) }
     }
+
+    /// Height of the dissolve above the panel.
+    private static let feather: CGFloat = 56
 
     /// The primary record/redo control. `diameter` lets it be full-size when
     /// standalone (64) or compact inside the transport row (52); the glyph and
