@@ -96,7 +96,7 @@ struct PublicIntroView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!canPublish)
-                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
 
                 if publishedId != nil {
                     Button(role: .destructive) {
