@@ -1253,7 +1253,8 @@ struct ShadowDrillView: View {
             fix: payload?.fix ?? ""
         )
         appState.saveShadowAttempt(attempt)
-        PracticeLog.shared.record(.shadow)
+        // A recorded take IS the practice — nothing else to finish.
+        PracticeLog.shared.record(.shadow, finished: true)
     }
 
     /// Replace `userWordTimings` from the LATEST segment-level word timings

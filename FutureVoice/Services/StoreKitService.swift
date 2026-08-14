@@ -37,10 +37,9 @@ final class StoreKitService: ObservableObject {
         var localizedPrice: String? { product?.displayPrice ?? PlanOption.plannedPrice[plan.id] }
 
         // KRW price points for the locked EUR list prices in
-        // docs/launch-billing.md. The Daily pair are Apple's own suggested
-        // points for the EUR base (taken from App Store Connect 2026-08-11);
-        // the Unlimited pair are still our estimates until the same screen
-        // is read for them. Live StoreKit localizes once products ship.
+        // docs/launch-billing.md — Apple's own suggestions for the EUR base
+        // (App Store Connect, 2026-08-11). Live StoreKit localizes these away
+        // once the products ship; they exist for the pre-launch paywall.
         static let plannedPrice: [String: String] = [
             "daily_monthly":     "₩15,000",
             "daily_annual":      "₩110,000",

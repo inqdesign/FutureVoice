@@ -75,8 +75,8 @@ final class VocabStore: ObservableObject {
         guard !studying.contains(word) else { return }
         studying.insert(word, at: 0)   // newest first
         saveStudying()
-        // A "keep" is a studied-word judgment — it counts toward the daily
-        // words challenge (as does "I know" in markKnown; un-taps don't).
+        // Effort, not a finished word: keeping it means you're still
+        // studying it, so it must not tick the daily goal.
         PracticeLog.shared.record(.word)
         Analytics.capture("word_saved", ["cefr": VocabStore.coreLevelLabel(for: word)])
     }
@@ -133,7 +133,7 @@ final class VocabStore: ObservableObject {
         } else if known {
             expressionRecords[k] = Record(state: .known, firstAt: Date(), lastAt: Date(), count: 0)
         }
-        if known { PracticeLog.shared.record(.expression) }
+        if known { PracticeLog.shared.record(.expression, finished: true) }
         saveExpressions()
         // Known-state changes can move a phrase in/out of the widget's studying
         // view is unaffected, but keep the snapshot fresh for the count badge.
@@ -336,7 +336,7 @@ final class VocabStore: ObservableObject {
             save()
         }
         removeStudying(lemma)
-        PracticeLog.shared.record(.word)
+        PracticeLog.shared.record(.word, finished: true)
         Analytics.capture("word_known", ["cefr": VocabStore.coreLevelLabel(for: lemma)])
     }
 

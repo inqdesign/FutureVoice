@@ -323,3 +323,52 @@ final class ExpressionMasteryEvidenceTests: XCTestCase {
         XCTAssertTrue(VocabStore.shared.hasUsedExpression(phrase))
     }
 }
+
+/// A day is complete when work is FINISHED, not when items were handled.
+/// Postponing ten cards used to tick the day off exactly like mastering them.
+@MainActor
+final class DailyGoalCountsFinishedWorkTests: XCTestCase {
+
+    private var log: PracticeLog!
+    private let filename = "test-practice-log-goals.json"
+
+    override func setUp() {
+        super.setUp()
+        log = PracticeLog(filename: filename)
+    }
+
+    override func tearDown() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.removeItem(at: dir.appendingPathComponent(filename))
+        super.tearDown()
+    }
+
+    func testHandlingAnItemIsEffortButNotDone() {
+        log.record(.word)                     // "Keep" / pushed to later
+        let day = log.day(Date())!
+        XCTAssertEqual(day.wordReps, 1, "effort is still recorded")
+        XCTAssertEqual(day.wordDone, 0, "…but nothing was finished")
+    }
+
+    func testFinishedWorkCountsForBoth() {
+        log.record(.word, finished: true)     // "I know"
+        let day = log.day(Date())!
+        XCTAssertEqual(day.wordReps, 1)
+        XCTAssertEqual(day.wordDone, 1)
+    }
+
+    func testGoalIsNotMetByPostponingAlone() {
+        let goals = GoalStore(defaults: UserDefaults(suiteName: "test.goals.\(UUID().uuidString)")!)
+        goals.sentencesPerDay = 0
+        goals.wordsPerDay = 2
+        goals.expressionsPerDay = 0
+        goals.shadowsPerDay = 0
+
+        log.record(.word); log.record(.word)                 // two postponements
+        XCTAssertFalse(goals.met(on: Date(), log: log),
+                       "a day must not complete itself on postponed items")
+
+        log.record(.word, finished: true); log.record(.word, finished: true)
+        XCTAssertTrue(goals.met(on: Date(), log: log))
+    }
+}

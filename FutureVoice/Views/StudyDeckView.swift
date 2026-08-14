@@ -10,7 +10,7 @@ private extension DrillBin {
     var deckTitle: LocalizedStringKey {
         switch self {
         // Follows DrillBin's own label so the deck can't advertise a delay
-        // the schedule doesn't keep (DEBUG shortens it — see `soonDelay`).
+        // the schedule doesn't keep (see `DrillBin.soonDelay`).
         case .tenMinutes: return LocalizedStringKey(DrillBin.soonTitle)
         case .tomorrow:   return "Tomorrow"
         case .threeDays:  return "3 days"

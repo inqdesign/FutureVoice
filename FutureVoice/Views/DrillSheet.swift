@@ -572,24 +572,14 @@ enum DrillBin: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
-    // The shortest "show me again" delay, in one place so the label can never
-    // disagree with what actually happens.
-    //
-    // DEBUG shortens it to a minute: the whole point of the shortest bin is
-    // the round trip (drop → notification → review deck), and a 10-minute
-    // wait makes that untestable by hand. Release keeps the real interval —
-    // a one-minute callback would be a nag, not a schedule.
-    #if DEBUG
-    static let soonDelay: TimeInterval = 60
-    static let soonTitle = "1 min"
-    static let soonHint = "Back in 1 minute"
-    static let soonAccessibilityTitle = "Show again in 1 minute"
-    #else
+    // The shortest "show me again" delay, in one place so the label, the
+    // schedule and the accessibility title can never disagree. (It was
+    // temporarily a minute in DEBUG to make the drop → notification → review
+    // round trip testable by hand.)
     static let soonDelay: TimeInterval = 10 * 60
     static let soonTitle = "10 min"
     static let soonHint = "Back in 10 minutes"
     static let soonAccessibilityTitle = "Show again in 10 minutes"
-    #endif
 
     var title: String {
         switch self {
@@ -941,7 +931,8 @@ private extension DrillView {
             DrillStore.shared.markKnown(card)
             ItemReminder.cancel(.sentence(card.id))
         }
-        PracticeLog.shared.record(.drill)
+        // Only "Got it" finishes a card; the delay bins are "not yet".
+        PracticeLog.shared.record(.drill, finished: bin.manual == nil)
         // The chip the card landed in ticks up as the deck advances — the
         // visible "it went somewhere" that makes grading feel like sorting.
         withAnimation(.snappy) { refreshFolders() }

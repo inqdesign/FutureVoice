@@ -9,12 +9,35 @@ import Foundation
 final class PracticeLog {
     static let shared = PracticeLog()
 
+    /// Two numbers per kind, because they answer two different questions.
+    ///
+    /// `*Reps` = EFFORT: every time the learner handled the item at all —
+    /// bookmarking a word, pushing a card to tomorrow. That's what the
+    /// activity chart on Progress is about ("you showed up").
+    ///
+    /// `*Done` = FINISHED: the item was actually retired — "Got it" on a card,
+    /// "I know" on a word or phrase, a recorded shadow take. That's what a
+    /// daily goal is about. The two were one number, so a day could be ticked
+    /// complete by postponing ten cards.
     struct Day: Codable {
         var drillReps: Int = 0
         var shadowReps: Int = 0
         var wordReps: Int = 0
         var expressionReps: Int = 0
+        var drillDone: Int = 0
+        var shadowDone: Int = 0
+        var wordDone: Int = 0
+        var expressionDone: Int = 0
         var total: Int { drillReps + shadowReps + wordReps + expressionReps }
+
+        func done(_ kind: Kind) -> Int {
+            switch kind {
+            case .drill:      return drillDone
+            case .shadow:     return shadowDone
+            case .word:       return wordDone
+            case .expression: return expressionDone
+            }
+        }
     }
 
     enum Kind {
@@ -38,7 +61,10 @@ final class PracticeLog {
         }
     }
 
-    func record(_ kind: Kind, on date: Date = Date()) {
+    /// - Parameter finished: the item is done with (mastered / known /
+    ///   actually said out loud), as opposed to merely handled. Only finished
+    ///   work counts toward a daily goal.
+    func record(_ kind: Kind, finished: Bool = false, on date: Date = Date()) {
         let key = Self.key(for: date)
         var day = days[key] ?? Day()
         switch kind {
@@ -46,6 +72,14 @@ final class PracticeLog {
         case .shadow:     day.shadowReps += 1
         case .word:       day.wordReps += 1
         case .expression: day.expressionReps += 1
+        }
+        if finished {
+            switch kind {
+            case .drill:      day.drillDone += 1
+            case .shadow:     day.shadowDone += 1
+            case .word:       day.wordDone += 1
+            case .expression: day.expressionDone += 1
+            }
         }
         days[key] = day
         save()
@@ -85,6 +119,7 @@ extension PracticeLog.Day {
     // empty log — which would erase the whole history on first launch.
     private enum CodingKeys: String, CodingKey {
         case drillReps, shadowReps, wordReps, expressionReps
+        case drillDone, shadowDone, wordDone, expressionDone
     }
 
     init(from decoder: Decoder) throws {
@@ -93,5 +128,13 @@ extension PracticeLog.Day {
         shadowReps     = try c.decodeIfPresent(Int.self, forKey: .shadowReps) ?? 0
         wordReps       = try c.decodeIfPresent(Int.self, forKey: .wordReps) ?? 0
         expressionReps = try c.decodeIfPresent(Int.self, forKey: .expressionReps) ?? 0
+        // Days logged before the split have no done counts. A shadow rep IS a
+        // recorded take, so that one can be recovered exactly; the others
+        // can't tell postponed from finished and stay at 0 rather than
+        // inventing credit for work that may not have happened.
+        drillDone      = try c.decodeIfPresent(Int.self, forKey: .drillDone) ?? 0
+        shadowDone     = try c.decodeIfPresent(Int.self, forKey: .shadowDone) ?? shadowReps
+        wordDone       = try c.decodeIfPresent(Int.self, forKey: .wordDone) ?? 0
+        expressionDone = try c.decodeIfPresent(Int.self, forKey: .expressionDone) ?? 0
     }
 }

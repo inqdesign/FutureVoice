@@ -604,11 +604,14 @@ struct PracticeTab: View {
                 // (clear today's deck, capped at DrillView.sessionCap so a
                 // 400-card backlog asks for 20), and on a day with nothing due
                 // and nothing done there's nothing to ask for.
-                if dueDrillCount > 0 || today.drillReps > 0 {
-                    let cardsGoal = max(today.drillReps,
-                                        min(today.drillReps + dueDrillCount, DrillView.sessionCap))
+                if goals.sentencesPerDay > 0, dueDrillCount > 0 || today.drillDone > 0 {
+                    // The learner's goal, but never more than exists to do —
+                    // asking for 20 when 3 cards are due makes the day
+                    // unwinnable through no fault of theirs.
+                    let cardsGoal = max(today.drillDone,
+                                        min(today.drillDone + dueDrillCount, goals.sentencesPerDay))
                     challengeTile(icon: "rectangle.stack", title: "Sentences",
-                                  done: today.drillReps, goal: cardsGoal,
+                                  done: today.drillDone, goal: cardsGoal,
                                   allCount: sentencesToStudy,
                                   all: {
                                       DrillsBySessionView()
@@ -623,7 +626,7 @@ struct PracticeTab: View {
                     // Lands in the dealt-hand session, not the explore cloud —
                     // a challenge hands you today's ten, it doesn't open a map.
                     challengeTile(icon: "text.book.closed.fill", title: "Words",
-                                  done: today.wordReps, goal: goals.wordsPerDay,
+                                  done: today.wordDone, goal: goals.wordsPerDay,
                                   allCount: wordsToStudy,
                                   all: { VocabularyView().environmentObject(appState) }) {
                         showingDailyWords = true
@@ -631,7 +634,7 @@ struct PracticeTab: View {
                 }
                 if goals.expressionsPerDay > 0 {
                     challengeTile(icon: "quote.bubble.fill", title: "Expressions",
-                                  done: today.expressionReps, goal: goals.expressionsPerDay,
+                                  done: today.expressionDone, goal: goals.expressionsPerDay,
                                   allCount: expressionsToStudy,
                                   all: {
                                       ExpressionsView()
@@ -647,7 +650,7 @@ struct PracticeTab: View {
                     // rule as Words and Expressions. Falls back to the browser
                     // only when there's nothing to pick from yet.
                     challengeTile(icon: "waveform.badge.mic", title: "Shadowing",
-                                  done: today.shadowReps, goal: goals.shadowsPerDay,
+                                  done: today.shadowDone, goal: goals.shadowsPerDay,
                                   allCount: shadowToStudy,
                                   all: {
                                       ShadowBrowserView()
@@ -1218,6 +1221,9 @@ struct StudyGoalsSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    Stepper(value: $goals.sentencesPerDay, in: 0...50) {
+                        goalLabel("rectangle.stack", "Sentences", goals.sentencesPerDay)
+                    }
                     Stepper(value: $goals.wordsPerDay, in: 0...50) {
                         goalLabel("text.book.closed.fill", "Words", goals.wordsPerDay)
                     }
@@ -1228,7 +1234,7 @@ struct StudyGoalsSheet: View {
                         goalLabel("waveform.badge.mic", "Shadowing", goals.shadowsPerDay)
                     }
                 } footer: {
-                    Text(explain("A day counts once every goal here is met. Words and expressions count each \u{201C}keep\u{201D} or \u{201C}I know\u{201D} decision; shadowing counts recorded takes. Set a goal to 0 to leave it out."))
+                    Text(explain("A day counts once every goal here is met — and only FINISHED work counts: \u{201C}Got it\u{201D} on a sentence, \u{201C}I know\u{201D} on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn\u{2019}t done. Set a goal to 0 to leave it out."))
                 }
                 // Whether the schedule can actually ring. Without this the
                 // learner drops a card on "10 min", nothing comes back, and

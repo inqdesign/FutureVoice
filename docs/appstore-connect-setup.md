@@ -74,7 +74,7 @@
 | **Product ID** | `com.roro.futurevoice.unlimited_monthly` |
 | Duration | 1 Month |
 | Price (기준) | **€19.99** |
-| Price (한국) | **₩29,000** — 추정치, ASC 제안가로 교체 필요 |
+| Price (한국) | **₩29,000** — Apple 제안가 |
 | Display Name — English | `Unlimited Monthly` |
 | Display Name — 한국어 | `무제한 월간` |
 | Description — English | `Talk as much as you want, every day` |
@@ -88,7 +88,7 @@
 | **Product ID** | `com.roro.futurevoice.unlimited_annual` |
 | Duration | 1 Year |
 | Price (기준) | **€199.99** |
-| Price (한국) | **₩299,000** — 추정치, ASC 제안가로 교체 필요 |
+| Price (한국) | **₩299,000** — Apple 제안가 |
 | Display Name — English | `Unlimited Annual` |
 | Display Name — 한국어 | `무제한 연간` |
 | Description — English | `Unlimited talk, 2 months free` |
@@ -182,8 +182,12 @@ ASC에 주간이 없으면 주간 탭 자체가 안 뜹니다. 나중에 ASC에 
 
 ## 5. 상품 외에 반드시 함께 해야 하는 것
 
-- [ ] **App Store Server Notifications V2** 를 `apple-webhook` 엔드포인트로 지정
-      → `https://chhzjtigzdotacutwcyo.supabase.co/functions/v1/apple-webhook`
+- [ ] **App Store Server Notifications V2** 지정
+      → RevenueCat을 쓰면 **RC의 URL**을 넣고, RC에서 우리 `apple-webhook`으로
+        포워딩하도록 설정합니다 (`docs/revenuecat-setup.md` §3).
+      → RC를 안 쓰면 우리 엔드포인트를 직접 넣습니다:
+        `https://chhzjtigzdotacutwcyo.supabase.co/functions/v1/apple-webhook`
+      → **둘 중 하나만** 가능합니다. Apple은 앱당 URL 하나만 받습니다.
 - [ ] Supabase 시크릿 `APPLE_BUNDLE_ID`, `APPLE_APP_ID` 설정 확인
 - [ ] 앱 내 약관/개인정보 링크는 이미 페이월에 있음 (Apple 표준 EULA +
       `nawana.app/privacy.html`). ASC의 App Information에도 **같은** 링크를
