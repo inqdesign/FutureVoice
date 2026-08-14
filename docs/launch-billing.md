@@ -102,7 +102,7 @@ Annual story = **cheaper sticker price** (“~2 months free”), **not** extra c
 | **premium monthly** | **1,500** | ~480 turns ≈ 15 turns/day + Watch/shadow |
 | **premium annual** | **18,000** | 12 × monthly |
 
-Weekly SKUs stay in the DB for StoreKit experiments; **web sells monthly + annual only**.  
+Weekly SKUs are **off the catalog** since 2026-08-11 (`is_active = false`, migration `20260811190000_weekly_off_catalog`): they were never priced, and the minutes-native model gives `daily_weekly` the SAME 300 s/day as `daily_monthly`, so the credits-era "quarter of a month" rationale is gone. Rows kept — re-selling weekly is price → ASC products → flip the flag, no code change. **Web sells monthly + annual only.**  
 v1 paywall default period: **annual** (higher LTV); beta survey defaults to **monthly** (clearer WTP signal).
 
 ### Unit definition
