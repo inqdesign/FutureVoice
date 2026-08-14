@@ -38,11 +38,17 @@ struct UsageBreakdown {
         var count: Int
     }
 
-    /// A day's metered total, for the recent-days list.
+    /// A day's metered total, for the recent-days list. Talk and scene
+    /// seconds are kept apart because since 2026-08-14 they come out of
+    /// different allowances — a chart that adds them would re-tell the very
+    /// confusion that split fixed.
     struct Day: Identifiable {
         var id: String { date }
         let date: String        // "yyyy-MM-dd" (UTC, matching the server pool)
-        var seconds: Int
+        var talkSeconds: Int = 0
+        var sceneSeconds: Int = 0
+
+        var seconds: Int { talkSeconds + sceneSeconds }
         var minutes: Int { seconds / 60 }
     }
 
@@ -142,7 +148,7 @@ struct UsageBreakdown {
         var todayMeters: [String: Meter] = [:]
         var weekMeters: [String: Meter] = [:]
         var free: [String: FreeItem] = [:]
-        var dayTotals: [String: Int] = [:]
+        var dayTotals: [String: Day] = [:]
 
         for row in rows {
             let day = String(row.created_at.prefix(10))
@@ -155,7 +161,10 @@ struct UsageBreakdown {
                 week.count += 1
                 weekMeters[row.action] = week
 
-                dayTotals[day, default: 0] += seconds
+                var totals = dayTotals[day] ?? Day(date: day)
+                if row.action == "tts_scene" { totals.sceneSeconds += seconds }
+                else { totals.talkSeconds += seconds }
+                dayTotals[day] = totals
 
                 if day == todayKey {
                     var t = todayMeters[row.action]
@@ -185,9 +194,7 @@ struct UsageBreakdown {
         out.today = order.compactMap { todayMeters[$0] }
         out.week = order.compactMap { weekMeters[$0] }
         out.freeToday = free.values.sorted { $0.count > $1.count }
-        out.days = dayTotals
-            .map { Day(date: $0.key, seconds: $0.value) }
-            .sorted { $0.date > $1.date }
+        out.days = dayTotals.values.sorted { $0.date > $1.date }
         return out
     }
 
@@ -215,7 +222,7 @@ struct UsageBreakdown {
         let today = dayKey(Date())
         out.days = [655, 1240, 0, 430, 980, 610, 320].enumerated().map { i, secs in
             Day(date: dayKey(Date().addingTimeInterval(Double(-i) * 86_400)),
-                seconds: secs)
+                talkSeconds: secs)
         }.filter { $0.seconds > 0 || $0.date == today }
         return out
     }

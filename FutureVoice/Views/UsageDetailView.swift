@@ -24,6 +24,7 @@ struct UsageDetailView: View {
                 Section { HStack { Spacer(); ProgressView(); Spacer() } }
             } else {
                 todaySection
+                scenesSection
                 freeSection
                 weekSection
             }
@@ -77,15 +78,25 @@ struct UsageDetailView: View {
 
     // MARK: - Today
 
+    /// Scenes left the talk meter on 2026-08-14: with a plan they cost one
+    /// COUNT off `daily_scenes`, not seconds off the talk allowance. Without
+    /// one they're still priced in seconds out of the balance.
+    private var scenesMeteredByCount: Bool { account.dailyScenesCap != nil }
+
+    /// The meters that actually spend TALK minutes for this account.
+    private var talkMeters: [UsageBreakdown.Meter] {
+        scenesMeteredByCount ? usage.today.filter { $0.key != "tts_scene" } : usage.today
+    }
+
     @ViewBuilder
     private var todaySection: some View {
         Section {
-            if usage.today.isEmpty {
+            if talkMeters.isEmpty {
                 Text(explain("You haven't used any talk time today."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(usage.today) { meter in
+                ForEach(talkMeters) { meter in
                     row(icon: meter.icon,
                         title: meter.title,
                         detail: countLabel(meter),
@@ -95,7 +106,7 @@ struct UsageDetailView: View {
                 HStack {
                     Text("Total").font(.subheadline.weight(.semibold))
                     Spacer()
-                    Text(totalLabel(usage.todaySeconds))
+                    Text(totalLabel(talkMeters.reduce(0) { $0 + $1.seconds }))
                         .font(.subheadline.weight(.semibold))
                         .monospacedDigit()
                 }
@@ -103,7 +114,28 @@ struct UsageDetailView: View {
         } header: {
             Text("Today")
         } footer: {
-            Text(explain("Talking is metered by the call clock; a Watch scene costs the length of the scene it plays."))
+            Text(scenesMeteredByCount
+                 ? explain("Talking is metered by the call clock. Watch scenes have their own daily count and never touch these minutes.")
+                 : explain("Talking is metered by the call clock; a Watch scene costs the length of the scene it plays."))
+        }
+    }
+
+    /// Watch's own allowance — a COUNT, so it gets its own section rather
+    /// than a minutes row that would imply it drains the same pool.
+    @ViewBuilder
+    private var scenesSection: some View {
+        if let cap = account.dailyScenesCap {
+            Section {
+                row(icon: "play.circle.fill",
+                    title: chrome("Watch scenes"),
+                    detail: explain("Replaying a scene you've already watched is free."),
+                    trailing: chrome("\(account.scenesUsedToday) of \(cap)"),
+                    trailingTint: .primary)
+            } header: {
+                Text("Watch today")
+            } footer: {
+                Text(explain("A scene costs one count however long it runs, and the count resets every day."))
+            }
         }
     }
 
@@ -150,12 +182,12 @@ struct UsageDetailView: View {
                         GeometryReader { geo in
                             Capsule()
                                 .fill(Color.accentColor.opacity(0.75))
-                                .frame(width: max(2, geo.size.width * barFraction(day.seconds)),
+                                .frame(width: max(2, geo.size.width * barFraction(daySeconds(day))),
                                        height: 8)
                                 .frame(maxHeight: .infinity, alignment: .center)
                         }
                         .frame(height: 16)
-                        Text(totalLabel(day.seconds))
+                        Text(totalLabel(daySeconds(day)))
                             .font(.footnote.monospacedDigit())
                             .foregroundStyle(.secondary)
                             .frame(width: 56, alignment: .trailing)
@@ -164,13 +196,21 @@ struct UsageDetailView: View {
             } header: {
                 Text("Last 7 days")
             } footer: {
-                Text(explain("Total talk time per day: calls plus the scenes you watched."))
+                Text(scenesMeteredByCount
+                     ? explain("Talk time per day. Watch scenes are counted separately and never appear here.")
+                     : explain("Total talk time per day: calls plus the scenes you watched."))
             }
         }
     }
 
+    /// Scene seconds belong to a different allowance once a plan meters them
+    /// by count, so they must not be added into a "talk time per day" bar.
+    private func daySeconds(_ day: UsageBreakdown.Day) -> Int {
+        scenesMeteredByCount ? day.talkSeconds : day.seconds
+    }
+
     private func barFraction(_ seconds: Int) -> Double {
-        let peak = usage.days.map(\.seconds).max() ?? 0
+        let peak = usage.days.map(daySeconds).max() ?? 0
         guard peak > 0 else { return 0 }
         return Double(seconds) / Double(peak)
     }

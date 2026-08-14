@@ -290,6 +290,12 @@
             "state": "new",
             "value": "%1$@: %2$lld"
           }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %lld"
+          }
         }
       },
       "shouldTranslate": false
@@ -337,6 +343,12 @@
         "en": {
           "stringUnit": {
             "state": "new",
+            "value": "%1$lld / %2$lld"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
             "value": "%1$lld / %2$lld"
           }
         }
@@ -555,6 +567,7 @@
       }
     },
     "%lld known": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -1596,6 +1609,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 대화의 핵심 문장만 빠르게 복습해요 — 나머지는 Practice의 복습 큐로 들어가요."
+          }
+        }
+      }
+    },
+    "A scene costs one count however long it runs, and the count resets every day.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "장면은 길이와 상관없이 한 번으로 계산되고, 매일 다시 채워져요."
           }
         }
       }
@@ -2935,6 +2958,7 @@
       }
     },
     "Captured automatically from what you say. Mark the ones you've got down as known.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -2946,6 +2970,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "말한 내용에서 자동으로 모아요. 완전히 익힌 건 '아는 것'으로 표시하세요."
+          }
+        }
+      }
+    },
+    "Captured from what you say, plus the expressions your watched scenes teach. Mark the ones you've got down as known.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "말한 내용과 시청한 장면이 알려준 표현에서 모았어요. 익힌 것은 안다고 표시해 주세요."
           }
         }
       }
@@ -4821,6 +4855,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "대화에서 쓴 표현들이 여기 모여요."
+          }
+        }
+      }
+    },
+    "Expressions you use in your talks — and the ones your watched scenes hand you — collect here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서 쓴 표현과 시청한 장면이 건넨 표현이 여기에 모여요."
           }
         }
       }
@@ -10171,6 +10215,16 @@
         }
       }
     },
+    "Replaying a scene you've already watched is free.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 본 장면을 다시 보는 건 무료예요."
+          }
+        }
+      }
+    },
     "Reports compare week-over-week, so we wait until there's enough new material.": {
       "localizations": {
         "de": {
@@ -10944,6 +10998,22 @@
         }
       }
     },
+    "Separate from your talk minutes": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화 시간과 별개예요"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getrennt von deinen Sprechminuten"
+          }
+        }
+      }
+    },
     "Serious about this": {
       "localizations": {
         "de": {
@@ -11317,6 +11387,14 @@
       }
     },
     "So — how did the interview go yesterday?": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그래서 — 어제 면접은 어땠어요?"
+          }
+        }
+      },
       "shouldTranslate": false
     },
     "Something specific coming up with them — a talk you're dreading, news you have to break.": {
@@ -12027,6 +12105,16 @@
         }
       }
     },
+    "Talk time per day. Watch scenes are counted separately and never appear here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 통화 시간이에요. Watch 장면은 따로 계산되어 여기엔 나오지 않아요."
+          }
+        }
+      }
+    },
     "Talking": {
       "localizations": {
         "de": {
@@ -12039,6 +12127,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "통화"
+          }
+        }
+      }
+    },
+    "Talking is metered by the call clock. Watch scenes have their own daily count and never touch these minutes.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화는 통화 시계로 계산돼요. Watch 장면은 하루 횟수가 따로 있어서 이 시간을 쓰지 않아요."
           }
         }
       }
@@ -13680,6 +13778,22 @@
         }
       }
     },
+    "Watch scenes today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 Watch 장면"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch-Szenen heute"
+          }
+        }
+      }
+    },
     "Watch the dialogue this book was written from.": {
       "extractionState": "stale",
       "localizations": {
@@ -13710,6 +13824,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "장면을 보고, 거기 나온 단어와 표현을 익히고, 내 대사를 섀도잉한 다음, 실제로 Talk 해 보세요."
+          }
+        }
+      }
+    },
+    "Watch today": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘의 Watch"
           }
         }
       }
