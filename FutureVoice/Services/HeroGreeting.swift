@@ -53,7 +53,7 @@ enum HeroGreeting {
     static func live(now: Date = Date()) -> Input {
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
         // Same definition as the home ring — see PracticeStats.todayTalkSeconds.
-        let todaySeconds = PracticeStats.todayTalkSeconds(sessions: sessions, now: now)
+        let todaySeconds = PracticeStats.todayTalkSeconds(now: now)
         let lastEnded = sessions.compactMap(\.endedAt).max()
         let goal = UserDefaults.standard.object(forKey: goalMinutesKey) as? Int
 

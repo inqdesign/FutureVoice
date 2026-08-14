@@ -14,29 +14,18 @@ enum PracticeStats {
         var shadowableLineCount: Int        // fluent-self turns across all sessions
     }
 
-    /// Seconds spent ON CALLS today — wall clock, start to end, exactly what
-    /// the server meters (`talk-tick` ticks the call clock) and exactly what
-    /// the learner watched the in-call timer count.
+    /// Seconds spent talking today — the seconds the server actually
+    /// METERED, read from `TalkTimeLog`.
     ///
-    /// It used to sum only the learner's own turn durations, which made the
-    /// same day read 7 min on the home ring and 13 min on the billing page:
-    /// a call is mostly the fluent self talking and the learner thinking, and
-    /// none of that vanished. One definition, one number — the home ring, the
-    /// widget and the talk-time receipt all call this.
-    ///
-    /// Local calendar day, deliberately: the ring is a habit, and a habit
-    /// belongs to the day the learner is living in. (The server pools per UTC
-    /// day for billing; a mismatch around midnight is the lesser evil versus
-    /// telling someone their evening call happened "tomorrow".)
-    static func todayTalkSeconds(sessions: [Session],
-                                 now: Date = Date(),
-                                 calendar: Calendar = .current) -> Int {
-        let todayStart = calendar.startOfDay(for: now)
-        return sessions.reduce(into: 0) { total, session in
-            let ended = session.endedAt ?? session.startedAt
-            guard ended >= todayStart else { return }
-            total += max(0, Int(ended.timeIntervalSince(session.startedAt)))
-        }
+    /// Two earlier definitions were both wrong, in opposite directions:
+    /// summing the learner's own turn durations undercounted (a call is
+    /// mostly the fluent self talking and the learner thinking — 7 min for a
+    /// 13-min call), and summing session spans overcounted (continuing an old
+    /// talk keeps its original `startedAt`, and backgrounding freezes the
+    /// ticks while the span runs on — 25 min for the same 13). Only the meter
+    /// knows, so the ring, the widget and the receipt all read the meter.
+    static func todayTalkSeconds(now: Date = Date()) -> Int {
+        TalkTimeLog.secondsToday(now: now)
     }
 
     static func snapshot(now: Date = Date(), calendar: Calendar = .current) -> Snapshot {

@@ -93,7 +93,7 @@ enum StudyWidgetRefresher {
     private static func refreshProgress() {
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
         // Same definition as the home ring — see PracticeStats.todayTalkSeconds.
-        let todaySeconds = PracticeStats.todayTalkSeconds(sessions: sessions)
+        let todaySeconds = PracticeStats.todayTalkSeconds()
         let goal = UserDefaults.standard.integer(forKey: "futurevoice.dailyGoalMinutes")
         let vocab = VocabStore.shared
         let snapshot = StudyProgressSnapshot(

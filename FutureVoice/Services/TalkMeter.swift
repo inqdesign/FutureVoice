@@ -79,6 +79,10 @@ final class TalkMeter: ObservableObject {
                     body: TickBody(seconds: seconds, session_id: sessionKey)
                 )
             )
+            // Accepted → these seconds were metered, so they're what the
+            // home ring counts too (TalkTimeLog). Deriving the ring from
+            // session spans instead made it disagree with the receipt.
+            TalkTimeLog.add(seconds: seconds)
             // Subscriber: what's left of today's allowance. Free user: the
             // seconds balance. Both already in seconds.
             let secondsLeft = res.daily_cap.map { max(0, $0 - res.seconds_today) }

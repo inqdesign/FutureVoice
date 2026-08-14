@@ -755,7 +755,7 @@ struct ConversationHome: View {
         // One shared definition of "talked today" — see
         // PracticeStats.todayTalkSeconds. Summing only the learner's turns
         // here made the ring disagree with the billing page on the same day.
-        todaySpokenSeconds = PracticeStats.todayTalkSeconds(sessions: sessions)
+        todaySpokenSeconds = PracticeStats.todayTalkSeconds()
         todayTalks = sessions.filter { ($0.endedAt ?? $0.startedAt) >= todayStart }.count
         // Keep the proxy's label copy in sync (see AppState.talkRingHeadline).
         appState.talkRingHeadline = goalHeadline
