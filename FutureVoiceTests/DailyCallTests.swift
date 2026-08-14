@@ -185,6 +185,65 @@ final class DailyCallTests: XCTestCase {
         XCTAssertEqual(DailyCallStore.shared.times.count, 1)
     }
 
+    // MARK: - The trace survives the next call
+
+    /// The regression this exists for: there is only ONE plan on disk, and
+    /// `refresh` writes the next call into it moments after settling the one
+    /// that just went unanswered — inside the same `refresh`. A trace kept on
+    /// the plan was therefore erased before the learner could ever see it, and
+    /// whether the row appeared came down to render timing.
+    @MainActor
+    func testUnheardMessageOutlivesTheNextScheduledCall() throws {
+        let store = isolatedStore()
+        defer { removeFiles(for: store) }
+
+        let missed = plan(outcome: .missed)
+        store.keepUnheard(missed)
+
+        // …and now the next call is written into the plan slot.
+        store.save(plan(outcome: nil))
+
+        XCTAssertEqual(store.unheardVoicemail?.id, missed.id,
+                       "the waiting message must survive the next call being scheduled")
+        XCTAssertEqual(store.load()?.outcome, nil, "the pending plan is the new one")
+    }
+
+    /// It's a trace, not a pile: hearing it clears it, and only the newest
+    /// unanswered call is ever kept.
+    @MainActor
+    func testTraceIsClearedWhenHeardAndNeverAccumulates() {
+        let store = isolatedStore()
+        defer { removeFiles(for: store) }
+
+        let first = plan(outcome: .missed)
+        let second = plan(outcome: .declined)
+        store.keepUnheard(first)
+        store.keepUnheard(second)
+        XCTAssertEqual(store.unheardVoicemail?.id, second.id, "newest replaces, never stacks")
+
+        store.clearUnheard()
+        XCTAssertNil(store.unheardVoicemail)
+    }
+
+    /// It has to survive a relaunch — the learner misses a call at 08:00 and
+    /// opens the app hours later, in a fresh process.
+    @MainActor
+    func testTraceSurvivesARelaunch() {
+        let name = "test_unheard_\(UUID().uuidString).json"
+        let missed = plan(outcome: .missed)
+        let writer = DailyCallStore(planFilename: "test_plan_\(UUID().uuidString).json",
+                                    historyFilename: "test_hist_\(UUID().uuidString).json",
+                                    unheardFilename: name)
+        writer.keepUnheard(missed)
+
+        let reopened = DailyCallStore(planFilename: "test_plan_\(UUID().uuidString).json",
+                                      historyFilename: "test_hist_\(UUID().uuidString).json",
+                                      unheardFilename: name)
+        XCTAssertEqual(reopened.unheardVoicemail?.id, missed.id)
+        removeFiles(for: reopened)
+        removeFiles(for: writer)
+    }
+
     // MARK: - Rang out vs. still armed
 
     /// A plan now owns SEVERAL fire times (`fireDates` arms every remaining
@@ -284,6 +343,21 @@ final class DailyCallTests: XCTestCase {
             createdAt: Date(), outcome: outcome,
             endedAt: outcome == nil ? nil : Date(),
             heardAt: heard ? Date() : nil)
+    }
+
+
+    @MainActor
+    private func isolatedStore() -> DailyCallStore {
+        DailyCallStore(planFilename: "test_plan_\(UUID().uuidString).json",
+                       historyFilename: "test_hist_\(UUID().uuidString).json",
+                       unheardFilename: "test_unheard_\(UUID().uuidString).json")
+    }
+
+    /// These stores write into the test host's Documents; clean up after.
+    @MainActor
+    private func removeFiles(for store: DailyCallStore) {
+        store.clearUnheard()
+        store.clear()
     }
 
     /// 16-bit LE mono PCM at a fixed amplitude, as the streaming TTS delivers.

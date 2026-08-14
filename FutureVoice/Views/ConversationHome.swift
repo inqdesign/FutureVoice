@@ -9,6 +9,9 @@ struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
+    /// Observed so a call settling as missed puts its row on screen right
+    /// away — the settle happens inside an async refresh, long after onAppear.
+    @ObservedObject private var callStore = DailyCallStore.shared
 
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
@@ -242,10 +245,12 @@ struct ConversationHome: View {
     /// Cleared the moment they call back or listen — this is a trace, not a
     /// standing reminder, and it must never accumulate into a guilt pile.
     private var missedCall: DailyCallPlan? {
-        guard DailyCallStore.shared.isEnabled,
-              let plan = DailyCallStore.shared.load(),
-              plan.hasUnheardVoicemail else { return nil }
-        return plan
+        guard DailyCallStore.shared.isEnabled else { return nil }
+        // Read the store's OWN record of the waiting message, not the pending
+        // plan: `refresh` overwrites that plan with the next call as soon as
+        // it settles this one, so reading it here showed the row only when a
+        // render happened to land in between.
+        return callStore.unheardVoicemail
     }
 
     /// Tapping calls them back — same script, same cached audio, straight into

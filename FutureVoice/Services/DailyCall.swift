@@ -82,7 +82,7 @@ struct DailyCallRecord: Codable, Equatable {
 /// switch invalidates it instead of leaving a second one queued in the old
 /// language's directory.
 @MainActor
-final class DailyCallStore {
+final class DailyCallStore: ObservableObject {
     static let shared = DailyCallStore()
 
     // MARK: - Settings
@@ -172,6 +172,7 @@ final class DailyCallStore {
 
     private let planURL: URL
     private let historyURL: URL
+    private let unheardURL: URL
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     /// Double optional: `.none` = never read from disk, `.some(nil)` = read,
@@ -185,10 +186,12 @@ final class DailyCallStore {
     private static let historyLimit = 14
 
     init(planFilename: String = "daily_call.json",
-         historyFilename: String = "daily_call_history.json") {
+         historyFilename: String = "daily_call_history.json",
+         unheardFilename: String = "daily_call_unheard.json") {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         self.planURL = docs.appendingPathComponent(planFilename)
         self.historyURL = docs.appendingPathComponent(historyFilename)
+        self.unheardURL = docs.appendingPathComponent(unheardFilename)
 
         let enc = JSONEncoder()
         enc.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -198,6 +201,10 @@ final class DailyCallStore {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         self.decoder = dec
+
+        self.unheardVoicemail = (try? Data(contentsOf: unheardURL)).flatMap {
+            try? dec.decode(DailyCallPlan.self, from: $0)
+        }
     }
 
     func load() -> DailyCallPlan? {
@@ -221,6 +228,37 @@ final class DailyCallStore {
     func clear() {
         cachedPlan = .some(nil)
         try? FileManager.default.removeItem(at: planURL)
+    }
+
+    // MARK: - The unheard message (the trace)
+
+    /// The last call that went unanswered, kept until the learner hears it.
+    ///
+    /// Stored in its OWN file rather than on the pending plan, and that is the
+    /// whole point: there is only ever one plan on disk and `save` overwrites
+    /// it, so the moment `refresh` wrote the NEXT call the trace was gone —
+    /// often within the same `refresh` that created it, since settling and
+    /// regenerating happen back to back. The row on Talk then appeared or not
+    /// depending on render timing.
+    ///
+    /// `@Published` so that row is not left guessing either: settling a missed
+    /// call updates the UI immediately instead of waiting for the next reload.
+    @Published private(set) var unheardVoicemail: DailyCallPlan?
+
+    /// Remember `plan` as the message still waiting. Only ever ONE — a trace,
+    /// never a pile. The newest unanswered call replaces the last.
+    func keepUnheard(_ plan: DailyCallPlan) {
+        unheardVoicemail = plan
+        guard let data = try? encoder.encode(plan) else { return }
+        try? data.write(to: unheardURL, options: .atomic)
+    }
+
+    /// They heard it — by playing it back, or by answering a later call, which
+    /// makes the old message stale rather than waiting.
+    func clearUnheard() {
+        guard unheardVoicemail != nil else { return }
+        unheardVoicemail = nil
+        try? FileManager.default.removeItem(at: unheardURL)
     }
 
     // MARK: - History (the caller's memory)

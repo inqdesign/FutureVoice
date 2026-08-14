@@ -259,6 +259,9 @@ enum DailyCallScheduler {
         guard let plan = DailyCallStore.shared.load(), !plan.isSettled else { return }
         Analytics.capture("daily_call_answered", ["callbacks": plan.callbackCount])
         settle(plan, as: .answered, heard: true)
+        // Picking up clears any older message still waiting: they're talking
+        // to the same person right now, so "you missed me" is no longer true.
+        DailyCallStore.shared.clearUnheard()
         Task { await cancelPendingRequest() }
     }
 
@@ -273,10 +276,13 @@ enum DailyCallScheduler {
 
     /// The learner played the message back from the missed-call row. It stops
     /// being "waiting for you" from here.
+    /// Clears the trace and NOTHING else. It must not touch the plan on disk:
+    /// by the time the learner taps that row, `refresh` has already replaced
+    /// the missed call with the NEXT one, so stamping `heardAt` there would
+    /// mark a call that hasn't even rung as already listened to — and then
+    /// `settle` would refuse to keep its message when it goes unanswered.
     static func markVoicemailHeard() {
-        guard var plan = DailyCallStore.shared.load(), plan.heardAt == nil else { return }
-        plan.heardAt = Date()
-        DailyCallStore.shared.save(plan)
+        DailyCallStore.shared.clearUnheard()
     }
 
     /// Close a call out and hand its result to the caller's memory.
@@ -290,6 +296,13 @@ enum DailyCallScheduler {
         DailyCallStore.shared.save(plan)
         DailyCallStore.shared.record(DailyCallRecord(
             date: Date(), outcome: outcome, callbacks: plan.callbackCount))
+        // The trace outlives the plan. `refresh` writes the NEXT call into the
+        // same single plan file moments after settling this one, so a message
+        // kept only on the plan would be erased before the learner ever saw
+        // it — usually inside the very same `refresh`.
+        if plan.hasUnheardVoicemail {
+            DailyCallStore.shared.keepUnheard(plan)
+        }
     }
 
     /// Settle a call that rang out unattended. Given a grace period so a plan
@@ -322,6 +335,7 @@ enum DailyCallScheduler {
     /// Turned off, or no longer possible. Drops the pending ring and the plan.
     static func cancel() async {
         await cancelPendingRequest()
+        DailyCallStore.shared.clearUnheard()
         DailyCallStore.shared.clear()
     }
 
