@@ -8,7 +8,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { recordFreeUsage, rateLimitedResponse } from "../_shared/credits.ts"
+import { recordFreeUsage, rateLimitedResponse, billingClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-voice-clone"
 
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
   // what actually ran. Keyed per user for the first (idempotent), per
   // attempt for retakes.
   if (isFree) {
-    await supabase.rpc("charge_credits", {
+    await billingClient().rpc("charge_credits", {
       p_user_id: user.id,
       p_credits: 0,
       p_action: action,

@@ -751,7 +751,10 @@ final class AppState: ObservableObject {
         }
         for i in c.expressions.indices where c.expressions[i].masteredAt == nil {
             let item = c.expressions[i]
-            if saidByUser(item.text) || VocabStore.shared.hasExpression(item.text) {
+            // hasUsedExpression, not hasExpression: a bookmark alone creates a
+            // row, and reading that as mastery ticked items off for saving
+            // them.
+            if saidByUser(item.text) || VocabStore.shared.hasUsedExpression(item.text) {
                 c.expressions[i].masteredAt = Date()
                 changed = true
             }

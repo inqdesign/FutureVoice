@@ -766,6 +766,24 @@ struct ConversationHome: View {
         appState.talkRingHeadline = goalHeadline
         // Reads everything above, so it goes last.
         refreshHeroLine()
+        backfillTalkTime()
+    }
+
+    /// The local meter log only starts filling on the build that introduced
+    /// it, so a day metered by an earlier build (or on another device) leaves
+    /// the ring at zero while the receipt shows the minutes. Reconcile with
+    /// the server's ledger, then re-draw only if the number actually moved —
+    /// an unconditional sweep would replay the animation on every appear.
+    private func backfillTalkTime() {
+        Task { @MainActor in
+            await TalkTimeLog.syncFromServer()
+            let synced = PracticeStats.todayTalkSeconds()
+            guard synced != todaySpokenSeconds else { return }
+            todaySpokenSeconds = synced
+            appState.talkRingHeadline = goalHeadline
+            refreshHeroLine()
+            drawRing()
+        }
     }
 }
 

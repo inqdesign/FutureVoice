@@ -38,9 +38,6 @@ struct ShadowDrillView: View {
     /// trust-calibrating footnote on the result.
     @State private var usedRoughTranscript = false
     @State private var recordingFileURL: URL?
-    /// Wall-clock t=0 of `recordingFileURL`. Paired with `syncStartedAt` it
-    /// gives the countdown's length INSIDE the scored file.
-    @State private var recordingStartedAt: Date?
     @State private var feedback: ShadowFeedback?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
     /// Word-onset timing comparison for the last attempt — nil whenever the
@@ -1036,12 +1033,12 @@ struct ShadowDrillView: View {
         // attempt back after analysis. AVAudioRecorder runs alongside the
         // AVAudioEngine tap LiveTranscriber sets up; both see the same mic.
         //
-        // This file is ALSO what `analyze` re-recognizes to score the attempt,
-        // and it starts here — before the 3-2-1. Stamp t=0 so the pre-beat
-        // stretch can be dropped from the scored words; without it, anything
-        // the learner said during the countdown scored as insertions.
-        recordingFileURL = (try? recorder.start(quality: .sttOptimal))
-        recordingStartedAt = recordingFileURL == nil ? nil : Date()
+        // PREPARED here, STARTED on the beat. This file is both the audio
+        // `analyze` re-recognizes to score the attempt and the take the
+        // learner plays back, and it used to open right here — so 2.4s of
+        // countdown sat in front of both. Session + file setup is the slow
+        // part and stays here; `record()` on a prepared recorder is not.
+        recordingFileURL = (try? recorder.prepare(quality: .sttOptimal))
 
         // Countdown 3-2-1-0 with haptic ticks; "0" IS the go beat so the
         // start lands on a visible number instead of an unmarked pause after
@@ -1055,6 +1052,13 @@ struct ShadowDrillView: View {
             try? await Task.sleep(nanoseconds: 700_000_000)
         }
         countdownValue = 0
+        // Capture starts HERE — on "0", the beat the learner is cued by, not
+        // back at setup. The 350 ms below is deliberate lead-in: "0" appears
+        // before the karaoke does, so anyone who starts speaking the instant
+        // they see it is inside the file. Everything earlier — the 3-2-1, a
+        // throat-clear, a rehearsal — never reaches the scored audio or the
+        // take they play back, because it was never recorded.
+        try? recorder.beginPrepared()
         HapticEngine.countdownGo()
         try? await Task.sleep(nanoseconds: 350_000_000)
 
@@ -1138,21 +1142,12 @@ struct ShadowDrillView: View {
                 contextualStrings: Self.recognitionHints(for: attemptTargetText)
             )
             if let rescored, !rescored.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                // The file opened before the countdown, so its first seconds
-                // are not part of the attempt. Segment timestamps are
-                // file-relative, which is exactly what's needed to cut them.
-                let trimmed = Self.dropPreBeatWords(
-                    text: rescored.text, timings: rescored.wordTimings,
-                    preRollMs: preBeatMs())
-                if trimmed.timings.count != rescored.wordTimings.count {
-                    Telemetry.log("shadow_pre_beat_trimmed", [
-                        "dropped": String(rescored.wordTimings.count - trimmed.timings.count),
-                        "pre_roll_ms": String(preBeatMs()),
-                    ])
-                }
-                scoredText = trimmed.text
-                prevTranscript = trimmed.text
-                learnerTimings = trimmed.timings
+                // No pre-roll to strip: the file starts on the go beat. Its
+                // only lead-in is the deliberate 350ms that catches a learner
+                // who speaks the moment "0" appears — that IS the attempt.
+                scoredText = rescored.text
+                prevTranscript = rescored.text
+                learnerTimings = rescored.wordTimings
                 usedRoughTranscript = false
             }
         }
@@ -1455,48 +1450,6 @@ struct ShadowDrillView: View {
             return WordTiming(word: w, startMs: Int(start),
                               endMs: max(Int(start) + 1, Int(cursor) - 20))
         }
-    }
-
-    /// How long the scored file ran BEFORE the go beat — the countdown, plus
-    /// whatever setup preceded it. 0 when either stamp is missing, which
-    /// leaves the transcript untouched.
-    private func preBeatMs() -> Int {
-        guard let recStart = recordingStartedAt, let syncStart = syncStartedAt else { return 0 }
-        return max(0, Int(syncStart.timeIntervalSince(recStart) * 1000))
-    }
-
-    /// A word straddling the beat belongs to the attempt. Losing a real first
-    /// word is the exact failure the hot-mic start exists to prevent, so the
-    /// cut leans toward keeping.
-    static let preBeatKeepMarginMs = 150
-
-    /// Drop what the learner said during the countdown from the scored words.
-    ///
-    /// The mic and the WAV both open BEFORE the 3-2-1 on purpose: starting
-    /// them on the beat clipped the first words of anyone who spoke right on
-    /// it, and those came back as deletions. But `analyze` scores by
-    /// re-recognizing that whole file, so the assumption baked into the old
-    /// comment — "the countdown's lead-in silence is harmless" — only held
-    /// while the learner stayed quiet. A throat-clear, a false start, or
-    /// reading the line to themselves during the 3-2-1 landed in the
-    /// transcript as INSERTIONS and cost them match score for words they had
-    /// said early, not wrong.
-    ///
-    /// Only a leading run is dropped: nothing after the beat can predate it,
-    /// and `drop(while:)` keeps the cut monotonic. Text and timings come back
-    /// consistent — `analyzeRhythm` requires the diff steps and the timing
-    /// array to consume each other exactly.
-    static func dropPreBeatWords(text: String, timings: [WordTiming],
-                                 preRollMs: Int) -> (text: String, timings: [WordTiming]) {
-        guard preRollMs > 0, !timings.isEmpty else { return (text, timings) }
-        let cutoff = preRollMs - preBeatKeepMarginMs
-        let kept = timings.drop { $0.endMs <= cutoff }
-        guard kept.count != timings.count else { return (text, timings) }
-        // Rebuilt from the recognizer's own tokens. Punctuation from
-        // `formattedString` is lost, which scoring doesn't read — ShadowEngine
-        // canonicalizes before diffing — and keeping the untrimmed string
-        // would defeat the whole point.
-        return (kept.map(\.word).joined(separator: " "), Array(kept))
     }
 
     /// How much longer than the model line a learner's own attempt runs. They

@@ -244,6 +244,19 @@ final class VocabStore: ObservableObject {
         return true
     }
 
+    /// Has the learner actually PRODUCED this expression (said it in a talk),
+    /// as opposed to merely having a row for it?
+    ///
+    /// Bookmarking writes a `count: 0` row so the phrase shows up in the
+    /// notebook, which made `hasExpression` true — and book mastery read that,
+    /// so bookmarking an expression silently ticked it off as learned. Mastery
+    /// needs evidence: a real use, or an explicit "I know it".
+    func hasUsedExpression(_ phrase: String) -> Bool {
+        let key = exprKey(phrase)
+        guard let record = expressionRecords[key] else { return false }
+        return record.state == .known || record.count > 0
+    }
+
     func hasExpression(_ phrase: String) -> Bool {
         expressionRecords[phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()] != nil
     }
@@ -367,9 +380,22 @@ final class VocabStore: ObservableObject {
     /// to the user's level and up: easier words they merely haven't happened
     /// to say would flood the list with noise.
     func pickupWords(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?) -> [String] {
+        pickupCandidates(fromFluentTexts: texts, atOrAbove: minLevel)
+            .filter { records[$0] == nil }
+    }
+
+    /// The same words WITHOUT the "you don't know it yet" filter — every
+    /// core-list lemma the fluent self used at or above the learner's level.
+    ///
+    /// This is what a talk BOOK's word chapter must be built from. Deriving it
+    /// from `pickupWords` meant the list dropped a word the moment the learner
+    /// learned it: the denominator shrank instead of the mastered count
+    /// growing, so a book's word progress could never leave 0 — the one thing
+    /// it was there to show. The list has to stay put; only the checkmarks
+    /// move.
+    func pickupCandidates(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?) -> [String] {
         let minRank = minLevel.map(CoreVocabulary.levelRank)
         return Self.lemmas(in: texts)
-            .filter { records[$0] == nil }
             .compactMap { w -> (word: String, rank: Int)? in
                 guard let lv = CoreVocabulary.level(of: w) else { return nil }
                 let rank = CoreVocabulary.levelRank(lv)

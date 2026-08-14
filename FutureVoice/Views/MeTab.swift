@@ -86,6 +86,17 @@ struct MeTab: View {
                             title: "Plan & talk time",
                             subtitle: "\(account.talkTimeLabel) · \(account.planLabel)")
                     }
+                    // Sits with the plan because it IS the plan for anyone in
+                    // it: a seat's reward is extra seconds on the same daily
+                    // allowance the row above shows. Next to Voice and the
+                    // daily call it read as an unrelated feature.
+                    NavigationLink {
+                        CoreClubView()
+                    } label: {
+                        row(icon: coreMembership?.seated == true ? "seal.fill" : "seal",
+                            title: "The Core",
+                            subtitle: coreClubSummary)
+                    }
                 }
 
                 // Learning stays expanded — languages, level, goal and app
@@ -113,13 +124,6 @@ struct MeTab: View {
                         row(icon: "person.2.wave.2",
                             title: "Find people",
                             subtitle: "Publish your intro — others practice with \"you\"")
-                    }
-                    NavigationLink {
-                        CoreClubView()
-                    } label: {
-                        row(icon: "seal",
-                            title: "The Core",
-                            subtitle: coreClubSummary)
                     }
                 }
 
@@ -726,7 +730,10 @@ struct MeTab: View {
         }
     }
 
-    private func row(icon: String, title: String, subtitle: String) -> some View {
+    /// `value` is for rows that state a number and go nowhere — a standing
+    /// allowance rather than a destination.
+    private func row(icon: String, title: String, subtitle: String,
+                     value: String? = nil) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.subheadline)
@@ -735,6 +742,12 @@ struct MeTab: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body)
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            if let value {
+                Spacer(minLength: 8)
+                Text(value)
+                    .font(.body.monospacedDigit())
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -779,6 +792,17 @@ struct MeTab: View {
                     row(icon: "sparkles",
                         title: account.planLabel == "Free" ? "See plans" : "Manage plan",
                         subtitle: "Talk time lands automatically every cycle")
+                }
+                // Watch is a SECOND allowance since 2026-08-14, and an
+                // invisible allowance is the thing that made the old shared
+                // meter feel dishonest. Shown only when a plan actually grants
+                // scenes — a free account still pays for them in seconds, so
+                // a count would be a lie there.
+                if let scenes = account.dailyScenesCap {
+                    row(icon: "play.circle.fill",
+                        title: account.sceneAllowanceLabel,
+                        subtitle: chrome("Separate from your talk minutes"),
+                        value: "\(account.scenesUsedToday) / \(scenes)")
                 }
                 NavigationLink {
                     CreditGuideView()

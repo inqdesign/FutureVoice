@@ -21,7 +21,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { insufficientCreditsResponse, dailyCapResponse } from "../_shared/credits.ts"
+import { insufficientCreditsResponse, dailyCapResponse, billingClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "talk-tick"
 
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     return errorResponse(400, "seconds must be an integer in 1...600")
   }
 
-  const { data, error } = await supabase.rpc("charge_talk_seconds", {
+  const { data, error } = await billingClient().rpc("charge_talk_seconds", {
     p_user_id: user.id,
     p_seconds: seconds,
     p_source_fn: SOURCE_FN,

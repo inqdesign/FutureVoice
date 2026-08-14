@@ -100,7 +100,7 @@ export async function recordFreeUsage(opts: {
   metadata?: Record<string, unknown>
 }): Promise<{ ok: true } | { ok: false; reason: "rate_limited" | "db_error"; detail?: string }> {
   const { supabase, userId, action, purpose, dailyCap, sourceFn, idempotencyKey, metadata } = opts
-  const { error } = await supabase.rpc("record_free_usage", {
+  const { error } = await billingClient().rpc("record_free_usage", {
     p_user_id: userId,
     p_action: action,
     p_purpose: purpose,
@@ -136,7 +136,7 @@ export async function chargeFreePooledTTS(opts: {
   metadata?: Record<string, unknown>
 }): Promise<ChargeResult | ChargeError> {
   const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
-  const { data, error } = await supabase.rpc("charge_tts_free_pooled", {
+  const { data, error } = await billingClient().rpc("charge_tts_free_pooled", {
     p_user_id: userId,
     p_chars: chars,
     p_action: action,
@@ -184,7 +184,7 @@ export async function chargeTurnTTSFloored(opts: {
   metadata?: Record<string, unknown>
 }): Promise<ChargeResult | ChargeError> {
   const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata } = opts
-  const { data, error } = await supabase.rpc("charge_turn_tts_floored", {
+  const { data, error } = await billingClient().rpc("charge_turn_tts_floored", {
     p_user_id: userId,
     p_chars: chars,
     p_action: action,
@@ -254,7 +254,7 @@ export async function charge(opts: {
   if (amount === 0) {
     return { ok: true, balanceAfter: -1, charged: 0, idempotencyKey }
   }
-  const { data, error } = await supabase.rpc("charge_credits", {
+  const { data, error } = await billingClient().rpc("charge_credits", {
     p_user_id: userId,
     p_credits: amount,
     p_action: action,
@@ -305,7 +305,7 @@ export async function chargePooledTTS(opts: {
   pool?: "scene_seconds" | "scene_counted"
 }): Promise<ChargeResult | ChargeError> {
   const { supabase, userId, action, chars, sourceFn, idempotencyKey, metadata, pool } = opts
-  const { data, error } = await supabase.rpc("charge_tts_pooled", {
+  const { data, error } = await billingClient().rpc("charge_tts_pooled", {
     p_user_id: userId,
     p_chars: chars,
     p_action: action,
@@ -353,7 +353,7 @@ export async function refund(opts: {
   const { supabase, userId, amount, action, sourceFn, originalIdempotencyKey, metadata } = opts
   if (amount === 0) return
   const refundKey = originalIdempotencyKey + ":refund"
-  await supabase.rpc("grant_credits", {
+  await billingClient().rpc("grant_credits", {
     p_user_id: userId,
     p_credits: amount,
     p_kind: "refund",
@@ -460,7 +460,7 @@ export async function beginScenePlay(opts: {
   | { ok: true; counted: boolean; used?: number; cap?: number }
   | { ok: false; reason: "scene_cap" | "db_error"; detail?: string }
 > {
-  const { data, error } = await opts.supabase.rpc("begin_scene_play", {
+  const { data, error } = await billingClient().rpc("begin_scene_play", {
     p_user_id: opts.userId,
     p_scene_key: opts.sceneKey,
   })
@@ -491,4 +491,27 @@ export function serviceRoleClient(): SupabaseClient {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { persistSession: false } },
   )
+}
+
+/**
+ * The client EVERY metering RPC goes through — never the caller's.
+ *
+ * These functions all take `p_user_id` as an argument, so whoever can execute
+ * them can name any account: `grant_credits` was a money printer reachable
+ * with nothing but the app's (public by design) anon key, and the `charge_*`
+ * family could burn a stranger's daily cap once their uuid was harvested from
+ * `public_personas.owner_user_id`. Argument-level guards can't close that —
+ * a caller passing their OWN uuid to `grant_credits` is indistinguishable
+ * from a legitimate call. The only real fix is that no client role holds
+ * EXECUTE at all, which makes these server-only primitives.
+ *
+ * Every call site already passes the id of the user it just authenticated,
+ * so routing through service-role changes no behaviour — only who is able to
+ * make the call. Cached because Edge Function instances are reused across
+ * requests and each createClient is a fresh connection pool.
+ */
+let cachedBillingClient: SupabaseClient | null = null
+export function billingClient(): SupabaseClient {
+  if (!cachedBillingClient) cachedBillingClient = serviceRoleClient()
+  return cachedBillingClient
 }

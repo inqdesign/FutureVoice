@@ -68,9 +68,42 @@ final class AudioRecorder: ObservableObject {
         }
     }
 
+    /// Everything a recording needs EXCEPT the first sample: session
+    /// category/route, the built-in mic, the file, and `prepareToRecord()`.
+    /// Returns the destination URL; nothing is captured until `beginPrepared`.
+    ///
+    /// Exists because Shadow has to have the mic warm before its 3-2-1 (a
+    /// learner speaking on the beat must not lose their first word) while the
+    /// FILE must start ON the beat — it is both the scored audio and the
+    /// attempt the learner plays back, and 2.4s of countdown in front of it is
+    /// wrong in both roles. Session activation and file setup are the slow
+    /// parts (hundreds of ms); `record()` on a prepared recorder is not.
+    @discardableResult
+    func prepare(quality: Quality = .sttOptimal) throws -> URL {
+        try configureAndPrepare(quality: quality).url
+    }
+
+    /// Start capturing on a recorder already built by `prepare`.
+    func beginPrepared() throws {
+        guard let rec = recorder, !isRecording else { return }
+        guard rec.record() else { throw AudioRecorderError.recordFailed }
+        isRecording = true
+        startMetering()
+    }
+
     /// Starts a new recording. Returns the destination file URL.
     @discardableResult
     func start(quality: Quality = .sttOptimal) throws -> URL {
+        let prepared = try configureAndPrepare(quality: quality)
+        guard prepared.recorder.record() else { throw AudioRecorderError.recordFailed }
+        isRecording = true
+        startMetering()
+        return prepared.url
+    }
+
+    private func configureAndPrepare(
+        quality: Quality
+    ) throws -> (recorder: AVAudioRecorder, url: URL) {
         if isMonitoring { stopMonitoring() }   // hand the mic over cleanly
         let session = AVAudioSession.sharedInstance()
         // `.measurement` flattens the iOS processing chain so we capture the
@@ -128,13 +161,13 @@ final class AudioRecorder: ObservableObject {
 
         let rec = try AVAudioRecorder(url: url, settings: settings)
         rec.isMeteringEnabled = true
-        guard rec.record() else { throw AudioRecorderError.recordFailed }
+        // Creates the file and allocates buffers now, so the caller's
+        // `record()` is the cheap part and the file's t=0 is where they said.
+        rec.prepareToRecord()
 
         recorder = rec
-        isRecording = true
         inputDescription = Self.describeInput(session: session)
-        startMetering()
-        return url
+        return (rec, url)
     }
 
     /// Human-readable string for the currently-active mic.

@@ -44,6 +44,10 @@ struct AccountStatus {
     var scenesUsedToday: Int = 0
     var dailyScenesCap: Int?
 
+    /// "Watch scenes" for the plan page's allowance row. A plain label — the
+    /// count itself is the row's value, so the title must not repeat it.
+    var sceneAllowanceLabel: String { chrome("Watch scenes today") }
+
     /// True while the subscription actually entitles (paid or in trial).
     var isEntitled: Bool {
         ["trialing", "active", "grace"].contains(subscriptionStatus)

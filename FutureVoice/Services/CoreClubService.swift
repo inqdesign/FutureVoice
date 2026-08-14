@@ -145,18 +145,13 @@ enum CoreClubService {
         return rows?.first
     }
 
-    /// How many seats are taken right now — the counter the club watches fill.
-    static func fetchClubSize() async -> Int? {
-        let rows: [Badge]? = try? await SupabaseProvider.shared
-            .from("core_badges")
-            .select("user_id,join_number,seated")
-            .eq("seated", value: true)
-            .execute()
-            .value
-        return rows?.count
-    }
-
     /// Badges for a batch of persona owners, keyed by LOWERCASE user id.
+    ///
+    /// Goes through `core_badges_for`, not a table read: the badge is public
+    /// but the membership LIST is not, so the server only answers about ids
+    /// the caller already names (20260814150000). The club size the counter
+    /// draws comes from `fetchProgress().club_size`, never from counting rows
+    /// here.
     ///
     /// `uuid` columns come back lowercase while `UUID.uuidString` is
     /// uppercase — the same mismatch that once made `PublicPersonaService`
@@ -166,9 +161,7 @@ enum CoreClubService {
         let ids = Set(ownerIds.map { $0.lowercased() })
         guard !ids.isEmpty else { return [:] }
         let rows: [Badge]? = try? await SupabaseProvider.shared
-            .from("core_badges")
-            .select("user_id,join_number,seated")
-            .in("user_id", values: Array(ids))
+            .rpc("core_badges_for", params: ["p_user_ids": Array(ids)])
             .execute()
             .value
         return Dictionary(

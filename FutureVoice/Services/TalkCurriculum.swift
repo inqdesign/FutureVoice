@@ -69,7 +69,11 @@ enum TalkCurriculum {
         // Words — the fluent self's pickup words, mastered by the same rules
         // as `AppState.refreshScenarioMastery` (in the vocab store, or said
         // by the user themselves).
-        let pickups = VocabStore.shared.pickupWords(
+        // CANDIDATES, not pickupWords: the latter drops every word that has a
+        // vocab record, i.e. exactly the ones the learner has since mastered.
+        // Built on that, this chapter shrank as you learned instead of filling
+        // in, and its progress was pinned at 0 forever.
+        let pickups = VocabStore.shared.pickupCandidates(
             fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
             atOrAbove: proficiency
         ).prefix(maxWords)

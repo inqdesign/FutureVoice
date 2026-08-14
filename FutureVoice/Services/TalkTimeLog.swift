@@ -1,4 +1,5 @@
 import Foundation
+import Supabase
 
 /// The day's talk seconds as they were actually METERED — appended by
 /// `TalkMeter` every time the server accepts a tick.
@@ -37,6 +38,74 @@ enum TalkTimeLog {
 
     static func seconds(on day: Date) -> Int {
         load()[dayKey(day)] ?? 0
+    }
+
+    // MARK: - Server backfill
+
+    /// Rebuild the log from the server's `usage_ledger`, which is where the
+    /// meter's accepted ticks actually landed.
+    ///
+    /// The local file only starts filling the moment a build carrying
+    /// `TalkMeter`'s write runs on this device, so without this the ring reads
+    /// zero for a day that the receipt already counts — after an update, a
+    /// reinstall, or a second device. Every accepted tick wrote a `talk_time`
+    /// row carrying `metadata.seconds` and a timestamp, so the day's total is
+    /// a read, not an estimate.
+    ///
+    /// Bucketed by the LOCAL day (the ledger's timestamps allow it, unlike
+    /// the server's UTC-pooled `tts_char_pool`) and applied as a FLOOR: a tick
+    /// accepted seconds ago may not be visible in this query yet, and a
+    /// ledger read must never walk the ring backwards mid-call.
+    @MainActor
+    static func syncFromServer(now: Date = Date(), calendar: Calendar = .current) async {
+        guard let session = try? await SupabaseProvider.shared.auth.session,
+              let start = calendar.date(byAdding: .day, value: -(backfillDays - 1),
+                                        to: calendar.startOfDay(for: now))
+        else { return }
+
+        struct LedgerRow: Decodable {
+            let created_at: String
+            let metadata: Metadata?
+            struct Metadata: Decodable { let seconds: Int? }
+        }
+        guard let rows: [LedgerRow] = try? await SupabaseProvider.shared
+            .from("usage_ledger")
+            .select("created_at,metadata")
+            .eq("user_id", value: session.user.id.uuidString)
+            .eq("action", value: "talk_time")
+            .gte("created_at", value: ISO8601DateFormatter().string(from: start))
+            // One row per 30 s tick: a fortnight of heavy use is ~2k rows.
+            .limit(4000)
+            .execute()
+            .value
+        else { return }
+
+        var serverByDay: [String: Int] = [:]
+        for row in rows {
+            guard let seconds = row.metadata?.seconds, seconds > 0,
+                  let at = parseTimestamp(row.created_at) else { continue }
+            serverByDay[dayKey(at), default: 0] += seconds
+        }
+        guard !serverByDay.isEmpty else { return }
+
+        var map = load()
+        for (day, seconds) in serverByDay where seconds > (map[day] ?? 0) {
+            map[day] = seconds
+        }
+        save(prune(map, now: now))
+    }
+
+    /// How far back the backfill reaches — today for the ring, plus enough
+    /// history for the widget's recent days.
+    private static let backfillDays = 14
+
+    /// Postgres timestamps come back with fractional seconds, but not always
+    /// — one formatter can't parse both, and a nil date would silently drop
+    /// the day.
+    private static func parseTimestamp(_ raw: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return withFraction.date(from: raw) ?? ISO8601DateFormatter().date(from: raw)
     }
 
     // MARK: - Disk

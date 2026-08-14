@@ -239,3 +239,87 @@ final class BookMaterialReachesLibraryTests: XCTestCase {
                      "an archived book must stop asking")
     }
 }
+
+/// A book has to fill in as you learn. Talk books were built from
+/// `pickupWords`, which excludes anything you already know — so learning a
+/// word removed it from the chapter instead of checking it off, and the
+/// progress bar sat at 0 no matter what.
+@MainActor
+final class TalkBookProgressTests: XCTestCase {
+
+    /// Picked from the ACTIVE language's core list at runtime — the store is
+    /// language-scoped, so a hardcoded English word isn't in the list when the
+    /// simulator is set to another target language.
+    private lazy var taughtWord: String = {
+        CoreVocabulary.entries
+            .first { VocabStore.shared.state(of: $0.word) == nil && $0.word.count > 3 }?
+            .word ?? "commute"
+    }()
+
+    private func session(saying line: String) -> Session {
+        Session(id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+                topic: "Free talk", startedAt: Date(), endedAt: Date(),
+                turns: [
+                    Turn(id: UUID(), role: .fluentSelf, audioURL: nil, transcript: line,
+                         durationMs: 0, timestamp: Date(), suggestion: nil)
+                ])
+    }
+
+    override func tearDown() {
+        VocabStore.shared.unmark(taughtWord)
+        VocabStore.shared.unmark(VocabStore.lookupKey(for: taughtWord))
+        super.tearDown()
+    }
+
+    func testLearningAWordChecksItOffInsteadOfRemovingIt() {
+        // The book stores LEMMAS (lowercased); German nouns arrive capitalized.
+        let taughtWord = self.taughtWord.lowercased()
+        let talk = session(saying: taughtWord)
+
+        let before = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [])
+        guard before.words.contains(where: { $0.text == taughtWord }) else {
+            return XCTFail("""
+                the fluent self's word never made it into the book —                 word=\(taughtWord) lemmas=\(VocabStore.lemmas(in: [taughtWord]))                 level=\(String(describing: CoreVocabulary.level(of: taughtWord)))                 got=\(before.words.map(\.text))
+                """)
+        }
+        XCTAssertNil(before.words.first { $0.text == taughtWord }?.masteredAt)
+
+        VocabStore.shared.markKnown(VocabStore.lookupKey(for: taughtWord))
+
+        let after = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [])
+        guard let item = after.words.first(where: { $0.text == taughtWord }) else {
+            return XCTFail("learning the word REMOVED it from the book — the old bug")
+        }
+        XCTAssertNotNil(item.masteredAt, "the word should now be checked off")
+        XCTAssertEqual(after.words.count, before.words.count,
+                       "the chapter's size must not change as you learn")
+        XCTAssertGreaterThan(after.masteredCount, before.masteredCount)
+    }
+}
+
+/// Bookmarking an expression is not the same as knowing it.
+@MainActor
+final class ExpressionMasteryEvidenceTests: XCTestCase {
+
+    /// Unique per run: the store persists to disk, and a previous run's
+    /// "known" record made this test pass alone but fail in the full suite.
+    private let phrase = "zz-flag-it-early-\(UUID().uuidString.prefix(6))"
+
+    override func tearDown() {
+        VocabStore.shared.setStudyingExpression(phrase, false)
+        VocabStore.shared.setKnownExpression(phrase, false)
+        super.tearDown()
+    }
+
+    func testBookmarkingDoesNotCountAsHavingUsedIt() {
+        VocabStore.shared.setStudyingExpression(phrase, true)
+
+        XCTAssertTrue(VocabStore.shared.hasExpression(phrase),
+                      "the bookmark still creates a row (it shows in the notebook)")
+        XCTAssertFalse(VocabStore.shared.hasUsedExpression(phrase),
+                       "…but saving something is not evidence of knowing it")
+
+        VocabStore.shared.setKnownExpression(phrase, true)
+        XCTAssertTrue(VocabStore.shared.hasUsedExpression(phrase))
+    }
+}

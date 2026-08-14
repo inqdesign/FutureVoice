@@ -218,71 +218,41 @@ final class LocalAlignmentTests: XCTestCase {
         XCTAssertFalse(ShadowDrillView.fits([], durationMs: 0), "empty is never usable")
     }
 
-    // MARK: - dropPreBeatWords
+    // MARK: - recorder start boundary
 
-    /// The scored WAV opens before the 3-2-1, so anything said during the
-    /// countdown used to score as insertions against the target line.
-    func testWordsSpokenDuringTheCountdownAreDropped() {
-        let timings = [WordTiming(word: "wait", startMs: 200, endMs: 700),      // countdown
-                       WordTiming(word: "i", startMs: 2_500, endMs: 2_800),     // attempt
-                       WordTiming(word: "went", startMs: 2_800, endMs: 3_300)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "wait i went", timings: timings, preRollMs: 2_450)
-        XCTAssertEqual(out.timings.map(\.word), ["i", "went"])
-        XCTAssertEqual(out.text, "i went")
+    /// `prepare` must not capture anything. Shadow calls it before its 3-2-1
+    /// so session activation and file setup are paid up front; if it started
+    /// the file too, the countdown would land in the scored audio AND in the
+    /// take the learner plays back — which is exactly the bug.
+    @MainActor
+    func testPrepareDoesNotStartCapturing() throws {
+        let rec = AudioRecorder()
+        defer { _ = rec.stop() }
+        let url = try rec.prepare(quality: .sttOptimal)
+        XCTAssertFalse(rec.isRecording, "prepare must arm, never record")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path),
+                      "the file is created up front so record() stays cheap")
     }
 
-    /// A silent countdown — the overwhelmingly common case — must come
-    /// through completely untouched, punctuation included.
-    func testSilentCountdownLeavesTheTranscriptAlone() {
-        let timings = [WordTiming(word: "i", startMs: 2_500, endMs: 2_800),
-                       WordTiming(word: "went", startMs: 2_800, endMs: 3_300)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "I went.", timings: timings, preRollMs: 2_450)
-        XCTAssertEqual(out.text, "I went.", "no drop must mean no rebuild")
-        XCTAssertEqual(out.timings.count, 2)
+    /// And the beat actually starts it.
+    @MainActor
+    func testBeginPreparedStartsCapturing() throws {
+        let rec = AudioRecorder()
+        defer { _ = rec.stop() }
+        _ = try rec.prepare(quality: .sttOptimal)
+        try rec.beginPrepared()
+        XCTAssertTrue(rec.isRecording)
     }
 
-    /// Dropping a real first word is the failure the hot-mic start exists to
-    /// prevent, so a word straddling the beat is kept.
-    func testWordStraddlingTheBeatIsKept() {
-        let timings = [WordTiming(word: "i", startMs: 2_300, endMs: 2_600),
-                       WordTiming(word: "went", startMs: 2_600, endMs: 3_100)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "i went", timings: timings, preRollMs: 2_450)
-        XCTAssertEqual(out.timings.map(\.word), ["i", "went"])
-    }
-
-    /// Only a LEADING run is cut — a mid-attempt word can never predate the
-    /// beat, and filtering the whole array would desync it from the diff
-    /// steps `analyzeRhythm` walks in lockstep.
-    func testOnlyTheLeadingRunIsDropped() {
-        let timings = [WordTiming(word: "um", startMs: 100, endMs: 500),
-                       WordTiming(word: "i", startMs: 2_500, endMs: 2_800),
-                       WordTiming(word: "eh", startMs: 2_900, endMs: 3_000),
-                       WordTiming(word: "went", startMs: 3_100, endMs: 3_400)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "um i eh went", timings: timings, preRollMs: 2_450)
-        XCTAssertEqual(out.timings.map(\.word), ["i", "eh", "went"])
-    }
-
-    /// No stamps (an older attempt, or a recorder that failed to open) means
-    /// no cut — never guess at a pre-roll.
-    func testMissingPreRollLeavesEverything() {
-        let timings = [WordTiming(word: "i", startMs: 0, endMs: 300)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "i", timings: timings, preRollMs: 0)
-        XCTAssertEqual(out.timings.count, 1)
-        XCTAssertEqual(out.text, "i")
-    }
-
-    /// A learner who says nothing but clears their throat during the 3-2-1
-    /// scores an empty attempt, not a wrong one.
-    func testCountdownOnlySpeechLeavesNothingBehind() {
-        let timings = [WordTiming(word: "ahem", startMs: 200, endMs: 700)]
-        let out = ShadowDrillView.dropPreBeatWords(
-            text: "ahem", timings: timings, preRollMs: 2_450)
-        XCTAssertTrue(out.timings.isEmpty)
-        XCTAssertEqual(out.text, "")
+    /// `beginPrepared` runs on the go beat, which a learner can reach twice if
+    /// an attempt is restarted — it must not throw away what is being captured.
+    @MainActor
+    func testBeginPreparedIsIdempotent() throws {
+        let rec = AudioRecorder()
+        defer { _ = rec.stop() }
+        _ = try rec.prepare(quality: .sttOptimal)
+        try rec.beginPrepared()
+        XCTAssertNoThrow(try rec.beginPrepared())
+        XCTAssertTrue(rec.isRecording)
     }
 }
