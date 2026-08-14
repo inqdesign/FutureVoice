@@ -88,20 +88,14 @@ enum StudyWidgetRefresher {
     /// progress widget can render them without touching the stores directly.
     @MainActor
     private static func refreshProgress() {
-        let cal = Calendar.current
-        let todayStart = cal.startOfDay(for: Date())
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
-        var todayMs = 0
-        for session in sessions where (session.endedAt ?? session.startedAt) >= todayStart {
-            for turn in session.turns where turn.role == .user {
-                todayMs += turn.durationMs
-            }
-        }
+        // Same definition as the home ring — see PracticeStats.todayTalkSeconds.
+        let todaySeconds = PracticeStats.todayTalkSeconds(sessions: sessions)
         let goal = UserDefaults.standard.integer(forKey: "futurevoice.dailyGoalMinutes")
         let vocab = VocabStore.shared
         let snapshot = StudyProgressSnapshot(
             updatedAt: Date(),
-            todaySeconds: todayMs / 1000,
+            todaySeconds: todaySeconds,
             goalMinutes: goal > 0 ? goal : 10,
             streakDays: PracticeStats.snapshot().streakDays,
             dueCount: DrillStore.shared.dueCount(),

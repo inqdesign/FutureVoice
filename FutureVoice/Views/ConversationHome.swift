@@ -752,16 +752,11 @@ struct ConversationHome: View {
 
         let cal = Calendar.current
         let todayStart = cal.startOfDay(for: Date())
-        var todayMs = 0
-        var todayCount = 0
-        for session in sessions where (session.endedAt ?? session.startedAt) >= todayStart {
-            todayCount += 1
-            for turn in session.turns where turn.role == .user {
-                todayMs += turn.durationMs
-            }
-        }
-        todaySpokenSeconds = todayMs / 1000
-        todayTalks = todayCount
+        // One shared definition of "talked today" — see
+        // PracticeStats.todayTalkSeconds. Summing only the learner's turns
+        // here made the ring disagree with the billing page on the same day.
+        todaySpokenSeconds = PracticeStats.todayTalkSeconds(sessions: sessions)
+        todayTalks = sessions.filter { ($0.endedAt ?? $0.startedAt) >= todayStart }.count
         // Keep the proxy's label copy in sync (see AppState.talkRingHeadline).
         appState.talkRingHeadline = goalHeadline
         // Reads everything above, so it goes last.

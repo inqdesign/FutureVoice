@@ -14,6 +14,31 @@ enum PracticeStats {
         var shadowableLineCount: Int        // fluent-self turns across all sessions
     }
 
+    /// Seconds spent ON CALLS today — wall clock, start to end, exactly what
+    /// the server meters (`talk-tick` ticks the call clock) and exactly what
+    /// the learner watched the in-call timer count.
+    ///
+    /// It used to sum only the learner's own turn durations, which made the
+    /// same day read 7 min on the home ring and 13 min on the billing page:
+    /// a call is mostly the fluent self talking and the learner thinking, and
+    /// none of that vanished. One definition, one number — the home ring, the
+    /// widget and the talk-time receipt all call this.
+    ///
+    /// Local calendar day, deliberately: the ring is a habit, and a habit
+    /// belongs to the day the learner is living in. (The server pools per UTC
+    /// day for billing; a mismatch around midnight is the lesser evil versus
+    /// telling someone their evening call happened "tomorrow".)
+    static func todayTalkSeconds(sessions: [Session],
+                                 now: Date = Date(),
+                                 calendar: Calendar = .current) -> Int {
+        let todayStart = calendar.startOfDay(for: now)
+        return sessions.reduce(into: 0) { total, session in
+            let ended = session.endedAt ?? session.startedAt
+            guard ended >= todayStart else { return }
+            total += max(0, Int(ended.timeIntervalSince(session.startedAt)))
+        }
+    }
+
     static func snapshot(now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
         let sessions = SessionStore.shared.load()
         let endedSessions = sessions.filter { $0.endedAt != nil }

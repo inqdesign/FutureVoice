@@ -52,14 +52,8 @@ enum HeroGreeting {
     @MainActor
     static func live(now: Date = Date()) -> Input {
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
-        let cal = Calendar.current
-        let todayStart = cal.startOfDay(for: now)
-        var todaySeconds = 0
-        for session in sessions where (session.endedAt ?? session.startedAt) >= todayStart {
-            for turn in session.turns where turn.role == .user {
-                todaySeconds += turn.durationMs
-            }
-        }
+        // Same definition as the home ring — see PracticeStats.todayTalkSeconds.
+        let todaySeconds = PracticeStats.todayTalkSeconds(sessions: sessions, now: now)
         let lastEnded = sessions.compactMap(\.endedAt).max()
         let goal = UserDefaults.standard.object(forKey: goalMinutesKey) as? Int
 
@@ -72,10 +66,10 @@ enum HeroGreeting {
                      hasMissedCall: missed,
                      sessionCount: sessions.count,
                      lastSessionEndedAt: lastEnded,
-                     todaySpokenSeconds: todaySeconds / 1000,
+                     todaySpokenSeconds: todaySeconds,
                      dailyGoalMinutes: goal ?? 10,
                      rotationCursor: UserDefaults.standard.integer(forKey: cursorKey),
-                     calendar: cal)
+                     calendar: .current)
     }
 
     /// Matches `ConversationHome`'s `@AppStorage`.
