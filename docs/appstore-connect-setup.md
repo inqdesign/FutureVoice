@@ -107,12 +107,32 @@
 Introductory Offer를 상품마다 따로 만들어야 합니다. 하나라도 빠지면 그
 상품만 체험 없이 즉시 결제로 뜹니다.
 
-| 필드 | 값 |
+**어디에 있나** — 별도 메뉴가 아니라 각 구독 상품 페이지 안에 있습니다:
+
+```
+App Store Connect → Apps → nawana → (좌측) Subscriptions
+  → 구독 그룹 "nawana subscriptions" 선택
+  → 구독 상품 4개 중 하나 선택 (예: Daily Monthly)
+  → 아래로 스크롤해서 "Subscription Prices" 섹션
+  → 오른쪽 [ + ] 버튼 → "Create Introductory Offer"
+```
+
+가격을 넣는 그 섹션의 `+` 안에 숨어 있어서 못 찾기 쉽습니다. 이 과정을
+**상품 4개마다 반복**하세요.
+
+| 입력 항목 | 값 |
 |---|---|
-| Type | **Free Trial** |
-| Duration | **1 Week** (= 7일; ASC에 "7 days" 항목은 없습니다) |
-| Territories | 판매하는 전 지역 |
-| Eligibility | New Subscribers |
+| Countries or Regions | 판매하는 전 지역 선택 |
+| Start Date | 오늘 (또는 출시일) |
+| End Date | **No End Date** — 끝을 정하면 그날 이후 신규 가입자는 체험이 사라집니다 |
+| Type | **Free** (Pay Up Front / Pay As You Go 아님) |
+| Duration | **1 Week** (= 7일; ASC에 "7 days"라는 항목은 없습니다) |
+
+**대상 지정 항목은 없습니다.** Introductory Offer는 자격이 자동으로
+정해집니다 — 해당 **구독 그룹에서 체험을 한 번도 안 쓴 사람**만 받습니다.
+즉 데일리 월간으로 7일 체험을 쓴 사람은 무제한 월간으로 갈아타도 다시
+공짜 7일을 받지 못합니다(그룹당 1회). 4개에 모두 거는 이유는 "어느 상품을
+먼저 고르든 체험이 붙게" 하기 위한 것이지, 4번 줄 수 있어서가 아닙니다.
 
 > 앱은 `product.subscription.introductoryOffer`를 읽어 체험 퍼널을 띄웁니다.
 > 이게 없으면 CTA가 조용히 "Subscribe"로 바뀌고 3단계 퍼널이 통째로
