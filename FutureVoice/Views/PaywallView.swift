@@ -14,7 +14,9 @@ struct PaywallView: View {
     /// Already paying (or in trial). Such a viewer opened this sheet to
     /// CHANGE plans, so the trial funnel is not just noise — it is wrong.
     @State private var isSubscriber = false
-    @State private var period: PlanPeriod = .annual
+    // Monthly by default: it is the smaller commitment, and a paywall that
+    // opens on the year-long option reads as pressure rather than a choice.
+    @State private var period: PlanPeriod = .monthly
     @State private var selectedTier: String = "unlimited"
 
     // Beta subscription-preference survey (last step while `BetaConfig.isBeta`).
@@ -224,7 +226,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("You, but fluent")
                     .font(.largeTitle.weight(.bold))
-                Text(explain("Everything nawana does, fueled up — in your own voice."))
+                Text(explain("Speak every day — and keep everything it teaches you."))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -234,21 +236,25 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 18) {
                 featureRow("bubble.left.and.bubble.right.fill",
                            "Real conversations, your voice",
-                           "Talk daily with your fluent self — every reply synthesized in your cloned voice.")
+                           explain("Talk daily with your fluent self — every reply synthesized in your cloned voice."))
+                featureRow("play.rectangle.on.rectangle.fill",
+                           "Rehearse before it happens",
+                           explain("Watch your fluent self handle what's coming — from your own life or this week's news."))
                 featureRow("sparkles",
                            "Corrections that stick",
-                           "Inline fixes become spaced-repetition drills, tuned to your mistakes.")
+                           explain("Inline fixes become spaced-repetition drills, tuned to your mistakes."))
                 featureRow("waveform.badge.mic",
                            "Pronunciation you can measure",
-                           "Shadow any line, get a real score, watch the weekly trend.")
-                featureRow("newspaper.fill",
-                           "Topics from your real life",
-                           "Scenarios from your world and this week's news in your interests.")
+                           explain("Shadow any line, get a real score, watch the weekly trend."))
             }
         }
     }
 
-    private func featureRow(_ icon: String, _ title: String, _ caption: String) -> some View {
+    /// `title` is a LocalizedStringKey so the literal EXTRACTS and follows
+    /// the chrome locale; `caption` arrives already resolved through
+    /// `explain()`. Passing both as plain `String` is why every feature row
+    /// rendered in English next to a Korean subtitle.
+    private func featureRow(_ icon: String, _ title: LocalizedStringKey, _ caption: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
@@ -275,23 +281,27 @@ struct PaywallView: View {
             .padding(.top, 12)
 
             VStack(alignment: .leading, spacing: 0) {
-                timelineRow(icon: "lock.open.fill", tint: .accentColor,
+                timelineRow(icon: "lock.open.fill",
                             title: "Today",
-                            caption: "Full access unlocked — talk, shadow, and drill with your fluent self.",
+                            caption: explain("Your trial starts — five minutes of talk a day, and all the review it produces."),
                             showsLine: true)
-                timelineRow(icon: "bell.fill", tint: .accentColor,
+                timelineRow(icon: "bell.fill",
                             title: "Day \(max(1, store.trialDays - 2))",
-                            caption: "We send a reminder that your trial is about to end.",
+                            caption: explain("We send a reminder that your trial is about to end."),
                             showsLine: true)
-                timelineRow(icon: "crown.fill", tint: .accentColor,
+                timelineRow(icon: "crown.fill",
                             title: "Day \(store.trialDays)",
-                            caption: "Your subscription starts. Cancel anytime before in the App Store.",
+                            caption: explain("Your subscription starts. Cancel any time before then in the App Store."),
                             showsLine: false)
             }
         }
     }
 
-    private func timelineRow(icon: String, tint: Color, title: String,
+    /// No tint parameter: the row follows the app's `.tint`, which is the
+    /// Futureself palette the learner picked. A literal `Color.accentColor`
+    /// does NOT cross a sheet boundary — that is why the badge and selection
+    /// ring rendered system blue next to a green button.
+    private func timelineRow(icon: String, title: LocalizedStringKey,
                              caption: String, showsLine: Bool) -> some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(spacing: 0) {
@@ -301,11 +311,11 @@ struct PaywallView: View {
                         .frame(width: 40, height: 40)
                     Image(systemName: icon)
                         .font(.subheadline)
-                        .foregroundStyle(tint)
+                        .foregroundStyle(.tint)
                 }
                 if showsLine {
                     Rectangle()
-                        .fill(tint.opacity(0.5))
+                        .fill(.tint.opacity(0.5))
                         .frame(width: 4)
                         .frame(minHeight: 34)
                 }
@@ -325,7 +335,7 @@ struct PaywallView: View {
 
     private var plansContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Pick your pace")
+            Text("How much will you talk?")
                 .font(.largeTitle.weight(.bold))
                 .padding(.top, 12)
 
@@ -351,11 +361,11 @@ struct PaywallView: View {
                 // the quantity so the plans read as phone-plan sizes.
                 planCard(tier: "unlimited",
                          name: "Unlimited",
-                         blurb: "Talk as much as you want — calls, Watch scenes, and shadowing without watching a meter.",
+                         blurb: explain("Talk and rehearse as much as you want, every day — calls, Watch scenes, shadowing."),
                          badge: "Most talk time")
                 planCard(tier: "daily",
                          name: "Daily",
-                         blurb: "A light daily habit — about five minutes of talk a day.",
+                         blurb: explain("A light daily habit you can actually keep."),
                          badge: nil)
             }
 
@@ -378,9 +388,9 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Always free")
                     .font(.footnote.weight(.semibold))
-                freeRow("repeat", "Replay shadow lines", "Loop and slow down cached audio.")
-                freeRow("rectangle.stack.fill", "Review drills", "Spaced repetition, graded on device.")
-                freeRow("play.rectangle.on.rectangle", "Re-watch dialogues", "Generated once, then cached.")
+                freeRow("repeat", "Replay shadow lines", explain("Loop and slow down cached audio."))
+                freeRow("rectangle.stack.fill", "Review drills", explain("Spaced repetition, graded on device."))
+                freeRow("play.rectangle.on.rectangle", "Re-watch dialogues", explain("Generated once, then cached."))
             }
             .padding(.top, 4)
 
@@ -439,7 +449,7 @@ struct PaywallView: View {
                                   : "https://nawana.app/privacy.html")!
     }
 
-    private func freeRow(_ icon: String, _ title: String, _ caption: String) -> some View {
+    private func freeRow(_ icon: String, _ title: LocalizedStringKey, _ caption: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.subheadline)
@@ -515,7 +525,7 @@ struct PaywallView: View {
     }
 
     @ViewBuilder
-    private func planCard(tier: String, name: String, blurb: String, badge: String?) -> some View {
+    private func planCard(tier: String, name: LocalizedStringKey, blurb: String, badge: LocalizedStringKey?) -> some View {
         let opt = option(tier: tier)
         let isSelected = selectedTier == tier
         Button {
@@ -524,16 +534,17 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     if let badge {
-                        Text(badge.uppercased())
+                        Text(badge)
                             .font(.caption2.weight(.bold))
+                            .textCase(.uppercase)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.accentColor))
+                            .background(Capsule().fill(.tint))
                             .foregroundStyle(Color(.systemBackground))
                     }
                     Spacer()
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                        .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                         .font(.title3)
                 }
                 Text(name).font(.title3.weight(.bold))
@@ -570,7 +581,8 @@ struct PaywallView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.06),
+                    .stroke(isSelected ? AnyShapeStyle(.tint)
+                                       : AnyShapeStyle(Color.primary.opacity(0.06)),
                             lineWidth: isSelected ? 2 : 1)
             )
         }
@@ -664,7 +676,7 @@ struct PaywallView: View {
         } label: {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     .font(.title3)
                     .padding(.top, 2)
                 VStack(alignment: .leading, spacing: 3) {
@@ -690,7 +702,8 @@ struct PaywallView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.accentColor : Color.primary.opacity(0.06),
+                    .stroke(isSelected ? AnyShapeStyle(.tint)
+                                       : AnyShapeStyle(Color.primary.opacity(0.06)),
                             lineWidth: isSelected ? 2 : 1)
             )
         }
