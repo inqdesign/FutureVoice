@@ -373,14 +373,20 @@ struct PaywallView: View {
             VStack(spacing: 14) {
                 // Tier = amount of talk time, not features — the names say
                 // the quantity so the plans read as phone-plan sizes.
+                // The plans differ in AMOUNT — that is the honest axis, and
+                // pretending otherwise (purpose, level, "serious learners")
+                // would send people to the wrong plan. But the label must not
+                // grade the buyer: "heavy/light user" tells someone they are
+                // the small one. So each card asks the same question about
+                // the same number and lets the reader recognise themselves.
                 planCard(tier: "unlimited",
+                         audience: explain("If five minutes isn't enough"),
                          name: explain("Unlimited"),
-                         blurb: explain("Talk and rehearse as much as you want, every day — calls, Watch scenes, shadowing."),
-                         badge: explain("Most talk time"))
+                         blurb: explain("Long sessions, several a day — as many calls and scenes as you want."))
                 planCard(tier: "daily",
+                         audience: explain("If five minutes a day is enough"),
                          name: explain("Daily"),
-                         blurb: explain("A light daily habit you can actually keep."),
-                         badge: nil)
+                         blurb: explain("The same five minutes every day — small enough that you actually do it."))
             }
 
             if store.options.allSatisfy({ $0.product == nil }), !store.loading {
@@ -542,24 +548,21 @@ struct PaywallView: View {
     }
 
     @ViewBuilder
-    private func planCard(tier: String, name: String, blurb: String, badge: String?) -> some View {
+    private func planCard(tier: String, audience: String, name: String, blurb: String) -> some View {
         let opt = option(tier: tier)
         let isSelected = selectedTier == tier
         Button {
             selectedTier = tier
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    if let badge {
-                        Text(badge)
-                            .font(.caption2.weight(.bold))
-                            .textCase(.uppercase)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(.tint))
-                            .foregroundStyle(Color(.systemBackground))
-                    }
-                    Spacer()
+                HStack(alignment: .top) {
+                    // A filled capsule reads as an award — it ranked the
+                    // plans on one axis and made Daily look like less. This
+                    // is a quiet label that tells you which one is yours.
+                    Text(audience)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                         .font(.title3)
