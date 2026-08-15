@@ -3607,6 +3607,16 @@
         }
       }
     },
+    "Couldn't export": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내보내지 못했습니다"
+          }
+        }
+      }
+    },
     "Couldn't get a response.": {
       "localizations": {
         "de": {
@@ -13752,6 +13762,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "아바타가 이 역할을 연기해요. 나는 내 쪽을 연습해요."
+          }
+        }
+      }
+    },
+    "The book couldn't be written to a file. Try again.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "책을 파일로 저장하지 못했습니다. 다시 시도해 주세요."
           }
         }
       }
