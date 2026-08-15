@@ -37,6 +37,7 @@ struct ConversationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var curriculum = TalkCurriculum.Snapshot()
     @State private var archivedAt: Date?
+    @StateObject private var exporter = BookExportController()
     @State private var showingDeleteConfirm = false
     @State private var drillCount = 0
     @State private var showingContinue = false
@@ -105,6 +106,7 @@ struct ConversationDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
+        .bookExport(exporter)
         .onAppear {
             refresh()
             if selectedChapter == nil { selectedChapter = initialChapter }
@@ -848,6 +850,11 @@ struct ConversationDetailView: View {
                     .fontWeight(.semibold)
             } else {
                 Menu {
+                    BookExportMenu(controller: exporter) {
+                        BookDocument.make(session: session,
+                                          curriculum: curriculum,
+                                          appState: appState)
+                    }
                     if archivedAt != nil {
                         Button { setArchived(false) } label: {
                             Label("Unarchive", systemImage: "tray.and.arrow.up")

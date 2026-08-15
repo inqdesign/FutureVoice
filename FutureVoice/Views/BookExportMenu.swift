@@ -1,80 +1,50 @@
 import SwiftUI
 import UIKit
 
-/// The "take this book off the phone" action, identical on every book page.
+/// "Take this book off the phone", split into the two halves SwiftUI needs it
+/// split into.
+///
+/// The buttons live inside a `Menu` — and menu content is not an ordinary view
+/// hierarchy. A `.sheet` or `.alert` attached in there never presents, which
+/// is exactly what happened: tapping PDF ran the work and then dropped the
+/// share sheet on the floor, with no indicator, because the presenter was
+/// inside a menu that had already closed. So the rows stay here and every
+/// piece of presentation moves to the page that owns the toolbar, via
+/// `.bookExport(_:)`.
 ///
 /// Two formats because two habits: a PDF to annotate on an iPad (or print),
 /// and Markdown to paste into whatever the learner already keeps notes in.
 /// Both come out of the same `BookDocument`, so a book can never say one
 /// thing on paper and another in a notes app.
-///
-/// Why this isn't a plain `ShareLink`: it was, and tapping PDF froze the
-/// screen for seconds with nothing on it. `ShareLink` resolves the
-/// `Transferable` while it prepares the sheet, and rendering a book to A4
-/// runs `UIPrintPageRenderer` on the main thread — so the app was busy
-/// laying out pages with no way to say so, and the sheet appeared only
-/// afterwards. Now the work is started explicitly, the button says what it
-/// is doing, and the share sheet opens on a file that already exists.
-struct BookExportMenu: View {
-    /// Built when the menu opens, not when the page renders.
-    let document: () -> BookDocument
+@MainActor
+final class BookExportController: ObservableObject {
+    enum Format { case pdf, markdown }
 
-    @EnvironmentObject private var appState: AppState
-
-    private enum Format { case pdf, markdown }
-
-    @State private var preparing = false
-    @State private var shared: SharedFile?
-    @State private var failed = false
-
-    var body: some View {
-        Group {
-            if preparing {
-                // Replaces the button rather than covering it: a toolbar has
-                // no room for an overlay, and a spinner where the control was
-                // is the clearest "it's working" this space allows.
-                ProgressView()
-            } else {
-                Menu {
-                    Button { export(.pdf) } label: {
-                        Label("PDF", systemImage: "doc.richtext")
-                    }
-                    Button { export(.markdown) } label: {
-                        Label("Text", systemImage: "doc.plaintext")
-                    }
-                } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
-                }
-            }
-        }
-        .sheet(item: $shared) { file in
-            ShareSheet(url: file.url)
-                .presentationDetents([.medium, .large])
-        }
-        .alert(Text(explain("Couldn't export")), isPresented: $failed) {
-            Button(explain("OK")) { }
-        } message: {
-            Text(explain("The book couldn't be written to a file. Try again."))
-        }
+    struct SharedFile: Identifiable {
+        let url: URL
+        var id: String { url.path }
     }
 
-    private func export(_ format: Format) {
+    @Published var preparing = false
+    @Published var shared: SharedFile?
+    @Published var failed = false
+
+    func export(_ format: Format,
+                document: @escaping () -> BookDocument,
+                native: String,
+                target: String) {
+        guard !preparing else { return }
         preparing = true
         Task {
-            // One turn of the run loop so the spinner actually paints before
-            // the render takes the main thread. Without it the state change
-            // and the blocking work land in the same frame and the user sees
-            // the freeze they saw before.
-            await Task.yield()
+            // Let the menu finish dismissing before the overlay appears and
+            // before the render takes the main thread — a sheet presented
+            // into a closing menu is dropped.
+            try? await Task.sleep(for: .milliseconds(350))
             var doc = document()
             // The glossary is the one part of a book that isn't already on
-            // the phone, so it's fetched here rather than at page render.
-            // Bounded by BookGlossary's own budget: a slow dictionary costs
+            // the phone. Bounded inside BookGlossary: a slow dictionary costs
             // the glossary, never the export.
-            if let glossary = await BookGlossary.section(
-                for: doc,
-                native: appState.nativeLanguage,
-                target: appState.targetLanguage) {
+            if let glossary = await BookGlossary.section(for: doc, native: native, target: target) {
                 doc.sections.append(glossary)
             }
             do {
@@ -94,10 +64,68 @@ struct BookExportMenu: View {
             }
         }
     }
+}
 
-    private struct SharedFile: Identifiable {
-        let url: URL
-        var id: String { url.path }
+/// The menu rows. Content only — no state, no presentation.
+struct BookExportMenu: View {
+    @ObservedObject var controller: BookExportController
+    /// Built when a format is chosen, not when the page renders.
+    let document: () -> BookDocument
+
+    @EnvironmentObject private var appState: AppState
+
+    var body: some View {
+        Button {
+            controller.export(.pdf, document: document,
+                              native: appState.nativeLanguage,
+                              target: appState.targetLanguage)
+        } label: {
+            Label("PDF", systemImage: "doc.richtext")
+        }
+        Button {
+            controller.export(.markdown, document: document,
+                              native: appState.nativeLanguage,
+                              target: appState.targetLanguage)
+        } label: {
+            Label("Text", systemImage: "doc.plaintext")
+        }
+    }
+}
+
+extension View {
+    /// Attach on the PAGE, not in the toolbar: this is what actually shows
+    /// progress and presents the share sheet.
+    func bookExport(_ controller: BookExportController) -> some View {
+        modifier(BookExportPresentation(controller: controller))
+    }
+}
+
+private struct BookExportPresentation: ViewModifier {
+    @ObservedObject var controller: BookExportController
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if controller.preparing {
+                    // Covers the page on purpose: rendering a book holds the
+                    // main thread, so taps would queue up anyway. Better to
+                    // say so than to look broken.
+                    ZStack {
+                        Color(.systemBackground).opacity(0.6).ignoresSafeArea()
+                        ProgressView(explain("Preparing the file…"))
+                            .controlSize(.large)
+                    }
+                }
+            }
+            .animation(.default, value: controller.preparing)
+            .sheet(item: $controller.shared) { file in
+                ShareSheet(url: file.url)
+            }
+            .alert(Text(explain("Couldn't export")), isPresented: $controller.failed) {
+                Button(explain("OK")) { }
+            } message: {
+                Text(explain("The book couldn't be written to a file. Try again."))
+            }
     }
 }
 

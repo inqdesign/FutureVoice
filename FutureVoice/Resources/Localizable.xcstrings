@@ -5150,6 +5150,7 @@
       }
     },
     "Export": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -10361,6 +10362,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 카드 연습하기"
+          }
+        }
+      }
+    },
+    "Preparing the file…": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일을 준비하는 중…"
           }
         }
       }

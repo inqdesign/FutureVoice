@@ -25,9 +25,33 @@ enum BookGlossary {
     static let budget: Duration = .seconds(8)
 
     /// Builds the section, or nil when nothing could be looked up.
+    ///
+    /// The budget is enforced HERE, by racing the whole lookup against a
+    /// sleep. It has to be: `WordLore` talks to the network and nothing in
+    /// that path promises to return, so an unenforced budget means an export
+    /// that never reaches the file write — which is exactly what happened.
     static func section(for doc: BookDocument,
                         native: String,
                         target: String) async -> BookDocument.Section? {
+        await withTaskGroup(of: BookDocument.Section?.self) { race in
+            race.addTask { @MainActor in
+                await build(for: doc, native: native, target: target)
+            }
+            race.addTask {
+                try? await Task.sleep(for: budget)
+                return nil
+            }
+            // Whichever finishes first decides; the loser is cancelled and
+            // its result discarded.
+            let first = await race.next() ?? nil
+            race.cancelAll()
+            return first
+        }
+    }
+
+    private static func build(for doc: BookDocument,
+                              native: String,
+                              target: String) async -> BookDocument.Section? {
         // De-duplicate case-insensitively but keep the first spelling: the
         // book should gloss the word as the learner met it.
         var seen = Set<String>()

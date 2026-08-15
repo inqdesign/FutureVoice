@@ -19,6 +19,7 @@ struct ScenarioDetailView: View {
     let scenarioId: UUID
 
     @State private var talkPresented = false
+    @StateObject private var exporter = BookExportController()
     @State private var watchPresented = false
     @State private var shadowTarget: Turn?
     @State private var wordSheet: WordRef?
@@ -70,6 +71,7 @@ struct ScenarioDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
+        .bookExport(exporter)
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
@@ -580,6 +582,7 @@ struct ScenarioDetailView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 if let s = scenario {
+                    BookExportMenu(controller: exporter) { BookDocument.make(scenario: s, appState: appState) }
                     if s.isArchived {
                         Button {
                             appState.setScenarioArchived(id: scenarioId, false)
