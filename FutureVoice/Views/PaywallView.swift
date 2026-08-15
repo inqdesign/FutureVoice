@@ -359,13 +359,13 @@ struct PaywallView: View {
                          badge: nil)
             }
 
-            if store.options.allSatisfy({ $0.localizedPrice == nil }) && !store.loading {
-                Label("Prices load from the App Store — not available yet in this build.",
-                      systemImage: "info.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else if store.options.allSatisfy({ $0.product == nil }) {
-                Label("Planned launch pricing — final prices confirm on the App Store at launch.",
+            if store.options.allSatisfy({ $0.product == nil }), !store.loading {
+                // Same condition, two different truths: in the survey the
+                // numbers on screen ARE the planned prices and must say so;
+                // outside it there are no numbers at all.
+                Label(showsSurvey
+                      ? "Planned launch pricing — final prices confirm on the App Store at launch."
+                      : "Prices load from the App Store — not available yet in this build.",
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -470,6 +470,17 @@ struct PaywallView: View {
         max(1, seconds / 60)
     }
 
+    /// What price a card may show. Live App Store price whenever there is
+    /// one. The planned figure is allowed ONLY in the beta survey, where
+    /// nothing can be bought and the screen exists to ask "would you pay
+    /// this?" — a labelled anchor. On a screen that can actually charge, a
+    /// hardcoded KRW figure would quote the wrong currency, so it stays nil
+    /// and the card shows "—" beside the "prices load from the App Store"
+    /// notice.
+    private func displayPrice(_ opt: StoreKitService.PlanOption?) -> String? {
+        opt?.localizedPrice ?? (showsSurvey ? opt?.plannedPriceLabel : nil)
+    }
+
     private func option(tier: String) -> StoreKitService.PlanOption? {
         store.options.first { $0.plan.tier == tier && $0.plan.period == period.rawValue }
     }
@@ -477,14 +488,17 @@ struct PaywallView: View {
     /// Percentage the annual plan saves versus paying monthly for a year, for
     /// one tier. nil when either price is unknown or annual isn't cheaper.
     private func annualSavingsPercent(tier: String) -> Int? {
-        // Prefer live prices; fall back to the planned price map so the badge
-        // still shows in the beta build, where StoreKit has no products.
+        // Live prices decide the badge. The planned map is a fallback only
+        // in the survey, for the same reason as `displayPrice` — otherwise a
+        // card showing "—" would still claim a savings percentage computed
+        // from numbers the viewer is never shown.
+        let planned = showsSurvey
         let monthly = store.options
             .first(where: { $0.plan.tier == tier && $0.plan.period == "monthly" })?.priceValue
-            ?? StoreKitService.PlanOption.plannedPriceValue["\(tier)_monthly"]
+            ?? (planned ? StoreKitService.PlanOption.plannedPriceValue["\(tier)_monthly"] : nil)
         let annual = store.options
             .first(where: { $0.plan.tier == tier && $0.plan.period == "annual" })?.priceValue
-            ?? StoreKitService.PlanOption.plannedPriceValue["\(tier)_annual"]
+            ?? (planned ? StoreKitService.PlanOption.plannedPriceValue["\(tier)_annual"] : nil)
         guard let monthly, let annual else { return nil }
         // Do the percentage in Double — Decimal division of these values was
         // truncating the sub-1 quotient to 0.
@@ -538,7 +552,7 @@ struct PaywallView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(opt?.localizedPrice.map { "\($0) / \(period.cycleNoun)" } ?? "—")
+                        Text(displayPrice(opt).map { "\($0) / \(period.cycleNoun)" } ?? "—")
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.secondary)
                         if period == .annual, let saved = annualSavingsPercent(tier: tier) {
