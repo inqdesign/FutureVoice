@@ -5,7 +5,15 @@ import Supabase
 /// Three-step trial-first paywall (pitch → trial timeline → plan picker),
 /// modeled on the Speak flow: sell the value, de-risk the trial, then show
 /// prices last. Pure SwiftUI + system colors; prices and trial length come
-/// live from StoreKit, credits-per-cycle from the server plan catalog.
+/// live from StoreKit, the plan catalog from the server.
+///
+/// LANGUAGE: every word on this screen goes through `explain()` — the
+/// learner's NATIVE language — including titles and buttons, which the rest
+/// of the app renders as target-language chrome. Paying is a decision you
+/// have to understand and consent to, and "Start my free 7-day trial" in a
+/// language someone is still learning is a comprehension barrier at exactly
+/// the wrong moment. This screen is the documented exception to the chrome
+/// rule in CLAUDE.md; keep it that way when adding copy here.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = StoreKitService()
@@ -37,12 +45,18 @@ struct PaywallView: View {
     enum PlanPeriod: String, CaseIterable, Identifiable {
         case weekly, monthly, annual
         var id: String { rawValue }
-        var label: String { rawValue.capitalized }
+        var label: String {
+            switch self {
+            case .weekly:  return explain("Weekly")
+            case .monthly: return explain("Monthly")
+            case .annual:  return explain("Annual")
+            }
+        }
         var cycleNoun: String {
             switch self {
-            case .weekly: return "week"
-            case .monthly: return "month"
-            case .annual: return "year"
+            case .weekly:  return explain("week")
+            case .monthly: return explain("month")
+            case .annual:  return explain("year")
             }
         }
     }
@@ -95,18 +109,18 @@ struct PaywallView: View {
                 scheduleTrialEndingReminder(trialDays: store.trialDays)
             }
         }
-        .alert("You're in", isPresented: purchasedBinding) {
-            Button("Done") { dismiss() }
+        .alert(Text(explain("You're in")), isPresented: purchasedBinding) {
+            Button(explain("Done")) { dismiss() }
         } message: {
             Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
         }
-        .alert("Purchase failed", isPresented: failedBinding) {
-            Button("OK") { store.purchaseState = .idle }
+        .alert(Text(explain("Purchase failed")), isPresented: failedBinding) {
+            Button(explain("OK")) { store.purchaseState = .idle }
         } message: {
             if case .failed(let msg) = store.purchaseState { Text(msg) }
         }
-        .alert("Thank you", isPresented: $surveySent) {
-            Button("Done") { dismiss() }
+        .alert(Text(explain("Thank you")), isPresented: $surveySent) {
+            Button(explain("Done")) { dismiss() }
         } message: {
             Text(explain("Thanks — this shapes launch pricing. Keep reviewing your saved words, drills, and dialogues anytime — that stays free."))
         }
@@ -172,7 +186,7 @@ struct PaywallView: View {
             .allowsHitTesting(step != .resolving)
 
             if step == .plans && !showsSurvey {
-                Button("Restore purchases") {
+                Button(explain("Restore purchases")) {
                     Task { await store.restore() }
                 }
                 .font(.footnote)
@@ -196,15 +210,15 @@ struct PaywallView: View {
     private var ctaTitle: String {
         switch step {
         case .resolving: return ""
-        case .pitch:    return "Try for free"
-        case .timeline: return "See plans"
+        case .pitch:    return explain("Try for free")
+        case .timeline: return explain("See plans")
         case .plans:
-            if showsSurvey { return "Continue" }
+            if showsSurvey { return explain("Continue") }
             return showsTrial && selectedOption?.trialDays != nil
-                ? "Start my free \(store.trialDays)-day trial"
-                : "Subscribe"
+                ? explain("Start my free \(store.trialDays)-day trial")
+                : explain("Subscribe")
         case .survey:
-            return "Submit"
+            return explain("Submit")
         }
     }
 
@@ -224,7 +238,7 @@ struct PaywallView: View {
     private var pitchContent: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("You, but fluent")
+                Text(explain("You, but fluent"))
                     .font(.largeTitle.weight(.bold))
                 Text(explain("Speak every day — and keep everything it teaches you."))
                     .font(.title3)
@@ -235,16 +249,16 @@ struct PaywallView: View {
 
             VStack(alignment: .leading, spacing: 18) {
                 featureRow("bubble.left.and.bubble.right.fill",
-                           "Real conversations, your voice",
+                           explain("Real conversations, your voice"),
                            explain("Talk daily with your fluent self — every reply synthesized in your cloned voice."))
                 featureRow("play.rectangle.on.rectangle.fill",
-                           "Rehearse before it happens",
+                           explain("Rehearse before it happens"),
                            explain("Watch your fluent self handle what's coming — from your own life or this week's news."))
                 featureRow("sparkles",
-                           "Corrections that stick",
+                           explain("Corrections that stick"),
                            explain("Inline fixes become spaced-repetition drills, tuned to your mistakes."))
                 featureRow("waveform.badge.mic",
-                           "Pronunciation you can measure",
+                           explain("Pronunciation you can measure"),
                            explain("Shadow any line, get a real score, watch the weekly trend."))
             }
         }
@@ -254,7 +268,7 @@ struct PaywallView: View {
     /// the chrome locale; `caption` arrives already resolved through
     /// `explain()`. Passing both as plain `String` is why every feature row
     /// rendered in English next to a Korean subtitle.
-    private func featureRow(_ icon: String, _ title: LocalizedStringKey, _ caption: String) -> some View {
+    private func featureRow(_ icon: String, _ title: String, _ caption: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title3)
@@ -272,7 +286,7 @@ struct PaywallView: View {
     private var timelineContent: some View {
         VStack(alignment: .leading, spacing: 28) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("\(store.trialDays) days free,\nno surprises")
+                Text(explain("\(store.trialDays) days free, no surprises"))
                     .font(.largeTitle.weight(.bold))
                 Text(explain("We'll remind you before your trial ends."))
                     .font(.title3)
@@ -282,15 +296,15 @@ struct PaywallView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 timelineRow(icon: "lock.open.fill",
-                            title: "Today",
+                            title: explain("Today"),
                             caption: explain("Your trial starts — five minutes of talk a day, and all the review it produces."),
                             showsLine: true)
                 timelineRow(icon: "bell.fill",
-                            title: "Day \(max(1, store.trialDays - 2))",
+                            title: explain("Day \(max(1, store.trialDays - 2))"),
                             caption: explain("We send a reminder that your trial is about to end."),
                             showsLine: true)
                 timelineRow(icon: "crown.fill",
-                            title: "Day \(store.trialDays)",
+                            title: explain("Day \(store.trialDays)"),
                             caption: explain("Your subscription starts. Cancel any time before then in the App Store."),
                             showsLine: false)
             }
@@ -301,7 +315,7 @@ struct PaywallView: View {
     /// Futureself palette the learner picked. A literal `Color.accentColor`
     /// does NOT cross a sheet boundary — that is why the badge and selection
     /// ring rendered system blue next to a green button.
-    private func timelineRow(icon: String, title: LocalizedStringKey,
+    private func timelineRow(icon: String, title: String,
                              caption: String, showsLine: Bool) -> some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(spacing: 0) {
@@ -335,18 +349,18 @@ struct PaywallView: View {
 
     private var plansContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("How much will you talk?")
+            Text(explain("Choose your plan"))
                 .font(.largeTitle.weight(.bold))
                 .padding(.top, 12)
 
             if showsSurvey {
-                Label("You're in the beta — subscriptions aren't live yet. Your starting talk time is final, but reviewing always stays free. Tell us what you'd want at launch on the next step.",
+                Label(explain("You're in the beta — subscriptions aren't live yet. Your starting talk time is final, but reviewing always stays free. Tell us what you'd want at launch on the next step."),
                       systemImage: "info.circle")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
 
-            Picker("Billing period", selection: $period) {
+            Picker(explain("Billing period"), selection: $period) {
                 ForEach(availablePeriods) { Text($0.label).tag($0) }
             }
             .pickerStyle(.segmented)
@@ -360,11 +374,11 @@ struct PaywallView: View {
                 // Tier = amount of talk time, not features — the names say
                 // the quantity so the plans read as phone-plan sizes.
                 planCard(tier: "unlimited",
-                         name: "Unlimited",
+                         name: explain("Unlimited"),
                          blurb: explain("Talk and rehearse as much as you want, every day — calls, Watch scenes, shadowing."),
-                         badge: "Most talk time")
+                         badge: explain("Most talk time"))
                 planCard(tier: "daily",
-                         name: "Daily",
+                         name: explain("Daily"),
                          blurb: explain("A light daily habit you can actually keep."),
                          badge: nil)
             }
@@ -374,8 +388,8 @@ struct PaywallView: View {
                 // numbers on screen ARE the planned prices and must say so;
                 // outside it there are no numbers at all.
                 Label(showsSurvey
-                      ? "Planned launch pricing — final prices confirm on the App Store at launch."
-                      : "Prices load from the App Store — not available yet in this build.",
+                      ? explain("Planned launch pricing — final prices confirm on the App Store at launch.")
+                      : explain("Prices load from the App Store — not available yet in this build."),
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -386,11 +400,11 @@ struct PaywallView: View {
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("Always free")
+                Text(explain("Always free"))
                     .font(.footnote.weight(.semibold))
-                freeRow("repeat", "Replay shadow lines", explain("Loop and slow down cached audio."))
-                freeRow("rectangle.stack.fill", "Review drills", explain("Spaced repetition, graded on device."))
-                freeRow("play.rectangle.on.rectangle", "Re-watch dialogues", explain("Generated once, then cached."))
+                freeRow("repeat", explain("Replay shadow lines"), explain("Loop and slow down cached audio."))
+                freeRow("rectangle.stack.fill", explain("Review drills"), explain("Spaced repetition, graded on device."))
+                freeRow("play.rectangle.on.rectangle", explain("Re-watch dialogues"), explain("Generated once, then cached."))
             }
             .padding(.top, 4)
 
@@ -410,9 +424,9 @@ struct PaywallView: View {
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
-                Link("Terms of Use", destination: Self.termsURL)
+                Link(explain("Terms of Use"), destination: Self.termsURL)
                 Text("·").foregroundStyle(.secondary)
-                Link("Privacy Policy", destination: Self.privacyURL)
+                Link(explain("Privacy Policy"), destination: Self.privacyURL)
             }
             .font(.caption2)
         }
@@ -449,7 +463,7 @@ struct PaywallView: View {
                                   : "https://nawana.app/privacy.html")!
     }
 
-    private func freeRow(_ icon: String, _ title: LocalizedStringKey, _ caption: String) -> some View {
+    private func freeRow(_ icon: String, _ title: String, _ caption: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .font(.subheadline)
@@ -471,9 +485,9 @@ struct PaywallView: View {
     /// counted separately, so a card that names only minutes is now lying by
     /// omission about half of what the plan includes.
     private func allowanceLine(seconds: Int, scenes: Int?) -> String {
-        let mins = "\(dailyTalkMinutes(seconds: seconds)) min of talk a day"
+        let mins = explain("\(dailyTalkMinutes(seconds: seconds)) min of talk a day")
         guard let scenes, scenes > 0 else { return mins }
-        return "\(mins) · \(scenes) scenes"
+        return explain("\(mins) · \(scenes) scenes")
     }
 
     private func dailyTalkMinutes(seconds: Int) -> Int {
@@ -502,13 +516,16 @@ struct PaywallView: View {
         // in the survey, for the same reason as `displayPrice` — otherwise a
         // card showing "—" would still claim a savings percentage computed
         // from numbers the viewer is never shown.
-        let planned = showsSurvey
-        let monthly = store.options
-            .first(where: { $0.plan.tier == tier && $0.plan.period == "monthly" })?.priceValue
-            ?? (planned ? StoreKitService.PlanOption.plannedPriceValue["\(tier)_monthly"] : nil)
-        let annual = store.options
-            .first(where: { $0.plan.tier == tier && $0.plan.period == "annual" })?.priceValue
-            ?? (planned ? StoreKitService.PlanOption.plannedPriceValue["\(tier)_annual"] : nil)
+        let storefront = store.options.first?.storefrontCountry
+        func value(_ period: String) -> Decimal? {
+            let opt = store.options.first { $0.plan.tier == tier && $0.plan.period == period }
+            if let live = opt?.priceValue { return live }
+            guard showsSurvey else { return nil }
+            return StoreKitService.PlanOption.plannedValue("\(tier)_\(period)",
+                                                          storefront: storefront)
+        }
+        let monthly = value("monthly")
+        let annual = value("annual")
         guard let monthly, let annual else { return nil }
         // Do the percentage in Double — Decimal division of these values was
         // truncating the sub-1 quotient to 0.
@@ -525,7 +542,7 @@ struct PaywallView: View {
     }
 
     @ViewBuilder
-    private func planCard(tier: String, name: LocalizedStringKey, blurb: String, badge: LocalizedStringKey?) -> some View {
+    private func planCard(tier: String, name: String, blurb: String, badge: String?) -> some View {
         let opt = option(tier: tier)
         let isSelected = selectedTier == tier
         Button {
@@ -555,7 +572,7 @@ struct PaywallView: View {
                     // and printing "60 min" next to the word Unlimited reads
                     // as a cap the buyer has to ration.
                     if tier == "unlimited" {
-                        Text("Unlimited talk & scenes")
+                        Text(explain("Unlimited talk & scenes"))
                             .font(.footnote.weight(.semibold))
                     } else if let capSeconds = opt?.plan.daily_seconds {
                         Text(allowanceLine(seconds: capSeconds, scenes: opt?.plan.daily_scenes))
@@ -567,7 +584,7 @@ struct PaywallView: View {
                             .font(.footnote.weight(.semibold))
                             .foregroundStyle(.secondary)
                         if period == .annual, let saved = annualSavingsPercent(tier: tier) {
-                            Text("Save \(saved)% vs monthly")
+                            Text(explain("Save \(saved)% vs monthly"))
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.green)
                         }
@@ -596,15 +613,17 @@ struct PaywallView: View {
     /// and docs/launch-billing.md.
     private func surveyPriceLabel(tier: String, period: PlanPeriod) -> String {
         // The survey is hypothetical, so the PLANNED price is the right
-        // anchor here — and the only place it may still appear.
+        // anchor here — and the only place it may still appear. Currency
+        // still follows the App Store storefront, not the app's language.
         let key = "\(tier)_\(period.rawValue)"
-        return StoreKitService.PlanOption.plannedPrice[key] ?? "—"
+        return StoreKitService.PlanOption.plannedPrice(
+            key, storefront: store.options.first?.storefrontCountry) ?? "—"
     }
 
     private var surveyContent: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Help set the price")
+                Text(explain("Help set the price"))
                     .font(.largeTitle.weight(.bold))
                 Text(explain("No charge during the beta. Looking at the planned launch prices, which would you actually subscribe to?"))
                     .font(.title3)
@@ -612,38 +631,38 @@ struct PaywallView: View {
             }
             .padding(.top, 12)
 
-            surveyGroup("Which plan?") {
+            surveyGroup(explain("Which plan?")) {
                 VStack(spacing: 10) {
                     surveyTierRow(tier: "unlimited",
-                                  name: "Unlimited",
-                                  detail: "Talk as much as you want, every day")
+                                  name: explain("Unlimited"),
+                                  detail: explain("Talk as much as you want, every day"))
                     surveyTierRow(tier: "daily",
-                                  name: "Daily",
-                                  detail: "Light habit — ~5 min of talk a day")
+                                  name: explain("Daily"),
+                                  detail: explain("Light habit — ~5 min of talk a day"))
                     surveyTierRow(tier: "none",
-                                  name: "Neither",
-                                  detail: "Too expensive or not for me")
+                                  name: explain("Neither"),
+                                  detail: explain("Too expensive or not for me"))
                 }
             }
 
             if surveyTier != "none" {
                 // Monthly + annual only — weekly has no locked sticker price yet
                 // (impulse SKU). Cleaner WTP signal for launch.
-                surveyGroup("How would you pay?") {
-                    Picker("Billing", selection: $surveyPeriod) {
+                surveyGroup(explain("How would you pay?")) {
+                    Picker(explain("Billing"), selection: $surveyPeriod) {
                         Text(PlanPeriod.monthly.label).tag(PlanPeriod.monthly)
                         Text(PlanPeriod.annual.label).tag(PlanPeriod.annual)
                     }
                     .pickerStyle(.segmented)
 
-                    Text("Selected: \(surveyPriceLabel(tier: surveyTier, period: surveyPeriod)) / \(surveyPeriod.cycleNoun)")
+                    Text(explain("Selected: \(surveyPriceLabel(tier: surveyTier, period: surveyPeriod)) / \(surveyPeriod.cycleNoun)"))
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
 
-            surveyGroup("Anything we should know? (optional)") {
+            surveyGroup(explain("Anything we should know? (optional)")) {
                 TextEditor(text: $surveyComment)
                     .frame(minHeight: 90)
                     .padding(8)
@@ -658,7 +677,7 @@ struct PaywallView: View {
                     .foregroundStyle(.red)
             }
 
-            Label("Reviewing your saved words, drills, and dialogues stays free during the beta.",
+            Label(explain("Reviewing your saved words, drills, and dialogues stays free during the beta."),
                   systemImage: "checkmark.seal.fill")
                 .font(.footnote)
                 .foregroundStyle(.green)
