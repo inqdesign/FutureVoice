@@ -401,10 +401,11 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(explain("Your plan buys talk time with your fluent self plus a number of Watch scenes each day — two separate daily allowances, both refilling at midnight. Reviewing, replays, drills, and progress stay free forever."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
+            // Directly under the cards on purpose: the question in a buyer's
+            // head right after picking is "what happens if I stop paying?".
+            // It used to sit last, below the fold, while the paragraph above
+            // made the same promise in prose — one place, and the concrete
+            // one, is enough.
             VStack(alignment: .leading, spacing: 12) {
                 Text(explain("Always free"))
                     .font(.footnote.weight(.semibold))
@@ -413,6 +414,10 @@ struct PaywallView: View {
                 freeRow("play.rectangle.on.rectangle", explain("Re-watch dialogues"), explain("Generated once, then cached."))
             }
             .padding(.top, 4)
+
+            Text(explain("Your plan buys talk time with your fluent self plus a number of Watch scenes each day — two separate daily allowances, both refilling at midnight."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
             if !showsSurvey { subscriptionLegal }
         }
