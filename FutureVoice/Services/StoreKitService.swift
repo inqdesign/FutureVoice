@@ -20,6 +20,7 @@ final class StoreKitService: ObservableObject {
         let tier: String               // 'daily' | 'unlimited'
         let period: String             // 'weekly' | 'monthly' | 'annual'
         let daily_seconds: Int?        // per-day talk allowance (minutes-native model)
+        let daily_scenes: Int?         // per-day Watch scene count (scenes left the talk meter 2026-08-14)
         let apple_product_id: String
     }
 
@@ -30,11 +31,17 @@ final class StoreKitService: ObservableObject {
         let product: Product?
         var id: String { plan.id }
 
-        /// Live App Store price when the product loads, else the planned launch
-        /// price from `docs/launch-billing.md` — so the paywall (and beta WTP
-        /// survey) show real numbers before StoreKit products are live.
-        /// Weekly is an impulse tier with no fixed price yet → nil ("—").
-        var localizedPrice: String? { product?.displayPrice ?? PlanOption.plannedPrice[plan.id] }
+        /// The price we may SHOW on a card that can be bought: Apple's, for
+        /// this customer's storefront, or nothing. Never the planned map —
+        /// that is one hardcoded currency (KRW) and would quote a Japanese
+        /// customer a Korean number. "—" plus the "prices load from the App
+        /// Store" notice is the honest state when StoreKit hasn't answered.
+        var localizedPrice: String? { product?.displayPrice }
+
+        /// Planned launch price for the BETA SURVEY only — an anchor for a
+        /// hypothetical ("would you pay this?"), explicitly labelled as
+        /// planned, never presented as a live charge.
+        var plannedPriceLabel: String? { PlanOption.plannedPrice[plan.id] }
 
         // KRW price points for the locked EUR list prices in
         // docs/launch-billing.md — Apple's own suggestions for the EUR base
@@ -130,7 +137,7 @@ final class StoreKitService: ObservableObject {
         do {
             plans = try await SupabaseProvider.shared
                 .from("subscription_plans")
-                .select("id,tier,period,daily_seconds,apple_product_id")
+                .select("id,tier,period,daily_seconds,daily_scenes,apple_product_id")
                 .eq("is_active", value: true)
                 .execute()
                 .value

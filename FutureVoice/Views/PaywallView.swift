@@ -321,7 +321,7 @@ struct PaywallView: View {
                 planCard(tier: "unlimited",
                          name: "Unlimited",
                          blurb: "Talk as much as you want — calls, Watch scenes, and shadowing without watching a meter.",
-                         badge: "Best for launch")
+                         badge: "Most talk time")
                 planCard(tier: "daily",
                          name: "Daily",
                          blurb: "A light daily habit — about five minutes of talk a day.",
@@ -340,7 +340,7 @@ struct PaywallView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(explain("Your minutes buy talk time with your fluent self, and reset every day at midnight. Reviewing, replays, drills, and progress stay free forever."))
+            Text(explain("Your plan buys talk time with your fluent self plus a number of Watch scenes each day — two separate daily allowances, both refilling at midnight. Reviewing, replays, drills, and progress stay free forever."))
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -425,6 +425,16 @@ struct PaywallView: View {
 
     /// Talk time per day this plan buys — the server's per-day allowance
     /// (`subscription_plans.daily_seconds`), shown in minutes.
+    /// "5 min of talk a day · 2 scenes" — the two allowances a metered plan
+    /// buys, in one line. Scenes left the talk meter on 2026-08-14 and are
+    /// counted separately, so a card that names only minutes is now lying by
+    /// omission about half of what the plan includes.
+    private func allowanceLine(seconds: Int, scenes: Int?) -> String {
+        let mins = "\(dailyTalkMinutes(seconds: seconds)) min of talk a day"
+        guard let scenes, scenes > 0 else { return mins }
+        return "\(mins) · \(scenes) scenes"
+    }
+
     private func dailyTalkMinutes(seconds: Int) -> Int {
         max(1, seconds / 60)
     }
@@ -484,9 +494,15 @@ struct PaywallView: View {
                 Text(name).font(.title3.weight(.bold))
                 Text(blurb).font(.subheadline).foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline) {
-                    if let capSeconds = opt?.plan.daily_seconds {
-                        // The plan IS a daily allowance — say exactly that.
-                        Text("\(dailyTalkMinutes(seconds: capSeconds)) min of talk a day")
+                    // What the plan buys, per day. Unlimited deliberately
+                    // shows NO number: its allowance is a fair-use ceiling,
+                    // and printing "60 min" next to the word Unlimited reads
+                    // as a cap the buyer has to ration.
+                    if tier == "unlimited" {
+                        Text("Unlimited talk & scenes")
+                            .font(.footnote.weight(.semibold))
+                    } else if let capSeconds = opt?.plan.daily_seconds {
+                        Text(allowanceLine(seconds: capSeconds, scenes: opt?.plan.daily_scenes))
                             .font(.footnote.weight(.semibold))
                     }
                     Spacer()
@@ -522,6 +538,8 @@ struct PaywallView: View {
     /// not abstract tier names. Keep in sync with `StoreKitService.plannedPrice`
     /// and docs/launch-billing.md.
     private func surveyPriceLabel(tier: String, period: PlanPeriod) -> String {
+        // The survey is hypothetical, so the PLANNED price is the right
+        // anchor here — and the only place it may still appear.
         let key = "\(tier)_\(period.rawValue)"
         return StoreKitService.PlanOption.plannedPrice[key] ?? "—"
     }
