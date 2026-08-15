@@ -10,7 +10,10 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store = StoreKitService()
 
-    @State private var step: Step = .pitch
+    @State private var step: Step = .resolving
+    /// Already paying (or in trial). Such a viewer opened this sheet to
+    /// CHANGE plans, so the trial funnel is not just noise — it is wrong.
+    @State private var isSubscriber = false
     @State private var period: PlanPeriod = .annual
     @State private var selectedTier: String = "unlimited"
 
@@ -23,7 +26,11 @@ struct PaywallView: View {
     @State private var surveySent = false
     @State private var surveyError: String?
 
-    enum Step { case pitch, timeline, plans, survey }
+    /// `.resolving` is the state before StoreKit and the account snapshot
+    /// have answered. Without it the sheet opened on `.pitch` and jumped to
+    /// `.plans` a beat later — a "Try for free" pitch flashed at people who
+    /// already pay us.
+    enum Step { case resolving, pitch, timeline, plans, survey }
 
     enum PlanPeriod: String, CaseIterable, Identifiable {
         case weekly, monthly, annual
@@ -55,6 +62,7 @@ struct PaywallView: View {
             ScrollView {
                 Group {
                     switch step {
+                    case .resolving: resolvingContent
                     case .pitch:    pitchContent
                     case .timeline: timelineContent
                     case .plans:    plansContent
@@ -69,10 +77,16 @@ struct PaywallView: View {
         }
         .background(Color(.systemBackground))
         .task {
-            await store.load()
-            // No trial to pitch (Apple says the intro offer is spent, or the
-            // beta can't sell): skip the pitch and open on plans.
-            if !showsTrial { step = .plans }
+            // Both answers are needed before the first frame can be chosen,
+            // so fetch them together rather than in sequence.
+            async let products: Void = store.load()
+            async let account = AccountStatus.fetch()
+            _ = await products
+            isSubscriber = await account.isEntitled
+            // Pitch the trial only to someone who could actually take it:
+            // not a current subscriber, not during the beta, and only while
+            // Apple still offers this account an intro offer.
+            step = (showsTrial && !isSubscriber) ? .pitch : .plans
         }
         .onChange(of: store.purchaseState) { _, state in
             if state == .purchased, showsTrial {
@@ -102,6 +116,7 @@ struct PaywallView: View {
         HStack {
             Button {
                 switch step {
+                case .resolving: dismiss()
                 case .pitch:    dismiss()
                 case .timeline: step = .pitch
                 // Without a trial funnel there are no earlier steps — back
@@ -110,7 +125,8 @@ struct PaywallView: View {
                 case .survey:   step = .plans
                 }
             } label: {
-                Image(systemName: step == .pitch || (step == .plans && !showsTrial)
+                Image(systemName: step == .pitch || step == .resolving
+                      || (step == .plans && !showsTrial)
                       ? "xmark" : "chevron.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -127,6 +143,7 @@ struct PaywallView: View {
         VStack(spacing: 10) {
             Button {
                 switch step {
+                case .resolving: break
                 case .pitch:    step = .timeline
                 case .timeline: step = .plans
                 case .plans:
@@ -149,6 +166,8 @@ struct PaywallView: View {
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
             .disabled(store.purchaseState == .purchasing || surveySubmitting)
+            .opacity(step == .resolving ? 0 : 1)
+            .allowsHitTesting(step != .resolving)
 
             if step == .plans && !showsSurvey {
                 Button("Restore purchases") {
@@ -160,7 +179,7 @@ struct PaywallView: View {
                 Text(explain("Your answers go straight to the team building nawana."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-            } else if step != .plans {
+            } else if step != .plans && step != .resolving {
                 Text(explain("\(store.trialDays) days free. Cancel anytime."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -174,6 +193,7 @@ struct PaywallView: View {
 
     private var ctaTitle: String {
         switch step {
+        case .resolving: return ""
         case .pitch:    return "Try for free"
         case .timeline: return "See plans"
         case .plans:
@@ -184,6 +204,17 @@ struct PaywallView: View {
         case .survey:
             return "Submit"
         }
+    }
+
+    /// Deliberately quiet: a spinner, not a skeleton of the pitch. Whatever
+    /// is drawn here is what a subscriber sees for a fraction of a second.
+    private var resolvingContent: some View {
+        VStack {
+            ProgressView()
+                .controlSize(.large)
+                .padding(.top, 120)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Step 1 · Pitch
