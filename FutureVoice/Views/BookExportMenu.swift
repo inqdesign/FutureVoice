@@ -19,6 +19,8 @@ struct BookExportMenu: View {
     /// Built when the menu opens, not when the page renders.
     let document: () -> BookDocument
 
+    @EnvironmentObject private var appState: AppState
+
     private enum Format { case pdf, markdown }
 
     @State private var preparing = false
@@ -64,7 +66,17 @@ struct BookExportMenu: View {
             // and the blocking work land in the same frame and the user sees
             // the freeze they saw before.
             await Task.yield()
-            let doc = document()
+            var doc = document()
+            // The glossary is the one part of a book that isn't already on
+            // the phone, so it's fetched here rather than at page render.
+            // Bounded by BookGlossary's own budget: a slow dictionary costs
+            // the glossary, never the export.
+            if let glossary = await BookGlossary.section(
+                for: doc,
+                native: appState.nativeLanguage,
+                target: appState.targetLanguage) {
+                doc.sections.append(glossary)
+            }
             do {
                 let url: URL
                 switch format {

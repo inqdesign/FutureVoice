@@ -5850,6 +5850,16 @@
         }
       }
     },
+    "Glossary": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "낱말 풀이"
+          }
+        }
+      }
+    },
     "Goal": {
       "localizations": {
         "de": {
