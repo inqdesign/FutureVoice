@@ -34,6 +34,15 @@ final class TalkMeter: ObservableObject {
 
     static let tickSeconds = 30
 
+    /// The target language, read straight from defaults rather than passed in
+    /// — the meter is started from several surfaces and threading it through
+    /// each one is how a caller eventually forgets and silently drops a call
+    /// out of its club.
+    private static func spokenLanguage() -> String {
+        (UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en")
+            .lowercased()
+    }
+
     private var task: Task<Void, Never>?
     private var sessionKey = ""
 
@@ -61,6 +70,12 @@ final class TalkMeter: ObservableObject {
     private struct TickBody: Encodable {
         let seconds: Int
         let session_id: String
+        /// Which language was being SPOKEN. Billing ignores it — the daily
+        /// allowance is per account — but the Core is one club per language
+        /// (`20260816120000_core_by_language`) and this is the only place the
+        /// server ever learns which one a call belongs to. Without it the
+        /// seconds still bill and simply count toward no club.
+        let language: String
     }
     private struct TickResponse: Decodable {
         let balance: Int
@@ -76,7 +91,8 @@ final class TalkMeter: ObservableObject {
                 options: FunctionInvokeOptions(
                     // One key per tick: a retried request can't double-bill.
                     headers: ["X-Idempotency-Key": "tick:\(sessionKey):\(label)"],
-                    body: TickBody(seconds: seconds, session_id: sessionKey)
+                    body: TickBody(seconds: seconds, session_id: sessionKey,
+                                   language: Self.spokenLanguage())
                 )
             )
             // Accepted → these seconds were metered, so they're what the

@@ -17,7 +17,9 @@ struct DailyExpressionsView: View {
                 if dealt && picks.isEmpty {
                     emptyState
                 } else if dealt {
-                    StudyDeckView(items: picks.map(StudyDeckItem.expression), onResolve: resolve)
+                    StudyDeckView(title: "Expressions",
+                                  items: picks.map(StudyDeckItem.expression),
+                                  onResolve: resolve)
                 }
             }
             .navigationTitle("Expressions")

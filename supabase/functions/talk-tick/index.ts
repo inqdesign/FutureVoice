@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
   const idemKey = req.headers.get("X-Idempotency-Key")
   if (!idemKey) return errorResponse(400, "missing X-Idempotency-Key header")
 
-  let body: { seconds?: number; session_id?: string }
+  let body: { seconds?: number; session_id?: string; language?: string }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const seconds = body.seconds
   if (typeof seconds !== "number" || !Number.isInteger(seconds) ||
@@ -51,6 +51,12 @@ Deno.serve(async (req) => {
     p_source_fn: SOURCE_FN,
     p_idempotency_key: idemKey,
     p_metadata: { session_id: body.session_id ?? null },
+    // The Core is one club per target language and this tick is the only
+    // place the server hears which language was spoken. Absent on older
+    // builds — those seconds bill normally and count toward no club, which
+    // is correct: a client that can't say what was spoken shouldn't be
+    // guessed at.
+    p_language: body.language ?? null,
   })
   if (error) {
     if (error.message?.includes("INSUFFICIENT_CREDITS")) {

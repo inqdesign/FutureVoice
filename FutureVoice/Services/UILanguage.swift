@@ -8,8 +8,10 @@ import os
 /// - **Chrome** — tabs, labels, buttons, section headers — speaks the TARGET
 ///   language. It's one-word A1 vocabulary the learner meets dozens of times a
 ///   day with an icon beside it: free exposure, no comprehension cost. Wired
-///   once at the root as `.environment(\.locale, targetLanguage)`, so every
-///   SwiftUI `Text("literal")` follows with no per-call code.
+///   once at the root as `.environment(\.locale, UILanguage.chromeLanguage)`,
+///   so every SwiftUI `Text("literal")` follows with no per-call code. The one
+///   exception is onboarding, which speaks the learner's own language — see
+///   `isOnboarding`.
 /// - **Explanations** — anything the learner has to actually parse to act on:
 ///   why a score moved, what a credit is, what happens if they delete this.
 ///   These are ALWAYS written in the language the learner picked as their own,
@@ -19,9 +21,40 @@ import os
 /// `Localizable.xcstrings` — no code change, here or anywhere else.
 enum UILanguage {
 
-    /// The language chrome is written in — always the language being learned.
+    /// The language chrome is written in — the language being learned, EXCEPT
+    /// during onboarding, where it's the learner's own (see `isOnboarding`).
     static var chromeLanguage: String {
-        UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        if isOnboarding { return LanguageCatalog.currentNative }
+        return UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+    }
+
+    /// True while the learner is still walking the first-run flow — Welcome,
+    /// setup, persona, voice clone, the daily-call intro.
+    ///
+    /// Onboarding is the one stretch where chrome CANNOT follow the target
+    /// language. On the first two screens no target has been chosen yet, so
+    /// `targetLanguage` is still its `"en"` placeholder and a Korean phone
+    /// opened the app in English no matter what the device asked for. And even
+    /// once it's picked, nothing here is recognized-by-shape: every screen asks
+    /// the learner to decide something, consent to something, or follow a
+    /// recording instruction. "Free exposure at no comprehension cost" is only
+    /// true for a tab bar they see a hundred times — it is not true for the
+    /// screen that explains what happens to their voice model.
+    ///
+    /// So the whole flow speaks the learner's own language, which defaults to
+    /// the device's (`LanguageCatalog.defaultNative`). The standing
+    /// chrome-follows-target rule resumes the moment they land on the tabs.
+    ///
+    /// Read straight from UserDefaults rather than AppState so `chrome()` — a
+    /// free function with no view context — can answer it. The three keys
+    /// mirror the gate in `RootView.gatedContent`; keep them in step with it.
+    /// (Persona is stored on disk, not in defaults, so it sits this one out —
+    /// it's bracketed by the two keys on either side of it anyway.)
+    static var isOnboarding: Bool {
+        let defaults = UserDefaults.standard
+        return !defaults.bool(forKey: "futurevoice.setupComplete")
+            || defaults.string(forKey: "futurevoice.voiceCloneId") == nil
+            || !defaults.bool(forKey: "futurevoice.dailyCall.onboarded")
     }
 
     /// The language explanatory copy is written in: the one the learner chose,

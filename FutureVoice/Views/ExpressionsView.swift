@@ -217,6 +217,9 @@ struct ExpressionCard: View {
 
     @State private var entry: WordEntry?
     @State private var loading = false
+    /// Same as the word card: a nil lookup means the generation round trip
+    /// failed, which deserves a retry rather than a dash.
+    @State private var failed = false
     @State private var speaking = false
     @State private var sentences: [VocabStore.SourceSentence] = []
     @State private var shadowing: Turn?
@@ -283,13 +286,16 @@ struct ExpressionCard: View {
                     }
                 }
 
-                section(entry?.examples.count == 1 ? "Example" : "Examples") {
-                    if let examples = entry?.examples, !examples.isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            ForEach(examples) { exampleRow($0) }
+                // Same rule as the word card: one failure, one retry.
+                if !failed {
+                    section(entry?.examples.count == 1 ? "Example" : "Examples") {
+                        if let examples = entry?.examples, !examples.isEmpty {
+                            VStack(alignment: .leading, spacing: 14) {
+                                ForEach(examples) { exampleRow($0) }
+                            }
+                        } else {
+                            lookupPlaceholder
                         }
-                    } else {
-                        lookupPlaceholder
                     }
                 }
 
@@ -463,6 +469,7 @@ struct ExpressionCard: View {
         // `loading` FIRST: clearing the entry before flipping it flashed the
         // "—" no-entry glyph for a frame on every phrase swap.
         loading = true
+        failed = false
         entry = nil
         sentences = store.sentences(containing: phrase)
         // .expression, always — this card only ever holds multi-word chunks,
@@ -473,6 +480,7 @@ struct ExpressionCard: View {
         // loading flag for the phrase that replaced it.
         guard !Task.isCancelled else { return }
         entry = fetched
+        failed = fetched == nil
         loading = false
     }
 
@@ -495,12 +503,9 @@ struct ExpressionCard: View {
     @ViewBuilder
     private var lookupPlaceholder: some View {
         if loading {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.mini)
-                Text("Looking it up…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            LookupProgress()
+        } else if failed {
+            LookupFailure { Task { await load() } }
         } else {
             Text("—").font(.body).foregroundStyle(.secondary)
         }

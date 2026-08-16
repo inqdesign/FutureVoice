@@ -50,6 +50,9 @@ struct StudyDeckItem: Identifiable, Hashable {
 }
 
 struct StudyDeckView: View {
+    /// What the page is called. The deck draws it ITSELF, stacked over the
+    /// progress counter in the navigation bar's centre — see `deckHeader`.
+    let title: LocalizedStringKey
     /// The dealt hand, in order. Fixed for the session.
     let items: [StudyDeckItem]
     /// A card was dropped into a folder — the parent writes the store state
@@ -65,6 +68,9 @@ struct StudyDeckView: View {
     @State private var revealed = false
     @State private var entry: WordEntry?
     @State private var loadingEntry = false
+    /// The lookup failed — the deck offers the same retry the cards do, so a
+    /// flaky moment doesn't cost the learner the card.
+    @State private var lookupFailed = false
     /// What landed where this session — the chips' counts and their folder
     /// sheets, same as the drill deck's folders.
     @State private var folderItems: [DrillBin: [StudyDeckItem]] = [:]
@@ -75,7 +81,7 @@ struct StudyDeckView: View {
     // Drag state — mirrors DrillView.
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging = false
-    @State private var activeBin: DrillBin?
+    @State private var activeTarget: DropTarget?
     @State private var binFrames: [DrillBin: CGRect] = [:]
     @State private var flyScale: CGFloat = 1
     @State private var flyOpacity: Double = 1
@@ -88,33 +94,89 @@ struct StudyDeckView: View {
     private static let binDeadZone: CGFloat = 28
     private static let binHysteresis: CGFloat = 14
     private static let deckSpace = "studydeck"
+    /// Upward travel that means "not into any of these". Above the folders'
+    /// dead zone so a sideways drag that drifts a little high still files.
+    private static let cancelThreshold: CGFloat = 44
 
     var body: some View {
-        Group {
-            if queue.isEmpty && dealt {
-                doneState
-            } else if !queue.isEmpty {
-                deckBody
-            } else {
-                Color.clear
+        // The deck reads the height it was OFFERED, never the height it ended
+        // up at. Those differ exactly when it matters: a card whose meaning
+        // has overrun its slab reports the overrun as available room, so
+        // sizing off its own frame would let it keep growing. The proposal
+        // from above can't be pushed by content, so it's the honest number —
+        // and every card below is cut to fit it (see `cardHeight`).
+        GeometryReader { geo in
+            Group {
+                if queue.isEmpty && dealt {
+                    doneState
+                } else if !queue.isEmpty {
+                    deckBody(offered: geo.size.height)
+                } else {
+                    Color.clear
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .toolbar { deckHeader }
         .onAppear {
             guard !dealt else { return }
             queue = items
             dealt = true
+            #if DEBUG
+            if DebugCapture.previewStudyTray {
+                revealed = true
+                isDragging = true
+                activeTarget = .cancel
+            }
+            #endif
         }
     }
 
     // MARK: - Deck
 
-    private var deckBody: some View {
+    /// The page title with the deck's progress under it, in the navigation
+    /// bar's centre. The counter used to be a line of its own above the deck,
+    /// which cost the card a full row to say "1 of 10" — the smallest thing
+    /// on the screen paying the same rent as the biggest. It's a subtitle;
+    /// the bar is where a subtitle goes, and the row it vacated goes to the
+    /// card, which is the one thing here that can always use more of it.
+    private var deckHeader: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            VStack(spacing: 1) {
+                Text(title)
+                    .font(.headline)
+                Text("\(min(resolvedCount + 1, items.count)) of \(items.count)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    // Matched by identifier in the drag tests: the label is
+                    // chrome, so it's in whatever language the profile under
+                    // test happens to be learning.
+                    .accessibilityIdentifier("studyDeck.counter")
+            }
+            .animation(.snappy, value: resolvedCount)
+        }
+    }
+
+    /// Everything in the deck that ISN'T the card: the drag hint, the folder
+    /// chips, and the spacing/padding between them. Subtracted from the
+    /// offered height to get the card's real budget.
+    /// drag hint 40 + chips 34 + two 12pt gaps + 20pt padding.
+    private static let deckFurnitureHeight: CGFloat = 118
+
+    /// The card's height, fixed rather than grown-to-fit. Fixing it is what
+    /// makes the card safe on a small screen: the meaning side then gets a
+    /// BOUNDED proposal, which is the only thing `ViewThatFits` can measure
+    /// against. Floor of 240 so a freak-small container degrades to a
+    /// scrunched card rather than an invisible one.
+    private func cardHeight(offered: CGFloat) -> CGFloat {
+        max(240, offered - Self.deckFurnitureHeight)
+    }
+
+    private func deckBody(offered: CGFloat) -> some View {
         VStack(spacing: 12) {
-            Text("\(min(resolvedCount + 1, items.count)) of \(items.count)")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-            deck
+            deck(height: cardHeight(offered: offered))
             // Mid-drag the panel says where the card is headed; this row keeps
             // its height so the deck doesn't jump when the drag begins.
             Label("Drag the card into a folder", systemImage: "hand.draw")
@@ -211,16 +273,16 @@ struct StudyDeckView: View {
         .presentationDetents([.medium, .large])
     }
 
-    private var deck: some View {
+    private func deck(height: CGFloat) -> some View {
         ZStack {
             // Peek of the next card so the user feels there's a deck.
             if queue.count > 1 {
-                cardSurface(queue[1].text, revealed: false, showHint: false)
+                cardSurface(queue[1].text, revealed: false, showHint: false, height: height)
                     .scaleEffect(0.95)
                     .opacity(0.45)
                     .offset(y: 14)
             }
-            cardSurface(queue[0].text, revealed: revealed, showHint: true)
+            cardSurface(queue[0].text, revealed: revealed, showHint: true, height: height)
                 .scaleEffect(flyScale)
                 .opacity(flyOpacity)
                 .offset(dragOffset)
@@ -236,27 +298,37 @@ struct StudyDeckView: View {
                     withAnimation(.easeOut(duration: 0.2)) { revealed = true }
                 }
                 .accessibilityElement(children: .contain)
+                // The card's own frame, so a UI test can check that nothing
+                // inside it has spilled past the slab onto the folder chips.
+                .accessibilityIdentifier("studyDeck.card")
                 .accessibilityActions { binAccessibilityActions }
                 .task(id: queue.first) {
                     revealed = false
-                    entry = nil
-                    guard let top = queue.first else { return }
-                    loadingEntry = true
-                    // A mixed deck holds both kinds; each card must be looked
-                    // up as what it is or an expression comes back glossed as
-                    // one of its words.
-                    let fetched = await WordLore.entry(
-                        for: top.text, native: appState.nativeLanguage,
-                        target: appState.targetLanguage,
-                        kind: top.kind == .expression ? .expression : .word)
-                    // The deck advances mid-lookup all the time; a cancelled
-                    // fetch must not clear the next card's loading flag.
-                    guard !Task.isCancelled else { return }
-                    entry = fetched
-                    loadingEntry = false
+                    await reloadEntry()
                 }
         }
         .padding(.horizontal, 16)
+    }
+
+    /// Look up the top card's meaning. Shared by the card-changed task and by
+    /// the retry button, so a retry can't drift from the first attempt.
+    private func reloadEntry() async {
+        entry = nil
+        guard let top = queue.first else { return }
+        loadingEntry = true
+        lookupFailed = false
+        // A mixed deck holds both kinds; each card must be looked up as what
+        // it is or an expression comes back glossed as one of its words.
+        let fetched = await WordLore.entry(
+            for: top.text, native: appState.nativeLanguage,
+            target: appState.targetLanguage,
+            kind: top.kind == .expression ? .expression : .word)
+        // The deck advances mid-lookup all the time; a cancelled fetch must
+        // not clear the next card's loading flag.
+        guard !Task.isCancelled else { return }
+        entry = fetched
+        lookupFailed = fetched == nil
+        loadingEntry = false
     }
 
     /// Supporting text on the slab — the card's own "secondary".
@@ -265,7 +337,8 @@ struct StudyDeckView: View {
     /// Same slab as a drill card — same anatomy too: a caption-labeled
     /// section for the item, the flipped content below it, pill buttons on
     /// the revealed card, "tap to reveal" on the concealed one.
-    private func cardSurface(_ text: String, revealed: Bool, showHint: Bool) -> some View {
+    private func cardSurface(_ text: String, revealed: Bool, showHint: Bool,
+                             height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             labeled(revealed ? "When should it come back?" : "Say it out loud — do you know it?") {
                 Text(text)
@@ -276,9 +349,7 @@ struct StudyDeckView: View {
             }
 
             if revealed {
-                labeled("Meaning") {
-                    meaningBlock
-                }
+                meaningBlock
             }
 
             Spacer(minLength: 12)
@@ -304,7 +375,8 @@ struct StudyDeckView: View {
             }
         }
         .padding(24)
-        .frame(maxWidth: .infinity, minHeight: 240, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height,
+               alignment: .topLeading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(Color.accentColor)
@@ -372,63 +444,127 @@ struct StudyDeckView: View {
         }
     }
 
-    /// The flipped side: senses + one example from the shared dictionary cache.
+    /// The flipped side, laid out like the word notebook it comes from — the
+    /// same numbered senses, the same part-of-speech label above the meaning,
+    /// the same ruled examples. Same dictionary entry too (`WordLore.entry`);
+    /// the card differs only in how much of it there is room for.
+    ///
+    /// How much is decided by `ViewThatFits`, not by a fixed cap. A cap in
+    /// items ("two senses, one example") is a guess about heights it can't
+    /// see: the same two senses are four lines on a 6.3" screen and seven on
+    /// an SE, more again at large Dynamic Type or in a language that doesn't
+    /// abbreviate. So the richest layout is offered first and the first one
+    /// that actually fits the card wins. The last candidate is the floor —
+    /// one sense, line-limited, no example — so there is always something
+    /// that fits and the card can never spill onto the folder chips.
     @ViewBuilder
     private var meaningBlock: some View {
         if let senses = entry?.senses, !senses.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(Array(senses.prefix(2))) { s in
-                    senseRow(s)
-                }
-            }
-            if let ex = entry?.examples.first {
-                exampleRow(ex)
+            let examples = entry?.examples ?? []
+            ViewThatFits(in: .vertical) {
+                meaningLayout(senses, examples, senseCount: 3, exampleCount: 2)
+                meaningLayout(senses, examples, senseCount: 3, exampleCount: 1)
+                // Senses outrank examples all the way down — the meaning is
+                // what the card is asking about — but once a sense has been
+                // dropped, spend what that freed on a second example rather
+                // than leaving the slab half empty.
+                meaningLayout(senses, examples, senseCount: 2, exampleCount: 2)
+                meaningLayout(senses, examples, senseCount: 2, exampleCount: 1)
+                meaningLayout(senses, examples, senseCount: 2, exampleCount: 0)
+                meaningLayout(senses, examples, senseCount: 1, exampleCount: 1)
+                meaningLayout(senses, examples, senseCount: 1, exampleCount: 0, meaningLines: 3)
             }
         } else {
-            if loadingEntry {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .tint(Self.onCard)
-                    Text("Looking it up…")
-                        .font(.subheadline)
+            labeled("Meaning") {
+                if loadingEntry {
+                    LookupProgress(onCard: true)
+                } else if lookupFailed {
+                    LookupFailure(onCard: true) { Task { await reloadEntry() } }
+                } else {
+                    Text("—")
+                        .font(.body)
                         .foregroundStyle(Self.onCardSecondary)
                 }
-            } else {
-                Text("—")
-                    .font(.body)
-                    .foregroundStyle(Self.onCardSecondary)
             }
         }
     }
 
-    private func senseRow(_ s: WordEntry.Sense) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(s.meaning)
-                .font(.title3.weight(.semibold))
+    /// One candidate layout for `ViewThatFits`. Every candidate is the same
+    /// shape — only the counts change — so whichever one wins, the card reads
+    /// identically.
+    private func meaningLayout(_ senses: [WordEntry.Sense],
+                               _ examples: [WordEntry.Example],
+                               senseCount: Int,
+                               exampleCount: Int,
+                               meaningLines: Int? = nil) -> some View {
+        let shownExamples = Array(examples.prefix(exampleCount))
+        return VStack(alignment: .leading, spacing: 16) {
+            labeled("Meaning") {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(senses.prefix(senseCount).enumerated()), id: \.element.id) { i, s in
+                        senseRow(i + 1, s, meaningLines: meaningLines)
+                    }
+                }
+            }
+            if !shownExamples.isEmpty {
+                labeled(shownExamples.count == 1 ? "Example" : "Examples") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(shownExamples) { exampleRow($0) }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The notebook's sense row, restated in the card's on-accent colours:
+    /// numbered index, part of speech above the meaning, meaning in title3.
+    private func senseRow(_ index: Int, _ s: WordEntry.Sense,
+                          meaningLines: Int?) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(index)")
+                .font(.caption.weight(.bold)).monospacedDigit()
                 .foregroundStyle(Self.onCard)
-                .fixedSize(horizontal: false, vertical: true)
-            if !s.pos.isEmpty {
-                Text(s.pos)
-                    .font(.caption)
-                    .foregroundStyle(Self.onCardSecondary)
+                .frame(width: 22, height: 22)
+                .background(Circle().fill(Color.white.opacity(0.20)))
+            VStack(alignment: .leading, spacing: 3) {
+                if !s.pos.isEmpty {
+                    Text(s.pos)
+                        .font(.caption2.weight(.semibold))
+                        .textCase(.uppercase)
+                        .foregroundStyle(Self.onCardSecondary)
+                }
+                Text(s.meaning)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(Self.onCard)
+                    .lineLimit(meaningLines)
+                    .fixedSize(horizontal: false, vertical: meaningLines == nil)
             }
+            Spacer(minLength: 0)
         }
     }
 
+    /// The notebook's ruled example, minus its context menu — the card is a
+    /// question, not a place to file things away from.
     private func exampleRow(_ ex: WordEntry.Example) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text("\u{201C}\(ex.text)\u{201D}")
-                .font(.subheadline)
-                .foregroundStyle(Self.onCard)
-                .fixedSize(horizontal: false, vertical: true)
-            if let meaning = ex.meaning, !meaning.isEmpty {
-                Text(meaning)
-                    .font(.caption)
-                    .foregroundStyle(Self.onCardSecondary)
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(Color.white.opacity(0.35))
+                .frame(width: 3)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ex.text)
+                    .font(.callout)
+                    .foregroundStyle(Self.onCard)
                     .fixedSize(horizontal: false, vertical: true)
+                if let meaning = ex.meaning, !meaning.isEmpty {
+                    Text(meaning)
+                        .font(.footnote)
+                        .foregroundStyle(Self.onCardSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+            Spacer(minLength: 0)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var doneState: some View {
@@ -452,22 +588,27 @@ struct StudyDeckView: View {
 
     private var binPanel: some View {
         VStack(spacing: 10) {
+            // Above the row, and centred: the folders are a decision, and
+            // this is the way past it — so it sits on the path back to the
+            // card rather than at the end of the row, where it would read as
+            // a fifth folder.
+            cancelSlot
             HStack(spacing: 8) {
                 ForEach(DrillBin.allCases) { bin in
                     binSlot(bin)
                 }
             }
             Group {
-                if let activeBin {
-                    Text(activeBin.deckDropHint)
-                } else {
-                    Text("Drop it on a folder")
+                switch activeTarget {
+                case .bin(let bin): Text(bin.deckDropHint)
+                case .cancel:       Text("Leave it undecided")
+                case nil:           Text("Drop it on a folder")
                 }
             }
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .contentTransition(.opacity)
-                .animation(.easeOut(duration: 0.15), value: activeBin)
+                .animation(.easeOut(duration: 0.15), value: activeTarget)
         }
         .padding(.horizontal, 12)
         .padding(.top, 14)
@@ -488,8 +629,31 @@ struct StudyDeckView: View {
         .allowsHitTesting(false)
     }
 
+    /// The way out: drag UP and the card goes back where it was. Not red —
+    /// nothing is being destroyed, and a card you aren't ready to answer for
+    /// is a normal thing to want, not a mistake being undone.
+    private var cancelSlot: some View {
+        let active = activeTarget == .cancel && isDragging
+        return Image(systemName: "xmark")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(active ? Color(.systemBackground) : Color.secondary)
+            .frame(width: 46, height: 46)
+            .background {
+                Circle().fill(active ? AnyShapeStyle(Color.secondary)
+                                     : AnyShapeStyle(Color(.tertiarySystemFill)))
+            }
+            .overlay {
+                Circle().strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
+                                      style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            }
+            .scaleEffect(active ? 1.12 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)
+            .accessibilityIdentifier("studyDeck.cancel")
+            .accessibilityLabel(Text("Leave it undecided"))
+    }
+
     private func binSlot(_ bin: DrillBin) -> some View {
-        let active = activeBin == bin && isDragging
+        let active = activeTarget == .bin(bin) && isDragging
         return VStack(spacing: 5) {
             Image(systemName: bin.icon)
                 .font(.title3)
@@ -539,7 +703,7 @@ struct StudyDeckView: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { isDragging = true }
         }
         dragOffset = value.translation
-        updateActiveBin(fingerX: value.location.x, translation: value.translation)
+        updateActiveTarget(fingerX: value.location.x, translation: value.translation)
     }
 
     /// Which bin the FINGER is over, by nearest centre in the deck's own
@@ -547,28 +711,46 @@ struct StudyDeckView: View {
     /// translation; here the deck-frame preference silently never delivered —
     /// midX stayed 0 and the highlight pinned to the left folders — so the
     /// gesture reports its location in the named space directly instead.)
-    private func updateActiveBin(fingerX: CGFloat, translation: CGSize) {
+    private func updateActiveTarget(fingerX: CGFloat, translation: CGSize) {
         let travelled = hypot(translation.width, translation.height)
         guard travelled > Self.binDeadZone, !binFrames.isEmpty else {
-            if activeBin != nil { activeBin = nil }
+            if activeTarget != nil { activeTarget = nil }
+            return
+        }
+        // Direction decides between the two KINDS of target before position
+        // decides between folders. The folders sit at the bottom of the
+        // screen, so pulling the card up is already the gesture for "away
+        // from all of them" — cancel only has to be given a face.
+        if translation.height < -Self.cancelThreshold {
+            guard activeTarget != .cancel else { return }
+            activeTarget = .cancel
+            HapticEngine.drillBinChanged()
             return
         }
         let candidate = binFrames
             .min { abs($0.value.midX - fingerX) < abs($1.value.midX - fingerX) }
             .map(\.key)
-        guard let candidate, candidate != activeBin else { return }
-        if let current = activeBin, let currentFrame = binFrames[current],
+        guard let candidate, activeTarget != .bin(candidate) else { return }
+        // Hysteresis applies between two FOLDERS only. Coming back down from
+        // cancel there is no previous folder to be sticky about, and making
+        // it sticky would leave the card highlighting nothing on the way.
+        if case .bin(let current) = activeTarget,
+           let currentFrame = binFrames[current],
            let candidateFrame = binFrames[candidate] {
             let gain = abs(currentFrame.midX - fingerX) - abs(candidateFrame.midX - fingerX)
             guard gain > Self.binHysteresis else { return }
         }
-        activeBin = candidate
+        activeTarget = .bin(candidate)
         HapticEngine.drillBinChanged()
     }
 
     private func handleDragEnded(_ value: DragGesture.Value) {
         let travelled = hypot(value.translation.width, value.translation.height)
-        guard travelled > Self.commitThreshold, let bin = activeBin else {
+        // Cancel and "didn't drag far enough" end the same way, on purpose:
+        // the card goes back, undecided, and nothing is written. The circle
+        // exists to make that outcome VISIBLE, not to add a new one.
+        guard travelled > Self.commitThreshold,
+              case .bin(let bin) = activeTarget else {
             springBack()
             return
         }
@@ -580,7 +762,7 @@ struct StudyDeckView: View {
             dragOffset = .zero
             isDragging = false
         }
-        activeBin = nil
+        activeTarget = nil
     }
 
     private func drop(into bin: DrillBin, from endLocation: CGPoint) {
@@ -600,7 +782,7 @@ struct StudyDeckView: View {
             flyScale = 1
             flyOpacity = 1
             withAnimation(.easeOut(duration: 0.2)) { isDragging = false }
-            activeBin = nil
+            activeTarget = nil
         }
     }
 

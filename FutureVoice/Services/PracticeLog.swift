@@ -61,6 +61,19 @@ final class PracticeLog {
         }
     }
 
+    /// Drops the in-memory day map and re-reads the file. Only `BackupService`
+    /// needs this: the log is read once at init and held for the process's
+    /// life, so a restore that replaced the file on disk would be erased by
+    /// the very next `record()` writing the stale map back out.
+    func reloadFromDisk() {
+        if let data = try? Data(contentsOf: fileURL),
+           let decoded = try? JSONDecoder().decode([String: Day].self, from: data) {
+            days = decoded
+        } else {
+            days = [:]
+        }
+    }
+
     /// - Parameter finished: the item is done with (mastered / known /
     ///   actually said out loud), as opposed to merely handled. Only finished
     ///   work counts toward a daily goal.

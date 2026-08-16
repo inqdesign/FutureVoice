@@ -45,6 +45,11 @@ struct ConversationView: View {
     /// endAndClose defers its dismiss until the first-talk feedback closes.
     @State private var dismissAfterFeedback = false
     @State private var showMicPermissionAlert = false
+    /// One-time "which mic?" question (see `MicPreferenceStore`). Asked at the
+    /// top of the call, never per turn — a modal between turns would be a
+    /// modal in the middle of a conversation.
+    @State private var askingMicChoice = false
+    @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
     /// Flipped by tearDown() when the screen closes. Every async continuation
     /// (Gemini reply, TTS synthesis, stream chunks, auto-restart) checks it
     /// and bails — otherwise a reply in flight at close time keeps talking
@@ -359,6 +364,9 @@ struct ConversationView: View {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
             }) { ctx in
                 BetaFeedbackSheet(context: ctx)
+            }
+            .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
+                MicChoiceSheet { _ in }
             }
             // Hitting the credit wall now routes to the paywall's preference
             // survey (see the "See plans" alert button) — no separate feedback
@@ -795,6 +803,12 @@ struct ConversationView: View {
     }
 
     private func openConversation() async {
+        // Once, at the top of the call: whose mic records you
+        // (`MicPreferenceStore`). Here rather than in `startRecording`, which
+        // runs every turn — a modal between turns is a modal in the middle of
+        // a conversation. No-op after the first answer, and whenever no
+        // Bluetooth device is connected.
+        await askMicChoiceIfNeeded()
         phase = .thinking
         // The opener plays before any mic session exists — arm the call's
         // audio session or the greeting streams into `.soloAmbient` (muted by
@@ -952,6 +966,22 @@ struct ConversationView: View {
         return opener
     }
 
+    /// Suspends until the learner answers the mic sheet; does nothing once
+    /// they have. `onDismiss` resumes, so every dismissal path lands in one
+    /// place.
+    private func askMicChoiceIfNeeded() async {
+        guard MicPreferenceStore.shouldAsk() else { return }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            micChoiceContinuation = cont
+            askingMicChoice = true
+        }
+    }
+
+    private func resumeAfterMicChoice() {
+        micChoiceContinuation?.resume()
+        micChoiceContinuation = nil
+    }
+
     private func startRecording() async {
         guard !isTornDown else { return }
         let granted = await LiveTranscriber.requestPermissions()
@@ -964,14 +994,19 @@ struct ConversationView: View {
             return
         }
         do {
-            // Conversation keeps the Bluetooth (HFP) mic allowed: the whole
-            // point of earphones is phone-in-pocket, where the built-in mic
-            // hears nothing. NON-NEGOTIABLE product-wise (forcing the
-            // built-in mic was tried 2026-08 and reverted same day) even
-            // though HFP puts Talk's output on the earphone's CALL volume
-            // domain while listening surfaces play on the media domain —
-            // that gap is compensated in signal (`a2dpBoostDB`), not by
-            // giving up the earphone mic.
+            // Conversation keeps the Bluetooth (HFP) mic allowed by DEFAULT:
+            // the whole point of earphones is phone-in-pocket, where the
+            // built-in mic hears nothing. Forcing the built-in mic on everyone
+            // was tried 2026-08 and reverted the same day for exactly that
+            // reason — so the only thing that overrides it is the learner
+            // choosing the phone mic themselves (`MicPreferenceStore`), which
+            // is a statement that their phone is in front of them. HFP puts
+            // Talk's output on the earphone's CALL volume domain while
+            // listening surfaces play on the media domain; that gap is
+            // compensated in signal (`a2dpBoostDB`), not by giving up the mic.
+            // `measurementMode: false` is explicit because it otherwise
+            // defaults to `preferBuiltInMic`, and `.measurement` would make
+            // the fluent self's replies noticeably quiet.
             // `voiceProcessing: true` — Talk is the surface people use OUTSIDE
             // (walking, cafés, transit), and it is the only mic surface with no
             // deterministic score riding on raw levels, so it is where iOS's
@@ -980,6 +1015,8 @@ struct ConversationView: View {
             // energy meter's noise floor down, lets real endpointing fire
             // instead of the 6s `noisyRoomFallbackSeconds` crawl.
             try live.start(locale: appState.targetLanguage,
+                           preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
+                           measurementMode: false,
                            contextualStrings: recognitionHints(),
                            captureToFile: true,   // keep the user's own audio for listen-back
                            voiceProcessing: true)

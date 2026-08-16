@@ -16,9 +16,12 @@ final class StudyDeckDragUITests: XCTestCase {
         app.launchArguments = ["-capture", "daily-words"]
         app.launch()
 
-        // Deck counter ("1 von 10" — the harness profile's chrome is German).
-        let counter = app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS[c] %@", "von")).firstMatch
+        // By IDENTIFIER, never by label: the counter is chrome, so it reads
+        // "1 of 10" or "1 von 10" depending on what the profile under test is
+        // learning. Matching the German cost these tests every run on a
+        // simulator that hadn't picked German.
+        let counter = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.counter").firstMatch
         XCTAssertTrue(counter.waitForExistence(timeout: 10), "deck never appeared")
         let before = counter.label
 
@@ -39,6 +42,44 @@ final class StudyDeckDragUITests: XCTestCase {
                        "drag did not resolve the card — counter still \(before)")
     }
 
+    /// Dragging UP is the way out. Every other direction files the card
+    /// somewhere, and until the cancel target existed a learner who picked a
+    /// card up and thought better of it had no visible way to put it down —
+    /// releasing gently worked, but nothing said so, so the escape hatch was
+    /// "file it wrong and fix it later".
+    ///
+    /// The assertion is that NOTHING was written: same card, same counter,
+    /// every folder still empty.
+    @MainActor
+    func testDraggingUpFilesNothing() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-capture", "daily-words"]
+        app.launch()
+
+        let counter = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.counter").firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 10), "deck never appeared")
+        let before = counter.label
+
+        // Well past the commit threshold, so this is a real drag being
+        // deliberately aimed at nothing — not a fumble under the dead zone.
+        let window = app.windows.firstMatch
+        let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55))
+        let end = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18))
+        start.press(forDuration: 0.1, thenDragTo: end,
+                    withVelocity: XCUIGestureVelocity(300), thenHoldForDuration: 0.6)
+
+        Thread.sleep(forTimeInterval: 1.5)
+        XCTAssertEqual(counter.label, before,
+                       "an upward drag advanced the deck — the card was filed")
+        for bin in ["tenMinutes", "tomorrow", "threeDays", "gotIt"] {
+            let chip = app.descendants(matching: .any)
+                .matching(identifier: "studyDeck.folder.\(bin)").firstMatch
+            XCTAssertEqual(chip.value as? String, "0",
+                           "an upward drag put a card in \(bin)")
+        }
+    }
+
     /// The highlight must FOLLOW the finger: a hard-right drag has to land in
     /// the rightmost folder (Got it), not whichever bin was nearest to a
     /// stale/zero deck frame. This is the regression the counter-only test
@@ -49,8 +90,8 @@ final class StudyDeckDragUITests: XCTestCase {
         app.launchArguments = ["-capture", "daily-words"]
         app.launch()
 
-        let counter = app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS[c] %@", "von")).firstMatch
+        let counter = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.counter").firstMatch
         XCTAssertTrue(counter.waitForExistence(timeout: 10), "deck never appeared")
 
         let window = app.windows.firstMatch
@@ -82,8 +123,8 @@ final class ReviewReminderUITests: XCTestCase {
         app.launchArguments = ["-capture", "daily-words"]
         app.launch()
 
-        let counter = app.staticTexts
-            .matching(NSPredicate(format: "label CONTAINS[c] %@", "von")).firstMatch
+        let counter = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.counter").firstMatch
         XCTAssertTrue(counter.waitForExistence(timeout: 10), "deck never appeared")
 
         // Leftmost folder = the shortest delay.

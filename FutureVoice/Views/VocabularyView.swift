@@ -417,6 +417,10 @@ struct WordCard: View {
     @State private var entry: WordEntry?
     @State private var nlPos: String?
     @State private var loading = false
+    /// The lookup came back empty. `WordLore` generates on demand, so nil
+    /// means the round trip failed — worth its own state because it has an
+    /// action attached (retry), unlike "no entry".
+    @State private var failed = false
     @State private var speaking = false
     @State private var sentences: [VocabStore.SourceSentence] = []
     @State private var shadowing: Turn?
@@ -509,12 +513,12 @@ struct WordCard: View {
             // rather than as work in progress — and this peek is the FIRST
             // thing a tapped word shows, so it's where the app most looked
             // stuck.
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.mini)
-                Text("Looking it up…")
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-            }
+            LookupProgress()
+        } else if failed {
+            // The retry button lives on the full card; the peek's job is to
+            // say what happened and that opening it is worth doing.
+            Text(explain("Couldn't load it — tap to open the card and try again."))
+                .font(.footnote).foregroundStyle(.secondary)
         } else {
             Text(explain("No dictionary entry yet — tap to open the card."))
                 .font(.footnote).foregroundStyle(.secondary)
@@ -546,13 +550,17 @@ struct WordCard: View {
                     }
                 }
 
-                section(entry?.examples.count == 1 ? "Example" : "Examples") {
-                    if let examples = entry?.examples, !examples.isEmpty {
-                        VStack(alignment: .leading, spacing: 14) {
-                            ForEach(examples) { exampleRow($0) }
+                // Examples never carry their own retry: one failed lookup is
+                // one failure, and the button belongs with the first message.
+                if !failed {
+                    section(entry?.examples.count == 1 ? "Example" : "Examples") {
+                        if let examples = entry?.examples, !examples.isEmpty {
+                            VStack(alignment: .leading, spacing: 14) {
+                                ForEach(examples) { exampleRow($0) }
+                            }
+                        } else {
+                            lookupPlaceholder
                         }
-                    } else {
-                        lookupPlaceholder
                     }
                 }
 
@@ -647,12 +655,9 @@ struct WordCard: View {
     @ViewBuilder
     private var lookupPlaceholder: some View {
         if loading {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.mini)
-                Text("Looking it up…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+            LookupProgress()
+        } else if failed {
+            LookupFailure { Task { await load() } }
         } else {
             Text("—").font(.body).foregroundStyle(.secondary)
         }
@@ -903,6 +908,7 @@ struct WordCard: View {
         // before flipping it shows the no-entry state for a frame every time
         // the card walks to the next word.
         loading = true
+        failed = false
         entry = nil
         nlPos = WordLore.partOfSpeech(word)
         sentences = store.sentences(using: word)
@@ -912,6 +918,7 @@ struct WordCard: View {
         // neither the stale entry nor the stale `loading = false` may land.
         guard !Task.isCancelled else { return }
         entry = fetched
+        failed = fetched == nil
         loading = false
     }
 }
@@ -983,11 +990,17 @@ enum WordLore {
     static func entry(for word: String, native: String,
                       target: String, kind: Kind = .word) async -> WordEntry? {
         #if DEBUG
+        if DebugCapture.failLookups { return nil }
         // Capture seam: the loading state is invisible offline (the lookup
         // fails instantly), so a screenshot run can hold it open.
         if DebugCapture.slowLookupSeconds > 0 {
             try? await Task.sleep(nanoseconds: UInt64(DebugCapture.slowLookupSeconds) * 1_000_000_000)
         }
+        // Same seam, for the opposite problem: a capture run has no session,
+        // so every real lookup comes back nil and the card renders "—". A
+        // stub is the only way to photograph a FULL entry — which is what
+        // the small-screen layout has to be checked against.
+        if let stub = DebugCapture.stubWordEntry { return stub }
         #endif
         let key = [native, target, kind.rawValue, word].joined(separator: "|")
         if let c = cache[key] { return c }

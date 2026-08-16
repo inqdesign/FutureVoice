@@ -185,6 +185,19 @@ enum LanguageCatalog {
             ?? code.uppercased()
     }
 
+    /// Name in the LEARNER's own language — "영어" for a Korean, "Englisch"
+    /// for a German. For anything the learner READS about a language.
+    ///
+    /// `englishName` is for prompts, where the model needs "German" and not a
+    /// bare code; putting it on screen wrote the one English word into an
+    /// otherwise Korean sentence, which is exactly the seam the app is trying
+    /// not to have. Falls back to the English name for a locale iOS can't name
+    /// the language in.
+    static func learnerName(_ code: String) -> String {
+        Locale(identifier: currentNative).localizedString(forLanguageCode: code)?.capitalized
+            ?? englishName(code)
+    }
+
     /// Name in its own language ("Deutsch", "한국어") — for pickers.
     static func endonym(_ code: String) -> String {
         Locale(identifier: code).localizedString(forLanguageCode: code)?.capitalized

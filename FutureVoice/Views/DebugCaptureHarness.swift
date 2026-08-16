@@ -29,9 +29,44 @@ enum DebugCapture {
     /// loading state open. 0 = off (every case except `vocab-loading`).
     static var slowLookupSeconds = 0
 
+    /// Make every dictionary lookup fail, so the retry affordance can be seen
+    /// (offline it fails anyway, but not deterministically enough to shoot).
+    static var failLookups = false
+
+    /// Dictionary entry every lookup returns instead of hitting the network.
+    /// nil = off. A capture run isn't signed in, so a real lookup always
+    /// fails and the study card shows "—" — useless for checking a layout
+    /// whose whole question is how much of a full entry fits.
+    static var stubWordEntry: WordEntry?
+
+    /// A deliberately FAT entry — three senses, two examples, definitions
+    /// long enough to wrap. The worst realistic case for the study card, and
+    /// the one that decides what a small screen can show.
+    static let fatWordEntry = WordEntry(
+        pos: "Adverb",
+        senses: [
+            .init(pos: "Adverb", meaning: "In a loose or not taut manner; without tension.", note: nil),
+            .init(pos: "Adverb", meaning: "In a careless, lazy, or inefficient way.", note: nil),
+            .init(pos: "Adverb", meaning: "Of trade or business, in a way that is slow or lacking in activity.", note: nil),
+        ],
+        examples: [
+            .init(text: "The rope hung slackly from the pole.",
+                  meaning: "The rope was not pulled tight and hung loosely from the pole."),
+            .init(text: "He slackly completed his tasks, missing several deadlines.",
+                  meaning: "He finished his tasks carelessly and inefficiently, failing to meet several deadlines."),
+        ],
+        phrases: [],
+        properNoun: nil
+    )
+
     /// True while capturing the drill bin tray: `DrillView` opens already
     /// revealed and "mid-drag" so the drop targets are on screen.
     static var previewDrillTray = false
+
+    /// Same trick for the study deck, with the cancel target lit: a drag can
+    /// only be photographed from inside itself, and XCUITest has no way to
+    /// hold one open while the camera runs.
+    static var previewStudyTray = false
 
     /// True while capturing a folder list: `DrillView` opens with the
     /// Tomorrow folder sheet already presented — chips are tap-only.
@@ -82,6 +117,13 @@ enum DebugCapture {
             // evaluation blanks the render (learned the hard way twice).
             return AnyView(NavigationStack { VocabularyView() }
                 .task { appState.focusWord = "zzz-uncached-word" })
+        case "vocab-failed":
+            // The lookup-failed state, with its Try again button.
+            once("vocab") { seedVocab() }
+            previewWordCard = true
+            failLookups = true
+            return AnyView(NavigationStack { VocabularyView() }
+                .task { appState.focusWord = "zzz-uncached-word" })
         case "vocab-card":
             // The word card at full height — the peek is the default, so a
             // screenshot can't reach the expanded state without this.
@@ -91,6 +133,18 @@ enum DebugCapture {
         case "daily-words":
             // The Words challenge session (the dealt hand of recommendations).
             once("vocab") { seedVocab() }
+            return AnyView(DailyWordsView().environmentObject(appState))
+        case "daily-words-tray":
+            // The deck mid-drag: folders out, cancel highlighted.
+            once("vocab") { seedVocab() }
+            stubWordEntry = fatWordEntry
+            previewStudyTray = true
+            return AnyView(DailyWordsView().environmentObject(appState))
+        case "daily-words-full":
+            // Same deck, but every lookup returns the fat entry — how much of
+            // a full dictionary entry the card fits, on THIS screen size.
+            once("vocab") { seedVocab() }
+            stubWordEntry = fatWordEntry
             return AnyView(DailyWordsView().environmentObject(appState))
         case "daily-expressions":
             once("vocab") { seedVocab() }

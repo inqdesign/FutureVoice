@@ -88,8 +88,8 @@ struct PersonaIntakeView: View {
     private var nameStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "What should I call you?",
-                detail: "We're building your fluent self — it'll speak in your own voice at the end of this. The more you share, the more it'll sound like you, not a textbook.")
+                question: explain("What should I call you?"),
+                detail: explain("We're building your fluent self — it'll speak in your own voice at the end of this. The more you share, the more it'll sound like you, not a textbook."))
             VStack(spacing: 16) {
                 PhotosPicker(selection: $avatarPick, matching: .images) {
                     ZStack(alignment: .bottomTrailing) {
@@ -126,8 +126,8 @@ struct PersonaIntakeView: View {
     private var homeStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "Where's home these days?",
-                detail: "Real places make your conversations concrete — no small talk about nowhere.")
+                question: explain("Where's home these days?"),
+                detail: explain("Real places make your conversations concrete — no small talk about nowhere."))
             VStack(spacing: 0) {
                 TextField("City", text: $persona.city)
                     .textInputAutocapitalization(.words)
@@ -148,8 +148,8 @@ struct PersonaIntakeView: View {
     private var interestsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "What are you into?",
-                detail: "Tap what fits — these pick your news stories and fuel conversations.")
+                question: explain("What are you into?"),
+                detail: explain("Tap what fits — these pick your news stories and fuel conversations."))
             ChipPickerField(
                 presets: PersonaOnboardingView.interestPresets,
                 selection: $persona.interests)
@@ -159,8 +159,8 @@ struct PersonaIntakeView: View {
     private var situationsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: "When do you most need \(LanguageCatalog.englishName(appState.targetLanguage))?",
-                detail: "So practice aims at moments that actually happen to you.")
+                question: explain("When do you most need \(LanguageCatalog.learnerName(appState.targetLanguage))?"),
+                detail: explain("So practice aims at moments that actually happen to you."))
             ChipPickerField(
                 presets: PersonaOnboardingView.situationPresets,
                 selection: $persona.situations)

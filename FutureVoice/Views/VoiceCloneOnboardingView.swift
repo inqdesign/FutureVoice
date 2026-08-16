@@ -127,13 +127,17 @@ struct VoiceCloneOnboardingView: View {
 
     /// Staged narration for the cloning wait. Honest theater — no fake
     /// percentages, just what the process is genuinely about.
-    private static let becomingLines = [
-        "Listening back to every word…",
-        "Learning your vowels…",
-        "Finding your tone…",
-        "Practicing your rhythm…",
-        "Almost there…",
-    ]
+    /// Computed, not stored: a stored static resolves its strings once per
+    /// process, and these have to follow the learner's language.
+    private static var becomingLines: [String] {
+        [
+            explain("Listening back to every word…"),
+            explain("Learning your vowels…"),
+            explain("Finding your tone…"),
+            explain("Practicing your rhythm…"),
+            explain("Almost there…"),
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -241,16 +245,16 @@ struct VoiceCloneOnboardingView: View {
 
     private var stageTitle: String {
         switch status {
-        case .intro:     return "Your fluent self"
-        case .consent:   return "Your voice, your call"
-        case .spot:      return "Find a quiet spot"
-        case .mic:       return "Mic check"
-        case .script:    return "Read this aloud"
-        case .recording: return "It's listening"
-        case .reviewing: return "How you sound"
-        case .account:   return "Make it yours"
-        case .uploading: return "Becoming you"
-        case .meet:      return "Meet your fluent self"
+        case .intro:     return chrome("Your fluent self")
+        case .consent:   return chrome("Your voice, your call")
+        case .spot:      return chrome("Find a quiet spot")
+        case .mic:       return chrome("Mic check")
+        case .script:    return chrome("Read this aloud")
+        case .recording: return chrome("It's listening")
+        case .reviewing: return chrome("How you sound")
+        case .account:   return chrome("Make it yours")
+        case .uploading: return chrome("Becoming you")
+        case .meet:      return chrome("Meet your fluent self")
         }
     }
 
@@ -297,7 +301,7 @@ struct VoiceCloneOnboardingView: View {
         case .recording:
             return elapsedText
         case .reviewing:
-            if let q = quality { return "\(Int(q.durationSeconds))s recorded" }
+            if let q = quality { return chrome("\(Int(q.durationSeconds))s recorded") }
             return ""
         default:
             return ""
@@ -331,8 +335,8 @@ struct VoiceCloneOnboardingView: View {
     // the account is what brings the fluent self to life.
     private var accountContent: some View {
         VStack(spacing: 26) {
-            stepHeader("Your fluent self is ready.",
-                       "Create your account and it comes to life — your voice and your progress live there.")
+            stepHeader(explain("Your fluent self is ready."),
+                       explain("Create your account and it comes to life — your voice and your progress live there."))
 
             if auth.isWorking { ProgressView() }
         }
@@ -361,8 +365,8 @@ struct VoiceCloneOnboardingView: View {
 
     // Step 1 — the narrative. One thought, nothing else.
     private var introContent: some View {
-        stepHeader("Another you.\nAlready fluent.",
-                   "It speaks perfect \(LanguageCatalog.englishName(appState.targetLanguage)) in your own voice. From here, you just follow.")
+        stepHeader(explain("Another you.\nAlready fluent."),
+                   explain("It speaks perfect \(LanguageCatalog.learnerName(appState.targetLanguage)) in your own voice. From here, you just follow."))
             .transition(.opacity)
     }
 
@@ -443,8 +447,8 @@ struct VoiceCloneOnboardingView: View {
     // listen to the room).
     private var micContent: some View {
         VStack(spacing: 26) {
-            stepHeader("The iPhone's own mic.",
-                       "No Bluetooth earbuds — AirPods record at phone-call quality, and the clone won't sound like you.")
+            stepHeader(explain("The iPhone's own mic."),
+                       explain("No Bluetooth earbuds — AirPods record at phone-call quality, and the clone won't sound like you."))
 
             Label("Take your AirPods out before recording", systemImage: "airpods.gen3")
                 .font(.subheadline)
@@ -460,17 +464,17 @@ struct VoiceCloneOnboardingView: View {
     //   2. echo   — clap once; the decay tail says dry or reverberant.
     private var spotContent: some View {
         VStack(spacing: 26) {
-            stepHeader("Quiet, and soft.",
-                       "Noise stirs the surface — walk until it settles. Soft rooms fix echo too: clothes, curtains, a parked car. A closet is perfect.")
+            stepHeader(explain("Quiet, and soft."),
+                       explain("Noise stirs the surface — walk until it settles. Soft rooms fix echo too: clothes, curtains, a parked car. A closet is perfect."))
 
             if recorder.isMonitoring {
                 VStack(spacing: 0) {
-                    gateRow(symbol: "waveform", title: "Noise",
+                    gateRow(symbol: "waveform", title: chrome("Noise"),
                             value: String(format: "%.0f dB", recorder.ambientDBFS),
                             state: noiseGate.state, tint: noiseGate.tint)
                     // inset 0 — the card itself already pads 14 on both sides.
                     CardDivider(inset: 0)
-                    gateRow(symbol: echoGate.symbol, title: "Echo",
+                    gateRow(symbol: echoGate.symbol, title: chrome("Echo"),
                             value: recorder.echoTailMs.map { String(format: "%.0f ms", $0) },
                             state: echoGate.state, tint: echoGate.tint)
                 }
@@ -529,18 +533,18 @@ struct VoiceCloneOnboardingView: View {
     /// chain — tune thresholds on device.
     private var noiseGate: (state: String, tint: Color) {
         let db = recorder.ambientDBFS
-        if db > -35 { return ("too noisy", .red) }
-        if db > -45 { return ("almost", .orange) }
-        return ("quiet", .green)
+        if db > -35 { return (explain("too noisy"), .red) }
+        if db > -45 { return (explain("almost"), .orange) }
+        return (explain("quiet"), .green)
     }
 
     /// Gate 2 — how live the room is. Waits for a clap; each clap re-measures.
     private var echoGate: (symbol: String, state: String, tint: Color) {
         guard let tail = recorder.echoTailMs else {
-            return ("hands.clap", "clap to check", Color.accentColor)
+            return ("hands.clap", explain("clap to check"), Color.accentColor)
         }
-        if tail <= Self.dryTailMs { return ("checkmark.circle.fill", "dry", .green) }
-        return ("water.waves", "echoey", .orange)
+        if tail <= Self.dryTailMs { return ("checkmark.circle.fill", explain("dry"), .green) }
+        return ("water.waves", explain("echoey"), .orange)
     }
 
     private var bothGatesPass: Bool {
@@ -620,7 +624,7 @@ struct VoiceCloneOnboardingView: View {
                 HStack(spacing: 6) {
                     Image(systemName: isBadMic ? "exclamationmark.triangle.fill" : "mic.fill")
                     Text(isBadMic
-                         ? "Bluetooth mic — disconnect AirPods for a faithful clone"
+                         ? explain("Bluetooth mic — disconnect AirPods for a faithful clone")
                          : recorder.inputDescription)
                 }
                 .font(.caption)
@@ -701,8 +705,8 @@ struct VoiceCloneOnboardingView: View {
     // Meet: greeting + theme pick.
     private var meetContent: some View {
         VStack(spacing: 22) {
-            stepHeader("It's you — fluent.",
-                       "Pick how your fluent self looks.")
+            stepHeader(explain("It's you — fluent."),
+                       explain("Pick how your fluent self looks."))
 
             HStack(spacing: 14) {
                 ForEach(FutureselfTheme.allCases) { theme in
@@ -815,7 +819,7 @@ struct VoiceCloneOnboardingView: View {
                 // Cross-stage back: reopen the persona cards. The published
                 // persona is only nil-ed — the store keeps the data, and the
                 // intake reopens pre-filled from it.
-                wizardBar(next: "Next", onBack: { appState.persona = nil }) {
+                wizardBar(next: chrome("Next"), onBack: { appState.persona = nil }) {
                     agreedToAge = false
                     agreedToVoiceCloning = false
                     status = stepAfterIntro
@@ -824,7 +828,7 @@ struct VoiceCloneOnboardingView: View {
             case .consent:
                 // Next is dead until BOTH toggles are on — the whole point of
                 // an explicit consent is that it can't be walked past.
-                wizardBar(next: "Next",
+                wizardBar(next: chrome("Next"),
                           nextDisabled: !(agreedToAge && agreedToVoiceCloning),
                           backTo: .intro) {
                     ConsentStore.shared.confirmAge()
@@ -833,21 +837,21 @@ struct VoiceCloneOnboardingView: View {
                 }
 
             case .mic:
-                wizardBar(next: "Next", backTo: stepAfterIntro) { handleMicPermission() }
+                wizardBar(next: chrome("Next"), backTo: stepAfterIntro) { handleMicPermission() }
 
             case .spot:
-                wizardBar(next: "Next", backTo: .mic) { status = .script }
+                wizardBar(next: chrome("Next"), backTo: .mic) { status = .script }
 
             case .script:
                 // Re-recording from the meet act: Back means "never mind,
                 // keep the voice I have", not "walk the wizard backwards".
                 if isReRecordingClone {
-                    wizardBar(next: "Record my voice", nextIcon: "mic.fill",
+                    wizardBar(next: chrome("Record my voice"), nextIcon: "mic.fill",
                               onBack: { cancelReRecord() }) {
                         startRecording()
                     }
                 } else {
-                    wizardBar(next: "Record my voice", nextIcon: "mic.fill", backTo: .spot) {
+                    wizardBar(next: chrome("Record my voice"), nextIcon: "mic.fill", backTo: .spot) {
                         startRecording()
                     }
                 }
@@ -1068,7 +1072,7 @@ struct VoiceCloneOnboardingView: View {
                 AudioRecorder.prewarmMonitoringSession()
                 status = .spot
             } else {
-                error = "Microphone access denied. Enable it in Settings."
+                error = explain("Microphone access denied. Enable it in Settings.")
             }
         }
     }
@@ -1082,7 +1086,7 @@ struct VoiceCloneOnboardingView: View {
                 // covers the Settings-revoked edge.
                 let granted = await recorder.requestPermission()
                 guard granted else {
-                    error = "Microphone access denied. Enable it in Settings."
+                    error = explain("Microphone access denied. Enable it in Settings.")
                     return
                 }
                 error = nil

@@ -56,7 +56,7 @@ struct DrillView: View {
     /// Bin tray state. The tray only exists during a drag — at rest the deck
     /// is just a card, so nothing competes with the phrase being recalled.
     @State private var isDragging = false
-    @State private var activeBin: DrillBin?
+    @State private var activeTarget: DropTarget?
     /// Measured in the "drilldeck" coordinate space so the released card can
     /// fly to the exact bin it was dropped on.
     @State private var binFrames: [DrillBin: CGRect] = [:]
@@ -97,6 +97,9 @@ struct DrillView: View {
     /// A new bin has to be this much closer than the current one to steal the
     /// highlight, so a finger resting on a boundary doesn't rattle.
     private static let binHysteresis: CGFloat = 14
+    /// Upward travel that means "not into any of these". Above the folders'
+    /// dead zone so a sideways drag that drifts a little high still files.
+    private static let cancelThreshold: CGFloat = 44
 
     var body: some View {
         Group {
@@ -147,7 +150,7 @@ struct DrillView: View {
             if DebugCapture.previewDrillTray {
                 topCardRevealed = true
                 isDragging = true
-                activeBin = .tomorrow
+                activeTarget = .bin(.tomorrow)
                 // Dragged DOWN and right — the case where the card's own
                 // buttons would otherwise poke out under the tray.
                 dragOffset = CGSize(width: 40, height: 150)
@@ -277,16 +280,27 @@ struct DrillView: View {
     /// the card is showing down there into a quiet backdrop.
     private var binPanel: some View {
         VStack(spacing: 10) {
+            // Above the row, and centred: the folders are a decision, and
+            // this is the way past it — so it sits on the path back to the
+            // card rather than at the end of the row, where it would read as
+            // a fifth folder.
+            cancelSlot
             HStack(spacing: 8) {
                 ForEach(DrillBin.allCases) { bin in
                     binSlot(bin)
                 }
             }
-            Text(activeBin?.dropHint ?? "Drop it on a folder")
+            Group {
+                switch activeTarget {
+                case .bin(let bin): Text(bin.dropHint)
+                case .cancel:       Text("Leave it undecided")
+                case nil:           Text("Drop it on a folder")
+                }
+            }
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .contentTransition(.opacity)
-                .animation(.easeOut(duration: 0.15), value: activeBin)
+                .animation(.easeOut(duration: 0.15), value: activeTarget)
         }
         .padding(.horizontal, 12)
         .padding(.top, 14)
@@ -317,8 +331,31 @@ struct DrillView: View {
         .allowsHitTesting(false)
     }
 
+    /// The way out: drag UP and the card goes back where it was. Not red —
+    /// nothing is being destroyed, and a card you aren't ready to grade is a
+    /// normal thing to want, not a mistake being undone.
+    private var cancelSlot: some View {
+        let active = activeTarget == .cancel && isDragging
+        return Image(systemName: "xmark")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(active ? Color(.systemBackground) : Color.secondary)
+            .frame(width: 46, height: 46)
+            .background {
+                Circle().fill(active ? AnyShapeStyle(Color.secondary)
+                                     : AnyShapeStyle(Color(.tertiarySystemFill)))
+            }
+            .overlay {
+                Circle().strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
+                                      style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+            }
+            .scaleEffect(active ? 1.12 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)
+            .accessibilityIdentifier("drill.cancel")
+            .accessibilityLabel(Text("Leave it undecided"))
+    }
+
     private func binSlot(_ bin: DrillBin) -> some View {
-        let active = activeBin == bin && isDragging
+        let active = activeTarget == .bin(bin) && isDragging
         return VStack(spacing: 5) {
             Image(systemName: bin.icon)
                 .font(.title3)
@@ -495,35 +532,53 @@ struct DrillView: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { isDragging = true }
         }
         dragOffset = value.translation
-        updateActiveBin(for: value.translation)
+        updateActiveTarget(for: value.translation)
     }
 
     /// Which bin the card is currently over. Nearest-centre rather than
     /// containment, so the gap between bins (and the space above the tray,
     /// where the card actually is) still resolves to a target.
-    private func updateActiveBin(for translation: CGSize) {
+    private func updateActiveTarget(for translation: CGSize) {
         let travelled = hypot(translation.width, translation.height)
         guard travelled > Self.binDeadZone, !binFrames.isEmpty else {
-            if activeBin != nil { activeBin = nil }
+            if activeTarget != nil { activeTarget = nil }
+            return
+        }
+        // Direction decides between the two KINDS of target before position
+        // decides between folders. The folders sit at the bottom of the
+        // screen, so pulling the card up is already the gesture for "away
+        // from all of them" — cancel only has to be given a face.
+        if translation.height < -Self.cancelThreshold {
+            guard activeTarget != .cancel else { return }
+            activeTarget = .cancel
+            HapticEngine.drillBinChanged()
             return
         }
         let x = deckFrame.midX + translation.width
         let candidate = binFrames
             .min { abs($0.value.midX - x) < abs($1.value.midX - x) }
             .map(\.key)
-        guard let candidate, candidate != activeBin else { return }
-        if let current = activeBin, let currentFrame = binFrames[current],
+        guard let candidate, activeTarget != .bin(candidate) else { return }
+        // Hysteresis applies between two FOLDERS only. Coming back down from
+        // cancel there is no previous folder to be sticky about, and making
+        // it sticky would leave the card highlighting nothing on the way.
+        if case .bin(let current) = activeTarget,
+           let currentFrame = binFrames[current],
            let candidateFrame = binFrames[candidate] {
             let gain = abs(currentFrame.midX - x) - abs(candidateFrame.midX - x)
             guard gain > Self.binHysteresis else { return }
         }
-        activeBin = candidate
+        activeTarget = .bin(candidate)
         HapticEngine.drillBinChanged()
     }
 
     private func handleDragEnded(_ value: DragGesture.Value) {
         let travelled = hypot(value.translation.width, value.translation.height)
-        guard isTopRevealed, travelled > Self.commitThreshold, let bin = activeBin else {
+        // Cancel and "didn't drag far enough" end the same way, on purpose:
+        // the card goes back, ungraded, and nothing is written. The circle
+        // exists to make that outcome VISIBLE, not to add a new one.
+        guard isTopRevealed, travelled > Self.commitThreshold,
+              case .bin(let bin) = activeTarget else {
             springBack()
             return
         }
@@ -535,7 +590,7 @@ struct DrillView: View {
             dragOffset = .zero
             isDragging = false
         }
-        activeBin = nil
+        activeTarget = nil
     }
 
     /// The card gets swallowed: it flies to the bin's centre while shrinking
@@ -557,7 +612,7 @@ struct DrillView: View {
             flyScale = 1
             flyOpacity = 1
             withAnimation(.easeOut(duration: 0.2)) { isDragging = false }
-            activeBin = nil
+            activeTarget = nil
         }
     }
 }
@@ -567,6 +622,19 @@ struct DrillView: View {
 ///
 /// The three delays double as Leitner boxes (see `DrillStore.snooze`), so
 /// picking one parks the card on a rung of the same ladder rather than off it.
+/// Where a dragged card can land — either a folder, or back where it came
+/// from. Shared by BOTH decks so the sentence drill and the study deck can't
+/// drift on what a drag can do, the same reason they share `DrillBin`.
+///
+/// `cancel` writes nothing: it's the card you've looked at and don't want to
+/// answer for yet. Releasing short of the commit threshold has always done
+/// this, but silently — nothing on screen said it was possible, so the only
+/// visible way out of a drag was to file the card somewhere you didn't mean.
+enum DropTarget: Hashable {
+    case bin(DrillBin)
+    case cancel
+}
+
 enum DrillBin: String, CaseIterable, Identifiable {
     case tenMinutes, tomorrow, threeDays, gotIt
 

@@ -6,9 +6,17 @@ import UserNotifications
 /// Two facts, deliberately separate (see `20260813120000_core_club.sql`):
 ///
 ///   * **Qualification** — 28 of the last 30 days over the daily bar. Earned
-///     once, granted the moment it's done, and NEVER revoked. `joinNumber`
-///     and `qualifiedAt` are the permanent record; a low number is the whole
-///     founding story, which is why there's no separate "founding" flag.
+///     once, granted the moment it's done, and NEVER revoked. `qualifiedAt`
+///     is the permanent record.
+///
+///     There is no member NUMBER anywhere in this file any more. It existed,
+///     and it was wrong: an ordinal that is never reused climbs past the seat
+///     count forever, so a hundred-seat club ends up with a member #137 —
+///     and once the club screen draws the hundred seats, that number is a
+///     contradiction the learner has to be argued out of. It also quietly
+///     reintroduced the rank the club was designed not to have. The server
+///     still keeps `join_number` as its internal ordering key (seat order,
+///     promotion tie-break); nothing reads it back to a person.
 ///   * **A seat** — kept with 5 of the last 7 days. Loose on purpose: a
 ///     missed day costs nothing. A seat is only ever vacated by its holder,
 ///     never taken by a newcomer, so an arrival is pure good news to the
@@ -26,24 +34,23 @@ enum CoreClubService {
     /// The signed-in learner's own membership. Includes the private columns
     /// their `core_membership` self-read policy allows.
     struct Membership: Decodable {
-        let join_number: Int
         let qualified_at: String
         let seated: Bool
         let seated_since: String?
         let days_total: Int
 
-        var joinNumber: Int { join_number }
         /// Cumulative days seated across every stint. Stock — it survives
         /// losing the seat, which is what makes leaving a rest rather than a
         /// bankruptcy.
         var daysTotal: Int { days_total }
     }
 
-    /// What a stranger is allowed to see next to someone's name: the seal and
-    /// the number. Never lapses, never how much anyone talks.
+    /// What a stranger is allowed to see next to someone's name: the seal,
+    /// filled or not. Nothing else — never a number, never how much anyone
+    /// talks. Rank decides who gets in; inside the club everyone is equal, and
+    /// a number beside a name in a browsable list is a rank.
     struct Badge: Decodable {
         let user_id: String
-        let join_number: Int
         let seated: Bool
     }
 
@@ -54,7 +61,6 @@ enum CoreClubService {
         let entry_required_days: Int
         let keep_window_days: Int
         let keep_required_days: Int
-        let bonus_seconds: Int
     }
 
     /// An arrival. Departures are not readable by clients at all — the RLS
@@ -64,7 +70,6 @@ enum CoreClubService {
         let id: Int
         let kind: String
         let user_id: String?
-        let join_number: Int?
         let club_size: Int
         let first_time: Bool
     }
@@ -78,14 +83,17 @@ enum CoreClubService {
             let seconds: Int
             let met: Bool
         }
+        /// `core_my_progress` still puts a `join_number` in this object — it
+        /// is the caller's own row and goes nowhere else, and rewriting a
+        /// 180-line settlement-adjacent function to delete one key is risk
+        /// bought for nothing. Simply never decoded; drop it there the next
+        /// time that function is touched for another reason.
         struct Member: Decodable {
-            let join_number: Int
             let seated: Bool
             let days_total: Int
         }
 
         let bar_seconds: Int
-        let bonus_seconds: Int
         let seats: Int
         let club_size: Int
         let member: Member?
@@ -109,13 +117,103 @@ enum CoreClubService {
         var spareAbsences: Int {
             max(days.count - entry_required - missedInEntryWindow, 0)
         }
+
+        /// Every field is optional AT THE WIRE, with a fallback.
+        ///
+        /// Synthesised `Decodable` treats a missing key as fatal for the whole
+        /// object, so the club screen is only ever one server-side field
+        /// removal away from showing "The Core is unavailable right now" to
+        /// every already-installed build — which is exactly what happened when
+        /// `bonus_seconds` left the payload. An app that can't render one row
+        /// must not lose the other twenty.
+        ///
+        /// The fallbacks are the config's shipped defaults, so a degraded
+        /// screen shows the rule this build was written against rather than a
+        /// zero. Counts fall back to 0 because a count nobody sent is not a
+        /// count we can guess.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            func int(_ k: CodingKeys, _ fallback: Int) -> Int {
+                (try? c.decodeIfPresent(Int.self, forKey: k)) .flatMap { $0 } ?? fallback
+            }
+            func bool(_ k: CodingKeys) -> Bool {
+                (try? c.decodeIfPresent(Bool.self, forKey: k)).flatMap { $0 } ?? false
+            }
+            bar_seconds     = int(.bar_seconds, 240)
+            seats           = int(.seats, 100)
+            club_size       = int(.club_size, 0)
+            member          = try? c.decodeIfPresent(Member.self, forKey: .member)
+            days            = (try? c.decodeIfPresent([Day].self, forKey: .days)).flatMap { $0 } ?? []
+            met_entry       = int(.met_entry, 0)
+            entry_required  = int(.entry_required, 28)
+            met_keep        = int(.met_keep, 0)
+            keep_required   = int(.keep_required, 28)
+            days_to_entry   = (try? c.decodeIfPresent(Int.self, forKey: .days_to_entry)).flatMap { $0 }
+            days_to_return  = (try? c.decodeIfPresent(Int.self, forKey: .days_to_return)).flatMap { $0 }
+            requalifying    = bool(.requalifying)
+            waiting_for_seat = bool(.waiting_for_seat)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case bar_seconds, seats, club_size, member, days, met_entry
+            case entry_required, met_keep, keep_required, days_to_entry
+            case days_to_return, requalifying, waiting_for_seat
+        }
     }
 
-    static func fetchProgress() async -> Progress? {
+    /// The hundred seats as colours: `themes[i]` is the palette worn by the
+    /// member sitting in seat `i`, oldest first, and everything past `taken`
+    /// is an empty seat. Deliberately carries no id, name or number — the room
+    /// is drawable, its roster is not (`20260815120000_core_seat_map`).
+    struct SeatMap: Decodable {
+        let seats: Int
+        let taken: Int
+        let themes: [Int]
+        /// Index of the caller's own seat, if they hold one.
+        let mine: Int?
+
+        /// Same rule as `Progress`: a missing key degrades the grid, it never
+        /// deletes it. Falling back to 100 empty seats draws the room the app
+        /// was built to draw.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            seats  = (try? c.decodeIfPresent(Int.self, forKey: .seats)).flatMap { $0 } ?? 100
+            taken  = (try? c.decodeIfPresent(Int.self, forKey: .taken)).flatMap { $0 } ?? 0
+            themes = (try? c.decodeIfPresent([Int].self, forKey: .themes)).flatMap { $0 } ?? []
+            mine   = (try? c.decodeIfPresent(Int.self, forKey: .mine)).flatMap { $0 }
+        }
+
+        private enum CodingKeys: String, CodingKey { case seats, taken, themes, mine }
+    }
+
+    /// Every read names its club. There is one Core PER TARGET LANGUAGE
+    /// (`20260816120000_core_by_language`), so a call without a language is
+    /// a call about nobody's club — the server rejects it rather than pick.
+    static func fetchProgress(language: String) async -> Progress? {
         try? await SupabaseProvider.shared
-            .rpc("core_my_progress")
+            .rpc("core_my_progress", params: ["p_language": language])
             .execute()
             .value
+    }
+
+    static func fetchSeatMap(language: String) async -> SeatMap? {
+        try? await SupabaseProvider.shared
+            .rpc("core_seat_map", params: ["p_language": language])
+            .execute()
+            .value
+    }
+
+    /// Publish the palette this device wears, so the member's seat is drawn in
+    /// their own colour on everyone else's grid.
+    ///
+    /// Fired on launch without checking membership first: a non-member's call
+    /// updates nothing and fails at nothing, and the alternative is a
+    /// round-trip to ask a question whose answer only ever suppresses a write
+    /// that was already free.
+    static func publishTheme(_ rawValue: Int) async {
+        _ = try? await SupabaseProvider.shared
+            .rpc("core_set_theme", params: ["p_theme": rawValue])
+            .execute()
     }
 
     // MARK: - Reads
@@ -125,12 +223,13 @@ enum CoreClubService {
         return id.uuidString.lowercased()
     }
 
-    static func fetchMine() async -> Membership? {
+    static func fetchMine(language: String) async -> Membership? {
         guard let uid = await myUserId() else { return nil }
         let rows: [Membership]? = try? await SupabaseProvider.shared
             .from("core_membership")
-            .select("join_number,qualified_at,seated,seated_since,days_total")
+            .select("qualified_at,seated,seated_since,days_total")
             .eq("user_id", value: uid)
+            .eq("language", value: language.lowercased())
             .execute()
             .value
         return rows?.first
@@ -139,7 +238,7 @@ enum CoreClubService {
     static func fetchConfig() async -> Config? {
         let rows: [Config]? = try? await SupabaseProvider.shared
             .from("core_club_config")
-            .select("seats,daily_bar_seconds,entry_window_days,entry_required_days,keep_window_days,keep_required_days,bonus_seconds")
+            .select("seats,daily_bar_seconds,entry_window_days,entry_required_days,keep_window_days,keep_required_days")
             .execute()
             .value
         return rows?.first
@@ -157,11 +256,21 @@ enum CoreClubService {
     /// uppercase — the same mismatch that once made `PublicPersonaService`
     /// insert a duplicate of the user on every launch. Both sides are folded
     /// here so a caller can't get it wrong.
-    static func fetchBadges(ownerIds: [String]) async -> [String: Badge] {
+    /// `language` is the pool being BROWSED, not the learner's own — Find
+    /// people shows one language at a time, and a seal earned in another one
+    /// says nothing about the person in front of you.
+    private struct BadgeQuery: Encodable {
+        let p_user_ids: [String]
+        let p_language: String
+    }
+
+    static func fetchBadges(ownerIds: [String], language: String) async -> [String: Badge] {
         let ids = Set(ownerIds.map { $0.lowercased() })
         guard !ids.isEmpty else { return [:] }
         let rows: [Badge]? = try? await SupabaseProvider.shared
-            .rpc("core_badges_for", params: ["p_user_ids": Array(ids)])
+            .rpc("core_badges_for",
+                 params: BadgeQuery(p_user_ids: Array(ids),
+                                    p_language: language.lowercased()))
             .execute()
             .value
         return Dictionary(
@@ -190,7 +299,7 @@ enum CoreClubService {
 
         let rows: [Event]? = try? await SupabaseProvider.shared
             .from("core_events")
-            .select("id,kind,user_id,join_number,club_size,first_time")
+            .select("id,kind,user_id,club_size,first_time")
             .in("kind", values: ["seated", "club_full"])
             .gt("id", value: lastSeen ?? 0)
             .order("id", ascending: true)
@@ -228,15 +337,14 @@ enum CoreClubService {
 
         guard let one = arrivals.first else { return }
         let name = await displayName(forOwner: one.user_id)
-        let number = one.join_number ?? 0
         let body = name.map {
-            explain("\($0) joined as member \(number) — \(one.club_size) seats taken.")
-        } ?? explain("Member \(number) joined — \(one.club_size) seats taken.")
+            explain("\($0) joined the Core — \(one.club_size) seats taken.")
+        } ?? explain("Someone joined the Core — \(one.club_size) seats taken.")
         await post(title: chrome("The Core"), body: body, id: "core.arrival.\(one.id)")
     }
 
     /// A member's published persona name, when they have one. Members who
-    /// never published stay a number — the number is the payload anyway.
+    /// never published arrive unnamed — the seat count is the news either way.
     private static func displayName(forOwner ownerId: String?) async -> String? {
         guard let ownerId else { return nil }
         struct Row: Decodable { let display_name: String }

@@ -21,7 +21,8 @@ struct DailyWordsView: View {
                 if dealt && picks.isEmpty {
                     emptyState
                 } else if dealt {
-                    StudyDeckView(items: picks.map(StudyDeckItem.word), onResolve: resolve)
+                    StudyDeckView(title: "Words", items: picks.map(StudyDeckItem.word),
+                                  onResolve: resolve)
                 }
             }
             .navigationTitle("Words")

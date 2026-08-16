@@ -88,6 +88,7 @@ struct FindPeopleSheet: View {
                 } else {
                     resultsSection
                 }
+                coreLegendSection
             }
             .navigationTitle("Find people")
             .toolbarTitleDisplayMode(.inline)
@@ -176,6 +177,38 @@ struct FindPeopleSheet: View {
             } else {
                 ForEach(searchResults) { p in
                     personRow(p)
+                }
+            }
+        }
+    }
+
+    /// What the indigo seal on a row means, and the way into the club.
+    ///
+    /// This sheet is the only place the seal is shown to someone other than
+    /// its owner, and a mark a stranger can't read isn't a badge — it's a
+    /// stray glyph. It's a ROW rather than a footer because a footer can't be
+    /// tapped, and the answer to "what is that?" should be one tap away, not
+    /// four taps away in Me.
+    ///
+    /// Only drawn when a seal is actually on screen: an explanation of
+    /// something nobody in this pool has is an ad.
+    @ViewBuilder private var coreLegendSection: some View {
+        if !coreBadges.isEmpty {
+            Section {
+                NavigationLink {
+                    CoreClubView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("The Core")
+                            Text(explain("The seal marks the 100 people who speak most days. Anyone can earn one."))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "seal.fill")
+                            .foregroundStyle(Color.coreClub)
+                    }
                 }
             }
         }
@@ -276,7 +309,10 @@ struct FindPeopleSheet: View {
         // Badges last and unguarded: the sheet is fully usable without them,
         // so a Core outage must never keep anyone from meeting people.
         coreBadges = await CoreClubService.fetchBadges(
-            ownerIds: pool.compactMap(\.owner_user_id))
+            ownerIds: pool.compactMap(\.owner_user_id),
+            // The pool being browsed, which is the language whose club these
+            // seals belong to.
+            language: appState.targetLanguage)
     }
 }
 

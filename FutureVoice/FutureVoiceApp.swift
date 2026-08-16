@@ -66,15 +66,10 @@ struct FutureVoiceApp: App {
                 .environmentObject(appState)
                 .environmentObject(auth)
                 .preferredColorScheme(appState.appearance.colorScheme)
-                // UI chrome speaks the language being LEARNED, not the device's.
-                // Labels, buttons and tabs are one-word A1 vocabulary the
-                // learner meets dozens of times a day — free exposure, and the
-                // same chrome works for every target language. Explanatory
-                // copy is the exception and resolves separately through
-                // `Bundle.explanations`. SwiftUI resolves every
-                // `Text("literal")` against this locale, so the whole catalog
-                // follows with no per-call changes.
-                .environment(\.locale, Locale(identifier: appState.targetLanguage))
+                // The chrome locale is applied inside RootView, not here:
+                // it changes when onboarding ends (UILanguage.isOnboarding),
+                // and RootView's body is the one that already reads every
+                // flag that gate turns on.
         }
         .onChange(of: scenePhase) { _, phase in
             // Drill grading may have moved due dates — leave with an accurate
@@ -100,6 +95,15 @@ struct FutureVoiceApp: App {
                 // 28/30 entry bar keeps arrivals rare enough that "next time
                 // you open the app" still reads as news.
                 Task { await CoreClubService.announceArrivals() }
+                // The seat grid draws each member in the palette their own
+                // app wears, so the palette has to leave the device. Here
+                // rather than in the theme picker: a member who changed
+                // themes while signed out, or before the column existed,
+                // still lands correctly on the next foreground.
+                Task {
+                    await CoreClubService.publishTheme(
+                        UserDefaults.standard.integer(forKey: "futureselfTheme"))
+                }
             }
         }
     }
@@ -1135,6 +1139,38 @@ final class AppState: ObservableObject {
             switchLanguage(to: fallback)
         }
         enrolledLanguages.removeAll { $0 == code }
+    }
+
+    /// Re-reads everything from disk after `BackupService.restore` laid a
+    /// backup down underneath a running app.
+    ///
+    /// Without this the restore looks like it failed. Two separate reasons,
+    /// both silent: the stores resolve their paths through
+    /// `LanguageScope.active`, so a restored `targetLanguage` has to reach
+    /// this object before anything is read; and every published property here
+    /// re-persists itself on `didSet`, so the pre-restore values would write
+    /// themselves back over the restored files on the next edit.
+    ///
+    /// Order matters — the language pointer moves first, stores repoint
+    /// against it, and only then is content read. `reloadLanguageScopedState`
+    /// takes the level from the restored profile, so `proficiency`'s didSet
+    /// finds them already equal and never saves over it.
+    func adoptRestoredData() {
+        let defaults = UserDefaults.standard
+        if let native = defaults.string(forKey: Self.nativeLanguageKey) { nativeLanguage = native }
+        let enrolled = defaults.stringArray(forKey: LanguageScope.enrolledDefaultsKey) ?? []
+        if !enrolled.isEmpty { enrolledLanguages = enrolled }
+        if let target = defaults.string(forKey: Self.targetLanguageKey) { targetLanguage = target }
+        if let raw = defaults.string(forKey: Self.appearanceKey),
+           let value = AppAppearance(rawValue: raw) { appearance = value }
+
+        LanguageScope.repointStores()
+        PracticeLog.shared.reloadFromDisk()
+        reloadLanguageScopedState()
+        // Global (unscoped) stores the restore also overwrote.
+        persona = PersonaStore.shared.load()
+        counterparts = CounterpartStore.shared.load()
+        StudyWidgetRefresher.refresh()
     }
 
     /// Everything published that a language-scoped store backs. Persona and

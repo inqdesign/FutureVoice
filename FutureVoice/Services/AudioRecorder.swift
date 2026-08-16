@@ -115,23 +115,26 @@ final class AudioRecorder: ObservableObject {
         // input over HFP — 8 kHz mono telephony quality. ElevenLabs IVC clones
         // exactly what it hears, so a Bluetooth-captured sample produces a
         // clone that doesn't sound like the speaker at all. Built-in iPhone
-        // mic only.
-        // Both qualities capture through the iPhone's own mic. Clone: AirPods'
-        // 8 kHz HFP mic ruins fidelity. STT (shadowing): the same HFP mic makes
-        // recognition flaky. `.sttOptimal` keeps `.allowBluetoothA2DP` so a
-        // connected AirPods still gets hi-fi playback; clone forces the speaker
-        // since it never plays back during capture.
+        // mic only, and the speaker for output since it never plays back
+        // during capture.
+        //
+        // `.sttOptimal` (shadowing) follows the LEARNER's choice instead
+        // (2026-08-15, `MicPreferenceStore`) — by default the worn earphone
+        // mic, because the mic at their mouth beats a wider-band mic across
+        // the room. Reading the preference HERE rather than taking it as a
+        // parameter is deliberate: this recorder runs alongside
+        // LiveTranscriber's engine tap on the SAME session and re-sets the
+        // category, so if the two ever disagreed this one would silently win.
+        let forceBuiltIn = (quality == .voiceCloneHigh) || MicPreferenceStore.forcesBuiltInMic
         let options: AVAudioSession.CategoryOptions = (quality == .voiceCloneHigh)
             ? [.defaultToSpeaker]
-            : AudioSessionRouting.builtInMicCaptureOptions
+            : (forceBuiltIn ? AudioSessionRouting.builtInMicCaptureOptions
+                            : AudioSessionRouting.recordOptions)
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true)
         if quality == .sttOptimal { AudioSessionRouting.applyOutputRoute(session) }
 
-        // Force the built-in mic for BOTH: clone fidelity and reliable STT.
-        if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
-            try? session.setPreferredInput(builtIn)
-        }
+        if forceBuiltIn { AudioSessionRouting.preferBuiltInMic(session) }
 
         let url = Self.makeFileURL()
         let settings: [String: Any]

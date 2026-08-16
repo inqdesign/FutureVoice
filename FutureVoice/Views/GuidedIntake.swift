@@ -33,7 +33,7 @@ struct IntakeStepHeader: View {
 /// "Worth mentioning" bullet card — tells the user what kind of detail makes
 /// a good answer, without demanding any of it.
 struct IntakeHints: View {
-    var title: String = "Worth mentioning"
+    var title: String = chrome("Worth mentioning")
     var bullets: [String]
 
     var body: some View {
@@ -86,7 +86,7 @@ struct ChipPickerField: View {
     var presets: [String]
     @Binding var selection: [String]
     var allowsCustom: Bool = true
-    var addPrompt: String = "Add your own (comma-separated)"
+    var addPrompt: String = explain("Add your own (comma-separated)")
 
     @State private var draft = ""
 
@@ -99,7 +99,8 @@ struct ChipPickerField: View {
                     Button {
                         toggle(tag)
                     } label: {
-                        IntakeChipLabel(text: tag, isOn: selection.contains(tag))
+                        IntakeChipLabel(text: PersonaOnboardingView.presetLabel(tag),
+                                        isOn: selection.contains(tag))
                     }
                     .buttonStyle(.plain)
                 }
@@ -178,7 +179,7 @@ struct SpeakOrTypeField: View {
     /// Flips true once any dictation lands in `text` — callers use it to
     /// decide whether the answer needs an LLM cleanup pass on finish.
     var usedVoice: Binding<Bool>? = nil
-    var placeholder: String = "Type here — or tap the mic and just talk. I'll sort it out."
+    var placeholder: String = explain("Type here — or tap the mic and just talk. I'll sort it out.")
     /// Hide the per-field native/target segmented control when the host puts
     /// ONE shared toggle above several stacked fields (PersonaDeepenSheet) —
     /// three copies of the same picker read as clutter.
@@ -299,7 +300,7 @@ struct SpeakOrTypeField: View {
         }
         let granted = await LiveTranscriber.requestPermissions()
         guard granted else {
-            error = "Microphone or speech permission denied."
+            error = explain("Microphone or speech permission denied.")
             return
         }
         error = nil

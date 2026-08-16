@@ -34,24 +34,31 @@ struct WelcomeView: View {
         let subtitle: String
     }
 
-    private static let features: [Feature] = [
-        // Slide one carries the whole product in two lines — the user should
-        // agree with THIS before anything else: another you, already fluent,
-        // and you learn English by talking with it.
-        Feature(title: "Another you.\nAlready fluent.",
-                subtitle: "Free talk, today's topics, real situations — speaking practice with your fluent self, in your voice."),
-        // Watch comes BEFORE People: first the idea (make any situation,
-        // watch your fluent self handle it — that's where expressions come
-        // from), then the deepening (do it with your real people).
-        Feature(title: "Watch yourself\nhandle it",
-                subtitle: "Make any situation — watch your fluent self handle it. That's where the ideas come from."),
-        Feature(title: "Then, with\nyour people",
-                subtitle: "Your barista, your boss, your doctor — watch your fluent self talk with them, then practice it."),
-        Feature(title: "Make the words yours",
-                subtitle: "Shadow the exact lines in your own voice, at any speed, until they stick."),
-        Feature(title: "Grow your word world",
-                subtitle: "Every word you speak joins your cloud — drag through it, tap any word for meaning and examples.")
-    ]
+    /// The pitch. Every line here is `explain()`, not chrome: this is the one
+    /// screen that has to be UNDERSTOOD before anything else happens, and a
+    /// learner who can't read the claim can't agree with it. Computed, not a
+    /// `let` — a stored static would resolve its strings once per process, and
+    /// setup's first question can change the learner's language behind it.
+    private static var features: [Feature] {
+        [
+            // Slide one carries the whole product in two lines — the user should
+            // agree with THIS before anything else: another you, already fluent,
+            // and you learn English by talking with it.
+            Feature(title: explain("Another you.\nAlready fluent."),
+                    subtitle: explain("Free talk, today's topics, real situations — speaking practice with your fluent self, in your voice.")),
+            // Watch comes BEFORE People: first the idea (make any situation,
+            // watch your fluent self handle it — that's where expressions come
+            // from), then the deepening (do it with your real people).
+            Feature(title: explain("Watch yourself\nhandle it"),
+                    subtitle: explain("Make any situation — watch your fluent self handle it. That's where the ideas come from.")),
+            Feature(title: explain("Then, with\nyour people"),
+                    subtitle: explain("Your barista, your boss, your doctor — watch your fluent self talk with them, then practice it.")),
+            Feature(title: explain("Make the words yours"),
+                    subtitle: explain("Shadow the exact lines in your own voice, at any speed, until they stick.")),
+            Feature(title: explain("Grow your word world"),
+                    subtitle: explain("Every word you speak joins your cloud — drag through it, tap any word for meaning and examples."))
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {

@@ -30,7 +30,7 @@ struct DueReviewView: View {
                 if dealt && items.isEmpty {
                     emptyState
                 } else if dealt {
-                    StudyDeckView(items: items, onResolve: resolve)
+                    StudyDeckView(title: "Review", items: items, onResolve: resolve)
                 }
             }
             .navigationTitle("Review")

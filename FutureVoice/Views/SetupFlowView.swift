@@ -86,15 +86,19 @@ struct SetupFlowView: View {
         }
     }
 
+    /// A `String`, so it can't ride the environment locale — hence `chrome()`
+    /// rather than a bare literal. Through onboarding that resolves to the
+    /// learner's own language (see `UILanguage.isOnboarding`), which is the
+    /// only sane answer on a screen where the target hasn't been picked yet.
     private var title: String {
         switch step {
         // "Your language?" carried the same ambiguity the Me row did — on the
         // very first screen, before any context, it reads as "which language
         // am I here to learn?". Say native.
-        case 0: return "Your native language?"
-        case 1: return "Learn which language?"
-        case 2: return "Your level?"
-        default: return "Your daily goal?"
+        case 0: return chrome("Your native language?")
+        case 1: return chrome("Learn which language?")
+        case 2: return chrome("Your level?")
+        default: return chrome("Your daily goal?")
         }
     }
 
@@ -108,7 +112,7 @@ struct SetupFlowView: View {
             ForEach(targetChoices, id: \.self) { code in
                 pickRow(
                     title: Self.endonym(code),
-                    subtitle: Self.englishName(code),
+                    subtitle: ownName(code),
                     selected: targetLanguage == code
                 ) { targetLanguage = code }
             }
@@ -137,7 +141,7 @@ struct SetupFlowView: View {
         } header: {
             Text(explain("How comfortable are you right now?"))
         } footer: {
-            Text(explain("You're about to build your fluent self — another you that already speaks fluent \(Self.englishName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk."))
+            Text(explain("You're about to build your fluent self — another you that already speaks fluent \(ownName(targetLanguage)). This sets how it will speak and what it corrects. Not sure? Pick the closest — the app adjusts as you talk."))
         }
     }
 
@@ -149,7 +153,7 @@ struct SetupFlowView: View {
         Section {
             ForEach([5, 10, 15, 20, 30], id: \.self) { m in
                 pickRow(
-                    title: "\(m) min a day",
+                    title: chrome("\(m) min a day"),
                     subtitle: Self.goalBlurb(m),
                     selected: goalMinutes == m
                 ) { goalMinutes = m }
@@ -175,11 +179,11 @@ struct SetupFlowView: View {
     private static func levelBlurb(_ level: CEFRLevel) -> String {
         switch level {
         case .a1: return explain("Just starting — a few words and set phrases")
-        case .a2: return "Basic — simple, everyday exchanges"
+        case .a2: return explain("Basic — simple, everyday exchanges")
         case .b1: return explain("Conversational — I get by on familiar topics")
         case .b2: return explain("Independent — I discuss most things with some ease")
         case .c1: return explain("Advanced — I express myself fluently and precisely")
-        case .c2: return "Mastery — effortless, near-native"
+        case .c2: return explain("Mastery — effortless, near-native")
         }
     }
 
@@ -193,7 +197,7 @@ struct SetupFlowView: View {
             ForEach(Self.nativeChoices, id: \.self) { code in
                 pickRow(
                     title: Self.endonym(code),
-                    subtitle: Self.englishName(code),
+                    subtitle: ownName(code),
                     selected: nativeLanguage == code
                 ) { nativeLanguage = code }
             }
@@ -238,9 +242,20 @@ struct SetupFlowView: View {
         LanguageCatalog.endonym(code)
     }
 
-    /// Language name in the device UI language (English today).
-    private static func englishName(_ code: String) -> String {
-        LanguageCatalog.englishName(code)
+    /// Language name in the LEARNER's own language — "영어", "Deutsch".
+    ///
+    /// The caption under an endonym exists to answer "which language is this?",
+    /// and it can only answer that in a language they already read. It used to
+    /// be the English name, which told a Korean opening the app for the first
+    /// time that 한국어 is "Korean" — true, and useless. `LanguageCatalog
+    /// .englishName` stays where it belongs: in prompts, where the model wants
+    /// the English name.
+    ///
+    /// Reads the step-one `@State`, not the stored setting, so tapping down
+    /// the native list re-labels the whole screen as you go.
+    private func ownName(_ code: String) -> String {
+        Locale(identifier: nativeLanguage).localizedString(forLanguageCode: code)?.capitalized
+            ?? LanguageCatalog.englishName(code)
     }
 
     // MARK: - Bottom bar

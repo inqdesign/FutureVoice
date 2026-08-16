@@ -68,6 +68,11 @@ struct ShadowDrillView: View {
     @State private var activeRange: ClosedRange<Int>?
     @State private var attemptTargetText: String = ""
     @State private var attemptTargetDurationMs: Int = 0
+    /// One-time "which mic?" question (see `MicPreferenceStore`). The take
+    /// waits on the answer, so the choice applies to the very first attempt
+    /// rather than to the one after it.
+    @State private var askingMicChoice = false
+    @State private var micChoiceContinuation: CheckedContinuation<Void, Never>?
 
     struct UserWordHit: Hashable {
         let word: String
@@ -130,6 +135,9 @@ struct ShadowDrillView: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
+                MicChoiceSheet { _ in }
             }
             .onChange(of: live.currentWordTimings) { _, new in
                 applyWordTimings(new)
@@ -838,23 +846,31 @@ struct ShadowDrillView: View {
 
     private var micSymbol: String {
         switch phase {
-        case .syncing:   return "stop.fill"
+        // An X, not a stop square: mid-attempt this button DISCARDS the take
+        // (see handleSyncTap). A stop glyph would promise "end and score it",
+        // which is the auto-stop's job and the opposite of what a tap does.
+        case .syncing:   return "xmark"
         case .analyzing: return "ellipsis"
         case .result:    return "arrow.counterclockwise"
         default:         return "mic.fill"
         }
     }
 
+    /// `chrome(…)`, not bare literals: this is a `String`-typed switch, so a
+    /// plain literal never sees the root's `\.locale` and stayed English in
+    /// every language. Exactly the case `chrome` exists for.
     private var micHint: String {
         switch phase {
         case .idle:        return practiceRange == nil
-            ? "Tap to sync-shadow" : "Tap to shadow the selected phrase"
-        case .loadingAudio:return "Loading…"
-        case .countdown:   return "Speak when 0 hits"
-        case .syncing:     return "Follow the highlight"
-        case .analyzing:   return "Comparing…"
+            ? chrome("Tap to sync-shadow") : chrome("Tap to shadow the selected phrase")
+        case .loadingAudio:return chrome("Loading…")
+        case .countdown:   return chrome("Speak when 0 hits")
+        // Recording ends by itself, so the only thing left to say about the
+        // button is what it now does — discard this take.
+        case .syncing:     return chrome("Follow the highlight · tap to cancel")
+        case .analyzing:   return chrome("Comparing…")
         case .result:      return practiceRange == nil
-            ? "Tap to try again" : "Tap to shadow the selected phrase"
+            ? chrome("Tap to try again") : chrome("Tap to shadow the selected phrase")
         }
     }
 
@@ -922,7 +938,15 @@ struct ShadowDrillView: View {
         case .idle, .result:
             await startSync()
         case .syncing:
-            finishSync()
+            // CANCEL, not stop (2026-08-15). Ending an attempt is the
+            // auto-stop's job — it waits out the line's own length and then
+            // 1.5s of real quiet, so a learner who is finished never has to
+            // press anything. That leaves the button with exactly one useful
+            // meaning mid-attempt: "this one went wrong, throw it away."
+            // Scoring a botched take isn't just noise in the history — below
+            // 90 it also spends a Gemini coach call on an attempt the learner
+            // has already disowned.
+            cancelSync()
         default:
             break
         }
@@ -950,6 +974,23 @@ struct ShadowDrillView: View {
         return hints
     }
 
+    /// Suspends until the learner answers the mic sheet, and does nothing at
+    /// all once they have (or with no Bluetooth device connected). `onDismiss`
+    /// is what resumes, so either button — and any future dismissal path —
+    /// lands in exactly one place.
+    private func askMicChoiceIfNeeded() async {
+        guard MicPreferenceStore.shouldAsk() else { return }
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            micChoiceContinuation = cont
+            askingMicChoice = true
+        }
+    }
+
+    private func resumeAfterMicChoice() {
+        micChoiceContinuation?.resume()
+        micChoiceContinuation = nil
+    }
+
     private func startSync() async {
         // Stop any loop/preview playback before recording so the speaker audio
         // doesn't bleed into the mic.
@@ -973,6 +1014,12 @@ struct ShadowDrillView: View {
             error = "Microphone or speech permission denied."
             return
         }
+
+        // First mic use with earphones connected: ask once which mic records
+        // (`MicPreferenceStore`). Right after the permission prompts so the
+        // questions don't stack, and BEFORE the countdown so the answer
+        // governs this take. Returns immediately every other time.
+        await askMicChoiceIfNeeded()
 
         // Freeze what this attempt practices: the selected phrase, or the
         // whole line. Everything downstream — STT bias, scoring, coach
@@ -1004,8 +1051,20 @@ struct ShadowDrillView: View {
             // processing, which made the karaoke line (and everything after)
             // noticeably QUIETER than a Talk call. Conversation already opts
             // out for the same reason; recognition runs fine in `.default`
-            // (it's the live call's own STT mode). Input still forces the
-            // built-in mic.
+            // (it's the live call's own STT mode).
+            //
+            // preferBuiltInMic (2026-08-15): the LEARNER's answer, not ours.
+            // This hard-forced the built-in mic on the theory that scoring
+            // needs the cleanest input; that theory ignores WHERE the mic is.
+            // A phone on the desk or in a pocket is metres from the mouth
+            // while the earphone mic sits at it, so forcing built-in traded a
+            // wider band for a far worse signal — and the learner reads the
+            // resulting low score as the app misjudging them. Which of the two
+            // is true depends on where the phone is, which only they can see,
+            // so `MicPreferenceStore` asks once and remembers. HFP output
+            // narrowing costs nothing here: nothing plays while the mic is hot
+            // (see above), and both the target line and the attempt play back
+            // through a fresh `playbackOptions` session.
             //
             // voiceProcessing: true (2026-08-14) — this ran on the RAW mic
             // until now, on the reasoning that shadow scores deterministically
@@ -1019,7 +1078,8 @@ struct ShadowDrillView: View {
             // a noise floor high enough that `lastVoicedAt` never went stale,
             // so the auto-stop below could only ever fire on its hard ceiling.
             // Talk made exactly this trade earlier in 2026-08.
-            try live.start(locale: targetLanguage, preferBuiltInMic: true,
+            try live.start(locale: targetLanguage,
+                           preferBuiltInMic: MicPreferenceStore.forcesBuiltInMic,
                            measurementMode: false,
                            contextualStrings: Self.recognitionHints(for: attemptTargetText),
                            voiceProcessing: true)
@@ -1105,6 +1165,37 @@ struct ShadowDrillView: View {
             guard !Task.isCancelled, phase == .syncing else { return }
             finishSync()
         }
+    }
+
+    /// Abandon the take: no scoring, no coach call, nothing written to
+    /// history, and the WAV is deleted rather than left to accumulate in
+    /// Documents under a filename no attempt references.
+    ///
+    /// Deliberately synchronous and complete — a cancel that leaves the
+    /// recognizer running would keep the mic hot and let a late final result
+    /// arrive into the next attempt.
+    private func cancelSync() {
+        guard phase == .syncing else { return }
+        autoStopTask?.cancel()
+        autoStopTask = nil
+        _ = live.stop()
+        _ = recorder.stop()
+        if let url = recordingFileURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        recordingFileURL = nil
+        // Everything the attempt would have populated, back to pre-attempt —
+        // otherwise a previous result's diff/rhythm sits under an idle mic.
+        syncStartedAt = nil
+        userWordTimings = []
+        prevTranscript = ""
+        activeRange = nil
+        feedback = nil
+        diffSteps = []
+        rhythm = nil
+        phase = .idle
+        HapticEngine.selection()
+        Telemetry.log("shadow_attempt_cancelled")
     }
 
     private func finishSync() {

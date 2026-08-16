@@ -39,6 +39,41 @@ struct PersonaOnboardingView: View {
         "Daily small talk"
     ]
 
+    /// What a preset chip READS as. The stored value stays English on purpose:
+    /// it is written into `persona.interests` / `.situations`, injected into
+    /// every prompt built from the persona, and matched by string to decide
+    /// which chip is on — localizing the value would rewrite saved profiles and
+    /// un-select every chip an existing user had already picked. Only the label
+    /// moves. A tag the learner typed themselves falls through unchanged, which
+    /// is correct: it is already in their words.
+    static func presetLabel(_ tag: String) -> String {
+        switch tag {
+        case "AI / tech":         return chrome("AI / tech")
+        case "parenting":         return chrome("parenting")
+        case "language learning": return chrome("language learning")
+        case "music":             return chrome("music")
+        case "podcasts":          return chrome("podcasts")
+        case "cooking":           return chrome("cooking")
+        case "travel":            return chrome("travel")
+        case "sports":            return chrome("sports")
+        case "fashion":           return chrome("fashion")
+        case "finance":           return chrome("finance")
+        case "science":           return chrome("science")
+        case "art":               return chrome("art")
+        case "Work meetings":     return chrome("Work meetings")
+        case "Client calls":      return chrome("Client calls")
+        case "Kita / school":     return chrome("Kita / school")
+        case "Doctor / clinic":   return chrome("Doctor / clinic")
+        case "Travel":            return chrome("Travel")
+        case "Online shopping":   return chrome("Online shopping")
+        case "Customer service":  return chrome("Customer service")
+        case "Streaming / shows": return chrome("Streaming / shows")
+        case "Reading articles":  return chrome("Reading articles")
+        case "Daily small talk":  return chrome("Daily small talk")
+        default:                  return tag
+        }
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -64,9 +99,9 @@ struct PersonaOnboardingView: View {
 
     private var title: String {
         switch step {
-        case 0: return isEditing ? "Profile" : "Hi"
-        case 1: return "Your life"
-        default: return "Your \(LanguageCatalog.englishName(appState.targetLanguage)) world"
+        case 0: return isEditing ? chrome("Profile") : chrome("Hi")
+        case 1: return chrome("Your life")
+        default: return chrome("Your \(LanguageCatalog.learnerName(appState.targetLanguage)) world")
         }
     }
 
@@ -154,7 +189,7 @@ struct PersonaOnboardingView: View {
                 TextField("Add your own (comma-separated)", text: $situationsDraft)
                     .onSubmit { mergeDraft(into: &persona.situations, from: &situationsDraft) }
             } header: {
-                Text(explain("When do you most need \(LanguageCatalog.englishName(appState.targetLanguage))?"))
+                Text(explain("When do you most need \(LanguageCatalog.learnerName(appState.targetLanguage))?"))
             }
 
             Section("Anything else (optional)") {
@@ -175,7 +210,7 @@ struct PersonaOnboardingView: View {
                 Button {
                     onTap(tag)
                 } label: {
-                    Text(tag)
+                    Text(Self.presetLabel(tag))
                         .font(.subheadline)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)

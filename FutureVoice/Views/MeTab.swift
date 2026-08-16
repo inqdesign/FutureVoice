@@ -17,6 +17,7 @@ struct MeTab: View {
     @AppStorage(VoicePreset.sceneDefaultKey) private var defaultSceneVoiceId = VoicePreset.catalog[0].id
     /// Talk-call playback gain (0.25–1.0). Same key `AudioPlayer` reads.
     @AppStorage(AudioPlayer.talkVoiceVolumeKey) private var talkVoiceVolume = 1.0
+    @AppStorage(MicPreferenceStore.key) private var micPreference = MicPreference.earphone.rawValue
     @State private var account: AccountStatus = .empty
     /// AI's holistic CEFR read of the last few conversations (mode of the
     /// last 3 scored sessions — same read as ProgressTab). Level changes stay
@@ -54,6 +55,12 @@ struct MeTab: View {
     @State private var pickingAccent = false
     @State private var importingBackup = false
     @State private var backupResult: String?
+    /// Non-nil while an export or import is running — it's both the progress
+    /// row's content and the "busy" flag that keeps the other direction from
+    /// starting on top of it.
+    @State private var backupStep: BackupService.Step?
+    /// The finished export, waiting to be shared.
+    @State private var exportedBackup: URL?
     @State private var confirmingConsentWithdrawal = false
     @State private var withdrawingConsent = false
     #if DEBUG
@@ -281,7 +288,7 @@ struct MeTab: View {
                 onResetOnboarding: { appState.resetOnboarding() }))
             #endif
             .task { account = await AccountStatus.fetch() }
-            .task { coreMembership = await CoreClubService.fetchMine() }
+            .task { coreMembership = await CoreClubService.fetchMine(language: appState.targetLanguage) }
             .task { aiLevel = recentAILevel() }
             .task(id: appState.enrolledLanguages) { refreshLevelCache() }
         }
@@ -379,35 +386,51 @@ struct MeTab: View {
     /// never reaches the other by itself. See `BackupService`.
     private var backupSection: some View {
         Section {
-            ShareLink(item: BackupFile(),
-                      preview: SharePreview("FutureVoice backup")) {
+            Button {
+                startExport()
+            } label: {
                 Label("Export practice data", systemImage: "square.and.arrow.up")
+            }
+            .disabled(backupStep != nil)
+            // Export used to be a ShareLink that built the file inside its
+            // Transferable, which meant a minutes-long pack behind a share
+            // sheet that showed nothing. It's a two-step now — build with a
+            // visible bar, THEN share the finished file — because the only
+            // honest way to show progress is to own the work.
+            if let url = exportedBackup {
+                ShareLink(item: url, preview: SharePreview("FutureVoice backup")) {
+                    Label {
+                        Text("Share backup")
+                        Text(backupFileSize(url)).font(.caption).foregroundStyle(.secondary)
+                    } icon: {
+                        Image(systemName: "checkmark.circle")
+                    }
+                }
             }
             Button {
                 importingBackup = true
             } label: {
                 Label("Import practice data", systemImage: "square.and.arrow.down")
             }
+            .disabled(backupStep != nil)
+            if let step = backupStep {
+                backupProgressRow(step)
+            }
         } header: {
             Text("Practice data")
         } footer: {
-            Text(explain("Everything you've practiced on this device — talks, drills, words, books — as one file. Use it to carry progress into another install. Your voice and minutes already follow your account."))
+            Text(explain("Everything you've practiced on this device — talks, drills, words, books — plus your languages, levels and goals, as one file. Use it to carry progress into another install. Your voice and minutes already follow your account."))
         }
         .fileImporter(isPresented: $importingBackup,
                       allowedContentTypes: [.item]) { result in
             switch result {
             case .success(let url):
-                do {
-                    let count = try BackupService.restore(from: url)
-                    backupResult = explain("Restored \(count) files. Quit the app completely and reopen it — your practice will be there.")
-                } catch {
-                    backupResult = error.localizedDescription
-                }
+                startImport(from: url)
             case .failure(let error):
                 backupResult = error.localizedDescription
             }
         }
-        .alert("Import practice data",
+        .alert("Practice data",
                isPresented: Binding(get: { backupResult != nil },
                                     set: { if !$0 { backupResult = nil } })) {
             Button("OK") { backupResult = nil }
@@ -416,11 +439,70 @@ struct MeTab: View {
         }
     }
 
-    /// Lazily builds the backup file the moment the share sheet asks for it.
-    private struct BackupFile: Transferable {
-        static var transferRepresentation: some TransferRepresentation {
-            FileRepresentation(exportedContentType: .data) { _ in
-                SentTransferredFile(try BackupService.export())
+    /// The one place either direction reports itself. A determinate bar where
+    /// the step can count, an indeterminate one where it can't — never a bar
+    /// standing still on a made-up number.
+    private func backupProgressRow(_ step: BackupService.Step) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let fraction = step.fraction {
+                ProgressView(value: fraction)
+            } else {
+                ProgressView().progressViewStyle(.linear)
+            }
+            Text(backupStepDescription(step))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func backupStepDescription(_ step: BackupService.Step) -> String {
+        switch step {
+        case .scanning:
+            return explain("Looking through your practice data…")
+        case let .packing(done, total):
+            return explain("Packing \(done) of \(total) files…")
+        case .encoding:
+            return explain("Writing the backup file. This is the slow part — keep the app open.")
+        case .decoding:
+            return explain("Reading the backup file. This is the slow part — keep the app open.")
+        case let .restoring(done, total):
+            return explain("Restoring \(done) of \(total) files…")
+        }
+    }
+
+    private func backupFileSize(_ url: URL) -> String {
+        let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        return Int64(bytes).formatted(.byteCount(style: .file))
+    }
+
+    private func startExport() {
+        exportedBackup = nil
+        backupStep = .scanning
+        Task {
+            defer { backupStep = nil }
+            do {
+                exportedBackup = try await BackupService.export { backupStep = $0 }
+            } catch {
+                backupResult = error.localizedDescription
+            }
+        }
+    }
+
+    private func startImport(from url: URL) {
+        backupStep = .decoding
+        Task {
+            defer { backupStep = nil }
+            do {
+                let report = try await BackupService.restore(from: url) { backupStep = $0 }
+                appState.adoptRestoredData()
+                if report.files == 0 {
+                    backupResult = explain("That file held no practice data — nothing was restored. Export again from the other install and check the file is the one you just made.")
+                } else {
+                    backupResult = explain("Restored \(report.files) files and \(report.defaults) settings. Quit the app completely and reopen it.")
+                }
+            } catch {
+                backupResult = error.localizedDescription
             }
         }
     }
@@ -635,6 +717,24 @@ struct MeTab: View {
                 }
                 Slider(value: $talkVoiceVolume, in: 0.25...1.0, step: 0.05)
             }
+            // Only bites with Bluetooth connected — wired and speaker routes
+            // use the built-in mic either way. Shown unconditionally anyway:
+            // a setting that appears and disappears with a connection is a
+            // setting nobody can find when they want it.
+            VStack(alignment: .leading, spacing: 4) {
+                Picker(selection: $micPreference) {
+                    Text("Earphone mic").tag(MicPreference.earphone.rawValue)
+                    Text("Phone mic").tag(MicPreference.phone.rawValue)
+                } label: {
+                    Label("Recording mic", systemImage: "mic")
+                }
+                Text(explain("Only applies while Bluetooth earphones are connected. The earphone mic sounds narrower but is always at your mouth; the phone mic captures more detail but only when the phone is near you."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            // Choosing here answers the question for good, so the one-time
+            // sheet never interrupts a call later.
+            .onChange(of: micPreference) { _, _ in MicPreferenceStore.hasChosen = true }
             NavigationLink {
                 VoicePresetPickerView(selection: $defaultSceneVoiceId)
                     .environmentObject(appState)
@@ -769,8 +869,8 @@ struct MeTab: View {
     private var coreClubSummary: String {
         guard let m = coreMembership else { return chrome("100 seats · 28 of 30 days to enter") }
         return m.seated
-            ? chrome("Member #\(m.joinNumber) · \(m.daysTotal) days")
-            : chrome("Member #\(m.joinNumber) · no seat right now")
+            ? chrome("In the Core · \(m.daysTotal) days")
+            : chrome("No seat right now")
     }
 
     private var planPage: some View {

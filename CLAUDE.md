@@ -50,7 +50,24 @@ Nobody opens a language app because a streak asks them to; they answer a phone t
 - Tapping is handled by `DailyCallNotificationDelegate` (installed from `AppDelegate` — the delegate MUST be set before launch finishes or a lock-screen answer is lost), which posts to `DailyCallInbox.shared`; `RootTabView` presents the call from there.
 - `interruptionLevel = .timeSensitive` is set but inert until the Time Sensitive capability is added to the App ID — harmless without the entitlement, no signing change needed today.
 
-## The Core (100 seats)
+## The Core (100 seats, per language)
+
+**One club PER TARGET LANGUAGE** (`20260816120000_core_by_language`) —
+`core_membership` is keyed `(user_id, language)`, settlement loops over
+languages, and every client read names its club. A seat is a claim about
+keeping ONE language up, so it can't follow you when you switch; Find people is
+already per language, so a cross-language seal was appearing beside names it
+said nothing about. A learner with two target languages earns a seat in each,
+separately.
+
+The Core's activity comes from its OWN ledger, `talk_seconds_by_language`,
+written by `charge_talk_seconds(p_language)` — not from `tts_char_pool`.
+Billing's per-day pool is keyed `(user_id, day, action)` and widening it would
+put metering on the critical path of a feature that grants nothing. **`p_language`
+is optional**: a build that doesn't send it bills exactly as before and counts
+toward no club, which is right — a client that can't say what was spoken must
+not be guessed at. `TalkMeter` reads it from defaults rather than taking it as
+a parameter, because the meter is started from several surfaces.
 
 A 100-seat club of learners who actually speak most days. It exists to build
 and KEEP a core, not to run a contest — so membership is a BAR, never a rank,
@@ -82,10 +99,13 @@ resetting to zero, and the UI must say so (`CoreClubView` shows a DISTANCE —
   seen by a stranger. A stranger sees the seal and nothing else: no number, no
   rank, no talk time. Rank decides who gets in; inside the club everyone is
   equal.
-- **Reward** = `bonus_seconds` added to that day's cap in
-  `consume_metered_seconds`, for as long as the seat is held. Never written to
-  a balance — it must not accumulate into a liability, and a non-subscriber
-  must not be able to spend it (the hard paywall stays hard).
+- **The Core grants NOTHING** (`20260816100000_core_grants_nothing`). It used
+  to add `bonus_seconds` to the day's talk cap; that was near-worthless to the
+  tier most likely to qualify (against Unlimited's 3600 s/day it was under 7%)
+  and it made a record of persistence look like a loyalty discount. There is
+  no payout, no unlock, no priority. The club is a standing and a record —
+  honour, and a promise kept to yourself. **Do not add a perk**; the absence is
+  the design, and it is why the Core no longer touches billing at all.
 - **Only talking counts.** `core_daily_activity` reads `talk_seconds` alone;
   Watch scenes (`scene_seconds` / `scene_counted`) can never move anyone
   toward a seat. Upgrade path: point that view at per-turn utterance seconds
@@ -173,7 +193,8 @@ Two cases that look like exceptions but aren't:
 
 Four string catalogs (+ `SWIFT_EMIT_LOC_STRINGS`) hold every UI string, and the build extracts SwiftUI literals into them automatically, so they can't drift from the code: `FutureVoice/Resources/Localizable.xcstrings` (the app), `FutureVoiceWidget/Localizable.xcstrings` (the extension — `StudyWidgetShared.swift` compiles into both targets, so its literals land in BOTH and must be translated identically), and an `InfoPlist.xcstrings` beside each Info.plist (permission alerts and the Home-screen name — OS-drawn, so they follow the DEVICE language; an alert is not our surface). `UILanguage.swift` decides which language each string resolves in:
 
-- **Chrome → the TARGET language.** Tabs, labels, buttons, titles, chips. One-word A1 vocabulary the learner meets dozens of times a day next to an icon: free exposure at no comprehension cost, and the same chrome serves every target language. Wired once at the app root as `.environment(\.locale, targetLanguage)` — every `Text("literal")` follows with **no per-call code**.
+- **Chrome → the TARGET language.** Tabs, labels, buttons, titles, chips. One-word A1 vocabulary the learner meets dozens of times a day next to an icon: free exposure at no comprehension cost, and the same chrome serves every target language. Wired once in `RootView.body` as `.environment(\.locale, UILanguage.chromeLanguage)` — every `Text("literal")` follows with **no per-call code**. It sits there rather than at the app root because `chromeLanguage` answers from UserDefaults and `RootView` is the body that reads the flags below.
+- **ONE exception: onboarding speaks the learner's own language** (`UILanguage.isOnboarding`, true until setup + the voice clone + the daily-call intro are all done). On the first two screens no target has been picked yet, so `targetLanguage` is still its `"en"` placeholder and a Korean phone opened the app in English; and nothing in the flow is recognized-by-shape anyway — every screen asks the learner to decide, consent, or follow a recording instruction. So the whole flow follows `LanguageCatalog.currentNative`, which defaults to the DEVICE language. Chrome-follows-target resumes on the tabs. That means an onboarding string in a `String` (a computed nav title, a `switch` returning a label) still has to go through `chrome(…)`/`explain(…)` — a bare literal there is frozen English, which is how most of onboarding shipped untranslated until 2026-08-16.
 - **Explanations → the NATIVE language, always.** Why a number moved, what a control does, what a term means, what a confirm will destroy, empty states that instruct, error recovery. Wrap these in `explain("…")` (which resolves through `Bundle.explanations`), which resolves `LanguageCatalog.currentNative` — the language the learner picked in setup and can change in Me. There is no level gate: this used to flip to the target language above B1, and it was removed (2026-08-14) because speaking proficiency doesn't imply wanting to decode a delete-confirmation, and because a level moved for calibration reasons silently changed the app's language. An explicit setting outranks an inference about it.
 
 `explain()` is the ONLY marker — an unwrapped literal is chrome by default. When adding UI text, ask "does the learner have to parse this to act, or do they recognize it by shape?" Parse → `explain()`. Recognize → plain `Text`.
