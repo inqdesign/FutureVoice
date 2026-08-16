@@ -10578,6 +10578,22 @@
         }
       }
     },
+    "Opens activity calendar.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동 달력을 엽니다."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffnet den Aktivitätskalender."
+          }
+        }
+      }
+    },
     "Opens the full card": {
       "localizations": {
         "de": {
@@ -15179,16 +15195,16 @@
     },
     "The first seats open on %@.": {
       "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "첫 자리는 %@에 열려요."
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Die ersten Plätze öffnen am %@."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 자리는 %@에 열려요."
           }
         }
       }

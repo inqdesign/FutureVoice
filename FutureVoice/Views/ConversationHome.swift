@@ -509,29 +509,46 @@ struct ConversationHome: View {
         .frame(width: 280, height: 280)
     }
 
-    /// Header streak chip — tap opens the activity calendar (the old Today
-    /// card's tap target). Hidden until a streak exists.
-    @ViewBuilder
+    /// Header chip — the one Today stat up here, and the ONLY way into the
+    /// activity calendar.
+    ///
+    /// It used to hide itself entirely until a streak existed, to avoid
+    /// printing "0 day streak" at someone. That was right about the number and
+    /// wrong about the button: the chip is also the navigation, so a learner
+    /// with no streak — exactly the person most likely to be looking for
+    /// where they stand — had no route to the page at all.
+    ///
+    /// So the button is always there and only its CONTENTS change. No zero is
+    /// ever shown; with no streak it simply says what it opens.
     private var streakChip: some View {
-        if snapshot.streakDays > 0 {
-            Button {
-                showingActivity = true
-            } label: {
-                HStack(spacing: 4) {
+        Button {
+            showingActivity = true
+        } label: {
+            HStack(spacing: 4) {
+                if snapshot.streakDays > 0 {
                     Image(systemName: "flame.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.orange)
                     Text("\(snapshot.streakDays) day streak")
                         .font(.footnote.weight(.semibold))
                         .foregroundStyle(.primary)
+                } else {
+                    Image(systemName: "calendar")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("Activity")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Capsule().fill(Color(.secondarySystemFill)))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(snapshot.streakDays) day streak. Opens activity calendar.")
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color(.secondarySystemFill)))
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(snapshot.streakDays > 0
+            ? "\(snapshot.streakDays) day streak. Opens activity calendar."
+            : "Opens activity calendar.")
     }
 
     private var goalHeadline: String {
