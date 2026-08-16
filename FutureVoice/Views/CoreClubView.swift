@@ -192,11 +192,19 @@ struct CoreClubView: View {
             Text("Where you stand")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
-                // While the window still reaches back past the day counting
-                // began, an empty month is not a verdict — it's a start date.
-                // Give them something to wait for instead of a score to lose.
-                if let first = p.firstSeatDate, p.hasUncountedDays {
-                    Text(explain("Counting started \(p.countingSinceText). The faint days are before that — they're not misses. The first seat can be taken on \(first)."))
+                // One forward-looking fact, or nothing.
+                //
+                // This used to be three sentences: when the server started
+                // counting, what the faint cells mean, and the date. All three
+                // were about the SYSTEM — its ledger, its pixel shading, its
+                // history — and a learner opening this screen is asking one
+                // question, which is when they can get in. The rest was the
+                // app explaining its own plumbing and apologising for it.
+                //
+                // It also only matters for the first month, so it must not
+                // read like permanent furniture.
+                if let first = p.firstSeatDate, p.hasUncountedDays, p.member == nil {
+                    Text(explain("The first seats open on \(first)."))
                 }
                 // Watch now has its own visible daily allowance, which makes
                 // it reasonable to assume scenes count here too. They never

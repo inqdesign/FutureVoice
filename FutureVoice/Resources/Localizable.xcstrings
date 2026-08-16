@@ -4049,28 +4049,6 @@
         }
       }
     },
-    "Counting started %@. The faint days are before that — they're not misses. The first seat can be taken on %@.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "Counting started %1$@. The faint days are before that — they're not misses. The first seat can be taken on %2$@."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@부터 세기 시작했어요. 흐린 날들은 그 전이라 빠뜨린 날이 아닙니다. 첫 자리는 %2$@에 나올 수 있어요."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gezählt wird seit %1$@. Die blassen Tage liegen davor — das sind keine Fehltage. Der erste Platz kann am %2$@ vergeben werden."
-          }
-        }
-      }
-    },
     "Country": {
       "localizations": {
         "de": {
@@ -15195,6 +15173,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "추정 레벨"
+          }
+        }
+      }
+    },
+    "The first seats open on %@.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 자리는 %@에 열려요."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die ersten Plätze öffnen am %@."
           }
         }
       }
