@@ -130,17 +130,18 @@ struct CoreClubView: View {
     /// 7% — and framing-wise it turned a record of having kept something up
     /// into a loyalty scheme with a discount attached.
     ///
-    /// The Core hands over nothing. So this says what is TRUE of being in it
-    /// and makes no offer: the seal exists because other people see it, the
-    /// day count exists because it happened. Never add a perk row here to make
-    /// the section feel more generous — the absence is the design.
+    /// The Core hands over nothing, and this section does not SAY so. Stating
+    /// "no extra minutes, no unlocked features" was the app explaining a
+    /// decision only its author knew had been made — nobody was expecting a
+    /// payout, so the sentence introduced a disappointment and then answered
+    /// it. You don't advertise the absence of a thing.
+    ///
+    /// What's left is what is true of being in it: the seal exists because
+    /// other people see it, the day count exists because it happened. Never
+    /// add a perk row to make this feel more generous, and never add a line
+    /// explaining why there isn't one.
     private func whatItMeansSection() -> some View {
         Section {
-            Label {
-                Text(explain("Nothing is handed to you for it. No extra minutes, no unlocked features."))
-            } icon: {
-                Image(systemName: "hand.raised").foregroundStyle(Color.coreClub)
-            }
             Label {
                 // The seal's only real audience is a stranger, so name the
                 // place they'll see it — a badge nobody can point at isn't

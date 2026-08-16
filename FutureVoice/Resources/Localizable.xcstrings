@@ -10165,22 +10165,6 @@
         }
       }
     },
-    "Nothing is handed to you for it. No extra minutes, no unlocked features.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Du bekommst nichts dafür. Keine Extraminuten, keine freigeschalteten Funktionen."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이걸로 받는 건 없습니다. 추가 통화 시간도, 새로 열리는 기능도 없습니다."
-          }
-        }
-      }
-    },
     "Nothing is lost by putting this off — no streak breaks and today still counts.": {
       "localizations": {
         "de": {
