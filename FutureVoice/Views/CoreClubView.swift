@@ -191,11 +191,19 @@ struct CoreClubView: View {
         } header: {
             Text("Where you stand")
         } footer: {
-            // Watch now has its own visible daily allowance, which makes it
-            // reasonable to assume scenes count here too. They never have and
-            // never will — say so rather than let someone watch their way
-            // toward a seat that isn't coming.
-            Text(explain("Only Talk counts. Watching a scene doesn't."))
+            VStack(alignment: .leading, spacing: 6) {
+                // While the window still reaches back past the day counting
+                // began, an empty month is not a verdict — it's a start date.
+                // Give them something to wait for instead of a score to lose.
+                if let first = p.firstSeatDate, p.hasUncountedDays {
+                    Text(explain("Counting started \(p.countingSinceText). The faint days are before that — they're not misses. The first seat can be taken on \(first)."))
+                }
+                // Watch now has its own visible daily allowance, which makes
+                // it reasonable to assume scenes count here too. They never
+                // have and never will — say so rather than let someone watch
+                // their way toward a seat that isn't coming.
+                Text(explain("Only Talk counts. Watching a scene doesn't."))
+            }
         }
     }
 
@@ -252,9 +260,14 @@ struct CoreClubView: View {
             spacing: 8
         ) {
             ForEach(Array(p.days.enumerated()), id: \.offset) { _, day in
+                // Three states, not two. A day before counting began is drawn
+                // faintest and hollow: it is not a day the learner missed, and
+                // showing it as one turned a fresh start into a month of
+                // failure for anyone who had been talking all along.
                 Image(systemName: day.met ? "circle.fill" : "circle")
                     .font(.caption2)
-                    .foregroundStyle(day.met ? Color.coreClub : Color.secondary.opacity(0.4))
+                    .foregroundStyle(day.met ? Color.coreClub
+                                     : Color.secondary.opacity(day.wasCounted ? 0.4 : 0.12))
                     .accessibilityHidden(true)
             }
         }

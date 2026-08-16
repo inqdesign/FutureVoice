@@ -82,6 +82,15 @@ enum CoreClubService {
             let day: String
             let seconds: Int
             let met: Bool
+            /// False for days before the Core could observe language-tagged
+            /// talk at all. A rolling window can't tell "you missed it" from
+            /// "nobody was counting" — both are just an absent row — so the
+            /// server marks the boundary and the grid must draw the two
+            /// differently. Older servers omit it; treating that as counted
+            /// keeps their behaviour unchanged.
+            let counted: Bool?
+
+            var wasCounted: Bool { counted ?? true }
         }
         /// `core_my_progress` still puts a `join_number` in this object — it
         /// is the caller's own row and goes nowhere else, and rewriting a
@@ -95,6 +104,11 @@ enum CoreClubService {
 
         let bar_seconds: Int
         let seats: Int
+        /// The day the Core started observing this at all, and the earliest
+        /// date any seat can exist (`counting_since + entry_required - 1`).
+        /// Both nil on older servers.
+        let counting_since: String?
+        let first_seat_on: String?
         let club_size: Int
         let member: Member?
         let days: [Day]
@@ -111,6 +125,26 @@ enum CoreClubService {
         let requalifying: Bool
         /// Bar cleared, badge held, club full — nothing to do but wait.
         let waiting_for_seat: Bool
+
+        /// True while the 30-day window still reaches back past the day the
+        /// Core started counting — i.e. while an empty month is a start
+        /// rather than a failure.
+        var hasUncountedDays: Bool { days.contains { !$0.wasCounted } }
+
+        /// Medium-style dates for the copy, in the learner's own locale.
+        var countingSinceText: String { Self.medium(counting_since) ?? "" }
+        var firstSeatDate: String? { Self.medium(first_seat_on) }
+
+        private static func medium(_ iso: String?) -> String? {
+            guard let iso else { return nil }
+            let parser = DateFormatter()
+            parser.calendar = Calendar(identifier: .gregorian)
+            parser.locale = Locale(identifier: "en_US_POSIX")
+            parser.timeZone = TimeZone(identifier: "UTC")
+            parser.dateFormat = "yyyy-MM-dd"
+            guard let date = parser.date(from: String(iso.prefix(10))) else { return nil }
+            return date.formatted(.dateTime.month(.abbreviated).day())
+        }
 
         /// Absences inside the entry window, and how many are still spare.
         var missedInEntryWindow: Int { days.count - met_entry }
@@ -152,12 +186,18 @@ enum CoreClubService {
             days_to_return  = (try? c.decodeIfPresent(Int.self, forKey: .days_to_return)).flatMap { $0 }
             requalifying    = bool(.requalifying)
             waiting_for_seat = bool(.waiting_for_seat)
+            // Absent on a server older than 20260817100000; the accessors
+            // treat nil as "everything was counted", which is what that
+            // server's behaviour effectively was.
+            counting_since  = (try? c.decodeIfPresent(String.self, forKey: .counting_since)).flatMap { $0 }
+            first_seat_on   = (try? c.decodeIfPresent(String.self, forKey: .first_seat_on)).flatMap { $0 }
         }
 
         private enum CodingKeys: String, CodingKey {
             case bar_seconds, seats, club_size, member, days, met_entry
             case entry_required, met_keep, keep_required, days_to_entry
             case days_to_return, requalifying, waiting_for_seat
+            case counting_since, first_seat_on
         }
     }
 
