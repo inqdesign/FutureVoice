@@ -141,9 +141,16 @@ struct CoreClubView: View {
                 Image(systemName: "seal.fill").foregroundStyle(Color.coreClub)
             }
             Label {
-                Text(explain("Your days stay yours, even after you leave."))
+                // What "keeping" concretely means: the seal survives losing
+                // the seat. The line here used to be "your days stay yours,
+                // even after you leave", which answered an anxiety the reader
+                // hasn't formed yet (they don't know a seat can be lost),
+                // about a number they cannot see (the day count is only shown
+                // to members), landing somewhere unnamed. Three vaguenesses in
+                // one sentence.
+                Text(explain("The badge stays even if you lose the seat."))
             } icon: {
-                Image(systemName: "calendar").foregroundStyle(Color.coreClub)
+                Image(systemName: "seal").foregroundStyle(Color.coreClub)
             }
         } header: {
             Text("What you keep")
