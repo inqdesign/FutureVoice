@@ -37,18 +37,19 @@ struct CoreClubView: View {
     var body: some View {
         List {
             if let p = progress {
+                // The room, then YOUR standing, then the rules. One order for
+                // everyone.
+                //
+                // It used to branch: members saw their standing second,
+                // non-members saw it last, after four sections of rules. But
+                // the rules were four sections precisely because they repeated
+                // themselves, and the person who opens this screen — member or
+                // not — opens it to find out where they are. Making them read
+                // the pitch first is the app talking past them.
                 roomSection
-                // A member gets their own standing first — they already know
-                // what the club is, and being made to read the pitch again on
-                // the way to their own seat is the app talking past them.
-                if isSeated { standingSection(p) }
-
-                whatItIsSection
-                if !isSeated { howToJoinSection(p) }
-                keepSection(p)
-                whatItMeansSection()
-
-                if !isSeated { standingSection(p) }
+                standingSection(p)
+                howItWorksSection(p)
+                whatYouKeepSection()
             } else if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else {
@@ -69,11 +70,20 @@ struct CoreClubView: View {
         Section {
             CoreSeatGrid(map: seatMap)
         } footer: {
+            // A count, and the one thing the picture can't say for itself.
+            // The old caption taught a three-clause legend — filled, empty,
+            // outlined — for a grid that mostly reads on sight, and spent its
+            // longest clause explaining the colours instead of letting them
+            // land.
             VStack(alignment: .leading, spacing: 6) {
                 if let m = seatMap {
                     Text(explain("\(m.taken) of \(m.seats) seats taken."))
+                    if m.mine != nil {
+                        Text(explain("The outlined cell is you."))
+                    } else {
+                        Text(explain("Each filled cell is a member, in the colour they chose."))
+                    }
                 }
-                Text(explain("One cell is one person, in the colour they picked for their own app. Empty cells are free seats; the outlined one is you."))
             }
         }
     }
@@ -87,48 +97,31 @@ struct CoreClubView: View {
     // true ("missing a day moves your date one day later"; it does not, once
     // you have used up your two). A point can't hedge.
 
-    private var whatItIsSection: some View {
-        Section {
-            Text(explain("100 seats."))
-            Text(explain("The people who have kept it up the longest."))
-            Text(explain("A seat is never taken from you. It opens only when the person in it stops."))
-        } header: {
-            Text("The Core")
-        }
-    }
-
-    private func howToJoinSection(_ p: CoreClubService.Progress) -> some View {
-        Section {
-            Text(explain("\(p.entry_required) of the last \(p.days.count) days, \(p.bar_seconds / 60) minutes of talk or more each. Two days off is fine."))
-            // Qualifying is not entering, and the screen said it was. Someone
-            // who completes the month into a full club and is then told
-            // nothing has changed will read it as broken.
-            Text(explain("A seat has to be free. If all \(p.seats) are taken, you wait."))
-            Text(explain("Keep clearing it while you wait. Stop, and a seat opening won't be yours."))
-            Text(explain("First to qualify, first to sit."))
-        } header: {
-            Text("Getting in")
-        }
-    }
-
-    /// One bar, stated twice on purpose — under "getting in" and again here —
-    /// because the question "and then what do I have to keep doing?" is asked
-    /// separately even when the answer is the same.
-    private func keepSection(_ p: CoreClubService.Progress) -> some View {
-        Section {
-            Text(explain("The same as getting in: \(p.keep_required) of the last \(p.days.count) days."))
-        } header: {
-            Text("Keeping the seat")
-        }
-    }
-
-    /// Deliberately NOT "what you get".
+    /// Every rule, once each.
     ///
-    /// This section used to lead with "4 more minutes of talk a day", which
-    /// was two mistakes at once. Tier-wise it was near-worthless to the people
-    /// most likely to be here — against Unlimited's 60 min/day it was under
-    /// 7% — and framing-wise it turned a record of having kept something up
-    /// into a loyalty scheme with a discount attached.
+    /// This replaced three sections — "The Core", "Getting in", "Keeping the
+    /// seat" — that between them stated the daily bar three times, the seat
+    /// count three times, and devoted a whole section to saying "the same as
+    /// getting in". Repetition read as importance the first time and as
+    /// padding by the third, and it pushed the learner's own standing four
+    /// screens down.
+    ///
+    /// One of the removed lines was also false: "the people who have kept it
+    /// up the longest". Nobody is ranked by length. The bar is pass/fail and
+    /// the queue is first-qualified-first, which is a fairness claim the old
+    /// wording quietly contradicted.
+    private func howItWorksSection(_ p: CoreClubService.Progress) -> some View {
+        Section {
+            Text(explain("Talk \(p.bar_seconds / 60) minutes a day, \(p.entry_required) days out of \(p.days.count)."))
+            Text(explain("The same bar to get in and to stay."))
+            Text(explain("\(p.seats) seats. One opens only when the person in it stops — never because someone new arrived."))
+            Text(explain("Whoever qualified first takes it."))
+        } header: {
+            Text("How it works")
+        }
+    }
+
+    /// What being in it actually leaves you with.
     ///
     /// The Core hands over nothing, and this section does not SAY so. Stating
     /// "no extra minutes, no unlocked features" was the app explaining a
@@ -136,29 +129,26 @@ struct CoreClubView: View {
     /// payout, so the sentence introduced a disappointment and then answered
     /// it. You don't advertise the absence of a thing.
     ///
-    /// What's left is what is true of being in it: the seal exists because
-    /// other people see it, the day count exists because it happened. Never
-    /// add a perk row to make this feel more generous, and never add a line
-    /// explaining why there isn't one.
-    private func whatItMeansSection() -> some View {
+    /// Never add a perk row to make this feel more generous, and never add a
+    /// line explaining why there isn't one.
+    private func whatYouKeepSection() -> some View {
         Section {
             Label {
                 // The seal's only real audience is a stranger, so name the
-                // place they'll see it — a badge nobody can point at isn't
-                // one.
+                // place they'll see it — a badge nobody can point at isn't one.
                 Text(explain("A badge next to your name where you meet people."))
             } icon: {
                 Image(systemName: "seal.fill").foregroundStyle(Color.coreClub)
             }
             Label {
-                Text(explain("A count of the days you kept it. It stays yours even after you leave."))
+                Text(explain("Your days stay yours, even after you leave."))
             } icon: {
                 Image(systemName: "calendar").foregroundStyle(Color.coreClub)
             }
         } header: {
-            Text("What it means")
+            Text("What you keep")
         } footer: {
-            Text(explain("It's a promise to yourself, and a record that you kept it."))
+            Text(explain("A promise to yourself, and a record that you kept it."))
         }
     }
 

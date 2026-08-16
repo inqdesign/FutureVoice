@@ -927,6 +927,7 @@
       }
     },
     "%lld of the last %lld days, %lld minutes of talk or more each. Two days off is fine.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -960,6 +961,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "보면서 저장한 문장 %lld개"
+          }
+        }
+      }
+    },
+    "%lld seats. One opens only when the person in it stops — never because someone new arrived.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld석. 앉아 있던 사람이 멈출 때만 자리가 열립니다 — 새로 온 사람 때문에 열리는 일은 없어요."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Plätze. Einer wird nur frei, wenn die Person darauf aufhört — nie, weil jemand Neues kommt."
           }
         }
       }
@@ -1601,22 +1618,6 @@
         }
       }
     },
-    "100 seats.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100 Plätze."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "100자리입니다."
-          }
-        }
-      }
-    },
     "A": {
       "shouldTranslate": false
     },
@@ -1665,22 +1666,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "매일 한 통"
-          }
-        }
-      }
-    },
-    "A count of the days you kept it. It stays yours even after you leave.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Zahl der Tage, die du durchgehalten hast. Sie bleibt deine, auch wenn du gehst."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자리를 지켜낸 날의 수입니다. 자리를 떠난 뒤에도 그대로 남습니다."
           }
         }
       }
@@ -1779,6 +1764,22 @@
         }
       }
     },
+    "A promise to yourself, and a record that you kept it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자기 자신과의 약속이고, 그걸 지켰다는 기록입니다."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Versprechen an dich selbst — und der Beleg, dass du es gehalten hast."
+          }
+        }
+      }
+    },
     "A quick active-recall run through this talk's saved phrases.": {
       "extractionState": "stale",
       "localizations": {
@@ -1845,6 +1846,7 @@
       }
     },
     "A seat has to be free. If all %lld are taken, you wait.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -1856,22 +1858,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "빈자리가 있어야 들어갑니다. %lld자리가 다 차 있으면 기다립니다."
-          }
-        }
-      }
-    },
-    "A seat is never taken from you. It opens only when the person in it stops.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Platz wird dir nie weggenommen. Er wird nur frei, wenn die Person darauf aufhört."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자리는 뺏기지 않습니다. 앉은 사람이 그만둘 때만 빕니다."
           }
         }
       }
@@ -4947,6 +4933,22 @@
         }
       }
     },
+    "Each filled cell is a member, in the colour they chose.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채워진 칸 하나가 멤버 한 명이고, 색은 그 사람이 고른 색이에요."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede gefüllte Zelle ist ein Mitglied, in der Farbe, die es gewählt hat."
+          }
+        }
+      }
+    },
     "Each line is the smoother version of something you actually said. Tap one to say the fix out loud — score %lld+ and it's yours. The same fixes come back as cards below.": {
       "extractionState": "stale",
       "localizations": {
@@ -5996,22 +5998,6 @@
         }
       }
     },
-    "First to qualify, first to sit.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wer zuerst qualifiziert ist, sitzt zuerst."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "먼저 자격을 얻은 사람부터 앉습니다."
-          }
-        }
-      }
-    },
     "Five minutes at the same time every day — small enough that you actually do it.": {
       "extractionState": "stale",
       "localizations": {
@@ -6362,22 +6348,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시작하기"
-          }
-        }
-      }
-    },
-    "Getting in": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reinkommen"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자격"
           }
         }
       }
@@ -6985,6 +6955,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘 하루 어때 보여요?"
+          }
+        }
+      }
+    },
+    "How it works": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "규칙"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So funktioniert es"
           }
         }
       }
@@ -7828,22 +7814,6 @@
         }
       }
     },
-    "It's a promise to yourself, and a record that you kept it.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Versprechen an dich selbst — und der Beleg, dass du es gehalten hast."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자기 자신과의 약속이고, 그걸 지켰다는 기록입니다."
-          }
-        }
-      }
-    },
     "It's been a while.": {
       "comment": "Text displayed in a notification when a user returns after a break in their free talk habit.",
       "isCommentAutoGenerated": true,
@@ -7912,22 +7882,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "입문 — 단어 몇 개와 정해진 표현 정도"
-          }
-        }
-      }
-    },
-    "Keep clearing it while you wait. Stop, and a seat opening won't be yours.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Halte die Marke auch beim Warten. Hörst du auf, gehört ein frei werdender Platz nicht dir."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기다리는 동안에도 계속 채워야 합니다. 멈추면 자리가 나도 못 들어갑니다."
           }
         }
       }
@@ -8009,22 +7963,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 목소리로"
-          }
-        }
-      }
-    },
-    "Keeping the seat": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Platz halten"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "유지"
           }
         }
       }
@@ -10375,22 +10313,6 @@
         }
       }
     },
-    "One cell is one person, in the colour they picked for their own app. Empty cells are free seats; the outlined one is you.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Feld ist eine Person, in der Farbe, die sie für ihre App gewählt hat. Leere Felder sind freie Plätze, das umrandete bist du."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 칸이 한 명입니다. 칸의 색은 그 사람이 자기 앱에서 고른 색입니다. 빈칸은 남은 자리이고, 테두리가 있는 칸이 내 자리입니다."
-          }
-        }
-      }
-    },
     "One dialogue for exactly this situation — its words, expressions, and your lines become the checklist. Generated once, then it's your book.": {
       "localizations": {
         "de": {
@@ -10564,16 +10486,16 @@
     },
     "Opens activity calendar.": {
       "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "활동 달력을 엽니다."
-          }
-        },
         "de": {
           "stringUnit": {
             "state": "translated",
             "value": "Öffnet den Aktivitätskalender."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활동 달력을 엽니다."
           }
         }
       }
@@ -14247,6 +14169,28 @@
         }
       }
     },
+    "Talk %lld minutes a day, %lld days out of %lld.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Talk %1$lld minutes a day, %2$lld days out of %3$lld."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 %1$lld분씩, %3$lld일 중 %2$lld일."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprich %1$lld Minuten am Tag, an %2$lld von %3$lld Tagen."
+          }
+        }
+      }
+    },
     "Talk %lld more minutes and this level gets re-read from everything new you've said.": {
       "localizations": {
         "de": {
@@ -15284,18 +15228,18 @@
         }
       }
     },
-    "The people who have kept it up the longest.": {
+    "The outlined cell is you.": {
       "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Leute, die am längsten drangeblieben sind."
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "가장 오래, 꾸준히 이어온 사람들입니다."
+            "value": "테두리가 있는 칸이 당신이에요."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die umrandete Zelle bist du."
           }
         }
       }
@@ -15317,6 +15261,7 @@
       }
     },
     "The same as getting in: %lld of the last %lld days.": {
+      "extractionState": "stale",
       "localizations": {
         "de": {
           "stringUnit": {
@@ -15334,6 +15279,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "자격과 같은 기준입니다. 최근 %2$lld일 중 %1$lld일."
+          }
+        }
+      }
+    },
+    "The same bar to get in and to stay.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "들어올 때와 지킬 때가 같은 기준입니다."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieselbe Marke zum Eintreten und zum Bleiben."
           }
         }
       }
@@ -16747,22 +16708,6 @@
         }
       }
     },
-    "What it means": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Was es bedeutet"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이게 뜻하는 것"
-          }
-        }
-      }
-    },
     "What never moves the level": {
       "localizations": {
         "de": {
@@ -16873,6 +16818,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "혜택"
+          }
+        }
+      }
+    },
+    "What you keep": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남는 것"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was dir bleibt"
           }
         }
       }
@@ -17329,6 +17290,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "대화 상대"
+          }
+        }
+      }
+    },
+    "Whoever qualified first takes it.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 자격을 갖춘 사람이 앉습니다."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wer sich zuerst qualifiziert hat, rückt nach."
           }
         }
       }
@@ -18393,6 +18370,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "하루 목표는?"
+          }
+        }
+      }
+    },
+    "Your days stay yours, even after you leave.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지나온 날들은 나간 뒤에도 당신 것으로 남습니다."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Tage bleiben deine, auch wenn du gehst."
           }
         }
       }
