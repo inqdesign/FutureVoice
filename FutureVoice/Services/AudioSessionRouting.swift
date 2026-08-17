@@ -53,6 +53,13 @@ enum AudioSessionRouting {
     static let builtInMicCaptureOptions: AVAudioSession.CategoryOptions =
         [.allowBluetoothA2DP, .duckOthers]
 
+    /// The options a Talk call is meant to run on, mic choice included. One
+    /// definition so the warm-up, the transcriber and the post-mic restore all
+    /// name the same session instead of three that drift.
+    static var conversationOptions: AVAudioSession.CategoryOptions {
+        MicPreferenceStore.forcesBuiltInMic ? builtInMicCaptureOptions : recordOptions
+    }
+
     /// Force the device's built-in mic as the input. Call after `setActive`.
     static func preferBuiltInMic(_ session: AVAudioSession = .sharedInstance()) {
         if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
@@ -98,12 +105,52 @@ enum AudioSessionRouting {
         // Same options `LiveTranscriber.start` is about to set, including the
         // learner's mic choice — otherwise the opener plays through HFP and
         // the route audibly shifts underneath the first reply.
-        let options = MicPreferenceStore.forcesBuiltInMic
-            ? builtInMicCaptureOptions
-            : recordOptions
-        try? session.setCategory(.playAndRecord, mode: .default, options: options)
+        try? session.setCategory(.playAndRecord, mode: .default,
+                                 options: conversationOptions)
         try? session.setActive(true, options: .notifyOthersOnDeactivation)
         applyOutputRoute(session)
+        #if DEBUG
+        debugSnapshot("talk/warmup")
+        #endif
+    }
+
+    /// Put the session back the way a Talk call wants it, after the mic has
+    /// been running. Call right before the fluent self speaks.
+    ///
+    /// Why this exists: Talk's mic runs through iOS's voice-processing unit
+    /// (`setVoiceProcessingEnabled(true)`), and turning it on swaps the whole
+    /// AVAudioEngine I/O unit and rewrites the session underneath us. Measured
+    /// on device, 2026-08-17 — the same call, one line apart:
+    ///
+    ///     [talk/warmup]   mode=Default    opts=35  out=Speaker  vol=0.95
+    ///     [mic/start]     mode=VoiceChat  opts=3   out=Speaker  vol=0.70
+    ///
+    /// `.voiceChat` moves output into the CALL volume domain (0.70 there is not
+    /// 0.70 of media loudness — it's a different slider on a quieter chain),
+    /// which is why the opener came out at full volume and every reply after it
+    /// was barely audible: the opener plays before any mic session exists.
+    ///
+    /// Options are restored to `conversationOptions`, NOT to whatever the
+    /// session currently reports — VPIO strips `.allowBluetoothA2DP` on its way
+    /// in (35 → 3 above), and re-asserting that stripped set would leave a
+    /// connected earphone unusable as an output for the rest of the call.
+    /// Category stays `.playAndRecord`: switching to `playbackOptions` mid-call
+    /// would drop the earphone's HFP mic (see `startPCMStream`'s note).
+    static func reassertOutputAfterMic(_ session: AVAudioSession = .sharedInstance()) {
+        #if DEBUG
+        debugSnapshot("reassert/before")
+        #endif
+        let wanted = conversationOptions
+        // iOS reports options we never set (it adds `.mixWithOthers` on the
+        // VPIO path), so ask whether ours are all still there rather than
+        // comparing the raw sets — otherwise this re-sets on every line.
+        if session.mode != .default || !session.categoryOptions.isSuperset(of: wanted) {
+            try? session.setCategory(.playAndRecord, mode: .default, options: wanted)
+        }
+        applyOutputRoute(session)
+        #if DEBUG
+        debugSnapshot("reassert/after")
+        #endif
     }
 
     /// Call right after `setActive(true)`. Snaps to the loud bottom speaker only

@@ -253,6 +253,41 @@ final class LiveTranscriber: ObservableObject {
                 // it's exactly what every run did before this existed.
             }
         }
+        if vpActive {
+            // VPIO is ONE I/O unit: turning it on for INPUT also puts its
+            // output bus in the graph, and that bus is pulled every render
+            // cycle whether or not the app wants to play anything. With
+            // nothing connected to the engine's output that pull fails on
+            // every cycle — measured on device 2026-08-17, the console fills
+            // with hundreds of `auou/vpio/appl, render err: -1` per turn — so
+            // the unit runs its processing against a render loop that never
+            // completes. Give it a valid thing to render: a silent source at
+            // zero volume. Nothing of ours plays through this engine (the
+            // fluent self has its own), so muting the mixer costs nothing.
+            let hwRate = engine.outputNode.outputFormat(forBus: 0).sampleRate
+            if let silenceFormat = AVAudioFormat(
+                standardFormatWithSampleRate: hwRate > 0 ? hwRate : 48_000, channels: 1) {
+                let silence = AVAudioSourceNode(format: silenceFormat) { _, _, _, abl in
+                    for buffer in UnsafeMutableAudioBufferListPointer(abl) {
+                        memset(buffer.mData, 0, Int(buffer.mDataByteSize))
+                    }
+                    return noErr
+                }
+                engine.attach(silence)
+                engine.connect(silence, to: engine.mainMixerNode, format: silenceFormat)
+                engine.mainMixerNode.outputVolume = 0
+            }
+            // Keep noise suppression (the reason VPIO is here at all) but drop
+            // its AGC. AGC rides the level continuously, and the learner HEARS
+            // that: their own turn plays back thin and pumping in Practice.
+            // Nothing in the app reads absolute mic amplitude — shadow scores
+            // are token-level over the transcript, `FluencyMeter`'s thresholds
+            // track the floor — so the levelling buys recognition nothing and
+            // costs the one recording the learner listens to.
+            if #available(iOS 17.0, *) {
+                input.isVoiceProcessingAGCEnabled = false
+            }
+        }
         // AFTER the toggle: the unit re-negotiates the input format (typically
         // to 48 kHz mono float), and a tap installed with the pre-toggle format
         // would throw at runtime.
@@ -306,6 +341,15 @@ final class LiveTranscriber: ObservableObject {
             }
         }
         self.voiceProcessingActive = vpActive
+        // The voice processing unit swaps the whole I/O unit on its way in and
+        // drops the `.speaker` override set above, so re-assert it now that the
+        // engine is up. The mode is left alone — changing it under a running
+        // VPIO would fight the unit; playback restores it
+        // (`AudioSessionRouting.reassertOutputAfterMic`).
+        if vpActive { AudioSessionRouting.applyOutputRoute(session) }
+        #if DEBUG
+        AudioSessionRouting.debugSnapshot("mic/start vp=\(vpActive ? 1 : 0)")
+        #endif
 
         self.engine = engine
         self.recognizer = rec

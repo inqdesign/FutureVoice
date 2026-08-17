@@ -91,7 +91,16 @@ final class AudioPlayer: NSObject, ObservableObject {
         }
         if configureSession {
             configureForPlayback(forceSessionReset: forceSessionReset)
+        } else {
+            // Inheriting a live mic session (Talk). The category stays exactly
+            // as the transcriber left it, but the OUTPUT side has to be put
+            // back: the voice-processing unit drops the speaker override on
+            // its way in. See AudioSessionRouting.reassertOutputAfterMic.
+            AudioSessionRouting.reassertOutputAfterMic()
         }
+        #if DEBUG
+        AudioSessionRouting.debugSnapshot("play/\(source)")
+        #endif
 
         // Equalize loudness across voices: IVC clones come back much quieter
         // than premade preset voices (see AudioLoudness). Falls back to the
@@ -272,6 +281,12 @@ final class AudioPlayer: NSObject, ObservableObject {
                                      options: AudioSessionRouting.playbackOptions)
             try? session.setActive(true)
             AudioSessionRouting.applyOutputRoute(session)
+        } else {
+            // Live Talk: keep the transcriber's category/options (HFP mic and
+            // all) but put the OUTPUT back on the speaker route the voice
+            // processing unit took away — otherwise every reply after the
+            // opener plays out of the earpiece.
+            AudioSessionRouting.reassertOutputAfterMic()
         }
         // configureSession == false means a live Talk call — the one place
         // the user's call-voice volume applies.
