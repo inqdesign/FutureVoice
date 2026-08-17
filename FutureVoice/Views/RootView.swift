@@ -32,13 +32,11 @@ struct RootView: View {
             .fontDesign(.rounded)
             .tint(accent)
             .accentColor(accent)
-            // Chrome speaks the language being LEARNED — every `Text("literal")`
-            // resolves against this locale with no per-call code — except
-            // through onboarding, which speaks the learner's own language
-            // (`UILanguage.isOnboarding`). This lives HERE rather than at the
-            // app root because `chromeLanguage` answers from UserDefaults:
-            // `gatedContent` below is what reads the three flags that flip it,
-            // so this is the one body SwiftUI will re-run when they change.
+            // The app's ONE UI language — the one the learner picked in setup
+            // and can change in Me → App language. Every `Text("literal")` in
+            // the app resolves against this locale with no per-call code.
+            // It used to be the language being LEARNED; see
+            // `UILanguage.chromeLanguage` for why that's gone.
             .environment(\.locale, Locale(identifier: UILanguage.chromeLanguage))
     }
 

@@ -292,17 +292,13 @@ struct MeTab: View {
             .task { aiLevel = recentAILevel() }
             .task(id: appState.enrolledLanguages) { refreshLevelCache() }
         }
-        // Settings speaks the learner's OWN language, not the target — the
-        // same exception onboarding gets, for the same reason. "Chrome follows
-        // the target" buys free exposure on words recognized by shape (a tab
-        // bar seen a hundred times a day beside an icon). Nothing in here is
-        // that: every row asks the learner to decide something, consent to
-        // something, or destroy something, and the page that literally sets
-        // the app's language cannot be the one page they can't read. Applies
-        // to everything pushed or presented from here too, so a `Text`
-        // literal in a subpage needs no per-call code — a `String`-typed one
-        // still has to go through `explain(…)`.
-        .environment(\.locale, Locale(identifier: appState.nativeLanguage))
+        // No locale override here any more: the whole app speaks the app
+        // language now (`RootView`), so Settings needs no exception. What
+        // still matters is that a `String`-typed literal — every `row(…)`
+        // title and subtitle on this screen — goes through `explain(…)`.
+        // `Text("literal")` follows the environment; a `String` never sees
+        // it, which is how ~35 rows here stayed frozen English in BOTH
+        // languages until 2026-08-17.
     }
 
     /// Same source as ProgressTab's "Estimated level": ONLY the weekly

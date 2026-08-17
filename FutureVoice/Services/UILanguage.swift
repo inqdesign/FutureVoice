@@ -21,41 +21,33 @@ import os
 /// `Localizable.xcstrings` — no code change, here or anywhere else.
 enum UILanguage {
 
-    /// The language chrome is written in — the language being learned, EXCEPT
-    /// during onboarding, where it's the learner's own (see `isOnboarding`).
+    /// The language chrome is written in: the one the learner picked as their
+    /// own. Same answer as `explanationLanguage` — the app has ONE UI
+    /// language, and it is the one named in Me → App language.
+    ///
+    /// This used to be the TARGET language, on the theory that a tab bar seen
+    /// a hundred times a day is free vocabulary at no comprehension cost.
+    /// Reverted 2026-08-17. The theory only holds if the words are incidental,
+    /// and they aren't: the target audience is Korean speakers learning
+    /// English *and German*, so the rule handed a Korean learner a German app
+    /// — and even the English case put every tab, chip and button of the
+    /// product in a language the learner is, by definition, still learning.
+    /// The exposure was never worth the tax, and the learner had already said
+    /// which language they read by choosing one in setup.
+    ///
+    /// Material stays in the target language, which is where the exposure
+    /// actually belongs: scene lines, drill cards, expressions, corrections.
+    /// See "Two languages" in CLAUDE.md — that split is untouched.
     static var chromeLanguage: String {
-        if isOnboarding { return LanguageCatalog.currentNative }
-        return UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en"
+        LanguageCatalog.currentNative
     }
 
-    /// True while the learner is still walking the first-run flow — Welcome,
-    /// setup, persona, voice clone, the daily-call intro.
-    ///
-    /// Onboarding is the one stretch where chrome CANNOT follow the target
-    /// language. On the first two screens no target has been chosen yet, so
-    /// `targetLanguage` is still its `"en"` placeholder and a Korean phone
-    /// opened the app in English no matter what the device asked for. And even
-    /// once it's picked, nothing here is recognized-by-shape: every screen asks
-    /// the learner to decide something, consent to something, or follow a
-    /// recording instruction. "Free exposure at no comprehension cost" is only
-    /// true for a tab bar they see a hundred times — it is not true for the
-    /// screen that explains what happens to their voice model.
-    ///
-    /// So the whole flow speaks the learner's own language, which defaults to
-    /// the device's (`LanguageCatalog.defaultNative`). The standing
-    /// chrome-follows-target rule resumes the moment they land on the tabs.
-    ///
-    /// Read straight from UserDefaults rather than AppState so `chrome()` — a
-    /// free function with no view context — can answer it. The three keys
-    /// mirror the gate in `RootView.gatedContent`; keep them in step with it.
-    /// (Persona is stored on disk, not in defaults, so it sits this one out —
-    /// it's bracketed by the two keys on either side of it anyway.)
-    static var isOnboarding: Bool {
-        let defaults = UserDefaults.standard
-        return !defaults.bool(forKey: "futurevoice.setupComplete")
-            || defaults.string(forKey: "futurevoice.voiceCloneId") == nil
-            || !defaults.bool(forKey: "futurevoice.dailyCall.onboarded")
-    }
+    // `isOnboarding` lived here until 2026-08-17. It existed only to carve
+    // onboarding out of the chrome-follows-target rule; with that rule gone
+    // there is nothing to carve out — onboarding, the tabs and Settings all
+    // speak the same language now — so keeping a flag that answers a question
+    // nobody asks would just be one more thing to keep in step with
+    // `RootView.gatedContent`.
 
     /// The language explanatory copy is written in: the one the learner chose,
     /// full stop.

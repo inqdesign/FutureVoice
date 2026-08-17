@@ -200,12 +200,18 @@ struct UsageBreakdown {
 
     #if DEBUG
     /// A representative day + week for the screenshot harness.
+    ///
+    /// The numbers have to ADD UP against the sample account in
+    /// `DebugCaptureHarness` (Daily: 300 s/day): talk seconds here are what
+    /// its header counts down from, so 512 s under a 300 s cap shot a page
+    /// that said "3 min left" over rows totalling 8 min. Days are under the
+    /// cap for the same reason.
     static var sample: UsageBreakdown {
         var out = UsageBreakdown()
         out.loaded = true
         out.today = [
             Meter(key: "talk_time", title: explain("Talking"),
-                  icon: "phone.fill", seconds: 512, count: 18),
+                  icon: "phone.fill", seconds: 120, count: 4),
             Meter(key: "tts_scene", title: explain("Watch scenes"),
                   icon: "play.circle.fill", seconds: 143, count: 22),
         ]
@@ -220,7 +226,7 @@ struct UsageBreakdown {
                      icon: "doc.text.fill", count: 3),
         ]
         let today = dayKey(Date())
-        out.days = [655, 1240, 0, 430, 980, 610, 320].enumerated().map { i, secs in
+        out.days = [110, 300, 0, 240, 180, 295, 60].enumerated().map { i, secs in
             Day(date: dayKey(Date().addingTimeInterval(Double(-i) * 86_400)),
                 talkSeconds: secs)
         }.filter { $0.seconds > 0 || $0.date == today }

@@ -193,22 +193,22 @@ enum DebugCapture {
         case "usage":
             // The talk-time receipt. Captures run signed-out, so the page
             // gets a representative account (a Daily subscriber mid-day).
-            //
-            // The locale is set by hand here because the real page is only
-            // ever reached by a push from MeTab, which puts the whole
-            // settings drawer in the learner's own language. Rendering it
-            // bare would shoot it in the target language and make the
-            // screenshot lie about what a learner actually sees.
             return AnyView(NavigationStack {
                 UsageDetailView(
                     account: AccountStatus(
                         email: nil, secondsBalance: 0,
                         planId: "daily_monthly", subscriptionStatus: "active",
-                        secondsUsedToday: 655, dailyCapSeconds: 1800,
-                        fullTankSeconds: 1800),
+                        // 300 s is what Daily actually grants
+                        // (`subscription_plans.daily_seconds`, migration
+                        // 20260811160000). This used to say 1800 and shot a
+                        // "30 min" screen no customer has ever had — a
+                        // sample account has to be an account that exists,
+                        // or the copy gets reviewed against a fake number.
+                        secondsUsedToday: 120, dailyCapSeconds: 300,
+                        scenesUsedToday: 1, dailyScenesCap: 2,
+                        fullTankSeconds: 300),
                     previewUsage: .sample)
-            }
-            .environment(\.locale, Locale(identifier: appState.nativeLanguage)))
+            })
         case "level-header":
             // The two-line conversation title in a real inline bar.
             return AnyView(NavigationStack {

@@ -49,18 +49,22 @@ struct UsageDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(account.talkTimeLabel)
                     .font(.title2.weight(.semibold))
-                Text(headerCaption)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                if let headerCaption {
+                    Text(headerCaption)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(.vertical, 4)
         }
     }
 
-    private var headerCaption: String {
-        if account.isUnlimitedPlan {
-            return explain("Talk as much as you want — nothing here counts down.")
-        }
+    /// The ONE thing the number above can't say for itself: whether it comes
+    /// back. Nil where it has no answer to give — on Unlimited nothing counts
+    /// down, so the header is already the whole story and a caption under it
+    /// ("talk as much as you want") was words with no instruction in them.
+    private var headerCaption: String? {
+        if account.isUnlimitedPlan { return nil }
         if account.isTrialing {
             // The trial is metered as Daily whatever plan is being trialed.
             return explain("Your trial gives you \(account.tankMinutes) minutes a day, refilled at midnight.")
@@ -73,7 +77,7 @@ struct UsageDetailView: View {
             // a daily allowance that comes back tomorrow.
             return explain("What's left of your beta talk time. It doesn't refill — only talking and Watch scenes use it.")
         }
-        return explain("Talking needs a plan. Reviewing, replaying and building situations stay free either way.")
+        return explain("Talking needs a plan.")
     }
 
     // MARK: - Today
@@ -113,11 +117,11 @@ struct UsageDetailView: View {
             }
         } header: {
             Text("Today")
-        } footer: {
-            Text(scenesMeteredByCount
-                 ? explain("Talking is metered by the call clock. Watch scenes have their own daily count and never touch these minutes.")
-                 : explain("Talking is metered by the call clock; a Watch scene costs the length of the scene it plays."))
         }
+        // No footer. It said talking is metered by the call clock, under rows
+        // that already read "Talking · 8 min" — and its second half ("Watch
+        // scenes have their own count") is the Watch section sitting right
+        // below it. A receipt explains itself or it isn't a receipt.
     }
 
     /// Watch's own allowance — a COUNT, so it gets its own section rather
@@ -128,13 +132,11 @@ struct UsageDetailView: View {
             Section {
                 row(icon: "play.circle.fill",
                     title: explain("Watch scenes"),
-                    detail: explain("Replaying a scene you've already watched is free."),
+                    detail: nil,
                     trailing: explain("\(account.scenesUsedToday) of \(cap)"),
                     trailingTint: .primary)
             } header: {
                 Text("Watch today")
-            } footer: {
-                Text(explain("A scene costs one count however long it runs, and the count resets every day."))
             }
         }
     }
@@ -160,8 +162,6 @@ struct UsageDetailView: View {
                 }
             } header: {
                 Text("Used no talk time")
-            } footer: {
-                Text(explain("Reviewing, replaying, and building situations never cost talk time — no matter how much you do."))
             }
         }
     }
@@ -195,10 +195,6 @@ struct UsageDetailView: View {
                 }
             } header: {
                 Text("Last 7 days")
-            } footer: {
-                Text(scenesMeteredByCount
-                     ? explain("Talk time per day. Watch scenes are counted separately and never appear here.")
-                     : explain("Total talk time per day: calls plus the scenes you watched."))
             }
         }
     }
@@ -222,7 +218,11 @@ struct UsageDetailView: View {
                       : explain("\(seconds) sec")
     }
 
-    private func row(icon: String, title: String, detail: String,
+    /// `detail` is a COUNT, not prose — "18 check-ins", "34 times today". A
+    /// row with nothing to count passes nil rather than a sentence: the
+    /// Watch row's caption used to explain the rules of scene counting in the
+    /// slot where every other row shows a number.
+    private func row(icon: String, title: String, detail: String?,
                      trailing: String, trailingTint: Color) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -231,7 +231,9 @@ struct UsageDetailView: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body)
-                Text(detail).font(.caption).foregroundStyle(.secondary)
+                if let detail {
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
             }
             Spacer(minLength: 8)
             Text(trailing)
