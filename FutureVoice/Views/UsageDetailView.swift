@@ -127,9 +127,9 @@ struct UsageDetailView: View {
         if let cap = account.dailyScenesCap {
             Section {
                 row(icon: "play.circle.fill",
-                    title: chrome("Watch scenes"),
+                    title: explain("Watch scenes"),
                     detail: explain("Replaying a scene you've already watched is free."),
-                    trailing: chrome("\(account.scenesUsedToday) of \(cap)"),
+                    trailing: explain("\(account.scenesUsedToday) of \(cap)"),
                     trailingTint: .primary)
             } header: {
                 Text("Watch today")
@@ -141,8 +141,8 @@ struct UsageDetailView: View {
 
     private func countLabel(_ meter: UsageBreakdown.Meter) -> String {
         meter.key == "tts_scene"
-            ? chrome("\(meter.count) lines played")
-            : chrome("\(meter.count) check-ins")
+            ? explain("\(meter.count) lines played")
+            : explain("\(meter.count) check-ins")
     }
 
     // MARK: - Free
@@ -154,8 +154,8 @@ struct UsageDetailView: View {
                 ForEach(usage.freeToday) { item in
                     row(icon: item.icon,
                         title: item.title,
-                        detail: chrome("\(item.count) times today"),
-                        trailing: chrome("Free"),
+                        detail: explain("\(item.count) times today"),
+                        trailing: explain("Free"),
                         trailingTint: .green)
                 }
             } header: {
@@ -218,8 +218,8 @@ struct UsageDetailView: View {
     // MARK: - Shared
 
     private func totalLabel(_ seconds: Int) -> String {
-        seconds >= 60 ? chrome("\(seconds / 60) min")
-                      : chrome("\(seconds) sec")
+        seconds >= 60 ? explain("\(seconds / 60) min")
+                      : explain("\(seconds) sec")
     }
 
     private func row(icon: String, title: String, detail: String,

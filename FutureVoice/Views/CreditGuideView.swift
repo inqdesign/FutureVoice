@@ -17,11 +17,11 @@ struct CreditGuideView: View {
         List {
             Section {
                 costRow(icon: "phone.fill",
-                        title: "Talking", cost: "clock time",
-                        detail: "The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call.")
+                        title: explain("Talking"), cost: explain("clock time"),
+                        detail: explain("The call clock is the meter — a 10-minute call uses 10 minutes. Thinking pauses cost the same as talking, just like a phone call."))
                 costRow(icon: "person.wave.2.fill",
-                        title: "Re-cloning your voice", cost: "~1 min",
-                        detail: "Setup is free, including re-records in the first day. Later re-records cost a little.")
+                        title: explain("Re-cloning your voice"), cost: explain("~1 min"),
+                        detail: explain("Setup is free, including re-records in the first day. Later re-records cost a little."))
             } header: {
                 Text("Uses talk time")
             } footer: {
@@ -30,8 +30,8 @@ struct CreditGuideView: View {
 
             Section {
                 costRow(icon: "play.circle.fill",
-                        title: "Watching a scene", cost: "1 scene",
-                        detail: "Watch has its own daily count, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.")
+                        title: explain("Watching a scene"), cost: explain("1 scene"),
+                        detail: explain("Watch has its own daily count, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."))
             } header: {
                 Text("Watch scenes")
             } footer: {
@@ -39,16 +39,16 @@ struct CreditGuideView: View {
             }
 
             Section {
-                freeRow(icon: "rectangle.stack.fill", title: "All reviewing",
-                        detail: "Drills, shadowing (including coach feedback), word and expression playback — every review surface is free.")
-                freeRow(icon: "repeat", title: "Replays",
-                        detail: "Anything already synthesized is cached — loop it, slow it down, replay whole talks.")
-                freeRow(icon: "wand.and.stars", title: "Summaries & reports",
-                        detail: "Session scorecards, weekly reports, and the daily call are on the house.")
-                freeRow(icon: "square.grid.2x2", title: "Exploring",
-                        detail: "Building situations, browsing topics, translations, dictionaries — tap freely, nothing here is metered.")
-                freeRow(icon: "text.book.closed.fill", title: "Vocabulary & progress",
-                        detail: "The word cloud, CEFR estimate, and stats never cost anything.")
+                freeRow(icon: "rectangle.stack.fill", title: explain("All reviewing"),
+                        detail: explain("Drills, shadowing (including coach feedback), word and expression playback — every review surface is free."))
+                freeRow(icon: "repeat", title: explain("Replays"),
+                        detail: explain("Anything already synthesized is cached — loop it, slow it down, replay whole talks."))
+                freeRow(icon: "wand.and.stars", title: explain("Summaries & reports"),
+                        detail: explain("Session scorecards, weekly reports, and the daily call are on the house."))
+                freeRow(icon: "square.grid.2x2", title: explain("Exploring"),
+                        detail: explain("Building situations, browsing topics, translations, dictionaries — tap freely, nothing here is metered."))
+                freeRow(icon: "text.book.closed.fill", title: explain("Vocabulary & progress"),
+                        detail: explain("The word cloud, CEFR estimate, and stats never cost anything."))
             } header: {
                 Text("Always free")
             } footer: {

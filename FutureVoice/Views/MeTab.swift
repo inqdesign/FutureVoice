@@ -90,7 +90,7 @@ struct MeTab: View {
                         planPage
                     } label: {
                         row(icon: "bolt.fill",
-                            title: "Plan & talk time",
+                            title: explain("Plan & talk time"),
                             subtitle: "\(account.talkTimeLabel) · \(account.planLabel)")
                     }
                     // Sits with the plan because it IS the plan for anyone in
@@ -101,7 +101,7 @@ struct MeTab: View {
                         CoreClubView()
                     } label: {
                         row(icon: coreMembership?.seated == true ? "seal.fill" : "seal",
-                            title: "The Core",
+                            title: explain("The Core"),
                             subtitle: coreClubSummary)
                     }
                 }
@@ -115,22 +115,22 @@ struct MeTab: View {
                         dailyCallPage
                     } label: {
                         row(icon: "phone.arrow.down.left",
-                            title: "Daily call",
+                            title: explain("Daily call"),
                             subtitle: dailyCallSummary)
                     }
                     NavigationLink {
                         voicePage
                     } label: {
                         row(icon: "person.wave.2",
-                            title: "Voice",
+                            title: explain("Voice"),
                             subtitle: appState.voiceDisplayName)
                     }
                     NavigationLink {
                         PublicIntroView().environmentObject(appState)
                     } label: {
                         row(icon: "person.2.wave.2",
-                            title: "Find people",
-                            subtitle: "Publish your intro — others practice with \"you\"")
+                            title: explain("Find people"),
+                            subtitle: explain("Publish your intro — others practice with \"you\""))
                     }
                 }
 
@@ -139,21 +139,21 @@ struct MeTab: View {
                         appearancePage
                     } label: {
                         row(icon: "paintpalette",
-                            title: "Appearance",
+                            title: explain("Appearance"),
                             subtitle: appState.appearance.label)
                     }
                     NavigationLink {
                         dataPage
                     } label: {
                         row(icon: "externaldrive",
-                            title: "Practice data",
-                            subtitle: "Export or import this device's practice")
+                            title: explain("Practice data"),
+                            subtitle: explain("Export or import this device's practice"))
                     }
                     NavigationLink {
                         privacyPage
                     } label: {
                         row(icon: "hand.raised",
-                            title: "Privacy",
+                            title: explain("Privacy"),
                             subtitle: privacySummary)
                     }
                 }
@@ -188,8 +188,8 @@ struct MeTab: View {
                         confirmingOnboardingReset = true
                     } label: {
                         row(icon: "arrow.counterclockwise",
-                            title: "Replay onboarding",
-                            subtitle: "Reset setup, voice & persona — stays signed in")
+                            title: explain("Replay onboarding"),
+                            subtitle: explain("Reset setup, voice & persona — stays signed in"))
                     }
                     // Forces the next play of every line to re-synthesize.
                     // Exists so nobody ever reaches for "delete the app" to
@@ -199,8 +199,8 @@ struct MeTab: View {
                         confirmingAudioCacheClear = true
                     } label: {
                         row(icon: "waveform.slash",
-                            title: "Clear voice cache",
-                            subtitle: "Re-synthesize every line — learning data untouched")
+                            title: explain("Clear voice cache"),
+                            subtitle: explain("Re-synthesize every line — learning data untouched"))
                     }
                 } header: {
                     Text("Developer")
@@ -292,6 +292,17 @@ struct MeTab: View {
             .task { aiLevel = recentAILevel() }
             .task(id: appState.enrolledLanguages) { refreshLevelCache() }
         }
+        // Settings speaks the learner's OWN language, not the target — the
+        // same exception onboarding gets, for the same reason. "Chrome follows
+        // the target" buys free exposure on words recognized by shape (a tab
+        // bar seen a hundred times a day beside an icon). Nothing in here is
+        // that: every row asks the learner to decide something, consent to
+        // something, or destroy something, and the page that literally sets
+        // the app's language cannot be the one page they can't read. Applies
+        // to everything pushed or presented from here too, so a `Text`
+        // literal in a subpage needs no per-call code — a `String`-typed one
+        // still has to go through `explain(…)`.
+        .environment(\.locale, Locale(identifier: appState.nativeLanguage))
     }
 
     /// Same source as ProgressTab's "Estimated level": ONLY the weekly
@@ -544,16 +555,16 @@ struct MeTab: View {
                     levelCache[appState.targetLanguage] = ai
                 } label: {
                     row(icon: "sparkles",
-                        title: "AI read: \(ai.rawValue.uppercased()) — tap to apply",
-                        subtitle: "From your recent \(LanguageCatalog.englishName(appState.targetLanguage)) conversations")
+                        title: explain("AI read: \(ai.rawValue.uppercased()) — tap to apply"),
+                        subtitle: explain("From your recent \(LanguageCatalog.endonym(appState.targetLanguage)) conversations"))
                 }
             }
             Button {
                 showingAddLanguage = true
             } label: {
                 row(icon: "plus.circle",
-                    title: "Add a language",
-                    subtitle: "Same voice, new language")
+                    title: explain("Add a language"),
+                    subtitle: explain("Same voice, new language"))
             }
             // Goal + app language live WITH the languages: they're the other
             // two answers to "how do I learn here", not app chrome.
@@ -563,8 +574,8 @@ struct MeTab: View {
                 }
             } label: {
                 row(icon: "target",
-                    title: "Daily goal",
-                    subtitle: "Minutes of speaking per day")
+                    title: explain("Daily goal"),
+                    subtitle: explain("Minutes of speaking per day"))
             }
             // A menu of 60+ languages is a scroll inside a popover, so this
             // wants a whole pushed screen. It is NOT a `.navigationLink`
@@ -579,7 +590,7 @@ struct MeTab: View {
                 // Names the EFFECT, not the fact: what this decides is which
                 // language the app explains itself in.
                 row(icon: "globe",
-                    title: "App language",
+                    title: explain("App language"),
                     subtitle: LanguageCatalog.endonym(appState.nativeLanguage))
             }
         } header: {
@@ -597,8 +608,8 @@ struct MeTab: View {
         Section {
             Toggle(isOn: $dailyCallEnabled) {
                 row(icon: "phone.arrow.down.left",
-                    title: "Daily call",
-                    subtitle: "Your fluent self phones you")
+                    title: explain("Daily call"),
+                    subtitle: explain("Your fluent self phones you"))
             }
             if dailyCallEnabled {
                 // One row per call. More than one a day is the difference
@@ -698,8 +709,8 @@ struct MeTab: View {
                 renamingVoice = true
             } label: {
                 row(icon: "textformat",
-                    title: "Voice name: \(appState.voiceDisplayName)",
-                    subtitle: "What your clone is called, here and on ElevenLabs")
+                    title: explain("Voice name: \(appState.voiceDisplayName)"),
+                    subtitle: explain("What your clone is called, here and on ElevenLabs"))
             }
             // On Bluetooth, a Talk call plays through the earphone's CALL
             // chain, which iOS's "Reduce Loud Sounds" headphone-safety cap
@@ -740,8 +751,8 @@ struct MeTab: View {
                     .environmentObject(appState)
             } label: {
                 row(icon: "person.wave.2",
-                    title: "Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)",
-                    subtitle: "For Watch scenes without a saved person")
+                    title: explain("Scene partner voice: \(VoicePreset.by(id: defaultSceneVoiceId).displayName)"),
+                    subtitle: explain("For Watch scenes without a saved person"))
             }
             if appState.voiceCloneId != nil,
                !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
@@ -751,16 +762,16 @@ struct MeTab: View {
                     pickingAccent = true
                 } label: {
                     row(icon: "globe",
-                        title: applied.map { "Accent: \($0.label)" } ?? "Accent",
-                        subtitle: "Same voice, the accent you choose")
+                        title: applied.map { explain("Accent: \($0.label)") } ?? explain("Accent"),
+                        subtitle: explain("Same voice, the accent you choose"))
                 }
             }
             Button(role: .destructive) {
                 confirmingVoiceReset = true
             } label: {
                 row(icon: "mic.badge.plus",
-                    title: "Re-record voice",
-                    subtitle: "Replace your current clone with a new one")
+                    title: explain("Re-record voice"),
+                    subtitle: explain("Replace your current clone with a new one"))
             }
             if VoiceSampleStore.shared.exists {
                 Button {
@@ -768,8 +779,8 @@ struct MeTab: View {
                 } label: {
                     HStack {
                         row(icon: "arrow.triangle.2.circlepath",
-                            title: "Regenerate from saved recording",
-                            subtitle: "Rebuild the clone from your last recording")
+                            title: explain("Regenerate from saved recording"),
+                            subtitle: explain("Rebuild the clone from your last recording"))
                         if regeneratingVoice {
                             Spacer()
                             ProgressView()
@@ -825,7 +836,7 @@ struct MeTab: View {
             do {
                 try await appState.renameVoice(to: next)
             } catch {
-                voiceRenameWarning = "Saved here, but ElevenLabs didn't accept the new name: \(error.localizedDescription) It'll be applied the next time your voice is cloned."
+                voiceRenameWarning = explain("Saved here, but ElevenLabs didn't accept the new name: \(error.localizedDescription) It'll be applied the next time your voice is cloned.")
             }
         }
     }
@@ -857,7 +868,7 @@ struct MeTab: View {
     /// "08:00 · 13:00" while enabled, "Off" otherwise — the main list's
     /// one-line read of the call schedule.
     private var dailyCallSummary: String {
-        guard dailyCallEnabled else { return "Off" }
+        guard dailyCallEnabled else { return explain("Off") }
         return callTimes
             .map { String(format: "%02d:%02d", $0.hour, $0.minute) }
             .joined(separator: " · ")
@@ -867,10 +878,10 @@ struct MeTab: View {
     /// and its bar — the door has to be visible from outside or nobody walks
     /// toward it.
     private var coreClubSummary: String {
-        guard let m = coreMembership else { return chrome("100 seats · 28 of 30 days to enter") }
+        guard let m = coreMembership else { return explain("100 seats · 28 of 30 days to enter") }
         return m.seated
-            ? chrome("In the Core · \(m.daysTotal) days")
-            : chrome("No seat right now")
+            ? explain("In the Core · \(m.daysTotal) days")
+            : explain("No seat right now")
     }
 
     private var planPage: some View {
@@ -884,14 +895,14 @@ struct MeTab: View {
                 } label: {
                     row(icon: "bolt.fill",
                         title: account.talkTimeLabel,
-                        subtitle: "\(account.planLabel) · see where it went")
+                        subtitle: explain("\(account.planLabel) · see where it went"))
                 }
                 Button {
                     showingPaywall = true
                 } label: {
                     row(icon: "sparkles",
-                        title: account.planLabel == "Free" ? "See plans" : "Manage plan",
-                        subtitle: "Talk time lands automatically every cycle")
+                        title: account.isEntitled ? explain("Manage plan") : explain("See plans"),
+                        subtitle: explain("Talk time lands automatically every cycle"))
                 }
                 // Watch is a SECOND allowance since 2026-08-14, and an
                 // invisible allowance is the thing that made the old shared
@@ -901,29 +912,29 @@ struct MeTab: View {
                 if let scenes = account.dailyScenesCap {
                     row(icon: "play.circle.fill",
                         title: account.sceneAllowanceLabel,
-                        subtitle: chrome("Separate from your talk minutes"),
+                        subtitle: explain("Separate from your talk minutes"),
                         value: "\(account.scenesUsedToday) / \(scenes)")
                 }
                 NavigationLink {
                     CreditGuideView()
                 } label: {
                     row(icon: "questionmark.circle",
-                        title: "What uses talk time?",
-                        subtitle: "And what's always free")
+                        title: explain("What uses talk time?"),
+                        subtitle: explain("And what's always free"))
                 }
                 if BetaConfig.invitesAvailable {
                     NavigationLink {
                         InviteView()
                     } label: {
                         row(icon: "gift",
-                            title: "Invite & earn talk time",
-                            subtitle: "About an hour each, per friend")
+                            title: explain("Invite & earn talk time"),
+                            subtitle: explain("About an hour each, per friend"))
                     }
                 }
             } footer: {
                 Text(BetaConfig.invitesAvailable
-                    ? "Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free."
-                    : "Minutes buy talk time with your fluent self. Reviewing your words, drills, and dialogues always stays free.")
+                    ? explain("Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free.")
+                    : explain("Minutes buy talk time with your fluent self. Reviewing your words, drills, and dialogues always stays free."))
             }
         }
         .navigationTitle("Plan & talk time")
@@ -973,8 +984,8 @@ struct MeTab: View {
 
     private var privacySummary: String {
         consent.hasVoiceConsent
-            ? chrome("Voice consent · policy")
-            : chrome("Policy")
+            ? explain("Voice consent · policy")
+            : explain("Policy")
     }
 
     /// Where a consent given during onboarding can be READ BACK and TAKEN
@@ -986,13 +997,13 @@ struct MeTab: View {
             Section {
                 if let given = consent.voiceConsentAt {
                     row(icon: "waveform.badge.checkmark",
-                        title: "Voice model consent",
-                        subtitle: chrome("Given \(given.formatted(date: .abbreviated, time: .omitted))"))
+                        title: explain("Voice model consent"),
+                        subtitle: explain("Given \(given.formatted(date: .abbreviated, time: .omitted))"))
                 }
                 if consent.ageConfirmedAt != nil {
                     row(icon: "person.badge.shield.checkmark",
-                        title: "Age confirmed",
-                        subtitle: chrome("At least \(ConsentStore.minimumAge)"))
+                        title: explain("Age confirmed"),
+                        subtitle: explain("At least \(ConsentStore.minimumAge)"))
                 }
             } header: {
                 Text("Consent")
@@ -1022,7 +1033,7 @@ struct MeTab: View {
 
             Section {
                 Link(destination: ConsentStore.privacyURL) {
-                    row(icon: "doc.text", title: "Privacy Policy",
+                    row(icon: "doc.text", title: explain("Privacy Policy"),
                         subtitle: "nawana.app/privacy")
                 }
                 Button {
@@ -1030,7 +1041,7 @@ struct MeTab: View {
                         openURL(url)
                     }
                 } label: {
-                    row(icon: "envelope", title: "Contact us",
+                    row(icon: "envelope", title: explain("Contact us"),
                         subtitle: ConsentStore.contactEmail)
                 }
             } footer: {
@@ -1070,7 +1081,7 @@ struct MeTab: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(appState.persona?.displayName.isEmpty == false
                      ? appState.persona!.displayName
-                     : "Set up your profile")
+                     : explain("Set up your profile"))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 // Apple often returns no email (private relay, or the email
@@ -1091,7 +1102,7 @@ struct MeTab: View {
 
     private var accountSubtitle: String {
         let email = account.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return email.isEmpty ? "Signed in with Apple" : email
+        return email.isEmpty ? explain("Signed in with Apple") : email
     }
 }
 
@@ -1151,6 +1162,12 @@ extension MeTab {
 /// — in their language, with the app's own static copy staying English. The
 /// split has to say that BEFORE the choice, which is what the group footers
 /// are for; a header alone reads as a category name, not a caveat.
+///
+/// The first footer used to promise "menus, buttons — everything you read" and
+/// that was never true: chrome follows the TARGET language everywhere outside
+/// this drawer. Someone who set the app to Korean and then found Settings in
+/// English had been told, on this very screen, that it wouldn't be. It now
+/// names what actually changes and what deliberately doesn't.
 private struct AppLanguagePage: View {
     @Binding var selection: String
     let groups: (translated: [String], coachingOnly: [String])
@@ -1163,14 +1180,14 @@ private struct AppLanguagePage: View {
             } header: {
                 Text(explain("Fully translated"))
             } footer: {
-                Text(explain("Everything you read in the app — menus, buttons, corrections, notes — is in this language."))
+                Text(explain("Settings, explanations, corrections and notes all come in this language. Tabs and the buttons inside practice stay in the language you're learning."))
             }
             Section {
                 ForEach(groups.coachingOnly, id: \.self, content: choice)
             } header: {
                 Text(explain("Corrections and notes only"))
             } footer: {
-                Text(explain("Your corrections, notes and word meanings come back in this language. The app's own menus and buttons stay English."))
+                Text(explain("Your corrections, notes and word meanings come back in this language. The app's own screens stay English."))
             }
         }
         .navigationTitle("App language")

@@ -16,7 +16,15 @@ enum AppAppearance: String, CaseIterable {
         }
     }
 
-    var label: String { rawValue.capitalized }
+    /// Settings-only, and Settings speaks the learner's own language — so
+    /// this can't stay `rawValue.capitalized`, which is frozen English.
+    var label: String {
+        switch self {
+        case .system: return explain("System")
+        case .light:  return explain("Light")
+        case .dark:   return explain("Dark")
+        }
+    }
 }
 
 /// Exists for ONE reason: `UNUserNotificationCenter.current().delegate` has to

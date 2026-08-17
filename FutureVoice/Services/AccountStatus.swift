@@ -46,7 +46,7 @@ struct AccountStatus {
 
     /// "Watch scenes" for the plan page's allowance row. A plain label — the
     /// count itself is the row's value, so the title must not repeat it.
-    var sceneAllowanceLabel: String { chrome("Watch scenes today") }
+    var sceneAllowanceLabel: String { explain("Watch scenes today") }
 
     /// True while the subscription actually entitles (paid or in trial).
     var isEntitled: Bool {
@@ -146,14 +146,14 @@ struct AccountStatus {
             // No free tier since the hard paywall: an account without a
             // subscription is either a beta tester spending leftovers or
             // someone who hasn't started.
-            return hasLegacyPool ? chrome("Beta") : chrome("No plan")
+            return hasLegacyPool ? explain("Beta") : explain("No plan")
         }
         let parts = planId.split(separator: "_")
         let tier = parts.first.map(String.init) ?? planId
         let name = tier.capitalized    // 'daily' → "Daily", 'unlimited' → "Unlimited"
         // The trial is metered as Daily whatever plan is being trialed, so
         // naming the trialed plan's tier here would promise the wrong size.
-        if isTrialing { return chrome("\(name) trial") }
+        if isTrialing { return explain("\(name) trial") }
         let period = parts.dropFirst().first?.capitalized ?? ""
         return period.isEmpty ? name : "\(name) \(period)"
     }
@@ -180,24 +180,24 @@ struct AccountStatus {
     /// whether the number refills is the thing a learner most needs to know,
     /// and one shared "N of M" shape hid exactly that.
     var talkTimeLabel: String {
-        if unlimited { return chrome("\(minutesRemaining) min left") }
+        if unlimited { return explain("\(minutesRemaining) min left") }
         if isUnlimitedPlan {
             return minutesUsedToday == 0
-                ? chrome("No talk time used today")
-                : chrome("\(minutesUsedToday) min used today")
+                ? explain("No talk time used today")
+                : explain("\(minutesUsedToday) min used today")
         }
         if isEntitled {
             // Daily and trial both refill at midnight — "today" is what
             // stops the number reading as a dwindling lifetime balance.
-            return chrome("\(minutesRemaining) of \(tankMinutes) min left today")
+            return explain("\(minutesRemaining) of \(tankMinutes) min left today")
         }
         if hasLegacyPool {
             // Beta leftovers: a one-time pool with nothing to refill toward,
             // so no denominator.
-            return chrome("\(minutesRemaining) min of beta talk left")
+            return explain("\(minutesRemaining) min of beta talk left")
         }
         // Hard paywall — there is no free tier to count down from.
-        return chrome("No talk time yet")
+        return explain("No talk time yet")
     }
 
     /// Below this, the plan card turns orange and nudges toward an upgrade.
