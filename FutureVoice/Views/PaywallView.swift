@@ -16,12 +16,15 @@ import Supabase
 /// rule in CLAUDE.md; keep it that way when adding copy here.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @StateObject private var store = StoreKitService()
 
     @State private var step: Step = .resolving
-    /// Already paying (or in trial). Such a viewer opened this sheet to
-    /// CHANGE plans, so the trial funnel is not just noise — it is wrong.
-    @State private var isSubscriber = false
+    /// The server's billing snapshot. Someone already paying (or in trial)
+    /// opened this sheet to CHANGE plans, so the trial funnel is not just
+    /// noise — it is wrong; and the plan they hold has to be visible on the
+    /// screen that sells plans, or the sheet asks them to buy what they own.
+    @State private var account: AccountStatus = .empty
     // Monthly by default: it is the smaller commitment, and a paywall that
     // opens on the year-long option reads as pressure rather than a choice.
     @State private var period: PlanPeriod = .monthly
@@ -68,6 +71,48 @@ struct PaywallView: View {
     /// and say "Subscribe" instead of "Try for free".
     private var showsTrial: Bool { store.trialEligible && !BetaConfig.isBeta }
 
+    /// Already entitled — paid or in trial.
+    private var isSubscriber: Bool { account.isEntitled }
+
+    /// Whether this viewer was actually walked through pitch → timeline. A
+    /// subscriber never is, so for them `.plans` is the FIRST step and its
+    /// back button has to close the sheet — `showsTrial` alone sent them
+    /// backwards into a trial pitch for something they already pay for.
+    private var walkedTrialFunnel: Bool { showsTrial && !isSubscriber }
+
+    /// The plan this account holds right now (`daily_monthly`), or nil.
+    private var currentPlanId: String? { isSubscriber ? account.planId : nil }
+
+    private func isCurrentPlan(tier: String, period: PlanPeriod) -> Bool {
+        currentPlanId == "\(tier)_\(period.rawValue)"
+    }
+
+    /// True when the selection IS what they already pay for — the one case
+    /// where the button must not say "Subscribe".
+    private var selectionIsCurrentPlan: Bool {
+        isCurrentPlan(tier: selectedTier, period: period)
+    }
+
+    /// The held plan, named the way the CARDS name it ("Unlimited · Monthly")
+    /// — `AccountStatus.planLabel` capitalizes the raw plan id, so it reads
+    /// English beside a Korean card that says 무제한.
+    private var currentPlanLabel: String {
+        guard let id = currentPlanId else { return "" }
+        let parts = id.split(separator: "_").map(String.init)
+        let name = parts.first == "unlimited" ? explain("Unlimited") : explain("Daily")
+        // The trial is metered as Daily whatever plan it trials, so the tier
+        // it names is the plan it will BECOME, not today's allowance.
+        if account.isTrialing { return explain("\(name) trial") }
+        guard let raw = parts.dropFirst().first,
+              let held = PlanPeriod(rawValue: raw) else { return name }
+        return "\(name) · \(held.label)"
+    }
+
+    /// Apple's own subscription management screen. Changing or cancelling a
+    /// live subscription happens there, never in-app.
+    private static let manageSubscriptionsURL = URL(
+        string: "https://apps.apple.com/account/subscriptions")!
+
     /// During the beta the paywall can't sell, so it ends in a preference
     /// survey rather than a purchase. `.plans` → `.survey` → submit.
     private var showsSurvey: Bool { BetaConfig.collectsPreferenceSurvey }
@@ -96,13 +141,21 @@ struct PaywallView: View {
             // Both answers are needed before the first frame can be chosen,
             // so fetch them together rather than in sequence.
             async let products: Void = store.load()
-            async let account = AccountStatus.fetch()
+            async let snapshot = AccountStatus.fetch()
             _ = await products
-            isSubscriber = await account.isEntitled
+            account = await snapshot
+            // Open on the plan they hold, so the sheet starts by showing
+            // their own state rather than a pitch for something else.
+            if let id = currentPlanId {
+                let parts = id.split(separator: "_")
+                if let tier = parts.first { selectedTier = String(tier) }
+                if let raw = parts.dropFirst().first,
+                   let held = PlanPeriod(rawValue: String(raw)) { period = held }
+            }
             // Pitch the trial only to someone who could actually take it:
             // not a current subscriber, not during the beta, and only while
             // Apple still offers this account an intro offer.
-            step = (showsTrial && !isSubscriber) ? .pitch : .plans
+            step = walkedTrialFunnel ? .pitch : .plans
         }
         .onChange(of: store.purchaseState) { _, state in
             if state == .purchased, showsTrial {
@@ -137,12 +190,12 @@ struct PaywallView: View {
                 case .timeline: step = .pitch
                 // Without a trial funnel there are no earlier steps — back
                 // from plans just closes.
-                case .plans:    showsTrial ? (step = .timeline) : dismiss()
+                case .plans:    walkedTrialFunnel ? (step = .timeline) : dismiss()
                 case .survey:   step = .plans
                 }
             } label: {
                 Image(systemName: step == .pitch || step == .resolving
-                      || (step == .plans && !showsTrial)
+                      || (step == .plans && !walkedTrialFunnel)
                       ? "xmark" : "chevron.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -164,6 +217,7 @@ struct PaywallView: View {
                 case .timeline: step = .plans
                 case .plans:
                     if showsSurvey { step = .survey }
+                    else if selectionIsCurrentPlan { openURL(Self.manageSubscriptionsURL) }
                     else { Task { await purchaseSelected() } }
                 case .survey:   Task { await submitSurvey() }
                 }
@@ -214,6 +268,12 @@ struct PaywallView: View {
         case .timeline: return explain("See plans")
         case .plans:
             if showsSurvey { return explain("Continue") }
+            // A subscriber can't buy what they already have — the only real
+            // action on their own plan is Apple's management screen. Picking
+            // the other plan is a change, not a first purchase, and must not
+            // be dressed up as a trial.
+            if selectionIsCurrentPlan { return explain("Manage subscription") }
+            if isSubscriber { return explain("Change plan") }
             return showsTrial && selectedOption?.trialDays != nil
                 ? explain("Start my free \(store.trialDays)-day trial")
                 : explain("Subscribe")
@@ -349,9 +409,18 @@ struct PaywallView: View {
 
     private var plansContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(explain("Choose your plan"))
+            Text(isSubscriber ? explain("Your plan") : explain("Choose your plan"))
                 .font(.largeTitle.weight(.bold))
                 .padding(.top, 12)
+
+            if isSubscriber {
+                Label(account.isTrialing
+                      ? explain("You're on the \(currentPlanLabel) — it converts unless you cancel.")
+                      : explain("You're subscribed to \(currentPlanLabel)."),
+                      systemImage: "checkmark.seal.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
 
             if showsSurvey {
                 Label(explain("You're in the beta — subscriptions aren't live yet. Your starting talk time is final, but reviewing always stays free. Tell us what you'd want at launch on the next step."),
@@ -389,13 +458,13 @@ struct PaywallView: View {
                          blurb: explain("The same five minutes every day — small enough that you actually do it."))
             }
 
-            if store.options.allSatisfy({ $0.product == nil }), !store.loading {
-                // Same condition, two different truths: in the survey the
-                // numbers on screen ARE the planned prices and must say so;
-                // outside it there are no numbers at all.
-                Label(showsSurvey
-                      ? explain("Planned launch pricing — final prices confirm on the App Store at launch.")
-                      : explain("Prices load from the App Store — not available yet in this build."),
+            // Only the survey's anchor is worth a line: there the numbers on
+            // screen ARE planned prices and must say so. Outside it, a missing
+            // price is a StoreKit state the learner can do nothing about —
+            // explaining it ("prices load from the App Store") turned a blank
+            // into an apology on every open. The card simply omits the price.
+            if showsSurvey, store.options.allSatisfy({ $0.product == nil }), !store.loading {
+                Label(explain("Planned launch pricing — final prices confirm on the App Store at launch."),
                       systemImage: "info.circle")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -510,8 +579,7 @@ struct PaywallView: View {
     /// nothing can be bought and the screen exists to ask "would you pay
     /// this?" — a labelled anchor. On a screen that can actually charge, a
     /// hardcoded KRW figure would quote the wrong currency, so it stays nil
-    /// and the card shows "—" beside the "prices load from the App Store"
-    /// notice.
+    /// and the card shows no price at all.
     private func displayPrice(_ opt: StoreKitService.PlanOption?) -> String? {
         opt?.localizedPrice ?? (showsSurvey ? opt?.plannedPriceLabel : nil)
     }
@@ -556,6 +624,7 @@ struct PaywallView: View {
     private func planCard(tier: String, audience: String, name: String, blurb: String) -> some View {
         let opt = option(tier: tier)
         let isSelected = selectedTier == tier
+        let isCurrent = isCurrentPlan(tier: tier, period: period)
         Button {
             selectedTier = tier
         } label: {
@@ -564,9 +633,11 @@ struct PaywallView: View {
                     // A filled capsule reads as an award — it ranked the
                     // plans on one axis and made Daily look like less. This
                     // is a quiet label that tells you which one is yours.
-                    Text(audience)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
+                    // For the plan already held, WHICH ONE IT IS outranks the
+                    // "is this you?" question the audience line asks.
+                    Text(isCurrent ? explain("Current plan") : audience)
+                        .font(.caption.weight(isCurrent ? .semibold : .medium))
+                        .foregroundStyle(isCurrent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     Spacer(minLength: 8)
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
@@ -588,9 +659,14 @@ struct PaywallView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(displayPrice(opt).map { "\($0) / \(period.cycleNoun)" } ?? "—")
-                            .font(.footnote.weight(.semibold))
-                            .foregroundStyle(.secondary)
+                        // No placeholder when StoreKit hasn't priced it: a
+                        // dash reads as a broken field, and an absent price
+                        // says the same thing more quietly.
+                        if let price = displayPrice(opt) {
+                            Text("\(price) / \(period.cycleNoun)")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
                         if period == .annual, let saved = annualSavingsPercent(tier: tier) {
                             Text(explain("Save \(saved)% vs monthly"))
                                 .font(.caption2.weight(.semibold))

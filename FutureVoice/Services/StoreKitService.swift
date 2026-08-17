@@ -34,8 +34,8 @@ final class StoreKitService: ObservableObject {
         /// The price we may SHOW on a card that can be bought: Apple's, for
         /// this customer's storefront, or nothing. Never the planned map —
         /// that is one hardcoded currency (KRW) and would quote a Japanese
-        /// customer a Korean number. "—" plus the "prices load from the App
-        /// Store" notice is the honest state when StoreKit hasn't answered.
+        /// customer a Korean number. Showing NO price is the honest state
+        /// when StoreKit hasn't answered — the card omits the line.
         var localizedPrice: String? { product?.displayPrice }
 
         /// Planned launch price for the BETA SURVEY only — an anchor for a
