@@ -141,7 +141,7 @@ struct StudyProgressSnapshot: Codable {
     var updatedAt: Date
     var todaySeconds: Int         // seconds spoken today (user turns)
     var goalMinutes: Int          // the daily goal (minutes)
-    var streakDays: Int           // consecutive days with ≥1 talk
+    var streakDays: Int           // consecutive days over the Core bar, in the active language
     var dueCount: Int             // SRS cards due right now
     var studyingWords: Int        // notebook words being studied
     var studyingExpressions: Int  // bookmarked phrases being studied

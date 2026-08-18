@@ -6,7 +6,7 @@ import Foundation
 enum PracticeStats {
 
     struct Snapshot {
-        var streakDays: Int                 // consecutive days ending today with ≥1 ended session
+        var streakDays: Int                 // consecutive days over the Core bar, in the active language
         var totalSessions: Int
         var lastScorecard: SessionScorecard?
         var lastSessionEndedAt: Date?
