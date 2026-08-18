@@ -1501,7 +1501,8 @@ struct ProgressTab: View {
             for session in allEnded {
                 let snap = TalkCurriculum.build(session: session,
                                                 proficiency: proficiency,
-                                                shadowAttempts: attempts)
+                                                shadowAttempts: attempts,
+                                                drillCards: drillCards)
                 mastered += snap.masteredCount
                 total += snap.totalCount
             }
@@ -1659,6 +1660,7 @@ struct ProgressTab: View {
                     gT.append(TrendPoint(date: date,
                                          value: Double(slips) / Double(m.userWordCount) * 100))
                 }
+            let drillCards = DrillStore.shared.load()
             }
             if m.avgWordsPerUserTurn > 0 {
                 eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))

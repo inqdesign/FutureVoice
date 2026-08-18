@@ -9,7 +9,10 @@ import Foundation
 ///                    exactly like a scenario word
 ///   - shadow lines → the corrected versions of the learner's own sentences
 ///                    (`Turn.suggestion`) — mastered by a shadow attempt
-///                    scoring ≥ `ScenarioCurriculum.shadowMasteryScore`
+///                    scoring ≥ `ScenarioCurriculum.shadowMasteryScore`, or by
+///                    the correction's drill card reaching the top Leitner box
+///                    (the book page studies corrections as CARDS, so the
+///                    card's "Got it" has to be able to finish the book)
 ///
 /// Deriving (instead of storing) keeps a single source of truth: mastery
 /// state lives in `VocabStore` / `ShadowAttemptStore`, and old sessions get
@@ -54,7 +57,8 @@ enum TalkCurriculum {
 
     static func build(session: Session,
                       proficiency: CEFRLevel,
-                      shadowAttempts: [ShadowAttempt]) -> Snapshot {
+                      shadowAttempts: [ShadowAttempt],
+                      drillCards: [DrillCard]) -> Snapshot {
         var snap = Snapshot()
 
         let spoken = session.turns.filter { $0.role == .user }
@@ -110,3 +114,20 @@ enum TalkCurriculum {
         return snap
     }
 }
+        let sessionCards = drillCards.filter { $0.sourceSessionId == session.id }
+            // The book page studies corrections as drill CARDS, not shadowing
+            // — a card graduated to the top box (Got it / produced live in a
+            // talk) masters the line, or the cover's count asks for work no
+            // chapter offers. Turn-id match first; text match catches cards
+            // minted from the summary without a source turn (same fallback
+            // the Drill chapter's openCard uses).
+            if item.masteredAt == nil {
+                let needle = CarryoverDetector.normalized(s.alternative)
+                if let card = sessionCards.first(where: {
+                    $0.box == DrillStore.maxBox
+                        && ($0.sourceTurnId == turn.id
+                            || CarryoverDetector.normalized($0.targetPhrase) == needle)
+                }) {
+                    item.masteredAt = card.lastReviewedAt ?? card.createdAt
+                }
+            }

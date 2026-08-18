@@ -126,12 +126,14 @@ enum StudyWidgetRefresher {
         let proficiency = CEFRLevel(rawValue:
             UserDefaults.standard.string(forKey: "futurevoice.proficiency") ?? "") ?? .b1
         let shadowAttempts = ShadowAttemptStore.shared.load()
+        let drillCards = DrillStore.shared.load()
         let talks = SessionStore.shared.load()
             .filter { $0.endedAt != nil && $0.archivedAt == nil }
         for session in talks {
             let cur = TalkCurriculum.build(session: session,
                                            proficiency: proficiency,
-                                           shadowAttempts: shadowAttempts)
+                                           shadowAttempts: shadowAttempts,
+                                           drillCards: drillCards)
             guard cur.masteredCount > 0, !cur.isMastered else { continue }
             let date = cur.lastStudiedAt ?? session.endedAt ?? session.startedAt
             candidates.append(Candidate(date: date, snapshot: StudyBookSnapshot(

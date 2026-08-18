@@ -882,12 +882,14 @@ struct ConversationDetailView: View {
         if let fresh = SessionStore.shared.load().first(where: { $0.id == session.id }) {
             session = fresh
         }
+        let cards = DrillStore.shared.load()
         curriculum = TalkCurriculum.build(session: session,
                                           proficiency: appState.proficiency,
-                                          shadowAttempts: appState.shadowAttempts)
+                                          shadowAttempts: appState.shadowAttempts,
+                                          drillCards: cards)
         archivedAt = SessionStore.shared.load().first { $0.id == session.id }?.archivedAt
             ?? session.archivedAt
-        drillCount = DrillStore.shared.load().filter { $0.sourceSessionId == session.id }.count
+        drillCount = cards.filter { $0.sourceSessionId == session.id }.count
     }
 
     /// Run the analysis this talk never got. Same engine, same idempotency

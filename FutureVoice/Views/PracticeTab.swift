@@ -1207,10 +1207,12 @@ struct PracticeTab: View {
         let toSnapshot = finished
         Task { @MainActor in
             var out: [UUID: TalkCurriculum.Snapshot] = [:]
+            let drillCards = DrillStore.shared.load()
             for s in toSnapshot {
                 out[s.id] = TalkCurriculum.build(session: s,
                                                  proficiency: appState.proficiency,
-                                                 shadowAttempts: appState.shadowAttempts)
+                                                 shadowAttempts: appState.shadowAttempts,
+                                                 drillCards: drillCards)
             }
             talkSnapshots = out
         }
