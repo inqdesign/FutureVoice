@@ -179,8 +179,24 @@ enum ScenarioCurriculumEngine {
         dialogue. The dialogue is the whole course — the learner watches it,
         studies its words and expressions, and shadows their own lines.
 
+        WHOSE SITUATION IT IS — settle this before you write a line. The
+        scenario is the learner's own, in the learner's own words, about the
+        learner's own life. Whatever it names being done — thanking someone,
+        apologizing, asking for a raise, sending a dish back, breaking news to
+        a friend — the LEARNER ("user") is the one doing it, and the
+        counterpart is the person on the OTHER side of it. Never cast the
+        counterpart as the one performing the learner's move, and never swap
+        the two: in "thanking the beta testers" the user thanks and the
+        counterpart is thanked, not the reverse.
+
         Content rules:
-        - turns: \(scale.turnRange), alternating naturally; either side can open.
+        - turns: \(scale.turnRange), alternating naturally. WHOEVER'S MOVE THE
+          SCENARIO NAMES OPENS IT — when the learner is the one going in to do
+          something, the FIRST turn is "user". The counterpart opens only when
+          the situation is something that happens TO the learner (called in by
+          the doctor, served at a counter, stopped by an official). When
+          neither side owns the move (a catch-up, talking a story through),
+          either may open.
           Real spoken \(languageName) — contractions, hedges, natural register.
           \(scale.turnStyle)
           The USER speaks as a confident, fluent version of the learner
@@ -236,14 +252,18 @@ enum ScenarioCurriculumEngine {
             }
         } else {
             lines = ["scenario:"]
-            lines.append("- where: \(scenario.environment)")
+            // NOT labelled "where" — the composer takes one free line, and a
+            // learner writes what they're going to DO at least as often as
+            // where they'll be. Filed as a place, an action read as scenery
+            // and the model handed it to whichever side it liked.
+            lines.append("- what the learner is going in to do (their own words): \(scenario.environment)")
             let role = scenario.role.trimmingCharacters(in: .whitespaces)
             // Free-described situations carry no explicit partner — cast
             // whoever the situation implies (a landlord scene gets a
             // landlord, an interview gets an interviewer), never a default.
             lines.append(role.isEmpty
-                ? "- talking to: infer the natural counterpart for this situation"
-                : "- talking to: \(role)")
+                ? "- talking to: infer the natural counterpart — the person on the OTHER side of what the learner is doing, never the one doing it"
+                : "- talking to: \(role) — the other side of what the learner is doing, never the one doing it")
             if !scenario.notes.trimmingCharacters(in: .whitespaces).isEmpty {
                 lines.append("- context: \(scenario.notes)")
             }

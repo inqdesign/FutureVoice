@@ -88,8 +88,13 @@ enum DialogueEngine {
           happens in THIS dialogue — distinct enough that two dialogues about
           the same scenario read differently in a list.
         - 6 to 10 turns total.
-        - Alternate speakers naturally. Either can open — pick whoever opens this \
-          situation more naturally.
+        - The Scenario is the USER's own, in their words. Whatever it names being \
+          done — thanking someone, apologizing, asking for something — the USER \
+          does it and the counterpart is the other side of it. Never swap the two.
+        - Alternate speakers naturally. Whoever's move the scenario names OPENS it: \
+          when the user is the one going in to do something, the FIRST turn is \
+          theirs. The counterpart opens only when the situation happens TO the user, \
+          or when neither side owns the move.
         - Each turn: 1–3 sentences. Real spoken \(languageName) — contractions, hedges, \
           half-finished thoughts, gentle interruptions are fine.
         - Reference SHARED context from the personas. Don't restate facts the two \
