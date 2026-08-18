@@ -19,6 +19,8 @@ struct ScenarioDetailView: View {
     let scenarioId: UUID
 
     @State private var talkPresented = false
+    /// Raised in place of the call when the account can't pay for one.
+    @State private var showingPaywall = false
     @StateObject private var exporter = BookExportController()
     @State private var watchPresented = false
     @State private var shadowTarget: Turn?
@@ -72,6 +74,7 @@ struct ScenarioDetailView: View {
         .toolbar(.hidden, for: .tabBar)
         .toolbar { toolbarMenu }
         .bookExport(exporter)
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
         .fullScreenCover(isPresented: $talkPresented, onDismiss: refreshMastery) {
             if let s = scenario {
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb)
@@ -303,8 +306,10 @@ struct ScenarioDetailView: View {
             }
             HStack(spacing: 10) {
                 Button {
-                    appState.markScenarioUsed(id: s.id)
-                    talkPresented = true
+                    BillingGate.start(orShow: $showingPaywall) {
+                        appState.markScenarioUsed(id: s.id)
+                        talkPresented = true
+                    }
                 } label: {
                     Label("Talk", systemImage: "mic.fill")
                         // The prominent fill would swallow a tinted icon —

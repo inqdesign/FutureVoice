@@ -4441,6 +4441,22 @@
         }
       }
     },
+    "Create": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erstellen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만들기"
+          }
+        }
+      }
+    },
     "Credits left": {
       "extractionState": "stale",
       "localizations": {
@@ -10077,22 +10093,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "둘 다 아님"
-          }
-        }
-      }
-    },
-    "New": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neu"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새로 나온"
           }
         }
       }

@@ -495,8 +495,11 @@ struct ActivityView: View {
         sessionsByDay = byDay
         totalSpeakingSeconds = totalSecs
         drillCards = DrillStore.shared.load()
-        currentStreak = currentStreak(in: days)
-        longestStreak = longestStreak(in: days)
+        // One rule, one implementation. This screen used to count its own
+        // "days with any session", which was a third definition of streak
+        // alongside PracticeStats' and the Core's — three numbers, one word.
+        currentStreak = PracticeStats.snapshot().streakDays
+        longestStreak = longestStreak(in: metDays())
         // Land with a day already open so the detail card is present from the
         // start (no first-tap height jump): today if active, else most recent.
         if selectedDay == nil {
@@ -505,22 +508,16 @@ struct ActivityView: View {
         }
     }
 
-    private func currentStreak(in days: Set<Date>) -> Int {
-        let today = cal.startOfDay(for: Date())
-        var cursor = today
-        if !days.contains(today) {
-            // A streak can still be "alive" if you practiced yesterday.
-            guard let yesterday = cal.date(byAdding: .day, value: -1, to: today),
-                  days.contains(yesterday) else { return 0 }
-            cursor = yesterday
-        }
-        var count = 0
-        while days.contains(cursor) {
-            count += 1
-            guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
-            cursor = prev
-        }
-        return count
+    /// Days that COUNT toward a streak — over the Core's bar, in the language
+    /// being practised. `activeDays` is a different set (any session at all)
+    /// and is still what the calendar shades, because the calendar is a record
+    /// of what happened, not of what qualified.
+    private func metDays() -> Set<Date> {
+        let language = CoreClubService.activeLanguage()
+        let bar = CoreClubService.dailyBarSeconds()
+        return Set(activeDays.filter {
+            TalkTimeLog.seconds(on: $0, language: language) >= bar
+        })
     }
 
     private func longestStreak(in days: Set<Date>) -> Int {

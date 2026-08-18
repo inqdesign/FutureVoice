@@ -226,6 +226,39 @@ enum CoreClubService {
             .execute()
     }
 
+    // MARK: - The rule, on-device
+
+    /// The language whose club is being practised — the same value every Core
+    /// read is scoped by. Read from defaults rather than passed in, for the
+    /// reason `TalkMeter` does: this is consulted from several surfaces and a
+    /// parameter is a thing one of them eventually forgets.
+    static func activeLanguage() -> String {
+        (UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey) ?? "en")
+            .lowercased()
+    }
+
+    private static let barKey = "futurevoice.core.dailyBarSeconds"
+
+    /// Seconds of talk that make a day count, mirrored from
+    /// `core_club_config.daily_bar_seconds`.
+    ///
+    /// Cached because the streak is drawn on Home, in Activity, in Progress
+    /// and in the widget — all of which must render offline and none of which
+    /// can wait on a round trip. The default matches the shipped config, so a
+    /// device that has never synced still applies the real rule.
+    static func dailyBarSeconds() -> Int {
+        let cached = UserDefaults.standard.integer(forKey: barKey)
+        return cached > 0 ? cached : 240
+    }
+
+    /// Refresh the cached bar. Cheap, and safe to call on launch: a failure
+    /// leaves the last known value in place rather than falling back to a
+    /// guess mid-session.
+    static func refreshDailyBar() async {
+        guard let config = await fetchConfig() else { return }
+        UserDefaults.standard.set(config.daily_bar_seconds, forKey: barKey)
+    }
+
     // MARK: - Reads
 
     private static func myUserId() async -> String? {

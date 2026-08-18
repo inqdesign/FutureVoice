@@ -234,8 +234,7 @@ struct WatchTab: View {
             // every person and scrolled off the row the moment the user had a
             // few, which hid the only way into the shared pool.
             HStack(alignment: .firstTextBaseline) {
-                Text("People")
-                    .font(.title3.weight(.semibold))
+                sectionHeader("People")
                 Spacer()
                 Button {
                     showingFind = true
@@ -244,19 +243,25 @@ struct WatchTab: View {
                         .font(.subheadline)
                 }
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 16) {
-                    ForEach(rowPeople) { c in
-                        personBubble(c)
+            // Making a person is pinned to the left, outside the scroller —
+            // as the last bubble it slid off the row the moment the user had
+            // a few people, exactly like Find people did before it moved up
+            // into the header.
+            HStack(alignment: .top, spacing: 16) {
+                addPersonBubble
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 16) {
+                        ForEach(rowPeople) { c in
+                            personBubble(c)
+                        }
                     }
-                    addPersonBubble
+                    // Full-bleed scroller: cancel the page's side padding so
+                    // avatars run to the trailing edge, then restore it inside.
+                    .padding(.trailing, 20)
                 }
-                // Full-bleed scroller: cancel the page's side padding so
-                // avatars run edge to edge, then restore it inside.
-                .padding(.horizontal, 20)
-                .padding(.vertical, 6)
+                .padding(.trailing, -20)
             }
-            .padding(.horizontal, -20)
+            .padding(.vertical, 6)
             Text(explain("Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
@@ -297,7 +302,7 @@ struct WatchTab: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
-                Text("New")
+                Text("Create")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .frame(width: 68)

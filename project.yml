@@ -139,6 +139,18 @@ schemes:
     build:
       targets:
         FutureVoice: all
+    run:
+      # Local StoreKit products, for Xcode runs ONLY (TestFlight and the App
+      # Store always see the real App Store Connect catalog).
+      #
+      # Debug builds run as com.roro.futurevoice.dev — an id App Store Connect
+      # has no record of — so Apple answers `Product.products(for:)` with
+      # nothing and every price line on the paywall is blank. That is a
+      # property of the dev bundle id, not a misconfiguration to chase in ASC.
+      # This file is what makes the paywall (and the purchase flow) testable
+      # from Xcode. Prices mirror docs/launch-billing.md; keep them in step, or
+      # the screen being reviewed is quoting numbers we don't charge.
+      storeKitConfiguration: Config/FutureVoice.storekit
     test:
       targets:
         - FutureVoiceTests

@@ -82,6 +82,8 @@ struct PracticeTab: View {
     }
     @State private var openTalkSession: OpenTalk?
     @State private var talkLaunch: Scenario?
+    /// Raised in place of the call when the account can't pay for one.
+    @State private var showingPaywall = false
     /// SRS review (rehomed from the home Today card): cards due now + the
     /// review sheet itself.
     @State private var dueDrillCount = 0
@@ -202,6 +204,7 @@ struct PracticeTab: View {
                 ConversationDetailView(session: talk.session)
                     .environmentObject(appState)
             }
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
             .fullScreenCover(item: $talkLaunch, onDismiss: reload) { s in
                 ConversationView(initialTopic: s.displayTitle, initialBlurb: s.promptBlurb,
                                  initialOrigin: .scenario, initialScenarioId: s.id)
@@ -988,7 +991,9 @@ struct PracticeTab: View {
             .onTapGesture { openScenario = s }
             .contextMenu {
                 Button { openScenario = s } label: { Label("Open", systemImage: "book") }
-                Button { talkLaunch = s } label: { Label("Talk now", systemImage: "mic.fill") }
+                Button {
+                    BillingGate.start(orShow: $showingPaywall) { talkLaunch = s }
+                } label: { Label("Talk now", systemImage: "mic.fill") }
                 Button { appState.setScenarioArchived(id: s.id, true) } label: {
                     Label("Archive", systemImage: "archivebox")
                 }

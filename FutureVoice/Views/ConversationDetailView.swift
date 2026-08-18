@@ -227,7 +227,7 @@ struct ConversationDetailView: View {
                     // down call would double up the call UI.
                     if postTalk == nil {
                         Button {
-                            showingContinue = true
+                            BillingGate.start(orShow: $showingPaywall) { showingContinue = true }
                         } label: {
                             Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
                                 // Row tint would swallow the icon on the prominent
@@ -978,6 +978,8 @@ struct TalkTranscriptView: View {
     /// too slow to run inside row bodies), computed once on appear.
     @State private var turnTokenKeys: [UUID: [String]] = [:]
     @State private var showingContinue = false
+    /// Raised in place of the call when the account can't pay for one.
+    @State private var showingPaywall = false
     @State private var isPlaying = false
     @State private var currentIndex: Int?
 
@@ -1061,6 +1063,7 @@ struct TalkTranscriptView: View {
             ConversationView(resumeSession: session)
                 .environmentObject(appState)
         }
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
         .sheet(item: $wordSheet) { item in
             WordSheet(initialWord: item.word, words: item.words)
                 .environmentObject(appState)
@@ -1086,7 +1089,7 @@ struct TalkTranscriptView: View {
             Button {
                 isPlaying = false
                 player.stop()
-                showingContinue = true
+                BillingGate.start(orShow: $showingPaywall) { showingContinue = true }
             } label: {
                 Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
                     .frame(maxWidth: .infinity)

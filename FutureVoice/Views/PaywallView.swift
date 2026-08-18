@@ -15,6 +15,15 @@ import Supabase
 /// the wrong moment. This screen is the documented exception to the chrome
 /// rule in CLAUDE.md; keep it that way when adding copy here.
 struct PaywallView: View {
+    /// Set when the paywall is NOT a sheet — onboarding hosts it as the
+    /// screen itself, where `dismiss()` has nothing to dismiss and every exit
+    /// would dead-end into a wall. Sheet callers leave it nil.
+    private let onClose: (() -> Void)?
+
+    init(onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @StateObject private var store = StoreKitService()
@@ -99,6 +108,15 @@ struct PaywallView: View {
         return "\(name) · \(held.label)"
     }
 
+    /// The one exit. Also drops the billing gate's cached answer: a purchase
+    /// made here changes what every launcher in the app is allowed to start,
+    /// and the next tap must ask the server again rather than replay the
+    /// snapshot that sent them to this screen.
+    private func close() {
+        BillingGate.shared.invalidate()
+        if let onClose { onClose() } else { dismiss() }
+    }
+
     /// Apple's own subscription management screen. Changing or cancelling a
     /// live subscription happens there, never in-app.
     private static let manageSubscriptionsURL = URL(
@@ -149,7 +167,7 @@ struct PaywallView: View {
             }
         }
         .alert(Text(explain("You're in")), isPresented: purchasedBinding) {
-            Button(explain("Done")) { dismiss() }
+            Button(explain("Done")) { close() }
         } message: {
             Text(explain("Your subscription is active. Your talk time lands on your account as soon as Apple confirms the purchase."))
         }
@@ -166,12 +184,12 @@ struct PaywallView: View {
         HStack {
             Button {
                 switch step {
-                case .resolving: dismiss()
-                case .pitch:    dismiss()
+                case .resolving: close()
+                case .pitch:    close()
                 case .timeline: step = .pitch
                 // Without a trial funnel there are no earlier steps — back
                 // from plans just closes.
-                case .plans:    walkedTrialFunnel ? (step = .timeline) : dismiss()
+                case .plans:    walkedTrialFunnel ? (step = .timeline) : close()
                 }
             } label: {
                 Image(systemName: step == .pitch || step == .resolving
@@ -672,7 +690,7 @@ struct PaywallView: View {
 
     private var purchasedBinding: Binding<Bool> {
         Binding(get: { store.purchaseState == .purchased },
-                set: { if !$0 { store.purchaseState = .idle; dismiss() } })
+                set: { if !$0 { store.purchaseState = .idle; close() } })
     }
 
     private var failedBinding: Binding<Bool> {
@@ -680,5 +698,48 @@ struct PaywallView: View {
             if case .failed = store.purchaseState { return true }
             return false
         }, set: { if !$0 { store.purchaseState = .idle } })
+    }
+}
+
+/// Onboarding's last step: the plans, once, right after the voice exists.
+///
+/// The choice was always being asked — just later, and from behind something.
+/// Under the hard paywall the first tap on Talk cannot succeed without a
+/// subscription, so the paywall arrived on top of a call screen that then had
+/// to be dismissed, or on Watch after a whole scene had been written. Asking
+/// here costs the learner nothing extra and asks at the one moment they have
+/// just heard their own voice speak the language fluently.
+///
+/// Skippable, and the flag is set on BOTH exits — the same rule the daily-call
+/// step follows. A paywall with no way past it is a wall, and the app still
+/// has plenty to show someone who says not yet.
+struct OnboardingPaywallView: View {
+    @AppStorage("futurevoice.paywall.onboarded") private var onboarded = false
+
+    /// Nil while the account is still being asked. Nobody who already pays —
+    /// or who still has minutes in the pool — is shown a pitch, which is what
+    /// keeps the update that adds this step from ambushing existing installs
+    /// with a screen selling them what they hold.
+    @State private var shows: Bool?
+
+    var body: some View {
+        Group {
+            if shows == true {
+                PaywallView(onClose: { onboarded = true })
+            } else {
+                // The same blank hold RootView's auth gate uses: never a
+                // flash of a pitch at someone who isn't going to be shown one.
+                Color(.systemBackground).ignoresSafeArea()
+            }
+        }
+        .task {
+            guard shows == nil else { return }
+            let blocked = await BillingGate.shared.blocks()
+            shows = blocked
+            // Couldn't ask, or nothing to sell — step aside for good. A
+            // failed lookup must not park the learner on a paywall forever;
+            // the first paid tap asks the server again anyway.
+            if !blocked { onboarded = true }
+        }
     }
 }

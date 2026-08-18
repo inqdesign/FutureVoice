@@ -32,7 +32,7 @@ enum PracticeStats {
         let sessions = SessionStore.shared.load()
         let endedSessions = sessions.filter { $0.endedAt != nil }
 
-        let streak = computeStreak(sessions: endedSessions, now: now, calendar: calendar)
+        let streak = computeStreak(now: now, calendar: calendar)
         let last = endedSessions.first   // SessionStore.load is sorted newest-first
         let weekly = computeWeeklyAverages(sessions: endedSessions, now: now, calendar: calendar)
         let shadowable = sessions.flatMap { $0.turns }.filter { $0.role == .fluentSelf }.count
@@ -283,33 +283,47 @@ enum PracticeStats {
 
     // MARK: - Helpers
 
-    private static func computeStreak(sessions: [Session], now: Date, calendar: Calendar) -> Int {
-        // Bucket session days, then walk back from today until we find a gap.
-        var days: Set<Date> = []
-        for s in sessions {
-            guard let ended = s.endedAt else { continue }
-            days.insert(calendar.startOfDay(for: ended))
+    /// Consecutive days over the Core's daily bar, in the language being
+    /// practised.
+    ///
+    /// This used to be "consecutive days with at least one ended session",
+    /// computed from `SessionStore`. That made a ten-second session keep a
+    /// streak alive, pooled every language together, and — once the Core
+    /// shipped its own streak — put two different numbers called "streak" in
+    /// front of the same learner, on Home and on the Core page, differing on
+    /// the bar, the language and the day boundary. Two streaks is not a
+    /// display bug; it is the app disagreeing with itself about what counts.
+    ///
+    /// So there is one rule now, and it is the Core's: a day counts when the
+    /// METERED talk seconds for that language clear `dailyBarSeconds`.
+    ///
+    /// Read from `TalkTimeLog`, not from sessions, for the same reason the
+    /// ring reads it — session spans are not talk time. One knowingly
+    /// remaining difference from the server's copy: days here are LOCAL and
+    /// the server pools UTC, so around midnight the two can be a day apart
+    /// before they agree again. Local is right for a habit; the alternative
+    /// is a streak that turns over at 9am.
+    private static func computeStreak(now: Date, calendar: Calendar) -> Int {
+        let language = CoreClubService.activeLanguage()
+        let bar = CoreClubService.dailyBarSeconds()
+
+        func met(_ day: Date) -> Bool {
+            TalkTimeLog.seconds(on: day, language: language) >= bar
         }
-        guard !days.isEmpty else { return 0 }
 
         var streak = 0
         var cursor = calendar.startOfDay(for: now)
-        while days.contains(cursor) {
+        // Today not done yet doesn't break anything — a streak is alive until
+        // the day it belongs to is over. Anchor on yesterday instead.
+        if !met(cursor) {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: cursor),
+                  met(yesterday) else { return 0 }
+            cursor = yesterday
+        }
+        while met(cursor) {
             streak += 1
             guard let prev = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
             cursor = prev
-        }
-        // If user hasn't practiced today yet, allow yesterday as the streak tail
-        // so the count doesn't reset at midnight before they've had a chance.
-        if streak == 0,
-           let yesterday = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: now)),
-           days.contains(yesterday) {
-            cursor = yesterday
-            while days.contains(cursor) {
-                streak += 1
-                guard let prev = calendar.date(byAdding: .day, value: -1, to: cursor) else { break }
-                cursor = prev
-            }
         }
         return streak
     }

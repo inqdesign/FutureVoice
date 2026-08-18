@@ -186,6 +186,15 @@ struct ConversationView: View {
     /// never ends at all. 30s is far past any single learner turn, so it only
     /// ever fires when the room, not the learner, is doing the talking.
     private static let maxListenSeconds: Double = 30
+    /// How much close-mic speech a segment must contain before we believe a
+    /// PERSON produced it. Used twice: whether a ceiling'd turn is worth
+    /// sending, and whether the call counts as occupied at all.
+    ///
+    /// 1.5s is about the shortest real answer ("Yeah, I think so"). Below it,
+    /// in a room loud enough to reach the ceiling, we are guessing — and the
+    /// cost of guessing wrong is a paid Gemini turn answering a stranger's
+    /// sentence.
+    private static let minVoicedSecondsPerTurn: Double = 1.5
     /// How much true silence before warming the network path. Must stay well
     /// under the SHORTEST VAD tier (now 0.8s) so the TLS handshake + auth
     /// token are in place by the time the turn actually fires.
@@ -323,25 +332,49 @@ struct ConversationView: View {
     ///   • a reply is being generated;
     ///   • the learner is talking.
     ///
-    /// **"Talking" needs TWO witnesses, not one** (2026-08-18). It was mic
-    /// energy alone, and in a café that is permanently true: a room full of
-    /// other people's voices reads as the learner's, so nothing ever went
-    /// idle. Measured in a real café, a call that nobody was speaking into
-    /// took ~3 minutes to hit a 60-second idle bar, because every stray burst
-    /// of room noise reset the clock — and every one of those seconds billed.
-    /// So energy now has to be corroborated by the recognizer still MAKING
-    /// WORDS of it. Room babble produces sporadic hypotheses at best; a person
-    /// speaking into the phone produces a steady stream. Both signals carry
-    /// the same grace, so ordinary recognizer lag can't read as silence.
+    /// The learner half of that is `someoneIsTalkingHere`, which is where the
+    /// café problem lives — see below.
     private func isBillableMoment() -> Bool {
         if phase == .thinking || phase == .speaking { return true }
         if player.isPlaying { return true }
+        return someoneIsTalkingHere()
+    }
+
+    /// Is the person HOLDING THE PHONE talking — as opposed to a room that is?
+    ///
+    /// Mic energy alone answered this until 2026-08-18, and in a café it is
+    /// permanently yes: other people's voices read as the learner's, so a call
+    /// nobody was speaking into never went idle (measured: >3 minutes against
+    /// a 60-second bar, every second of it billed) and no turn ever ended.
+    ///
+    /// Three witnesses now, and the third is the one that separates a person
+    /// from a room:
+    ///   • the mic heard energy recently, and
+    ///   • the recognizer is still making WORDS of it — room babble yields
+    ///     sporadic hypotheses, a person speaking into a phone a steady
+    ///     stream — and
+    ///   • at least `minVoicedSecondsPerTurn` of THIS segment cleared the
+    ///     voiced threshold, which after the `noiseMargin` raise means ~11 dB
+    ///     over the room's own floor. A mouth 20 cm from the mic clears that;
+    ///     a table two metres away mostly doesn't.
+    ///
+    /// Being wrong in the cautious direction is free — an unbilled second and
+    /// a call that pauses a minute early. Being wrong the other way is what
+    /// the learner just paid three minutes for.
+    private func someoneIsTalkingHere() -> Bool {
         guard let voiced = live.lastVoicedAt,
               Date().timeIntervalSince(voiced) < TalkMeter.voiceGraceSeconds,
               let heard = live.lastLivePartialAt,
-              Date().timeIntervalSince(heard) < TalkMeter.voiceGraceSeconds
+              Date().timeIntervalSince(heard) < TalkMeter.voiceGraceSeconds,
+              voicedSecondsThisTurn() >= Self.minVoicedSecondsPerTurn
         else { return false }
         return true
+    }
+
+    /// How much of the CURRENT mic run cleared the voiced threshold. The meter
+    /// resets on every `live.start()`, so this is per turn by construction.
+    private func voicedSecondsThisTurn() -> Double {
+        live.fluencyStats().speakingSeconds
     }
 
     var body: some View {
@@ -389,6 +422,7 @@ struct ConversationView: View {
                 // start(): the ticker polls it from its first second.
                 meter.isBillable = { isBillableMoment() }
                 meter.start(sessionId: sessionId)
+                lastActivityAt = Date()   // the call starts occupied
                 // Put the call on the lock screen. Play/pause there are the
                 // same two things the mic button does, so a call that outlives
                 // the screen can still be hung up without unlocking.
@@ -779,6 +813,7 @@ struct ConversationView: View {
         phoneCallActive = true
         HapticEngine.phoneCallStarted()
         CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
+        lastActivityAt = Date()   // a tap is someone being here
         await startRecording()
     }
 
@@ -816,16 +851,18 @@ struct ConversationView: View {
     /// first voice it hears — a TV, someone else in the room — reads as the
     /// learner talking and gets both billed and answered.
     ///
-    /// A minute of TOTAL silence — no voice, no reply in flight, no line being
-    /// spoken. In a conversation that is already a long time to hear nothing;
-    /// three minutes (the first cut) left the mic open through most of a walk
-    /// away from the phone.
+    /// How long a call may go without anyone in it before it puts itself down.
     ///
-    /// The floor on this number is the learner who genuinely thinks for a long
-    /// while and then speaks: once the mic is closed we cannot hear them start
-    /// again, so they talk into nothing until they look at the screen. A
-    /// minute keeps that rare; much less than that and it stops being rare.
-    private static let idlePauseSeconds: Double = 60
+    /// 30s of nothing — no close-mic voice, no reply in flight, no line being
+    /// spoken — is already a long silence in a conversation. Started at three
+    /// minutes, then a minute; both were a long time to sit with an open mic.
+    ///
+    /// The floor on this number is the learner who thinks for a long while and
+    /// then speaks: once the mic closes we can't hear them start again, so
+    /// they talk into nothing until they look at the screen. At 30s that is
+    /// still an unusual pause, and the recovery is one tap on a screen that
+    /// never lost the conversation.
+    private static let idlePauseSeconds: Double = 30
     /// Coarse on purpose: nothing here needs to be precise to the second. It
     /// also bounds the overshoot — the pause lands within a tick of the bar.
     private static let idleWatchTickSeconds: Double = 5
@@ -835,21 +872,25 @@ struct ConversationView: View {
     /// back to a quiet screen reads "paused" instead of wondering what broke.
     @State private var isPausedForIdle = false
     @State private var idleWatchTask: Task<Void, Never>?
+    /// The last moment anything real happened. Deliberately OUTSIDE the watch
+    /// task: the task is re-armed every time the mic opens, and a noisy room
+    /// reopens it every 30s (`restartListeningQuietly`). A clock living inside
+    /// the task would be reset by each of those restarts and the call would
+    /// never pause — which is exactly the bug the restart was introduced to
+    /// solve. Only real activity moves this.
+    @State private var lastActivityAt = Date()
 
-    /// Watch for a call with nobody in it. Armed whenever the mic opens, so
-    /// every turn re-arms it and the clock effectively runs from the last
-    /// thing that happened.
+    /// Watch for a call with nobody in it.
     private func startIdleWatch() {
         cancelIdleWatch()
         idleWatchTask = Task { @MainActor in
-            var lastActive = Date()
             while !Task.isCancelled, phoneCallActive, !isTornDown {
                 try? await Task.sleep(for: .seconds(Self.idleWatchTickSeconds))
                 guard !Task.isCancelled, phoneCallActive, !isTornDown else { return }
-                // The same predicate the meter bills on: the fluent self
-                // speaking, a reply in flight, or a voice heard recently.
-                if isBillableMoment() { lastActive = Date(); continue }
-                guard Date().timeIntervalSince(lastActive) >= Self.idlePauseSeconds else { continue }
+                // The same predicate the meter bills on — so the call pauses
+                // on exactly the silence it charges nothing for.
+                if isBillableMoment() { lastActivityAt = Date(); continue }
+                guard Date().timeIntervalSince(lastActivityAt) >= Self.idlePauseSeconds else { continue }
                 isPausedForIdle = true
                 await pauseCall()
                 return
@@ -914,6 +955,7 @@ struct ConversationView: View {
         guard phase == .listening || phase == .idle else { return }
         guard force || !live.isEngineRunning else { return }
         if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+        lastActivityAt = Date()   // coming back from an interruption isn't idling
         await startRecording()
         CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
     }
@@ -970,6 +1012,16 @@ struct ConversationView: View {
                 let listened = userSpeechStartedAt.map { Date().timeIntervalSince($0) } ?? 0
                 let ranLong = listened >= Self.maxListenSeconds
                 guard audioSettled || transcriptSettled || ranLong else { continue }
+                // A ceiling'd turn is the one case where the transcript may be
+                // nobody's — a room talking into an open mic for 30s. Sending
+                // it would pay for a reply to a stranger's sentence, so the
+                // segment is dropped and the mic reopened instead. Everything
+                // the learner never said costs nothing and leaves no trace.
+                if ranLong, !audioSettled, !transcriptSettled,
+                   voicedSecondsThisTurn() < Self.minVoicedSecondsPerTurn {
+                    await restartListeningQuietly()
+                    return
+                }
                 // `vad_wait_ms` alone hid the worst case: on the noisy fallback
                 // the energy meter never saw silence, so it logs a TINY audio
                 // gap for a turn that actually sat out the 6s transcript wait.
@@ -1004,6 +1056,21 @@ struct ConversationView: View {
                 return
             }
         }
+    }
+
+    /// Drop what the mic collected and open a fresh segment, without sending
+    /// anything. The room's words go with it, along with the fluency meter's
+    /// count — so the next 30 s has to earn its own evidence of a person.
+    ///
+    /// Deliberately silent: nothing was said, so there is nothing to show. The
+    /// idle watchdog keeps its own clock across this (`lastActivityAt` is not
+    /// touched here), which is what lets a room full of noise eventually pause
+    /// the call instead of restarting forever.
+    private func restartListeningQuietly() async {
+        guard !isTornDown, phoneCallActive, phase == .listening else { return }
+        _ = live.stop()
+        userSpeechStartedAt = nil
+        await startRecording()
     }
 
     /// Inspect the latest STT transcript and pick a REQUIRED TRUE-SILENCE

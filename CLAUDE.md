@@ -203,16 +203,30 @@ screen and stone deaf.
 - Metering follows from the idle rule above: a backgrounded call bills only
   while someone is actually speaking, so a phone in a pocket costs nothing
   unless it hears a voice.
-- **"Someone is speaking" takes two witnesses — energy AND the recognizer
-  making words of it** (`isBillableMoment`). A café test on 2026-08-18 showed
-  why one isn't enough: mic energy alone is permanently true in a room full of
-  other people, so a call nobody was speaking into took ~3 minutes to reach a
-  60-second idle bar, billing all of it. The same room defeats BOTH
-  endpointing signals at once, which is why a listening turn now has a hard
-  30s ceiling (`maxListenSeconds`, logged as `vad_path=ceiling`) and why
-  `FluencyMeter.noiseMargin` went 6 dB → 11 dB. That margin binds only in loud
-  rooms — quiet ones are decided by the absolute 0.35 floor and are untouched.
-- **After a minute of nothing at all, the call PUTS ITSELF DOWN** — it does
+- **A CAFÉ IS THE HARD CASE, and it took three tries** (2026-08-18, tested in
+  a real one). Mic energy alone is permanently true in a room full of other
+  people: a call nobody was speaking into never went idle (>3 minutes against
+  a 60s bar, all billed) and no turn ever ended — the room never falls silent,
+  so energy endpointing can't fire, and the recognizer keeps making fresh
+  partials out of other people's voices, so the transcript-quiet fallback
+  keeps restarting. Four changes, all needed together:
+  - `someoneIsTalkingHere()` takes **three witnesses**: recent energy, the
+    recognizer still making words of it, and ≥`minVoicedSecondsPerTurn` (1.5s)
+    of this segment above the voiced threshold. Both the meter and the
+    watchdog ask it, so the call pauses on exactly the silence it bills zero
+    for.
+  - `FluencyMeter.noiseMargin` 6 dB → 11 dB. It leans on physics: a mouth
+    20 cm from the mic against a table metres away is 15–20 dB. **Quiet rooms
+    are untouched by construction** — there the absolute 0.35 floor is the
+    higher bar and decides alone.
+  - A listening turn has a hard 30s ceiling (`maxListenSeconds`, logged as
+    `vad_path=ceiling`). If that turn has no close-mic evidence, the segment
+    is DROPPED and the mic reopened (`restartListeningQuietly`) instead of
+    paying for a reply to a stranger's sentence.
+  - `lastActivityAt` lives OUTSIDE the watch task, because that quiet restart
+    re-arms it every 30s and a clock inside the task would never reach the
+    bar. Only real activity moves it.
+- **After 30s of nothing at all, the call PUTS ITSELF DOWN** — it does
   not end (`idlePauseSeconds`, `startIdleWatch` → `pauseCall`). Ending is a
   decision with consequences: a summary, drills, a book. Pausing has none —
   the transcript stays on screen and one tap resumes the same session, which
@@ -265,6 +279,7 @@ had never heard. What the server needs is a **session**, not an account.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
 - **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isDailyPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **The paywall is asked BEFORE the spending, at the tap** (2026-08-18, `BillingGate`). A hard paywall met only as a 402 arrives too late to be an answer: the call screen was already up, and on Watch a whole scene had been written and watched being written before the learner was told it wasn't theirs to play. Every metered launcher now runs its action through `BillingGate.start(orShow:)` — the free-talk ring and the widget deep link (one gate, in `RootTabView.startFreeTalk`, where both paths meet), Talk's news/scenario cards, the composer's CTA (`ScenarioComposerSheet.commit`, before the categorize call and before any scenario is minted), Find people's Talk/Watch, and the Talk/Continue buttons on the book pages. Two rules keep it honest: it gates on `AccountStatus.needsSubscription` ONLY — a daily cap is not this, that learner already paid and the client's copy of today's usage is stale often enough to refuse a call the server would allow — and a "no" is never given from cache (a purchase or invite that landed a minute ago must not be paywalled again), while a "yes" always is, so the app's primary button never waits on the network. **A sheet hosting a paid button owns its own `PaywallView`**; a paywall raised by the host underneath never appears. Onboarding offers the plans once at the end (`OnboardingPaywallView`, after the daily-call step, flag on every exit, skipped silently for anyone with nothing to buy) — so the first tap on Talk stops being where the hard paywall introduces itself.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
 ## Build / run

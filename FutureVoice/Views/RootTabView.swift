@@ -32,6 +32,10 @@ struct RootTabView: View {
     /// Opaque backdrop behind the call, raised fast on open so the home never
     /// shows through the call's opacity fade, dropped on close.
     @State private var callBackdropShown = false
+    /// The plans, raised in place of a call this account can't pay for. Owned
+    /// here because the free-talk gate is here — the tab root is never behind
+    /// a sheet, so the presentation always lands.
+    @State private var showingPaywall = false
     /// Where an answered daily call lands. The notification delegate has no
     /// view in reach (and on a cold launch from the lock screen, no view
     /// exists yet), so it drops the plan here and this picks it up.
@@ -126,7 +130,11 @@ struct RootTabView: View {
         // Presented from onAppear rather than a computed binding so a swipe-away
         // is honoured for this run and simply asks again next launch.
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
         .onAppear {
+            // Warm the billing snapshot so the first paid tap answers from
+            // memory instead of holding the call button on a round trip.
+            BillingGate.shared.warm()
             if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
                 showingAgeCheck = true
             }
@@ -314,6 +322,18 @@ struct RootTabView: View {
     }
 
     private func startFreeTalk() {
+        // Both ways into a free talk — the home's ring and the widget's deep
+        // link — land here, so this is the one place the account has to be
+        // asked. An account that can't pay gets the plans instead of a call
+        // that could only 402 a few seconds in. A cached "yes" answers with
+        // no round trip, so the morph starts on the same frame as before.
+        BillingGate.start(orShow: $showingPaywall) { beginFreeTalkMorph() }
+    }
+
+    private func beginFreeTalkMorph() {
+        // Re-checked HERE rather than before the gate: the gate can take a
+        // round trip, and a second tap inside that window would otherwise
+        // mount two calls.
         guard freeTalkCallId == nil, !freeTalkClosing, !pillDocked else { return }
         // Stage 0 — the proxy mounts ON the ring's pose (the home ring hides
         // itself the same tick), and the backdrop starts covering the home.

@@ -18,26 +18,49 @@ import Supabase
 /// UTC day for billing, and around midnight the two may briefly differ).
 enum TalkTimeLog {
     private static let key = "futurevoice.talkSecondsByDay"
-    /// Days kept before pruning — the ring needs today, the widget's history
-    /// needs a couple of weeks of headroom, and this is a few hundred bytes.
-    private static let keepDays = 30
+    /// Days kept before pruning. The ring needs today and the widget a
+    /// fortnight, but the STREAK needs the whole entry run plus room to see
+    /// where it started — pruning at 30 would cap a 30-day streak at exactly
+    /// the length it is trying to prove.
+    private static let keepDays = 45
 
     /// Record seconds the server accepted. Never call this for a tick that
     /// 402'd: those seconds were refused, and counting them would put the
     /// ring back ahead of the receipt.
-    static func add(seconds: Int, now: Date = Date()) {
+    ///
+    /// `language` is what was being SPOKEN. The ring doesn't care — a minute
+    /// is a minute against the day's allowance — but the streak does, because
+    /// the Core counts one language at a time and the app must not show a
+    /// second, looser streak beside it.
+    static func add(seconds: Int, language: String?, now: Date = Date()) {
         guard seconds > 0 else { return }
         var map = load()
-        map[dayKey(now), default: 0] += seconds
+        map[key(day: now, language: language), default: 0] += seconds
         save(prune(map, now: now))
     }
 
+    /// Every language's seconds for the day — what the ring and the receipt
+    /// read, since the daily allowance is per account.
     static func secondsToday(now: Date = Date()) -> Int {
-        load()[dayKey(now)] ?? 0
+        seconds(on: now)
     }
 
     static func seconds(on day: Date) -> Int {
-        load()[dayKey(day)] ?? 0
+        let prefix = dayKey(day)
+        return load().reduce(0) { total, entry in
+            entry.key == prefix || entry.key.hasPrefix(prefix + separator)
+                ? total + entry.value : total
+        }
+    }
+
+    /// One language's seconds for the day — the streak's input.
+    ///
+    /// Entries written before this log knew about languages have no language
+    /// in their key and are deliberately NOT counted here: they can't be
+    /// attributed, and guessing would put days into a streak that may have
+    /// been spoken in another language. They still count in the totals above.
+    static func seconds(on day: Date, language: String) -> Int {
+        load()[key(day: day, language: language)] ?? 0
     }
 
     // MARK: - Server backfill
@@ -66,7 +89,7 @@ enum TalkTimeLog {
         struct LedgerRow: Decodable {
             let created_at: String
             let metadata: Metadata?
-            struct Metadata: Decodable { let seconds: Int? }
+            struct Metadata: Decodable { let seconds: Int?; let language: String? }
         }
         guard let rows: [LedgerRow] = try? await SupabaseProvider.shared
             .from("usage_ledger")
@@ -84,7 +107,9 @@ enum TalkTimeLog {
         for row in rows {
             guard let seconds = row.metadata?.seconds, seconds > 0,
                   let at = parseTimestamp(row.created_at) else { continue }
-            serverByDay[dayKey(at), default: 0] += seconds
+            // Ticks from a build that predates language reporting land under
+            // the bare day key, exactly where this log used to put them.
+            serverByDay[key(day: at, language: row.metadata?.language), default: 0] += seconds
         }
         guard !serverByDay.isEmpty else { return }
 
@@ -121,7 +146,22 @@ enum TalkTimeLog {
     private static func prune(_ map: [String: Int], now: Date) -> [String: Int] {
         guard map.count > keepDays else { return map }
         let cutoff = dayKey(now.addingTimeInterval(-Double(keepDays) * 86_400))
-        return map.filter { $0.key >= cutoff }
+        // Compare the DATE part: "2026-08-01|en" must not be judged against a
+        // bare cutoff by plain string order, or a language suffix would keep
+        // stale days alive.
+        return map.filter { String($0.key.prefix(10)) >= cutoff }
+    }
+
+    /// `yyyy-MM-dd|lang`, or a bare `yyyy-MM-dd` when the language is
+    /// unknown — which is what every entry written before 2026-08 looks like.
+    /// Prefix-compatible on purpose: the totals scan by date prefix, so old
+    /// rows keep counting without a migration pass.
+    private static let separator = "|"
+
+    private static func key(day: Date, language: String?) -> String {
+        let lang = language?.trimmingCharacters(in: .whitespaces).lowercased()
+        guard let lang, !lang.isEmpty else { return dayKey(day) }
+        return dayKey(day) + separator + lang
     }
 
     /// LOCAL day — see the type comment for why this differs from the

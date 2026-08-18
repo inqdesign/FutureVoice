@@ -5,6 +5,10 @@ import SwiftUI
 /// ask sits at the top of the investment ladder and its Meet act drops
 /// straight into the first call. The auth gate is non-bypassable — without a
 /// Supabase session we can't proxy ElevenLabs/Gemini calls.
+///
+/// Two short steps trail the clone, each shown once and each setting its own
+/// flag on every exit: the daily call (the clone's first job) and the plans
+/// (`OnboardingPaywallView`, skipped silently for anyone with nothing to buy).
 struct RootView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
@@ -18,6 +22,10 @@ struct RootView: View {
     /// `DailyCallOnboardingView` on BOTH exits (enabled or skipped), so
     /// declining it doesn't turn the screen into a wall.
     @AppStorage("futurevoice.dailyCall.onboarded") private var dailyCallOnboarded = false
+    /// Whether the plans have been offered once, at the end of onboarding.
+    /// Set by `OnboardingPaywallView` on every exit — including the silent
+    /// one it takes for an account that has nothing to buy.
+    @AppStorage("futurevoice.paywall.onboarded") private var paywallOnboarded = false
 
     init() { Self.applyRoundedNavBar() }
 
@@ -119,6 +127,12 @@ struct RootView: View {
             // permissions request. Existing installs see it once too; that's
             // how they learn the feature exists.
             DailyCallOnboardingView()
+        } else if !paywallOnboarded {
+            // LAST, and only for an account with something to buy. The voice
+            // exists and has spoken by now, so the plans are priced against
+            // something heard rather than promised — and the first tap on
+            // Talk stops being where a hard paywall introduces itself.
+            OnboardingPaywallView()
         } else {
             // A language switch swaps the entire scoped store set underneath
             // the tabs — rebuild the tree so every view re-reads from the new

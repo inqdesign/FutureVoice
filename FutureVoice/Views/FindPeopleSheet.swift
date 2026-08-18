@@ -334,6 +334,9 @@ struct FindPersonCard: View {
     /// nil hides the row.
     var onCompose: ((Counterpart) -> Void)? = nil
 
+    /// Raised in place of Talk/Watch when the account can't pay for them.
+    @State private var showingPaywall = false
+
     private var pastTalks: [Session] {
         SessionStore.shared.load()
             .filter { $0.counterpartId == person.id && $0.endedAt != nil }
@@ -423,8 +426,12 @@ struct FindPersonCard: View {
                 // Same weight on both: watching and talking are two ways in,
                 // not a main action and a lesser one. A prominent Talk read
                 // as "the real button" and made Watch look like a preamble.
+                // Both actions spend — Watch writes a scene, Talk opens a
+                // call — so both ask first, and the plans come up HERE rather
+                // than from the tab behind this card, which couldn't show
+                // them while this is on screen.
                 Button {
-                    onWatch(savedPerson())
+                    BillingGate.start(orShow: $showingPaywall) { onWatch(savedPerson()) }
                 } label: {
                     Label("Watch", systemImage: "play.fill")
                         .frame(maxWidth: .infinity)
@@ -432,7 +439,7 @@ struct FindPersonCard: View {
                 .buttonStyle(.bordered)
 
                 Button {
-                    onTalk(savedPerson())
+                    BillingGate.start(orShow: $showingPaywall) { onTalk(savedPerson()) }
                 } label: {
                     Label("Talk", systemImage: "phone.fill")
                         .frame(maxWidth: .infinity)
@@ -444,6 +451,7 @@ struct FindPersonCard: View {
             .padding(.vertical, 10)
             .background(.bar)
         }
+        .sheet(isPresented: $showingPaywall) { PaywallView() }
     }
 
     /// First Talk/Preview is the moment you "meet" them — persist the person

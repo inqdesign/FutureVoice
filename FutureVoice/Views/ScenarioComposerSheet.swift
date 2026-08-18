@@ -52,6 +52,10 @@ struct ScenarioComposerSheet: View {
     /// persists it). Keyed by person too, so ideas scoped to someone never
     /// leak into the blank composer. "More" (force) still refreshes.
 
+    /// Raised in place of the CTA when the account can't pay for what it
+    /// starts (a call on Talk, a scene on Watch).
+    @State private var showingPaywall = false
+
     // Custom category creation (keyword title + icon or emoji)
     @State private var addingCustom = false
     @State private var customTitle = ""
@@ -129,6 +133,11 @@ struct ScenarioComposerSheet: View {
             }
             .navigationTitle(editing == nil ? Text("New scenario") : Text("Edit scenario"))
             .navigationBarTitleDisplayMode(.inline)
+            // The plans, when the CTA can't be paid for. Presented from this
+            // sheet, never from the host behind it: a sheet raised underneath
+            // an open sheet doesn't appear, and the composer staying up means
+            // the situation they just wrote is still there afterwards.
+            .sheet(isPresented: $showingPaywall) { PaywallView() }
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
@@ -606,6 +615,14 @@ struct ScenarioComposerSheet: View {
         let text = situation.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         Task {
+            // The CTA is the paid tap on BOTH hosts — Talk starts a call,
+            // Watch writes a scene — so the account is asked here, before
+            // anything is generated. Blocked means the plans and nothing
+            // else: no categorize call, no scenario minted, no host callback.
+            if await BillingGate.shared.blocks() {
+                showingPaywall = true
+                return
+            }
             var categoryName = path.first?.label
             var icon = path.first?.icon
             var sum = summary

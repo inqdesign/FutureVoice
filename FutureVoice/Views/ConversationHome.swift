@@ -452,17 +452,11 @@ struct ConversationHome: View {
                 .opacity(goalProgress0to1 > 0.97 ? 1 : 0)
 
             Button {
-                // Same gate as openBilling: a spent free balance goes to the
-                // paywall INSTEAD of into a call that can only 402. Unlimited
-                // and subscribed accounts always pass (the server is the
-                // authority); an unknown account (fetch not landed) passes
-                // too rather than blocking the tap on the network.
-                if let account, !account.unlimited, !account.isEntitled,
-                   account.secondsBalance <= 0 {
-                    showingPaywall = true
-                } else {
-                    appState.pendingFreeTalk = true
-                }
+                // The gate lives in RootTabView's `startFreeTalk`, which is
+                // where BOTH paths into a free talk meet (this ring and the
+                // widget's deep link). Checking here as well would ask the
+                // server the same question twice for one tap.
+                appState.pendingFreeTalk = true
             } label: {
                 ZStack {
                     Futureself(mode: .idle, level: 0, virtualHeight: 64)
@@ -578,22 +572,30 @@ struct ConversationHome: View {
 
     // MARK: - Actions (tap = start the call)
 
+    /// Every card on this page is a launcher, so every card asks the same
+    /// question the call button asks: can this account pay for what the tap
+    /// starts? Answered here rather than inside the call, which is why the
+    /// paywall opens INSTEAD of the call screen and not on top of one.
     private func runScenario(_ s: Scenario) {
-        appState.markScenarioUsed(id: s.id)
-        callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false,
-                                origin: .scenario, scenarioId: s.id)
+        BillingGate.start(orShow: $showingPaywall) {
+            appState.markScenarioUsed(id: s.id)
+            callLaunch = CallLaunch(topic: s.displayTitle, blurb: s.promptBlurb, isNews: false,
+                                    origin: .scenario, scenarioId: s.id)
+        }
     }
 
     private func runNews(_ t: SuggestedTopic) {
-        // The blurb is factual context from the search results — hand it
-        // to the avatar so the conversation sticks to what happened.
-        callLaunch = CallLaunch(
-            topic: t.title,
-            blurb: "Recent news to discuss (facts from coverage): \(t.blurb)",
-            isNews: true,
-            origin: .news,
-            newsFacts: t.facts ?? []
-        )
+        BillingGate.start(orShow: $showingPaywall) {
+            // The blurb is factual context from the search results — hand it
+            // to the avatar so the conversation sticks to what happened.
+            callLaunch = CallLaunch(
+                topic: t.title,
+                blurb: "Recent news to discuss (facts from coverage): \(t.blurb)",
+                isNews: true,
+                origin: .news,
+                newsFacts: t.facts ?? []
+            )
+        }
     }
 
     // MARK: - Chrome
@@ -688,7 +690,10 @@ struct ConversationHome: View {
             return
         }
         #endif
-        Task { account = await AccountStatus.fetch() }
+        // Through the gate, not around it: the ring and the launch decision
+        // are the same snapshot, so what the ring shows is what the next tap
+        // will be judged against.
+        Task { account = await BillingGate.shared.snapshot(force: true) }
     }
 
     // MARK: - First run
