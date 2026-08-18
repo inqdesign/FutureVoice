@@ -969,22 +969,25 @@ struct MeTab: View {
                 }
                 Slider(value: $talkVoiceVolume, in: 0.25...1.0, step: 0.05)
             }
-            // Only bites with Bluetooth connected — wired and speaker routes
-            // use the built-in mic either way. Shown unconditionally anyway:
-            // a setting that appears and disappears with a connection is a
-            // setting nobody can find when they want it. The trade-off behind
-            // the two options is explained where it's decided (MicChoiceSheet);
-            // here the caption says only where the setting applies.
-            VStack(alignment: .leading, spacing: 4) {
-                Picker(selection: $micPreference) {
-                    Text("Earphone mic").tag(MicPreference.earphone.rawValue)
-                    Text("Phone mic").tag(MicPreference.phone.rawValue)
-                } label: {
-                    Label("Recording mic", systemImage: "mic")
-                }
-                Text(explain("Only applies with Bluetooth earphones."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+            // The TITLE carries the condition ("on Bluetooth"), which is what
+            // "Recording mic" failed to do — that name promised a setting
+            // covering every recording and left the reader to work out why it
+            // seemed to do nothing. With the condition in the title the
+            // caption underneath became a repeat of it, so it's gone. The
+            // options keep the full noun — the menu pops up WITHOUT the title
+            // beside it, and "Phone" alone would also collide with the "Phone"
+            // scenario category, which means a call, not a device. The
+            // trade-off between them is explained where it's decided, in
+            // MicChoiceSheet.
+            //
+            // Shown even with nothing connected: a setting that appears and
+            // disappears with a connection is one nobody can find when they
+            // want it.
+            Picker(selection: $micPreference) {
+                Text("Earphone mic").tag(MicPreference.earphone.rawValue)
+                Text("Phone mic").tag(MicPreference.phone.rawValue)
+            } label: {
+                Label("Mic on Bluetooth", systemImage: "mic")
             }
             // Choosing here answers the question for good, so the one-time
             // sheet never interrupts a call later.

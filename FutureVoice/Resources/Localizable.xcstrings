@@ -9604,6 +9604,22 @@
         }
       }
     },
+    "Mic on Bluetooth": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofon bei Bluetooth"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블루투스 이어폰 사용시"
+          }
+        }
+      }
+    },
     "Microphone access denied. Enable it in Settings.": {
       "localizations": {
         "ko": {
@@ -11221,22 +11237,6 @@
         }
       }
     },
-    "Only applies with Bluetooth earphones.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gilt nur mit Bluetooth-Kopfhörern."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "블루투스 이어폰을 낄 때만 적용돼요."
-          }
-        }
-      }
-    },
     "Only the call clock spends your talk minutes. Watching a scene never takes a second off them.": {
       "localizations": {
         "de": {
@@ -12822,22 +12822,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "설정 중에는 다시 녹음해도 무료예요. 새로 만든 목소리를 선택할 때만 지금 목소리가 바뀌고요."
-          }
-        }
-      }
-    },
-    "Recording mic": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aufnahmemikrofon"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 마이크"
           }
         }
       }
