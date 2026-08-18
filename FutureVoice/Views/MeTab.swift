@@ -406,7 +406,7 @@ struct MeTab: View {
             // visible bar, THEN share the finished file — because the only
             // honest way to show progress is to own the work.
             if let url = exportedBackup {
-                ShareLink(item: url, preview: SharePreview("FutureVoice backup")) {
+                ShareLink(item: url, preview: SharePreview("nawana backup")) {
                     Label {
                         Text("Share backup")
                         Text(backupFileSize(url)).font(.caption).foregroundStyle(.secondary)
@@ -900,7 +900,7 @@ struct MeTab: View {
     /// and its bar — the door has to be visible from outside or nobody walks
     /// toward it.
     private var coreClubSummary: String {
-        guard let m = coreMembership else { return explain("100 seats · 28 of 30 days to enter") }
+        guard let m = coreMembership else { return explain("100 seats · 30 days in a row to enter") }
         return m.seated
             ? explain("In the Core · \(m.daysTotal) days")
             : explain("No seat right now")
@@ -950,7 +950,7 @@ struct MeTab: View {
                     } label: {
                         row(icon: "gift",
                             title: explain("Invite & earn talk time"),
-                            subtitle: explain("About an hour each, per friend"))
+                            subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
                     }
                 }
             } footer: {

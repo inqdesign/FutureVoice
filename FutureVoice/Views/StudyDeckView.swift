@@ -192,6 +192,9 @@ struct StudyDeckView: View {
         }
         .padding(.top, 12)
         .padding(.bottom, 8)
+        // The overlay is applied AFTER the padding, so the panel's bottom is
+        // the deck's outer bottom edge; the 8pt is the resting chips' breathing
+        // room, which the panel replaces rather than sits above.
         .overlay(alignment: .bottom) {
             if isDragging {
                 binPanel
@@ -612,20 +615,15 @@ struct StudyDeckView: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 14)
-        .padding(.bottom, 12)
+        // As low as it can go. The tray used to run past the screen edge
+        // (`ignoresSafeArea`), so its inner padding read as part of a surface
+        // that reached the bottom; without the slab that same padding just
+        // left the folders floating short of it.
+        .padding(.bottom, 0)
         .frame(maxWidth: .infinity)
-        .background {
-            UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0,
-                                   bottomTrailingRadius: 0, topTrailingRadius: 24,
-                                   style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.06))
-                        .frame(height: 1)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        }
+        // No slab behind the row. The folders and the cancel circle carry
+        // their own fills, and a tray drawn around them read as a second
+        // surface sliding up over the card.
         .allowsHitTesting(false)
     }
 
@@ -639,12 +637,14 @@ struct StudyDeckView: View {
             .foregroundStyle(active ? Color(.systemBackground) : Color.secondary)
             .frame(width: 46, height: 46)
             .background {
-                Circle().fill(active ? AnyShapeStyle(Color.secondary)
-                                     : AnyShapeStyle(Color(.tertiarySystemFill)))
-            }
-            .overlay {
-                Circle().strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
-                                      style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                // Blur, not a translucent fill: with no tray behind the row
+                // each target has to make its own backdrop, and a fill lets
+                // the card's text read straight through it. Aimed-at, it goes
+                // OPAQUE (systemGray, not `.secondary` — a label colour is
+                // ~60% alpha, so the card showed through the one target the
+                // finger is on).
+                Circle().fill(active ? AnyShapeStyle(Color(.systemGray))
+                                     : AnyShapeStyle(.regularMaterial))
             }
             .scaleEffect(active ? 1.12 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)
@@ -667,12 +667,7 @@ struct StudyDeckView: View {
         .foregroundStyle(active ? Color.white : Color.secondary)
         .background {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(active ? AnyShapeStyle(bin.tint) : AnyShapeStyle(Color(.tertiarySystemFill)))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
-                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                .fill(active ? AnyShapeStyle(bin.tint) : AnyShapeStyle(.regularMaterial))
         }
         .scaleEffect(active ? 1.08 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)

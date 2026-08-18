@@ -13,16 +13,28 @@ import SwiftUI
 /// the learner's own standing, in one of three states, because they are three
 /// points on one path rather than three features:
 ///
-///   * **Challenger** — hasn't qualified. Sees a DISTANCE ("6 days to go"),
-///     never a verdict. No "failed", no "start over": the window is rolling,
-///     so a missed day defers entry by a day, and the copy has to say so or
-///     the learner will read a gap as a broken streak and quit.
-///   * **Seated** — in the club. Sees tenure and the week's cushion, not a
-///     rank. Rank decides who gets in; inside, everyone is equal, and a
-///     leaderboard here would rebuild the anxiety the design removed.
+///   * **Challenger** — hasn't qualified. Sees how far they have come and how
+///     far is left, as two numbers. No verdict, no grid.
+///   * **Seated** — in the club. Sees tenure and the month's one forgiven
+///     day, not a rank. Rank decides who gets in; inside, everyone is equal,
+///     and a leaderboard here would rebuild the anxiety the design removed.
 ///   * **Seatless** — qualified, currently out. Sees that the badge is
 ///     permanent and how far the way back is. Never a scolding, never a
 ///     record of who took the seat.
+///
+/// **NUMBERS, NOT A PICTURE** (2026-08-17). This screen used to draw thirty
+/// dots under "Days met 3 / 28". Two things were wrong with it and neither
+/// was fixable by restyling. The grid was a scoreboard of a month already
+/// spent — it answered "how did I do" when the only question here is "what do
+/// I do today" — and it could not state its own rule: nothing in a field of
+/// dots says which two of them were forgiven. The rule is now a streak, which
+/// is a rule people already hold in their heads, and a streak is one number.
+/// Do not bring the grid back to "show progress"; the progress is the number.
+///
+/// The other thing the picture quietly implied is that filling it got you in.
+/// It doesn't, and never did: finishing the streak puts you in LINE, and the
+/// room at the top is what you are waiting on. `queue_ahead` says so in the
+/// one state where it matters.
 struct CoreClubView: View {
     /// Which club this is. There is one per target language, so the screen
     /// shows the one the learner is currently practising — switching language
@@ -112,10 +124,17 @@ struct CoreClubView: View {
     /// wording quietly contradicted.
     private func howItWorksSection(_ p: CoreClubService.Progress) -> some View {
         Section {
-            Text(explain("Talk \(p.bar_seconds / 60) minutes a day, \(p.entry_required) days out of \(p.days.count)."))
-            Text(explain("The same bar to get in and to stay."))
+            Text(explain("Talk \(p.bar_seconds / 60) minutes a day, \(p.entry_streak) days in a row."))
+            // Said plainly, and never softened. A streak that quietly forgives
+            // is a rolling window wearing a streak's clothes, and the learner
+            // finds out which one it really is at the worst possible moment.
+            Text(explain("Miss a day and the count starts again at zero."))
+            // The correction this screen most needed: filling the streak is
+            // not the door, it is the queue.
+            Text(explain("Finishing puts you in line — it doesn't seat you."))
             Text(explain("\(p.seats) seats. One opens only when the person in it stops — never because someone new arrived."))
             Text(explain("Whoever qualified first takes it."))
+            Text(explain("Once you're in, one missed day a month is forgiven."))
         } header: {
             Text("How it works")
         }
@@ -163,58 +182,54 @@ struct CoreClubView: View {
 
     /// The learner's own standing, whole, in a single section.
     ///
-    /// It used to be spread over two: a header section with the countdown and
-    /// a count, then — after the explanations — a separate "Last 30 days"
-    /// section with the month grid. So "Days met 3 / 28" sat in one box and
-    /// the thirty dots that ARE that number sat in another, with several
-    /// screens of rules between them. Two containers for one fact reads as
-    /// two facts, and the learner has to work out that they're the same one.
+    /// One section, and every row in it is a number with a name. The lead is
+    /// the only thing that varies by state, so the rows under it don't move
+    /// when the state changes.
     ///
-    /// The order inside is fixed for all three states — where you stand, the
-    /// count, the month — so the numbers don't move when your state changes.
+    /// What is deliberately NOT here: any rendering of the last thirty days.
+    /// See the type comment — the streak replaced it, and a grid beside a
+    /// streak would just be the old rule arguing with the new one.
     private func standingSection(_ p: CoreClubService.Progress) -> some View {
         Section {
             standingLead(p)
 
-            LabeledContent("Days met") {
-                Text(verbatim: "\(p.met_entry) / \(p.entry_required)").monospacedDigit()
-            }
-            if let m = p.member {
-                LabeledContent("Days in the Core") {
-                    Text(verbatim: "\(m.days_total)").monospacedDigit()
-                }
+            // The streak is shown to everyone, in every state, because it is
+            // the one number that answers "what do I do today" — and for a
+            // seated member it is the thing the forgiven day is spent from.
+            LabeledContent("Current streak") {
+                Text(verbatim: "\(p.streak)").monospacedDigit()
             }
 
-            monthGrid(p)
+            if let m = p.member {
+                if m.seated {
+                    LabeledContent("Days in the Core") {
+                        Text(verbatim: "\(m.days_total)").monospacedDigit()
+                    }
+                    // The keep rule as a number rather than a warning. "0 / 1"
+                    // is a cushion; "you have one day left" is a threat, and
+                    // the same fact read as a threat is what makes people stop
+                    // opening the app.
+                    LabeledContent("Missed this month") {
+                        Text(verbatim: "\(p.missed_recent) / \(p.keep_grace)").monospacedDigit()
+                    }
+                } else if let ahead = p.queue_ahead {
+                    LabeledContent("People ahead of you") {
+                        Text(verbatim: "\(ahead)").monospacedDigit()
+                    }
+                }
+            }
         } header: {
             Text("Where you stand")
-        } footer: {
-            VStack(alignment: .leading, spacing: 6) {
-                // One forward-looking fact, or nothing.
-                //
-                // This used to be three sentences: when the server started
-                // counting, what the faint cells mean, and the date. All three
-                // were about the SYSTEM — its ledger, its pixel shading, its
-                // history — and a learner opening this screen is asking one
-                // question, which is when they can get in. The rest was the
-                // app explaining its own plumbing and apologising for it.
-                //
-                // It also only matters for the first month, so it must not
-                // read like permanent furniture.
-                if let first = p.firstSeatDate, p.hasUncountedDays, p.member == nil {
-                    Text(explain("The first seats open on \(first)."))
-                }
-                // Watch now has its own visible daily allowance, which makes
-                // it reasonable to assume scenes count here too. They never
-                // have and never will — say so rather than let someone watch
-                // their way toward a seat that isn't coming.
-                Text(explain("Only Talk counts. Watching a scene doesn't."))
-            }
         }
+        // No footer. There was one saying "only Talk counts, watching a scene
+        // doesn't" — written to head off a confusion that nobody had. Naming
+        // Watch here is what plants the idea that Watch might count; the rule
+        // section says "Talk" and that is the whole job. An answer to an
+        // unasked question is just noise with a defensive tone.
     }
 
     /// The one line that differs by state. Everything under it is the same
-    /// three rows for everybody.
+    /// handful of rows for everybody.
     @ViewBuilder
     private func standingLead(_ p: CoreClubService.Progress) -> some View {
         if let m = p.member, m.seated {
@@ -222,22 +237,34 @@ struct CoreClubView: View {
         } else if p.member != nil {
             CoreSealRow(seated: false)
             if p.waiting_for_seat {
-                Text(explain("You're over the bar. The next seat is yours."))
-                    .font(.footnote).foregroundStyle(.secondary)
+                // Qualified and over the bar. Which of the two things they are
+                // waiting on depends on the room at the top of this screen, and
+                // saying "a seat opens when someone stops" to someone looking
+                // at ninety empty ones is the app not reading its own screen.
+                if p.club_size < p.seats {
+                    Text(explain("You're in line, and there's room. You take a seat tonight."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Text(explain("You're in line. A seat opens when someone stops."))
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             } else if let back = p.days_to_return {
                 bigNumber(back, label: "Days to return")
                 if p.requalifying {
-                    Text(explain("You've been away a while, so the full month counts again."))
+                    Text(explain("You've been away a while, so the full streak counts again."))
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
         } else if let togo = p.days_to_entry {
-            // "Absences 27 · 0" used to sit under this — two unlabelled
-            // numbers telling a beginner they had already failed 27 times with
-            // no cushion left, which is the precise feeling this whole design
-            // exists to avoid. The month grid says the same thing without the
-            // verdict.
-            bigNumber(togo, label: "Days to qualify")
+            if togo == 0 {
+                // Streak complete, settlement not yet run. Saying "0 days to
+                // go" here would read as a stall; this is the one moment the
+                // screen gets to be pleased.
+                Text(explain("You've done the \(p.entry_streak) days. You join the line tonight."))
+                    .font(.footnote).foregroundStyle(.secondary)
+            } else {
+                bigNumber(togo, label: "Days to go")
+            }
         }
     }
 
@@ -252,35 +279,6 @@ struct CoreClubView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
-    }
-
-    // MARK: - The month
-
-    /// One dot per day in the entry window, oldest first. The point of
-    /// drawing all thirty is to make the ROLLING window visible: the gaps
-    /// slide off the left edge as the days pass, which is the difference
-    /// between "deferred" and "broken".
-    private func monthGrid(_ p: CoreClubService.Progress) -> some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 10),
-            spacing: 8
-        ) {
-            ForEach(Array(p.days.enumerated()), id: \.offset) { _, day in
-                // Three states, not two. A day before counting began is drawn
-                // faintest and hollow: it is not a day the learner missed, and
-                // showing it as one turned a fresh start into a month of
-                // failure for anyone who had been talking all along.
-                Image(systemName: day.met ? "circle.fill" : "circle")
-                    .font(.caption2)
-                    .foregroundStyle(day.met ? Color.coreClub
-                                     : Color.secondary.opacity(day.wasCounted ? 0.4 : 0.12))
-                    .accessibilityHidden(true)
-            }
-        }
-        .padding(.vertical, 6)
-        .accessibilityElement()
-        .accessibilityLabel(Text("Days met"))
-        .accessibilityValue(Text(verbatim: "\(p.met_entry) / \(p.days.count)"))
     }
 
     private func load() async {

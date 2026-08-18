@@ -73,22 +73,45 @@ A 100-seat club of learners who actually speak most days. It exists to build
 and KEEP a core, not to run a contest — so membership is a BAR, never a rank,
 and its two halves are deliberately asymmetric (`20260813120000_core_club`):
 
-- **Qualifying** — 28 of the last 30 days over the daily bar. Once, hard, and
-  the badge it grants is PERMANENT: `qualified_at` + `join_number` are never
-  revoked. A low join number IS the founding story, which is why there is no
-  separate "founding" flag and no sealing date.
-- **Keeping a seat** — 5 of the last 7 days. Loose on purpose: one missed day
-  costs nothing. **A seat is only ever vacated by its holder, never taken by a
-  newcomer** — `settle_core_club` releases before it promotes, so an arrival is
-  pure good news to the people already inside. If qualified people pile up
-  waiting, the answer is to raise the keep bar, not to evict anyone.
-- **Re-entry** — within 90 days of leaving you return on the WEEK bar, not the
-  month; the month is asked of first-timers only. Recently departed members
-  outrank first-timers for a vacancy for 14 days.
+- **Qualifying** — **30 days IN A ROW** over the daily bar
+  (`20260817140000_core_streak_entry`). Break it and the count restarts at
+  zero; there is no forgiveness on the way in, and that is the entire value of
+  the badge. Once, hard, and the badge it grants is PERMANENT: `qualified_at` +
+  `join_number` are never revoked. A low join number IS the founding story,
+  which is why there is no separate "founding" flag and no sealing date.
+- **Qualifying does NOT seat you.** It puts you in the queue, in qualification
+  order; you are seated when a holder vacates. `core_my_progress.queue_ahead`
+  exists so the screen can say that out loud instead of letting a progress
+  number read as a door.
+- **Keeping a seat** — don't break the streak, except **one missed day per
+  rolling 30 is forgiven** (`keep_grace_days`). A cold or a flight is free; two
+  inside a month vacates the seat, and the badge survives it. **A seat is only
+  ever vacated by its holder, never taken by a newcomer** — `settle_core_club`
+  releases before it promotes, so an arrival is pure good news to the people
+  already inside. If qualified people pile up waiting, the answer is to loosen
+  the keep bar, not to evict anyone.
+- **Re-entry** — within 90 days of leaving you return on the KEEP bar, not the
+  streak; the full 30 in a row is asked of first-timers only.
 
-Rolling windows, never streaks: a missed day defers by a day instead of
-resetting to zero, and the UI must say so (`CoreClubView` shows a DISTANCE —
-"6 days to go" — and never the words "failed" or "start over").
+**This replaced 28-of-30 rolling windows on 2026-08-17, and the old argument is
+worth knowing before re-deriving it.** Rolling windows were chosen so a missed
+day would defer entry by a day instead of resetting to zero — humane, and true.
+But it was humane only in the arithmetic, where nobody could see it: what
+reached the screen was "Days met 3 / 28" over thirty dots, which is a scoreboard
+of a month already spent and says nothing about what to do today. It also could
+not state its own rule — nothing in a field of dots tells you which two absences
+were forgiven. A streak is a rule people already hold in their heads, and its
+instruction is the product's instruction: talk today. The humaneness moved to
+the KEEP side, where it is one sentence anyone can repeat.
+
+The two measurements live in `core_streak()` / `core_missed_recent()` and are
+called by BOTH the nightly settlement and `core_my_progress`, so the number on
+screen is the number the promotion decision was made from — never re-implement
+either in a query. The streak is anchored to today if today is already met,
+otherwise to yesterday: a streak is alive until its day is over, and without
+that every learner reads 0 each morning and the 00:05 UTC settlement sees
+nobody qualified at all. The UI shows numbers only — no grid; don't bring one
+back to "show progress", the progress is the number.
 
 - **Badge vs seat are separate facts, shown in one glyph** (`CoreSeal`): filled
   `seal.fill` = seated now, outlined `seal` = qualified but currently seatless.
@@ -157,7 +180,7 @@ Three consequences to preserve when touching this: the failure path in `requestR
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
-- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = wall-clock call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → "see you tomorrow", NEVER a paywall. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → "see you tomorrow", NEVER a paywall. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
 ## Build / run

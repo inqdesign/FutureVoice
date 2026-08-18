@@ -40,8 +40,16 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
+    /// Today's talk allowance is spent. Its own alert, not the error one —
+    /// a finished day is not something going wrong.
+    @State private var dailyCapReached = false
+    /// This account is on Daily, so there IS somewhere to go when the day
+    /// runs out. Resolved at call start so the alert's button is there the
+    /// moment the wall lands. False on Unlimited: nothing left to sell, and
+    /// the answer really is tomorrow.
+    @State private var canUpgradePlan = false
     /// Unified beta feedback modal — set to a milestone to present it.
-    @State private var feedbackContext: BetaFeedbackSheet.Context?
+    @State private var feedbackContext: FeedbackSheet.Context?
     /// endAndClose defers its dismiss until the first-talk feedback closes.
     @State private var dismissAfterFeedback = false
     @State private var showMicPermissionAlert = false
@@ -144,6 +152,21 @@ struct ConversationView: View {
     private static let vadShortSeconds: Double   = 0.8
     private static let vadDefaultSeconds: Double = 1.6
     private static let vadLongSeconds: Double    = 5.0
+    /// Headroom over a pause the learner has already taken and come back from.
+    /// Matching it exactly would end the turn on the very gap they proved they
+    /// speak through; 0.4s is one tick of hesitation more than that.
+    private static let pauseFloorMargin: Double = 0.4
+    /// How much of the evidence survives into the next turn. Pausing habits
+    /// carry across a call — the learner composing in 3s gaps in turn two is
+    /// the same person in turn three — but a single freak gap must not make
+    /// the whole call sluggish, so each turn starts from 70% of the last.
+    /// Three ordinary turns wash a 4s outlier back down to ~1.4s.
+    private static let pauseFloorDecay: Double = 0.7
+    /// The longest mid-speech pause seen SO FAR IN THIS CALL, decayed per turn.
+    /// Exists because `LiveTranscriber`'s meter resets every turn, which left
+    /// the first pause of every turn judged with no evidence at all — and the
+    /// first pause is exactly where a learner gets cut off.
+    @State private var sessionPauseFloor: Double = 0
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
     private static let sttSettleSeconds: Double  = 0.7
@@ -235,9 +258,6 @@ struct ConversationView: View {
     /// ✕ tapped with unsaved turns — asks save vs. discard before leaving.
     @State private var confirmingDiscard = false
     @State private var userSpeechStartedAt: Date?
-    /// Last time the live STT partial changed — the endpoint monitor waits
-    /// for BOTH audio silence and a settled transcript before sending.
-    @State private var lastTranscriptChangeAt: Date?
     /// True when the topic is a news story ("In the news" picker). The opener
     /// call then runs search-grounded and collects `newsFacts`.
     @State private var topicIsNews = false
@@ -280,6 +300,27 @@ struct ConversationView: View {
         case speaking       // ElevenLabs TTS playing
     }
 
+    /// Is this second of the open call actually a second of TALKING? The
+    /// meter polls this once a second and charges nothing for the seconds it
+    /// says no to (`TalkMeter.isBillable`).
+    ///
+    /// A call screen left open is not a call. The mic being hot costs the
+    /// learner nothing and costs us nothing — what costs is the model writing
+    /// and the voice speaking — so the yes cases are exactly the three places
+    /// where work is happening or has just happened:
+    ///   • the fluent self is speaking (or a turn's audio is playing);
+    ///   • a reply is being generated;
+    ///   • the learner's voice was heard within the last few seconds — the
+    ///     grace covers the end-of-turn wait, which is time the app spends
+    ///     deciding they finished, not time they spent doing nothing.
+    /// Silence with the mic open falls through to no, which is the whole fix.
+    private func isBillableMoment() -> Bool {
+        if phase == .thinking || phase == .speaking { return true }
+        if player.isPlaying { return true }
+        guard let voiced = live.lastVoicedAt else { return false }
+        return Date().timeIntervalSince(voiced) < TalkMeter.voiceGraceSeconds
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -315,12 +356,15 @@ struct ConversationView: View {
                     if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
                     if phase == .listening || phase == .thinking { phase = .idle }
                     if meter.wallReason == .dailyCapReached {
-                        error = explain("Today's talk minutes are used up — they reset at midnight. This call is saved; pick it up tomorrow.")
+                        dailyCapReached = true
                     } else {
                         outOfCredits = true
                         error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
                     }
                 }
+                // Silence isn't billed — see `isBillableMoment`. Set before
+                // start(): the ticker polls it from its first second.
+                meter.isBillable = { isBillableMoment() }
                 meter.start(sessionId: sessionId)
                 HapticEngine.phoneCallStarted()
                 Analytics.capture("conversation_started", [
@@ -356,6 +400,22 @@ struct ConversationView: View {
             } message: {
                 Text(error ?? "")
             }
+            // A spent day is its own alert. On Daily it offers the way to
+            // keep going TODAY; on Unlimited there's nothing to sell, so it
+            // stays what it was — see you tomorrow.
+            .alert("That's today's talk time", isPresented: $dailyCapReached) {
+                if canUpgradePlan {
+                    Button("See Unlimited") {
+                        dailyCapReached = false
+                        showingPaywall = true
+                    }
+                }
+                Button("OK") { dailyCapReached = false }
+            } message: {
+                Text(canUpgradePlan
+                     ? explain("Upgrading to Unlimited lets you keep talking today.")
+                     : explain("Your minutes reset at midnight. This call is saved — pick it up tomorrow."))
+            }
             .sheet(isPresented: $showingPaywall) {
                 // Reached here from an out-of-credits failure → no trial pitch.
                 PaywallView()
@@ -363,7 +423,7 @@ struct ConversationView: View {
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
             }) { ctx in
-                BetaFeedbackSheet(context: ctx)
+                FeedbackSheet(context: ctx)
             }
             .sheet(isPresented: $askingMicChoice, onDismiss: resumeAfterMicChoice) {
                 MicChoiceSheet { _ in }
@@ -382,6 +442,7 @@ struct ConversationView: View {
                 Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
+            .task { canUpgradePlan = await AccountStatus.fetch().isDailyPlan }
             .onChange(of: topic) { _, newTopic in
                 // Topic just got picked → opener appears AND we auto-enter
                 // phone-call mode. Zero-tap start: the user's scenario pick
@@ -391,13 +452,6 @@ struct ConversationView: View {
                 phoneCallActive = true
                 HapticEngine.phoneCallStarted()
                 Task { await openConversation() }
-            }
-            .onChange(of: live.transcript) { _, _ in
-                // The endpoint monitor measures silence from mic ENERGY, not
-                // from this — but it refuses to fire while the partial is
-                // still moving (STT settle), so track the last change here.
-                guard phoneCallActive, phase == .listening else { return }
-                lastTranscriptChangeAt = Date()
             }
         }
     }
@@ -706,7 +760,16 @@ struct ConversationView: View {
                 guard !live.transcript.trimmingCharacters(in: .whitespaces).isEmpty,
                       let lastVoiced = live.lastVoicedAt else { continue }
                 let audioSilence = Date().timeIntervalSince(lastVoiced)
-                let sinceTextChange = lastTranscriptChangeAt.map { Date().timeIntervalSince($0) }
+                // Evidence accumulates as they speak, so a long gap raises the
+                // bar for the gap AFTER it — within this turn and the next few.
+                sessionPauseFloor = max(sessionPauseFloor, live.observedPauseSeconds)
+                // The LIVE partial's clock, not the transcript's: a late
+                // rescored final rewrites the bubble while the learner is
+                // already silent, and treating that as "still speaking" made
+                // every corrected turn wait an extra settle window before the
+                // fluent self answered — the learner paid for their own
+                // correction. See `LiveTranscriber.lastLivePartialAt`.
+                let sinceTextChange = live.lastLivePartialAt.map { Date().timeIntervalSince($0) }
                     ?? .greatestFiniteMagnitude
                 // The user has plausibly finished — spend the rest of the VAD
                 // wait warming the network path (TLS + auth token) so the turn
@@ -734,6 +797,15 @@ struct ConversationView: View {
                     "vad_path": audioSettled ? "audio" : "noisy",
                     "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
                     "noise": String(format: "%.2f", live.ambientNoiseLevel),
+                    // The longest thinking gap this turn spoke through. Reads
+                    // as "how close did we come to cutting them off": whenever
+                    // it approaches `vad_wait_ms`, the fixed tiers were about
+                    // to end a turn the learner was still in the middle of.
+                    "pause_max_ms": String(Int(live.observedPauseSeconds * 1000)),
+                    // What the floor actually demanded of this turn. Compare
+                    // with `vad_wait_ms` to see whether the learner's own
+                    // pausing, or the fixed tier, decided when to answer.
+                    "pause_floor_ms": String(Int(sessionPauseFloor * 1000)),
                     // Requested is not granted — some routes refuse the unit.
                     // Without this, a `vad_path=noisy` turn can't be told apart
                     // from one where noise suppression simply never engaged.
@@ -750,17 +822,35 @@ struct ConversationView: View {
     /// Inspect the latest STT transcript and pick a REQUIRED TRUE-SILENCE
     /// duration (seconds since the mic last heard voiced audio):
     ///   • 5.0s — clearly mid-thought (filler / hanging conjunction / stub).
-    ///   • 1.2s — wrapped up cleanly (terminal punctuation .!?).
-    ///   • 2.2s — anything in between.
+    ///   • 0.8s — wrapped up cleanly (terminal punctuation .!?).
+    ///   • 1.6s — anything in between.
+    ///
+    /// …then RAISED, never lowered, to the longest thinking pause this turn has
+    /// already survived (`observedPauseSeconds`). The tiers above are a guess
+    /// about the speaker read off their words; that is a measurement of the
+    /// speaker themselves, and where the two disagree the measurement wins.
+    /// Learners compose mid-sentence far more slowly than the lexical cues
+    /// admit — a clause can end on a clean period and still be half a thought,
+    /// and the tuning that took the tiers down to 0.8/1.6s was driven purely by
+    /// latency telemetry, which cannot see a learner being cut off (their next
+    /// turn just looks like a new sentence).
     private func currentVadWaitSeconds() -> Double {
         let trimmed = live.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lexical: Double
         if Self.isLikelyIncomplete(trimmed) {
-            return Self.vadLongSeconds
+            lexical = Self.vadLongSeconds
+        } else if let last = trimmed.last, ".!?".contains(last) {
+            lexical = Self.vadShortSeconds
+        } else {
+            lexical = Self.vadDefaultSeconds
         }
-        if let last = trimmed.last, ".!?".contains(last) {
-            return Self.vadShortSeconds
-        }
-        return Self.vadDefaultSeconds
+        // Only pauses they actually CLOSED by speaking again count, so this
+        // can never chase the silence that is currently running. Capped at the
+        // long tier: one freak gap must not turn the rest of the call into a
+        // conversation with a wall.
+        let demonstrated = min(sessionPauseFloor + Self.pauseFloorMargin,
+                               Self.vadLongSeconds)
+        return max(lexical, demonstrated)
     }
 
     private static let fillerWords: Set<String> = [
@@ -1021,7 +1111,9 @@ struct ConversationView: View {
                            captureToFile: true,   // keep the user's own audio for listen-back
                            voiceProcessing: true)
             userSpeechStartedAt = Date()
-            lastTranscriptChangeAt = nil
+            // Last turn's pausing still describes this learner, but with less
+            // and less authority the longer they go without needing it.
+            sessionPauseFloor *= Self.pauseFloorDecay
             didPreconnectThisTurn = false
             phase = .listening
             startEndpointMonitor()
@@ -1964,8 +2056,8 @@ struct ConversationView: View {
         cancelSilenceTimer()
         // First-ever finished conversation → ask for feedback before leaving;
         // the sheet's onDismiss completes the exit.
-        if BetaFeedback.shouldShow(.firstTalk) {
-            BetaFeedback.markShown(.firstTalk)
+        if FeedbackPrompt.shouldShow(.firstTalk) {
+            FeedbackPrompt.markShown(.firstTalk)
             dismissAfterFeedback = true
             feedbackContext = .firstTalk
         } else {

@@ -1,15 +1,27 @@
 import Foundation
 import Supabase
 
-/// Wall-clock talk metering — the in-call timer IS the price.
+/// Talk metering — the in-call timer IS the price, but only while the call
+/// is actually a call.
 ///
 /// While a call is active this ticks the `talk-tick` Edge Function every
-/// 30 s; the server pools the seconds per day and consumes them from the
-/// plan's daily allowance (subscribers) or the one-time seconds balance
-/// (free users) — 1 s of call = 1 s, no other unit. A 1-second preflight
-/// tick fires at call start so an empty allowance surfaces BEFORE the
-/// greeting speaks (otherwise every fresh session would carry a free first
-/// minute).
+/// 30 s of LIVE time; the server pools the seconds per day and consumes them
+/// from the plan's daily allowance (subscribers) or the one-time seconds
+/// balance (free users) — 1 s of talking = 1 s, no other unit. A 1-second
+/// preflight tick fires at call start so an empty allowance surfaces BEFORE
+/// the greeting speaks (otherwise every fresh session would carry a free
+/// first minute).
+///
+/// **Idle time is not charged** (2026-08-18). It used to be: the ticker was a
+/// plain wall clock, so a screen left open while the learner did something
+/// else spent the day's minutes on silence — 8 minutes billed for a call
+/// where nobody said a word. A learner cannot be asked to pay for a room they
+/// walked out of. So the meter polls `isBillable` once a second and only
+/// accumulates the seconds it answers yes to; the predicate lives in the
+/// caller because only the call screen knows what "something is happening"
+/// means (see `ConversationView.isBillableMoment`). Unset → everything counts,
+/// which is the old behaviour and the safe default for a surface that hasn't
+/// been taught the difference.
 ///
 /// Failure policy is asymmetric on purpose:
 /// - 402 → `onWallHit` — the call ends gracefully. `wallReason` says which
@@ -32,7 +44,25 @@ final class TalkMeter: ObservableObject {
     /// Fired once when the server says today's talking is over (402).
     var onWallHit: (() -> Void)?
 
+    /// Polled once a second: is this second part of the conversation? Seconds
+    /// it answers `false` to are neither billed nor counted toward the day.
+    /// Set it before `start`; nil means "count everything".
+    var isBillable: (() -> Bool)?
+
     static let tickSeconds = 30
+
+    /// How long after the learner's last voiced frame still counts as them
+    /// talking. Must cover the longest end-of-turn wait (`vadLongSeconds` 5s
+    /// + the STT settle) or the meter would stop mid-turn while the app is
+    /// still deciding the learner finished.
+    static let voiceGraceSeconds: Double = 6
+
+    /// Poll cadence, and the ceiling on what one poll may contribute. The
+    /// clamp matters because a suspended app resumes with a huge gap on the
+    /// clock — without it, a phone that was in a pocket for ten minutes would
+    /// bill all ten on its first poll back.
+    private static let pollSeconds: Double = 1
+    private static let maxSecondsPerPoll: Double = 2
 
     /// The target language, read straight from defaults rather than passed in
     /// — the meter is started from several surfaces and threading it through
@@ -52,11 +82,20 @@ final class TalkMeter: ObservableObject {
         task = Task { [weak self] in
             // Preflight before the first sleep — see type comment.
             await self?.tick(seconds: 1, label: "pre")
+            var live = 0.0            // billable seconds not yet sent
             var i = 0
+            var lastPoll = Date()
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(Self.tickSeconds))
-                guard !Task.isCancelled else { break }
-                await self?.tick(seconds: Self.tickSeconds, label: String(i))
+                try? await Task.sleep(for: .seconds(Self.pollSeconds))
+                guard !Task.isCancelled, let self else { break }
+                let now = Date()
+                let elapsed = min(now.timeIntervalSince(lastPoll), Self.maxSecondsPerPoll)
+                lastPoll = now
+                guard self.isBillable?() ?? true else { continue }
+                live += elapsed
+                guard live >= Double(Self.tickSeconds) else { continue }
+                live -= Double(Self.tickSeconds)
+                await self.tick(seconds: Self.tickSeconds, label: String(i))
                 i += 1
             }
         }

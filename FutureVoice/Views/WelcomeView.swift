@@ -246,7 +246,7 @@ struct WelcomeView: View {
                     .background(RoundedRectangle(cornerRadius: 12).fill(Color(.secondarySystemGroupedBackground)))
                     .padding(.horizontal, 32)
                     .onChange(of: inviteCode) { _, _ in savePendingInvite() }
-                Text(explain("You'll both get 300 credits when you sign in."))
+                Text(explain("You'll both get \(ReferralService.bonusMinutes) minutes of talk time when you sign in."))
                     .font(.caption).foregroundStyle(.secondary)
             }
             .padding(.top, 4)

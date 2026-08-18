@@ -39,6 +39,19 @@ final class LiveTranscriber: ObservableObject {
     @Published private(set) var currentWordTimings: [WordTimingInfo] = []
     @Published private(set) var segmentAnchorAt: Date?
 
+    /// When the LIVE segment's hypothesis last changed — i.e. the last moment
+    /// the recognizer was still catching up with speech that is being spoken.
+    ///
+    /// Deliberately NOT "when `transcript` last changed". `transcript` is also
+    /// rewritten by the late, language-model-rescored FINAL of a segment that
+    /// was frozen seconds ago (`handleResult`'s late-callback path) — a
+    /// correction of words the user finished saying, carrying no evidence that
+    /// they are still talking. Endpointing must not treat that as new speech:
+    /// callers hold fire while this is moving, so a rescore landing during the
+    /// silence used to restart the settle wait and the learner paid for their
+    /// own correction with a longer pause before the answer.
+    @Published private(set) var lastLivePartialAt: Date?
+
     struct WordTimingInfo: Equatable, Hashable {
         var word: String
         var startSeconds: Double   // offset into audio of current segment
@@ -119,6 +132,18 @@ final class LiveTranscriber: ObservableObject {
     /// Ambient noise estimate the endpointer is currently working against
     /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
     var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
+
+    /// The longest MID-SPEECH silence this run has already survived — a pause
+    /// the learner opened and then closed by carrying on talking.
+    ///
+    /// It is the only hard evidence available about how long THIS person, in
+    /// THIS turn, goes quiet while still composing. The endpointer's fixed
+    /// tiers are a guess about that; this is a measurement, and a turn that
+    /// has already shown a 3 s thinking gap must not be ended on a 1.6 s one.
+    /// Trailing silence is deliberately excluded — it is only counted once
+    /// speech resumes, so the pause currently in progress can never raise the
+    /// bar that is about to end it.
+    var observedPauseSeconds: Double { fluency.longestPauseSoFar() }
 
     /// Whether the current — or, once stopped, the most recent — run actually
     /// got iOS's voice processing unit (see `start(voiceProcessing:)`).
@@ -254,29 +279,18 @@ final class LiveTranscriber: ObservableObject {
             }
         }
         if vpActive {
-            // VPIO is ONE I/O unit: turning it on for INPUT also puts its
-            // output bus in the graph, and that bus is pulled every render
-            // cycle whether or not the app wants to play anything. With
-            // nothing connected to the engine's output that pull fails on
-            // every cycle — measured on device 2026-08-17, the console fills
-            // with hundreds of `auou/vpio/appl, render err: -1` per turn — so
-            // the unit runs its processing against a render loop that never
-            // completes. Give it a valid thing to render: a silent source at
-            // zero volume. Nothing of ours plays through this engine (the
-            // fluent self has its own), so muting the mixer costs nothing.
-            let hwRate = engine.outputNode.outputFormat(forBus: 0).sampleRate
-            if let silenceFormat = AVAudioFormat(
-                standardFormatWithSampleRate: hwRate > 0 ? hwRate : 48_000, channels: 1) {
-                let silence = AVAudioSourceNode(format: silenceFormat) { _, _, _, abl in
-                    for buffer in UnsafeMutableAudioBufferListPointer(abl) {
-                        memset(buffer.mData, 0, Int(buffer.mDataByteSize))
-                    }
-                    return noErr
-                }
-                engine.attach(silence)
-                engine.connect(silence, to: engine.mainMixerNode, format: silenceFormat)
-                engine.mainMixerNode.outputVolume = 0
-            }
+            // NOTE (2026-08-18): do NOT connect a silent source to the mixer to
+            // feed VPIO's output bus. It was tried, to stop the hundreds of
+            // `auou/vpio/appl, render err: -1` the unit logs when only its input
+            // is used, and it KILLED THE MIC on Bluetooth: the output format is
+            // read before `engine.start()`, when the earphone is still on A2DP,
+            // but opening the mic flips the link to HFP at a different rate —
+            // so the connection is stale by the time the graph runs, the engine
+            // refuses to start, and the retry inherits the same dead node. The
+            // call then plays fine (the fluent self has its own engine) while
+            // nothing is ever heard. The render errors are noisy but harmless;
+            // a working mic is not negotiable.
+
             // Keep noise suppression (the reason VPIO is here at all) but drop
             // its AGC. AGC rides the level continuously, and the learner HEARS
             // that: their own turn plays back thin and pumping in Practice.
@@ -319,6 +333,9 @@ final class LiveTranscriber: ObservableObject {
         do {
             try engine.start()
         } catch {
+            #if DEBUG
+            print("🔊 [mic] engine.start failed (vp=\(vpActive ? 1 : 0)): \(error)")
+            #endif
             input.removeTap(onBus: 0)
             // The voice processing unit is a whole I/O unit swap; a route that
             // accepted the toggle can still fail to start under it. Losing
@@ -336,6 +353,9 @@ final class LiveTranscriber: ObservableObject {
             do {
                 try engine.start()
             } catch {
+                #if DEBUG
+                print("🔊 [mic] engine.start failed on the raw-mic retry: \(error)")
+                #endif
                 input.removeTap(onBus: 0)
                 throw LiveError.engineFailed
             }
@@ -349,6 +369,12 @@ final class LiveTranscriber: ObservableObject {
         if vpActive { AudioSessionRouting.applyOutputRoute(session) }
         #if DEBUG
         AudioSessionRouting.debugSnapshot("mic/start vp=\(vpActive ? 1 : 0)")
+        // The tap's own format and the port feeding it: "the mic hears nothing"
+        // is either a dead graph or a quiet one, and only these two lines (plus
+        // `level`) tell them apart.
+        let inFormat = input.outputFormat(forBus: 0)
+        print("🔊 [mic/format] rate=\(inFormat.sampleRate) ch=\(inFormat.channelCount) " +
+              "port=\(session.currentRoute.inputs.map(\.portType.rawValue).joined(separator: "+"))")
         #endif
 
         self.engine = engine
@@ -361,6 +387,7 @@ final class LiveTranscriber: ObservableObject {
         self.transcript = ""
         self.lastSegmentText = ""
         self.lastChangeTime = Date()
+        self.lastLivePartialAt = nil
         self.level = 0
         self.isRunning = true
         startNewSegment()
@@ -650,6 +677,11 @@ final class LiveTranscriber: ObservableObject {
 
             if segmentText != lastSegmentText {
                 lastChangeTime = Date()
+                // The ONLY place the endpointer's settle clock advances: this
+                // is the recognizer still trailing live speech. A late rescore
+                // of an already-frozen segment goes through the guard above and
+                // must leave this untouched (see `lastLivePartialAt`).
+                lastLivePartialAt = lastChangeTime
                 lastSegmentText = segmentText
             }
             rebuildTranscript()
@@ -760,6 +792,11 @@ private final class FluencyMeter: @unchecked Sendable {
     func lastVoicedTime() -> Date? {
         lock.lock(); defer { lock.unlock() }
         return lastVoicedAt
+    }
+
+    func longestPauseSoFar() -> Double {
+        lock.lock(); defer { lock.unlock() }
+        return longestPause
     }
 
     /// Current ambient estimate (0…1 on the `rms()` curve) — telemetry only,

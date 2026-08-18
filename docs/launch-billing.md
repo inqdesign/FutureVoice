@@ -123,7 +123,7 @@ Charge table lives in `supabase/functions/_shared/credits.ts` — keep
 | **Beta signup** | **300** | Live now (`beta300:` ledger prefix) |
 | **Launch signup** | **100** | Swap trigger at production open |
 | **Apple / Stripe trial** | Full selected plan cycle | Intro offer / trial webhook |
-| **Referral** (both sides) | **300**, inviter cap 10 | Standing loop; revisit if unit econ shifts |
+| **Referral** (both sides) | **1800 s (30 min)**, inviter cap 10 | Standing loop, and since the hard paywall the ONLY free talk time in the product (`20260818100000_referral_thirty_minutes`) |
 
 Beta 300 is intentionally generous so testers can form a habit and we can
 read real usage. Launch 100 is enough to clone + taste, not live on.

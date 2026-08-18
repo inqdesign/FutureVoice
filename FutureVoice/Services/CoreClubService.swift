@@ -1,13 +1,18 @@
 import Foundation
 import UserNotifications
 
-/// The Core — 100 seats held by learners who actually speak most days.
+/// The Core — 100 seats held by learners who actually speak every day.
 ///
-/// Two facts, deliberately separate (see `20260813120000_core_club.sql`):
+/// Two facts, deliberately separate (see `20260817140000_core_streak_entry.sql`):
 ///
-///   * **Qualification** — 28 of the last 30 days over the daily bar. Earned
-///     once, granted the moment it's done, and NEVER revoked. `qualifiedAt`
-///     is the permanent record.
+///   * **Qualification** — 30 days IN A ROW over the daily bar. Break the
+///     streak and it restarts at zero; there is no forgiveness on the way in,
+///     which is the whole value of the badge. Earned once, granted the moment
+///     it's done, and NEVER revoked. `qualifiedAt` is the permanent record.
+///
+///     Qualifying does NOT seat you. It puts you in the queue, in
+///     qualification order, and you are seated when someone vacates — which
+///     is what `queue_ahead` exists to say out loud.
 ///
 ///     There is no member NUMBER anywhere in this file any more. It existed,
 ///     and it was wrong: an ordinal that is never reused climbs past the seat
@@ -17,10 +22,10 @@ import UserNotifications
 ///     reintroduced the rank the club was designed not to have. The server
 ///     still keeps `join_number` as its internal ordering key (seat order,
 ///     promotion tie-break); nothing reads it back to a person.
-///   * **A seat** — kept with 5 of the last 7 days. Loose on purpose: a
-///     missed day costs nothing. A seat is only ever vacated by its holder,
-///     never taken by a newcomer, so an arrival is pure good news to the
-///     people already inside.
+///   * **A seat** — kept by not missing more than one day per rolling 30. A
+///     cold or a flight is free; two inside a month vacates the seat. A seat
+///     is only ever vacated by its holder, never taken by a newcomer, so an
+///     arrival is pure good news to the people already inside.
 ///
 /// One glyph shows both (`CoreSeal`): filled = seated now, outlined =
 /// qualified but currently seatless. Losing a seat is dormancy, not a scar.
@@ -78,20 +83,6 @@ enum CoreClubService {
     /// only. `core_daily_activity` is revoked from clients — this RPC is the
     /// only door, and it reads nobody else's days.
     struct Progress: Decodable {
-        struct Day: Decodable {
-            let day: String
-            let seconds: Int
-            let met: Bool
-            /// False for days before the Core could observe language-tagged
-            /// talk at all. A rolling window can't tell "you missed it" from
-            /// "nobody was counting" — both are just an absent row — so the
-            /// server marks the boundary and the grid must draw the two
-            /// differently. Older servers omit it; treating that as counted
-            /// keeps their behaviour unchanged.
-            let counted: Bool?
-
-            var wasCounted: Bool { counted ?? true }
-        }
         /// `core_my_progress` still puts a `join_number` in this object — it
         /// is the caller's own row and goes nowhere else, and rewriting a
         /// 180-line settlement-adjacent function to delete one key is risk
@@ -104,53 +95,33 @@ enum CoreClubService {
 
         let bar_seconds: Int
         let seats: Int
-        /// The day the Core started observing this at all, and the earliest
-        /// date any seat can exist (`counting_since + entry_required - 1`).
-        /// Both nil on older servers.
-        let counting_since: String?
-        let first_seat_on: String?
         let club_size: Int
         let member: Member?
-        let days: [Day]
-        let met_entry: Int
-        let entry_required: Int
-        let met_keep: Int
-        let keep_required: Int
-        /// Best-case days until the entry bar, assuming every remaining day
-        /// is met. Nil once qualified.
+
+        /// Consecutive days over the daily bar, alive until today is over —
+        /// today only breaks it at midnight, so this doesn't read 0 every
+        /// morning. `entry_streak` is what it has to reach.
+        let streak: Int
+        let entry_streak: Int
+        /// Missed days inside the keep window, and how many of them are
+        /// forgiven. Only meaningful once seated; a challenger's streak
+        /// already says everything.
+        let missed_recent: Int
+        let keep_grace: Int
+        let keep_window: Int
+        /// Qualified people ahead of you in this language's line. Nil unless
+        /// you're qualified and seatless — the one state where it answers
+        /// anything.
+        let queue_ahead: Int?
+        /// `entry_streak - streak`, from the server so the screen and the
+        /// settlement can't disagree by a day. Nil once qualified.
         let days_to_entry: Int?
-        /// Best-case days until a seatless member is eligible again.
+        /// Days until a seatless member is back over the keep bar.
         let days_to_return: Int?
-        /// A long absence means the month has to be earned again.
+        /// A long absence means the streak has to be run again.
         let requalifying: Bool
-        /// Bar cleared, badge held, club full — nothing to do but wait.
+        /// Over the bar, badge held, waiting for someone to vacate.
         let waiting_for_seat: Bool
-
-        /// True while the 30-day window still reaches back past the day the
-        /// Core started counting — i.e. while an empty month is a start
-        /// rather than a failure.
-        var hasUncountedDays: Bool { days.contains { !$0.wasCounted } }
-
-        /// Medium-style dates for the copy, in the learner's own locale.
-        var countingSinceText: String { Self.medium(counting_since) ?? "" }
-        var firstSeatDate: String? { Self.medium(first_seat_on) }
-
-        private static func medium(_ iso: String?) -> String? {
-            guard let iso else { return nil }
-            let parser = DateFormatter()
-            parser.calendar = Calendar(identifier: .gregorian)
-            parser.locale = Locale(identifier: "en_US_POSIX")
-            parser.timeZone = TimeZone(identifier: "UTC")
-            parser.dateFormat = "yyyy-MM-dd"
-            guard let date = parser.date(from: String(iso.prefix(10))) else { return nil }
-            return date.formatted(.dateTime.month(.abbreviated).day())
-        }
-
-        /// Absences inside the entry window, and how many are still spare.
-        var missedInEntryWindow: Int { days.count - met_entry }
-        var spareAbsences: Int {
-            max(days.count - entry_required - missedInEntryWindow, 0)
-        }
 
         /// Every field is optional AT THE WIRE, with a fallback.
         ///
@@ -170,6 +141,9 @@ enum CoreClubService {
             func int(_ k: CodingKeys, _ fallback: Int) -> Int {
                 (try? c.decodeIfPresent(Int.self, forKey: k)) .flatMap { $0 } ?? fallback
             }
+            func opt(_ k: CodingKeys) -> Int? {
+                (try? c.decodeIfPresent(Int.self, forKey: k)).flatMap { $0 }
+            }
             func bool(_ k: CodingKeys) -> Bool {
                 (try? c.decodeIfPresent(Bool.self, forKey: k)).flatMap { $0 } ?? false
             }
@@ -177,27 +151,23 @@ enum CoreClubService {
             seats           = int(.seats, 100)
             club_size       = int(.club_size, 0)
             member          = try? c.decodeIfPresent(Member.self, forKey: .member)
-            days            = (try? c.decodeIfPresent([Day].self, forKey: .days)).flatMap { $0 } ?? []
-            met_entry       = int(.met_entry, 0)
-            entry_required  = int(.entry_required, 28)
-            met_keep        = int(.met_keep, 0)
-            keep_required   = int(.keep_required, 28)
-            days_to_entry   = (try? c.decodeIfPresent(Int.self, forKey: .days_to_entry)).flatMap { $0 }
-            days_to_return  = (try? c.decodeIfPresent(Int.self, forKey: .days_to_return)).flatMap { $0 }
+            streak          = int(.streak, 0)
+            entry_streak    = int(.entry_streak, 30)
+            missed_recent   = int(.missed_recent, 0)
+            keep_grace      = int(.keep_grace, 1)
+            keep_window     = int(.keep_window, 30)
+            queue_ahead     = opt(.queue_ahead)
+            days_to_entry   = opt(.days_to_entry)
+            days_to_return  = opt(.days_to_return)
             requalifying    = bool(.requalifying)
             waiting_for_seat = bool(.waiting_for_seat)
-            // Absent on a server older than 20260817100000; the accessors
-            // treat nil as "everything was counted", which is what that
-            // server's behaviour effectively was.
-            counting_since  = (try? c.decodeIfPresent(String.self, forKey: .counting_since)).flatMap { $0 }
-            first_seat_on   = (try? c.decodeIfPresent(String.self, forKey: .first_seat_on)).flatMap { $0 }
         }
 
         private enum CodingKeys: String, CodingKey {
-            case bar_seconds, seats, club_size, member, days, met_entry
-            case entry_required, met_keep, keep_required, days_to_entry
-            case days_to_return, requalifying, waiting_for_seat
-            case counting_since, first_seat_on
+            case bar_seconds, seats, club_size, member
+            case streak, entry_streak, missed_recent, keep_grace, keep_window
+            case queue_ahead, days_to_entry, days_to_return
+            case requalifying, waiting_for_seat
         }
     }
 
@@ -327,12 +297,15 @@ enum CoreClubService {
     /// There is no push infrastructure (no APNs registration, no device-token
     /// table), so this is the honest version: the app notices on foreground
     /// and posts a LOCAL notification. It arrives late by design — when the
-    /// learner next opens the app — which is fine while the 28/30 entry bar
+    /// learner next opens the app — which is fine while the entry bar
     /// keeps arrivals to a handful a week. Wire APNs before that stops being
     /// true.
     ///
     /// First run records the high-water mark WITHOUT announcing: a fresh
     /// install must not dump the club's entire history onto the lock screen.
+    ///
+    /// (The bar referred to above is now 30 consecutive days — arrivals are,
+    /// if anything, rarer than they were under 28/30.)
     static func announceArrivals() async {
         let defaults = UserDefaults.standard
         let lastSeen = defaults.object(forKey: lastSeenKey) as? Int

@@ -485,7 +485,7 @@ struct StudyWidgetView: View {
                         .foregroundStyle(.secondary)
                 }
             } else {
-                Text("Future Voice").font(.headline)
+                Text(verbatim: "nawana").font(.headline)
                 Text(entry.section == .words
                      ? "Save words to study them here"
                      : "Bookmark phrases to study them here")

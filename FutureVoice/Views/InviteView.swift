@@ -1,30 +1,44 @@
 import SwiftUI
 import UIKit
 
-/// Beta "invite & credits" screen: your remaining quota, your shareable code,
-/// and a box to redeem a friend's code. No subscription during beta — credits
-/// come from the starting grant and from inviting people.
+/// "Invite & talk time": what this account can still speak, the code to share,
+/// and — only for an account that never used one — a box to enter a friend's
+/// code.
+///
+/// The code's real home is the Welcome screen: `WelcomeView` captures it
+/// before sign-in and `AuthService.redeemPendingInviteIfAny` redeems it the
+/// moment there's a session. This page's box exists for the one case that
+/// misses, someone who signed up first and was given a code afterwards — so
+/// it disappears once a code has been used, instead of asking a settled
+/// account for something it can no longer do.
 struct InviteView: View {
     @State private var referral = ReferralStatus.empty
-    @State private var balance = 0
+    @State private var account = AccountStatus.empty
     @State private var codeInput = ""
     @State private var redeeming = false
     @State private var redeemMessage: String?
     @State private var redeemError: String?
     @State private var loaded = false
 
+    private var bonusMinutes: Int { ReferralService.bonusMinutes }
+
     var body: some View {
         List {
             Section {
                 HStack {
-                    Label("Talk time left", systemImage: "bolt.fill")
+                    Label("Talk time", systemImage: "bolt.fill")
                     Spacer()
-                    Text("\(balance / 60) min")
-                        .font(.headline).monospacedDigit()
-                        .foregroundStyle(balance > 0 ? Color.primary : Color.orange)
+                    Text(account.talkTimeLabel)
+                        .font(.subheadline).monospacedDigit()
+                        .foregroundStyle(.secondary)
                 }
             } footer: {
-                Text(explain("Minutes are talk time with your fluent self. There's no subscription during the beta — invite friends to earn more."))
+                // A subscriber's invite minutes land in the one-time pool,
+                // which a subscription never spends — say so rather than
+                // promise time they won't see this month.
+                Text(account.isEntitled
+                     ? explain("Invite minutes are kept for after your plan ends. Reviewing is always free.")
+                     : explain("Minutes buy talk time with your fluent self. Reviewing is always free."))
             }
 
             Section {
@@ -47,7 +61,7 @@ struct InviteView: View {
                     HStack {
                         Label("Friends joined", systemImage: "person.2.fill")
                         Spacer()
-                        Text("\(referral.invitesUsed) / 10")
+                        Text("\(referral.invitesUsed) / \(ReferralService.rewardedInviteCap)")
                             .monospacedDigit().foregroundStyle(.secondary)
                     }
                 } else {
@@ -56,35 +70,49 @@ struct InviteView: View {
             } header: {
                 Text("Your invite code")
             } footer: {
-                Text(explain("You and your friend each get about an hour of talk time when they join with your code — for up to 10 friends."))
+                Text(explain("Your friend enters this code when they sign up, and you both get \(bonusMinutes) minutes. You're rewarded for your first \(ReferralService.rewardedInviteCap) friends."))
             }
 
-            Section {
-                TextField("Enter invite code", text: $codeInput)
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
-                    .font(.system(.body, design: .monospaced))
-                Button {
-                    Task { await redeem() }
-                } label: {
+            if let joined = referral.redeemedCode {
+                Section {
                     HStack {
-                        Text("Redeem")
-                        if redeeming { Spacer(); ProgressView() }
+                        Label("Joined with a code", systemImage: "checkmark.seal.fill")
+                        Spacer()
+                        Text(joined)
+                            .font(.system(.subheadline, design: .monospaced))
+                            .foregroundStyle(.secondary)
                     }
+                } footer: {
+                    Text(explain("A code counts once per account, so this one is done."))
                 }
-                .disabled(redeeming || codeInput.trimmingCharacters(in: .whitespaces).isEmpty)
-                if let m = redeemMessage {
-                    Label(m, systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green).font(.footnote)
+            } else {
+                Section {
+                    TextField("Enter invite code", text: $codeInput)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.system(.body, design: .monospaced))
+                    Button {
+                        Task { await redeem() }
+                    } label: {
+                        HStack {
+                            Text("Redeem")
+                            if redeeming { Spacer(); ProgressView() }
+                        }
+                    }
+                    .disabled(redeeming || codeInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if let m = redeemMessage {
+                        Label(m, systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green).font(.footnote)
+                    }
+                    if let e = redeemError {
+                        Label(e, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(.orange).font(.footnote)
+                    }
+                } header: {
+                    Text("Didn't use a code when you signed up?")
+                } footer: {
+                    Text(explain("Enter it here instead — \(bonusMinutes) minutes, once."))
                 }
-                if let e = redeemError {
-                    Label(e, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(.orange).font(.footnote)
-                }
-            } header: {
-                Text("Have a code?")
-            } footer: {
-                Text(explain("Enter a friend's code once for about an hour of bonus talk time."))
             }
         }
         .navigationTitle("Invite & talk time")
@@ -95,12 +123,12 @@ struct InviteView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        "I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get bonus talk time."
+        explain("I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get \(bonusMinutes) minutes of talk time.")
     }
 
     private func reload() async {
         referral = await ReferralService.fetchMine()
-        balance = await AccountStatus.fetch().secondsBalance
+        account = await AccountStatus.fetch()
     }
 
     private func redeem() async {
@@ -109,14 +137,14 @@ struct InviteView: View {
         redeemMessage = nil
         defer { redeeming = false }
         do {
-            balance = try await ReferralService.redeem(code: codeInput)
-            redeemMessage = "Redeemed — about an hour of talk time added."
+            _ = try await ReferralService.redeem(code: codeInput)
+            redeemMessage = explain("Redeemed — \(bonusMinutes) minutes added.")
             codeInput = ""
-            referral = await ReferralService.fetchMine()
+            await reload()
         } catch let err as ReferralService.RedeemError {
             redeemError = err.errorDescription
         } catch {
-            redeemError = "Couldn't redeem that code."
+            redeemError = explain("Couldn't redeem that code.")
         }
     }
 }

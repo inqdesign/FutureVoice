@@ -64,8 +64,14 @@ struct AccountStatus {
     /// they're the entry ticket, not usage.)
     var needsSubscription: Bool { !isEntitled && secondsBalance <= 0 && !unlimited }
 
-    /// A beta tester's leftover one-time pool: real seconds, no plan. Kept
-    /// when the free grant was removed — those minutes were already theirs.
+    /// Seconds in the pool with no plan behind them: a one-time balance that
+    /// spends like talk time but never refills.
+    ///
+    /// It stopped meaning "a beta tester's leftovers" on 2026-08-18, when
+    /// referrals went live: `redeem_referral` credits the same
+    /// `user_credits.balance`, so an invited user on day one lands here too.
+    /// Nothing user-facing may say "beta" off the back of this flag — it
+    /// would tell a brand-new account it had been testing.
     var hasLegacyPool: Bool { !isEntitled && secondsBalance > 0 }
 
     /// The Daily plan's allowance, minutes per day. Keep in sync with the
@@ -144,9 +150,10 @@ struct AccountStatus {
         if unlimited { return "Admin" }
         guard isEntitled, let planId else {
             // No free tier since the hard paywall: an account without a
-            // subscription is either a beta tester spending leftovers or
-            // someone who hasn't started.
-            return hasLegacyPool ? explain("Beta") : explain("No plan")
+            // subscription is either spending a one-time pool (beta
+            // leftovers, or an invite bonus) or hasn't started. Both are
+            // "no plan yet" — the pool is a balance, not a tier.
+            return hasLegacyPool ? explain("Free minutes") : explain("No plan")
         }
         let parts = planId.split(separator: "_")
         let tier = parts.first.map(String.init) ?? planId
@@ -192,9 +199,10 @@ struct AccountStatus {
             return explain("\(minutesRemaining) of \(tankMinutes) min left today")
         }
         if hasLegacyPool {
-            // Beta leftovers: a one-time pool with nothing to refill toward,
-            // so no denominator.
-            return explain("\(minutesRemaining) min of beta talk left")
+            // A one-time pool with nothing to refill toward, so no
+            // denominator. Says nothing about where it came from — beta
+            // leftovers and an invite bonus are the same balance.
+            return explain("\(minutesRemaining) min of talk left")
         }
         // Hard paywall — there is no free tier to count down from.
         return explain("No talk time yet")

@@ -38,6 +38,15 @@ final class AuthService: NSObject, ObservableObject {
     /// apply it the moment sign-in succeeds.
     static let pendingInviteKey = "futurevoice.pendingInviteCode"
 
+    /// The code still waiting to be applied, if any. The Welcome screen takes
+    /// it several steps before the sign-up button exists, so the account step
+    /// shows it back — an invisible pending code reads as a lost one.
+    static func pendingInviteCode() -> String? {
+        let code = UserDefaults.standard.string(forKey: pendingInviteKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return code.isEmpty ? nil : code
+    }
+
     override init() {
         super.init()
         Task { await loadInitialSession() }
@@ -52,6 +61,15 @@ final class AuthService: NSObject, ObservableObject {
     private func observeSession() async {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
             self.session = change.session
+            // A code held back by a network blip during sign-up had only one
+            // retry trigger — another sign-in, which a signed-in user never
+            // performs, so the invite was silently lost for good. Every
+            // session event is a retry now; it's a no-op unless a code is
+            // actually pending, and the server's ALREADY_REDEEMED guard makes
+            // a duplicate attempt harmless.
+            if change.session != nil, Self.pendingInviteCode() != nil {
+                await redeemPendingInviteIfAny()
+            }
         }
     }
 

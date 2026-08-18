@@ -100,7 +100,7 @@ struct FutureVoiceApp: App {
                 appState.refreshDailyCall()
                 // The Core has no push infrastructure, so an arrival is
                 // noticed here and announced locally. Late by design — the
-                // 28/30 entry bar keeps arrivals rare enough that "next time
+                // 30-in-a-row entry bar keeps arrivals rare enough that "next time
                 // you open the app" still reads as news.
                 Task { await CoreClubService.announceArrivals() }
                 // The seat grid draws each member in the palette their own

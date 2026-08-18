@@ -73,9 +73,10 @@ struct UsageDetailView: View {
             return explain("Refills to \(account.tankMinutes) minutes every day at midnight.")
         }
         if account.hasLegacyPool {
-            // Beta leftovers never refill — say so, or the number reads like
-            // a daily allowance that comes back tomorrow.
-            return explain("What's left of your beta talk time. It doesn't refill — only talking and Watch scenes use it.")
+            // A one-time pool never refills — say so, or the number reads
+            // like a daily allowance that comes back tomorrow. Doesn't name
+            // its source: beta leftovers and an invite bonus land here alike.
+            return explain("What's left of your free talk time. It doesn't refill — only talking and Watch scenes use it.")
         }
         return explain("Talking needs a plan.")
     }

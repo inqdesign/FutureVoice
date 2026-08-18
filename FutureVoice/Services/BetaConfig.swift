@@ -11,7 +11,9 @@ import Foundation
 /// Flip `isBeta` to false at launch and the app reverts to the real paywall
 /// (trial funnel → plan purchase) and re-exposes invites.
 enum BetaConfig {
-    static let isBeta = true
+    /// False since 2026-08-17 — the public build. The paywall sells (trial
+    /// funnel → purchase) and invites are exposed.
+    static let isBeta = false
 
     /// Referral / invite UI is offered only after the beta.
     static var invitesAvailable: Bool { !isBeta }

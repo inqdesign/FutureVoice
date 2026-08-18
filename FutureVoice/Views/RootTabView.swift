@@ -9,10 +9,6 @@ struct RootTabView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: Tab = .home
-    /// Beta intro shows ONCE, right after onboarding — in place of a paywall
-    /// (no subscription during the beta). Explains the free quota + invites.
-    @AppStorage("futurevoice.betaWelcomeSeen") private var betaWelcomeSeen = false
-    @State private var showingBetaWelcome = false
     /// Retroactive age declaration for pre-consent-step installs — see
     /// `AgeCheckSheet`. Never shown to anyone who came through onboarding.
     @State private var showingAgeCheck = false
@@ -130,7 +126,6 @@ struct RootTabView: View {
         // is honoured for this run and simply asks again next launch.
         .sheet(isPresented: $showingAgeCheck) { AgeCheckSheet() }
         .onAppear {
-            if !betaWelcomeSeen { showingBetaWelcome = true }
             if appState.voiceCloneId != nil && !ConsentStore.shared.isAgeVerified {
                 showingAgeCheck = true
             }
@@ -218,9 +213,11 @@ struct RootTabView: View {
                 break
             }
         }
-        .fullScreenCover(isPresented: $showingBetaWelcome, onDismiss: { betaWelcomeSeen = true }) {
-            BetaWelcomeView()
-        }
+        // The beta intro ("Welcome to the beta", 300 free credits) used to be
+        // presented here on first entry. It is NOT shown in the public build:
+        // there is no beta quota to explain — a new account starts at zero and
+        // meets the real paywall on its first talk. `BetaWelcomeView` is kept
+        // for the tester builds and the screenshot harness.
         .sheet(item: $appState.levelUpAnnouncement) { announcement in
             LevelUpSheet(announcement: announcement)
         }

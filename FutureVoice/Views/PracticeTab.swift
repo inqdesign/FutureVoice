@@ -625,10 +625,13 @@ struct PracticeTab: View {
                 if goals.wordsPerDay > 0 {
                     // Lands in the dealt-hand session, not the explore cloud —
                     // a challenge hands you today's ten, it doesn't open a map.
+                    // "To study" lands in the LIST the number counts, not the
+                    // CEFR cloud — the cloud is one row inside it now. See
+                    // WordsView for why.
                     challengeTile(icon: "text.book.closed.fill", title: "Words",
                                   done: today.wordDone, goal: goals.wordsPerDay,
                                   allCount: wordsToStudy,
-                                  all: { VocabularyView().environmentObject(appState) }) {
+                                  all: { WordsView().environmentObject(appState) }) {
                         showingDailyWords = true
                     }
                 }
@@ -1154,18 +1157,10 @@ struct PracticeTab: View {
                                                        store: vocab).count
 
         // Same union for words: the notebook plus unmastered book words the
-        // learner hasn't retired yet. Deduped case-insensitively — a book word
-        // the learner has already kept must not count twice.
-        var wordKeys = Set(vocab.studying.map { $0.lowercased() })
-        for scenario in appState.scenarios where !scenario.isArchived {
-            for item in scenario.curriculum?.words ?? [] where item.masteredAt == nil {
-                let key = item.text.lowercased()
-                guard vocab.state(of: VocabStore.lookupKey(for: item.text)) == nil,
-                      vocab.state(of: key) == nil else { continue }
-                wordKeys.insert(key)
-            }
-        }
-        wordsToStudy = wordKeys.count
+        // learner hasn't retired yet. Computed by `WordCatalog` — the same
+        // call `WordsView` lists row by row, so the number and the page it
+        // opens can't drift.
+        wordsToStudy = WordCatalog.toStudy(scenarios: appState.scenarios, store: vocab).count
 
         // Same rule as the Watch shelf: newest talk first, by when it was
         // STARTED. `endedAt` moves when a talk is continued, which pushed old

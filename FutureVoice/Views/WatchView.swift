@@ -239,7 +239,7 @@ struct WatchView: View {
     @State private var currentIndex: Int? = nil
     @State private var isPlaying = false
     /// Unified beta feedback modal — presented after the first full listen-through.
-    @State private var feedbackContext: BetaFeedbackSheet.Context?
+    @State private var feedbackContext: FeedbackSheet.Context?
     @State private var loading = true
     @State private var error: String?
     @State private var outOfCredits = false
@@ -299,6 +299,12 @@ struct WatchView: View {
     /// Today's Watch allowance is spent. Not a paywall: they already paid,
     /// and the answer is tomorrow.
     @State private var sceneCapReached = false
+
+    /// This account is on Daily, so the spent-allowance alert has somewhere
+    /// to send them. Resolved when the cap actually lands — Watch views are
+    /// made often and most never hit it. False on Unlimited: nothing left to
+    /// sell there, and the answer really is tomorrow.
+    @State private var canUpgradePlan = false
 
     /// Everything needed to synthesize one line, resolved on the main actor
     /// before any concurrency so a prefetch can't race `turns` growing under
@@ -368,7 +374,7 @@ struct WatchView: View {
         .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
         .sheet(item: $feedbackContext) { ctx in
-            BetaFeedbackSheet(context: ctx)
+            FeedbackSheet(context: ctx)
         }
         .alert("Something went wrong", isPresented: errorBinding) {
             if outOfCredits {
@@ -376,13 +382,23 @@ struct WatchView: View {
             }
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
-        // Deliberately NOT the error alert and deliberately no "See plans":
-        // this learner is a subscriber who used up today's scenes. The answer
-        // is tomorrow, and everything already generated still replays free.
+        // Deliberately NOT the error alert: this learner is a subscriber who
+        // used up today's scenes, which is not a failure. On Daily it offers
+        // the way to keep going TODAY; on Unlimited there is nothing to sell,
+        // so the answer stays tomorrow — and either way what they already
+        // generated still replays free.
         .alert("That's today's scenes", isPresented: $sceneCapReached) {
+            if canUpgradePlan {
+                Button("See Unlimited") {
+                    sceneCapReached = false
+                    showingPaywall = true
+                }
+            }
             Button("OK") { sceneCapReached = false }
         } message: {
-            Text(explain("New scenes unlock at midnight. Replaying the ones you already have is always free."))
+            Text(canUpgradePlan
+                 ? explain("Upgrading to Unlimited lets you watch more today.")
+                 : explain("New scenes unlock at midnight. Replaying the ones you already have is always free."))
         }
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
@@ -742,7 +758,9 @@ struct WatchView: View {
                 }
             } catch ElevenLabsError.sceneCapReached {
                 // Out of today's scenes. Say so where the scene was going to
-                // play, and never send them to the paywall for it.
+                // play. Resolve the plan first so the alert opens with its
+                // button already decided instead of growing one a beat later.
+                canUpgradePlan = await AccountStatus.fetch().isDailyPlan
                 sceneCapReached = true
                 isPlaying = false
                 return
@@ -764,8 +782,8 @@ struct WatchView: View {
             withAnimation(.easeOut(duration: 0.25)) { didFinishScene = true }
         }
         // Completed the whole dialogue for the first time → ask for feedback.
-        if reachedEnd && BetaFeedback.shouldShow(.firstWatch) {
-            BetaFeedback.markShown(.firstWatch)
+        if reachedEnd && FeedbackPrompt.shouldShow(.firstWatch) {
+            FeedbackPrompt.markShown(.firstWatch)
             feedbackContext = .firstWatch
         }
     }

@@ -149,7 +149,10 @@ enum BackupService {
         let df = DateFormatter()
         df.dateFormat = "yyyyMMdd-HHmm"
         let out = fm.temporaryDirectory
-            .appendingPathComponent("FutureVoice-\(df.string(from: Date())).fvbackup")
+            // Prefix is cosmetic — the importer accepts `.item` and reads the
+            // envelope, so it never parses this name. Extension stays
+            // `.fvbackup` so older exports still import.
+            .appendingPathComponent("nawana-\(df.string(from: Date())).fvbackup")
         let envelope = Envelope(files: files, defaults: defaultsSnapshot())
         try JSONEncoder().encode(envelope).write(to: out, options: .atomic)
         return out

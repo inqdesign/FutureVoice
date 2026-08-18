@@ -273,11 +273,9 @@ struct DrillView: View {
     /// exist only mid-drag: the panel answers "where do I let go?", a question
     /// that doesn't exist until the card is moving.
     ///
-    /// Bins and caption share ONE blurred container. They sit ON TOP of the
-    /// card, and with only per-bin backgrounds the card's own text and buttons
-    /// read straight through the gaps — two layers of content competing at the
-    /// exact moment the learner is trying to aim. The material blurs whatever
-    /// the card is showing down there into a quiet backdrop.
+    /// The folders themselves ARE the panel — no container behind them. A
+    /// blurred tray was tried and pulled: it drew a second surface rising over
+    /// the card, and the folders had to compete with it to read as targets.
     private var binPanel: some View {
         VStack(spacing: 10) {
             // Above the row, and centred: the folders are a decision, and
@@ -304,30 +302,13 @@ struct DrillView: View {
         }
         .padding(.horizontal, 12)
         .padding(.top, 14)
-        .padding(.bottom, 12)
+        // As low as it can go — see StudyDeckView's twin for why the inner
+        // bottom padding went away with the slab.
+        .padding(.bottom, 0)
         .frame(maxWidth: .infinity)
-        // Rounded on top, flush to the bottom of the screen. A floating,
-        // fully-rounded panel left a gap under it, and a card dragged DOWNWARD
-        // slid its own buttons through that gap — the pills ended up sitting
-        // on top of this caption. Running the tray to the bottom edge means a
-        // card pushed low simply disappears behind it, which is also what
-        // "the folder swallows it" should look like.
-        //
-        // `.regularMaterial`, not `.ultraThin` — the card underneath is a
-        // saturated accent slab, and a thin blur lets that colour flood the
-        // tray until the unselected bins stop reading as targets.
-        .background {
-            UnevenRoundedRectangle(topLeadingRadius: 24, bottomLeadingRadius: 0,
-                                   bottomTrailingRadius: 0, topTrailingRadius: 24,
-                                   style: .continuous)
-                .fill(.regularMaterial)
-                .overlay(alignment: .top) {
-                    Rectangle()
-                        .fill(Color.primary.opacity(0.06))
-                        .frame(height: 1)
-                }
-                .ignoresSafeArea(edges: .bottom)
-        }
+        // No slab behind the row. The folders and the cancel circle carry
+        // their own fills, and a tray drawn around them read as a second
+        // surface sliding up over the card.
         .allowsHitTesting(false)
     }
 
@@ -341,12 +322,11 @@ struct DrillView: View {
             .foregroundStyle(active ? Color(.systemBackground) : Color.secondary)
             .frame(width: 46, height: 46)
             .background {
-                Circle().fill(active ? AnyShapeStyle(Color.secondary)
-                                     : AnyShapeStyle(Color(.tertiarySystemFill)))
-            }
-            .overlay {
-                Circle().strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
-                                      style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                // Same blur as the folders — the circle sits over the card too.
+                // Aimed-at is OPAQUE: `.secondary` is a label colour at ~60%
+                // alpha, so the card read through the active target.
+                Circle().fill(active ? AnyShapeStyle(Color(.systemGray))
+                                     : AnyShapeStyle(.regularMaterial))
             }
             .scaleEffect(active ? 1.12 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)
@@ -368,17 +348,11 @@ struct DrillView: View {
         .padding(.vertical, 12)
         .foregroundStyle(active ? Color.white : Color.secondary)
         .background {
-            // A system FILL, not a background colour — it has to layer over
-            // the panel's material without reading as an opaque patch.
+            // Blur, not a translucent fill: with no tray behind the row each
+            // target has to make its own backdrop, and a fill lets the card's
+            // text read straight through it.
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(active ? AnyShapeStyle(bin.tint) : AnyShapeStyle(Color(.tertiarySystemFill)))
-        }
-        .overlay {
-            // A dashed rim at rest reads as "drop something here"; the active
-            // bin drops it, having become a solid filled target instead.
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color.secondary.opacity(active ? 0 : 0.25),
-                              style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                .fill(active ? AnyShapeStyle(bin.tint) : AnyShapeStyle(.regularMaterial))
         }
         .scaleEffect(active ? 1.08 : 1)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: active)

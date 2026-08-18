@@ -402,6 +402,11 @@ enum DebugCapture {
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))
+        case "feedback":
+            // The first-talk feedback sheet, at the medium detent the call
+            // ends into. Reachable no other way in a capture run: it fires
+            // once, after a real conversation has been summarized.
+            return AnyView(FeedbackCaptureHost().environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
             // the fluent self can't reply because credits ran out.
@@ -973,6 +978,22 @@ private struct BookCaptureHost: View {
                 ScenarioDetailView(scenarioId: id, initialChapter: chapter)
             }
         }
+    }
+}
+
+/// Presents `FeedbackSheet` over the Talk home, the way it arrives at the
+/// end of the first call.
+private struct FeedbackCaptureHost: View {
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                FeedbackSheet(context: .firstTalk)
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
     }
 }
 

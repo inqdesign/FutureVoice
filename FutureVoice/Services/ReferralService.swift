@@ -1,18 +1,34 @@
 import Foundation
 import Supabase
 
-/// Beta invite system. Each user has a shareable code; redeeming someone's
-/// code grants +300 credits to BOTH sides (inviter rewarded for up to 10
-/// invites). All credit math happens server-side in `redeem_referral`.
+/// Invite system. Each user has a shareable code; redeeming someone's code
+/// grants talk time to BOTH sides (inviter rewarded for up to 10 invites).
+/// All grant math happens server-side in `redeem_referral`.
 struct ReferralStatus {
     var code: String?
     var invitesUsed: Int          // how many people joined with my code
-    static let empty = ReferralStatus(code: nil, invitesUsed: 0)
+    /// The code THIS account joined with, nil if it never used one. A code
+    /// is one-time per account (`referral_redemptions.invitee_id` is the
+    /// primary key), so this is what decides whether asking for one is a
+    /// real offer or a dead box.
+    var redeemedCode: String?
+    var hasRedeemed: Bool { redeemedCode != nil }
+    static let empty = ReferralStatus(code: nil, invitesUsed: 0, redeemedCode: nil)
 }
 
 @MainActor
 enum ReferralService {
-    /// My own code + how many friends have redeemed it. Best-effort.
+    /// Seconds granted to BOTH sides by `redeem_referral` — mirrors the
+    /// server (1800 s = 30 min since `20260818100000_referral_thirty_minutes`).
+    /// Change one without the other and every number on the invite page lies.
+    static let bonusSeconds = 1800
+    static var bonusMinutes: Int { bonusSeconds / 60 }
+    /// The inviter is rewarded for their first 10 redemptions; after that a
+    /// friend still gets theirs.
+    static let rewardedInviteCap = 10
+
+    /// My own code, how many friends have redeemed it, and the code I joined
+    /// with. Best-effort.
     static func fetchMine() async -> ReferralStatus {
         guard let session = try? await SupabaseProvider.shared.auth.session else { return .empty }
         let uid = session.user.id.uuidString
@@ -36,6 +52,17 @@ enum ReferralService {
             .execute() {
             out.invitesUsed = resp.count ?? 0
         }
+
+        struct RedemptionRow: Decodable { let code: String }
+        if let rows: [RedemptionRow] = try? await SupabaseProvider.shared
+            .from("referral_redemptions")
+            .select("code")
+            .eq("invitee_id", value: uid)
+            .limit(1)
+            .execute()
+            .value {
+            out.redeemedCode = rows.first?.code
+        }
         return out
     }
 
@@ -43,10 +70,10 @@ enum ReferralService {
         case invalid, alreadyRedeemed, selfReferral, unknown
         var errorDescription: String? {
             switch self {
-            case .invalid:         return "That invite code isn't valid."
-            case .alreadyRedeemed: return "You've already redeemed a code."
-            case .selfReferral:    return "You can't redeem your own code."
-            case .unknown:         return "Couldn't redeem that code. Try again."
+            case .invalid:         return explain("That invite code isn't valid.")
+            case .alreadyRedeemed: return explain("You've already used a code.")
+            case .selfReferral:    return explain("You can't use your own code.")
+            case .unknown:         return explain("Couldn't redeem that code. Try again.")
             }
         }
     }
