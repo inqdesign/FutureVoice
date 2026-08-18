@@ -159,8 +159,8 @@ struct PersonaIntakeView: View {
     private var situationsStep: some View {
         VStack(alignment: .leading, spacing: 20) {
             IntakeStepHeader(
-                question: explain("When do you most need \(LanguageCatalog.learnerName(appState.targetLanguage))?"),
-                detail: explain("So practice aims at moments that actually happen to you."))
+                question: explain("What do you want to be able to do in \(LanguageCatalog.learnerName(appState.targetLanguage))?"),
+                detail: explain("What you pick becomes your goal — practice aims at it."))
             ChipPickerField(
                 presets: PersonaOnboardingView.situationPresets,
                 selection: $persona.situations)

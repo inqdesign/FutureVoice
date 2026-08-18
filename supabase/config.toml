@@ -164,9 +164,15 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project.
 enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
-enable_anonymous_sign_ins = false
+# ON: the voice-clone step opens an anonymous session so the fluent voice can be
+# built and heard BEFORE the sign-up (AuthService.startAnonymousSession). The
+# ones nobody claims are collected nightly — 20260818160000_anonymous_voice_cleanup.
+enable_anonymous_sign_ins = true
 # Allow/disallow testing manual linking of accounts
-enable_manual_linking = false
+# ON: Apple is LINKED to that anonymous user, which keeps the user id — and so
+# the voice, consent record and credit row — across the sign-up. Off, the sign-up
+# would mint a second user and orphan the voice the learner just accepted.
+enable_manual_linking = true
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
 minimum_password_length = 6
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
@@ -461,3 +467,11 @@ entrypoint = "./functions/account-delete/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "./functions/waitlist-confirm/index.ts"
+
+[functions.cleanup-anonymous-voices]
+enabled = true
+# Called by pg_cron, which has no Supabase JWT to send — authenticity is the
+# CLEANUP_SECRET header checked inside the function, which refuses everything
+# when the env var is unset.
+verify_jwt = false
+entrypoint = "./functions/cleanup-anonymous-voices/index.ts"

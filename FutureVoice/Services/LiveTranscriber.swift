@@ -766,8 +766,21 @@ private final class FluencyMeter: @unchecked Sendable {
     /// always wins and behavior is exactly what it was before adaptation.
     private let baseVoicedThreshold: Float = 0.35
     /// How far above the measured noise floor a frame must sit to count as
-    /// speech. 0.12 on the 0…1 curve ≈ 6 dB.
-    private let noiseMargin: Float = 0.12
+    /// speech. 0.22 on the 0…1 curve ≈ 11 dB.
+    ///
+    /// Raised from 0.12 (≈6 dB) on 2026-08-18 after a café test where the turn
+    /// never ended: 6 dB over a decaying MINIMUM is a bar that other people's
+    /// voices clear easily, so the room read as the learner and endpointing
+    /// never fired. The physical asymmetry this leans on is large — the
+    /// learner's mouth is ~20 cm from the mic and the next table is metres
+    /// away, which is 15–20 dB — so 11 dB sits between the two with room on
+    /// both sides.
+    ///
+    /// Quiet rooms are UNAFFECTED by construction: there the absolute floor
+    /// (0.35) is the higher of the two and decides alone. This margin only
+    /// binds once the room is loud enough to matter, which is exactly where
+    /// the old value was failing.
+    private let noiseMargin: Float = 0.22
     /// Decaying-minimum noise estimate (classic "minimum statistics"): snaps
     /// DOWN to any quieter frame, creeps UP slowly. Speech cannot drag it up —
     /// even continuous speech has low-energy frames between words — but a room

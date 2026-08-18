@@ -203,6 +203,15 @@ screen and stone deaf.
 - Metering follows from the idle rule above: a backgrounded call bills only
   while someone is actually speaking, so a phone in a pocket costs nothing
   unless it hears a voice.
+- **"Someone is speaking" takes two witnesses — energy AND the recognizer
+  making words of it** (`isBillableMoment`). A café test on 2026-08-18 showed
+  why one isn't enough: mic energy alone is permanently true in a room full of
+  other people, so a call nobody was speaking into took ~3 minutes to reach a
+  60-second idle bar, billing all of it. The same room defeats BOTH
+  endpointing signals at once, which is why a listening turn now has a hard
+  30s ceiling (`maxListenSeconds`, logged as `vad_path=ceiling`) and why
+  `FluencyMeter.noiseMargin` went 6 dB → 11 dB. That margin binds only in loud
+  rooms — quiet ones are decided by the absolute 0.35 floor and are untouched.
 - **After a minute of nothing at all, the call PUTS ITSELF DOWN** — it does
   not end (`idlePauseSeconds`, `startIdleWatch` → `pauseCall`). Ending is a
   decision with consequences: a summary, drills, a book. Pausing has none —
@@ -214,6 +223,40 @@ screen and stone deaf.
   is the single place every stop lands; `isPausedForIdle` exists only so the
   hint under the pill can say "paused" rather than leaving a quiet screen
   unexplained.
+
+## The voice is heard BEFORE the sign-up (2026-08-18)
+
+Onboarding used to ask for an account between "use this voice" and the clone —
+the first server-bound act, so it looked like the honest place for it. It was
+the worst one: the app was asking someone to open an account for a voice they
+had never heard. What the server needs is a **session**, not an account.
+
+- `useThisVoice` opens an **anonymous Supabase session**
+  (`AuthService.startAnonymousSession`), clones, synthesizes the greeting, and
+  runs the whole Meet act on it. The account step now sits AFTER Meet and asks
+  to KEEP a voice already in the learner's ears.
+- **Apple is LINKED to that anonymous user** (`linkIdentityWithIdToken`), which
+  keeps the user id — so the clone, the consent record, the credit row and the
+  referral code all survive the sign-up. Signing in fresh would mint a second
+  user and orphan the voice. Requires `enable_anonymous_sign_ins` AND
+  `enable_manual_linking` in the project's auth settings (both on in
+  `config.toml`; the hosted project needs the same two toggles).
+- **A session is not an account, and every gate must know the difference.** Ask
+  `auth.isSignedIn`, never `session != nil` — `RootView` and the view's
+  `resumeUnclaimedVoice` both hold the flow on the sign-up step for an
+  anonymous session, or a killed app would drop someone into an app whose data
+  dies with the install.
+- **Two fallbacks, both silent.** Anonymous sign-in unavailable (setting off,
+  no network) → the old order, sign up then clone. Apple identity already has
+  an account (a returning user who tapped "Get started") → linking is refused,
+  they're signed into their real account, and the clone is rebuilt under it
+  from the take still on disk (`adoptedExistingAccount`).
+- **Unclaimed clones are collected nightly** — `cleanup-anonymous-voices` +
+  `stale_anonymous_users` (48h grace, ElevenLabs delete first, then the user,
+  which cascades). A voice that fails to delete upstream KEEPS its user so the
+  next run can retry; deleting it would lose the only pointer to a slot we pay
+  for. The cron needs `project_url` + `cleanup_secret` in the vault and
+  `CLEANUP_SECRET` in the function env — until then it simply doesn't schedule.
 
 ## Source of truth
 

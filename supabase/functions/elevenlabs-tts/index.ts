@@ -110,6 +110,17 @@ Deno.serve(async (req) => {
   // product's entry experience — not usage. Length-capped so the tag can't
   // be abused to smuggle real synthesis for free.
   const isFreeGreeting = body.purpose === "greeting" && body.text.length <= 120
+  // Judging the clone is free for the same reason. "Doesn't sound like you?"
+  // plays the opening the learner just read, in the clone's voice, beside
+  // their own recording — the only honest way to answer "is this me?", and
+  // the answer decides whether they re-record. A hard paywall in front of it
+  // charges for the entry ticket after the fact, and it lands on precisely
+  // the user who suspects the voice isn't theirs. Same length cap as the
+  // greeting (the client cuts at ~160 chars — VoiceCloneScript
+  // .comparisonOpening) and the result is cached client-side per line+voice,
+  // so this is one synthesis per voice, ever.
+  const isFreeVoiceCheck = body.purpose === "voice_comparison" && body.text.length <= 200
+  const isFreeEntry = isFreeGreeting || isFreeVoiceCheck
 
   // Daily character pooling — credits debit only when the day's running
   // char total crosses a rate boundary, so short lines stop costing a full
@@ -140,7 +151,7 @@ Deno.serve(async (req) => {
   }
 
   const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
-  const ch = isFreeGreeting
+  const ch = isFreeEntry
     ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
     : FREE_PURPOSES.has(body.purpose ?? "")
     ? await chargeFreePooledTTS({ ...chargeArgs, action: baseAction })

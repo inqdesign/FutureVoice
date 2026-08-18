@@ -189,7 +189,9 @@ struct PersonaOnboardingView: View {
                 TextField("Add your own (comma-separated)", text: $situationsDraft)
                     .onSubmit { mergeDraft(into: &persona.situations, from: &situationsDraft) }
             } header: {
-                Text(explain("When do you most need \(LanguageCatalog.learnerName(appState.targetLanguage))?"))
+                Text(explain("What do you want to be able to do in \(LanguageCatalog.learnerName(appState.targetLanguage))?"))
+            } footer: {
+                Text(explain("What you pick becomes your goal — practice aims at it."))
             }
 
             Section("Anything else (optional)") {

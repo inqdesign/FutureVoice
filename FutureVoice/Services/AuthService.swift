@@ -29,6 +29,31 @@ final class AuthService: NSObject, ObservableObject {
 
     private(set) var currentRawNonce: String?
 
+    /// True while the session belongs to an ANONYMOUS user.
+    ///
+    /// The voice-clone step opens one of these silently so the fluent voice can
+    /// be BUILT AND HEARD before anyone is asked to sign up — the edge
+    /// functions verify a JWT, so without a session there is no way to
+    /// synthesize a single word, and the app's strongest moment would stay
+    /// locked behind a sign-in for a thing the user hasn't heard yet.
+    ///
+    /// It is a session, not an account: nothing identifies it, it can't be
+    /// restored on another device, and it is deleted server-side along with its
+    /// clone if it's still unclaimed days later. So every gate that means "does
+    /// this person have an account" must ask `isSignedIn`, never `session !=
+    /// nil` — that's the difference between finishing onboarding and finishing
+    /// it into an account nobody can ever sign back into.
+    var isAnonymous: Bool { session?.user.isAnonymous ?? false }
+
+    /// A session with a real account behind it.
+    var isSignedIn: Bool { session != nil && !isAnonymous }
+
+    /// Open the pre-signup session. No-op once any session exists.
+    func startAnonymousSession() async throws {
+        guard session == nil else { return }
+        session = try await SupabaseProvider.shared.auth.signInAnonymously()
+    }
+
     /// Where the Apple-provided given name is stashed at first sign-in, for
     /// persona setup to prefill. Read once, then it's just a fallback.
     static let appleNameKey = "futurevoice.appleName"
@@ -67,7 +92,11 @@ final class AuthService: NSObject, ObservableObject {
             // session event is a retry now; it's a no-op unless a code is
             // actually pending, and the server's ALREADY_REDEEMED guard makes
             // a duplicate attempt harmless.
-            if change.session != nil, Self.pendingInviteCode() != nil {
+            // Never under an anonymous session: a code redeemed there is spent,
+            // and if Apple later signs the user into a DIFFERENT account (the
+            // reinstall case in `linkOrSignIn`) the invite would have been
+            // burned on a user nobody can sign into again.
+            if isSignedIn, Self.pendingInviteCode() != nil {
                 await redeemPendingInviteIfAny()
             }
         }
@@ -123,10 +152,21 @@ final class AuthService: NSObject, ObservableObject {
             Task {
                 self.isWorking = true
                 defer { self.isWorking = false }
+                let credentials = OpenIDConnectCredentials(provider: .apple,
+                                                           idToken: idToken, nonce: nonce)
                 do {
-                    let session = try await SupabaseProvider.shared.auth.signInWithIdToken(
-                        credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
-                    )
+                    // Anonymous session on stage: LINK Apple to it instead of
+                    // signing in fresh. Same user id, so the voice clone,
+                    // consent record and credit row minted before sign-up all
+                    // stay attached — signing in fresh would mint a second user
+                    // and orphan the voice the user just heard and accepted.
+                    let session: Auth.Session
+                    if self.isAnonymous {
+                        session = try await self.linkOrSignIn(credentials)
+                    } else {
+                        session = try await SupabaseProvider.shared.auth
+                            .signInWithIdToken(credentials: credentials)
+                    }
                     self.session = session
                     await self.redeemPendingInviteIfAny()
                 } catch {
@@ -135,6 +175,34 @@ final class AuthService: NSObject, ObservableObject {
             }
         }
     }
+
+    /// Attach Apple to the anonymous user, falling back to a plain sign-in.
+    ///
+    /// The fallback is the returning user who reinstalled: their Apple identity
+    /// already belongs to an account, so linking is refused server-side. Signing
+    /// them into that account is exactly right — it holds their real voice,
+    /// history and subscription. What's lost is the throwaway clone recorded
+    /// minutes ago under the anonymous user, which the nightly cleanup collects.
+    private func linkOrSignIn(_ credentials: OpenIDConnectCredentials) async throws -> Auth.Session {
+        do {
+            let session = try await SupabaseProvider.shared.auth
+                .linkIdentityWithIdToken(credentials: credentials)
+            adoptedExistingAccount = false
+            return session
+        } catch {
+            let session = try await SupabaseProvider.shared.auth
+                .signInWithIdToken(credentials: credentials)
+            adoptedExistingAccount = true
+            return session
+        }
+    }
+
+    /// Set when the Apple sign-in landed on a DIFFERENT user than the anonymous
+    /// one that was on stage — i.e. the identity was already an account. The
+    /// voice-clone flow reads it to rebuild the clone under the account that
+    /// actually owns the session now; anything minted under the throwaway user
+    /// is about to be cleaned up server-side.
+    @Published private(set) var adoptedExistingAccount = false
 
     /// Redeem a Welcome-screen invite code once we have a session. Server-side
     /// guards handle self-referral / already-redeemed / invalid; we just clear

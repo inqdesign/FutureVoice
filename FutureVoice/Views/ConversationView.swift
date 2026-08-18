@@ -180,6 +180,12 @@ struct ConversationView: View {
     /// meter reading "voiced" forever. If the TRANSCRIPT has been still this
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
+    /// Hard ceiling on one listening turn. A café defeats BOTH endpointing
+    /// signals at once — the room never falls silent and the recognizer keeps
+    /// turning other people's voices into fresh partials — and the turn then
+    /// never ends at all. 30s is far past any single learner turn, so it only
+    /// ever fires when the room, not the learner, is doing the talking.
+    private static let maxListenSeconds: Double = 30
     /// How much true silence before warming the network path. Must stay well
     /// under the SHORTEST VAD tier (now 0.8s) so the TLS handshake + auth
     /// token are in place by the time the turn actually fires.
@@ -306,23 +312,36 @@ struct ConversationView: View {
 
     /// Is this second of the open call actually a second of TALKING? The
     /// meter polls this once a second and charges nothing for the seconds it
-    /// says no to (`TalkMeter.isBillable`).
+    /// says no to (`TalkMeter.isBillable`), and the idle watchdog measures the
+    /// same thing to decide when nobody is there.
     ///
     /// A call screen left open is not a call. The mic being hot costs the
     /// learner nothing and costs us nothing — what costs is the model writing
-    /// and the voice speaking — so the yes cases are exactly the three places
-    /// where work is happening or has just happened:
+    /// and the voice speaking — so the yes cases are exactly the places where
+    /// work is happening or has just happened:
     ///   • the fluent self is speaking (or a turn's audio is playing);
     ///   • a reply is being generated;
-    ///   • the learner's voice was heard within the last few seconds — the
-    ///     grace covers the end-of-turn wait, which is time the app spends
-    ///     deciding they finished, not time they spent doing nothing.
-    /// Silence with the mic open falls through to no, which is the whole fix.
+    ///   • the learner is talking.
+    ///
+    /// **"Talking" needs TWO witnesses, not one** (2026-08-18). It was mic
+    /// energy alone, and in a café that is permanently true: a room full of
+    /// other people's voices reads as the learner's, so nothing ever went
+    /// idle. Measured in a real café, a call that nobody was speaking into
+    /// took ~3 minutes to hit a 60-second idle bar, because every stray burst
+    /// of room noise reset the clock — and every one of those seconds billed.
+    /// So energy now has to be corroborated by the recognizer still MAKING
+    /// WORDS of it. Room babble produces sporadic hypotheses at best; a person
+    /// speaking into the phone produces a steady stream. Both signals carry
+    /// the same grace, so ordinary recognizer lag can't read as silence.
     private func isBillableMoment() -> Bool {
         if phase == .thinking || phase == .speaking { return true }
         if player.isPlaying { return true }
-        guard let voiced = live.lastVoicedAt else { return false }
-        return Date().timeIntervalSince(voiced) < TalkMeter.voiceGraceSeconds
+        guard let voiced = live.lastVoicedAt,
+              Date().timeIntervalSince(voiced) < TalkMeter.voiceGraceSeconds,
+              let heard = live.lastLivePartialAt,
+              Date().timeIntervalSince(heard) < TalkMeter.voiceGraceSeconds
+        else { return false }
+        return true
     }
 
     var body: some View {
@@ -940,7 +959,17 @@ struct ConversationView: View {
                 // Fallback: steady background noise never reads as silent —
                 // fire on the old transcript-quiet signal as an upper bound.
                 let transcriptSettled = sinceTextChange >= Self.noisyRoomFallbackSeconds
-                guard audioSettled || transcriptSettled else { continue }
+                // Ceiling: in a café BOTH of the above can fail forever. The
+                // room never goes quiet, so energy endpointing never fires,
+                // and the recognizer keeps making words out of other people's
+                // voices, so the "transcript-quiet" fallback keeps restarting
+                // — the turn hangs on "Listening" until the learner taps.
+                // Reported from a real café, 2026-08-18. Nobody speaks one
+                // turn for this long, so shipping what we have beats a screen
+                // that never answers.
+                let listened = userSpeechStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+                let ranLong = listened >= Self.maxListenSeconds
+                guard audioSettled || transcriptSettled || ranLong else { continue }
                 // `vad_wait_ms` alone hid the worst case: on the noisy fallback
                 // the energy meter never saw silence, so it logs a TINY audio
                 // gap for a turn that actually sat out the 6s transcript wait.
@@ -948,7 +977,11 @@ struct ConversationView: View {
                 // and how loud the room was, so "slow outside" is readable.
                 turnTiming = [
                     "vad_wait_ms": String(Int(audioSilence * 1000)),
-                    "vad_path": audioSettled ? "audio" : "noisy",
+                    // "ceiling" is the one to watch: it means neither
+                    // endpointing signal ever fired and the turn was cut by
+                    // the clock. A rising share of it is a room problem.
+                    "vad_path": audioSettled ? "audio" : (transcriptSettled ? "noisy" : "ceiling"),
+                    "listened_ms": String(Int(listened * 1000)),
                     "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
                     "noise": String(format: "%.2f", live.ambientNoiseLevel),
                     // The longest thinking gap this turn spoke through. Reads

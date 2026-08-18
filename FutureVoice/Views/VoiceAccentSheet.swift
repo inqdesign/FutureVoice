@@ -56,6 +56,12 @@ struct VoiceAccentSheet: View {
                     takesSection
                     applySection
                 }
+                // LAST, and in a section of its own. It used to sit first in
+                // the accent list, where a row reading "no accent" looked like
+                // a fourth option to pick rather than the way back — and the
+                // way back is the one thing on this screen that can't be
+                // undone by tapping something else.
+                if canRemoveAccent { removeAccentSection }
             }
             .onAppear {
                 // Show what's already live. `accent` doubles as "whose takes
@@ -66,8 +72,15 @@ struct VoiceAccentSheet: View {
             .navigationTitle("Accent")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // "Cancel", not "Done". Nothing on this screen is committed by
+                // leaving it — "Use this voice" applies and dismisses itself,
+                // and so does removing — so the only thing this button can
+                // mean is "change nothing". Labelled Done, it read as the
+                // opposite: after generating takes and tapping one, it looked
+                // like the way to confirm the pick, and there was no visible
+                // way to back out of an accent at all.
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
+                    Button(chrome("Cancel")) {
                         player.stop()
                         dismiss()
                     }
@@ -100,13 +113,6 @@ struct VoiceAccentSheet: View {
 
     private var accentSection: some View {
         Section {
-            // First, because it's the way BACK: the footer promised "you can
-            // rebuild the original anytime from Me → Voice" and then made the
-            // learner leave this screen, hunt through settings, and recognize
-            // "Regenerate from saved recording" as the answer to "I want the
-            // accent gone". The capability already existed; it just wasn't
-            // where anyone would look for it.
-            if canRemoveAccent { removeAccentRow }
             ForEach(options) { option in
                 accentRow(option)
             }
@@ -119,16 +125,24 @@ struct VoiceAccentSheet: View {
         }
     }
 
-    private var removeAccentRow: some View {
-        Button { confirmingRemove = true } label: {
-            HStack {
-                Text(chrome("No accent"))
-                    .foregroundStyle(.primary)
-                Spacer()
-                if removing { ProgressView() }
+    /// The way back — its own section so it reads as an action, not an option.
+    /// The capability lives here rather than only in Me → Voice because "I
+    /// want the accent gone" is decided on this screen; making the learner
+    /// leave, hunt through settings and recognize "Regenerate from saved
+    /// recording" as the answer was the old, worse version of having it.
+    private var removeAccentSection: some View {
+        Section {
+            Button(role: .destructive) { confirmingRemove = true } label: {
+                HStack {
+                    Text(chrome("Remove accent"))
+                    Spacer()
+                    if removing { ProgressView() }
+                }
             }
+            .disabled(generating || saving || removing)
+        } footer: {
+            Text(explain("Back to the voice your recording makes on its own."))
         }
-        .disabled(generating || saving || removing)
     }
 
     private func accentRow(_ option: VoiceAccent) -> some View {

@@ -5,6 +5,92 @@ import Foundation
 /// Keeps prompt strings close to spec §7 so they can be iterated without touching transport code.
 enum ConversationEngine {
 
+    /// How the fluent self actually SPEAKS at a given level.
+    ///
+    /// "Proficiency: A1" plus one line asking the model to speak at that level
+    /// is not a control — the model reads it as a mood, and the long KNOWLEDGE
+    /// / DIRECT QUESTIONS blocks below (be well-read, take a position, name
+    /// names) outweigh it by sheer volume. So the same thing Watch does for
+    /// scenes (`ScenarioCurriculumEngine.sceneScale`) is done here: say what
+    /// the band means in words the model can obey — which vocabulary, which
+    /// sentence shapes, and how deep an answer may go.
+    ///
+    /// `answerDepth` is the important one. Without a per-level version, the
+    /// "2–3 sentences are fine here" licence in DIRECT QUESTIONS was the one
+    /// place the prompt explicitly unlocked length, and it fired for an A1
+    /// learner exactly as hard as for a C1 one.
+    /// `maxSentences` is a COUNTABLE ceiling, and that is the point. The
+    /// qualitative version ("almost every turn is one short sentence") lost to
+    /// REACT-first and VARY-turn-length below, which are concrete and carry
+    /// examples — an A1 turn came back as four sentences. A rule the model can
+    /// check by counting beats a rule it has to weigh against another rule, so
+    /// those two bullets now defer to this number instead of competing with it.
+    struct SpeechScale {
+        let vocabulary: String
+        let sentences: String
+        let answerDepth: String
+        let maxSentences: Int
+    }
+
+    static func speechScale(for level: CEFRLevel) -> SpeechScale {
+        switch level {
+        case .a1, .a2:
+            return SpeechScale(
+                vocabulary: """
+                Use the most ORDINARY everyday words — the ones this learner
+                  already hears every day. No academic, technical, literary or
+                  business register. At most ONE idiom or phrasal verb per turn,
+                  and only when the situation makes its meaning obvious. When a
+                  precise word would be hard, say the easy thing instead of the
+                  clever thing ("it got worse", not "it deteriorated").
+                """,
+                sentences: """
+                ONE short sentence, roughly 5–12 words. TWO is the absolute
+                  ceiling and only when the first is a two-word reaction.
+                  Simple structures — one clause, or two joined by "and" / "but"
+                  / "so". Keep subordinate clauses rare and never stack two.
+                  ONE MOVE per turn: react, OR say your thing, OR ask — not all
+                  three. Reassuring them and then asking something new is two
+                  moves; pick one and let them answer.
+                """,
+                answerDepth: "Keep it to 1–2 short sentences even here",
+                maxSentences: 2
+            )
+        case .b1, .b2:
+            return SpeechScale(
+                vocabulary: """
+                Everyday vocabulary plus the common idioms and phrasal verbs a
+                  fluent speaker actually reaches for. Specialist or abstract
+                  words are fine when the sentence around them makes the meaning
+                  clear; drop one genuinely new word in now and then, not every
+                  turn.
+                """,
+                sentences: """
+                Most turns 1 sentence. Sometimes 2. Three is the ceiling.
+                  Subordinate clauses and natural hedging are welcome.
+                """,
+                answerDepth: "2–3 sentences are fine here",
+                maxSentences: 3
+            )
+        case .c1, .c2:
+            return SpeechScale(
+                vocabulary: """
+                Speak with your full natural range — idiom, precise nuance
+                  words, register shifts, the odd bit of wordplay. Don't
+                  simplify; this learner is here for the parts they can't
+                  produce yet.
+                """,
+                sentences: """
+                Most turns 1–2 sentences, sometimes 3. Four is the ceiling.
+                  Subordinate clauses, asides and self-corrections the way a
+                  real speaker talks.
+                """,
+                answerDepth: "2–4 sentences are fine here — go into the substance",
+                maxSentences: 4
+            )
+        }
+    }
+
     /// System prompt for an in-conversation turn.
     static func conversationSystemPrompt(
         targetLanguage: String,
@@ -21,6 +107,8 @@ enum ConversationEngine {
         let patterns = topPatterns.prefix(3).map { "- \($0.mistake) → \($0.correction) (\($0.context))" }
             .joined(separator: "\n")
         let weak = weakVocabAreas.isEmpty ? "—" : weakVocabAreas.joined(separator: ", ")
+        let scale = speechScale(for: level)
+        let levelName = level.rawValue.uppercased()
 
         // News conversations: the model can't know this week's stories, so a
         // grounded lookup at conversation open collected real facts. They are
@@ -88,7 +176,7 @@ enum ConversationEngine {
 
         Language profile:
         - Native language: \(LanguageCatalog.englishName(nativeLanguage))
-        - Proficiency: \(level.rawValue.uppercased())
+        - Proficiency: \(levelName)
         - Recurring patterns to be gently aware of:
         \(patterns.isEmpty ? "  (none yet — this is an early session)" : patterns)
         - Weak vocab areas: \(weak)
@@ -97,17 +185,33 @@ enum ConversationEngine {
 
         HOW TO TALK — read this carefully, this is the whole game:
 
+        - PITCH TO THEIR LEVEL (\(levelName)). This governs every rule below it, \
+          including how you answer questions — a brilliant answer they can't \
+          follow is a wasted turn, and the whole point is that they can talk \
+          BACK. Two things, both non-negotiable:
+          · WORDS: \(scale.vocabulary)
+          · LENGTH: \(scale.sentences)
+          · HARD CEILING: never more than \(scale.maxSentences) sentence\
+          \(scale.maxSentences == 1 ? "" : "s") in one turn. Count them before \
+          you send. This is a number, not a feel — it outranks every stylistic \
+          rule below, including REACT and VARY.
+          Let ONE slightly-above-level word or turn of phrase slip in naturally \
+          now and then — that small stretch is where they grow. Never two \
+          levels up, and never two stretches in the same turn.
         - This is SPOKEN, not written. Use contractions ("I'm", "you're", "don't"). \
           Drop fillers in occasionally where a real speaker would: "yeah", "well", \
           "I mean", "honestly", "you know", "uh", "hm". Not every turn — sparingly, \
           where it fits.
-        - Keep responses SHORT. Most turns 1 sentence. Sometimes 2. Rarely 3. \
-          Real conversation is lots of brief turns, not paragraphs.
-        - VARY turn length. Sometimes the right response is just "yeah", "really?", \
-          "huh", "mm-hm", or "oh god" — then let them keep talking. Other times \
-          you go a bit longer.
-        - REACT first, then respond. "Oh wow, yeah —" "Hmm." "Wait, really?" Open \
-          with the human reaction, THEN say what you want to say.
+        - Real conversation is lots of brief turns, not paragraphs. Never a \
+          paragraph, at any level.
+        - VARY turn length — DOWNWARD from the ceiling, never past it. Sometimes \
+          the right response is just "yeah", "really?", "huh", "mm-hm", or \
+          "oh god" — then let them keep talking. "A bit longer" means using the \
+          ceiling, not exceeding it.
+        - REACT first, then respond — but the reaction is not a free extra \
+          sentence. Where the ceiling is tight, FUSE them into one \
+          ("Oh wow — that sounds rough.") or let the reaction BE the whole turn. \
+          Never spend the ceiling on "Ah, I see!" and then start a new subject.
         - DO NOT always end with a question. Statements + reactions pass the ball \
           too. Ending every turn with a question feels like an interview.
         - DON'T summarize what they just said back to them. Just respond.
@@ -171,6 +275,12 @@ enum ConversationEngine {
           - "What's it about?" as your PRIMARY response to a well-known work
           - Vague deflections that throw the topic back without engaging
 
+        Knowing a lot is NOT the same as using big words. Everything in this
+        section is about SUBSTANCE — having something real to say. Say it in
+        the words a \(levelName) learner can follow, per PITCH TO THEIR LEVEL
+        above. A specific, concrete thought in plain language beats a clever
+        sentence they have to decode.
+
         INSTEAD do:
           - Say what struck you about the work — a character, an argument,
             a passage that stuck with you.
@@ -185,8 +295,9 @@ enum ConversationEngine {
         - A factual question or a request for examples/recommendations
           ("which companies should I look at", "who wrote that", "what's a
           good one") gets a REAL answer: concrete names, examples, numbers
-          from your knowledge. 2–3 sentences are fine here — answering beats
-          brevity. Then hand the ball back.
+          from your knowledge. \(scale.answerDepth) — answering beats brevity.
+          Then hand the ball back. The names stay whatever they are; the words
+          AROUND them still follow PITCH TO THEIR LEVEL.
         - Restating the theme instead of answering ("yeah, security's a huge
           deal these days…") IS the vague deflection banned above. If they
           asked WHICH, say names.
@@ -203,11 +314,23 @@ enum ConversationEngine {
         have an opinion on a Rick Rubin book.
 
         STRICT:
-        - Reply in \(languageName) only.
+        - Reply in \(languageName) only. NOT ONE WORD of any other language —
+          not a stock phrase ("no problem", "okay"), not a softener, not a
+          single borrowed word, however natural the mix would sound. The learner
+          is here to hear \(languageName) and nothing else.
+        - If the user says they can't manage \(languageName), asks to switch, or
+          answers you in another language, you STILL answer only in
+          \(languageName) — you just make it easier: shorter, plainer, slower
+          wording. Switching languages to be kind teaches them that giving up
+          works, and it is the one thing this call must never teach.
+        - Keep ONE form of address for the whole call (formal vs. informal, and
+          singular vs. plural). Switching partway is confusing at any level and
+          reads as a different person talking.
         - Never correct the user mid-conversation. Corrections happen elsewhere.
-        - Speak mostly AT their level (\(level.rawValue.uppercased())), but let a
-          slightly-above-level word or turn of phrase slip in naturally now and
-          then — that small stretch is where they grow. Never two levels up.
+        - Before you send a turn, check it twice: (1) count the sentences —
+          more than \(scale.maxSentences)? cut it down; (2) re-read it against
+          PITCH TO THEIR LEVEL (\(levelName)) — a word or clause above that line
+          that isn't the one deliberate stretch gets the plainer version.
         """
     }
 
@@ -528,6 +651,11 @@ enum ConversationEngine {
           the learner glances at this mid-conversation and must get it without
           decoding. Quote the \(LanguageCatalog.englishName(targetLanguage))
           words that changed, untranslated, inside the \(nativeName) sentence.
+          Those quoted words are the ONLY foreign text allowed here. Every other
+          word is \(nativeName): no English adjectives dropped into a
+          \(nativeName) sentence ("더 natural해요"), no romanized shorthand — write
+          the \(nativeName) word for it. This holds even when \(nativeName)
+          speakers commonly mix that word in casually.
           "alternative" above is unaffected: it stays
           \(LanguageCatalog.englishName(targetLanguage)) material.
         - The suggestion is shown silently as text — never mention it in "reply",

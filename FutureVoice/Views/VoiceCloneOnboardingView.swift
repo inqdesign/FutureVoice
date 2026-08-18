@@ -32,6 +32,18 @@ import SwiftUI
 ///   8. **Becoming**  — uploading: the orb thinks, cycling all six palettes.
 ///   9. **Meet**      — the clone SPEAKS its first words in the user's own
 ///                      voice; they pick the theme their fluent self wears.
+///  10. **Account**   — sign up to KEEP it.
+///
+/// The account moved BEHIND the meet act on 2026-08-18. It used to sit between
+/// review and cloning, which meant the app asked for an account in front of the
+/// one thing that sells it — a voice nobody had heard yet. What the server
+/// actually needs is a session, not an account, so `useThisVoice` opens an
+/// ANONYMOUS one (`AuthService.startAnonymousSession`), the clone speaks, and
+/// the sign-up then asks about something already in the user's ears. Apple is
+/// LINKED to that anonymous user, so the id — and with it the voice, the
+/// consent record and the credit row — survives the sign-up. Sessions nobody
+/// claims are collected nightly (`cleanup-anonymous-voices`), and the whole
+/// path degrades to the old order if anonymous sign-ins are unavailable.
 struct VoiceCloneOnboardingView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
@@ -44,7 +56,10 @@ struct VoiceCloneOnboardingView: View {
     /// Never pre-checked: a consent that arrives already ticked is not a
     /// consent — so they start false every time the step is shown, and the
     /// step is only shown when there's nothing on record (see `stepAfterIntro`).
-    @State private var agreedToAge = false
+    /// ONE toggle for two facts. Age and voice are still recorded separately
+    /// (see `ConsentStore`) — what merged is the asking: two checkboxes above
+    /// one disclosure read as a form to clear, and the second one was never a
+    /// separate decision for anyone who had already made the first.
     @State private var agreedToVoiceCloning = false
     @State private var error: String?
     @State private var startedAt: Date?
@@ -100,9 +115,9 @@ struct VoiceCloneOnboardingView: View {
         case intro, consent, mic, spot, script   // the wizard — one idea per screen
         case recording
         case reviewing   // recorded; user can listen + see quality before cloning
-        case account     // sign-up moment: the clone needs the server NOW
         case uploading
         case meet        // clone landed; greeting + theme pick
+        case account     // sign-up: keep the voice they just heard
     }
 
     /// Which language the user reads the script in. The clone captures a
@@ -190,10 +205,25 @@ struct VoiceCloneOnboardingView: View {
         .task(id: status == .uploading) {
             if status == .uploading { await runBecoming() }
         }
-        // Sign-up landed mid-flow: the account act resolves itself and the
-        // clone proceeds without another tap.
-        .onChange(of: auth.session == nil) { _, isNil in
-            if !isNil, status == .account { performClone() }
+        // Sign-up landed: the account act resolves itself with no second tap.
+        //
+        // The one branch is the returning user who walked "Get started" instead
+        // of signing in: Apple's identity already had an account, so the
+        // anonymous user couldn't be upgraded and the session now belongs to
+        // someone else — the voice minted minutes ago hangs off a throwaway
+        // user the nightly cleanup deletes. Re-clone from the take still on
+        // disk so the voice they accepted belongs to the account they landed in.
+        .onChange(of: auth.isSignedIn) { _, signedIn in
+            guard signedIn, status == .account else { return }
+            // No clone yet means the anonymous session never opened and this is
+            // the old order (sign up, then clone). A clone that belongs to a
+            // throwaway user has to be rebuilt under the account that just
+            // claimed the session. Either way: build it now.
+            if appState.voiceCloneId == nil || auth.adoptedExistingAccount {
+                performClone()
+            } else {
+                finishMeet()
+            }
         }
         // The quiet-spot finder: monitor ambient noise only while the spot
         // step is on stage — the orb becomes the room's meter.
@@ -211,6 +241,7 @@ struct VoiceCloneOnboardingView: View {
         }
         .onAppear {
             debugSeed()
+            resumeUnclaimedVoice()
             restorePendingTake()
         }
         // Fetch the native script while the user is still reading the intro:
@@ -273,7 +304,7 @@ struct VoiceCloneOnboardingView: View {
     private var stageTitle: String {
         switch status {
         case .intro:     return chrome("Your fluent self")
-        case .consent:   return chrome("Your voice, your call")
+        case .consent:   return chrome("Your voice, in safe hands")
         case .spot:      return chrome("Find a quiet spot")
         case .mic:       return chrome("Mic check")
         case .script:    return chrome("Read this aloud")
@@ -357,13 +388,13 @@ struct VoiceCloneOnboardingView: View {
         }
     }
 
-    // The sign-up moment — deferred all the way to here, where the clone
-    // genuinely needs the server. The user has already invested everything;
-    // the account is what brings the fluent self to life.
+    // The sign-up moment — deferred past the MEET act, so it asks about
+    // something the user has already heard. Everything before this ran on an
+    // anonymous session; nothing here creates the voice, it only keeps it.
     private var accountContent: some View {
         VStack(spacing: 26) {
-            stepHeader(explain("Your fluent self is ready."),
-                       explain("Create your account and it comes to life — your voice and your progress live there."))
+            stepHeader(explain("Save this voice to your account."),
+                       explain("It's built and it's yours. Sign in and it stays — with your progress, on whichever iPhone you use."))
 
             // The code was typed on the Welcome screen, several steps back.
             // Showing it here is the only sign it's still coming.
@@ -382,28 +413,40 @@ struct VoiceCloneOnboardingView: View {
     /// A wizard step's type stack: one big hook (the thing to remember) over
     /// a quiet support line. The support's measure is capped so lines break
     /// on phrases, never stranding a single word.
-    private func stepHeader(_ hook: String, _ support: String) -> some View {
+    private func stepHeader(_ hook: String, _ support: String?) -> some View {
         VStack(spacing: 12) {
             Text(hook)
                 .font(.title2.weight(.semibold))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(support)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(3)
-                .frame(maxWidth: 300)
-                .fixedSize(horizontal: false, vertical: true)
+            if let support { supportLine(support) }
         }
         .padding(.horizontal, 32)
     }
 
-    // Step 1 — the narrative. One thought, nothing else.
+    /// A quiet line under the hook. Its measure is capped so lines break on
+    /// phrases, never stranding a single word.
+    private func supportLine(_ text: String) -> some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .frame(maxWidth: 300)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    // Step 1 — the narrative. Why it's YOUR voice and not a stranger's (the
+    // pitch the consent screen used to carry, moved to where the decision is
+    // actually being made), then what the next minute buys.
     private var introContent: some View {
-        stepHeader(explain("Another you.\nAlready fluent."),
-                   explain("It speaks perfect \(LanguageCatalog.learnerName(appState.targetLanguage)) in your own voice. From here, you just follow."))
-            .transition(.opacity)
+        VStack(spacing: 12) {
+            stepHeader(explain("Another you.\nAlready fluent."),
+                       explain("Don't imitate a stranger — practice with the fluent you."))
+            supportLine(explain("Time to meet the you who speaks perfect \(LanguageCatalog.learnerName(appState.targetLanguage)) — in your own voice. One minute of reading is all it takes."))
+                .padding(.horizontal, 32)
+        }
+        .transition(.opacity)
     }
 
     // Step 2 — age + biometric consent, on one screen, gating the CTA.
@@ -418,39 +461,30 @@ struct VoiceCloneOnboardingView: View {
     // "how old are you?" screen in front of a language app reads as a form to
     // get past, not as a fact about what happens next.
     //
-    // Both toggles start OFF and Next is dead until both are on. Neither is
-    // ever pre-ticked: a consent that arrives already agreed is not a consent,
-    // and an age box that does is not a check.
+    // ONE toggle carries both facts, and they are still stored as two dated
+    // records (`ConsentStore`). It starts OFF and Next is dead until it's on;
+    // it is never pre-ticked, because a consent that arrives already agreed is
+    // not a consent, and an age box that does is not a check.
     //
     // It sits between the narrative and the mic on purpose: after the user
     // knows what the clone is FOR (an agreement to something unexplained isn't
     // informed) and before anything has been recorded.
     private var consentContent: some View {
         VStack(spacing: 22) {
-            // Leads with the PAYOFF, not the disclosure. This screen used to
-            // open on "a voice model is personal in a way a password isn't",
-            // which is true, legally motivated, and — right before the biggest
-            // ask in the app — reads as a warning wall. The consent still has
-            // to be separate, informed and recorded (GDPR Art. 9 / BIPA /
-            // PIPA), so nothing was removed; the order changed. Why it's worth
-            // doing comes first, then the promises, then the fact that makes
-            // this its own screen.
-            stepHeader(explain("Hearing it in your own voice is the point."),
-                       explain("A stranger's voice reads you a sentence. Your own voice shows you saying it — that's what the next minute of reading buys."))
+            // One promise, then what backs it. The "why your own voice" pitch
+            // moved to the intro — it belongs where the learner is deciding to
+            // do this at all, and here it only delayed the two facts this
+            // screen exists to state. The consent still has to be separate,
+            // informed and recorded (GDPR Art. 9 / BIPA / PIPA); what shrank
+            // is the reading, not the disclosure.
+            stepHeader(explain("Your voice is handled with care."), nil)
 
             VoiceConsentDetail()
 
-            VStack(alignment: .leading, spacing: 14) {
-                Toggle(isOn: $agreedToAge) {
-                    Text(explain("I'm \(ConsentStore.minimumAge) or older."))
-                        .font(.subheadline)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Toggle(isOn: $agreedToVoiceCloning) {
-                    Text(explain("I agree to my recording being used to build my voice model."))
-                        .font(.subheadline)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            Toggle(isOn: $agreedToVoiceCloning) {
+                Text(explain("I'm \(ConsentStore.minimumAge) or older, and I agree to my recording being used to build my voice model."))
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: 340)
 
@@ -462,20 +496,21 @@ struct VoiceCloneOnboardingView: View {
     }
 
     /// The plain-language description of what happens to a voice recording:
-    /// who processes it, what comes out, how long it lives, and how it ends.
-    /// Sits above the toggles because consent to something unexplained isn't
-    /// informed consent — this IS the disclosure the toggles agree to.
+    /// who processes it, what it's used for, and how it ends. Sits above the
+    /// toggle because consent to something unexplained isn't informed consent
+    /// — this IS the disclosure the toggle agrees to.
     private struct VoiceConsentDetail: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
-                // Promise → control → fact. The fact used to lead and ended on
-                // "that model is biometric data", which left the scariest
-                // sentence hanging with no reason attached. It now closes the
-                // list and carries its own why: that classification is exactly
-                // why this consent gets a screen of its own.
-                row("person.fill.viewfinder", explain("It does one thing: say your practice lines back in your own voice. Never sold, never shared, never used to train anyone else's model."))
-                row("trash", explain("Re-record it or delete it whenever you want. Deleting your account deletes it too."))
-                row("waveform", explain("The recording goes to ElevenLabs, which builds the voice model. That model counts as sensitive personal data, which is why this consent gets its own screen."))
+                // Two lines, not five. The processor is NOT named here — the
+                // privacy policy names it, says what it does with a recording
+                // and on what legal basis, and the link to it sits under this
+                // toggle. What an informed consent needs is that the facts are
+                // findable and the agreement is separate and recorded, which
+                // they are; the screen states the promise the learner is
+                // agreeing to, not the sub-processor list.
+                row("person.fill.viewfinder", explain("Your voice model is built by the most trusted service there is, and used for your language practice only."))
+                row("trash", explain("Re-record it or delete it whenever you want, and deleting your account deletes it too."))
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -496,12 +531,14 @@ struct VoiceCloneOnboardingView: View {
     // listen to the room).
     private var micContent: some View {
         VStack(spacing: 26) {
-            // Says what to do and what happens if you don't — nothing about
-            // WHY. "AirPods record at phone-call quality" is a fact about
-            // codecs; the reader has no way to judge whether that's bad, so it
-            // reads as noise in front of the one instruction that matters.
-            stepHeader(explain("Record with the iPhone's own mic."),
-                       explain("With Bluetooth earbuds in, the voice that comes out won't sound like you."))
+            // Framed as QUALITY, not as a threat. It used to warn that the
+            // clone "won't sound like you", which is a punishment for getting
+            // it wrong; the same instruction reads better as what a good mic
+            // buys. The AirPods line below stays because it's the one concrete
+            // action — Bluetooth records at phone-call quality, and the voice
+            // clone is the one surface where the worn mic must NOT win.
+            stepHeader(explain("Use the iPhone's mic — or a better one."),
+                       explain("The better the mic, the better the voice that comes out. A wired mic is best if you have one."))
 
             Label("Take your AirPods out before recording", systemImage: "airpods.gen3")
                 .font(.subheadline)
@@ -830,13 +867,16 @@ struct VoiceCloneOnboardingView: View {
                         .font(.footnote)
                 }
 
-                // A native-language take carries no target-language accent at
-                // all — the TTS default (US English) fills that gap unless the
-                // learner picks one here. Target-language readers already gave
-                // the clone THEIR accent, so they get this from Me → Voice
-                // only, not as an onboarding beat.
-                if readInNative,
-                   !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
+                // Offered to EVERYONE who has accents to choose from, not just
+                // native-language takes. The old rule was that a
+                // target-language reader had already given the clone their own
+                // accent and so had nothing to pick — true, and beside the
+                // point: wanting to sound American or British is a wish about
+                // the fluent self, and this screen is the one moment the
+                // learner is actually listening to it. Hiding the choice here
+                // meant they had to know it exists in Me → Voice to ever find
+                // it. Still optional, still reversible from Me → Voice.
+                if !VoiceAccentCatalog.options(for: appState.targetLanguage).isEmpty {
                     Button {
                         player.stop()
                         pickingAccent = true
@@ -901,16 +941,15 @@ struct VoiceCloneOnboardingView: View {
                 // persona is only nil-ed — the store keeps the data, and the
                 // intake reopens pre-filled from it.
                 wizardBar(next: chrome("Next"), onBack: { appState.persona = nil }) {
-                    agreedToAge = false
                     agreedToVoiceCloning = false
                     status = stepAfterIntro
                 }
 
             case .consent:
-                // Next is dead until BOTH toggles are on — the whole point of
-                // an explicit consent is that it can't be walked past.
+                // Next is dead until the toggle is on — the whole point of an
+                // explicit consent is that it can't be walked past.
                 wizardBar(next: chrome("Next"),
-                          nextDisabled: !(agreedToAge && agreedToVoiceCloning),
+                          nextDisabled: !agreedToVoiceCloning,
                           backTo: .intro) {
                     ConsentStore.shared.confirmAge()
                     ConsentStore.shared.recordVoiceConsent()
@@ -993,7 +1032,9 @@ struct VoiceCloneOnboardingView: View {
                 HStack(spacing: 12) {
                     Button {
                         error = nil
-                        status = .reviewing
+                        // Back to whatever this step interrupted: the voice
+                        // they just met, or the take waiting to become one.
+                        status = appState.voiceCloneId == nil ? .reviewing : .meet
                     } label: {
                         Label("Back", systemImage: "chevron.left")
                     }
@@ -1021,14 +1062,28 @@ struct VoiceCloneOnboardingView: View {
                 .disabled(true)
 
             case .meet:
-                // Onboarding's last tap — the clone exists, the theme is
-                // chosen, and this drops straight into the app's first call.
-                Button(action: finishMeet) {
-                    Text("Start talking")
-                        .frame(maxWidth: .infinity)
+                // Two exits, one button. With an account behind the session
+                // this is onboarding's last tap, straight into the first call;
+                // on the anonymous session it hands over to the sign-up, which
+                // now asks about a voice they've heard rather than a promise.
+                if auth.isSignedIn || authBypassed {
+                    Button(action: finishMeet) {
+                        Text("Start talking")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                } else {
+                    Button {
+                        player.stop()
+                        status = .account
+                    } label: {
+                        Text("Save this voice")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
             }
         }
         .padding(.horizontal, 16)
@@ -1193,14 +1248,33 @@ struct VoiceCloneOnboardingView: View {
         try? player.play(data)
     }
 
-    /// Confirm the reviewed recording. If there's no account yet — the whole
-    /// onboarding runs account-free until here — this is THE sign-up moment:
-    /// the clone is the first thing that genuinely needs the server.
+    /// Confirm the reviewed recording and build the voice.
+    ///
+    /// Onboarding runs account-free all the way through the MEET act now: the
+    /// sign-up used to sit here, in front of a voice the user had never heard,
+    /// which asked them to open an account for a promise. What the server
+    /// actually needs is a session, not an account — so an anonymous one is
+    /// opened silently here, the clone speaks, and the account is asked for
+    /// afterwards, to KEEP the voice they just heard. See `AuthService`.
     private func useThisVoice() {
         guard recordedSampleURL != nil else { return }
         player.stop()
         if auth.session == nil && !authBypassed {
-            status = .account
+            status = .uploading
+            Task {
+                do {
+                    try await auth.startAnonymousSession()
+                    performClone()
+                } catch {
+                    // Anonymous sessions unavailable — the project setting is
+                    // off, or there's no network. Fall back to the ORIGINAL
+                    // order (sign up, then clone) rather than stranding the
+                    // user on a take they can't use: this screen is the only
+                    // way into the app, so it can never depend on a server
+                    // setting being right.
+                    status = .account
+                }
+            }
             return
         }
         performClone()
@@ -1367,6 +1441,18 @@ struct VoiceCloneOnboardingView: View {
 
     /// Relaunch landing: if a reviewed-but-never-cloned take is still on
     /// disk, resume straight at review — the user's 90 seconds are not lost.
+    /// The app died between "keep this voice" and the sign-up — reopen on the
+    /// account step instead of walking a finished voice through the wizard
+    /// again. Without this the flow would either restart from the intro or,
+    /// worse, wave the user through into the app on an anonymous session that
+    /// can never be signed back into (see `RootView`'s gate).
+    private func resumeUnclaimedVoice() {
+        guard status == .intro, appState.voiceCloneId != nil,
+              auth.isAnonymous, !authBypassed else { return }
+        appState.holdVoiceOnboarding = true
+        status = .account
+    }
+
     private func restorePendingTake() {
         guard status == .intro, recordedSampleURL == nil,
               let name = UserDefaults.standard.string(forKey: Self.pendingTakeKey) else { return }

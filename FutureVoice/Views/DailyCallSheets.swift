@@ -108,6 +108,12 @@ struct DailyCallOnboardingView: View {
     /// believing a call is coming that never will.
     @State private var permissionDenied = false
 
+    /// The learner as this screen calls them — Korean takes its vocative
+    /// particle here (see `LearnerAddress`). nil when they never gave a name.
+    private var name: String? {
+        LearnerAddress.vocative(appState.persona?.displayName)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
@@ -124,7 +130,11 @@ struct DailyCallOnboardingView: View {
                 // why people stop, and that somebody is offering to carry it.
                 // "A call every day" described the mechanism and sold nothing.
                 VStack(spacing: 10) {
-                    Text("I'll help you keep it up")
+                    // By NAME when there is one. Everything from here on is
+                    // the future self speaking, and being called by name is
+                    // what separates that from an app announcing a feature.
+                    Text(name.map { explain("\($0), I'll help you keep it up") }
+                         ?? explain("I'll help you keep it up"))
                         .font(.title.bold())
                         .multilineTextAlignment(.center)
                     Text(explain("Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done."))

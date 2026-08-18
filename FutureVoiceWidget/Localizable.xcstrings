@@ -1,505 +1,502 @@
 {
-  "sourceLanguage": "en",
-  "strings": {
-    "%lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "/ %lldm" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld Min."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld분"
           }
         }
       }
     },
-    "%lld / %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld / %2$lld"
+    "%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        }
+      }
+    },
+    "%lld / %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld / %2$lld"
           }
         }
       },
-      "shouldTranslate": false
+      "shouldTranslate" : false
     },
-    "%lld/%lld": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld/%2$lld"
+    "%lld/%lld" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
           }
         },
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld/%2$lld"
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld/%2$lld"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld/%2$lld"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
           }
         }
       }
     },
-    "/ %lldm": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "/ %lld Min."
+    "<" : {
+      "shouldTranslate" : false
+    },
+    ">" : {
+      "shouldTranslate" : false
+    },
+    "Bookmark phrases to study them here" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Markiere hier Sätze zum Lernen"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "/ %lld분"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기서 공부할 문장을 북마크하세요"
           }
         }
       }
     },
-    "<": {
-      "shouldTranslate": false
-    },
-    ">": {
-      "shouldTranslate": false
-    },
-    "Bookmark phrases to study them here": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Markiere hier Sätze zum Lernen"
+    "Continue studying" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiterlernen"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여기서 공부할 문장을 북마크하세요"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이어서 공부하기"
           }
         }
       }
     },
-    "Continue studying": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weiterlernen"
+    "day streak" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tage-Serie"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이어서 공부하기"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일 연속"
           }
         }
       }
     },
-    "Delta": {
-      "shouldTranslate": false
+    "Delta" : {
+      "shouldTranslate" : false
     },
-    "Done for today": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Für heute geschafft"
+    "Done for today" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für heute geschafft"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘은 여기까지"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘은 여기까지"
           }
         }
       }
     },
-    "Expressions": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wendungen"
+    "Expressions" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wendungen"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "표현"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현"
           }
         }
       }
     },
-    "Free Talk": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Freies Gespräch"
+    "Free Talk" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freies Gespräch"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자유 대화"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유 대화"
           }
         }
       }
     },
-    "Future Voice": {
-      "shouldTranslate": false
-    },
-    "Jump back into the book you're working through.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spring zurück in das Buch, das du gerade durcharbeitest."
+    "Jump back into the book you're working through." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spring zurück in das Buch, das du gerade durcharbeitest."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "보고 있던 책으로 바로 돌아가요."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보고 있던 책으로 바로 돌아가요."
           }
         }
       }
     },
-    "Keep your daily talking streak alive.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Halte deine tägliche Sprech-Serie am Leben."
+    "Keep your daily talking streak alive." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Halte deine tägliche Sprech-Serie am Leben."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "매일 말하기 연속 기록을 이어가세요."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "매일 말하기 연속 기록을 이어가세요."
           }
         }
       }
     },
-    "Let's talk": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sprechen wir"
+    "left" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "übrig"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대화하기"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "남음"
           }
         }
       }
     },
-    "Next / previous word": {
-      "shouldTranslate": false
-    },
-    "Nothing in progress": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nichts in Arbeit"
+    "Let's talk" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sprechen wir"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "진행 중인 게 없어요"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화하기"
           }
         }
       }
     },
-    "One tap to call your fluent self.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ein Tipp — und du rufst dein fließendes Ich an."
+    "mastered" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gemeistert"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 번 눌러 유창한 나에게 전화하세요."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "완료"
           }
         }
       }
     },
-    "Phrases": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sätze"
+    "Next / previous word" : {
+      "shouldTranslate" : false
+    },
+    "Nothing in progress" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nichts in Arbeit"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문장"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진행 중인 게 없어요"
           }
         }
       }
     },
-    "Phrases you've picked up in your talks.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sätze, die du in deinen Gesprächen aufgeschnappt hast."
+    "One tap to call your fluent self." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Tipp — und du rufst dein fließendes Ich an."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대화에서 주워 온 문장들."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "한 번 눌러 유창한 나에게 전화하세요."
           }
         }
       }
     },
-    "Progress": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fortschritt"
+    "phrases" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wendungen"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성장"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현"
           }
         }
       }
     },
-    "Save words to study them here": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Speichere hier Wörter zum Lernen"
+    "Phrases" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sätze"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "여기서 공부할 단어를 저장하세요"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문장"
           }
         }
       }
     },
-    "Section": {
-      "shouldTranslate": false
-    },
-    "Start your streak": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Starte deine Serie"
+    "Phrases you've picked up in your talks." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sätze, die du in deinen Gesprächen aufgeschnappt hast."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "연속 기록을 시작하세요"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화에서 주워 온 문장들."
           }
         }
       }
     },
-    "Streak": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serie"
+    "Progress" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fortschritt"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "연속 기록"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "성장"
           }
         }
       }
     },
-    "Studying": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wird gelernt"
+    "Save words to study them here" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speichere hier Wörter zum Lernen"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학습 중"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "여기서 공부할 단어를 저장하세요"
           }
         }
       }
     },
-    "Today's goal, streak, and what's left to study.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Heutiges Ziel, Serie und was noch zu lernen ist."
+    "Section" : {
+      "shouldTranslate" : false
+    },
+    "Start your streak" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starte deine Serie"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 목표와 연속 기록, 남은 학습량이 한눈에."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연속 기록을 시작하세요"
           }
         }
       }
     },
-    "Vocabulary": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vokabeln"
+    "Streak" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Serie"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "어휘"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "연속 기록"
           }
         }
       }
     },
-    "Words": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wörter"
+    "Studying" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wird gelernt"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단어"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학습 중"
           }
         }
       }
     },
-    "Words from your notebook to keep studying.": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wörter aus deinem Notizbuch zum Weiterlernen."
+    "Today's goal, streak, and what's left to study." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heutiges Ziel, Serie und was noch zu lernen ist."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트에 모아 둔, 계속 공부할 단어들."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 목표와 연속 기록, 남은 학습량이 한눈에."
           }
         }
       }
     },
-    "day streak": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tage-Serie"
+    "Vocabulary" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vokabeln"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일 연속"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "어휘"
           }
         }
       }
     },
-    "left": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "übrig"
+    "words" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "남음"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어"
           }
         }
       }
     },
-    "mastered": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "gemeistert"
+    "Words" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "완료"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어"
           }
         }
       }
     },
-    "phrases": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wendungen"
+    "Words from your notebook to keep studying." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wörter aus deinem Notizbuch zum Weiterlernen."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "표현"
-          }
-        }
-      }
-    },
-    "words": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wörter"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단어"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "노트에 모아 둔, 계속 공부할 단어들."
           }
         }
       }
     }
   },
-  "version": "1.1"
+  "version" : "1.1"
 }
