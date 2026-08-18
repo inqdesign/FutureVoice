@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Privacy manifest for the widget extension. An extension needs its own —
+	  the host app's does not cover it.
+
+	  The widget COLLECTS NOTHING. It has no network access and no analytics;
+	  it only reads a snapshot the app already wrote into the shared App Group
+	  (see Services/StudyWidgetRefresher.swift). So the collected-data list is
+	  deliberately empty, and the only accessed API is UserDefaults.
+	-->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<!-- Reads the snapshot from the App Group container
+		     (group.com.roro.futurevoice) that it shares with the app, plus its
+		     own paging state. -->
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>1C8F.1</string>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

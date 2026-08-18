@@ -59,13 +59,12 @@ enum CoreClubService {
         let seated: Bool
     }
 
+    /// Only what the client actually mirrors. The config row carries the
+    /// window and grace numbers too, but those are the SERVER's business —
+    /// every rule that reads them runs there, and decoding them here would
+    /// suggest the app gets a vote.
     struct Config: Decodable {
-        let seats: Int
         let daily_bar_seconds: Int
-        let entry_window_days: Int
-        let entry_required_days: Int
-        let keep_window_days: Int
-        let keep_required_days: Int
     }
 
     /// An arrival. Departures are not readable by clients at all — the RLS
@@ -108,7 +107,6 @@ enum CoreClubService {
         /// already says everything.
         let missed_recent: Int
         let keep_grace: Int
-        let keep_window: Int
         /// Qualified people ahead of you in this language's line. Nil unless
         /// you're qualified and seatless — the one state where it answers
         /// anything.
@@ -155,7 +153,6 @@ enum CoreClubService {
             entry_streak    = int(.entry_streak, 30)
             missed_recent   = int(.missed_recent, 0)
             keep_grace      = int(.keep_grace, 1)
-            keep_window     = int(.keep_window, 30)
             queue_ahead     = opt(.queue_ahead)
             days_to_entry   = opt(.days_to_entry)
             days_to_return  = opt(.days_to_return)
@@ -165,7 +162,7 @@ enum CoreClubService {
 
         private enum CodingKeys: String, CodingKey {
             case bar_seconds, seats, club_size, member
-            case streak, entry_streak, missed_recent, keep_grace, keep_window
+            case streak, entry_streak, missed_recent, keep_grace
             case queue_ahead, days_to_entry, days_to_return
             case requalifying, waiting_for_seat
         }
@@ -281,7 +278,7 @@ enum CoreClubService {
     static func fetchConfig() async -> Config? {
         let rows: [Config]? = try? await SupabaseProvider.shared
             .from("core_club_config")
-            .select("seats,daily_bar_seconds,entry_window_days,entry_required_days,keep_window_days,keep_required_days")
+            .select("daily_bar_seconds")
             .execute()
             .value
         return rows?.first
