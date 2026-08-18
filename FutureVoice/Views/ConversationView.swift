@@ -64,6 +64,10 @@ struct ConversationView: View {
     /// over the home screen and overlaps the next call's session.
     @State private var isTornDown = false
     @Environment(\.dismiss) private var dismiss
+    /// Watched only to recover a call whose mic died while the app was away —
+    /// see `resumeCallIfStalled`. With background audio declared this is a
+    /// safety net, not the normal path: a backgrounded call keeps running.
+    @Environment(\.scenePhase) private var scenePhase
 
     /// RootTabView's free-talk presentation hosts this view in a ZStack (not
     /// a cover), where dismiss() is a no-op — closing must hand control back
@@ -366,6 +370,14 @@ struct ConversationView: View {
                 // start(): the ticker polls it from its first second.
                 meter.isBillable = { isBillableMoment() }
                 meter.start(sessionId: sessionId)
+                // Put the call on the lock screen. Play/pause there are the
+                // same two things the mic button does, so a call that outlives
+                // the screen can still be hung up without unlocking.
+                CallNowPlaying.begin(
+                    title: callDisplayTitle,
+                    onResume: { Task { if !phoneCallActive, !isTornDown { await handleMicTap() } } },
+                    onPause: { Task { if phoneCallActive { await pauseCall() } } }
+                )
                 HapticEngine.phoneCallStarted()
                 Analytics.capture("conversation_started", [
                     "origin": sessionOrigin.rawValue,
@@ -443,7 +455,21 @@ struct ConversationView: View {
             }
             .task { refreshDashboard() }
             .task { canUpgradePlan = await AccountStatus.fetch().isDailyPlan }
+            // A real phone call, Siri, or an alarm takes the audio session
+            // away and stops the engine WITHOUT going through `live.stop()`.
+            // Nothing used to notice: the call stayed on screen, deaf, until
+            // the learner tapped the mic twice.
+            .onReceive(NotificationCenter.default.publisher(
+                for: AVAudioSession.interruptionNotification)) { note in
+                handleAudioInterruption(note)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                // Coming back to a call that should be listening but isn't.
+                guard newPhase == .active else { return }
+                Task { await resumeCallIfStalled() }
+            }
             .onChange(of: topic) { _, newTopic in
+                CallNowPlaying.update(title: callDisplayTitle, isPlaying: phoneCallActive)
                 // Topic just got picked → opener appears AND we auto-enter
                 // phone-call mode. Zero-tap start: the user's scenario pick
                 // IS the "I want to talk now" signal. They can hang up via
@@ -690,6 +716,7 @@ struct ConversationView: View {
             case .idle:      return "Hang up"
             }
         }
+        if isPausedForIdle { return explain("Call paused — tap to pick it back up") }
         return turns.isEmpty ? "Start phone-call mode" : "Resume phone-call mode"
     }
 
@@ -704,6 +731,10 @@ struct ConversationView: View {
             case .idle:      return explain("On call · tap to stop")
             }
         }
+        // A call that put itself down says so. Without this the screen looks
+        // identical to one the learner stopped on purpose, and the only clue
+        // that three minutes passed is that nothing is happening.
+        if isPausedForIdle { return explain("Paused — tap to pick it back up") }
         return turns.isEmpty ? "Tap to start a phone-call" : "Tap to continue"
     }
 
@@ -721,19 +752,29 @@ struct ConversationView: View {
 
     private func handleMicTap() async {
         if phoneCallActive {
-            // Tap during an active phone call = hang up.
-            await endPhoneCall()
+            // Tap during an active phone call = put it down.
+            await pauseCall()
             return
         }
         // Start a phone call. Avatar's reply will auto-restart listening.
         phoneCallActive = true
         HapticEngine.phoneCallStarted()
+        CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
         await startRecording()
     }
 
-    private func endPhoneCall() async {
+    /// Put the call DOWN — not away. The mic closes and the meter goes quiet,
+    /// but the transcript stays on screen and tapping the pill picks the same
+    /// session up where it stopped. Nothing is saved, summarized or discarded
+    /// here; that only happens on End (`endSession`) and on discard.
+    ///
+    /// Every "stop" in this screen lands here: the mic tap, the lock screen's
+    /// pause, and the idle watchdog. It used to be called `endPhoneCall`, which
+    /// described none of that.
+    private func pauseCall() async {
         phoneCallActive = false
         cancelSilenceTimer()
+        cancelIdleWatch()
         if phase == .listening {
             _ = live.stop()
             userSpeechStartedAt = nil
@@ -742,7 +783,120 @@ struct ConversationView: View {
             player.stop()
         }
         phase = .idle
+        CallNowPlaying.update(title: callDisplayTitle, isPlaying: false)
         HapticEngine.phoneCallEnded()
+    }
+
+    // MARK: - Nobody's there
+
+    /// How long a call may hear nothing at all before it puts itself down.
+    ///
+    /// Not a billing rule — idle seconds already cost nothing (`TalkMeter`).
+    /// This is about the open mic: a call the learner walked away from, or one
+    /// riding in a pocket, keeps the microphone live indefinitely, and the
+    /// first voice it hears — a TV, someone else in the room — reads as the
+    /// learner talking and gets both billed and answered.
+    ///
+    /// A minute of TOTAL silence — no voice, no reply in flight, no line being
+    /// spoken. In a conversation that is already a long time to hear nothing;
+    /// three minutes (the first cut) left the mic open through most of a walk
+    /// away from the phone.
+    ///
+    /// The floor on this number is the learner who genuinely thinks for a long
+    /// while and then speaks: once the mic is closed we cannot hear them start
+    /// again, so they talk into nothing until they look at the screen. A
+    /// minute keeps that rare; much less than that and it stops being rare.
+    private static let idlePauseSeconds: Double = 60
+    /// Coarse on purpose: nothing here needs to be precise to the second. It
+    /// also bounds the overshoot — the pause lands within a tick of the bar.
+    private static let idleWatchTickSeconds: Double = 5
+
+    /// True when the watchdog was the one that stopped the call — the only
+    /// difference it makes is the hint under the pill, so a learner coming
+    /// back to a quiet screen reads "paused" instead of wondering what broke.
+    @State private var isPausedForIdle = false
+    @State private var idleWatchTask: Task<Void, Never>?
+
+    /// Watch for a call with nobody in it. Armed whenever the mic opens, so
+    /// every turn re-arms it and the clock effectively runs from the last
+    /// thing that happened.
+    private func startIdleWatch() {
+        cancelIdleWatch()
+        idleWatchTask = Task { @MainActor in
+            var lastActive = Date()
+            while !Task.isCancelled, phoneCallActive, !isTornDown {
+                try? await Task.sleep(for: .seconds(Self.idleWatchTickSeconds))
+                guard !Task.isCancelled, phoneCallActive, !isTornDown else { return }
+                // The same predicate the meter bills on: the fluent self
+                // speaking, a reply in flight, or a voice heard recently.
+                if isBillableMoment() { lastActive = Date(); continue }
+                guard Date().timeIntervalSince(lastActive) >= Self.idlePauseSeconds else { continue }
+                isPausedForIdle = true
+                await pauseCall()
+                return
+            }
+        }
+    }
+
+    private func cancelIdleWatch() {
+        idleWatchTask?.cancel()
+        idleWatchTask = nil
+    }
+
+    /// What the lock screen calls this call. The same words the toolbar shows.
+    private var callDisplayTitle: String {
+        topic.isEmpty ? explain("Let's talk") : topic
+    }
+
+    // MARK: - Surviving the screen going away
+
+    /// The audio session was taken (incoming phone call, Siri, an alarm) or
+    /// handed back.
+    ///
+    /// On `.began` iOS has ALREADY stopped the engine and any playback, so
+    /// there is nothing to stop — what matters is that our state stops lying:
+    /// a `listening` phase with a dead engine keeps the endpoint monitor
+    /// spinning on a transcript that can never change. On `.ended` the system
+    /// tells us whether it's our turn again; `shouldResume` is the only case
+    /// where reopening the mic is polite.
+    private func handleAudioInterruption(_ note: Notification) {
+        guard !isTornDown,
+              let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        switch type {
+        case .began:
+            cancelSilenceTimer()
+            if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+            if phase == .speaking { player.stop() }
+            // `.thinking` is left alone: the reply is in flight over the
+            // network, and it will speak (or fail) on its own terms.
+            if phase == .listening || phase == .speaking { phase = .idle }
+            CallNowPlaying.update(title: callDisplayTitle, isPlaying: false)
+        case .ended:
+            let options = (note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt)
+                .map(AVAudioSession.InterruptionOptions.init(rawValue:))
+            guard options?.contains(.shouldResume) == true else { return }
+            Task { await resumeCallIfStalled(force: true) }
+        @unknown default:
+            break
+        }
+    }
+
+    /// Reopen the mic when the call should be listening and isn't.
+    ///
+    /// The test is `live.isEngineRunning`, never `isRunning` — an interrupted
+    /// run still reads as started. Cheap and idempotent, which is why it can
+    /// hang off every foreground: on the normal path the engine is alive (the
+    /// call kept running in the background) and this returns immediately.
+    private func resumeCallIfStalled(force: Bool = false) async {
+        guard !isTornDown, phoneCallActive else { return }
+        // Only the two waiting-for-the-learner phases can be silently dead.
+        // Mid-reply, the call is doing something that doesn't need the mic.
+        guard phase == .listening || phase == .idle else { return }
+        guard force || !live.isEngineRunning else { return }
+        if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+        await startRecording()
+        CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
     }
 
     /// Energy-based endpointing loop, started with the mic. Every tick it
@@ -1117,6 +1271,8 @@ struct ConversationView: View {
             didPreconnectThisTurn = false
             phase = .listening
             startEndpointMonitor()
+            isPausedForIdle = false
+            startIdleWatch()
         } catch {
             self.error = error.localizedDescription
         }
@@ -1915,9 +2071,12 @@ struct ConversationView: View {
     private func endSession() async {
         guard !turns.isEmpty else { return }
         phoneCallActive = false
-        // The call is over — summary generation isn't talk time.
+        // The call is over — summary generation isn't talk time, and the lock
+        // screen must stop showing a call that has hung up.
         meter.stop()
+        CallNowPlaying.end()
         cancelSilenceTimer()
+        cancelIdleWatch()
         // If a call is still live, stop the mic/playback so the overlay isn't
         // fighting an open recording while the summary generates.
         if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
@@ -2020,7 +2179,9 @@ struct ConversationView: View {
         if phoneCallActive { HapticEngine.phoneCallEnded() }
         phoneCallActive = false
         meter.stop()
+        CallNowPlaying.end()
         cancelSilenceTimer()
+        cancelIdleWatch()
         // The transcription runs on its own clock and can outlive the screen —
         // it must not keep uploading (or write into `turns`) after the call
         // has been hung up.
@@ -2044,6 +2205,13 @@ struct ConversationView: View {
         if !topic.isEmpty {
             phoneCallActive = true   // stay in phone-call mode for continuity
             meter.start(sessionId: sessionId)   // fresh session, fresh tick keys
+            // endSession took the last call off the lock screen; this is a new
+            // one and has to put itself back.
+            CallNowPlaying.begin(
+                title: callDisplayTitle,
+                onResume: { Task { if !phoneCallActive, !isTornDown { await handleMicTap() } } },
+                onPause: { Task { if phoneCallActive { await pauseCall() } } }
+            )
             Task { await openConversation() }
         }
     }

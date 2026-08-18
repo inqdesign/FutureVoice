@@ -45,6 +45,19 @@
 	<string>$(SUPABASE_ANON_KEY)</string>
 	<key>SUPABASE_URL</key>
 	<string>$(SUPABASE_URL)</string>
+	<!-- A call must survive the screen going dark. Without this the system
+	     suspends the app seconds after the learner locks the phone or checks
+	     a message: the audio engine stops mid-sentence, the recognition task
+	     dies, and coming back finds a call that is still on screen but deaf.
+	     The mode is honest here — the app's main function IS audio, and it is
+	     audible and recording for the whole time it holds the session. It is
+	     claimed only while a call is up: `CallNowPlaying.begin/end` bracket it
+	     with the lock-screen controls, and every other surface deactivates its
+	     session as before. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>GeistPixel-Square.ttf</string>

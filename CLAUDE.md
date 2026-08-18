@@ -174,13 +174,54 @@ Do not re-attach audio to the reply call, and do not add a THIRD per-turn call. 
 
 Three consequences to preserve when touching this: the failure path in `requestReply` and `endSession` must both flush (a turn that never speaks still needs its correction, and `endSession` freezes `turns` for the summary — it waits ≤2.5 s for an in-flight call); `voiceDidStart` flushes BEFORE its `turnTiming.isEmpty` guard, so a logging condition can never cost a turn its transcript; and the audio-path field moved from `talk_turn_timing` to `talk_asr_upgrade` because it is now known only after the timing row has shipped.
 
+## A call outlives the screen (2026-08-18)
+
+A phone call doesn't end because you looked at something else. Until now this
+one did: no `UIBackgroundModes`, so iOS suspended the app seconds after a lock
+or an app switch — engine stopped mid-sentence, recognition task dead — and
+nothing put it back together, so returning found a call that was still on
+screen and stone deaf.
+
+- **`UIBackgroundModes: [audio]`** is declared in `FutureVoice/Resources/Info.plist`.
+  The claim is honest (the app is audibly speaking and recording for the whole
+  time it holds the session), but it is the kind of declaration App Review
+  reads closely — if it's ever questioned, the answer is the live call, not
+  "background processing".
+- **The lock screen gets the call** (`CallNowPlaying`): topic as the title,
+  flagged as a live stream so there's no scrubber, and play/pause wired to the
+  exact two things the mic button does (`handleMicTap` / `pauseCall`).
+  Without it iOS shows whatever played before us, and a locked phone has no way
+  to hang up. `begin`/`end` must bracket every call path — `endSession` and
+  `tearDown` both end it, `startNewSession` begins the next one.
+- **Interruptions are handled** (`ConversationView.handleAudioInterruption`) —
+  a real incoming call, Siri, an alarm. iOS has already stopped the engine by
+  the time the notification lands, so `.began` only stops our state from lying;
+  `.ended` reopens the mic when the system says `shouldResume`.
+- **`live.isEngineRunning`, never `isRunning`.** An interrupted run still reads
+  as started — that gap is what made a stalled call invisible. `resumeCallIfStalled`
+  tests the engine and runs on every foreground as a cheap no-op safety net.
+- Metering follows from the idle rule above: a backgrounded call bills only
+  while someone is actually speaking, so a phone in a pocket costs nothing
+  unless it hears a voice.
+- **After a minute of nothing at all, the call PUTS ITSELF DOWN** — it does
+  not end (`idlePauseSeconds`, `startIdleWatch` → `pauseCall`). Ending is a
+  decision with consequences: a summary, drills, a book. Pausing has none —
+  the transcript stays on screen and one tap resumes the same session, which
+  is what the mic tap and the lock screen's pause have always done. The point
+  isn't the money (idle is already free) but the open mic: a call nobody is in
+  keeps listening, and the first voice it hears — a TV, someone else in the
+  room — would be billed AND answered as if it were the learner. `pauseCall`
+  is the single place every stop lands; `isPausedForIdle` exists only so the
+  hint under the pill can say "paused" rather than leaving a quiet screen
+  unexplained.
+
 ## Source of truth
 
 - **Domain types** → `FutureVoice/Models/Models.swift`. Update there first.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
-- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → "see you tomorrow", NEVER a paywall. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **Billing** → minutes-NATIVE since 2026-08-11 (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isDailyPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
 - **Secrets** → `Secrets.swift` only, injected via `Config/FutureVoice.xcconfig` (gitignored).
 
 ## Build / run

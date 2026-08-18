@@ -3531,6 +3531,16 @@
         }
       }
     },
+    "Call paused — tap to pick it back up": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화 잠시 멈춤 · 탭하면 이어서 해요"
+          }
+        }
+      }
+    },
     "Call voice volume": {
       "localizations": {
         "de": {
@@ -11563,6 +11573,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "일시정지"
+          }
+        }
+      }
+    },
+    "Paused — tap to pick it back up": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잠시 멈췄어요 · 탭하면 이어서 해요"
           }
         }
       }

@@ -133,6 +133,13 @@ final class LiveTranscriber: ObservableObject {
     /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
     var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
 
+    /// Is the mic ACTUALLY open right now? `isRunning` only says the caller
+    /// started a run and never stopped it — an interruption (a real phone
+    /// call, Siri, an alarm) stops the engine underneath us without going
+    /// through `stop()`, leaving a run that reads as live and hears nothing.
+    /// Anything recovering a call must test this, not `isRunning`.
+    var isEngineRunning: Bool { engine?.isRunning ?? false }
+
     /// The longest MID-SPEECH silence this run has already survived — a pause
     /// the learner opened and then closed by carrying on talking.
     ///
