@@ -29,10 +29,12 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { serviceRoleClient } from "../_shared/credits.ts"
 
-// Legit learners hit a handful of NEW (uncached) words per session and quickly
-// converge to cache hits as the shared dictionary warms. This cap only bites
-// on someone generating brand-new words en masse; cache hits are unlimited.
-const MAX_NEW_GENERATIONS_PER_HOUR = 150
+// The word/expression LISTS lazily generate an entry per row scrolled into
+// view (2026-08-18), so a learner walking a 250-word notebook legitimately
+// mints a few hundred new entries in their first hour — 150 locked that
+// learner's own detail cards out mid-session. Cache hits are unlimited; this
+// only bounds brand-new generations, i.e. cost + cache-junk abuse.
+const MAX_NEW_GENERATIONS_PER_HOUR = 600
 // A word key is a short lemma; an expression is a 2–6 word chunk, which the
 // 40-char word ceiling silently rejected (400 → the card rendered "—").
 const MAX_LEN: Record<Kind, number> = { word: 40, expression: 80 }
