@@ -2,6 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://nawana.app/</loc><xhtml:link xmlns:xhtml="http://www.w3.org/1999/xhtml" rel="alternate" hreflang="en" href="https://nawana.app/"/></url>
   <url><loc>https://nawana.app/ko.html</loc></url>
+  <url><loc>https://nawana.app/support.html</loc></url>
+  <url><loc>https://nawana.app/support-ko.html</loc></url>
   <url><loc>https://nawana.app/privacy.html</loc></url>
   <url><loc>https://nawana.app/privacy-ko.html</loc></url>
 </urlset>

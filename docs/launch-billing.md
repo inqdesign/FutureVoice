@@ -181,7 +181,7 @@ Later (if annual share is high): drip annual credits 1/12 per month via cron.
 
 Apple (blocking — nothing sells until these are done):
 
-- [ ] **Six products in ASC under the RENAMED ids** — `com.roro.futurevoice.daily_{weekly,monthly,annual}` / `unlimited_{…}` (renamed 2026-08-11; they must match `subscription_plans.apple_product_id`)
+- [ ] **Four products in ASC under the RENAMED ids** — `com.roro.futurevoice.{daily,unlimited}_{monthly,annual}` (renamed 2026-08-11; they must match `subscription_plans.apple_product_id`). **Weekly is NOT sold** — already switched off in `20260811190000_weekly_off_catalog` (`is_active = false`), and the client selects on `is_active`. Two independent guards keep it hidden: the plan never loads, and `PaywallView.availablePeriods` only offers a period whose StoreKit product actually loaded. Re-enabling it later is one flag plus the ASC products — no migration, no code change.
 - [ ] **7-day free-trial introductory offer on each** — the trial funnel reads `product.subscription.introductoryOffer`; with none, the paywall silently degrades to "Subscribe"
 - [ ] `APPLE_BUNDLE_ID` / `APPLE_APP_ID` secrets set
 - [ ] `apple-webhook` deployed; ASC Server Notifications V2 pointed at it

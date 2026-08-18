@@ -16,7 +16,7 @@
 | **Primary Category** | Education |
 | **Secondary Category** | Productivity |
 | **Price** | Free (with In-App Purchases / subscriptions) |
-| **Age Rating** | **16+** (see §4 — was 4+, which was wrong on three counts) |
+| **Age Rating** | **4+** (see §4 — every questionnaire answer is No; the in-app 16+ gate is a separate thing, see §4a) |
 
 ### Support / URLs
 | Field | Value |
@@ -228,29 +228,77 @@ nawana 베타에 오신 걸 환영합니다.
 - [ ] Email/name (Sign in with Apple) · Purchase history · User content (conversations)
 - [ ] Tracking: none
 
-### 4. Age rating questionnaire → **16+**
+### 4. Age rating questionnaire → **4+ (current rating is correct — leave it)**
 
-`4+` was the old answer and it does not survive the 2025 questionnaire overhaul
-(4+ / 9+ / 13+ / 16+ / 18+; 12+ and 17+ are gone, and answering the new
-questions became mandatory 2026-01-31). Three separate things push it up:
+Verified against the live questionnaire and the rendering code on 2026-08-18.
+**Every question answers No.** The rating in ASC today (4+ / AL Brazil / ALL
+Korea / 00+ Vietnam) is the honest result; do not raise it.
 
-- **AI-generated content.** Apple explicitly says to account for "artificial
-  intelligence assistants and chatbot functionality" when judging what the app
-  can surface. Every Talk turn and Watch scene is Gemini output — there is no
-  4+ guarantee behind it.
-- **Social media capability.** Find people (`public_personas`) lets a learner
-  browse self-introductions written by strangers. Apple's July 2026 questions
-  define that capability as redistributing or interacting with user-generated
-  content through a feed or similar discovery, and it fixes a **13+ floor**;
-  the answers became mandatory September 2026.
-- **The 16+ minimum we now enforce ourselves.** `ConsentStore.minimumAge` is
-  16 (ElevenLabs' under-13 ban and 13–17 parental-consent rule, plus GDPR
-  Art. 8's German age of digital consent). An App Store rating that says a
-  9-year-old may install an app whose own gate turns them away is a
-  contradiction the reviewer will find.
+| Question | Answer | Why |
+|---|---|---|
+| Violence · Sexual content · Nudity · Profanity · Horror · Alcohol/tobacco/drugs · Simulated gambling · Contests · Gambling | **No** | Language-practice dialogue; none of these are themes the app trades in. |
+| **Parental Controls** | **No** | No guardian-facing monitoring or restriction features exist. |
+| **Age Assurance** | **No** | The 16+ step is a *self-declaration* (`ConsentStore`), not a confirmation. Apple's bar in this section is explicit in the next question — "at a minimum, the **Declared Age Range API** is called" — and the app never calls it (it is iOS 26+; the deployment target is 17). Yes here would claim a mitigation we cannot back, and No costs nothing: see §4a, the gate is contractual, not a rating input. |
+| **Unrestricted Web Access** | **No** | No `WKWebView` / `SFSafariViewController` anywhere. Every outbound link (App Store subscriptions, privacy policy) hands off to Safari via `Link` / `openURL`. Yes here forces 18+. |
+| **User-Generated Content** | **No** | See "Why Find people is not UGC" below — the one answer worth understanding before anyone re-derives it. |
+| **Social Media** | **No** | The definition needs redistribution, *amplification*, or interaction that "visibly spreads content to many users". There is no feed, no ranking, no likes, no follows, no comments, no resharing; bookmarks are local `UserDefaults`, and nothing a learner does reaches a persona's author — no notification, no shared record. |
+| Social Media Disabled for Users Under 13 | **n/a** | Only asked when Social Media is Yes. |
+| **Messaging and Chat** | **No** | No user-to-user path exists. `PublicPersonaService` touches exactly one table, `public_personas` — there is no message or DM table in the schema. Talk is learner↔AI; Find people is an AI portrayal. |
+| **Advertising** | **No** | No ad SDK, no IDFA, no ATT prompt. Analytics is hand-written PostHog events only. |
 
-Answer the questionnaire honestly to those three and take whatever it returns,
-but do not ship below 16 — the app's own gate is the binding number.
+#### Why Find people is **not** UGC (read this before changing the answer)
+
+The data model reads like UGC and the UI is not, which is exactly the trap.
+`public_personas` does store a user-written `intro` — but
+[`FindPeopleSheet`](../FutureVoice/Views/FindPeopleSheet.swift) renders that
+paragraph **only for curated characters** (`group == .character` /
+`personaKind != "user"`). A real learner's row and card fall to the `else`
+branch and show four identity facets and nothing more: **display name,
+occupation, location, interests.** The intro prose — which carries things like
+household composition — reaches the *model* and never another human.
+
+So the content another learner actually consumes is AI-generated conversation,
+not text a user wrote. The four facets are parameters for choosing a practice
+partner, not published content. Reading the data model alone (or CLAUDE.md's
+description of it) produces the wrong answer here; read the rendering code.
+
+If that guard is ever removed — if a real learner's `intro` becomes visible on
+a browsable card — this answer flips to **Yes**, and Guideline 1.2 (report,
+block, takedown, publish-time filtering) applies in full.
+
+#### 4a. The in-app 16+ gate is NOT the age rating
+
+Two different things, and conflating them produces bad decisions in both
+directions:
+
+- **The App Store rating** measures *content suitability*. Ours is 4+.
+- **`ConsentStore.minimumAge = 16`** measures *legal eligibility*. It exists
+  because ElevenLabs — the sub-processor that builds the voice model — bans
+  under-13s outright, requires parental consent for 13–17, and forbids passing
+  its Services on under terms more permissive than we received them. There is
+  no way to verify a real parent in-app, so the floor clears the 13–17 band
+  entirely. GDPR Art. 8 (16 in Germany, where the seller is registered) lands
+  on the same number for the voice consent, which is Art. 9 special-category
+  data and therefore consent-based.
+
+A 4+ rating alongside a 16+ eligibility gate is normal and not a contradiction
+— compare any banking app. Do **not** raise the rating to "match" the gate, and
+do **not** drop the gate to match the rating: removing it means either building
+verifiable parental consent or breaching the provider terms.
+
+⚠️ The ElevenLabs clause above lives only in `ConsentStore`'s doc comment; no
+copy of the terms is in `docs/contracts`. The whole number rests on it — verify
+against the current ToS before submitting.
+
+#### Open, unrelated to the rating
+
+- **The four published facets are auto-published, not opted into.**
+  `PublicPersonaService.autoSyncMyPersona` runs at app start and on tab entry,
+  gated only on a 30-character intro. Disclosed in the privacy policy as of
+  2026-08-18; whether it should be opt-in is a product decision.
+- **Those four fields are free text with no report path.** A much smaller
+  surface than 1.2 UGC, but a publish-time check on short fields is cheap
+  insurance.
 
 ### 5. Pricing: Free + country availability
 
