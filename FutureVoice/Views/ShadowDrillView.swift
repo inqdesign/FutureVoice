@@ -808,6 +808,10 @@ struct ShadowDrillView: View {
                     .font(.system(size: diameter * 0.375, weight: .semibold))
                     .foregroundStyle(Color(.systemBackground))
             }
+            // The pulse draws OUTSIDE the circle's 64pt layout frame, and the
+            // panel sits flush against the sheet's bottom edge — without this
+            // slack the scaled-up rim gets clipped flat there.
+            .padding(diameter * 0.03)
         }
         .buttonStyle(.plain)
         .tint(phase == .syncing ? .red : .accentColor)
