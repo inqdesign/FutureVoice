@@ -38,64 +38,15 @@ final class StoreKitService: ObservableObject {
         /// when StoreKit hasn't answered — the card omits the line.
         var localizedPrice: String? { product?.displayPrice }
 
-        /// Planned launch price for the BETA SURVEY only — an anchor for a
-        /// hypothetical ("would you pay this?"), explicitly labelled as
-        /// planned, never presented as a live charge.
-        var plannedPriceLabel: String? {
-            PlanOption.plannedPrice(plan.id, storefront: storefrontCountry)
-        }
-
         /// The viewer's App Store country (ISO-3, e.g. "KOR"), captured with
         /// the catalog so the fallback can pick a currency.
         var storefrontCountry: String?
 
-        // Planned launch prices from docs/launch-billing.md — the EUR list
-        // and Apple's own suggested KRW points (App Store Connect,
-        // 2026-08-11). Used ONLY before StoreKit has products; the live
-        // `displayPrice` is always the customer's own storefront currency.
-        static let plannedPriceKRW: [String: String] = [
-            "daily_monthly":     "₩15,000",
-            "daily_annual":      "₩110,000",
-            "unlimited_monthly": "₩29,000",
-            "unlimited_annual":  "₩299,000",
-        ]
-        static let plannedPriceEUR: [String: String] = [
-            "daily_monthly":     "€9.99",
-            "daily_annual":      "€79.99",
-            "unlimited_monthly": "€19.99",
-            "unlimited_annual":  "€199.99",
-        ]
-
-        /// Currency follows the App Store STOREFRONT, never the app's
-        /// language — a Korean-speaking learner with a US account pays in
-        /// USD. StoreKit does this for us on live products; this fallback
-        /// only has two currencies, so it picks by storefront country and
-        /// quotes EUR (the list currency) everywhere else.
-        static func plannedPrice(_ id: String, storefront: String?) -> String? {
-            storefront == "KOR" ? plannedPriceKRW[id] : plannedPriceEUR[id]
-        }
-
-        /// Numeric price for math (annual-vs-monthly savings). Live products
-        /// carry `product.price`; the fallback mirrors `plannedPrice`.
-        /// Numeric planned prices for the savings badge. Ratios (annual vs
-        /// 12× monthly) differ per currency because Apple price points are a
-        /// tier table, not a conversion — so this must follow the storefront
-        /// too: 39% off in KRW, 33% in EUR.
-        static let plannedValueKRW: [String: Decimal] = [
-            "daily_monthly":     15_000,
-            "daily_annual":      110_000,
-            "unlimited_monthly": 29_000,
-            "unlimited_annual":  299_000,
-        ]
-        static let plannedValueEUR: [String: Decimal] = [
-            "daily_monthly":     9.99,
-            "daily_annual":      79.99,
-            "unlimited_monthly": 19.99,
-            "unlimited_annual":  199.99,
-        ]
-        static func plannedValue(_ id: String, storefront: String?) -> Decimal? {
-            storefront == "KOR" ? plannedValueKRW[id] : plannedValueEUR[id]
-        }
+        // The hardcoded planned-price tables lived here to anchor the
+        // beta's willingness-to-pay survey. They went with the survey on
+        // 2026-08-18: a second copy of the price list in the binary can only
+        // drift from App Store Connect, and every surface now shows either
+        // StoreKit's own `displayPrice` or no price at all.
 
         var priceValue: Decimal? { product?.price }
 

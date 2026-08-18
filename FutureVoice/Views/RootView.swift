@@ -102,9 +102,15 @@ struct RootView: View {
             // recording, so the clone lands as onboarding's finale — Meet act,
             // then straight into the first call.
             PersonaIntakeView()
-        } else if appState.voiceCloneId == nil || appState.holdVoiceOnboarding {
+        } else if appState.voiceCloneId == nil || appState.holdVoiceOnboarding
+                    || (auth.isAnonymous && !authBypassed) {
             // holdVoiceOnboarding keeps this screen up through the final act
             // (greeting + theme pick) after the clone id has already landed.
+            //
+            // The anonymous clause is the crash/kill guard: the voice is now
+            // built on a pre-signup session, and a session is not an account —
+            // letting it through would hand someone an app whose data dies with
+            // the install. The view reopens on its sign-up step.
             VoiceCloneOnboardingView()
         } else if !dailyCallOnboarded {
             // AFTER the clone, because the daily call is the clone's first
@@ -127,14 +133,13 @@ struct RootView: View {
     /// Screenshot harness. Launch with `-onboardingPreview <screen>` to jump
     /// straight to one onboarding view, bypassing the auth gate — lets the
     /// simulator capture each first-run screen without an Apple sign-in.
-    /// Screens: welcome · setup · voice · persona · betaWelcome.
+    /// Screens: welcome · setup · voice · persona.
     private static var onboardingPreview: AnyView? {
         switch UserDefaults.standard.string(forKey: "onboardingPreview") {
         case "welcome":      return AnyView(WelcomeView())
         case "setup":        return AnyView(SetupFlowView())
         case "voice":        return AnyView(VoiceCloneOnboardingView())
         case "persona":      return AnyView(PersonaIntakeView())
-        case "betaWelcome":  return AnyView(BetaWelcomeView())
         default:             return nil
         }
     }

@@ -944,19 +944,15 @@ struct MeTab: View {
                         title: explain("What uses talk time?"),
                         subtitle: explain("And what's always free"))
                 }
-                if BetaConfig.invitesAvailable {
-                    NavigationLink {
-                        InviteView()
-                    } label: {
-                        row(icon: "gift",
-                            title: explain("Invite & earn talk time"),
-                            subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
-                    }
+                NavigationLink {
+                    InviteView()
+                } label: {
+                    row(icon: "gift",
+                        title: explain("Invite & earn talk time"),
+                        subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
                 }
             } footer: {
-                Text(BetaConfig.invitesAvailable
-                    ? explain("Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free.")
-                    : explain("Minutes buy talk time with your fluent self. Reviewing your words, drills, and dialogues always stays free."))
+                Text(explain("Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free."))
             }
         }
         .navigationTitle("Plan & talk time")

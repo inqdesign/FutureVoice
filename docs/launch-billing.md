@@ -25,7 +25,7 @@ Everything else is free, defended by invisible daily caps.**
 | **1. Free the loop** (server-only, no app update) | All Gemini purposes → 0 credits, per-purpose daily request caps (`record_free_usage`). Review TTS (drill/library/shadow/voice_preview/daily-call) free inside a 12k-chars/day pool, falling through to the paid pooled charge past it (`charge_tts_free_pooled`) so purpose-spoofing gains at most the pool. 0-delta ledger rows keep attribution. Migration `20260811100000_free_learning_loop`. | **Shipped** |
 | **2. Minutes metering** | Talk debits **wall-clock active-call time** (the in-call timer IS the price; server floor `max(reported seconds, TTS chars ÷ 750 × 60)` against under-reporting clients). Watch scenes debit their audio length (~850 chars ≈ 60 s). Migration `20260811130000_talk_minutes`. | **Shipped** |
 | **3. Minutes-NATIVE unit + tiers** | Credits stop existing as a unit: `user_credits.balance` holds **seconds** (beta balances converted ×40/3), and subscribers have **no balance at all** — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (**데일리 / Daily** `daily_*` = 300 s, resets midnight UTC; **무제한 / Unlimited** `unlimited_*` = 3600 s fair-use, no meter UI). Webhooks grant nothing on renewal. Signup/referral grants = 3960 s (66 min). Subscriber cap-out returns 402 `daily_cap_reached` (never a paywall); free pool spent returns 402 `insufficient_credits` (paywall). Clones free, capped 5/day past onboarding. Migration `20260811160000_minutes_native`. Caveat: pre-2026-08-11 builds divide the balance by 4.5 for display — numbers inflate until users update. | **Shipped 2026-08-11** |
-| **4. Hard paywall + trial** | No free tier: new signups get 0 seconds (`handle_new_user_credits` creates the row at zero), so the first talk 402s into the paywall — voice clone + onboarding greeting stay free as the hook. The 7-day trial is Apple's intro offer (`status='trialing'` via apple-webhook) and is metered at the **Daily** allowance (300 s/day) regardless of which plan is being trialed, so a trial-then-cancel can't cost 7 × 60 min. `PaywallView.offerTrial` removed — Apple's `isEligibleForIntroOffer` is the only trial gate now. Migration `20260811180000_hard_paywall_trial`. **BLOCKED on ASC**: products must exist under the new ids (`com.roro.futurevoice.daily_monthly` …) with a 7-day free-trial intro offer, and `BetaConfig.isBeta` must flip to false — until then a NEW signup can neither talk nor pay. | **Server shipped 2026-08-11 / app gated** |
+| **4. Hard paywall + trial** | No free tier: new signups get 0 seconds (`handle_new_user_credits` creates the row at zero), so the first talk 402s into the paywall — voice clone + onboarding greeting stay free as the hook. The 7-day trial is Apple's intro offer (`status='trialing'` via apple-webhook) and is metered at the **Daily** allowance (300 s/day) regardless of which plan is being trialed, so a trial-then-cancel can't cost 7 × 60 min. `PaywallView.offerTrial` removed — Apple's `isEligibleForIntroOffer` is the only trial gate now. Migration `20260811180000_hard_paywall_trial`. **BLOCKED on ASC**: products must exist under the new ids (`com.roro.futurevoice.daily_monthly` …) with a 7-day free-trial intro offer, and the beta's survey-mode paywall had to go — done 2026-08-18, `BetaConfig` deleted with it. | **Server shipped 2026-08-11 / app gated** |
 
 | **5. Watch leaves the talk meter** | Talk seconds meter against `daily_seconds` ALONE. Watch scenes meter by **count** against a new `subscription_plans.daily_scenes` (**Daily 2/day**, **Unlimited 20/day** fair-use), claimed once per scene via `begin_scene_play(user, scene_key)` — one key across every line of a scene, so a ten-line scene costs one count and a scene under way is never cut off. Cap-out returns 402 `scene_cap_reached` (never a paywall). Cached scenes never reach the server, so replays cost nothing, as promised. Backward compatible: a client that sends no `scene_key` stays on the `scene_seconds` pool and keeps today's economics exactly — only a registered scene moves to `scene_counted`, which the daily-seconds cap ignores. Migration `20260814100000_watch_scenes_by_count`. | **Shipped 2026-08-14 (server) / app in this build** |
 
@@ -103,7 +103,7 @@ Annual story = **cheaper sticker price** (“~2 months free”), **not** extra c
 | **premium annual** | **18,000** | 12 × monthly |
 
 Weekly SKUs are **off the catalog** since 2026-08-11 (`is_active = false`, migration `20260811190000_weekly_off_catalog`): they were never priced, and the minutes-native model gives `daily_weekly` the SAME 300 s/day as `daily_monthly`, so the credits-era "quarter of a month" rationale is gone. Rows kept — re-selling weekly is price → ASC products → flip the flag, no code change. **Web sells monthly + annual only.**  
-v1 paywall default period: **annual** (higher LTV); beta survey defaults to **monthly** (clearer WTP signal).
+v1 paywall default period: **monthly** — the smaller commitment; a paywall that opens on the year-long option reads as pressure rather than a choice.
 
 ### Unit definition
 
@@ -132,17 +132,22 @@ Real trial = Apple intro offer / Stripe trial (grants a full cycle via webhook).
 
 ---
 
-## 3. Beta phase (now) — what we measure
+## 3. Beta phase — closed 2026-08-18
 
-Subscriptions are **not** for sale. The paywall ends in a **preference survey**
-(`beta_reviews.context = subscription_survey`) with **price anchors** so
-answers are WTP, not vibes.
+The paywall sells. `BetaConfig`, `BetaWelcomeView` and the paywall's
+willingness-to-pay survey were deleted on 2026-08-18, along with the
+hardcoded planned-price tables in `StoreKitService` that anchored it —
+a second copy of the price list in the binary can only drift from App Store
+Connect. Prices now come from StoreKit or aren't shown.
 
-Watch in Supabase / Telegram:
+What the survey collected is still in `beta_reviews`
+(`context = subscription_survey`); the table itself stays, because
+`FeedbackSheet` still writes to it.
 
-1. **Credit burn rate** — days to first 402, median cr/session, cr/day
+Still worth watching in Supabase / Telegram:
+
+1. **Seconds burn rate** — days to first 402, median s/session, s/day
 2. **Feature mix** — talk vs Watch vs shadow vs clone
-3. **Survey mix** — premium vs pro vs none × period
 4. **Depletion alerts** — first-time empty balance (already wired)
 
 **Do not** change prices mid-beta without a written reason.  
@@ -185,7 +190,7 @@ Apple (blocking — nothing sells until these are done):
 
 At launch day:
 
-- [ ] Paywall leaves survey mode (`BetaConfig.isBeta = false`) — **do this only after the ASC products exist**, or the paywall sells nothing while the hard paywall blocks talking
+- [x] Paywall leaves survey mode — `BetaConfig` deleted 2026-08-18
 - [ ] Web `PLANS` already match this doc; set Stripe price IDs + `BILLING.enabled`
 - [ ] MeTab shows live plan label (already wired)
 
