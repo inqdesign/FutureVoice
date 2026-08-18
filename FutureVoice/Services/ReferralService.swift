@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import UserNotifications
 
 /// Invite system. Each user has a shareable code; redeeming someone's code
 /// grants talk time to BOTH sides (inviter rewarded for up to 10 invites).
@@ -105,4 +106,134 @@ enum ReferralService {
             throw RedeemError.unknown
         }
     }
+
+    // MARK: - Friends joining (the inviter's side)
+
+    private static let lastSeenJoinKey = "futurevoice.referral.lastSeenJoinAt"
+
+    /// Poll for friends who joined with my code, and announce them.
+    ///
+    /// Same shape as `CoreClubService.announceArrivals`, for the same reason:
+    /// there is no push infrastructure, so the app notices on foreground and
+    /// posts a LOCAL notification plus an in-app sheet. The learner gave
+    /// someone a code and then heard nothing back — the grant landed silently
+    /// in a balance they had no reason to look at.
+    ///
+    /// First run records the high-water mark WITHOUT announcing: a fresh
+    /// install must not replay every friend who ever joined.
+    static func announceJoins() async {
+        guard let session = try? await SupabaseProvider.shared.auth.session else { return }
+        let uid = session.user.id.uuidString
+        let defaults = UserDefaults.standard
+        let lastSeen = defaults.string(forKey: lastSeenJoinKey)
+
+        struct JoinRow: Decodable {
+            let invitee_id: String
+            let created_at: String
+        }
+        // The whole list, oldest first: a row's RANK is what decides whether
+        // it paid (the server rewards the first `rewardedInviteCap`), and
+        // that can't be read off the new rows alone.
+        guard let rows: [JoinRow] = try? await SupabaseProvider.shared
+            .from("referral_redemptions")
+            .select("invitee_id,created_at")
+            .eq("inviter_id", value: uid)
+            .order("created_at", ascending: true)
+            .limit(200)
+            .execute()
+            .value,
+              let newest = rows.last?.created_at
+        else { return }
+
+        defaults.set(newest, forKey: lastSeenJoinKey)
+        guard let lastSeen else { return }        // first run: catch up silently
+
+        // Postgres timestamps come back in one format from one source, so a
+        // string compare is a date compare here.
+        let fresh = rows.enumerated().filter { $0.element.created_at > lastSeen }
+        guard !fresh.isEmpty else { return }
+
+        let paid = fresh.filter { $0.offset < rewardedInviteCap }.count
+        let minutes = paid * bonusMinutes
+        let name = fresh.count == 1 ? await displayName(forOwner: fresh[0].element.invitee_id) : nil
+
+        let join = ReferralJoin(id: fresh.last!.element.invitee_id,
+                                friendName: name,
+                                friendsJoined: fresh.count,
+                                totalJoined: rows.count,
+                                minutesEarned: minutes)
+        ReferralInbox.shared.pendingJoin = join
+        await post(title: chrome("nawana"), body: join.notificationBody, id: "referral.join.\(join.id)")
+    }
+
+    /// The friend's published persona name, when they have one. Someone who
+    /// never published stays unnamed — that they joined is the news either way.
+    private static func displayName(forOwner ownerId: String) async -> String? {
+        struct Row: Decodable { let display_name: String }
+        let rows: [Row]? = try? await SupabaseProvider.shared
+            .from("public_personas")
+            .select("display_name")
+            .eq("owner_user_id", value: ownerId.lowercased())
+            .limit(1)
+            .execute()
+            .value
+        return rows?.first?.display_name
+    }
+
+    /// Quiet by construction: no sound, no time-sensitive level. The daily
+    /// call is the habit anchor and must not be competed with.
+    private static func post(title: String, body: String, id: String) async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized
+                || settings.authorizationStatus == .provisional else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = nil
+        content.threadIdentifier = "referral"
+        content.userInfo = ["kind": "referral"]
+
+        try? await center.add(UNNotificationRequest(
+            identifier: id,
+            content: content,
+            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)))
+    }
+}
+
+/// One announcement: friends who joined with my code since the last look.
+struct ReferralJoin: Identifiable, Equatable {
+    /// The newest invitee's id — stable, so a re-poll can't double-notify.
+    let id: String
+    /// Named only when a single friend joined AND they published a persona.
+    let friendName: String?
+    let friendsJoined: Int
+    let totalJoined: Int
+    /// 0 once past the reward cap — a friend still gets theirs, and saying
+    /// "you earned 30 minutes" when nothing landed is the one thing this
+    /// screen must never do.
+    let minutesEarned: Int
+
+    var notificationBody: String {
+        if minutesEarned == 0 {
+            return friendsJoined == 1
+                ? explain("A friend joined with your code.")
+                : explain("\(friendsJoined) friends joined with your code.")
+        }
+        if let friendName {
+            return explain("\(friendName) joined with your code — \(minutesEarned) minutes are yours.")
+        }
+        return friendsJoined == 1
+            ? explain("A friend joined with your code — \(minutesEarned) minutes are yours.")
+            : explain("\(friendsJoined) friends joined with your code — \(minutesEarned) minutes are yours.")
+    }
+}
+
+/// Hand-off for the sheet, same shape as `DailyCallInbox`: the poll runs
+/// wherever the app happens to be, and `RootTabView` presents from here.
+@MainActor
+final class ReferralInbox: ObservableObject {
+    static let shared = ReferralInbox()
+    @Published var pendingJoin: ReferralJoin?
 }

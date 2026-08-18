@@ -103,6 +103,10 @@ struct FutureVoiceApp: App {
                 // 30-in-a-row entry bar keeps arrivals rare enough that "next time
                 // you open the app" still reads as news.
                 Task { await CoreClubService.announceArrivals() }
+                // Same reason, same shape: a friend joining with your code
+                // is news that only exists server-side, and the grant it
+                // brings lands in a number nobody watches.
+                Task { await ReferralService.announceJoins() }
                 // The seat grid draws each member in the palette their own
                 // app wears, so the palette has to leave the device. Here
                 // rather than in the theme picker: a member who changed

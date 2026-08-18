@@ -36,6 +36,7 @@ struct RootTabView: View {
     /// view in reach (and on a cold launch from the lock screen, no view
     /// exists yet), so it drops the plan here and this picks it up.
     @ObservedObject private var callInbox = DailyCallInbox.shared
+    @ObservedObject private var referralInbox = ReferralInbox.shared
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -220,6 +221,11 @@ struct RootTabView: View {
         // for the tester builds and the screenshot harness.
         .sheet(item: $appState.levelUpAnnouncement) { announcement in
             LevelUpSheet(announcement: announcement)
+        }
+        // A friend joined with this learner's code. Polled on foreground
+        // (no push infrastructure), announced quietly, and shown here.
+        .sheet(item: $referralInbox.pendingJoin) { join in
+            ReferralJoinSheet(join: join)
         }
     }
 

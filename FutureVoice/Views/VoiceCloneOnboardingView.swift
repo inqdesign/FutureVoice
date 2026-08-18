@@ -846,6 +846,17 @@ struct VoiceCloneOnboardingView: View {
                     }
                 }
             }
+
+            // The code they typed on the Welcome screen actually landed. Said
+            // once, here, on the last screen before the first call: the grant
+            // itself is a number on a settings page they have no reason to
+            // open, so without this line the invite simply never happened.
+            if auth.redeemedInviteBalance != nil {
+                Label(explain("Invite applied · \(ReferralService.bonusMinutes) min of talk time"),
+                      systemImage: "gift.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+            }
         }
         .transition(.opacity)
         .confirmationDialog("Record your voice again?", isPresented: $confirmReRecord,
