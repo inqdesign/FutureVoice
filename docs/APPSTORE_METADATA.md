@@ -23,19 +23,19 @@
 |---|---|
 | **Marketing URL** | https://nawana.app/ |
 | **Support URL** | https://nawana.app/ (add a /support or contact page) |
-| **Privacy Policy URL** | https://nawana.app/privacy (required — must exist before review) |
+| **Privacy Policy URL** | https://nawana.app/privacy.html (live; ko at /privacy-ko.html) |
 | **Copyright** | © 2026 Dear RoRo |
 
 ---
 
 ## Promotional Text (≤170)
 
-> Editable without a new build — use for beta/launch messaging.
+> Editable without a new build. Source of truth is fastlane/metadata/<locale>/promotional_text.txt.
 
 ```
-Record 60 seconds once. Then call your fluent self, shadow your own voice, and watch your words add up. Free during the iOS beta.
+Record 60 seconds once. Then call your fluent self, shadow your own voice, and watch your words add up. Seven days free, cancel anytime.
 ```
-(128 chars)
+(136 chars)
 
 ---
 
@@ -65,7 +65,7 @@ YOUR VOICE, TREATED CAREFULLY
 Sixty seconds at setup. The app never records you outside a conversation you started. Re-record or delete your voice anytime. Your sessions, drills, and progress live on your iPhone.
 
 SUBSCRIPTION
-One subscription works across app and web. Credits power conversations, voice generation, and shadowing. Cancel anytime.
+A subscription buys talk time — five minutes a day, or an hour. Watch scenes have their own small daily count. Reviewing, replaying, and building situations never cost anything. Seven days free, cancel anytime.
 
 Sixty seconds of setup. Your first conversation tonight.
 ```
@@ -85,17 +85,18 @@ language learning,voice clone,shadowing,pronunciation,English,ESL,AI tutor,conve
 
 ## What's New (release notes, ≤4000)
 
-First public TestFlight build:
+First public App Store release:
 ```
-Welcome to the nawana beta.
+nawana is here.
 
-• Clone your voice in 60 seconds, then call your fluent self and just talk
-• Watch your fluent self live real situations before they happen
-• Shadow any line in your own voice with per-word scoring
-• Automatic drills, an ~8,000-word CEFR notebook, and a weekly progress report
-• Home-screen widgets for your vocabulary and expressions
+Clone your voice once, then learn a language by talking with the fluent version of yourself — same timbre, same pace, just fluent.
 
-Thanks for testing — reply with feedback anytime.
+• Talk — call your fluent self. Free talk, a situation you pick, or news matched to your interests. Every sentence comes back the way you'd have said it fluently.
+• Watch — describe something coming up and watch yourself handle it before it happens. That's where the expressions come from.
+• Practice — every line you fumbled returns as a speak-aloud drill, right before you'd forget it.
+• Progress — your level, measured from the words you actually used. A measurement, not an opinion.
+
+Seven days free. Thanks for being here at the start — the Send button in the app reaches me directly.
 ```
 
 ---
@@ -103,11 +104,19 @@ Thanks for testing — reply with feedback anytime.
 ## App Review notes (private — not shown to users)
 
 ```
-- Sign in with Apple is the only auth method. A demo account is not required, but reviewers can sign in with any Apple ID.
-- Onboarding asks for a 60-second voice recording to create a personalized text-to-speech voice (ElevenLabs). Microphone + Speech Recognition permissions are required to use the core conversation feature.
-- Voice, LLM, and TTS requests route through our Supabase Edge Functions; no third-party keys ship in the app.
-- Subscriptions are auto-renewable; credits fund AI usage. Restore/cancel via the App Store.
-- If review needs beta credits or an invite code, contact: hello.dearroroapp@gmail.com
+ABOUT THE VOICE CLONE (important for review):
+- During onboarding the user records a 60-second sample of their OWN voice, with explicit consent, to create a personal text-to-speech voice (via ElevenLabs).
+- The app can only clone the signed-in user's own voice — there is no way to import audio of another person or clone anyone else.
+- The clone is used solely to speak the user's practice lines back in their own voice ("your fluent self"). Re-recording permanently deletes the previous clone; the user can delete their voice or entire account in-app (Me tab).
+- Consent is a separate, recorded step shown before the microphone is ever requested (age 16+ and voice-model consent are two distinct toggles), because a voice model is biometric data under GDPR Art. 9, Illinois BIPA, and Korea's PIPA.
+
+REVIEW LOGISTICS:
+- Sign in with Apple is the only auth method; any Apple ID works.
+- Onboarding requires microphone + speech recognition permissions and the 60-second recording before the main app unlocks.
+- All AI requests (Gemini, ElevenLabs) route through our Supabase Edge Functions; no provider API keys ship in the binary.
+- Subscriptions are auto-renewable and buy talk time per day (Daily 5 min, Unlimited 60 min), with a 7-day free trial. Restore and cancel via the App Store. There is no free tier: the voice clone and the first spoken greeting are free, and the first conversation reaches the paywall.
+- Reviewing, replaying, and building situations never consume talk time, so the app remains usable after the daily allowance is spent.
+- Any trouble reaching a paid feature during review: contact hello.dearroroapp@gmail.com and we will respond quickly.
 ```
 
 ### Permission usage strings (verify in Info.plist)

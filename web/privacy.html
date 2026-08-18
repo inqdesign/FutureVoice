@@ -55,7 +55,7 @@
     <tr><th>Data</th><th>Why</th><th>Where it lives</th></tr>
     <tr><td>Apple ID sign-in (user identifier, email)</td><td>Your account, subscription entitlement, invite credits</td><td>Our backend (Supabase)</td></tr>
     <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by ElevenLabs; the app keeps only a reference to your voice</td></tr>
-    <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Transcribed on-device where possible; conversation text is processed per-request and results are stored on your iPhone</td></tr>
+    <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Recognised on-device first; the recording of that turn is also sent for a more accurate transcription, processed per request and not retained. The resulting text stays on your iPhone</td></tr>
     <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple (purchase) + our backend (balance)</td></tr>
     <tr><td>Product usage events (e.g. "a talk ended", "a scene played")</td><td>Understanding which parts of the app work, and fixing the parts that don't</td><td>PostHog, on EU servers, keyed to a random account identifier</td></tr>
   </table>
@@ -76,7 +76,7 @@
   <ul>
     <li><strong>Supabase</strong> — authentication, subscriptions, and secure relay of AI requests.</li>
     <li><strong>ElevenLabs</strong> — voice cloning and speech synthesis of your fluent lines.</li>
-    <li><strong>Google (Gemini)</strong> — conversation replies, fluent rewrites, and session analysis. Text only; your audio is not sent to Google.</li>
+    <li><strong>Google (Gemini)</strong> — conversation replies, fluent rewrites, session analysis, and transcribing what you just said. The recording of a single spoken turn is sent for that transcription and is not retained after the request; nothing is used to train Google's models.</li>
     <li><strong>Apple</strong> — Sign in with Apple, subscriptions, and on-device speech recognition.</li>
     <li><strong>PostHog</strong> — product usage events, hosted in the EU. No advertising identifiers, no session replay, no automatic screen tracking.</li>
   </ul>

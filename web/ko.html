@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>nawana — 유창한 나에게 언어를 배우세요.</title>
-<meta name="description" content="유창해진 내 목소리로 배우는 언어 학습 — 대화하고, 따라 말하고, 쌓인 단어를 확인하세요. TestFlight에서 iOS 베타 진행 중." />
+<meta name="description" content="유창해진 내 목소리로 배우는 언어 학습 — 대화하고, 따라 말하고, 쌓인 단어를 확인하세요. iOS용 앱, App Store에서 받으세요." />
 <meta property="og:title" content="nawana — 유창한 나에게 언어를 배우세요." />
 <meta property="og:description" content="60초의 내 목소리가 유창한 내가 됩니다 — 대화 상대이자, 따라 할 목표이자, 가능하다는 증거." />
 <meta property="og:type" content="website" />
@@ -379,7 +379,7 @@ footer a:hover { color: var(--ink); }
       <a href="#practice">Practice</a>
       <a href="#pricing" id="nav-pricing" hidden>가격</a>
       <a href="index.full.html">English</a>
-      <a class="btn btn-white" href="#" data-testflight>베타 참여하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-white" href="#" data-appstore>App Store에서 받기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
     </div>
   </div>
 </nav>
@@ -397,10 +397,10 @@ footer a:hover { color: var(--ink); }
     <h1 class="rv" style="--d:0.1s">유창한 나에게<br />언어를 배우세요.</h1>
     <p class="hero-sub rv" style="--d:0.16s">60초 녹음이면 유창해진 미래의 내 목소리가 생깁니다. 그 목소리와 대화하고, 따라 말하고, 표현을 모으세요 — 내가 실제로 될 수 있는 단 하나의 목소리로.</p>
     <div class="hero-ctas rv" style="--d:0.22s">
-      <a class="btn btn-white" href="#" data-testflight>베타 참여하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-white" href="#" data-appstore>App Store에서 받기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <a class="btn btn-dim" href="#talk">앱 미리 보기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
     </div>
-    <span class="hero-note rv" style="--d:0.28s"><b>iOS 17 이상</b> · TestFlight · 베타 기간 무료</span>
+    <span class="hero-note rv" style="--d:0.28s"><b>iOS 17 이상</b> · 7일 무료</span>
   </div>
 </header>
 
@@ -647,7 +647,7 @@ footer a:hover { color: var(--ink); }
     <h2 class="rv">유창하게 말하는 미래의 내 목소리,<br />오늘 시작하세요.</h2>
     <p class="sub rv" style="--d:0.08s">설정은 60초. 첫 대화는 오늘 밤에.</p>
     <div class="hero-ctas rv" style="--d:0.16s">
-      <a class="btn btn-white" href="#" data-testflight>TestFlight 베타 참여하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-white" href="#" data-appstore>App Store에서 받기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
     </div>
     <div class="callstrip">
       <span class="tag"><i></i>나의 첫 통화</span>
@@ -664,7 +664,7 @@ footer a:hover { color: var(--ink); }
       <a href="privacy.html">Privacy</a>
       <a href="privacy-ko.html">개인정보 처리방침</a>
       <a href="mailto:hello.dearroroapp@gmail.com">문의하기</a>
-      <a href="#" data-testflight>TestFlight</a>
+      <a href="#" data-appstore>App Store</a>
     </div>
   </div>
 </footer>
@@ -672,11 +672,11 @@ footer a:hover { color: var(--ink); }
 <script>
 document.documentElement.classList.add("js");
 
-// ── TestFlight link — replace once the public beta link exists ──
-var TESTFLIGHT_URL = "#"; // e.g. "https://testflight.apple.com/join/XXXXXXXX"
-document.querySelectorAll("[data-testflight]").forEach(function (a) {
-  a.href = TESTFLIGHT_URL;
-  if (TESTFLIGHT_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
+// ── App Store link — the ONE value to fill at launch ──
+var APP_STORE_URL = "#"; // e.g. "https://apps.apple.com/app/id0000000000"
+document.querySelectorAll("[data-appstore]").forEach(function (a) {
+  a.href = APP_STORE_URL;
+  if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
 });
 
 var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;

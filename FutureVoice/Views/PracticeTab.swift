@@ -60,8 +60,18 @@ struct PracticeTab: View {
     /// The Shadowing challenge session: today's picks, one guided line at a
     /// time (PracticeSessionView) — the full browser stays behind the
     /// shortcuts band.
-    @State private var todayShadowPicks: [PracticeStats.ShadowPick] = []
-    @State private var showingShadowSession = false
+    ///
+    /// Carried by `sheet(item:)`, never by a Bool beside a separate picks
+    /// array: an `isPresented` sheet presents the content the modifier was
+    /// LAST BUILT with, so setting the picks and the flag in one tap showed a
+    /// session with zero lines — which is the "nothing to do" screen — and
+    /// only the second tap (after the dismissal re-rendered the modifier) saw
+    /// them. The picks travel WITH the presentation.
+    private struct ShadowSessionRequest: Identifiable {
+        let id = UUID()
+        let picks: [PracticeStats.ShadowPick]
+    }
+    @State private var shadowSession: ShadowSessionRequest?
 
     // Shelves — optional because it doubles as the pager's scrollPosition
     // binding (same pattern as Progress).
@@ -267,9 +277,9 @@ struct PracticeTab: View {
                 DueReviewView()
                     .environmentObject(appState)
             }
-            .sheet(isPresented: $showingShadowSession, onDismiss: reload) {
+            .sheet(item: $shadowSession, onDismiss: reload) { session in
                 NavigationStack {
-                    PracticeSessionView(shadowPicks: todayShadowPicks, includeCards: false)
+                    PracticeSessionView(shadowPicks: session.picks, includeCards: false)
                         .environmentObject(appState)
                 }
             }
@@ -672,8 +682,7 @@ struct PracticeTab: View {
                         if picks.isEmpty {
                             showingShadowBrowser = true
                         } else {
-                            todayShadowPicks = picks
-                            showingShadowSession = true
+                            shadowSession = ShadowSessionRequest(picks: picks)
                         }
                     }
                 }

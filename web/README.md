@@ -2,7 +2,8 @@
 
 Static pages, no build step. Everything (CSS/JS) is inlined.
 
-- `index.html` — English
+- `index.html` — English (the site root; was swapped out for a waitlist during the beta and restored 2026-08-18)
+- `waitlist.html` — the beta waitlist page, kept and `noindex`ed
 - `ko.html` — Korean (generated from index.html; marketing copy translated, phone mockup UI stays English like the real app). When you change index.html, port the change to ko.html.
 
 ## Replacing mockups with real captures
@@ -68,9 +69,9 @@ Notes:
 
 ## Before launch
 
-- [ ] Replace `TESTFLIGHT_URL` in the inline `<script>` at the bottom of `index.html` with the public TestFlight invite link. All CTAs (`[data-testflight]`) pick it up automatically.
+- [ ] Replace `APP_STORE_URL` in the inline `<script>` at the bottom of BOTH `index.html` and `ko.html` with the App Store link (`https://apps.apple.com/app/id<APP_ID>`). All CTAs (`[data-appstore]`) pick it up automatically. It is the only value left to fill.
 - [ ] Add an `og:image` (1200x630) and reference it in the meta tags.
-- [ ] Privacy policy page + footer link (required before App Store launch).
+- [x] Privacy policy page + footer link (`privacy.html` / `privacy-ko.html`).
 
 ## Conventions
 
