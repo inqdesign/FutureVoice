@@ -353,7 +353,7 @@ struct IntakeBottomBar: View {
     var nextTitle: String
     var nextEnabled: Bool = true
     var isWorking: Bool = false
-    var workingTitle: String = "Sorting it out…"
+    var workingTitle: String = explain("Sorting it out…")
     var onBack: () -> Void
     var onNext: () -> Void
 

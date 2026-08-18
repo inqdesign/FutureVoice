@@ -72,6 +72,8 @@ struct VoiceCloneOnboardingView: View {
     /// walking the wizard backwards, and a failed re-clone doesn't strand them.
     @State private var isReRecordingClone = false
     @State private var confirmReRecord = false
+    /// A/B against the recording — the meet act's answer to "is this me?".
+    @State private var comparingVoice = false
 
     /// ElevenLabs IVC quality climbs steeply to ~60s and keeps improving to
     /// ~90s. These three had all been collapsed to 60, which broke the flow in
@@ -125,6 +127,15 @@ struct VoiceCloneOnboardingView: View {
         VoiceCloneScript.greeting(for: appState.targetLanguage)
     }
 
+    /// The words both sides of the comparison say. Uses the LIVE pick while
+    /// onboarding is still running (`scriptLanguageCode` knows what's on the
+    /// teleprompter right now, before any clone has been minted), then the
+    /// same shared cut as Me → Voice.
+    private var comparisonOpening: String {
+        VoiceCloneScript.comparisonOpening(scriptLanguage: scriptLanguageCode,
+                                           targetLanguage: appState.targetLanguage)
+    }
+
     /// Staged narration for the cloning wait. Honest theater — no fake
     /// percentages, just what the process is genuinely about.
     /// Computed, not stored: a stored static resolves its strings once per
@@ -159,6 +170,22 @@ struct VoiceCloneOnboardingView: View {
             actionBar
         }
         .background(Color(.systemBackground).ignoresSafeArea())
+        // Attached to the BODY, not to `meetContent` inside the `status`
+        // switch. A sheet lives and dies with the view it hangs off, and that
+        // switch is a `_ConditionalContent`: any change of `status` while the
+        // accent picker was open tore the picker down mid-generate, throwing
+        // away a ~30 s request that had already been charged against the
+        // daily cap. Out here it survives everything but this whole screen
+        // going away.
+        .sheet(isPresented: $pickingAccent) {
+            VoiceAccentSheet(onApplied: { refreshGreetingForNewVoice() })
+                .environmentObject(appState)
+        }
+        .sheet(isPresented: $comparingVoice) {
+            VoiceComparisonSheet(scriptOpening: comparisonOpening,
+                                 onRerecord: { beginReRecordFromMeet() })
+                .environmentObject(appState)
+        }
         .animation(.easeInOut(duration: 0.35), value: status)
         .task(id: status == .uploading) {
             if status == .uploading { await runBecoming() }
@@ -338,6 +365,15 @@ struct VoiceCloneOnboardingView: View {
             stepHeader(explain("Your fluent self is ready."),
                        explain("Create your account and it comes to life — your voice and your progress live there."))
 
+            // The code was typed on the Welcome screen, several steps back.
+            // Showing it here is the only sign it's still coming.
+            if let code = AuthService.pendingInviteCode() {
+                Label(explain("Invite code \(code) · \(ReferralService.bonusMinutes) min when you sign up"),
+                      systemImage: "gift")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             if auth.isWorking { ProgressView() }
         }
         .transition(.opacity)
@@ -391,8 +427,16 @@ struct VoiceCloneOnboardingView: View {
     // informed) and before anything has been recorded.
     private var consentContent: some View {
         VStack(spacing: 22) {
-            stepHeader(explain("Before the mic."),
-                       explain("A voice model is personal in a way a password isn't. Here's exactly what happens to it."))
+            // Leads with the PAYOFF, not the disclosure. This screen used to
+            // open on "a voice model is personal in a way a password isn't",
+            // which is true, legally motivated, and — right before the biggest
+            // ask in the app — reads as a warning wall. The consent still has
+            // to be separate, informed and recorded (GDPR Art. 9 / BIPA /
+            // PIPA), so nothing was removed; the order changed. Why it's worth
+            // doing comes first, then the promises, then the fact that makes
+            // this its own screen.
+            stepHeader(explain("Hearing it in your own voice is the point."),
+                       explain("A stranger's voice reads you a sentence. Your own voice shows you saying it — that's what the next minute of reading buys."))
 
             VoiceConsentDetail()
 
@@ -424,9 +468,14 @@ struct VoiceCloneOnboardingView: View {
     private struct VoiceConsentDetail: View {
         var body: some View {
             VStack(alignment: .leading, spacing: 12) {
-                row("waveform", explain("Your recording is sent to ElevenLabs, which builds a voice model from it. That model is biometric data."))
-                row("person.fill.viewfinder", explain("It is used for one thing: speaking your practice lines back in your own voice. It is never sold, shared, or used to train anyone else's model."))
-                row("trash", explain("It lives until you replace it or delete it. Deleting your account deletes it too."))
+                // Promise → control → fact. The fact used to lead and ended on
+                // "that model is biometric data", which left the scariest
+                // sentence hanging with no reason attached. It now closes the
+                // list and carries its own why: that classification is exactly
+                // why this consent gets a screen of its own.
+                row("person.fill.viewfinder", explain("It does one thing: say your practice lines back in your own voice. Never sold, never shared, never used to train anyone else's model."))
+                row("trash", explain("Re-record it or delete it whenever you want. Deleting your account deletes it too."))
+                row("waveform", explain("The recording goes to ElevenLabs, which builds the voice model. That model counts as sensitive personal data, which is why this consent gets its own screen."))
             }
             .font(.subheadline)
             .foregroundStyle(.secondary)
@@ -447,8 +496,12 @@ struct VoiceCloneOnboardingView: View {
     // listen to the room).
     private var micContent: some View {
         VStack(spacing: 26) {
-            stepHeader(explain("The iPhone's own mic."),
-                       explain("No Bluetooth earbuds — AirPods record at phone-call quality, and the clone won't sound like you."))
+            // Says what to do and what happens if you don't — nothing about
+            // WHY. "AirPods record at phone-call quality" is a fact about
+            // codecs; the reader has no way to judge whether that's bad, so it
+            // reads as noise in front of the one instruction that matters.
+            stepHeader(explain("Record with the iPhone's own mic."),
+                       explain("With Bluetooth earbuds in, the voice that comes out won't sound like you."))
 
             Label("Take your AirPods out before recording", systemImage: "airpods.gen3")
                 .font(.subheadline)
@@ -464,8 +517,12 @@ struct VoiceCloneOnboardingView: View {
     //   2. echo   — clap once; the decay tail says dry or reverberant.
     private var spotContent: some View {
         VStack(spacing: 26) {
-            stepHeader(explain("Quiet, and soft."),
-                       explain("Noise stirs the surface — walk until it settles. Soft rooms fix echo too: clothes, curtains, a parked car. A closet is perfect."))
+            // Just give the answer. This used to say "walk until it settles",
+            // which asks the reader to wander their home running an experiment
+            // whose result we already know. A closet is the answer; the
+            // fallbacks and the go-signal are the rest of it.
+            stepHeader(explain("A closet is the best spot."),
+                       explain("Clothes soak up the echo, so the recording comes out clean. No closet? A curtain or a parked car works too. Start once the readings below go quiet."))
 
             if recorder.isMonitoring {
                 VStack(spacing: 0) {
@@ -530,11 +587,23 @@ struct VoiceCloneOnboardingView: View {
     private static let dryTailMs: Double = 220
 
     /// Gate 1 — how loud the room is. dBFS on the `.measurement` capture
-    /// chain — tune thresholds on device.
+    /// chain (no AGC), read off `AudioRecorder.ambientDBFS`: a ~0.6 s EMA of
+    /// 10 ms RMS windows.
+    ///
+    /// Thresholds are derived from the SNR the clone actually needs, not from
+    /// a desk reading. Read at conversational distance a voice lands around
+    /// −25 dBFS, and a usable clone wants the room sitting ~30 dB under that.
+    /// So −55 is "quiet", and −45 (20 dB SNR) is the last tolerable rung.
+    ///
+    /// They were −45/−35 until 2026-08-17, which is where the bug was: a room
+    /// with a TV playing measures about −47 dBFS, comfortably under the old
+    /// −45 bar, so the gate called a living room with the TV on "quiet" and
+    /// sent the learner off to record a take the noise had already ruined.
+    /// Both rungs moved down 10 dB.
     private var noiseGate: (state: String, tint: Color) {
         let db = recorder.ambientDBFS
-        if db > -35 { return (explain("too noisy"), .red) }
-        if db > -45 { return (explain("almost"), .orange) }
+        if db > -45 { return (explain("too noisy"), .red) }
+        if db > -55 { return (explain("almost"), .orange) }
         return (explain("quiet"), .green)
     }
 
@@ -678,7 +747,7 @@ struct VoiceCloneOnboardingView: View {
             .buttonStyle(.bordered)
             .controlSize(.large)
 
-            Text(explain("We boost the level on upload — clarity matters more than loudness."))
+            Text(explain("No need to be loud — just be clear."))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -748,11 +817,16 @@ struct VoiceCloneOnboardingView: View {
                 // they judged their own raw take, here they judge the CLONE.
                 // "It doesn't sound like me" with no way back is the one exit
                 // this act can't afford.
+                // Opens the A/B, not the re-record dialog. Asking "record
+                // again?" here made the learner rule on a likeness they had
+                // heard once, against a memory of their own voice — the one
+                // recording everyone finds strange. The comparison answers it
+                // in ten seconds, and the re-record decision lives inside it.
                 Button {
                     player.stop()
-                    confirmReRecord = true
+                    comparingVoice = true
                 } label: {
-                    Label("Doesn't sound like you? Record again", systemImage: "mic.fill")
+                    Label("Doesn't sound like you?", systemImage: "waveform")
                         .font(.footnote)
                 }
 
@@ -774,10 +848,6 @@ struct VoiceCloneOnboardingView: View {
             }
         }
         .transition(.opacity)
-        .sheet(isPresented: $pickingAccent) {
-            VoiceAccentSheet(onApplied: { refreshGreetingForNewVoice() })
-                .environmentObject(appState)
-        }
         .confirmationDialog("Record your voice again?", isPresented: $confirmReRecord,
                             titleVisibility: .visible) {
             Button("Record again", role: .destructive) { beginReRecordFromMeet() }
@@ -996,15 +1066,15 @@ struct VoiceCloneOnboardingView: View {
     @ViewBuilder
     private var recordingFooter: some View {
         if elapsedSeconds < Self.minSeconds {
-            Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more for a usable clone")
+            Text("Keep going — \(Int(Self.minSeconds - elapsedSeconds))s more")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         } else if elapsedSeconds < Self.recommendedSeconds {
-            Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the cleanest clone")
+            Text("Good. \(Int(Self.recommendedSeconds - elapsedSeconds))s more for the best result")
                 .font(.footnote)
                 .foregroundStyle(.green)
         } else {
-            Text("Plenty for a great clone — stop whenever you're ready")
+            Text("That's enough — stop whenever you're ready")
                 .font(.footnote)
                 .foregroundStyle(.green)
         }

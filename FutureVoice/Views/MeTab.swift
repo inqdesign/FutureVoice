@@ -53,6 +53,7 @@ struct MeTab: View {
     @State private var voiceRenameWarning: String?
     @State private var voiceRegenerateError: String?
     @State private var pickingAccent = false
+    @State private var comparingVoice = false
     @State private var importingBackup = false
     @State private var backupResult: String?
     /// Non-nil while an export or import is running — it's both the progress
@@ -762,6 +763,21 @@ struct MeTab: View {
                         subtitle: explain("Same voice, the accent you choose"))
                 }
             }
+            // Above the re-record, because it is the question people arrive
+            // with. "It doesn't sound like me" used to have exactly one answer
+            // here — record the whole thing again — and no way to check the
+            // claim first. Most of the time the clone is fine and what sounds
+            // foreign is the LANGUAGE; hearing both voices say the same
+            // sentence is what separates those two.
+            if appState.voiceCloneId != nil, VoiceSampleStore.shared.exists {
+                Button {
+                    comparingVoice = true
+                } label: {
+                    row(icon: "waveform",
+                        title: explain("Doesn't sound like you?"),
+                        subtitle: explain("Hear your recording and your clone side by side"))
+                }
+            }
             Button(role: .destructive) {
                 confirmingVoiceReset = true
             } label: {
@@ -785,6 +801,16 @@ struct MeTab: View {
                 }
                 .disabled(regeneratingVoice)
             }
+        }
+        .sheet(isPresented: $comparingVoice) {
+            VoiceComparisonSheet(
+                scriptOpening: VoiceCloneScript.comparisonOpening(
+                    scriptLanguage: appState.cloneScriptLanguage,
+                    targetLanguage: appState.targetLanguage),
+                // Outside onboarding a re-record is the full destructive path,
+                // so hand it to the confirmation that already guards it.
+                onRerecord: { confirmingVoiceReset = true })
+                .environmentObject(appState)
         }
         .alert("Rebuild your voice?", isPresented: $confirmingVoiceRegenerate) {
             Button("Cancel", role: .cancel) {}

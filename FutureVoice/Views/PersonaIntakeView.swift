@@ -51,7 +51,7 @@ struct PersonaIntakeView: View {
                     backVisible: true,
                     // Voice clone follows this flow now, so the last card is a
                     // "Next", not the app entrance.
-                    nextTitle: "Next",
+                    nextTitle: chrome("Next"),
                     nextEnabled: canAdvance,
                     onBack: {
                         if step == .name {

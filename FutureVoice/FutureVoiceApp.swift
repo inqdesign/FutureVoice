@@ -189,6 +189,18 @@ final class AppState: ObservableObject {
     @Published var voiceAccentId: String? {
         didSet { UserDefaults.standard.set(voiceAccentId, forKey: Self.voiceAccentIdKey) }
     }
+    /// Which language the clone's SAMPLE was read in — the learner's native
+    /// language when they took the native-script option, the target otherwise.
+    ///
+    /// Persisted because the voice comparison (`VoiceComparisonSheet`) has the
+    /// clone re-say the opening of the script the recording contains, and
+    /// outside onboarding nothing else remembers which script that was. It
+    /// used to reach analytics and nowhere else, so Me → Voice would have had
+    /// to guess — and guessing wrong turns a like-for-like comparison into two
+    /// different sentences, which is the one thing it must not be.
+    @Published var cloneScriptLanguage: String? {
+        didSet { UserDefaults.standard.set(cloneScriptLanguage, forKey: Self.cloneScriptLanguageKey) }
+    }
     /// Transient (never persisted): true while the voice-clone onboarding is
     /// playing its final act (cloned-voice greeting + theme pick). Setting
     /// `voiceCloneId` would otherwise make RootView swap the screen away the
@@ -321,6 +333,7 @@ final class AppState: ObservableObject {
     private static let voiceCloneIdKey = "futurevoice.voiceCloneId"
     private static let voiceNameKey = "futurevoice.voiceName"
     private static let voiceAccentIdKey = "futurevoice.voiceAccentId"
+    private static let cloneScriptLanguageKey = "futurevoice.cloneScriptLanguage"
     private static let pendingDeleteVoiceIdKey = "futurevoice.pendingDeleteVoiceId"
     private static let nativeLanguageKey = LanguageCatalog.nativeLanguageDefaultsKey
     private static let targetLanguageKey = LanguageCatalog.targetLanguageDefaultsKey
@@ -348,6 +361,7 @@ final class AppState: ObservableObject {
         voiceCloneId = UserDefaults.standard.string(forKey: Self.voiceCloneIdKey)
         voiceName = UserDefaults.standard.string(forKey: Self.voiceNameKey) ?? ""
         voiceAccentId = UserDefaults.standard.string(forKey: Self.voiceAccentIdKey)
+        cloneScriptLanguage = UserDefaults.standard.string(forKey: Self.cloneScriptLanguageKey)
         pendingDeleteVoiceId = UserDefaults.standard.string(forKey: Self.pendingDeleteVoiceIdKey)
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
@@ -959,6 +973,11 @@ final class AppState: ObservableObject {
         // A clone straight off the recording is un-remixed again, whatever
         // accent the outgoing one carried.
         voiceAccentId = nil
+        // Remember the script this sample holds, so the comparison can put the
+        // same words on both sides later. A rebuild with no language given
+        // (Me → Voice re-runs the saved sample) leaves the old answer alone —
+        // it's the same recording, so it's still the same script.
+        if let scriptLanguage { cloneScriptLanguage = scriptLanguage }
         Analytics.capture("voice_clone_succeeded", ["first_time": isFirstClone])
         await cleanupPreviousVoiceClone()
         warmFreeTalkOpeners()

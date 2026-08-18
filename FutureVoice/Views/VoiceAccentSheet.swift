@@ -22,6 +22,9 @@ struct VoiceAccentSheet: View {
     @State private var pickedPreviewId: String?
     @State private var generating = false
     @State private var saving = false
+    /// Rebuilding the un-accented voice from the saved recording.
+    @State private var removing = false
+    @State private var confirmingRemove = false
     @State private var playingId: String?
     @State private var error: String?
 
@@ -32,6 +35,17 @@ struct VoiceAccentSheet: View {
     /// The accent the live clone was remixed with, if any.
     private var appliedAccent: VoiceAccent? {
         options.first { $0.id == appState.voiceAccentId }
+    }
+
+    /// Whether "no accent" is reachable at all.
+    ///
+    /// Applying an accent REPLACES the clone and deletes the outgoing voice
+    /// upstream (`AppState.adoptRemixedVoice`), so there is no id to switch
+    /// back to — the only way to un-accent a voice is to build a fresh clone
+    /// from the recording. No recording on disk, no way back, so the row
+    /// stays hidden rather than offering a dead end.
+    private var canRemoveAccent: Bool {
+        appState.voiceAccentId != nil && VoiceSampleStore.shared.exists
     }
 
     var body: some View {
@@ -57,9 +71,22 @@ struct VoiceAccentSheet: View {
                         player.stop()
                         dismiss()
                     }
+                    .disabled(generating || removing)
                 }
             }
-            .interactiveDismissDisabled(saving)
+            // Generating counts too. Remix previews take ~30 s, and for that
+            // whole window the sheet used to stay swipe-to-dismissable — on
+            // iPad, where it floats and a tap outside closes it, the wait was
+            // the easiest moment in the app to throw the work away by accident.
+            // Closing mid-generate also loses the request: it is already
+            // charged against the daily cap and nothing reattaches to it.
+            .interactiveDismissDisabled(generating || saving || removing)
+            .alert("Remove the accent?", isPresented: $confirmingRemove) {
+                Button("Cancel", role: .cancel) {}
+                Button("Remove", role: .destructive) { removeAccent() }
+            } message: {
+                Text(explain("Rebuilds your voice from your saved recording, which takes a moment. The accented voice is deleted — audio already made keeps playing."))
+            }
             .alert("Couldn't remix your voice", isPresented: Binding(
                 get: { error != nil },
                 set: { if !$0 { error = nil } }
@@ -73,12 +100,35 @@ struct VoiceAccentSheet: View {
 
     private var accentSection: some View {
         Section {
+            // First, because it's the way BACK: the footer promised "you can
+            // rebuild the original anytime from Me → Voice" and then made the
+            // learner leave this screen, hunt through settings, and recognize
+            // "Regenerate from saved recording" as the answer to "I want the
+            // accent gone". The capability already existed; it just wasn't
+            // where anyone would look for it.
+            if canRemoveAccent { removeAccentRow }
             ForEach(options) { option in
                 accentRow(option)
             }
         } footer: {
-            Text(explain("Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare."))
+            if generating {
+                Text(explain("Making a few takes — about half a minute. Keep this open."))
+            } else {
+                Text(explain("Your clone speaks with whatever accent the AI guesses. Pick one instead: same voice, your chosen accent. Takes about half a minute to prepare."))
+            }
         }
+    }
+
+    private var removeAccentRow: some View {
+        Button { confirmingRemove = true } label: {
+            HStack {
+                Text(chrome("No accent"))
+                    .foregroundStyle(.primary)
+                Spacer()
+                if removing { ProgressView() }
+            }
+        }
+        .disabled(generating || saving || removing)
     }
 
     private func accentRow(_ option: VoiceAccent) -> some View {
@@ -95,7 +145,7 @@ struct VoiceAccentSheet: View {
                 }
             }
         }
-        .disabled(generating || saving)
+        .disabled(generating || saving || removing)
     }
 
     private var takesSection: some View {
@@ -171,11 +221,14 @@ struct VoiceAccentSheet: View {
                     error = explain("No takes came back. Please try again.")
                 }
             } catch {
-                guard accent == option else { return }
+                // Say it EVERY time. This used to sit behind the same
+                // stale-accent guard as the success path, so a remix that
+                // failed while the pick had moved on ended with the spinner
+                // quietly vanishing and no word about what happened.
                 self.error = error.localizedDescription
                 // Back to whatever is actually live — dropping to nil would
                 // read as "you have no accent" after a failed remix.
-                self.accent = appliedAccent
+                if accent == option { self.accent = appliedAccent }
             }
         }
     }
@@ -192,6 +245,28 @@ struct VoiceAccentSheet: View {
         player.stop()
         playingId = preview.id
         try? player.play(preview.audio, source: "accent_preview")
+    }
+
+    /// Back to the voice the recording makes on its own. Goes through the
+    /// same rebuild Me → Voice uses, which clears `voiceAccentId` as part of
+    /// minting an un-remixed clone.
+    private func removeAccent() {
+        guard let url = VoiceSampleStore.shared.url, !removing else { return }
+        player.stop()
+        playingId = nil
+        removing = true
+        Analytics.capture("voice_accent_removed")
+        Task {
+            defer { removing = false }
+            do {
+                try await appState.regenerateVoiceClone(fromSampleAt: url)
+                HapticEngine.success()
+                onApplied?()
+                dismiss()
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
     }
 
     private func apply() {

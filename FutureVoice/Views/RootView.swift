@@ -73,12 +73,22 @@ struct RootView: View {
 
     @ViewBuilder
     private var gatedContent: some View {
-        if !auth.didResolveInitialSession && !authBypassed && !appState.onboardingStarted {
+        if !auth.didResolveInitialSession && !authBypassed
+            && !appState.onboardingStarted && !appState.holdVoiceOnboarding {
             // Match the (blank) launch screen until we know whether there's a
             // stored session — a returning user then lands straight on Home
             // with no Welcome-screen flash.
+            //
+            // `holdVoiceOnboarding` vetoes this branch and the next one. The
+            // flag means "a voice-clone act is on stage, don't move", and a
+            // session that blinks — a token refresh mid-flow republishes
+            // `auth.session` — used to outrank it: the chain fell to Welcome
+            // for a frame and came back, which destroys and rebuilds the
+            // whole voice screen. Every `@State` on it resets, so anything
+            // open on top (the accent picker, mid-generate) silently closes.
             Color(.systemBackground).ignoresSafeArea()
-        } else if auth.session == nil && !authBypassed && !appState.onboardingStarted {
+        } else if auth.session == nil && !authBypassed
+                    && !appState.onboardingStarted && !appState.holdVoiceOnboarding {
             // Welcome gates on "has the journey begun", NOT on the session:
             // "Get started" enters onboarding account-free, and sign-up is
             // deferred to the voice-clone step (the first server-bound act).

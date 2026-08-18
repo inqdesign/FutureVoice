@@ -34,6 +34,38 @@ enum VoiceCloneScript {
         return greetings[code] ?? greetings["en"]!
     }
 
+    /// The words BOTH sides of `VoiceComparisonSheet` say: the opening of the
+    /// script the learner actually read.
+    ///
+    /// Cut at a sentence boundary near 120 characters — long enough to hear a
+    /// voice, short enough that the single synthesis it costs stays small and
+    /// the recording's own opening still covers the same ground.
+    ///
+    /// `scriptLanguage` is what the sample was READ in, which is not always
+    /// the target: a learner may take the native-script option, and then the
+    /// recording holds Korean while the app teaches English. Handing back the
+    /// target script there would have the clone say words the recording never
+    /// contains, and the comparison stops being a comparison.
+    static func comparisonOpening(scriptLanguage: String?, targetLanguage: String) -> String {
+        let paragraphs: [String]
+        if let scriptLanguage,
+           LanguageCatalog.language(scriptLanguage)?.code != LanguageCatalog.language(targetLanguage)?.code,
+           let native = CloneScriptStore.shared.script(for: scriptLanguage)
+            ?? CloneScriptStore.handAuthored(scriptLanguage) {
+            paragraphs = native
+        } else {
+            paragraphs = self.paragraphs(for: targetLanguage)
+        }
+        let text = paragraphs.first ?? ""
+        guard text.count > 120 else { return text }
+        let head = text.prefix(160)
+        if let stop = head.lastIndex(where: { ".?!。？！".contains($0) }),
+           head.distance(from: head.startIndex, to: stop) > 40 {
+            return String(head[...stop])
+        }
+        return String(text.prefix(120))
+    }
+
     private static let byLanguage: [String: [String]] = [
         "en": [
             "Hi. I'm recording this so my fluent self can sound like me. I'm curious. I'm patient. I want to sound like me — just a more confident version.",

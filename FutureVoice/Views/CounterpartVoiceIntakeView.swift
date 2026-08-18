@@ -70,7 +70,7 @@ struct CounterpartVoiceIntakeView: View {
                 .animation(.snappy, value: step)
                 IntakeBottomBar(
                     backVisible: step != .who,
-                    nextTitle: step == .style ? "Continue" : "Next",
+                    nextTitle: step == .style ? chrome("Continue") : chrome("Next"),
                     nextEnabled: canAdvance,
                     isWorking: isParsing,
                     onBack: { withAnimation { step = Step(rawValue: step.rawValue - 1) ?? .who } },
