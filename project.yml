@@ -139,7 +139,8 @@ schemes:
     build:
       targets:
         FutureVoice: all
-    # NO storeKitConfiguration here on purpose. Debug builds run as
+    # NO storeKitConfiguration here on purpose (see the Store scheme below).
+    # Debug builds run as
     # com.roro.futurevoice.dev, an id App Store Connect has no record of, so
     # Apple returns no products and the paywall's price lines are blank — a
     # property of the dev bundle id, not something to chase in ASC. The fix is
@@ -151,3 +152,23 @@ schemes:
       targets:
         - FutureVoiceTests
         - FutureVoiceUITests
+
+  # The same app, run in the RELEASE configuration — the only way a build
+  # launched from Xcode carries the SHIPPING bundle id (com.roro.futurevoice)
+  # and can therefore be priced by App Store Connect at all. Use it to check
+  # the paywall's real prices and the purchase flow.
+  #
+  # Its own scheme, rather than flipping the main one: everyday development
+  # stays on Debug (its own bundle id, its own data container), and this build
+  # deliberately OVERWRITES the TestFlight install on the device, because it
+  # has to share that id to be recognised.
+  FutureVoice (Store):
+    build:
+      targets:
+        FutureVoice: all
+    run:
+      config: Release
+    test:
+      config: Release
+      targets:
+        - FutureVoiceTests

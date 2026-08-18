@@ -139,19 +139,20 @@ final class StoreKitService: ObservableObject {
         } catch {
             products = []
         }
-        #if DEBUG
         // A silent empty answer is the one failure this screen can't explain
-        // to itself — every price line simply goes blank. Say which ids Apple
-        // refused and which bundle asked, because the usual cause is the
-        // build's own id: Debug runs as com.roro.futurevoice.dev, which App
-        // Store Connect has no record of, so it can never be priced. Run the
-        // Release configuration (or TestFlight) to see Apple's real prices.
+        // to itself — every price line simply goes blank. Name the ids Apple
+        // refused and the bundle that asked, since the answer is almost always
+        // one of the two: a bundle id App Store Connect doesn't know (Debug
+        // runs as com.roro.futurevoice.dev, which can never be priced — use
+        // the "FutureVoice (Store)" scheme), or products not yet purchasable.
+        //
+        // NOT behind #if DEBUG on purpose: in a Debug build the cause is known
+        // in advance, so the log is worth least exactly where it would have
+        // been the only one printed.
         if products.isEmpty {
             print("[StoreKit] no products for \(plans.map(\.apple_product_id)) — "
-                  + "bundle \(Bundle.main.bundleIdentifier ?? "?") is unknown to "
-                  + "App Store Connect; run the Release configuration to price this build")
+                  + "asked as \(Bundle.main.bundleIdentifier ?? "?")")
         }
-        #endif
         let byId = Dictionary(uniqueKeysWithValues: products.map { ($0.id, $0) })
         // The storefront is the App Store account's country — nothing to do
         // with the device or app language.
