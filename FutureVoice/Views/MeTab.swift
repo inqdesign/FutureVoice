@@ -127,6 +127,13 @@ struct MeTab: View {
                             subtitle: appState.voiceDisplayName)
                     }
                     NavigationLink {
+                        soundPage
+                    } label: {
+                        row(icon: "speaker.wave.2",
+                            title: explain("Sound & mic"),
+                            subtitle: soundSummary)
+                    }
+                    NavigationLink {
                         PublicIntroView().environmentObject(appState)
                     } label: {
                         row(icon: "person.2.wave.2",
@@ -709,40 +716,6 @@ struct MeTab: View {
                     title: explain("Voice name: \(appState.voiceDisplayName)"),
                     subtitle: explain("What your clone is called, here and on ElevenLabs"))
             }
-            // On Bluetooth, a Talk call plays through the earphone's CALL
-            // chain, which iOS's "Reduce Loud Sounds" headphone-safety cap
-            // does NOT limit — so with the cap on, Talk can tower over every
-            // listening surface. We can't detect the cap and won't tell
-            // anyone to disable a hearing-safety setting; this slider lets
-            // the call voice come DOWN to match instead.
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Label("Call voice volume", systemImage: "speaker.wave.2")
-                    Spacer()
-                    Text("\(Int(talkVoiceVolume * 100))%")
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                Slider(value: $talkVoiceVolume, in: 0.25...1.0, step: 0.05)
-            }
-            // Only bites with Bluetooth connected — wired and speaker routes
-            // use the built-in mic either way. Shown unconditionally anyway:
-            // a setting that appears and disappears with a connection is a
-            // setting nobody can find when they want it.
-            VStack(alignment: .leading, spacing: 4) {
-                Picker(selection: $micPreference) {
-                    Text("Earphone mic").tag(MicPreference.earphone.rawValue)
-                    Text("Phone mic").tag(MicPreference.phone.rawValue)
-                } label: {
-                    Label("Recording mic", systemImage: "mic")
-                }
-                Text(explain("Only applies while Bluetooth earphones are connected. The earphone mic sounds narrower but is always at your mouth; the phone mic captures more detail but only when the phone is near you."))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            // Choosing here answers the question for good, so the one-time
-            // sheet never interrupts a call later.
-            .onChange(of: micPreference) { _, _ in MicPreferenceStore.hasChosen = true }
             NavigationLink {
                 VoicePresetPickerView(selection: $defaultSceneVoiceId)
                     .environmentObject(appState)
@@ -972,6 +945,65 @@ struct MeTab: View {
         List { voiceSection }
             .navigationTitle("Voice")
             .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Device audio, kept OFF the Voice page. Voice is about the clone —
+    /// what it's called, its accent, re-recording it. How loud the phone
+    /// plays and which mic it listens with are facts about the hardware in
+    /// the learner's hand, and they read as clutter next to an identity.
+    private var soundSection: some View {
+        Section {
+            // On Bluetooth, a Talk call plays through the earphone's CALL
+            // chain, which iOS's "Reduce Loud Sounds" headphone-safety cap
+            // does NOT limit — so with the cap on, Talk can tower over every
+            // listening surface. We can't detect the cap and won't tell
+            // anyone to disable a hearing-safety setting; this slider lets
+            // the call voice come DOWN to match instead.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Label("Call voice volume", systemImage: "speaker.wave.2")
+                    Spacer()
+                    Text("\(Int(talkVoiceVolume * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(value: $talkVoiceVolume, in: 0.25...1.0, step: 0.05)
+            }
+            // Only bites with Bluetooth connected — wired and speaker routes
+            // use the built-in mic either way. Shown unconditionally anyway:
+            // a setting that appears and disappears with a connection is a
+            // setting nobody can find when they want it. The trade-off behind
+            // the two options is explained where it's decided (MicChoiceSheet);
+            // here the caption says only where the setting applies.
+            VStack(alignment: .leading, spacing: 4) {
+                Picker(selection: $micPreference) {
+                    Text("Earphone mic").tag(MicPreference.earphone.rawValue)
+                    Text("Phone mic").tag(MicPreference.phone.rawValue)
+                } label: {
+                    Label("Recording mic", systemImage: "mic")
+                }
+                Text(explain("Only applies with Bluetooth earphones."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            // Choosing here answers the question for good, so the one-time
+            // sheet never interrupts a call later.
+            .onChange(of: micPreference) { _, _ in MicPreferenceStore.hasChosen = true }
+        }
+    }
+
+    private var soundPage: some View {
+        List { soundSection }
+            .navigationTitle("Sound & mic")
+            .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Both values at a glance, so the row answers "is my mic right?" without
+    /// opening it.
+    private var soundSummary: String {
+        let mic = micPreference == MicPreference.phone.rawValue
+            ? chrome("Phone mic") : chrome("Earphone mic")
+        return "\(mic) · \(Int(talkVoiceVolume * 100))%"
     }
 
     private var appearancePage: some View {

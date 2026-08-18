@@ -29,7 +29,7 @@ struct MicChoiceSheet: View {
                 Text("Which mic?")
                     .font(.title2.weight(.semibold))
 
-                Text(explain("Your phone's mic actually captures more detail — but only if the phone is near you. Your earphone's mic sounds narrower, like a phone call, yet it sits at your mouth wherever you put the phone. Change this any time in Me → Voice."))
+                Text(explain("The phone's mic hears more detail, but only when the phone is near you. The earphone's mic sounds narrower, and is always at your mouth. You can change this later in Me → Sound & mic."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
