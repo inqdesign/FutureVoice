@@ -41,6 +41,9 @@ enum WordCatalog {
             case kept(count: Int)
             /// It came with a Watch book's scene, named here.
             case scene(String)
+            /// Straight from the core vocabulary pool — nothing personal about
+            /// it yet. Only the All-words lens and whole-pool search mint these.
+            case vocabulary
         }
     }
 

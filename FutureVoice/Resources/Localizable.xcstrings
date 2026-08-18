@@ -1090,6 +1090,22 @@
         }
       }
     },
+    "%lld sentences": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Sätze"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문장 %lld개"
+          }
+        }
+      }
+    },
     "%lld sessions · %@": {
       "localizations": {
         "de": {
@@ -2467,6 +2483,22 @@
         }
       }
     },
+    "All levels": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Niveaus"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 레벨"
+          }
+        }
+      }
+    },
     "All reviewing": {
       "localizations": {
         "ko": {
@@ -2489,6 +2521,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "모든 상황"
+          }
+        }
+      }
+    },
+    "All sources": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Quellen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 출처"
+          }
+        }
+      }
+    },
+    "All words": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Wörter"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 단어"
           }
         }
       }
@@ -6663,6 +6727,22 @@
         }
       }
     },
+    "From talks": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus Gesprächen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화에서"
+          }
+        }
+      }
+    },
     "From your recent %@ conversations": {
       "localizations": {
         "ko": {
@@ -10471,6 +10551,22 @@
         }
       }
     },
+    "No matching words": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine passenden Wörter"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "조건에 맞는 단어가 없어요"
+          }
+        }
+      }
+    },
     "No need to be loud — just be clear.": {
       "localizations": {
         "ko": {
@@ -14041,6 +14137,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ 레벨 설정을 기준으로 매겼어요. 이번 대화 자체는 ≈%2$@로 읽혔고요."
+          }
+        }
+      }
+    },
+    "Search words": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wörter suchen"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단어 검색"
           }
         }
       }
@@ -18924,6 +19036,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "단어·문장 듣기"
+          }
+        }
+      }
+    },
+    "Word notebook": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vokabelheft"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단어장"
           }
         }
       }

@@ -627,7 +627,7 @@ struct PracticeTab: View {
                                   done: today.drillDone, goal: cardsGoal,
                                   allCount: sentencesToStudy,
                                   all: {
-                                      DrillsBySessionView()
+                                      SentencesView()
                                           .navigationTitle("Sentences")
                                           .navigationBarTitleDisplayMode(.inline)
                                           .environmentObject(appState)

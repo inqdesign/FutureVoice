@@ -31,7 +31,7 @@ struct VocabularyView: View {
     enum LevelFilter: String, CaseIterable, Identifiable {
         case all, a1, a2, b1, b2, c1, c2
         var id: String { rawValue }
-        var label: String { self == .all ? "All levels" : rawValue.uppercased() }
+        var label: String { self == .all ? explain("All levels") : rawValue.uppercased() }
         var cefr: CEFRLevel? { self == .all ? nil : CEFRLevel(rawValue: rawValue) }
         init(_ cefr: CEFRLevel) { self = LevelFilter(rawValue: cefr.rawValue) ?? .all }
     }

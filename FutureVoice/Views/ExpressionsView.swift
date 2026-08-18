@@ -11,6 +11,10 @@ struct ExpressionsView: View {
     @ObservedObject private var store = VocabStore.shared
     @State private var selected: PhraseRef?
     @State private var filter: Filter = .toStudy
+    /// First-sense gloss per phrase, filled lazily as rows appear — the words
+    /// page's pattern. "" = looked up, nothing to show; the row falls back to
+    /// its origin line and the session won't retry.
+    @State private var meanings: [String: String] = [:]
 
     private struct PhraseRef: Identifiable {
         let value: String
@@ -51,7 +55,7 @@ struct ExpressionsView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 4)
+            .padding(.bottom, 12)
 
             if entries.isEmpty {
                 ContentUnavailableView {
@@ -70,16 +74,21 @@ struct ExpressionsView: View {
                                 row(entry)
                             }
                             .buttonStyle(.plain)
+                            .task(id: entry.text) { await loadMeaning(entry) }
                         }
+                    } header: {
+                        // What this lens adds up to — same grammar as the
+                        // words page.
+                        Text("\(entries.count) expressions")
                     } footer: {
-                        Text(filter == .toStudy
-                             ? explain("Captured from what you say, plus the expressions your watched scenes teach. Mark the ones you've got down as known.")
-                             : "\(entries.count) known")
+                        if filter == .toStudy {
+                            Text(explain("Captured from what you say, plus the expressions your watched scenes teach. Mark the ones you've got down as known."))
+                        }
                     }
                 }
             }
         }
-        .navigationTitle("\(ExpressionCatalog.all(scenarios: appState.scenarios, store: store).count) expressions")
+        .navigationTitle("Expressions")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
         .onAppear {
@@ -128,30 +137,53 @@ struct ExpressionsView: View {
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(Self.display(entry.text))
-                    .font(.body)
+                    .font(.headline)
                     .foregroundStyle(.primary)
-                // Say which kind of row this is. "Used N times" on a phrase
-                // that came from a scene the learner hasn't spoken yet would
-                // be a lie, and it's the reason scene expressions aren't
-                // simply copied into the store.
-                switch entry.origin {
-                case .said(let count):
-                    Text("Used \(count) time\(count == 1 ? "" : "s") · \(entry.at.formatted(.dateTime.month().day()))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                case .scene(let title):
-                    Label(title, systemImage: "film")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+                subtitle(entry)
             }
             Spacer(minLength: 8)
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
+    }
+
+    /// The phrase's meaning, like the words page. Until the gloss is in (or
+    /// when there is none) the row says where it came from — "Used N times"
+    /// on a scene phrase the learner hasn't spoken would be a lie, which is
+    /// why scene expressions aren't simply copied into the store.
+    @ViewBuilder
+    private func subtitle(_ entry: ExpressionCatalog.Item) -> some View {
+        if let meaning = meanings[entry.text], !meaning.isEmpty {
+            Text(meaning)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        } else {
+            switch entry.origin {
+            case .said(let count):
+                Text("Used \(count) time\(count == 1 ? "" : "s") · \(entry.at.formatted(.dateTime.month().day()))")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            case .scene(let title):
+                Label(title, systemImage: "film")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
+    /// Same lookup the expression card runs (`WordLore`, `.expression` — the
+    /// word prompt would gloss one word out of the middle of a phrase), fired
+    /// per row as it appears; the card's own tap then hits the warm cache.
+    private func loadMeaning(_ entry: ExpressionCatalog.Item) async {
+        guard meanings[entry.text] == nil else { return }
+        let fetched = await WordLore.entry(for: entry.text, native: appState.nativeLanguage,
+                                           target: appState.targetLanguage, kind: .expression)
+        guard !Task.isCancelled else { return }
+        meanings[entry.text] = fetched?.senses.first?.meaning ?? ""
     }
 
     /// Stored keys are lowercased; show with a capitalized first letter.
