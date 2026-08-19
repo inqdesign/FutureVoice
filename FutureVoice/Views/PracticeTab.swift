@@ -1164,9 +1164,10 @@ struct PracticeTab: View {
         dueDrillCount = cards.filter { $0.nextReviewAt <= Date() }.count
         sentencesToStudy = cards.filter { $0.box < DrillStore.maxBox }.count
         dueReviewCount = DueReviewView.dueDeck().count
-        // The SAME list the Expressions page shows — said-it phrases plus the
-        // ones watched scenes handed over. Counting only the store's rows
-        // meant the tile ignored every expression a Watch book taught.
+        // The SAME list the Expressions page shows — said-it phrases, the ones
+        // the fluent self used in a call, and the ones watched scenes handed
+        // over. Counting only the store's rows meant the tile ignored every
+        // expression a Watch book taught.
         expressionsToStudy = ExpressionCatalog.toStudy(scenarios: appState.scenarios,
                                                        store: vocab).count
 

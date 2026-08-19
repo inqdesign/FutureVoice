@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// Dedicated surface for the multi-word expressions the user has actually used
-/// across their talks — the phrase-level companion to the word cloud. Rows are
-/// collected automatically at the end of each session (verified against the
-/// user's own transcript), so everything here is something they really said.
+/// Dedicated surface for the multi-word expressions in the learner's orbit —
+/// the phrase-level companion to the word cloud. Rows are collected
+/// automatically at the end of each session and each is one of three things,
+/// said out loud by the row itself: a phrase they USED, a phrase their fluent
+/// self used in a call and they didn't yet, or one a watched scene taught.
 /// Tapping a row opens the expression's card as a sheet — same interaction as
 /// tapping a word anywhere in the app.
 struct ExpressionsView: View {
@@ -35,10 +36,10 @@ struct ExpressionsView: View {
         }
     }
 
-    /// Both sources in one list — phrases you SAID (VocabStore) and the ones
-    /// your Watch books handed you (scene curricula). They used to be separate
-    /// worlds: a book could show six expressions that this page had never
-    /// heard of, while the daily deck dealt them anyway.
+    /// Every source in one list — phrases you SAID (VocabStore), the ones your
+    /// fluent self used in a call, and the ones your Watch books handed you.
+    /// They used to be separate worlds: a book could show six expressions that
+    /// this page had never heard of, while the daily deck dealt them anyway.
     private var entries: [ExpressionCatalog.Item] {
         let all = ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
         switch filter {
@@ -82,7 +83,7 @@ struct ExpressionsView: View {
                         Text("\(entries.count) expressions")
                     } footer: {
                         if filter == .toStudy {
-                            Text(explain("Captured from what you say, plus the expressions your watched scenes teach. Mark the ones you've got down as known."))
+                            Text(explain("Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."))
                         }
                     }
                 }
@@ -118,7 +119,7 @@ struct ExpressionsView: View {
     }
     private var emptyMessage: String {
         switch filter {
-        case .toStudy: return explain("Expressions you use in your talks — and the ones your watched scenes hand you — collect here.")
+        case .toStudy: return explain("Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here.")
         case .known:   return explain("Mark expressions you've got down as known.")
         }
     }
@@ -168,6 +169,14 @@ struct ExpressionsView: View {
                     .foregroundStyle(.secondary)
             case .scene(let title):
                 Label(title, systemImage: "film")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            case .heard(let title):
+                // Says where it came from AND that it's still unsaid — the
+                // whole difference between this row and a "Used 3 times" one.
+                Label(title.isEmpty ? explain("Heard in a call") : title,
+                      systemImage: "quote.bubble")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)

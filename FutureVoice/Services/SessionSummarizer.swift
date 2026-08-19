@@ -58,6 +58,8 @@ enum SessionSummarizer {
         var phrases: Int?
         /// Words + expressions the learner used that are new to their pool.
         var words: Int?
+        /// Expressions the fluent self used that the learner can take.
+        var offered: Int?
         /// Corrections that survived the "they really said this" check.
         var corrections: Int?
         /// Things they'd been studying that came out unprompted.
@@ -112,7 +114,10 @@ enum SessionSummarizer {
             targetLanguage: session.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
             profile: appState.learnerProfile,
-            knownAboutUser: appState.persona?.knownFacts ?? []
+            knownAboutUser: appState.persona?.knownFacts ?? [],
+            // What a talk is allowed to yield follows how much was said in it.
+            expressionBudget: ConversationEngine.expressionBudget(
+                fluentTurns: turns.filter { $0.role == .fluentSelf }.count)
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)
@@ -148,7 +153,14 @@ enum SessionSummarizer {
                 // End — the talk was already saved, but its whole review yield
                 // was lost. The ceiling is not billed, only tokens actually
                 // produced, so the headroom is free.
-                maxTokens: 4096,
+                // 4096 until 2026-08-19: the expression budget now scales with
+                // the talk (up to 14 per side), and the failures that were
+                // showing up on the long talks this ceiling has to cover —
+                // 9, 11, 25 and 31 turns, all NSCocoaErrorDomain 4864, a JSON
+                // the decoder couldn't read — are what running out of room
+                // mid-object looks like when the model stops short of the
+                // MAX_TOKENS flag. Free headroom, so take it.
+                maxTokens: 8192,
                 purpose: "summary",
                 idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)",
                 onPartial: { partial in report { $0.absorb(partial: partial) } }
@@ -215,6 +227,32 @@ enum SessionSummarizer {
             sessionId: sessionId, phrases: session.summary?.expressionsUsed ?? [])
         VocabStore.shared.ingestExpressions(
             sessionId: sessionId, phrases: verifiedExpressions)
+
+        // The other direction: phrases the FLUENT SELF used. Same verbatim
+        // guard against ITS turns, and cheaper to satisfy — that text is
+        // model-written, so there is no transcriber between the phrase and
+        // the check. Anything the learner already produced is dropped: it is
+        // evidence, and it is in the list above.
+        //
+        // A resumed talk re-summarizes from turn one, so the previous take's
+        // phrases are merged rather than replaced — the same rule
+        // `newWordsUsed` follows, for the same reason.
+        let fluentHaystack = CarryoverDetector.normalized(
+            turns.filter { $0.role == .fluentSelf }.map(\.transcript).joined(separator: " "))
+        let alreadyMine = Set(verifiedExpressions.map(CarryoverDetector.normalized))
+        var seenOffered = Set<String>()
+        let verifiedOffered = computed.expressionsOffered.filter { phrase in
+            let needle = CarryoverDetector.normalized(phrase)
+            guard !needle.isEmpty, !alreadyMine.contains(needle),
+                  !haystack.contains(needle),          // they said it too — not new material
+                  fluentHaystack.contains(needle) else { return false }
+            return seenOffered.insert(needle).inserted
+        }
+        let priorOffered = session.summary?.expressionsOffered ?? []
+        computed.expressionsOffered = priorOffered + verifiedOffered.filter {
+            !priorOffered.contains($0)
+        }
+        report { $0.offered = computed.expressionsOffered.count }
 
         // Same guard for grammar evidence: a quote the user can't find in
         // their own words destroys trust in the whole list. Compare with

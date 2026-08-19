@@ -263,6 +263,15 @@ struct SessionSummary: Codable {
     /// Multi-word expressions the LLM flagged AND we verified appear verbatim
     /// in the user's own turns (hallucination-guarded).
     var expressionsUsed: [String] = []
+    /// Multi-word expressions the FLUENT SELF used this session and the learner
+    /// did not — verified verbatim against the fluent-self turns, the same
+    /// hallucination guard `expressionsUsed` gets. This is the talk's NEW
+    /// material (the other list is its evidence), and the one thing a call
+    /// produces that nothing else in the app could: phrases spoken in the
+    /// learner's own voice, about their own situation. Merged into the
+    /// expression library at read time by `ExpressionCatalog` — never copied
+    /// into `VocabStore`, whose rows count times SAID.
+    var expressionsOffered: [String] = []
     /// Short topic labels where the user visibly lacked words this session
     /// ("cooking verbs", "phone-call phrases"). Absorbed into
     /// `LearnerProfile.weakVocabAreas` → next conversation's system prompt.
@@ -359,7 +368,7 @@ struct GrammarIssue: Codable, Identifiable, Hashable {
 extension SessionSummary {
     enum CodingKeys: String, CodingKey {
         case phrasesUsed, newPatternsDetected, suggestedDrills, overallNote
-        case scorecard, newWordsUsed, expressionsUsed, weakVocabAreas
+        case scorecard, newWordsUsed, expressionsUsed, expressionsOffered, weakVocabAreas
         case grammarIssues, carryovers
     }
 
@@ -376,6 +385,7 @@ extension SessionSummary {
         scorecard = try c.decodeIfPresent(SessionScorecard.self, forKey: .scorecard)
         newWordsUsed = try c.decodeIfPresent([String].self, forKey: .newWordsUsed) ?? []
         expressionsUsed = try c.decodeIfPresent([String].self, forKey: .expressionsUsed) ?? []
+        expressionsOffered = try c.decodeIfPresent([String].self, forKey: .expressionsOffered) ?? []
         weakVocabAreas = try c.decodeIfPresent([String].self, forKey: .weakVocabAreas) ?? []
         grammarIssues = try c.decodeIfPresent([GrammarIssue].self, forKey: .grammarIssues) ?? []
         carryovers = try c.decodeIfPresent([Carryover].self, forKey: .carryovers) ?? []

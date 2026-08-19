@@ -48,9 +48,11 @@ struct SummaryProgressView: View {
                  done: progress.wroteDrills, count: progress.cards),
             Step(id: 3, title: "Words and expressions you used",
                  done: progress.wroteExpressions, count: progress.words),
-            Step(id: 4, title: "Corrections worth keeping",
+            Step(id: 4, title: "New expressions from the call",
+                 done: progress.offered != nil, count: progress.offered),
+            Step(id: 5, title: "Corrections worth keeping",
                  done: progress.wroteGrammar, count: progress.corrections),
-            Step(id: 5, title: "Things you'd been studying",
+            Step(id: 6, title: "Things you'd been studying",
                  done: progress.carryovers != nil, count: progress.carryovers),
         ]
     }
@@ -68,7 +70,7 @@ struct SummaryProgressView: View {
     /// open at the end (`ConversationView.endSession`) size their beat from
     /// this, so the reveal can never be cut off by the summary sheet.
     static let revealInterval: Double = 0.18
-    static let revealTail: Double = revealInterval * 6 + 0.3
+    static let revealTail: Double = revealInterval * 7 + 0.3
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {

@@ -3791,6 +3791,16 @@
         }
       }
     },
+    "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 한 말, 유창해진 내가 되돌려준 말, 그리고 본 상황연습이 알려준 표현을 모아둬요. 익숙해진 건 아는 표현으로 표시해 두세요."
+          }
+        }
+      }
+    },
     "Cards": {
       "extractionState": "stale",
       "localizations": {
@@ -6364,6 +6374,26 @@
         }
       }
     },
+    "Expressions from your calls — yours and your fluent self's — and the ones your watched scenes hand you collect here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화에서 나온 표현이 여기 모여요. 내가 쓴 것, 유창해진 내가 쓴 것, 그리고 본 상황연습이 건네준 것까지요."
+          }
+        }
+      }
+    },
+    "Expressions from your calls — yours and your fluent self's — will collect here.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화에서 나온 표현이 여기 모여요. 내가 쓴 것도, 유창해진 내가 쓴 것도요."
+          }
+        }
+      }
+    },
     "Expressions you actually used this talk.": {
       "extractionState": "stale",
       "localizations": {
@@ -6887,6 +6917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "대화에서"
+          }
+        }
+      }
+    },
+    "From your fluent self": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창해진 내가 쓴 말"
           }
         }
       }
@@ -7585,6 +7625,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "내 목소리 듣기"
+          }
+        }
+      }
+    },
+    "Heard in a call": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화에서 들었어요"
           }
         }
       }
@@ -10435,6 +10485,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "둘 다 아님"
+          }
+        }
+      }
+    },
+    "New expressions from the call": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "통화에서 건진 새 표현"
           }
         }
       }
@@ -17113,6 +17173,16 @@
         }
       }
     },
+    "The reusable phrases this talk produced — the ones your fluent self reached for, and the ones you said yourself. Tap for the card: meaning, examples, and where it came up.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 대화에서 나온, 다시 쓸 만한 표현들이에요. 유창해진 내가 꺼낸 말과 내가 직접 쓴 말이요. 누르면 뜻과 예문, 어디서 나왔는지가 담긴 카드가 열려요."
+          }
+        }
+      }
+    },
     "The same as getting in: %lld of the last %lld days.": {
       "extractionState": "stale",
       "localizations": {
@@ -20122,6 +20192,16 @@
         }
       }
     },
+    "You said these": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 쓴 말"
+          }
+        }
+      }
+    },
     "You skipped every line. They'll be waiting whenever you want to say them.": {
       "localizations": {
         "de": {
@@ -20804,6 +20884,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "유창해진 내가 이 언어를 내 목소리로 말해요. 나중에 언어를 더 추가해도 목소리는 그대로라, 다시 녹음할 필요 없고요."
+          }
+        }
+      }
+    },
+    "Your fluent self used this — you didn't.": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유창해진 내가 쓴 표현이에요. 나는 아직 안 썼고요."
           }
         }
       }

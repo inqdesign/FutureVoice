@@ -533,7 +533,7 @@ enum DebugCapture {
                 ShadowDrillView(turn: shadowTurn, targetLanguage: "en")
             })
         case "expr":
-            once("expr") { seedVocab() }
+            once("expr") { seedVocab(); seedSessions(scored: true) }
             return AnyView(NavigationStack { ExpressionsView() })
         case "score":
             once("score") { seedVocab() }
@@ -576,11 +576,12 @@ enum DebugCapture {
             // sitting above the real tab bar.
             once("tabs") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(RootTabView())
-        case "talkdetail-words", "talkdetail-lines", "talkdetail-cards":
+        case "talkdetail-words", "talkdetail-expressions", "talkdetail-lines", "talkdetail-cards":
             // The talk book opened straight onto one chapter's page.
             once("talkdetail") { seedVocab() }
             let chapter: ConversationDetailView.Chapter = switch name {
             case "talkdetail-words": .words
+            case "talkdetail-expressions": .expressions
             case "talkdetail-lines": .lines
             default: .cards
             }
@@ -676,6 +677,8 @@ enum DebugCapture {
             scorecard: sampleScorecard)
         summary.newWordsUsed = ["prepared", "relaxed", "interview"]
         summary.expressionsUsed = ["felt prepared"]
+        summary.expressionsOffered = ["took the initiative", "what mattered most",
+                                      "looking back on it"]
         summary.grammarIssues = [
             GrammarIssue(quote: "Honestly, it go really well.",
                          correction: "Honestly, it went really well.",
@@ -895,10 +898,14 @@ enum DebugCapture {
             // scored: attach a scorecard summary so ProgressTab's assessed
             // branch (chip header + level pages) renders instead of the
             // empty state.
-            let summary = scored ? SessionSummary(
+            var summary = scored ? SessionSummary(
                 phrasesUsed: [], newPatternsDetected: [], suggestedDrills: [],
                 overallNote: "Confident, natural talk — tighten a few articles.",
                 scorecard: sampleScorecard) : nil
+            // Phrases the fluent self offered — the library and the daily deck
+            // read these off the session, so a capture run needs them to show
+            // the heard-in-a-call rows at all.
+            summary?.expressionsOffered = ["what surprised you most", "how did it go"]
             // Vary origin across the three so the Talk shelf shows every badge.
             let origin: SessionOrigin = [.free, .news, .scenario][day % 3]
             let topic: String? = origin == .free ? nil

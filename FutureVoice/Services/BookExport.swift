@@ -177,11 +177,17 @@ extension BookDocument {
             doc.sections.append(s)
         }
 
+        // Both halves of the book's Expressions chapter: the phrases the
+        // fluent self offered, then the ones the learner already said.
+        let offered = session.summary?.expressionsOffered ?? []
         let expressions = session.summary?.expressionsUsed ?? []
-        doc.terms += expressions.map { Term(text: $0, isExpression: true) }
-        if !expressions.isEmpty {
-            doc.sections.append(Section(title: chrome("Expressions"),
-                                        entries: expressions.map { Entry(text: $0) }))
+        doc.terms += (offered + expressions).map { Term(text: $0, isExpression: true) }
+        if !offered.isEmpty || !expressions.isEmpty {
+            var s = Section(title: chrome("Expressions"))
+            s.entries = offered.map {
+                Entry(text: $0, note: explain("Your fluent self used this — you didn't."))
+            } + expressions.map { Entry(text: $0) }
+            doc.sections.append(s)
         }
 
         // The same fluent-self lines the book's Shadow chapter offers — the

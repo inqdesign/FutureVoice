@@ -446,10 +446,21 @@ enum ConversationEngine {
     /// and `new_patterns_detected.context` are machine-consumed — they're
     /// re-injected into the next conversation's system prompt via
     /// `LearnerProfile`, never rendered on their own.
+    /// How many expressions ONE talk may yield per side, from how much was
+    /// actually spoken. A flat 6 was the same ceiling for a two-minute check-in
+    /// and a twenty-minute conversation, so the long talk — the one that
+    /// produced the most phrases worth stealing — threw the rest away. Counted
+    /// in fluent-self turns because that side is where the offered phrases come
+    /// from, and it tracks the length of the talk either way.
+    static func expressionBudget(fluentTurns: Int) -> Int {
+        min(14, max(6, fluentTurns))
+    }
+
     static func summarySystemPrompt(targetLanguage: String,
                                     nativeLanguage: String,
                                     profile: LearnerProfile,
-                                    knownAboutUser: [String] = []) -> String {
+                                    knownAboutUser: [String] = [],
+                                    expressionBudget: Int = 6) -> String {
         let languageName = LanguageCatalog.englishName(targetLanguage)
         let nativeName = LanguageCatalog.englishName(nativeLanguage)
         let contract = CoachingLanguage.contract(target: targetLanguage, native: nativeLanguage)
@@ -486,6 +497,7 @@ enum ConversationEngine {
           ],
           "suggested_drills": ["phrase 1", "phrase 2", "phrase 3"],
           "expressions_used": ["...", "..."],
+          "expressions_offered": ["...", "..."],
           "weak_vocab_areas": ["...", "..."],
           "grammar_errors": [
             { "quote": "...", "correction": "...", "note": "..." }
@@ -506,8 +518,8 @@ enum ConversationEngine {
         - \(languageName) — the learner reads these as material or hears them
           spoken: title, phrases_used.user_said, phrases_used.fluent_alternative,
           new_patterns_detected.mistake, new_patterns_detected.correction,
-          suggested_drills, expressions_used, grammar_errors.quote,
-          grammar_errors.correction.
+          suggested_drills, expressions_used, expressions_offered,
+          grammar_errors.quote, grammar_errors.correction.
         - \(nativeName) — the learner reads these to
           understand what happened: phrases_used.reason, grammar_errors.note,
           overall_note, scorecard.*.note, scorecard.top_line, about_user.
@@ -552,7 +564,7 @@ enum ConversationEngine {
           collocations, connectors, more precise word choices. Skip trivial
           phrases they obviously already command. Each is a full, speakable
           sentence, and the 3-4 should be varied (not near-duplicates).
-        - expressions_used: up to 6 REUSABLE multi-word expressions the user
+        - expressions_used: up to \(expressionBudget) REUSABLE multi-word expressions the user
           ACTUALLY said this session — idioms, phrasal verbs, collocations or
           set phrases a fluent speaker would reach for in completely unrelated
           conversations (e.g. "push back", "at the end of the day", "flag it
@@ -563,6 +575,21 @@ enum ConversationEngine {
           list only when the user genuinely produced nothing reusable (very
           short or single-word turns) — in a normal conversation there are
           usually several.
+        - expressions_offered: up to \(expressionBudget) REUSABLE multi-word expressions YOU (the
+          fluent self) said this conversation that the user did NOT — the
+          phrases worth stealing out of this exact talk. Same test as
+          expressions_used (would this phrase be useful next week on a
+          different topic?) and the same VERBATIM rule: quote them exactly as
+          they appear in your own turns, never invent or paraphrase; a
+          paraphrase is dropped on arrival. Do NOT repeat anything already in
+          expressions_used, and skip conversational filler ("you know", "I
+          mean", "kind of"). This is where the user's next expressions come
+          from, so prefer the ones that carry real meaning — idioms, phrasal
+          verbs, collocations, set phrases — over anything they clearly
+          already command. Sweep the WHOLE transcript, not just its first
+          exchanges: a long conversation has phrases worth stealing all the way
+          through it, and stopping at two or three when you said a dozen throws
+          away the only material this talk can produce.
         - grammar_errors: EVERY clear grammatical error in the user's turns
           (up to 15) — articles, tense, subject-verb agreement, prepositions,
           plurals, word order, wrong verb forms. This is the EVIDENCE behind
@@ -913,6 +940,9 @@ struct ClaudeSummaryPayload: Decodable {
     let new_patterns_detected: [Pattern]
     let suggested_drills: [String]
     let expressions_used: [String]?
+    /// Reusable phrases the FLUENT SELF said — the talk's new material, as
+    /// opposed to `expressions_used`, which is the talk's evidence.
+    let expressions_offered: [String]?
     let weak_vocab_areas: [String]?
     let grammar_errors: [GrammarError]?
     let overall_note: String
@@ -923,7 +953,8 @@ struct ClaudeSummaryPayload: Decodable {
 
     private enum CodingKeys: String, CodingKey {
         case title, phrases_used, new_patterns_detected, suggested_drills
-        case expressions_used, weak_vocab_areas, grammar_errors, overall_note, scorecard
+        case expressions_used, expressions_offered
+        case weak_vocab_areas, grammar_errors, overall_note, scorecard
         case about_user
     }
 
@@ -934,6 +965,7 @@ struct ClaudeSummaryPayload: Decodable {
         new_patterns_detected = Self.lossyArray(Pattern.self, in: c, forKey: .new_patterns_detected)
         suggested_drills = Self.lossyArray(String.self, in: c, forKey: .suggested_drills)
         expressions_used = Self.lossyArray(String.self, in: c, forKey: .expressions_used)
+        expressions_offered = Self.lossyArray(String.self, in: c, forKey: .expressions_offered)
         weak_vocab_areas = Self.lossyArray(String.self, in: c, forKey: .weak_vocab_areas)
         grammar_errors = Self.lossyArray(GrammarError.self, in: c, forKey: .grammar_errors)
         overall_note = (try? c.decodeIfPresent(String.self, forKey: .overall_note)) ?? ""
@@ -1015,6 +1047,7 @@ struct ClaudeSummaryPayload: Decodable {
             overallNote: overall_note,
             scorecard: card,
             expressionsUsed: expressions_used ?? [],
+            expressionsOffered: expressions_offered ?? [],
             weakVocabAreas: weak_vocab_areas ?? [],
             grammarIssues: (grammar_errors ?? []).compactMap {
                 let quote = $0.quote.trimmingCharacters(in: .whitespacesAndNewlines)

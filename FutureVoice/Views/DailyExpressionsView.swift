@@ -61,7 +61,7 @@ struct DailyExpressionsView: View {
         VStack(spacing: 10) {
             Image(systemName: "quote.bubble")
                 .font(.largeTitle).foregroundStyle(.secondary)
-            Text(explain("Expressions you use in your talks will collect here."))
+            Text(explain("Expressions from your calls — yours and your fluent self's — will collect here."))
                 .font(.subheadline).foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -75,7 +75,10 @@ struct DailyExpressionsView: View {
     ///   1. bookmarked (studying) expressions not yet known — rotated by day,
     ///      same as the words session's notebook rotation
     ///   2. unmastered expressions from active Watch books
-    ///   3. expressions collected from talks, newest first, not yet known
+    ///   3. expressions the fluent self used in a call and they haven't said
+    ///   4. expressions they said themselves, newest first, not yet known
+    /// 3 before 4 on purpose: a deck exists to teach what you can't say yet,
+    /// and the phrases you already produced are already yours.
     /// No core-list top-up exists for phrases, so the hand can run short —
     /// the empty state explains where they come from.
     static func pick(goal: Int, appState: AppState,
@@ -116,6 +119,15 @@ struct DailyExpressionsView: View {
                 where item.masteredAt == nil && !store.isKnownExpression(item.text) {
                     add(item.text)
                 }
+            }
+        }
+
+        if out.count < goal {
+            for item in ExpressionCatalog.all(scenarios: appState.scenarios, store: store)
+            where !store.isKnownExpression(item.text) {
+                // Heard-in-a-call first, then the ones they said — `all` is
+                // already newest-first within each group.
+                if case .heard = item.origin { add(item.text) }
             }
         }
 

@@ -130,7 +130,8 @@ struct ConversationDetailView: View {
         .sheet(item: $phraseSheet, onDismiss: refresh) { ref in
             // The app's ONE expression surface — same card the scenario books
             // and the library open. Chevrons walk this talk's expressions.
-            ExpressionSheet(initialPhrase: ref.value, phrases: usedExpressions)
+            ExpressionSheet(initialPhrase: ref.value,
+                            phrases: offeredExpressions + usedExpressions)
                 .environmentObject(appState)
         }
         .sheet(item: $fluentShadowTurn, onDismiss: refresh) { turn in
@@ -354,6 +355,21 @@ struct ConversationDetailView: View {
             .filter { !credited.contains(CarryoverDetector.normalized($0)) }
     }
 
+    /// The other half of this chapter: reusable phrases the fluent self used
+    /// here that the learner hasn't said. Marked known elsewhere (the deck,
+    /// the library) drops them from the page — this is study material, not a
+    /// log of the call.
+    private var offeredExpressions: [String] {
+        // A continued talk can end with the learner finally SAYING one of the
+        // phrases an earlier take offered — it belongs to the group below then,
+        // and to exactly one group.
+        let mine = Set(usedExpressions.map(CarryoverDetector.normalized))
+        return (session.summary?.expressionsOffered ?? []).filter {
+            !VocabStore.shared.isKnownExpression($0)
+                && !mine.contains(CarryoverDetector.normalized($0))
+        }
+    }
+
     private var studyChapters: [ChapterEntry] {
         // Shadow = repeat the fluent self's lines. Drill = the grammar and
         // expression fixes — corrections studied as CARDS (saved, enriched,
@@ -374,10 +390,10 @@ struct ConversationDetailView: View {
                                         total: curriculum.words.count,
                                         count: mineWords.count))
         }
-        if !usedExpressions.isEmpty {
+        if !usedExpressions.isEmpty || !offeredExpressions.isEmpty {
             entries.append(ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
                                         icon: "quote.opening",
-                                        count: usedExpressions.count))
+                                        count: usedExpressions.count + offeredExpressions.count))
         }
         if hasShadow {
             entries.append(ChapterEntry(chapter: .lines, title: chrome("Shadow"),
@@ -423,7 +439,7 @@ struct ConversationDetailView: View {
         case .expressions:
             pageTitle(chrome("Expressions"))
             expressionsPage
-            pageFooter(explain("Expressions you actually used this talk. Tap one for its card — meaning, examples, and the sentences you said it in."))
+            pageFooter(explain("The reusable phrases this talk produced — the ones your fluent self reached for, and the ones you said yourself. Tap for the card: meaning, examples, and where it came up."))
         case .lines:
             pageTitle(chrome("Shadow"))
             shadowPage
@@ -517,34 +533,58 @@ struct ConversationDetailView: View {
         Color.clear.frame(height: 6)
     }
 
+    /// Two groups, in the words page's order: what the fluent self offered
+    /// (new material) above what the learner already said (evidence).
     @ViewBuilder
     private var expressionsPage: some View {
-        ForEach(usedExpressions, id: \.self) { e in
-            Button {
-                phraseSheet = PhraseRef(value: e)
-            } label: {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tint)
-                        .padding(.top, 3)
-                    Text(ExpressionsView.display(e))
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 2)
-                }
+        if !offeredExpressions.isEmpty {
+            Text("From your fluent self")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .contentShape(Rectangle())
+                .padding(.top, 12)
+            ForEach(offeredExpressions, id: \.self) { e in
+                expressionRow(e, icon: "quote.opening")
             }
-            .buttonStyle(.plain)
+        }
+        if !usedExpressions.isEmpty {
+            if !offeredExpressions.isEmpty { Divider().padding(.leading, 16) }
+            Text("You said these")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+            ForEach(usedExpressions, id: \.self) { e in
+                expressionRow(e, icon: "checkmark")
+            }
         }
         Color.clear.frame(height: 8)
+    }
+
+    private func expressionRow(_ e: String, icon: String) -> some View {
+        Button {
+            phraseSheet = PhraseRef(value: e)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .padding(.top, 3)
+                Text(ExpressionsView.display(e))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .padding(.top, 2)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     /// The shadow chapter: repeat the fluent self's whole lines from this
