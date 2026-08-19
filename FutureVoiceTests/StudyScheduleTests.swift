@@ -276,7 +276,7 @@ final class TalkBookProgressTests: XCTestCase {
         let taughtWord = self.taughtWord.lowercased()
         let talk = session(saying: taughtWord)
 
-        let before = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [])
+        let before = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [], drillCards: [])
         guard before.words.contains(where: { $0.text == taughtWord }) else {
             return XCTFail("""
                 the fluent self's word never made it into the book —                 word=\(taughtWord) lemmas=\(VocabStore.lemmas(in: [taughtWord]))                 level=\(String(describing: CoreVocabulary.level(of: taughtWord)))                 got=\(before.words.map(\.text))
@@ -286,7 +286,7 @@ final class TalkBookProgressTests: XCTestCase {
 
         VocabStore.shared.markKnown(VocabStore.lookupKey(for: taughtWord))
 
-        let after = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [])
+        let after = TalkCurriculum.build(session: talk, proficiency: .a1, shadowAttempts: [], drillCards: [])
         guard let item = after.words.first(where: { $0.text == taughtWord }) else {
             return XCTFail("learning the word REMOVED it from the book — the old bug")
         }
