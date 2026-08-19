@@ -539,14 +539,20 @@ struct ProgressTab: View {
                     // each with its live number — not a hardcoded "more
                     // words". Measurement tab stays measurement-only: the
                     // doing (vocabulary, drills, shadowing) lives in Practice.
+                    // …and each one that has somewhere to be done carries the
+                    // way there, so "use more C1 words" is one tap from the
+                    // C1 words instead of a route the learner has to retrace.
                     ForEach(focusTips(toward: next), id: \.text) { tip in
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: tip.icon)
                                 .font(.subheadline)
                                 .foregroundStyle(.tint)
                                 .frame(width: 22)
-                            Text(tip.text).font(.callout)
-                                .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(tip.text).font(.callout)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                if let action = tip.action { tipLink(action) }
+                            }
                         }
                     }
                 }
@@ -1308,8 +1314,11 @@ struct ProgressTab: View {
             }
             panel {
                 Text("How to level up").font(.headline)
-                Text(explain("Discover and use words you don't reach for yet — Practice → Vocabulary highlights the ones at and above your level."))
+                Text(explain("Discover and use words you don't reach for yet — the ones at and above your level."))
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
+                // The band right above the measured one: the words that would
+                // actually move this number, already filtered.
+                actionButton(seeWordsAction(at: vocabNextBand))
             }
             panel {
                 HStack(alignment: .firstTextBaseline) {
@@ -1318,8 +1327,14 @@ struct ProgressTab: View {
                     Text("\(vocab.expressionCount)")
                         .font(.headline).foregroundStyle(.tint).monospacedDigit()
                 }
-                Text(explain("Multi-word phrases you actually said in your talks, collected automatically — browse them under Practice → Expressions."))
+                Text(explain("Multi-word phrases you actually said in your talks, collected automatically."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if vocab.expressionCount > 0 {
+                    tipLink(TipAction(title: chrome("Browse expressions"),
+                                      icon: "text.quote") {
+                        appState.pendingPracticeRoute = .expressions(phrase: nil)
+                    })
+                }
             }
         }
     }
@@ -1357,7 +1372,7 @@ struct ProgressTab: View {
                 : nil,
             measures: "Pace measured from voiced speech only — pauses and think-time don't drag it down.",
             improve: "Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.",
-            action: nil,
+            action: startTalkAction,
             trend: fluencyTrend,
             trendCaption: "Words per minute of voiced speech — one point per talk. Background zones are the ≈CEFR pace bands.",
             trendBands: Self.fluencyBands
@@ -1378,8 +1393,8 @@ struct ProgressTab: View {
                          slipsPer100Words, grammarTargetHint)
                 : "Verified grammar slips per 100 spoken words — fewer reads higher.",
             measures: "Counted from transcript-verified slips only — STT artifacts and style suggestions are excluded. This is the exact number your level assessment weighs.",
-            improve: "Run your review cards under Practice — they're built from your own slips and target exactly these.",
-            action: nil,
+            improve: "Run your review cards — they're built from your own slips and target exactly these.",
+            action: reviewSlipsAction,
             trend: grammarTrend,
             trendCaption: "Verified slips per 100 words, one point per talk — DOWN is progress. Background zones are the ≈CEFR bands; the dashed line is the next one.",
             trendTarget: grammarNextBandThreshold,
@@ -1391,7 +1406,7 @@ struct ProgressTab: View {
     private var grammarTargetHint: String {
         guard let t = grammarNextBandThreshold, let lv = grammarCEFR,
               let next = nextLevel(lv) else { return "" }
-        return String(format: " — get under %.1f and this reads ≈%@", t, next.rawValue.uppercased())
+        return String(format: explain(" — get under %.1f and this reads ≈%@"), t, next.rawValue.uppercased())
     }
 
     /// Upper density bound of the NEXT band up (nil at ≈C2 / no data) —
@@ -1412,14 +1427,12 @@ struct ProgressTab: View {
             measuredLine: "Longer, richer turns usually mean you're elaborating more.",
             measures: "How vividly and naturally you get your meaning across.",
             improve: "Tell stories, react, and add detail — describe how things felt, not just what happened.",
-            action: nil,
+            action: startTalkAction,
             trend: expressionTrend,
             trendCaption: "Average words per turn — one point per talk. Background zones are the ≈CEFR bands.",
             trendBands: Self.expressionBands
         )
     }
-
-    private struct DimAction { let title: String; let icon: String; let destination: AnyView }
 
     /// A dimension's trend over time — the same measurement as the page's
     /// headline number, one point per analyzed talk.
@@ -1504,7 +1517,7 @@ struct ProgressTab: View {
 
     private func measuredContent(dim: Dim, big: String, bigUnit: String, band: String?,
                                  measuredLine: String?, measures: String, improve: String,
-                                 action: DimAction?, trend: [TrendPoint] = [],
+                                 action: TipAction?, trend: [TrendPoint] = [],
                                  trendCaption: String = "",
                                  trendTarget: Double? = nil,
                                  trendBands: [BandSpec] = []) -> some View {
@@ -1543,13 +1556,7 @@ struct ProgressTab: View {
             panel {
                 Text("How to improve").font(.headline)
                 Text(improve).font(.callout).fixedSize(horizontal: false, vertical: true)
-                if let action {
-                    NavigationLink(destination: action.destination) {
-                        Label(action.title, systemImage: action.icon)
-                            .font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 4)
-                    }
-                    .buttonStyle(.borderedProminent).controlSize(.large).padding(.top, 2)
-                }
+                if let action { actionButton(action) }
             }
         }
     }
@@ -1567,40 +1574,125 @@ struct ProgressTab: View {
         }
     }
 
+    /// Where a tip's advice is actually carried out. Progress MEASURES; the
+    /// doing lives in Practice and Talk — so an action always leaves this tab
+    /// (staged route, the same handoff Home's Practice row uses) instead of
+    /// pushing a second copy of a Practice page underneath Progress.
+    private struct TipAction {
+        let title: String
+        let icon: String
+        let run: () -> Void
+    }
+
+    private struct FocusTip {
+        let icon: String
+        let text: String
+        let action: TipAction?
+    }
+
+    /// The words of that band, in the notebook — the tip names a level, this
+    /// opens exactly that level rather than wherever the filter was left.
+    private func seeWordsAction(at level: CEFRLevel) -> TipAction {
+        TipAction(title: chrome("See \(level.rawValue.uppercased()) words"),
+                  icon: "text.book.closed") {
+            appState.focusVocabLevel = level
+            appState.pendingPracticeRoute = .vocabulary(word: nil)
+        }
+    }
+
+    /// The due deck — the cards are built from the learner's own slips.
+    private var reviewSlipsAction: TipAction {
+        TipAction(title: chrome("Review your slips"), icon: "checkmark.seal") {
+            appState.pendingPracticeRoute = .review
+        }
+    }
+
+    /// Pace and turn length only move by speaking, so the door is a call.
+    /// Staging it brings the Talk tab along and passes the billing gate there.
+    private var startTalkAction: TipAction {
+        TipAction(title: chrome("Start a talk"), icon: "waveform") {
+            appState.pendingFreeTalk = true
+        }
+    }
+
+    /// Compact link under a tip line — small so the measurement stays the
+    /// panel's subject and the way out is an offer, not a call to action.
+    private func tipLink(_ action: TipAction) -> some View {
+        Button(action: action.run) {
+            Label(action.title, systemImage: action.icon)
+                .font(.subheadline.weight(.medium))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+    }
+
+    /// Full-width version, for a panel whose whole subject IS the advice
+    /// ("How to improve", "How to level up") — there the way out is the point.
+    private func actionButton(_ action: TipAction) -> some View {
+        Button(action: action.run) {
+            Label(action.title, systemImage: action.icon)
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity).padding(.vertical, 4)
+        }
+        .buttonStyle(.borderedProminent).controlSize(.large).padding(.top, 2)
+    }
+
+    /// The band just above the measured vocabulary level — where the words
+    /// that would actually move this number live. Before anything is measured
+    /// it follows the learner's own level, and it stops at the top band.
+    private var vocabNextBand: CEFRLevel {
+        let base = vocabLevel ?? appState.proficiency
+        return nextLevel(base) ?? base
+    }
+
     /// Concrete next-step focuses, derived from the SAME per-axis measurements
     /// the assessment sheet shows: only axes currently measuring below the
     /// target level appear, each anchored to its live number. Unmeasured axes
     /// stay silent — no guessing. Capped at 3 so it reads as focus, not a
     /// checklist.
-    private func focusTips(toward next: CEFRLevel) -> [(icon: String, text: String)] {
+    private func focusTips(toward next: CEFRLevel) -> [FocusTip] {
         let targetRank = CoreVocabulary.levelRank(next)
         func lags(_ lv: CEFRLevel?) -> Bool {
             guard let lv else { return false }
             return CoreVocabulary.levelRank(lv) < targetRank
         }
-        var tips: [(icon: String, text: String)] = []
+        var tips: [FocusTip] = []
         if lags(vocabLevel) {
-            tips.append((icon: "text.book.closed",
-                         text: "Use more \(next.rawValue.uppercased())-level words in your talks — Practice → Vocabulary highlights them."))
+            tips.append(FocusTip(icon: "text.book.closed",
+                                 text: explain("Use more \(next.rawValue.uppercased())-level words in your talks."),
+                                 action: seeWordsAction(at: next)))
         }
         if lags(grammarCEFR) {
-            tips.append((icon: "checkmark.seal",
-                         text: String(format: "You're at %.1f verified slips per 100 words%@ — your review cards under Practice target exactly these.",
-                                      slipsPer100Words, grammarTargetHint)))
+            tips.append(FocusTip(icon: "checkmark.seal",
+                                 text: String(format: explain("You're at %.1f verified slips per 100 words%@."),
+                                              slipsPer100Words, grammarTargetHint),
+                                 action: reviewSlipsAction))
         }
         if lags(fluencyCEFR) {
-            tips.append((icon: "gauge.with.needle",
-                         text: "Your pace is \(effectivePace) words/min — talk more often and a little longer; longer turns build flow."))
+            tips.append(FocusTip(icon: "gauge.with.needle",
+                                 text: explain("Your pace is \(effectivePace) words/min — talk more often and a little longer; longer turns build flow."),
+                                 action: startTalkAction))
         }
         if lags(expressionCEFR) {
-            tips.append((icon: "text.bubble",
-                         text: "Your turns average \(wordsPerTurn) words — add detail: how things felt, not just what happened."))
+            tips.append(FocusTip(icon: "text.bubble",
+                                 text: explain("Your turns average \(wordsPerTurn) words — add detail: how things felt, not just what happened."),
+                                 action: startTalkAction))
         }
         if tips.isEmpty {
-            tips.append((icon: "checkmark.circle",
-                         text: "Every measured skill already reads at \(next.rawValue.uppercased()) or above — keep talking and the pooled read will catch up."))
+            tips.append(FocusTip(icon: "checkmark.circle",
+                                 text: explain("Every measured skill already reads at \(next.rawValue.uppercased()) or above — keep talking and the pooled read will catch up."),
+                                 action: nil))
         }
-        return Array(tips.prefix(3))
+        // Two lagging axes can want the same destination (pace and turn length
+        // are both fixed by talking) — the second one keeps its line and drops
+        // the duplicate button rather than showing the same door twice.
+        var offered = Set<String>()
+        let deduped = tips.map { tip -> FocusTip in
+            guard let a = tip.action else { return tip }
+            return offered.insert(a.title).inserted ? tip
+                 : FocusTip(icon: tip.icon, text: tip.text, action: nil)
+        }
+        return Array(deduped.prefix(3))
     }
 
     private func nextLevel(_ l: CEFRLevel) -> CEFRLevel? {

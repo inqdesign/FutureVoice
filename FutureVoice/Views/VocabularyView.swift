@@ -44,7 +44,11 @@ struct VocabularyView: View {
                     if !inited {
                         inited = true
                         store.backfillFromSessions()
-                        level = LevelFilter(appState.proficiency)   // start at the user's level
+                        // Start at the user's level, unless something sent us
+                        // here to look at a specific band (Progress → "See C1
+                        // words") — then that band is the whole point of the trip.
+                        level = LevelFilter(appState.focusVocabLevel ?? appState.proficiency)
+                        appState.focusVocabLevel = nil
                         // A widget-tapped word opens straight to its card; the
                         // sheet shows it regardless of the cloud's level filter.
                         currentWord = appState.focusWord ?? store.studying.first
@@ -55,6 +59,12 @@ struct VocabularyView: View {
                     }
                     if nodes.isEmpty { rebuild(center: true) }      // don't recompute on every re-appear
                 }
+        }
+        // A later jump from Progress (page already open) re-aims the filter.
+        .onChange(of: appState.focusVocabLevel) { _, lv in
+            guard let lv else { return }
+            level = LevelFilter(lv)
+            appState.focusVocabLevel = nil
         }
         // A later widget tap (page already open) focuses the new word's card.
         .onChange(of: appState.focusWord) { _, w in

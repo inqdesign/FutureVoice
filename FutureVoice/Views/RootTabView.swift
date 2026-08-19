@@ -157,8 +157,13 @@ struct RootTabView: View {
         .onChange(of: selection) { _, tab in
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
         }
-        // Free Talk widget tap while the app is already up.
-        .onChange(of: appState.pendingFreeTalk) { _, _ in consumeFreeTalk() }
+        // Free Talk widget tap while the app is already up — and in-app jumps
+        // ("Start a talk" on a Progress tip), which can be staged from any tab,
+        // so bring the Talk tab along the way the widget's URL path does.
+        .onChange(of: appState.pendingFreeTalk) { _, staged in
+            if staged { selection = .home }
+            consumeFreeTalk()
+        }
         // Review reminder tapped — the delegate can't reach AppState, so it
         // posts to the inbox and the route is staged from here. Covers both a
         // cold launch (onAppear) and a tap while the app is already up.

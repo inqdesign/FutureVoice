@@ -153,6 +153,12 @@ final class AppState: ObservableObject {
     @Published var focusWord: String?
     @Published var focusPhrase: String?
 
+    /// The CEFR band the vocabulary notebook should open on — set by a
+    /// Progress tip ("Use more C1-level words" → see them). Same reason as
+    /// `focusWord` for living beside the route rather than inside it: the
+    /// notebook may already be on screen, and the filter still has to land.
+    @Published var focusVocabLevel: CEFRLevel?
+
     /// Set by the Free Talk widget's deep link — RootTabView starts a call as
     /// soon as it's up (staged, so a cold launch that isn't mounted yet still
     /// fires once the tab appears).
