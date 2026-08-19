@@ -94,10 +94,14 @@ struct MeTab: View {
                             title: explain("Plan & talk time"),
                             subtitle: "\(account.talkTimeLabel) · \(account.planLabel)")
                     }
-                    // Sits with the plan because it IS the plan for anyone in
-                    // it: a seat's reward is extra seconds on the same daily
-                    // allowance the row above shows. Next to Voice and the
-                    // daily call it read as an unrelated feature.
+                    // Sits under the plan row because both are about how much
+                    // this account actually speaks — the row above says what
+                    // today allows, this one says what a run of days earns.
+                    // (It is NOT a perk on the plan: the Core grants nothing,
+                    // and hasn't since 20260816100000.)
+                    //
+                    // Filled seal only while seated, same rule as everywhere:
+                    // the seal is current membership, never a past one.
                     NavigationLink {
                         CoreClubView()
                     } label: {

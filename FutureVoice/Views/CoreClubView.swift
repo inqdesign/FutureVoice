@@ -18,9 +18,10 @@ import SwiftUI
 ///   * **Seated** — in the club. Sees tenure and the month's one forgiven
 ///     day, not a rank. Rank decides who gets in; inside, everyone is equal,
 ///     and a leaderboard here would rebuild the anxiety the design removed.
-///   * **Seatless** — qualified, currently out. Sees that the badge is
-///     permanent and how far the way back is. Never a scolding, never a
-///     record of who took the seat.
+///   * **Seatless** — qualified, currently out. Sees how far the way back is,
+///     and no seal: the badge is current membership and this person doesn't
+///     have one right now. Never a scolding, never a record of who took the
+///     seat.
 ///
 /// **NUMBERS, NOT A PICTURE** (2026-08-17). This screen used to draw thirty
 /// dots under "Days met 3 / 28". Two things were wrong with it and neither
@@ -44,8 +45,6 @@ struct CoreClubView: View {
     @State private var seatMap: CoreClubService.SeatMap?
     @State private var isLoading = true
 
-    private var isSeated: Bool { progress?.member?.seated == true }
-
     var body: some View {
         List {
             if let p = progress {
@@ -61,7 +60,7 @@ struct CoreClubView: View {
                 roomSection
                 standingSection(p)
                 howItWorksSection(p)
-                whatYouKeepSection()
+                whatYouGetSection()
             } else if isLoading {
                 HStack { Spacer(); ProgressView(); Spacer() }
             } else {
@@ -140,7 +139,7 @@ struct CoreClubView: View {
         }
     }
 
-    /// What being in it actually leaves you with.
+    /// What being in it actually gets you.
     ///
     /// The Core hands over nothing, and this section does not SAY so. Stating
     /// "no extra minutes, no unlocked features" was the app explaining a
@@ -150,7 +149,13 @@ struct CoreClubView: View {
     ///
     /// Never add a perk row to make this feel more generous, and never add a
     /// line explaining why there isn't one.
-    private func whatYouKeepSection() -> some View {
+    ///
+    /// It also used to have a second row — "the badge stays even if you lose
+    /// the seat" — under the header "What you keep". Both are gone (see
+    /// `CoreSeal`). The badge is now exactly one fact, current membership, so
+    /// a line about the badge outliving it is describing a different product,
+    /// and "keep" was the word that made the reader look for one.
+    private func whatYouGetSection() -> some View {
         Section {
             Label {
                 // The seal's only real audience is a stranger, so name the
@@ -159,22 +164,10 @@ struct CoreClubView: View {
             } icon: {
                 Image(systemName: "seal.fill").foregroundStyle(Color.coreClub)
             }
-            Label {
-                // What "keeping" concretely means: the seal survives losing
-                // the seat. The line here used to be "your days stay yours,
-                // even after you leave", which answered an anxiety the reader
-                // hasn't formed yet (they don't know a seat can be lost),
-                // about a number they cannot see (the day count is only shown
-                // to members), landing somewhere unnamed. Three vaguenesses in
-                // one sentence.
-                Text(explain("The badge stays even if you lose the seat."))
-            } icon: {
-                Image(systemName: "seal").foregroundStyle(Color.coreClub)
-            }
         } header: {
-            Text("What you keep")
+            Text("What you get")
         } footer: {
-            Text(explain("A promise to yourself, and a record that you kept it."))
+            Text(explain("It's there while you're in the Core, and it's a promise to yourself."))
         }
     }
 
@@ -233,9 +226,12 @@ struct CoreClubView: View {
     @ViewBuilder
     private func standingLead(_ p: CoreClubService.Progress) -> some View {
         if let m = p.member, m.seated {
-            CoreSealRow(seated: true)
+            CoreSealRow()
         } else if p.member != nil {
-            CoreSealRow(seated: false)
+            // No seal here. A qualified-but-seatless person used to lead with
+            // an outlined one over "Been in the Core" — the badge shown in the
+            // act of not applying. What they need is the way back, which is
+            // the next two lines, and they are enough on their own.
             if p.waiting_for_seat {
                 // Qualified and over the bar. Which of the two things they are
                 // waiting on depends on the room at the top of this screen, and

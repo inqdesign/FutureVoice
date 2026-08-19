@@ -191,9 +191,11 @@ struct FindPeopleSheet: View {
     /// four taps away in Me.
     ///
     /// Only drawn when a seal is actually on screen: an explanation of
-    /// something nobody in this pool has is an ad.
+    /// something nobody in this pool has is an ad. That test is `seated`, not
+    /// "we got badge rows back" — a pool of people who have all lapsed has no
+    /// seal on it to explain.
     @ViewBuilder private var coreLegendSection: some View {
-        if !coreBadges.isEmpty {
+        if coreBadges.values.contains(where: { $0.seated }) {
             Section {
                 NavigationLink {
                     CoreClubView()
@@ -201,7 +203,7 @@ struct FindPeopleSheet: View {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("The Core")
-                            Text(explain("The seal marks the 100 people who speak most days. Anyone can earn one."))
+                            Text(explain("The seal marks the 100 people speaking most days right now. Anyone can earn one."))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -223,8 +225,8 @@ struct FindPeopleSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(p.display_name).font(.body.weight(.medium))
-                        if let badge = coreBadge(ownerId: p.owner_user_id) {
-                            CoreSeal(seated: badge.seated)
+                        if isInCore(ownerId: p.owner_user_id) {
+                            CoreSeal()
                         }
                         if bookmarks.contains(p.id) {
                             Image(systemName: "bookmark.fill")
@@ -259,8 +261,8 @@ struct FindPeopleSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(c.name).font(.body.weight(.medium))
-                    if let badge = coreBadge(ownerId: ownerId(forRemote: c.remoteId)) {
-                        CoreSeal(seated: badge.seated)
+                    if isInCore(ownerId: ownerId(forRemote: c.remoteId)) {
+                        CoreSeal()
                     }
                     if let rid = c.remoteId, bookmarks.contains(rid) {
                         Image(systemName: "bookmark.fill")
@@ -278,9 +280,13 @@ struct FindPeopleSheet: View {
         [occupation, location].filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
-    private func coreBadge(ownerId: String?) -> CoreClubService.Badge? {
-        guard let ownerId else { return nil }
-        return coreBadges[ownerId.lowercased()]
+    /// The seal is a statement about today, so a badge row that says otherwise
+    /// draws nothing. The server already filters, and this is the second belt:
+    /// an older payload that still carries seatless rows must not put a mark
+    /// beside a name it no longer describes.
+    private func isInCore(ownerId: String?) -> Bool {
+        guard let ownerId else { return false }
+        return coreBadges[ownerId.lowercased()]?.seated == true
     }
 
     /// A met person is stored as a `Counterpart` keyed by the PERSONA id, so

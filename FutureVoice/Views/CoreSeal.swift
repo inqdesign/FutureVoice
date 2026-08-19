@@ -10,46 +10,52 @@ extension Color {
     static let coreClub = Color(.systemIndigo)
 }
 
-/// The Core's one glyph, everywhere it appears.
+/// The Core's one glyph: this person is in the Core, right now.
 ///
-/// - **Filled** — seated right now.
-/// - **Outlined** — qualified (permanently) but currently without a seat.
+/// **It has no second state, and must never get one back** (2026-08-18). It
+/// used to come in two — filled for a seated member, outlined for someone who
+/// had qualified but currently held no seat — so that the month which earned
+/// the badge could never be taken away. That reasoning is sound about the
+/// RECORD and wrong about the BADGE, and the place it failed is the only place
+/// the seal is ever seen by someone else: a mark beside a stranger's name in
+/// Find people. A stranger cannot read one seal, let alone tell two apart, and
+/// nothing on that row can explain that this one means "was here once". A
+/// badge that needs a legend to say which of two things it means isn't a badge.
 ///
-/// Outlined has to read as dormant, never as a demerit: the month that earned
-/// the badge happened, and nobody takes it back. That's why the difference is
-/// fill weight rather than colour or a slash.
+/// So the rule is the one sentence anyone can hold: the seal means they're in
+/// the Core today. Qualification is still permanent where it does real work —
+/// the queue, and re-entry on the keep bar — it just isn't something worn.
 ///
 /// A stranger sees the seal and nothing else — no number, no rank, no talk
 /// time. Rank decides who gets in; inside the club everyone is equal, and a
 /// number next to a name in a browsable list would rebuild the hierarchy the
 /// design spent its effort removing.
 struct CoreSeal: View {
-    let seated: Bool
     var font: Font = .caption
 
     var body: some View {
-        Image(systemName: seated ? "seal.fill" : "seal")
+        Image(systemName: "seal.fill")
             .font(font)
             .foregroundStyle(Color.coreClub)
             .accessibilityLabel(Text("The Core"))
     }
 }
 
-/// The seal with a word for what it currently means, on surfaces that are
-/// ABOUT this person — their own club screen.
+/// The seal with the word for it, on the one surface that is ABOUT this
+/// person — their own club screen. Only ever drawn for a member who is in.
 ///
 /// This used to print a join number ("#37"). The number is gone from every
 /// surface: it was an ordinal that never gets reused, so it climbs past the
 /// seat count forever, and "#137" beside a picture of a hundred seats is a
-/// contradiction a learner has to be talked out of. What's left is the only
-/// thing the club actually claims — you're in it, or you've been in it.
+/// contradiction a learner has to be talked out of. It also used to have a
+/// second wording, "Been in the Core", for the seatless — a sentence that told
+/// a person what they no longer had, in the colour of the thing they no longer
+/// had. Their standing is now said in plain rows, without the seal.
 struct CoreSealRow: View {
-    let seated: Bool
-
     var body: some View {
         HStack(spacing: 6) {
-            CoreSeal(seated: seated, font: .body)
-            Text(seated ? "In the Core" : "Been in the Core")
+            CoreSeal(font: .body)
+            Text("In the Core")
                 .foregroundStyle(Color.coreClub)
         }
         .accessibilityElement(children: .combine)
@@ -133,13 +139,12 @@ struct CoreSeatGrid: View {
     VStack(alignment: .leading, spacing: 16) {
         HStack(spacing: 6) {
             Text(verbatim: "Minji").font(.body.weight(.medium))
-            CoreSeal(seated: true)
+            CoreSeal()
         }
         HStack(spacing: 6) {
             Text(verbatim: "Joon").font(.body.weight(.medium))
-            CoreSeal(seated: false)
         }
-        CoreSealRow(seated: true)
+        CoreSealRow()
     }
     .padding()
 }

@@ -76,16 +76,18 @@ and its two halves are deliberately asymmetric (`20260813120000_core_club`):
 - **Qualifying** — **30 days IN A ROW** over the daily bar
   (`20260817140000_core_streak_entry`). Break it and the count restarts at
   zero; there is no forgiveness on the way in, and that is the entire value of
-  the badge. Once, hard, and the badge it grants is PERMANENT: `qualified_at` +
-  `join_number` are never revoked. A low join number IS the founding story,
-  which is why there is no separate "founding" flag and no sealing date.
+  it. Once, hard, and the QUALIFICATION is permanent: `qualified_at` +
+  `join_number` are never revoked, which is what fixes your place in the queue
+  and lets you re-enter on the keep bar. A low join number IS the founding
+  story, which is why there is no separate "founding" flag and no sealing date.
+  Permanent qualification is not a permanent badge — see below.
 - **Qualifying does NOT seat you.** It puts you in the queue, in qualification
   order; you are seated when a holder vacates. `core_my_progress.queue_ahead`
   exists so the screen can say that out loud instead of letting a progress
   number read as a door.
 - **Keeping a seat** — don't break the streak, except **one missed day per
   rolling 30 is forgiven** (`keep_grace_days`). A cold or a flight is free; two
-  inside a month vacates the seat, and the badge survives it. **A seat is only
+  inside a month vacates the seat, and with it the badge. **A seat is only
   ever vacated by its holder, never taken by a newcomer** — `settle_core_club`
   releases before it promotes, so an arrival is pure good news to the people
   already inside. If qualified people pile up waiting, the answer is to loosen
@@ -113,11 +115,18 @@ that every learner reads 0 each morning and the 00:05 UTC settlement sees
 nobody qualified at all. The UI shows numbers only — no grid; don't bring one
 back to "show progress", the progress is the number.
 
-- **Badge vs seat are separate facts, shown in one glyph** (`CoreSeal`): filled
-  `seal.fill` = seated now, outlined `seal` = qualified but currently seatless.
-  Losing a seat reads as dormancy, not a scar. **`Color.coreClub` (systemIndigo)
-  is reserved — nothing else in the app may use indigo.** The UI rules allow
-  only system colours, so scarcity of the colour IS the badge.
+- **The badge IS the seat** (`CoreSeal`, 2026-08-18): one glyph, `seal.fill`,
+  drawn only for a member seated right now. It used to have a second state —
+  outlined `seal` for qualified-but-seatless, so the thirty days could never be
+  taken away — and that was wrong about the badge even while being right about
+  the record. The seal's only audience is a stranger scrolling Find people,
+  where a row has no space for a legend and two fills can't be told apart; a
+  badge that needs explaining which of two things it means isn't one. Filtered
+  server-side too (`20260818130000_core_badge_is_the_seat`) so builds already
+  shipped stop drawing the outline. Losing a seat is still dormancy rather than
+  a scar — it just isn't worn. **`Color.coreClub` (systemIndigo) is reserved —
+  nothing else in the app may use indigo.** The UI rules allow only system
+  colours, so scarcity of the colour IS the badge.
 - **The badge's real home is `FindPeopleSheet`** — the one place a learner is
   seen by a stranger. A stranger sees the seal and nothing else: no number, no
   rank, no talk time. Rank decides who gets in; inside the club everyone is

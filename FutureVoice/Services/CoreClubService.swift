@@ -7,8 +7,10 @@ import UserNotifications
 ///
 ///   * **Qualification** — 30 days IN A ROW over the daily bar. Break the
 ///     streak and it restarts at zero; there is no forgiveness on the way in,
-///     which is the whole value of the badge. Earned once, granted the moment
-///     it's done, and NEVER revoked. `qualifiedAt` is the permanent record.
+///     which is the whole value of it. Earned once, and NEVER revoked:
+///     `qualifiedAt` is the permanent record, and it does permanent work —
+///     your place in the queue, and re-entry on the keep bar instead of the
+///     full streak. What it is NOT is the badge (see below).
 ///
 ///     Qualifying does NOT seat you. It puts you in the queue, in
 ///     qualification order, and you are seated when someone vacates — which
@@ -27,8 +29,12 @@ import UserNotifications
 ///     is only ever vacated by its holder, never taken by a newcomer, so an
 ///     arrival is pure good news to the people already inside.
 ///
-/// One glyph shows both (`CoreSeal`): filled = seated now, outlined =
-/// qualified but currently seatless. Losing a seat is dormancy, not a scar.
+/// **The badge is the seat, and only the seat** (`CoreSeal`, 2026-08-18). One
+/// glyph used to show both facts — filled for seated, outlined for qualified
+/// but seatless — and it failed in the only place a seal is seen by anyone
+/// other than its owner: beside a stranger's name in Find people, where no
+/// legend can fit and two states can't be told apart. Losing the seat is still
+/// dormancy rather than a scar; it just isn't worn while it lasts.
 ///
 /// The client only READS. Every transition is decided by the server's
 /// midnight-UTC settlement — the same clock the daily allowance resets on.
@@ -50,10 +56,15 @@ enum CoreClubService {
         var daysTotal: Int { days_total }
     }
 
-    /// What a stranger is allowed to see next to someone's name: the seal,
-    /// filled or not. Nothing else — never a number, never how much anyone
-    /// talks. Rank decides who gets in; inside the club everyone is equal, and
-    /// a number beside a name in a browsable list is a rank.
+    /// What a stranger is allowed to see next to someone's name: that this
+    /// person is in the Core. Nothing else — never a number, never how much
+    /// anyone talks. Rank decides who gets in; inside the club everyone is
+    /// equal, and a number beside a name in a browsable list is a rank.
+    ///
+    /// `seated` is now always true at the wire — `core_badges_for` returns
+    /// seated rows only (20260818130000). The field stays because the column
+    /// is what makes that filter checkable from here, and because a build
+    /// shipped before that migration still decodes this shape.
     struct Badge: Decodable {
         let user_id: String
         let seated: Bool
@@ -285,6 +296,7 @@ enum CoreClubService {
     }
 
     /// Badges for a batch of persona owners, keyed by LOWERCASE user id.
+    /// Seated members only — a lapsed member has no badge to draw.
     ///
     /// Goes through `core_badges_for`, not a table read: the badge is public
     /// but the membership LIST is not, so the server only answers about ids
@@ -314,7 +326,7 @@ enum CoreClubService {
             .execute()
             .value
         return Dictionary(
-            (rows ?? []).map { ($0.user_id.lowercased(), $0) },
+            (rows ?? []).filter(\.seated).map { ($0.user_id.lowercased(), $0) },
             uniquingKeysWith: { a, _ in a })
     }
 
