@@ -87,11 +87,21 @@ struct DailyWordsView: View {
     static func pick(goal: Int, appState: AppState,
                      now: Date = Date(), calendar: Calendar = .current) -> [String] {
         let store = VocabStore.shared
+        let schedule = StudyScheduleStore.shared
         var seen = Set<String>()
         var out: [String] = []
         func add(_ w: String) {
             let k = w.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !k.isEmpty, !seen.contains(k) else { return }
+            // EVERY source honors the schedule, not just the notebook below.
+            // A word put away for 10 minutes is still in the core list, still
+            // unmastered in its Watch book, still a pickup word from the last
+            // talk — and those three sources judge by `records`, which
+            // `addStudying` never writes. So a snoozed word came straight back
+            // on the next deal and the promise meant nothing. The gate lives
+            // in the one place every source funnels through, so adding a
+            // fifth source can't quietly reintroduce it.
+            guard schedule.isDue(.word, w, now: now) else { return }
             seen.insert(k)
             out.append(w)
         }
@@ -101,7 +111,6 @@ struct DailyWordsView: View {
         // scheduled words come first (earliest return first); never-scheduled
         // ones follow, oldest-first and rotated by the day so a big notebook
         // doesn't deal the same hand forever.
-        let schedule = StudyScheduleStore.shared
         let studying = store.studying.filter { schedule.isDue(.word, $0, now: now) }
         let scheduled = studying
             .compactMap { w in schedule.nextReview(.word, w).map { (w, $0) } }

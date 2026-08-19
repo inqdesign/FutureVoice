@@ -163,3 +163,125 @@ final class ReviewReminderUITests: XCTestCase {
             .alerts.firstMatch.buttons["Allow"]
     }
 }
+
+/// Filing a card takes a second; taking it back has to be just as cheap.
+/// Every folder — including "Got it", which is the one drop a learner is
+/// most likely to want undone — must hand the item back to the deck.
+final class StudyFolderUndoUITests: XCTestCase {
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    @MainActor
+    private func launchDeck() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments = ["-capture", "daily-words"]
+        app.launch()
+        let counter = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.counter").firstMatch
+        XCTAssertTrue(counter.waitForExistence(timeout: 10), "deck never appeared")
+        return app
+    }
+
+    @MainActor
+    private func chip(_ app: XCUIApplication, _ bin: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: "studyDeck.folder.\(bin)").firstMatch
+    }
+
+    /// Drag the top card toward `dx` on the folder row, which is where the
+    /// four bins sit during a drag.
+    @MainActor
+    private func drag(_ app: XCUIApplication, toward dx: CGFloat) {
+        let window = app.windows.firstMatch
+        window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45))
+            .press(forDuration: 0.1,
+                   thenDragTo: window.coordinate(withNormalizedOffset: CGVector(dx: dx, dy: 0.9)),
+                   withVelocity: XCUIGestureVelocity(300), thenHoldForDuration: 0.5)
+    }
+
+    /// Open `bin`'s folder, long-press its first row, and pick `target`.
+    @MainActor
+    private func reschedule(_ app: XCUIApplication, from bin: String, to target: String) {
+        chip(app, bin).tap()
+        let row = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.folderRow").firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 5), "\(bin) folder opened with no rows")
+        row.press(forDuration: 1.2)
+        let action = app.descendants(matching: .any)
+            .matching(identifier: "studyDeck.reschedule.\(target)").firstMatch
+        XCTAssertTrue(action.waitForExistence(timeout: 5),
+                      "long-pressing a row in \(bin) offered no way to move it")
+        action.tap()
+    }
+
+    /// The reported dead end: "Got it" erases the return date instead of
+    /// writing one, so rescheduling alone can't undo it — the item has to stop
+    /// being known first. Assert it lands back in a real folder.
+    @MainActor
+    func testGotItCanBePutBackInTheDeck() throws {
+        let app = launchDeck()
+        drag(app, toward: 0.92)                       // rightmost bin = Got it
+        XCTAssertTrue(chip(app, "gotIt").waitForExistence(timeout: 5))
+        let landed = NSPredicate { _, _ in self.chip(app, "gotIt").value as? String == "1" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: landed, object: nil)],
+                                        timeout: 5), .completed, "card never reached Got it")
+
+        reschedule(app, from: "gotIt", to: "tomorrow")
+
+        let movedOut = NSPredicate { _, _ in
+            self.chip(app, "gotIt").value as? String == "0"
+                && self.chip(app, "tomorrow").value as? String == "1"
+        }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: movedOut, object: nil)],
+                                        timeout: 8), .completed,
+                       "known=\(String(describing: chip(app, "gotIt").value)) tomorrow=\(String(describing: chip(app, "tomorrow").value)) — the item never came back")
+    }
+
+    /// The tray has four verdicts; so must the folder menu. Finishing an item
+    /// from inside a folder was reachable by dragging and by nothing else.
+    @MainActor
+    func testAnItemCanBeFinishedFromAFolder() throws {
+        let app = launchDeck()
+        drag(app, toward: 0.08)                       // leftmost bin = 10 min
+        let landed = NSPredicate { _, _ in self.chip(app, "tenMinutes").value as? String == "1" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: landed, object: nil)],
+                                        timeout: 8), .completed, "card never reached Soon")
+        let allow = ReviewReminderUITests.springboardAllowButton
+        if allow.waitForExistence(timeout: 5) { allow.tap() }
+
+        reschedule(app, from: "tenMinutes", to: "gotIt")
+
+        let finished = NSPredicate { _, _ in
+            self.chip(app, "tenMinutes").value as? String == "0"
+                && self.chip(app, "gotIt").value as? String == "1"
+        }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: finished, object: nil)],
+                                        timeout: 8), .completed,
+                       "soon=\(String(describing: chip(app, "tenMinutes").value)) known=\(String(describing: chip(app, "gotIt").value)) — the item was never finished")
+    }
+
+    /// …and the delay folders move too, so an item can be pulled forward
+    /// without waiting for it to come due.
+    @MainActor
+    func testASnoozedItemCanBePushedBack() throws {
+        let app = launchDeck()
+        drag(app, toward: 0.08)                       // leftmost bin = 10 min
+        let landed = NSPredicate { _, _ in self.chip(app, "tenMinutes").value as? String == "1" }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: landed, object: nil)],
+                                        timeout: 8), .completed, "card never reached Soon")
+        // The drop asks for notification permission the first time.
+        let allow = ReviewReminderUITests.springboardAllowButton
+        if allow.waitForExistence(timeout: 5) { allow.tap() }
+
+        reschedule(app, from: "tenMinutes", to: "threeDays")
+
+        let moved = NSPredicate { _, _ in
+            self.chip(app, "tenMinutes").value as? String == "0"
+                && self.chip(app, "threeDays").value as? String == "1"
+        }
+        XCTAssertEqual(XCTWaiter().wait(for: [XCTNSPredicateExpectation(predicate: moved, object: nil)],
+                                        timeout: 8), .completed,
+                       "soon=\(String(describing: chip(app, "tenMinutes").value)) later=\(String(describing: chip(app, "threeDays").value)) — the item did not move")
+    }
+}

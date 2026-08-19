@@ -11367,6 +11367,22 @@
         }
       }
     },
+    "Nothing is waiting to come back here.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hier wartet noch nichts auf seine Rückkehr."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기로 돌아올 게 아직 없어요."
+          }
+        }
+      }
+    },
     "Nothing learned yet": {
       "localizations": {
         "de": {
@@ -11405,6 +11421,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "아는 걸로 표시한 게 없어요"
+          }
+        }
+      }
+    },
+    "Nothing marked known yet in this session.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In dieser Runde noch nichts als gewusst markiert."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번에 아는 것으로 넘긴 게 아직 없어요."
           }
         }
       }
@@ -15225,6 +15257,22 @@
         }
       }
     },
+    "Soon": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bald"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "곧"
+          }
+        }
+      }
+    },
     "Sorting it out…": {
       "localizations": {
         "de": {
@@ -17850,6 +17898,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "하루 총 통화 시간: 통화와 본 상황연습을 합한 값이에요."
+          }
+        }
+      }
+    },
+    "Touch and hold to file it again.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gedrückt halten, um es neu einzusortieren."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "길게 누르면 다시 정할 수 있어요."
           }
         }
       }

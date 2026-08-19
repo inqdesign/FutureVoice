@@ -102,11 +102,35 @@ final class StudyScheduleStore: LanguageScopedStore {
         .sorted { $0.at < $1.at }
     }
 
+    /// Everything still WAITING — the mirror image of `dueItems`, soonest
+    /// first. Together the two cover every entry, so a deck's folders can
+    /// show where a card actually went instead of only what this session
+    /// happened to touch.
+    func upcoming(now: Date = Date()) -> [DueItem] {
+        entries.compactMap { key, entry -> DueItem? in
+            guard entry.at > now,
+                  let kind = key.split(separator: "|").first.flatMap({ Kind(rawValue: String($0)) })
+            else { return nil }
+            return DueItem(kind: kind, text: entry.text, at: entry.at)
+        }
+        .sorted { $0.at < $1.at }
+    }
+
     /// Every scheduled return time — the shared review reminder folds these
     /// in with the drill cards' due dates.
     func allNextReviews() -> [Date] {
         entries.values.map(\.at)
     }
+
+    #if DEBUG
+    /// Capture-harness only: a screenshot run (and the UI tests that assert
+    /// empty folders) must start from a clean schedule, and the store
+    /// survives across launches on the same simulator.
+    func removeAll() {
+        entries = [:]
+        save()
+    }
+    #endif
 
     private func save() {
         let enc = JSONEncoder()

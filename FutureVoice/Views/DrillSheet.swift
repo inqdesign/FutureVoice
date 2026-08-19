@@ -428,26 +428,39 @@ struct DrillView: View {
     private func folderSheet(_ bin: DrillBin) -> some View {
         NavigationStack {
             List {
-                ForEach(folderCards[bin] ?? []) { card in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(card.targetPhrase)
-                            .font(.subheadline)
-                            .lineLimit(2)
-                        Text("Back \(card.nextReviewAt, format: .relative(presentation: .named))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .contextMenu {
-                        // Same three delays as the tray, so a card can be
-                        // pulled forward (or pushed back) without waiting for
-                        // it to come due.
-                        ForEach(DrillBin.allCases.filter { $0.manual != nil }) { target in
-                            Button {
-                                resnooze(card, to: target)
-                            } label: {
-                                Label(target.accessibilityTitle, systemImage: target.icon)
+                // The menu below is the only way back out of a folder, and a
+                // long-press nothing points at is a dead end for anyone who
+                // doesn't guess it. Same footer as the study deck's folders.
+                Section {
+                    ForEach(folderCards[bin] ?? []) { card in
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(card.targetPhrase)
+                                .font(.subheadline)
+                                .lineLimit(2)
+                            Text("Back \(card.nextReviewAt, format: .relative(presentation: .named))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                        .contextMenu {
+                            // The same four verdicts as the tray, so a card can
+                            // be pulled forward, pushed back, or finished without
+                            // waiting for it to come due. "Got it" is dropped for
+                            // a card that already graduated — it would do nothing.
+                            ForEach(DrillBin.allCases.filter {
+                                $0 != .gotIt || bin != .gotIt
+                            }) { target in
+                                Button {
+                                    resnooze(card, to: target)
+                                } label: {
+                                    Label(target.accessibilityTitle, systemImage: target.icon)
+                                }
                             }
                         }
+                    }
+                } footer: {
+                    if !(folderCards[bin] ?? []).isEmpty {
+                        Text("Touch and hold to file it again.")
                     }
                 }
             }
@@ -673,6 +686,18 @@ enum DrillBin: String, CaseIterable, Identifiable {
         case .threeDays:  return "Later"
         case .gotIt:      return "Known"
         }
+    }
+
+    /// Which folder a still-future return time falls in. The windows are
+    /// generous on purpose — a folder is a rough "when is this coming back",
+    /// not a countdown — and they live here so the sentence deck and the
+    /// word/expression deck can never disagree about what "Soon" means.
+    /// (Neither deck asks about a return already in the past: that item is in
+    /// today's hand, not in a folder.)
+    static func folder(forReturnIn interval: TimeInterval) -> DrillBin {
+        if interval <= 12 * 60 * 60 { return .tenMinutes }
+        if interval <= 48 * 60 * 60 { return .tomorrow }
+        return .threeDays
     }
 
     var dropHint: String {
@@ -988,17 +1013,9 @@ private extension DrillView {
     private func refreshFolders(now: Date = Date()) {
         var buckets: [DrillBin: [DrillCard]] = [:]
         for card in DrillStore.shared.load() where card.nextReviewAt > now {
-            let until = card.nextReviewAt.timeIntervalSince(now)
-            let bin: DrillBin
-            if card.box >= DrillStore.maxBox {
-                bin = .gotIt
-            } else if until <= 12 * 60 * 60 {
-                bin = .tenMinutes
-            } else if until <= 48 * 60 * 60 {
-                bin = .tomorrow
-            } else {
-                bin = .threeDays
-            }
+            let bin = card.box >= DrillStore.maxBox
+                ? .gotIt
+                : DrillBin.folder(forReturnIn: card.nextReviewAt.timeIntervalSince(now))
             buckets[bin, default: []].append(card)
         }
         folderCards = buckets.mapValues { $0.sorted { $0.nextReviewAt < $1.nextReviewAt } }
@@ -1007,9 +1024,16 @@ private extension DrillView {
     /// Reschedule straight from a folder list — the card never re-enters
     /// the deck for this.
     private func resnooze(_ card: DrillCard, to bin: DrillBin) {
-        guard let manual = bin.manual else { return }
-        DrillStore.shared.snooze(card, box: manual.box,
-                                 until: Date().addingTimeInterval(manual.delay))
+        if let manual = bin.manual {
+            DrillStore.shared.snooze(card, box: manual.box,
+                                     until: Date().addingTimeInterval(manual.delay))
+        } else {
+            // Same verdict the rightmost bin writes, minus the rep: the card
+            // was already counted when it was graded, and changing your mind
+            // about it isn't a second one.
+            DrillStore.shared.markKnown(card)
+            ItemReminder.cancel(.sentence(card.id))
+        }
         withAnimation(.snappy) { refreshFolders() }
     }
 

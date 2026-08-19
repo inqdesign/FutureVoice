@@ -84,18 +84,23 @@ struct DailyExpressionsView: View {
     static func pick(goal: Int, appState: AppState,
                      now: Date = Date(), calendar: Calendar = .current) -> [String] {
         let store = VocabStore.shared
+        let schedule = StudyScheduleStore.shared
         var seen = Set<String>()
         var out: [String] = []
         func add(_ p: String) {
             let k = p.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             guard !k.isEmpty, !seen.contains(k) else { return }
+            // Every source, not just the bookmarks below — see the same gate
+            // in `DailyWordsView.pick`. A phrase put away for 10 minutes is
+            // still unmastered in its Watch book and still in the expression
+            // catalog, and neither of those knows about the schedule.
+            guard schedule.isDue(.expression, p, now: now) else { return }
             seen.insert(k)
             out.append(p)
         }
 
         // Bookmarked phrases, honoring the deck's schedule — same rule as the
         // words session: snoozed-and-not-due stays out, overdue comes first.
-        let schedule = StudyScheduleStore.shared
         let studying = store.studyingExpressions
             .filter { !store.isKnownExpression($0) && schedule.isDue(.expression, $0, now: now) }
         let scheduled = studying

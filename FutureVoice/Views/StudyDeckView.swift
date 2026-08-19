@@ -27,6 +27,27 @@ private extension DrillBin {
         case .gotIt:      return "Marked as known"
         }
     }
+    /// The folder's name AT REST — a place, not the action that filled it.
+    /// A folder holds everything whose RETURN falls in its window, so "3 days"
+    /// the drop becomes "Later" the folder. Mirrors `DrillBin.folderTitle`
+    /// (a plain String, which never localizes) as a key that extracts into
+    /// the catalog.
+    var deckFolderTitle: LocalizedStringKey {
+        switch self {
+        case .tenMinutes: return "Soon"
+        case .tomorrow:   return "Tomorrow"
+        case .threeDays:  return "Later"
+        case .gotIt:      return "Known"
+        }
+    }
+    /// What an empty folder means. Known is the odd one out for a reason —
+    /// see `finished`.
+    var deckFolderEmptyHint: LocalizedStringKey {
+        switch self {
+        case .gotIt: return "Nothing marked known yet in this session."
+        default:     return "Nothing is waiting to come back here."
+        }
+    }
 }
 
 /// The daily challenge deck — the Words and Expressions sessions share this
@@ -71,9 +92,19 @@ struct StudyDeckView: View {
     /// The lookup failed — the deck offers the same retry the cards do, so a
     /// flaky moment doesn't cost the learner the card.
     @State private var lookupFailed = false
-    /// What landed where this session — the chips' counts and their folder
-    /// sheets, same as the drill deck's folders.
-    @State private var folderItems: [DrillBin: [StudyDeckItem]] = [:]
+    /// Where everything still WAITING actually sits — rebuilt from
+    /// `StudyScheduleStore` on appear and after every drop, bucketed by when
+    /// the item comes back rather than by which bin last swallowed it. The
+    /// sentence deck's folders have always worked this way; these were a
+    /// session-local tally that emptied the moment the sheet closed, so the
+    /// same drag meant two different things depending on which deck you were
+    /// in — and nothing on this screen ever showed the promise being kept.
+    @State private var scheduled: [DrillBin: [StudyScheduleStore.DueItem]] = [:]
+    /// "Got it" is the one folder that can't come from the schedule: marking
+    /// something known CLEARS its return time (`ReviewQueue.retire`), which is
+    /// the point — a known item has no return. So this one holds what this
+    /// session finished, and its empty state says as much.
+    @State private var finished: [StudyDeckItem] = []
     @State private var openFolder: DrillBin?
     @StateObject private var player = AudioPlayer()
     @State private var loadingAudio = false
@@ -122,6 +153,7 @@ struct StudyDeckView: View {
             guard !dealt else { return }
             queue = items
             dealt = true
+            refreshFolders()
             #if DEBUG
             if DebugCapture.previewStudyTray {
                 revealed = true
@@ -218,8 +250,128 @@ struct StudyDeckView: View {
         }
     }
 
+    /// How many items the folder holds right now. Three of them answer from
+    /// disk, "Known" from this session — see `finished`.
+    private func folderCount(_ bin: DrillBin) -> Int {
+        bin == .gotIt ? finished.count : (scheduled[bin]?.count ?? 0)
+    }
+
+    /// Rebucket everything still waiting. Scoped to the KINDS this deck was
+    /// dealt: a Words session listing expressions under "Later" would be
+    /// answering a question nobody asked, while the mixed review deck (which
+    /// is handed both) correctly shows both.
+    private func refreshFolders(now: Date = Date()) {
+        // A word marked known from the notebook keeps its stale schedule
+        // entry; the shared queue is the one place that prunes them, so the
+        // folders can't count something that's already retired.
+        ReviewQueue.pruneRetired()
+        let kinds = Set(items.map(\.kind))
+        var buckets: [DrillBin: [StudyScheduleStore.DueItem]] = [:]
+        for item in StudyScheduleStore.shared.upcoming(now: now) where kinds.contains(item.kind) {
+            let bin = DrillBin.folder(forReturnIn: item.at.timeIntervalSince(now))
+            buckets[bin, default: []].append(item)
+        }
+        scheduled = buckets
+    }
+
+    /// Reschedule straight from a folder list — the item never re-enters the
+    /// deck for this, same as the drill deck's folders. Routed through
+    /// `ReviewQueue` so the promise and the notification that keeps it stay
+    /// inseparable.
+    private func resnooze(_ item: StudyScheduleStore.DueItem, to bin: DrillBin) {
+        guard let manual = bin.manual else {
+            return markKnown(StudyDeckItem(kind: item.kind, text: item.text))
+        }
+        ReviewQueue.snooze(item.kind, item.text, for: manual.delay)
+        withAnimation(.snappy) { refreshFolders() }
+    }
+
+    /// "Got it" from a folder — the same verdict the rightmost bin writes
+    /// (`DailyWordsView.resolve`'s else branch), reached without waiting for
+    /// the item to come around again. No rep is logged, here or in the two
+    /// re-file paths beside it: the card was already counted when it was
+    /// dropped, and changing your mind about it isn't a second one.
+    private func markKnown(_ item: StudyDeckItem) {
+        switch item.kind {
+        case .word:       VocabStore.shared.markKnown(item.text)
+        case .expression: VocabStore.shared.setKnownExpression(item.text, true)
+        }
+        ReviewQueue.retire(item.kind, item.text)
+        if !finished.contains(where: { $0.id == item.id }) { finished.append(item) }
+        withAnimation(.snappy) { refreshFolders() }
+    }
+
+    /// Take a "Got it" back. Marking something known is the one drop that
+    /// ERASES the return date instead of writing one, so it's also the one
+    /// that rescheduling alone can't undo — the item has to stop being known
+    /// first, and go back into the notebook the deal reads from. This mirrors
+    /// `DailyWordsView.resolve`'s delay branch in reverse, so an item brought
+    /// back is in exactly the state it would have been in had the card been
+    /// dropped on that delay in the first place.
+    ///
+    /// Only a `.known` record is cleared: a word the learner has actually
+    /// SAID carries a `.used` record with its own count, and a mis-tap on
+    /// "Got it" must not delete that evidence.
+    private func bringBack(_ item: StudyDeckItem, to bin: DrillBin) {
+        guard let manual = bin.manual else { return }
+        let store = VocabStore.shared
+        switch item.kind {
+        case .word:
+            for form in [item.text, item.text.lowercased(), VocabStore.lookupKey(for: item.text)]
+            where store.state(of: form) == .known {
+                store.unmark(form)
+            }
+            store.addStudying(item.text)
+        case .expression:
+            store.setKnownExpression(item.text, false)   // falls back to .used
+            store.setStudyingExpression(item.text, true)
+        }
+        ReviewQueue.snooze(item.kind, item.text, for: manual.delay)
+        finished.removeAll { $0.id == item.id }
+        withAnimation(.snappy) { refreshFolders() }
+    }
+
+    /// The tray's verdicts, as a menu — all FOUR of them, because a folder
+    /// row can be re-filed anywhere the card itself could have gone; offering
+    /// only the delays made "Got it" reachable by dragging and by nothing
+    /// else. Every folder row carries it: filing takes one drag, so changing
+    /// your mind can't be a trip back through the notebook. `current` is
+    /// dropped because re-filing a row where it already is does nothing (a
+    /// delay re-times from now, so only "Got it" is ever a true no-op).
+    @ViewBuilder
+    private func rescheduleMenu(current: DrillBin,
+                                _ act: @escaping (DrillBin) -> Void) -> some View {
+        ForEach(DrillBin.allCases.filter { $0 != .gotIt || current != .gotIt }) { target in
+            Button { act(target) } label: {
+                Label(target.deckTitle, systemImage: target.icon)
+            }
+            // By identifier, never by label — the menu speaks whatever the
+            // learner's app language is (see the drag tests).
+            .accessibilityIdentifier("studyDeck.reschedule.\(target.rawValue)")
+        }
+    }
+
+    /// One line in a folder: the item, when it comes back, and the menu that
+    /// moves it. Both folder shapes render through this so the Known list
+    /// can't quietly lose the affordance the others have.
+    private func folderRow<Menu: View>(_ text: String, caption: Text,
+                                       @ViewBuilder menu: () -> Menu) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(text)
+                .font(.subheadline)
+                .lineLimit(2)
+            caption
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        // The whole row is the long-press target, not just the glyphs in it.
+        .contentShape(Rectangle())
+        .contextMenu(menuItems: menu)
+        .accessibilityIdentifier("studyDeck.folderRow")
+    }
+
     private func folderChip(_ bin: DrillBin) -> some View {
-        let count = folderItems[bin]?.count ?? 0
+        let count = folderCount(bin)
         return Button {
             openFolder = bin
         } label: {
@@ -239,7 +391,9 @@ struct StudyDeckView: View {
         .buttonStyle(.plain)
         .disabled(count == 0)
         .animation(.snappy, value: count)
-        .accessibilityLabel(Text(bin.deckTitle))
+        // At rest a chip is a PLACE ("Soon"), not the drop that filled it
+        // ("10 min") — the tray keeps the action wording mid-drag.
+        .accessibilityLabel(Text(bin.deckFolderTitle))
         // Stable hooks for the drag UI test — which folder actually swallowed
         // the card is invisible in the counter alone.
         .accessibilityIdentifier("studyDeck.folder.\(bin.rawValue)")
@@ -249,23 +403,44 @@ struct StudyDeckView: View {
     private func folderSheet(_ bin: DrillBin) -> some View {
         NavigationStack {
             List {
-                ForEach(folderItems[bin] ?? []) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.text)
-                            .font(.subheadline)
-                            .lineLimit(2)
-                        Text(bin.deckDropHint)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                // The footer, not a comment: the menu is the way OUT of every
+                // folder — including "Got it", which is the one drop a learner
+                // is most likely to want back — and a menu nothing points at
+                // is a dead end for anyone who doesn't happen to long-press.
+                Section {
+                    if bin == .gotIt {
+                        ForEach(finished) { item in
+                            folderRow(item.text, caption: Text(bin.deckDropHint)) {
+                                rescheduleMenu(current: bin) { bringBack(item, to: $0) }
+                            }
+                        }
+                    } else {
+                        ForEach(scheduled[bin] ?? []) { item in
+                            folderRow(item.text,
+                                      caption: Text("Back \(item.at, format: .relative(presentation: .named))")) {
+                                // The same four verdicts as the tray, so an item
+                                // can be pulled forward, pushed back, or finished
+                                // without waiting for it to come due.
+                                rescheduleMenu(current: bin) { resnooze(item, to: $0) }
+                            }
+                        }
+                    }
+                } footer: {
+                    if folderCount(bin) > 0 {
+                        Text("Touch and hold to file it again.")
                     }
                 }
             }
             .overlay {
-                if (folderItems[bin] ?? []).isEmpty {
-                    ContentUnavailableView { Label(bin.deckTitle, systemImage: bin.icon) }
+                if folderCount(bin) == 0 {
+                    ContentUnavailableView {
+                        Label(bin.deckFolderTitle, systemImage: bin.icon)
+                    } description: {
+                        Text(bin.deckFolderEmptyHint)
+                    }
                 }
             }
-            .navigationTitle(Text(bin.deckTitle))
+            .navigationTitle(Text(bin.deckFolderTitle))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -582,9 +757,19 @@ struct StudyDeckView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
+            // The folders stay reachable AFTER the last card, which is the
+            // one moment the learner actually asks "so where did all that
+            // go?" — the deck used to answer by disappearing, and reopening
+            // it was the only way to look, which is exactly when the same
+            // cards seemed to come back.
+            folderChipsRow
+                .padding(.top, 4)
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .sheet(item: $openFolder) { bin in
+            folderSheet(bin)
+        }
     }
 
     // MARK: - Bin panel (mirrors DrillView's)
@@ -789,8 +974,12 @@ struct StudyDeckView: View {
         player.stop()
         queue.removeFirst()
         resolvedCount += 1
-        folderItems[bin, default: []].append(top)
+        if bin == .gotIt { finished.append(top) }
+        // The parent writes the schedule first; the chips then re-read it, so
+        // the count that ticks up is the state actually on disk rather than a
+        // tally that could drift from it.
         onResolve(top, bin)
+        withAnimation(.snappy) { refreshFolders() }
         revealed = false
     }
 

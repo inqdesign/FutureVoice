@@ -372,3 +372,119 @@ final class DailyGoalCountsFinishedWorkTests: XCTestCase {
         XCTAssertTrue(goals.met(on: Date(), log: log))
     }
 }
+
+/// The daily hand has to honor the SAME schedule the deck writes. It didn't:
+/// only the notebook source asked `isDue`, and the three top-up sources —
+/// Watch books, a talk's pickup words, the core list — judged by
+/// `VocabStore.records`, which `addStudying` never writes. So a word put away
+/// for "10 min" was dealt straight back the moment the session was reopened,
+/// and the promise the folders make meant nothing.
+@MainActor
+final class DailyDeckDealTests: XCTestCase {
+
+    private let schedule = StudyScheduleStore.shared
+    private var snoozed: [(StudyScheduleStore.Kind, String)] = []
+
+    override func tearDown() {
+        for (kind, text) in snoozed { schedule.clear(kind, text) }
+        snoozed = []
+        super.tearDown()
+    }
+
+    private func snooze(_ kind: StudyScheduleStore.Kind, _ text: String, _ delay: TimeInterval) {
+        schedule.snooze(kind, text, until: Date().addingTimeInterval(delay))
+        snoozed.append((kind, text))
+    }
+
+    /// A core-list word the notebook has never seen — so it can only reach the
+    /// hand through the top-up source, which is exactly the one that used to
+    /// ignore the schedule.
+    private func untouchedCoreWord(atOrAbove level: CEFRLevel) -> String? {
+        let minRank = CoreVocabulary.levelRank(level)
+        return CoreVocabulary.entries.first {
+            CoreVocabulary.levelRank($0.level) >= minRank
+                && VocabStore.shared.records[$0.word] == nil
+                && !VocabStore.shared.studying.contains($0.word)
+        }?.word
+    }
+
+    func testSnoozedWordIsNotDealtBackByTheCoreListTopUp() {
+        let appState = AppState()
+        guard let word = untouchedCoreWord(atOrAbove: appState.proficiency) else {
+            return XCTFail("no unseen core word at this level to test with")
+        }
+        let goal = 400   // deep enough that the top-up source is reached
+
+        // Control: with nothing scheduled, the top-up does reach this word.
+        XCTAssertTrue(DailyWordsView.pick(goal: goal, appState: appState).contains(word),
+                      "the test can't detect the bug — the word never reaches the hand at all")
+
+        snooze(.word, word, DrillBin.soonDelay)
+        XCTAssertFalse(DailyWordsView.pick(goal: goal, appState: appState).contains(word),
+                       "a word put away for 10 minutes came straight back")
+    }
+
+    /// …and it comes back once the promise is actually due.
+    func testTheWordReturnsWhenItsTimeArrives() {
+        let appState = AppState()
+        guard let word = untouchedCoreWord(atOrAbove: appState.proficiency) else {
+            return XCTFail("no unseen core word at this level to test with")
+        }
+        snooze(.word, word, DrillBin.soonDelay)
+        let after = Date().addingTimeInterval(DrillBin.soonDelay + 1)
+        XCTAssertTrue(DailyWordsView.pick(goal: 400, appState: appState, now: after).contains(word),
+                      "the snooze never expires — the word is gone for good")
+    }
+
+    /// The expressions deck had the same hole: a bookmarked phrase is also in
+    /// the expression catalog, and that source judged by `isKnownExpression`
+    /// alone.
+    func testSnoozedExpressionIsNotDealtBackByTheCatalog() {
+        let appState = AppState()
+        let phrase = "zz-deal-\(UUID().uuidString.prefix(6)) the whole way"
+        let store = VocabStore.shared
+        store.setStudyingExpression(phrase, true)
+        defer { store.setStudyingExpression(phrase, false) }
+
+        XCTAssertTrue(DailyExpressionsView.pick(goal: 400, appState: appState)
+                        .contains { $0.caseInsensitiveCompare(phrase) == .orderedSame },
+                      "the test can't detect the bug — the phrase never reaches the hand")
+
+        snooze(.expression, phrase, 24 * 60 * 60)
+        XCTAssertFalse(DailyExpressionsView.pick(goal: 400, appState: appState)
+                        .contains { $0.caseInsensitiveCompare(phrase) == .orderedSame },
+                       "a phrase put away until tomorrow came straight back")
+    }
+}
+
+/// The two decks' folders are the same idea and must stay one implementation:
+/// a folder is the WINDOW a return time falls in, not the button that wrote it.
+final class StudyFolderBucketTests: XCTestCase {
+
+    func testFoldersBucketByWhenTheItemComesBack() {
+        XCTAssertEqual(DrillBin.folder(forReturnIn: DrillBin.soonDelay), .tenMinutes)
+        XCTAssertEqual(DrillBin.folder(forReturnIn: 11 * 3600), .tenMinutes)
+        XCTAssertEqual(DrillBin.folder(forReturnIn: 24 * 3600), .tomorrow)
+        XCTAssertEqual(DrillBin.folder(forReturnIn: 47 * 3600), .tomorrow)
+        XCTAssertEqual(DrillBin.folder(forReturnIn: 3 * 24 * 3600), .threeDays)
+    }
+
+    /// `upcoming` and `dueItems` partition the file between them — an entry
+    /// that fell through both would be invisible in the deck AND in its folder.
+    func testUpcomingIsTheMirrorImageOfDue() {
+        let filename = "test-folders-\(UUID().uuidString).json"
+        let store = StudyScheduleStore(filename: filename)
+        defer {
+            try? FileManager.default.removeItem(
+                at: LanguageScope.activeDirectory.appendingPathComponent(filename))
+        }
+        let now = Date()
+        store.snooze(.word, "past", until: now.addingTimeInterval(-60))
+        store.snooze(.word, "soon", until: now.addingTimeInterval(600))
+        store.snooze(.expression, "later", until: now.addingTimeInterval(3 * 86_400))
+
+        XCTAssertEqual(store.dueItems(now: now).map(\.text), ["past"])
+        XCTAssertEqual(store.upcoming(now: now).map(\.text), ["soon", "later"],
+                       "soonest first, and the overdue one belongs to the deck")
+    }
+}
