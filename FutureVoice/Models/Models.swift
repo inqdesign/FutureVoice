@@ -801,6 +801,91 @@ struct VoicePreset: Hashable, Identifiable {
     }
 }
 
+/// The four BUILT-IN characters — the app's own contribution to the same
+/// "가상인물" pool the Find-people characters live in. Built 1:1 on the
+/// preset voices (the person's id is the voice preset id), always available
+/// without a network, and deliberately light: unlike the curated characters,
+/// who arrive mid-problem, these exist to PLAY whatever role a scenario
+/// implies, so their identity is personality only, never a job.
+///
+/// Picking one in the composer materializes an ordinary `Counterpart`
+/// (`asCounterpart`) with `personaKind: "character"` and a `builtin:` remote
+/// id — from there the whole people machinery (scenes, calls, books, "People
+/// you've met") treats them exactly like a character met in Find people.
+struct StockPerson: Identifiable, Hashable {
+    let voice: VoicePreset
+    /// Stable local `Counterpart.id` — hardcoded so a builtin materialized
+    /// today matches one materialized last month (sessions link on it).
+    let localId: UUID
+    /// One-line character for the picker card — UI, resolved in the app
+    /// language at access time (see `catalog` being computed).
+    let vibe: String
+    /// Identity blurb injected into scene prompts. Machine-consumed, so it
+    /// stays English — and deliberately job-free: the situation casts their
+    /// role (barista, landlord, interviewer); this only says who plays it.
+    let identity: String
+
+    var id: String { voice.id }
+    var name: String { voice.displayName }
+    /// The `Counterpart.remoteId` marker. Not a server row — the prefix is
+    /// what keeps builtins out of "your own people" surfaces (those filter on
+    /// `remoteId == nil`) while grouping them with the character pool.
+    var remoteKey: String { "builtin:" + voice.id }
+
+    /// Computed, not cached, so `vibe` re-resolves when the app language
+    /// changes mid-session. Order mirrors `VoicePreset.catalog`.
+    static var catalog: [StockPerson] {
+        let v = VoicePreset.catalog
+        return [
+            StockPerson(voice: v[0],
+                        localId: UUID(uuidString: "7A1C89E4-0D2B-4A54-9B6F-2E8C11D0A001")!,
+                        vibe: explain("Bright and upbeat"),
+                        identity: "Paige — American, twenties; bright and upbeat, quick to encourage, keeps the conversation moving"),
+            StockPerson(voice: v[1],
+                        localId: UUID(uuidString: "7A1C89E4-0D2B-4A54-9B6F-2E8C11D0A002")!,
+                        vibe: explain("Easygoing, a little dry"),
+                        identity: "Mark — American, thirties; easygoing and direct, with a dry sense of humor"),
+            StockPerson(voice: v[2],
+                        localId: UUID(uuidString: "7A1C89E4-0D2B-4A54-9B6F-2E8C11D0A003")!,
+                        vibe: explain("Warm and chatty"),
+                        identity: "Emma — British, twenties; warm and chatty, asks friendly follow-up questions"),
+            StockPerson(voice: v[3],
+                        localId: UUID(uuidString: "7A1C89E4-0D2B-4A54-9B6F-2E8C11D0A004")!,
+                        vibe: explain("Calm, gently witty"),
+                        identity: "James — British, forties; calm and courteous, unhurried, gently witty"),
+        ]
+    }
+
+    /// Resolve a scenario's stored voice id (nil = the Me-tab default) to its
+    /// person. Retired legacy voice ids resolve to the first person, matching
+    /// `VoicePreset.by`'s display fallback.
+    static func by(voiceId: String?) -> StockPerson {
+        let preset = VoicePreset.by(id: voiceId ?? VoicePreset.sceneDefault.id)
+        return catalog.first { $0.id == preset.id } ?? catalog[0]
+    }
+
+    /// This person as an ordinary `Counterpart`, reusing the already-saved
+    /// row when they've been used before (books and sessions link on the
+    /// local id, so it must stay stable — and it does, see `localId`).
+    func asCounterpart(existing: [Counterpart]) -> Counterpart {
+        if let known = existing.first(where: { $0.remoteId == remoteKey || $0.id == localId }) {
+            return known
+        }
+        var c = Counterpart(
+            id: localId,
+            name: name,
+            relationship: "",
+            background: identity,
+            conversationStyle: "",
+            voicePresetId: voice.id
+        )
+        c.remoteId = remoteKey
+        c.intro = identity
+        c.personaKind = PublicPersonaService.Group.character.rawValue
+        return c
+    }
+}
+
 // MARK: - Scenario (user-built practice scenario, saved as a library)
 
 /// A reusable Talk-mode practice scenario the user constructed once and can

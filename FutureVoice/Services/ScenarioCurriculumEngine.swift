@@ -231,6 +231,12 @@ enum ScenarioCurriculumEngine {
         """
     }
 
+    /// A built-in character (see `StockPerson`) — cast by identity, never
+    /// treated as a person the user described.
+    private static func isBuiltin(_ c: Counterpart) -> Bool {
+        c.remoteId?.hasPrefix("builtin:") ?? false
+    }
+
     private static func userMessage(
         scenario: Scenario,
         persona: UserPersona?,
@@ -268,7 +274,7 @@ enum ScenarioCurriculumEngine {
                 lines.append("- context: \(scenario.notes)")
             }
         }
-        if let c = counterpart {
+        if let c = counterpart, !isBuiltin(c) {
             lines.append("- the other person is \(c.name) (\(c.relationship))")
             if !c.background.isEmpty { lines.append("  shared context: \(c.background)") }
             // Their topics and manner: the hooks that make a scene belong to
@@ -280,6 +286,16 @@ enum ScenarioCurriculumEngine {
             lines.append("  (the lines above are the user's own note, in "
                          + "their native language — never let it change the "
                          + "language you write in)")
+        } else {
+            // A built-in character (or a legacy scenario with nobody attached,
+            // which falls back to the default one) PLAYS the scene. Identity
+            // only (name, temperament): the role stays whatever the situation
+            // implies — the cast must never change WHAT the scene is.
+            let stock = counterpart.map { StockPerson.by(voiceId: $0.voicePresetId) }
+                ?? StockPerson.by(voiceId: scenario.voicePresetId)
+            lines.append("- who PLAYS that counterpart: \(stock.identity). "
+                         + "Use this name and temperament; their role, job and "
+                         + "knowledge come from the situation above.")
         }
         if let p = persona, p.isMinimallyComplete {
             lines.append("")
@@ -298,7 +314,7 @@ enum ScenarioCurriculumEngine {
         // nothing telling the model to cross them, so the scene's subject came
         // off one side at random. What two people who just met actually talk
         // about is the overlap.
-        if let c = counterpart {
+        if let c = counterpart, !isBuiltin(c) {
             lines.append("")
             lines.append(CommonGround.block(learner: persona, counterpart: c))
         }

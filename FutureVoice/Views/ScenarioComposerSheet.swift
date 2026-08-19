@@ -15,7 +15,14 @@ import SwiftUI
 /// up, or just type your own. Per host only the primary action changes
 /// (Talk vs Watch) and what the caller does with the minted `Scenario`.
 struct ScenarioComposerSheet: View {
+    /// Which surface the CTA serves. Talk offers "Future self" (a call with
+    /// no one attached is a call with your own fluent voice — the product's
+    /// core); Watch doesn't — a scene always needs an other person, so its
+    /// default partner is a character.
+    enum Host { case talk, watch }
+
     var person: Counterpart?
+    var host: Host = .talk
     /// Pre-select a category on open (Watch's "Likely situations" cards jump
     /// straight into it, so its AI ideas load immediately).
     var initialCategory: Category? = nil
@@ -63,13 +70,15 @@ struct ScenarioComposerSheet: View {
     @State private var customEmoji = ""
     @State private var customCategories: [Category] = []
 
-    /// The person this scenario is WITH, when it was opened from their card.
-    /// The composer no longer offers a cast list — attaching someone is that
-    /// card's job — but an existing scenario keeps whoever it was built with.
-    @State private var attachedPersonId: UUID?
-    /// How the other person sounds when no person is attached. Defaults to
-    /// the user's scene voice from Me → Voice.
-    @State private var selectedVoiceId: String = VoicePreset.sceneDefault.id
+    /// WHO the other side of this scenario is — any person from the shared
+    /// people system: a built-in or curated character, a real user from the
+    /// Find-people pool, or one of the user's own people. nil = the future
+    /// self (Talk only). Materialized into `CounterpartStore` on commit, so
+    /// downstream (scenes, calls, books) it's an ordinary attached person.
+    @State private var partner: Counterpart?
+    /// One-shot guard for seeding `partner` in onAppear (which can re-fire).
+    @State private var partnerSeeded = false
+    @State private var showingPartnerPicker = false
     @FocusState private var situationFocused: Bool
     /// Dictation language for the speak-or-type field. Seeded from the app
     /// language on appear; "en" is only what it holds for the instant before
@@ -138,6 +147,10 @@ struct ScenarioComposerSheet: View {
             // an open sheet doesn't appear, and the composer staying up means
             // the situation they just wrote is still there afterwards.
             .sheet(isPresented: $showingPaywall) { PaywallView() }
+            .sheet(isPresented: $showingPartnerPicker) {
+                PartnerPickerSheet(host: host, current: partner) { partner = $0 }
+                    .environmentObject(appState)
+            }
             // A vertical TextField in a Form has no built-in way to dismiss the
             // keyboard — add both a swipe-down and an explicit Done button.
             .scrollDismissesKeyboard(.interactively)
@@ -157,8 +170,25 @@ struct ScenarioComposerSheet: View {
                         path = [Crumb(label: cat, scenario: "",
                                       icon: e.categoryIcon ?? "sparkles")]
                     }
-                    attachedPersonId = e.counterpartId
-                    selectedVoiceId = e.voicePresetId ?? VoicePreset.sceneDefault.id
+                }
+                if !partnerSeeded {
+                    partnerSeeded = true
+                    if let id = editing?.counterpartId,
+                       let found = appState.counterparts.first(where: { $0.id == id }) {
+                        partner = found
+                    } else if host == .watch {
+                        // A scene needs an other person. Legacy scenarios keep
+                        // the character whose voice they already play in; new
+                        // ones open on the default character.
+                        partner = StockPerson.by(voiceId: editing?.voicePresetId)
+                            .asCounterpart(existing: appState.counterparts)
+                    }
+                    // Talk + no attached person stays "future self" (nil) even
+                    // when a legacy voicePresetId exists: that field was only
+                    // ever the WATCH voice, and mapping it to a partner here
+                    // would silently turn a fluent-self call into a character
+                    // call on the next save (voicePresetId survives — see
+                    // commit()).
                 }
                 if let initialCategory, path.isEmpty { pickCategory(initialCategory) }
                 dictationLocale = SpeakOrTypeField.defaultLocale(
@@ -503,8 +533,49 @@ struct ScenarioComposerSheet: View {
         }
     }
 
+    /// The current partner + a tap into the people picker. One row, because
+    /// the choice is a person, not a setting: the detail lives in the sheet.
     private var attachSection: some View {
-        TalkingWithSection(selectedVoiceId: $selectedVoiceId)
+        Section {
+            Button { showingPartnerPicker = true } label: {
+                HStack(spacing: 12) {
+                    partnerAvatar
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(partner?.name ?? chrome("Future self"))
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(.primary)
+                        Text(partnerCaption)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .buttonStyle(.plain)
+        } header: {
+            Text("The other person")
+        } footer: {
+            Text(explain("Their role comes from the situation you describe — here you pick who plays it."))
+        }
+    }
+
+    @ViewBuilder private var partnerAvatar: some View {
+        ZStack {
+            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
+            if let p = partner {
+                Text(Books.initials(p.name)).font(.caption.weight(.semibold)).foregroundStyle(.tint)
+            } else {
+                Image(systemName: "waveform").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
+            }
+        }
+    }
+
+    private var partnerCaption: String {
+        guard let p = partner else { return explain("Your own voice, already fluent") }
+        return PartnerPickerSheet.caption(for: p)
     }
 
     // MARK: - Navigation / drill
@@ -638,8 +709,15 @@ struct ScenarioComposerSheet: View {
                     if sum.isEmpty { sum = r.summary }
                 }
             }
-            let who = person ?? attachedPersonId.flatMap { id in
-                appState.counterparts.first { $0.id == id }
+            var who = person
+            if who == nil, let p = partner {
+                // A picked character/user becomes a real row the moment a
+                // scenario is built with them — from here on they're an
+                // ordinary person (books, sessions, "People you've met").
+                if !appState.counterparts.contains(where: { $0.id == p.id }) {
+                    appState.saveCounterpart(p)
+                }
+                who = p
             }
             var s: Scenario
             if var e = editing {
@@ -649,20 +727,20 @@ struct ScenarioComposerSheet: View {
                 // invalidates them (they regenerate on the next talk).
                 if e.environment != text { e.openers = nil; e.openerCursor = nil }
                 e.environment = text
-                e.role = who.map { $0.relationship.isEmpty ? $0.name : $0.relationship }
-                    ?? (e.counterpartId != nil ? "" : e.role)
+                e.role = roleLine(for: who) ?? (e.counterpartId != nil ? "" : e.role)
                 s = e
             } else {
                 s = Scenario(
                     environment: text,
-                    role: who.map { $0.relationship.isEmpty ? $0.name : $0.relationship } ?? "",
+                    role: roleLine(for: who) ?? "",
                     notes: ""
                 )
             }
             s.counterpartId = who?.id
-            // No persona → carry the picked preset voice into every future
-            // watch of this scenario.
-            s.voicePresetId = who == nil ? selectedVoiceId : nil
+            // Future self keeps a legacy scenario's stored scene voice (that
+            // field was only ever the Watch voice); an attached person IS the
+            // voice now, so the field clears.
+            s.voicePresetId = who == nil ? editing?.voicePresetId : nil
             s.category = categoryName
             s.categoryIcon = icon
             s.summary = sum.isEmpty ? nil : sum
@@ -670,51 +748,223 @@ struct ScenarioComposerSheet: View {
             dismiss()
         }
     }
+
+    /// What `Scenario.role` should say for an attached person. Your OWN
+    /// people carry their relationship ("my landlord") — the scene is about
+    /// them. A character or pool user carries NOTHING: the situation casts
+    /// the role, and the person plays it (their identity rides in the
+    /// prompt's counterpart block). nil = no person attached.
+    private func roleLine(for who: Counterpart?) -> String? {
+        guard let who else { return nil }
+        if who.remoteId != nil { return "" }
+        return who.relationship.isEmpty ? who.name : who.relationship
+    }
 }
 
-// MARK: - Scene voice picker (shared by both composers)
+// MARK: - Partner picker (the shared people system, in one sheet)
 
-/// Who the other person SOUNDS like — nothing more. The scene infers who they
-/// are from the situation itself, which is what the composer is for.
+/// Pick WHO the other side of the scenario is, from the same people system
+/// everything else uses: built-in + curated characters (가상인물), real users
+/// from the Find-people pool, and your own people. Talk also offers "Future
+/// self" — a call with no one attached is a call with your own fluent voice.
 ///
-/// This used to double as a cast list: your saved people appeared as chips
-/// beside the voices, and picking one made that person play the scene. It
-/// made the composer answer two different questions in one control, and it
-/// duplicated a choice that now belongs to the person's own card ("Make a
-/// situation" arrives with the person already attached). What's left is the
-/// one thing the composer genuinely needs.
-struct TalkingWithSection: View {
-    @Binding var selectedVoiceId: String
+/// Built-ins and your own people render instantly; the pool streams in from
+/// `public_personas` and quietly stays absent offline. Every row can be
+/// heard (▶, cached per voice+line) before it's chosen.
+struct PartnerPickerSheet: View {
+    let host: ScenarioComposerSheet.Host
+    let current: Counterpart?
+    let onPick: (Counterpart?) -> Void
+
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var player = AudioPlayer()
+    @State private var loadingVoiceId: String?
+    @State private var playingRowId: UUID?
+    @State private var pool: [PublicPersonaService.PublicPersona] = []
+    @State private var poolLoading = true
 
     var body: some View {
-        Section {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)],
-                      alignment: .leading, spacing: 8) {
-                ForEach(VoicePreset.catalog) { preset in
-                    Button {
-                        selectedVoiceId = preset.id
-                    } label: {
-                        chip(preset.displayName, icon: "waveform",
-                             on: selectedVoiceId == preset.id)
-                    }
-                    .buttonStyle(.plain)
+        NavigationStack {
+            List {
+                if host == .talk { futureSelfSection }
+                if !mine.isEmpty {
+                    peopleSection(Text("Your people"), mine)
                 }
+                if !users.isEmpty || poolLoading {
+                    peopleSection(Text("People"), users, loading: poolLoading && users.isEmpty)
+                }
+                peopleSection(Text("Characters"), characters)
             }
-            .padding(.vertical, 2)
-        } header: {
-            Text("Voice")
-        } footer: {
-            Text(explain("How the other person sounds. Who they are comes from the situation you describe."))
+            .navigationTitle(Text("The other person"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() } }
+            }
+            .task {
+                pool = (try? await PublicPersonaService.fetchPool(
+                    language: appState.targetLanguage)) ?? []
+                poolLoading = false
+            }
+            .onDisappear { player.stop() }
         }
     }
 
-    private func chip(_ text: String, icon: String, on: Bool) -> some View {
-        Label(text, systemImage: icon)
-            .font(.subheadline)
-            .labelStyle(.titleAndIcon)
-            .padding(.horizontal, 12).padding(.vertical, 6)
-            .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
-            .background(Capsule().fill(on ? Color.accentColor : Color(.tertiarySystemFill)))
+    // MARK: Groups
+
+    /// 가상인물: the four built-ins first (always available), then every
+    /// character met or fetched — one pool, exactly like Find people's tab.
+    private var characters: [Counterpart] {
+        let builtins = StockPerson.catalog.map { $0.asCounterpart(existing: appState.counterparts) }
+        let met = appState.counterparts.filter {
+            guard let r = $0.remoteId else { return false }
+            return $0.personaKind == PublicPersonaService.Group.character.rawValue
+                && !r.hasPrefix("builtin:")
+        }
+        let fetched = pool.filter { $0.group == .character }
+            .map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
+        var seen = Set(builtins.map(\.id))
+        var rest: [Counterpart] = []
+        for c in met + fetched where seen.insert(c.id).inserted { rest.append(c) }
+        return builtins + rest
+    }
+
+    private var users: [Counterpart] {
+        let met = appState.counterparts.filter {
+            $0.remoteId != nil
+                && ($0.personaKind ?? PublicPersonaService.Group.user.rawValue)
+                    == PublicPersonaService.Group.user.rawValue
+        }
+        let fetched = pool.filter { $0.group == .user }
+            .map { PublicPersonaService.asCounterpart($0, existing: appState.counterparts) }
+        var seen = Set<UUID>()
+        var rows: [Counterpart] = []
+        for c in met + fetched where seen.insert(c.id).inserted { rows.append(c) }
+        return rows
+    }
+
+    private var mine: [Counterpart] {
+        appState.counterparts.filter { $0.remoteId == nil }
+    }
+
+    // MARK: Rows
+
+    private var futureSelfSection: some View {
+        Section {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
+                    Image(systemName: "waveform").font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Future self").font(.body.weight(.medium))
+                    Text(explain("Your own voice, already fluent"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                if current == nil {
+                    Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture { onPick(nil); dismiss() }
+        }
+    }
+
+    private func peopleSection(_ title: Text, _ people: [Counterpart],
+                               loading: Bool = false) -> some View {
+        Section {
+            ForEach(people) { p in row(p) }
+            if loading {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.mini)
+                    Text("Finding people…").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            title
+        }
+    }
+
+    private func row(_ p: Counterpart) -> some View {
+        HStack(spacing: 12) {
+            Button {
+                Task { await preview(p) }
+            } label: {
+                if loadingVoiceId == p.voicePresetId && playingRowId == nil {
+                    ProgressView().frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: playingRowId == p.id && player.isPlaying
+                          ? "stop.circle.fill" : "play.circle")
+                        .font(.title3)
+                        .foregroundStyle(.tint)
+                        .frame(width: 28, height: 28)
+                        .contentTransition(.symbolEffect(.replace))
+                }
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(playingRowId == p.id && player.isPlaying
+                                ? "Stop preview" : "Preview \(p.name)")
+            VStack(alignment: .leading, spacing: 1) {
+                Text(p.name).font(.body.weight(.medium))
+                let caption = Self.caption(for: p)
+                if !caption.isEmpty {
+                    Text(caption).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
+            if current?.id == p.id {
+                Image(systemName: "checkmark").fontWeight(.semibold).foregroundStyle(.tint)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onPick(p); dismiss() }
+    }
+
+    /// One line under the name: a built-in's temperament, your own person's
+    /// relationship, anyone else's place (their intro is their card's job).
+    static func caption(for p: Counterpart) -> String {
+        if let r = p.remoteId, r.hasPrefix("builtin:") {
+            return StockPerson.by(voiceId: p.voicePresetId).vibe
+        }
+        if p.remoteId == nil {
+            return p.relationship
+        }
+        return p.location
+    }
+
+    /// Same hear-before-you-choose mechanics as `VoicePresetPickerView`:
+    /// spoken in the target language, cached per voice+line, so each VOICE
+    /// costs at most one synthesis ever, however many people share it.
+    private func preview(_ p: Counterpart) async {
+        if playingRowId == p.id, player.isPlaying {
+            player.stop()
+            playingRowId = nil
+            return
+        }
+        player.stop()
+        playingRowId = nil
+
+        let text = VoicePresetPickerView.previewLine(for: appState.targetLanguage)
+        let voiceId = p.voicePresetId
+        loadingVoiceId = voiceId
+        defer { loadingVoiceId = nil }
+        do {
+            let data: Data
+            if let cached = PhraseAudioStore.shared.data(text: text, voiceId: voiceId) {
+                data = cached
+            } else {
+                data = try await ElevenLabsClient.shared.synthesize(
+                    voiceId: voiceId, text: text, purpose: "voice_preview")
+                _ = PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId)
+            }
+            playingRowId = p.id
+            try player.play(data, source: "voice_preview") {
+                playingRowId = nil
+            }
+        } catch {
+            playingRowId = nil
+        }
     }
 }
 

@@ -191,13 +191,9 @@ struct SceneWatchView: View {
             scenarioBlurb: "",
             title: c.dialogueTitle,
             turns: c.dialogue ?? [],
-            speakerName: linkedPersonaName(s) ?? s.role,
+            speakerName: watchCounterpart(for: s).name,
             voicePresetId: watchCounterpart(for: s).voicePresetId
         )
-    }
-
-    private func linkedPersonaName(_ s: Scenario) -> String? {
-        s.counterpartId.flatMap { id in appState.counterparts.first { $0.id == id }?.name }
     }
 
     private func watchCounterpart(for s: Scenario) -> Counterpart {

@@ -576,7 +576,7 @@ struct ScenarioDetailView: View {
             scenarioBlurb: "",
             title: c.dialogueTitle,
             turns: c.dialogue ?? [],
-            speakerName: linkedPersonaName(s) ?? s.role,
+            speakerName: watchCounterpart(for: s).name,
             voicePresetId: watchCounterpart(for: s).voicePresetId
         )
     }
@@ -631,13 +631,18 @@ struct ScenarioDetailView: View {
             ?? Self.syntheticCounterpart(for: s)
     }
 
-    /// Throwaway counterpart built from the scenario's role, so the scene can
-    /// play with a preset voice when no real person is linked. Never saved.
+    /// Throwaway counterpart built from the scenario's DEFAULT PERSON, so the
+    /// scene plays with an identity (their name, their voice) when no real
+    /// person is linked; the scenario's role rides along as the relationship.
+    /// Never saved.
     static func syntheticCounterpart(for s: Scenario) -> Counterpart {
         var c = Counterpart.empty
-        c.name = s.role.trimmingCharacters(in: .whitespaces).isEmpty ? "the other person" : s.role
+        c.name = StockPerson.by(voiceId: s.voicePresetId).name
+        c.relationship = s.role
         c.location = s.environment
         c.background = s.notes
+        // Keep the stored id even when it's a retired legacy voice — it still
+        // synthesizes; only display falls back (see `VoicePreset.by`).
         c.voicePresetId = s.voicePresetId ?? VoicePreset.sceneDefault.id
         return c
     }

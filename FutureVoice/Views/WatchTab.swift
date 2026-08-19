@@ -88,6 +88,7 @@ struct WatchTab: View {
                 // A saved card opens the SAME sheet in edit mode (cfg.editing):
                 // review/tweak the settings, delete, or Watch a fresh take.
                 ScenarioComposerSheet(person: cfg.person,
+                                      host: .watch,
                                       initialCategory: cfg.category,
                                       editing: cfg.editing,
                                       ctaTitle: "Watch", ctaIcon: "play.fill",
