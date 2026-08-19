@@ -136,13 +136,10 @@ struct ProgressTab: View {
     var body: some View {
         NavigationStack {
             Group {
-                if scoredCount == 0 {
-                    ScrollView {
-                        emptyState
-                            .padding(.top, 4)
-                            .padding(.bottom, 28)
-                    }
-                } else {
+                // The paged scaffold shows from day one — before the first
+                // scored talk each page renders its explainer (see
+                // `explainer(for:)`) instead of hiding the whole tab behind
+                // one blank ContentUnavailableView.
                     // A native horizontal-paging ScrollView instead of
                     // TabView(.page): the UIPageViewController behind the paged
                     // TabView clips its pages to the safe area, so content
@@ -201,7 +198,6 @@ struct ProgressTab: View {
                     // title font (see TransparentRoundedNavBar). The shim hides
                     // the bar background the same way, fonts intact.
                     .background(TransparentRoundedNavBar())
-                }
             }
             .background(Color(.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Progress")
@@ -219,12 +215,176 @@ struct ProgressTab: View {
     /// now also reachable by swiping the paged TabView.
     @ViewBuilder
     private func content(for dim: Dim) -> some View {
-        switch dim {
-        case .overall:        overallContent
-        case .vocabulary:     vocabularyContent
-        case .fluency:        fluencyContent
-        case .grammar:        grammarContent
-        case .expressiveness: expressivenessContent
+        if scoredCount == 0 {
+            explainer(for: dim)
+        } else {
+            switch dim {
+            case .overall:        overallContent
+            case .vocabulary:     vocabularyContent
+            case .fluency:        fluencyContent
+            case .grammar:        grammarContent
+            case .expressiveness: expressivenessContent
+            }
+        }
+    }
+
+    // MARK: - First-run pages (no scored talk yet)
+
+    /// Before the first scored talk, each page introduces its own sections —
+    /// same panel shapes and titles the filled page will use, so day one
+    /// teaches the map. Overall carries `buildingStatus`, the live unlock
+    /// progress, so the thing to do right now is on screen too.
+    @ViewBuilder
+    private func explainer(for dim: Dim) -> some View {
+        VStack(spacing: 16) {
+            switch dim {
+            case .overall:
+                panel {
+                    Text("Estimated level").font(.headline)
+                    Text("Read from your real talks — vocabulary, grammar, fluency and expression together.")
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    CardDivider(inset: 0)
+                    buildingStatus
+                }
+                explainerChartPanel("Growth",
+                                    "Every assessment adds a point — the line is your level over time.") {
+                    sampleLevelChart
+                }
+                explainerPanel("Across skills",
+                               "Vocabulary, fluency, grammar and expression each get their own page — swipe or tap the chips above.")
+            case .vocabulary:
+                explainerPanel("Vocabulary level",
+                               "Every word you say in a talk is collected and graded by CEFR — the level reads what you use, not what you know.")
+                explainerChartPanel("Words you use, by level",
+                                    "Each talk fills these bars, A1 to C2.") {
+                    sampleLevelBars
+                }
+                explainerPanel("Expressions you've used",
+                               "Multi-word phrases you actually said, collected automatically.")
+            case .fluency:
+                explainerPanel("Pace",
+                               "Words per minute of voiced speech — pauses and think-time don't drag it down.")
+                explainerChartPanel("Trend",
+                                    "One point per talk, with ≈CEFR pace bands behind the curve.") {
+                    trendChart(sampleTrend([78, 88, 84, 96, 104, 112]),
+                               unit: "words / min speaking",
+                               bands: Self.fluencyBands,
+                               line: Color(.systemGray2))
+                }
+            case .grammar:
+                explainerPanel("Grammatical control",
+                               "Read from verified grammar slips per 100 spoken words — fewer reads higher.")
+                explainerChartPanel("Trend",
+                                    "One point per talk — down is progress.") {
+                    trendChart(sampleTrend([6.5, 5.4, 5.8, 4.2, 3.4, 2.8]),
+                               unit: "slips / 100 words",
+                               bands: Self.grammarBands,
+                               line: Color(.systemGray2))
+                }
+            case .expressiveness:
+                explainerPanel("Words per turn",
+                               "How much you elaborate — longer, richer turns read higher.")
+                explainerChartPanel("Trend",
+                                    "One point per talk, with ≈CEFR bands behind the curve.") {
+                    trendChart(sampleTrend([7, 9, 8, 12, 14, 17]),
+                               unit: "words per turn",
+                               bands: Self.expressionBands,
+                               line: Color(.systemGray2))
+                }
+            }
+            Label("Your first talk starts filling this page", systemImage: "mic.fill")
+                .font(.footnote).foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 4)
+        }
+    }
+
+    private func explainerPanel(_ title: LocalizedStringKey, _ text: LocalizedStringKey) -> some View {
+        panel {
+            Text(title).font(.headline)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// An explainer panel WITH the section's chart, drawn in gray over sample
+    /// data and tagged "Sample" — the shape of what will appear, unmistakably
+    /// not a measurement of someone the app hasn't heard speak yet.
+    private func explainerChartPanel<C: View>(_ title: LocalizedStringKey,
+                                              _ text: LocalizedStringKey,
+                                              @ViewBuilder chart: () -> C) -> some View {
+        panel {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.headline)
+                Spacer()
+                Text("Sample")
+                    .font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(Color(.tertiarySystemFill)))
+            }
+            chart()
+            Text(text).font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Evenly-spaced sample points ending today — the explainer trend curves.
+    private func sampleTrend(_ values: [Double]) -> [TrendPoint] {
+        let cal = Calendar.current
+        return values.enumerated().compactMap { i, v in
+            cal.date(byAdding: .day, value: (i - values.count + 1) * 3, to: Date())
+                .map { TrendPoint(date: $0, value: v) }
+        }
+    }
+
+    /// The Growth chart's shape (A2 → B1 over a few assessments), gray.
+    private var sampleLevelChart: some View {
+        let cal = Calendar.current
+        let points: [LevelPoint] = [1, 1, 2, 2, 3].enumerated().compactMap { i, r in
+            cal.date(byAdding: .weekOfYear, value: i - 4, to: Date())
+                .map { LevelPoint(date: $0, rank: r, label: CEFRLevel.allCases[r].rawValue) }
+        }
+        return Chart(points) { p in
+            LineMark(x: .value("Assessment", p.date), y: .value("Level", p.rank))
+                .interpolationMethod(.stepEnd)
+                .foregroundStyle(Color(.systemGray2))
+            PointMark(x: .value("Assessment", p.date), y: .value("Level", p.rank))
+                .foregroundStyle(Color(.systemGray2))
+        }
+        .chartYScale(domain: -0.5...5.5)
+        .chartYAxis {
+            AxisMarks(position: .leading, values: Array(0...5)) { value in
+                AxisGridLine()
+                AxisValueLabel {
+                    if let i = value.as(Int.self) {
+                        Text(CEFRLevel.allCases[i].rawValue.uppercased())
+                            .font(.caption2)
+                    }
+                }
+            }
+        }
+        .frame(height: 130)
+    }
+
+    /// The by-level bars' shape — no counts, just the silhouette they'll take.
+    private var sampleLevelBars: some View {
+        let counts: [CEFRLevel: Int] = [.a1: 120, .a2: 80, .b1: 40, .b2: 12, .c1: 3, .c2: 0]
+        return ForEach(CEFRLevel.allCases, id: \.self) { lv in
+            HStack(spacing: 10) {
+                Text(lv.rawValue.uppercased())
+                    .geistPixel(15)
+                    .frame(width: 30, alignment: .leading)
+                    .foregroundStyle(.secondary)
+                GeometryReader { g in
+                    Capsule()
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(width: max((counts[lv] ?? 0) == 0 ? 0 : 6,
+                                          g.size.width * CGFloat(counts[lv] ?? 0) / 120))
+                }
+                .frame(height: 12)
+            }
+            .padding(.vertical, 2)
         }
     }
 
@@ -1268,69 +1428,78 @@ struct ProgressTab: View {
                             target: Double? = nil,
                             bands: [BandSpec] = []) -> some View {
         if trend.count >= 2 {
-            // Y-domain from the data (plus the goal line), padded — bands are
-            // then CLIPPED to it, so the zones label the visible range instead
-            // of squashing the curve to fit every band.
-            let values = trend.map(\.value) + (target.map { [$0] } ?? [])
-            let span = max((values.max() ?? 1) - (values.min() ?? 0), 1)
-            let lo = max(0, (values.min() ?? 0) - span * 0.25)
-            let hi = (values.max() ?? 1) + span * 0.25
-            // Zones clipped to the visible domain. Labels sit on the LEADING
-            // edge (the numeric y-axis owns the trailing edge) and are
-            // dropped for slivers too thin to hold a caption without
-            // colliding with the neighbor's.
-            let visibleBands: [(label: String, lo: Double, hi: Double, labeled: Bool)] =
-                bands.compactMap { band in
-                    let bLo = max(band.range.lowerBound, lo)
-                    let bHi = min(band.range.upperBound, hi)
-                    guard bLo < bHi else { return nil }
-                    return (band.level.rawValue.uppercased(), bLo, bHi,
-                            (bHi - bLo) / (hi - lo) >= 0.14)
-                }
             panel {
                 Text("Trend").font(.headline)
-                Chart {
-                    // CEFR zones behind the curve — same edges as the ≈band
-                    // mapping (one shared table per skill).
-                    ForEach(Array(visibleBands.enumerated()), id: \.offset) { i, band in
-                        RectangleMark(
-                            yStart: .value(unit, band.lo),
-                            yEnd: .value(unit, band.hi)
-                        )
-                        .foregroundStyle(Color(.secondarySystemFill)
-                            .opacity(i.isMultiple(of: 2) ? 0.55 : 0.25))
-                        .annotation(position: .overlay, alignment: .topLeading) {
-                            if band.labeled {
-                                Text(band.label)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.leading, 4)
-                                    .padding(.top, 1)
-                            }
-                        }
-                    }
-                    ForEach(trend) { p in
-                        LineMark(x: .value("Talk", p.date), y: .value(unit, p.value))
-                            .interpolationMethod(.monotone)
-                            .foregroundStyle(.tint)
-                        PointMark(x: .value("Talk", p.date), y: .value(unit, p.value))
-                            .foregroundStyle(.tint)
-                            .symbolSize(30)
-                    }
-                    // The next-band goal line — gives the curve a finish line.
-                    if let target {
-                        RuleMark(y: .value(unit, target))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .chartYScale(domain: lo...hi)
-                .frame(height: 130)
+                trendChart(trend, unit: unit, target: target, bands: bands)
                 Text(caption)
                     .font(.caption).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// The trend chart itself — shared between the real per-skill pages and
+    /// the first-run explainers (which draw it in gray over sample data).
+    private func trendChart(_ trend: [TrendPoint], unit: String,
+                            target: Double? = nil,
+                            bands: [BandSpec] = [],
+                            line: Color = .accentColor) -> some View {
+        // Y-domain from the data (plus the goal line), padded — bands are
+        // then CLIPPED to it, so the zones label the visible range instead
+        // of squashing the curve to fit every band.
+        let values = trend.map(\.value) + (target.map { [$0] } ?? [])
+        let span = max((values.max() ?? 1) - (values.min() ?? 0), 1)
+        let lo = max(0, (values.min() ?? 0) - span * 0.25)
+        let hi = (values.max() ?? 1) + span * 0.25
+        // Zones clipped to the visible domain. Labels sit on the LEADING
+        // edge (the numeric y-axis owns the trailing edge) and are
+        // dropped for slivers too thin to hold a caption without
+        // colliding with the neighbor's.
+        let visibleBands: [(label: String, lo: Double, hi: Double, labeled: Bool)] =
+            bands.compactMap { band in
+                let bLo = max(band.range.lowerBound, lo)
+                let bHi = min(band.range.upperBound, hi)
+                guard bLo < bHi else { return nil }
+                return (band.level.rawValue.uppercased(), bLo, bHi,
+                        (bHi - bLo) / (hi - lo) >= 0.14)
+            }
+        return Chart {
+            // CEFR zones behind the curve — same edges as the ≈band
+            // mapping (one shared table per skill).
+            ForEach(Array(visibleBands.enumerated()), id: \.offset) { i, band in
+                RectangleMark(
+                    yStart: .value(unit, band.lo),
+                    yEnd: .value(unit, band.hi)
+                )
+                .foregroundStyle(Color(.secondarySystemFill)
+                    .opacity(i.isMultiple(of: 2) ? 0.55 : 0.25))
+                .annotation(position: .overlay, alignment: .topLeading) {
+                    if band.labeled {
+                        Text(band.label)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 4)
+                            .padding(.top, 1)
+                    }
+                }
+            }
+            ForEach(trend) { p in
+                LineMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                    .interpolationMethod(.monotone)
+                    .foregroundStyle(line)
+                PointMark(x: .value("Talk", p.date), y: .value(unit, p.value))
+                    .foregroundStyle(line)
+                    .symbolSize(30)
+            }
+            // The next-band goal line — gives the curve a finish line.
+            if let target {
+                RuleMark(y: .value(unit, target))
+                    .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .chartYScale(domain: lo...hi)
+        .frame(height: 130)
     }
 
     private func measuredContent(dim: Dim, big: String, bigUnit: String, band: String?,
@@ -1466,14 +1635,6 @@ struct ProgressTab: View {
             .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No progress yet", systemImage: "chart.line.uptrend.xyaxis")
-        } description: {
-            Text(explain("Have a few conversations and I'll estimate your level and break down how your \(LanguageCatalog.englishName(appState.targetLanguage)) is developing."))
-        }
-    }
-
     // MARK: - Data
 
     private func reload() {
@@ -1498,6 +1659,7 @@ struct ProgressTab: View {
         let attempts = appState.shadowAttempts
         Task { @MainActor in
             var mastered = 0, total = 0
+            let drillCards = DrillStore.shared.load()
             for session in allEnded {
                 let snap = TalkCurriculum.build(session: session,
                                                 proficiency: proficiency,
@@ -1660,7 +1822,6 @@ struct ProgressTab: View {
                     gT.append(TrendPoint(date: date,
                                          value: Double(slips) / Double(m.userWordCount) * 100))
                 }
-            let drillCards = DrillStore.shared.load()
             }
             if m.avgWordsPerUserTurn > 0 {
                 eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))
