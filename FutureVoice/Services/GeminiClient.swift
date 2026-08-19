@@ -771,3 +771,34 @@ enum GeminiError: Error, LocalizedError {
         }
     }
 }
+
+extension Error {
+    /// True when the model answered, but in a shape the app couldn't read —
+    /// a decode failure, or prose where JSON was asked for. Distinct from
+    /// `.truncated` (asking again hits the same ceiling) and from anything
+    /// network- or billing-shaped: this is the one failure class where the
+    /// SAME request, asked once more, usually just works.
+    var isMalformedModelOutput: Bool {
+        if self is DecodingError { return true }
+        if let g = self as? GeminiError, case .jsonNotFound = g { return true }
+        return false
+    }
+
+    /// Where a decode gave up — `typeMismatch@scorecard.fluency.score`. For
+    /// telemetry only: without the coding path, every one of these failures
+    /// logs as NSCocoaErrorDomain:4864 and says nothing about which field the
+    /// model got wrong.
+    var decodeDetail: String? {
+        guard let error = self as? DecodingError else { return nil }
+        func path(_ context: DecodingError.Context) -> String {
+            context.codingPath.map(\.stringValue).joined(separator: ".")
+        }
+        switch error {
+        case let .typeMismatch(_, c):  return "typeMismatch@\(path(c))"
+        case let .valueNotFound(_, c): return "valueNotFound@\(path(c))"
+        case let .keyNotFound(key, c): return "keyNotFound@\(path(c)).\(key.stringValue)"
+        case let .dataCorrupted(c):    return "dataCorrupted@\(path(c))"
+        @unknown default:              return "decodingError"
+        }
+    }
+}

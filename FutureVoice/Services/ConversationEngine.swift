@@ -740,34 +740,72 @@ struct ConversationTurnPayload: Decodable {
 
 /// JSON shape returned by Claude for `SessionSummary`. Kept separate from the
 /// domain model so we can decode `frequency_hint` strings before mapping.
+///
+/// **Decoded LENIENTLY on purpose.** This is the one payload whose failure
+/// costs a whole talk its review material — no drills, no scorecard, nothing
+/// folded into the next conversation — and the shape is written by a model,
+/// which makes it a prediction, not a contract. In production it missed 6
+/// times between 2026-08-14 and 08-19 (`talk_summary_error`,
+/// NSCocoaErrorDomain:4864, at every transcript length from 9 to 31 turns),
+/// and each miss threw away everything the model got RIGHT because one field
+/// was absent or arrived as the wrong type.
+///
+/// So: an absent array is an empty array, an absent piece of prose is an empty
+/// string, a score written as `85.0` or `"85"` is 85, and one malformed
+/// element is dropped instead of taking its list with it. What can still fail
+/// is a phrase with no phrase in it — a record with nothing to teach, which is
+/// exactly what SHOULD be dropped.
 struct ClaudeSummaryPayload: Decodable {
     struct Phrase: Decodable {
         let user_said: String
         let fluent_alternative: String
-        let reason: String
+        /// Coaching prose — nice to have, never worth losing the phrase over.
+        let reason: String?
     }
     struct Pattern: Decodable {
         let mistake: String
         let correction: String
-        let context: String
-        let frequency_hint: String
+        let context: String?
+        /// Unknown/absent maps to "once" in `toDomain`, same as any other
+        /// unrecognized value.
+        let frequency_hint: String?
     }
     struct Axis: Decodable {
         let score: Int
-        let note: String
+        let note: String?
+
+        private enum CodingKeys: String, CodingKey { case score, note }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            // gen-3 writes a bare number here nearly always — but "nearly" is
+            // what a decoder can't spend a talk's whole yield on.
+            if let i = try? c.decode(Int.self, forKey: .score) {
+                score = i
+            } else if let d = try? c.decode(Double.self, forKey: .score) {
+                score = Int(d.rounded())
+            } else if let s = try? c.decode(String.self, forKey: .score),
+                      let d = Double(s.trimmingCharacters(in: .whitespaces)) {
+                score = Int(d.rounded())
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .score, in: c,
+                                                       debugDescription: "score is not a number")
+            }
+            note = try? c.decodeIfPresent(String.self, forKey: .note)
+        }
     }
     struct Scorecard: Decodable {
         let vocabulary: Axis
         let grammar: Axis
         let expressiveness: Axis
         let fluency: Axis
-        let top_line: String
+        let top_line: String?
         let cefr_level: String?
     }
     struct GrammarError: Decodable {
         let quote: String
         let correction: String
-        let note: String
+        let note: String?
     }
     let title: String?
     let phrases_used: [Phrase]
@@ -779,10 +817,53 @@ struct ClaudeSummaryPayload: Decodable {
     let overall_note: String
     let scorecard: Scorecard?
 
+    private enum CodingKeys: String, CodingKey {
+        case title, phrases_used, new_patterns_detected, suggested_drills
+        case expressions_used, weak_vocab_areas, grammar_errors, overall_note, scorecard
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        title = try? c.decodeIfPresent(String.self, forKey: .title)
+        phrases_used = Self.lossyArray(Phrase.self, in: c, forKey: .phrases_used)
+        new_patterns_detected = Self.lossyArray(Pattern.self, in: c, forKey: .new_patterns_detected)
+        suggested_drills = Self.lossyArray(String.self, in: c, forKey: .suggested_drills)
+        expressions_used = Self.lossyArray(String.self, in: c, forKey: .expressions_used)
+        weak_vocab_areas = Self.lossyArray(String.self, in: c, forKey: .weak_vocab_areas)
+        grammar_errors = Self.lossyArray(GrammarError.self, in: c, forKey: .grammar_errors)
+        overall_note = (try? c.decodeIfPresent(String.self, forKey: .overall_note)) ?? ""
+        // The scorecard is the one nested object worth keeping whole: an axis
+        // it forgot can't be invented, and a made-up 0 would read as a bad
+        // score rather than a missing one.
+        scorecard = try? c.decodeIfPresent(Scorecard.self, forKey: .scorecard)
+    }
+
+    /// Decodes an array element by element, skipping the ones that don't fit.
+    /// Missing key, wrong type, or a hole in the middle all land on the same
+    /// answer: whatever WAS usable.
+    private static func lossyArray<T: Decodable>(_ type: T.Type,
+                                                 in container: KeyedDecodingContainer<CodingKeys>,
+                                                 forKey key: CodingKeys) -> [T] {
+        guard var list = try? container.nestedUnkeyedContainer(forKey: key) else { return [] }
+        var out: [T] = []
+        while !list.isAtEnd {
+            if let item = try? list.decode(T.self) {
+                out.append(item)
+            } else if (try? list.decode(SkippedElement.self)) == nil {
+                break   // can't decode AND can't step over it — stop rather than spin
+            }
+        }
+        return out
+    }
+
+    /// Consumes one element of any shape, so the loop above can step past a
+    /// malformed entry. Empty by design.
+    private struct SkippedElement: Decodable {}
+
     func toDomain(now: Date = Date()) -> SessionSummary {
         let card: SessionScorecard? = scorecard.map { sc in
             func axis(_ a: Axis) -> AxisScore {
-                AxisScore(score: max(0, min(100, a.score)), note: a.note)
+                AxisScore(score: max(0, min(100, a.score)), note: a.note ?? "")
             }
             // Fluency rubric uses -1 to signal "no timing data". Surface that
             // by clamping back to 0 and rewriting the note, so the UI just
@@ -799,17 +880,19 @@ struct ClaudeSummaryPayload: Decodable {
                 expressiveness: axis(sc.expressiveness),
                 fluency: fluencyAxis,
                 pronunciation: nil,
-                topLine: sc.top_line,
+                topLine: sc.top_line ?? "",
                 cefrLevel: sc.cefr_level?.lowercased()
             )
         }
         return SessionSummary(
             phrasesUsed: phrases_used.map {
-                PhraseFeedback(userSaid: $0.user_said, fluentAlternative: $0.fluent_alternative, reason: $0.reason)
+                PhraseFeedback(userSaid: $0.user_said,
+                               fluentAlternative: $0.fluent_alternative,
+                               reason: $0.reason ?? "")
             },
             newPatternsDetected: new_patterns_detected.map {
                 let freq: Int
-                switch $0.frequency_hint.lowercased() {
+                switch ($0.frequency_hint ?? "").lowercased() {
                 case "often":     freq = 5
                 case "sometimes": freq = 2
                 default:          freq = 1
@@ -817,7 +900,7 @@ struct ClaudeSummaryPayload: Decodable {
                 return LearnerPattern(
                     mistake: $0.mistake,
                     correction: $0.correction,
-                    context: $0.context,
+                    context: $0.context ?? "",
                     frequency: freq,
                     lastSeenAt: now
                 )
@@ -831,7 +914,7 @@ struct ClaudeSummaryPayload: Decodable {
                 let quote = $0.quote.trimmingCharacters(in: .whitespacesAndNewlines)
                 let fix = $0.correction.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !quote.isEmpty, !fix.isEmpty else { return nil }
-                return GrammarIssue(quote: quote, correction: fix, note: $0.note)
+                return GrammarIssue(quote: quote, correction: fix, note: $0.note ?? "")
             }
         )
     }

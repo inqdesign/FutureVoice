@@ -180,12 +180,22 @@ struct ConversationView: View {
     /// meter reading "voiced" forever. If the TRANSCRIPT has been still this
     /// long (the old conservative signal), send regardless of energy.
     private static let noisyRoomFallbackSeconds: Double = 6.0
-    /// Hard ceiling on one listening turn. A café defeats BOTH endpointing
-    /// signals at once — the room never falls silent and the recognizer keeps
-    /// turning other people's voices into fresh partials — and the turn then
-    /// never ends at all. 30s is far past any single learner turn, so it only
-    /// ever fires when the room, not the learner, is doing the talking.
+    /// Ceiling on one listening turn, for when the ROOM is doing the talking.
+    /// A café defeats BOTH endpointing signals at once — the room never falls
+    /// silent and the recognizer keeps turning other people's voices into
+    /// fresh partials — and the turn then never ends at all. Gated on
+    /// `someoneIsTalkingHere()` being false: the clock alone cut real
+    /// monologues mid-sentence (reported 2026-08-18 — a learner who never
+    /// pauses reaches 30s in a perfectly quiet room), and a person's own
+    /// voice clears the voiced threshold where a room's babble doesn't, so
+    /// the same witness that separates them for billing separates them here.
     private static let maxListenSeconds: Double = 30
+    /// Absolute cap, whoever is talking. Bounds how large one turn's
+    /// recording can grow (the whole utterance is uploaded for transcription)
+    /// and how stale the on-device partial gets. By the time this fires the
+    /// segment carries minutes of close-mic evidence, so the cut SENDS —
+    /// nothing is lost but the tail.
+    private static let maxListenSecondsHard: Double = 120
     /// How much close-mic speech a segment must contain before we believe a
     /// PERSON produced it. Used twice: whether a ceiling'd turn is worth
     /// sending, and whether the call counts as occupied at all.
@@ -226,6 +236,67 @@ struct ConversationView: View {
     /// The in-flight verbatim-transcription call. One per turn; cancelled when
     /// the next turn starts or the call screen closes.
     @State private var transcribeTask: Task<Void, Never>?
+
+    // MARK: Chunked transcription (2026-08-18, testing)
+
+    /// Chunk-by-chunk audio transcription of the turn IN PROGRESS. The
+    /// whole-turn Gemini transcription corrects the bubble ~3s AFTER the reply
+    /// was already generated from the on-device guess — so the fluent self
+    /// answers text the learner may never have said (`asr=fixed` on most
+    /// turns). Cutting the capture at pause boundaries while the learner is
+    /// still talking puts the audio-grounded text (mostly) IN HAND when the
+    /// turn ends: chunks ride the idle network of the listening phase on
+    /// `GeminiClient.background`, and the tail chunk's round trip overlaps the
+    /// VAD confirmation wait. When every chunk resolves in time, the REPLY is
+    /// generated from that text; when any is missing, the turn ships exactly
+    /// as before (on-device guess now, whole-turn correction later) — never
+    /// worse than today, sometimes right where today is wrong.
+    private static let chunkedASREnabled = true
+    /// True silence before the current chunk is cut. Below every VAD tier
+    /// (0.8s shortest), so on a turn that is actually ending this doubles as
+    /// the SPECULATIVE TAIL send; above the intra-phrase word gaps, so cuts
+    /// land between phrases, not inside words.
+    private static let chunkRotateSilenceSeconds: Double = 0.5
+    /// Close-mic speech a piece must hold to be worth its own call.
+    private static let chunkMinVoicedSeconds: Double = 1.5
+    /// Voiced seconds below which the tail is just the trailing quiet after
+    /// the last cut — deleted, not transcribed.
+    private static let chunkTailMinVoicedSeconds: Double = 0.3
+    /// The most `stopAndSend` may wait for outstanding chunk transcripts
+    /// before falling back to the on-device text: a bounded wait for the
+    /// RIGHT text, priced against an instant reply to possibly-wrong text.
+    /// `chunk_wait_ms` records what it actually costs per turn.
+    private static let chunkAssemblyDeadlineSeconds: Double = 1.5
+
+    /// Per-listening-run state of the chunk pipeline — a class so the send
+    /// tasks and the endpoint monitor share one mutable record.
+    @MainActor
+    private final class ChunkASRState {
+        let runId = UUID()
+        /// Pieces cut so far; piece n's transcript lands in `resolved[n]`.
+        var nextIndex = 0
+        /// Piece index → verbatim text ("" = no speech in that piece).
+        var resolved: [Int: String] = [:]
+        /// Pieces whose call failed — any one of them sinks the assembly.
+        var failedCount = 0
+        /// `FluencyMeter.speakingSeconds` at the last cut, so "voiced seconds
+        /// since the last rotation" is computable against the running meter.
+        var voicedMark: Double = 0
+        var tasks: [Task<Void, Never>] = []
+
+        var isSettled: Bool { resolved.count + failedCount >= nextIndex }
+        var hasFailure: Bool { failedCount > 0 }
+        /// In-order text of everything resolved so far — the continuity
+        /// context for the next piece's call, and the assembled turn text.
+        func textSoFar() -> String {
+            (0..<nextIndex).compactMap { resolved[$0] }
+                .filter { !$0.isEmpty }.joined(separator: " ")
+        }
+    }
+    @State private var chunkASR: ChunkASRState?
+    /// Turns whose transcript was assembled from chunks BEFORE the reply —
+    /// already ground truth, so the whole-turn transcription call is skipped.
+    @State private var chunkResolvedTurns: Set<UUID> = []
 
     /// Turn work that is deliberately held until the fluent self is AUDIBLE.
     ///
@@ -409,7 +480,7 @@ struct ConversationView: View {
                 meter.onWallHit = {
                     guard !isTornDown else { return }
                     cancelSilenceTimer()
-                    if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+                    if phase == .listening { stopListeningDiscardingChunks() }
                     if phase == .listening || phase == .thinking { phase = .idle }
                     if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
@@ -830,8 +901,7 @@ struct ConversationView: View {
         cancelSilenceTimer()
         cancelIdleWatch()
         if phase == .listening {
-            _ = live.stop()
-            userSpeechStartedAt = nil
+            stopListeningDiscardingChunks()
         }
         if phase == .speaking {
             player.stop()
@@ -926,7 +996,7 @@ struct ConversationView: View {
         switch type {
         case .began:
             cancelSilenceTimer()
-            if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+            if phase == .listening { stopListeningDiscardingChunks() }
             if phase == .speaking { player.stop() }
             // `.thinking` is left alone: the reply is in flight over the
             // network, and it will speak (or fail) on its own terms.
@@ -954,10 +1024,70 @@ struct ConversationView: View {
         // Mid-reply, the call is doing something that doesn't need the mic.
         guard phase == .listening || phase == .idle else { return }
         guard force || !live.isEngineRunning else { return }
-        if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+        if phase == .listening { stopListeningDiscardingChunks() }
         lastActivityAt = Date()   // coming back from an interruption isn't idling
         await startRecording()
         CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
+    }
+
+    /// Fresh chunk state for this listening run — or none, when the feature is
+    /// off or the link is constrained (same guard as `startTranscription`: on
+    /// a bad uplink the pieces would stall and every turn would burn the full
+    /// assembly deadline for nothing).
+    private func startChunkPipeline() {
+        discardChunkPipeline()
+        let path = NetworkPathStatus.shared
+        guard Self.chunkedASREnabled, path.isSatisfied, !path.isConstrained else { return }
+        chunkASR = ChunkASRState()
+    }
+
+    /// Abandon the run's pieces (dropped segment, paused call). In-flight
+    /// tasks are cancelled; each deletes its own file on the way out.
+    private func discardChunkPipeline() {
+        guard let chunk = chunkASR else { return }
+        chunkASR = nil
+        for task in chunk.tasks { task.cancel() }
+    }
+
+    /// Stop the mic on an exit where the turn's audio is NEVER sent (wall
+    /// hit, interruption, pause, hang-up) — the chunk pipeline goes with it,
+    /// including the stopped run's un-cut tail file.
+    private func stopListeningDiscardingChunks() {
+        _ = live.stop()
+        discardChunkPipeline()
+        if let stale = live.lastChunkRecordingURL {
+            try? FileManager.default.removeItem(at: stale)
+        }
+        userSpeechStartedAt = nil
+    }
+
+    /// Encode one cut piece and put its transcription in flight. Fully
+    /// background — nothing awaits it until `adoptChunkTranscript`'s bounded
+    /// wait at turn end.
+    private func sendChunk(_ url: URL, state: ChunkASRState) {
+        let index = state.nextIndex
+        state.nextIndex += 1
+        let prior = state.textSoFar()
+        let target = appState.targetLanguage
+        let task = Task { @MainActor in
+            defer { try? FileManager.default.removeItem(at: url) }
+            let encoded = await Task.detached(priority: .userInitiated) {
+                Self.encodeTurnAudio(at: url)
+            }.value
+            guard let inline = encoded.inline else {
+                state.failedCount += 1
+                return
+            }
+            let heard = await UtteranceTranscriber.transcribeChunk(
+                audio: inline, priorText: prior, targetLanguage: target,
+                idempotencyKey: "asr-chunk:\(state.runId.uuidString):\(index)")
+            if let heard {
+                state.resolved[index] = heard
+            } else {
+                state.failedCount += 1
+            }
+        }
+        state.tasks.append(task)
     }
 
     /// Energy-based endpointing loop, started with the mic. Every tick it
@@ -993,6 +1123,19 @@ struct ConversationView: View {
                     didPreconnectThisTurn = true
                     GeminiClient.shared.preconnect()
                 }
+                // Cut the chunk capture at this pause and put its
+                // transcription in flight while the learner is still
+                // (possibly) mid-turn. 0.5s of true silence is below every
+                // VAD tier, so on a turn that is actually ending this same
+                // cut IS the speculative tail send — its round trip overlaps
+                // the confirmation wait happening right here.
+                if let chunk = chunkASR,
+                   audioSilence >= Self.chunkRotateSilenceSeconds,
+                   voicedSecondsThisTurn() - chunk.voicedMark >= Self.chunkMinVoicedSeconds,
+                   let piece = live.rotateCaptureChunk() {
+                    chunk.voicedMark = voicedSecondsThisTurn()
+                    sendChunk(piece, state: chunk)
+                }
                 // Primary: real audio silence for the tier duration, AND the
                 // recognizer's partial has settled (its lag would otherwise
                 // truncate the turn's tail).
@@ -1006,11 +1149,16 @@ struct ConversationView: View {
                 // and the recognizer keeps making words out of other people's
                 // voices, so the "transcript-quiet" fallback keeps restarting
                 // — the turn hangs on "Listening" until the learner taps.
-                // Reported from a real café, 2026-08-18. Nobody speaks one
-                // turn for this long, so shipping what we have beats a screen
-                // that never answers.
+                // Reported from a real café, 2026-08-18. But the clock alone
+                // also cut real monologues mid-sentence (same day): with no
+                // silence at all, 30s arrives while the LEARNER is the one
+                // talking. So the ceiling holds off while the close-mic
+                // evidence says a person is speaking — a room's babble never
+                // clears the voiced threshold, so the café case fires exactly
+                // as before — and only the absolute cap cuts a person.
                 let listened = userSpeechStartedAt.map { Date().timeIntervalSince($0) } ?? 0
-                let ranLong = listened >= Self.maxListenSeconds
+                let ranLong = listened >= Self.maxListenSecondsHard
+                    || (listened >= Self.maxListenSeconds && !someoneIsTalkingHere())
                 guard audioSettled || transcriptSettled || ranLong else { continue }
                 // A ceiling'd turn is the one case where the transcript may be
                 // nobody's — a room talking into an open mic for 30s. Sending
@@ -1068,8 +1216,9 @@ struct ConversationView: View {
     /// the call instead of restarting forever.
     private func restartListeningQuietly() async {
         guard !isTornDown, phoneCallActive, phase == .listening else { return }
-        _ = live.stop()
-        userSpeechStartedAt = nil
+        // The room's audio goes with the words: pieces already in flight are
+        // abandoned and the stopped run's chunk tail is deleted unheard.
+        stopListeningDiscardingChunks()
         await startRecording()
     }
 
@@ -1363,7 +1512,9 @@ struct ConversationView: View {
                            measurementMode: false,
                            contextualStrings: recognitionHints(),
                            captureToFile: true,   // keep the user's own audio for listen-back
+                           chunkCapture: Self.chunkedASREnabled,
                            voiceProcessing: true)
+            startChunkPipeline()
             userSpeechStartedAt = Date()
             // Last turn's pausing still describes this learner, but with less
             // and less authority the longer they go without needing it.
@@ -1427,6 +1578,20 @@ struct ConversationView: View {
         let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
         userSpeechStartedAt = nil
 
+        // Chunk pipeline: whatever was captured since the last cut is the
+        // tail. With voice in it, it becomes the final piece; without, it is
+        // the trailing quiet after a cut that already caught the real tail.
+        let chunkState = chunkASR
+        chunkASR = nil
+        if let tail = live.lastChunkRecordingURL {
+            if let chunk = chunkState,
+               fluency.speakingSeconds - chunk.voicedMark >= Self.chunkTailMinVoicedSeconds {
+                sendChunk(tail, state: chunk)
+            } else {
+                try? FileManager.default.removeItem(at: tail)
+            }
+        }
+
         var userTurn = Turn(
             id: turnId, role: .user, audioURL: nil,
             transcript: finalText, durationMs: max(0, elapsedMs), timestamp: Date(),
@@ -1460,7 +1625,52 @@ struct ConversationView: View {
         turns.append(userTurn)
         didSaveCurrentSession = false
 
+        if let chunk = chunkState, chunk.nextIndex > 0 {
+            await adoptChunkTranscript(chunk, turnId: turnId, guess: finalText)
+        }
         await requestReply(forUserTurn: userTurn.id)
+    }
+
+    /// Bounded wait for the in-flight chunk transcripts; when EVERY piece
+    /// resolved, the assembled audio-grounded text replaces the on-device
+    /// guess BEFORE the reply is generated — the whole point of the pipeline.
+    /// Any gap (a failed call, a piece still in flight at the deadline) falls
+    /// back to today's behavior: on-device text now, whole-turn correction
+    /// later.
+    private func adoptChunkTranscript(_ chunk: ChunkASRState, turnId: UUID,
+                                      guess: String) async {
+        let started = Date()
+        let deadline = started.addingTimeInterval(Self.chunkAssemblyDeadlineSeconds)
+        while !chunk.isSettled, !chunk.hasFailure, Date() < deadline, !isTornDown {
+            try? await Task.sleep(nanoseconds: 60_000_000)
+        }
+        let waitedMs = Int(Date().timeIntervalSince(started) * 1000)
+        turnTiming["chunks"] = String(chunk.nextIndex)
+        turnTiming["chunk_wait_ms"] = String(waitedMs)
+        let assembled = chunk.textSoFar()
+        guard chunk.isSettled, !chunk.hasFailure, !assembled.isEmpty,
+              let idx = turns.firstIndex(where: { $0.id == turnId }) else {
+            turnTiming["chunk_path"] = chunk.hasFailure ? "failed" : "late"
+            for task in chunk.tasks { task.cancel() }
+            return
+        }
+        turnTiming["chunk_path"] = "full"
+        // Same event the whole-turn path logs, so one query reads both eras:
+        // a `chunk_*` outcome means the reply itself was generated from
+        // audio-grounded text, and `ms` is what the assembly wait cost.
+        Telemetry.log("talk_asr_upgrade", [
+            "asr": "chunk_" + Self.asrDelta(heard: assembled, guess: guess),
+            "ms": String(waitedMs),
+            "guess_len": String(guess.count),
+            "audio": "aac",
+            "input": Self.currentInputPortType(),
+        ])
+        turns[idx].transcript = assembled
+        turns[idx].transcriptPending = false
+        // Ground truth: neither the recognizer's late rescore nor any stray
+        // whole-turn result may clobber it.
+        lastRecognizerText[turnId] = nil
+        chunkResolvedTurns.insert(turnId)
     }
 
     /// Generate the fluent-self reply for `turnId` (the latest user turn).
@@ -1577,6 +1787,7 @@ struct ConversationView: View {
             // paywall instead of a retry loop that can never succeed.
             Telemetry.log("talk_turn_error", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "status": error.elevenLabsStatus ?? "",
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
             ])
             outOfCredits = error.isOutOfCredits
@@ -1599,6 +1810,12 @@ struct ConversationView: View {
     /// already shipped and writing into it would leak the value onto the NEXT
     /// turn's row.
     private func startTranscription(forUserTurn turnId: UUID) {
+        // Already audio-grounded via the chunk pipeline — the reply itself was
+        // generated from that text and its event is logged. Nothing to fix.
+        guard !chunkResolvedTurns.contains(turnId) else {
+            chunkResolvedTurns.remove(turnId)
+            return
+        }
         guard let encode = turnAudioEncode, encode.turnId == turnId else {
             logTranscriptionSkip("no_file")
             resolvePendingTranscript(turnId)
@@ -1655,7 +1872,7 @@ struct ConversationView: View {
         defer { resolvePendingTranscript(turnId) }
         var outcome = "missing"
         if let heard, !heard.isEmpty, let idx = turns.firstIndex(where: { $0.id == turnId }) {
-            outcome = heard == turns[idx].transcript ? "same" : "fixed"
+            outcome = Self.asrDelta(heard: heard, guess: turns[idx].transcript)
             turns[idx].transcript = heard
             // Ground truth — a late recognizer pass must not overwrite it.
             lastRecognizerText[turnId] = nil
@@ -1665,7 +1882,34 @@ struct ConversationView: View {
             "ms": String(elapsedMs),
             "guess_len": String(guess.count),
             "audio": audio,
+            "input": Self.currentInputPortType(),
         ])
+    }
+
+    /// same / minor / fixed. "fixed" used to be EXACT string inequality, which
+    /// counted a differently-placed comma as a mishearing — the "82% wrong"
+    /// measured 2026-08-14 was inflated by pure formatting noise, and how much
+    /// was never knowable because the texts aren't logged. "minor" is that
+    /// noise (same words, different casing/punctuation); "fixed" now means the
+    /// WORDS differ.
+    private static func asrDelta(heard: String, guess: String) -> String {
+        if heard == guess { return "same" }
+        return asrNormalized(heard) == asrNormalized(guess) ? "minor" : "fixed"
+    }
+
+    private static func asrNormalized(_ text: String) -> String {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+
+    /// Which mic the words came through — the missing dimension in every ASR
+    /// accuracy question so far: an 8 kHz HFP earphone mic and the built-in
+    /// mic have very different error rates, and nothing recorded which one a
+    /// turn used.
+    private static func currentInputPortType() -> String {
+        AVAudioSession.sharedInstance().currentRoute.inputs.first?.portType.rawValue ?? "none"
     }
 
     /// Decode → 16 kHz mono → AAC-ADTS (~32 kbps, 8–13× smaller than WAV, so
@@ -1900,6 +2144,7 @@ struct ConversationView: View {
         } catch {
             Telemetry.log("talk_tts_split_open_failed", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "status": error.elevenLabsStatus ?? "",
                 "mid_stream": streamId != nil ? "1" : "0",
             ])
             if let id = streamId {
@@ -2106,6 +2351,7 @@ struct ConversationView: View {
         } catch {
             Telemetry.log("talk_tts_stream_fallback", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                "status": error.elevenLabsStatus ?? "",
                 "mid_stream": streamTurnId != nil ? "1" : "0",
             ])
             if let id = streamTurnId {
@@ -2179,7 +2425,9 @@ struct ConversationView: View {
         cancelIdleWatch()
         // If a call is still live, stop the mic/playback so the overlay isn't
         // fighting an open recording while the summary generates.
-        if phase == .listening { _ = live.stop(); userSpeechStartedAt = nil }
+        if phase == .listening {
+            stopListeningDiscardingChunks()
+        }
         if phase == .speaking { player.stop() }
         phase = .thinking
         withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
@@ -2205,6 +2453,11 @@ struct ConversationView: View {
         // session. `SessionSummarizer` overwrites this row (same id) once the
         // analysis lands; until then the talk sits in Practice with a
         // "generate the review material" button instead of dead-ending here.
+        // The draft save below overwrites a resumed talk's previous analysis
+        // (summary: nil is what marks the row "needs analysis") — capture it
+        // first so the summarizer can MERGE with it instead of losing it.
+        let priorSummary = SessionStore.shared.load()
+            .first { $0.id == sessionId }?.summary
         let draft = Session(
             id: sessionId,
             userId: userId,
@@ -2221,8 +2474,10 @@ struct ConversationView: View {
         )
         SessionStore.shared.save(draft)
         didSaveCurrentSession = true
+        var toAnalyze = draft
+        toAnalyze.summary = priorSummary
         do {
-            let result = try await SessionSummarizer.summarize(session: draft,
+            let result = try await SessionSummarizer.summarize(session: toAnalyze,
                                                                appState: appState)
             summary = result.summary
             phase = .idle
@@ -2234,6 +2489,10 @@ struct ConversationView: View {
             // truncation here is silent otherwise (the talk still saved).
             Telemetry.log("talk_summary_error", [
                 "error": (error as NSError).domain + ":\((error as NSError).code)",
+                // Which field the model got wrong. Without it every decode
+                // failure logs as NSCocoaErrorDomain:4864 and the next fix is
+                // guesswork.
+                "detail": error.decodeDetail ?? "",
                 "turns": String(turns.count),
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
             ])
@@ -2290,6 +2549,10 @@ struct ConversationView: View {
         turnAudioEncode?.task.cancel()
         splitSpeech = nil
         _ = live.stop()
+        discardChunkPipeline()
+        if let stale = live.lastChunkRecordingURL {
+            try? FileManager.default.removeItem(at: stale)
+        }
         player.stop()
         phase = .idle
     }

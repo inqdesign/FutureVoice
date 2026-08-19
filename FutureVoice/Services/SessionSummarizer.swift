@@ -58,30 +58,54 @@ enum SessionSummarizer {
         // Stable idempotency key: retrying — by re-tapping End, or from the
         // book days later — re-runs the SAME logical request without a
         // second charge, as long as the transcript hasn't grown.
-        let payload: ClaudeSummaryPayload = try await GeminiClient.shared.sendJSON(
-            system: systemP,
-            messages: [GeminiClient.Message(role: .user, content: userMessage)],
-            // The schema's worst case is big: up to 15 grammar_errors (quote +
-            // correction + a NATIVE-language note each), 5 phrases_used, 3-4
-            // drills, expressions, and a 6-field scorecard whose notes are
-            // also native-language. On top of that gen-3 counts THINKING
-            // tokens against this same ceiling. At 1400 a long B2 session ran
-            // out mid-JSON and surfaced as "reply hit the token ceiling" on
-            // End — the talk was already saved, but its whole review yield
-            // was lost. The ceiling is not billed, only tokens actually
-            // produced, so the headroom is free.
-            maxTokens: 4096,
-            purpose: "summary",
-            idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
-        )
+        func request() async throws -> ClaudeSummaryPayload {
+            try await GeminiClient.shared.sendJSON(
+                system: systemP,
+                messages: [GeminiClient.Message(role: .user, content: userMessage)],
+                // The schema's worst case is big: up to 15 grammar_errors (quote +
+                // correction + a NATIVE-language note each), 5 phrases_used, 3-4
+                // drills, expressions, and a 6-field scorecard whose notes are
+                // also native-language. On top of that gen-3 counts THINKING
+                // tokens against this same ceiling. At 1400 a long B2 session ran
+                // out mid-JSON and surfaced as "reply hit the token ceiling" on
+                // End — the talk was already saved, but its whole review yield
+                // was lost. The ceiling is not billed, only tokens actually
+                // produced, so the headroom is free.
+                maxTokens: 4096,
+                purpose: "summary",
+                idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
+            )
+        }
+
+        let payload: ClaudeSummaryPayload
+        do {
+            payload = try await request()
+        } catch let error where error.isMalformedModelOutput {
+            // The learner did nothing wrong and has nothing to fix — the model
+            // wrote a shape we couldn't read. Ask once more before making the
+            // end of a talk look like a failure. Free: `record_free_usage`
+            // dedupes on the idempotency key, so the second attempt neither
+            // charges nor spends a slot of the daily cap, and the wait is one
+            // request on a screen that is already showing a wrap-up.
+            Telemetry.log("talk_summary_retry", [
+                "detail": error.decodeDetail ?? "unknown",
+                "turns": String(turns.count),
+            ])
+            payload = try await request()
+        }
         var computed = payload.toDomain()
 
         // Fold the user's spoken words into the long-term vocab pool; the
         // freshly-used words ride along on the summary so the wrap-up can
-        // celebrate concrete progress.
+        // celebrate concrete progress. The pool accepts each text once, so
+        // when a RESUMED talk is summarized again the fresh batch covers only
+        // the new turns — merge with the previous summary's list instead of
+        // overwriting it, or every resume erased "words you used first".
         let userTexts = turns.filter { $0.role == .user }.map { $0.transcript }
-        computed.newWordsUsed = VocabStore.shared.ingest(
+        let freshWords = VocabStore.shared.ingest(
             sessionId: sessionId, userTexts: userTexts)
+        let priorWords = session.summary?.newWordsUsed ?? []
+        computed.newWordsUsed = priorWords + freshWords.filter { !priorWords.contains($0) }
 
         // Keep only expressions that literally appear in the user's own
         // turns — the LLM occasionally paraphrases, and we never show or
@@ -104,6 +128,11 @@ enum SessionSummarizer {
         }
         #endif
         computed.expressionsUsed = verifiedExpressions
+        // A pre-per-key-tracking session being re-analyzed: what it already
+        // counted is its previous summary's list — seed the store so those
+        // don't count twice (no-op when per-key data exists).
+        VocabStore.shared.notePriorExpressions(
+            sessionId: sessionId, phrases: session.summary?.expressionsUsed ?? [])
         VocabStore.shared.ingestExpressions(
             sessionId: sessionId, phrases: verifiedExpressions)
 
@@ -151,10 +180,12 @@ enum SessionSummarizer {
         saved.summary = computed
         SessionStore.shared.save(saved)
 
-        // Clear any cards from a previous analysis of THIS session (resume
+        // Clear cards from a previous analysis of THIS session (resume
         // re-summarizes the whole thing, and so does a regenerate) so they
-        // don't pile up.
-        DrillStore.shared.deleteForSession(sessionId)
+        // don't pile up — but ONLY the untouched ones. A card the learner
+        // has already reviewed carries Leitner progress a re-analysis must
+        // not reset; ingest's dedupe skips re-minting the survivors.
+        DrillStore.shared.clearUnreviewedCards(for: sessionId)
         DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
         // Producing a card's phrase live outranks any flashcard tap — credit
         // it against the SRS schedule, not just the wrap-up.
