@@ -260,6 +260,62 @@ enum DebugCapture {
                     }
                 }
             })
+        case "call-goals":
+            // The studying-chips row pinned above a call in progress: one item
+            // already said (ticked), the rest still open. Real use needs a
+            // notebook AND a live call, so the state is staged here.
+            let goals = [
+                TalkGoalItem(key: "commute", text: "commute", isWord: true),
+                TalkGoalItem(key: "it slipped my mind", text: "it slipped my mind", isWord: false),
+                TalkGoalItem(key: "hectic", text: "hectic", isWord: true),
+                TalkGoalItem(key: "run me through it", text: "run me through it", isWord: false),
+                TalkGoalItem(key: "eventually", text: "eventually", isWord: true),
+            ]
+            return AnyView(NavigationStack {
+                VStack(spacing: 0) {
+                    TalkGoalChipsRow(items: goals, used: ["commute"])
+                    Divider().opacity(0.15)
+                    VStack(alignment: .leading, spacing: 18) {
+                        DialogueLine(speaker: .other, name: "Future self") {
+                            Text("So — how did the interview go yesterday?")
+                        }
+                        DialogueLine(speaker: .user, name: "You") {
+                            Text("It went well. I commuted for almost an hour, though.")
+                        }
+                        Spacer()
+                    }
+                    .padding(20)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .principal) {
+                        LevelHeaderTitle(title: "Job interview",
+                                         level: .b1, surface: .talk)
+                            .environmentObject(appState)
+                    }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Image(systemName: "xmark")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Text("End").fontWeight(.semibold)
+                            .foregroundStyle(.red)
+                    }
+                }
+            })
+        case "call-goal-sheet":
+            // What a chip opens. A capture run has no session, so the real
+            // lookup returns nil and the sheet would render its failure state
+            // — stub the entry the same way the word card's capture does.
+            stubWordEntry = WordEntry(
+                pos: "Adjective",
+                senses: [.init(pos: "형용사", meaning: "정신없이 바쁜, 빡빡한",
+                               note: "일정·하루처럼 '쉴 틈 없이 바쁜' 상태에 써요.")],
+                examples: [.init(text: "It's been a hectic week at work.",
+                                 meaning: "회사에서 정신없는 한 주였어요.")],
+                phrases: [], properNoun: nil)
+            return AnyView(GoalSheetPreview().environmentObject(appState))
         case "level-sheet":
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
@@ -1228,6 +1284,37 @@ private struct StreakWidgetGallery: View {
                                    step: streakPixel))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The chip sheet over a call, presented on appear — a detented sheet can only
+/// be photographed from inside a real presentation.
+private struct GoalSheetPreview: View {
+    @EnvironmentObject private var appState: AppState
+    @State private var item: TalkGoalItem? = TalkGoalItem(key: "hectic", text: "hectic", isWord: true)
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 18) {
+                TalkGoalChipsRow(items: [
+                    TalkGoalItem(key: "commute", text: "commute", isWord: true),
+                    TalkGoalItem(key: "it slipped my mind", text: "it slipped my mind", isWord: false),
+                    TalkGoalItem(key: "hectic", text: "hectic", isWord: true),
+                ], used: ["commute"])
+                Divider().opacity(0.15)
+                DialogueLine(speaker: .other, name: "Future self") {
+                    Text("So — how did the interview go yesterday?")
+                }
+                .padding(.horizontal, 20)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(.systemBackground))
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .sheet(item: $item) {
+            TalkGoalSheet(item: $0, used: false).environmentObject(appState)
+        }
     }
 }
 #endif

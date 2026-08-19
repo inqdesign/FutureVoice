@@ -367,6 +367,16 @@ struct ConversationView: View {
     /// per frame, so no smoothing here.
     @State private var voiceLevel: Float = 0
 
+    /// What the learner is studying, offered as something to actually SAY in
+    /// this call. Picked once when the call opens (a row that re-shuffled
+    /// mid-conversation would be a different promise every turn) and ticked by
+    /// `CarryoverDetector` — see `TalkGoalChips.swift`.
+    @State private var goalItems: [TalkGoalItem] = []
+    @State private var usedGoalKeys: Set<String> = []
+    /// The chip the learner tapped — its meaning + an example to say. The call
+    /// keeps running underneath; this never pauses anything.
+    @State private var goalDetail: TalkGoalItem?
+
     /// Live lookup, not a copy — resolves through appState so edits to the
     /// person elsewhere are picked up, and resume restores it from the saved
     /// session's counterpartId with no extra plumbing.
@@ -451,6 +461,15 @@ struct ConversationView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Pinned, not part of the feed: material the learner is meant
+                // to reach for has to still be there at minute six, and
+                // anything inside the transcript is gone after two turns.
+                if !goalItems.isEmpty {
+                    TalkGoalChipsRow(items: goalItems, used: usedGoalKeys) { item in
+                        goalDetail = item
+                    }
+                    Divider().opacity(0.15)
+                }
                 feed
                 Divider().opacity(0.15)
                 bottomBar
@@ -523,6 +542,10 @@ struct ConversationView: View {
             }
             // Drill / Shadow / History / Watch / Profile moved to dedicated
             // tabs in `RootTabView`. ConversationView now owns Talk only.
+            .sheet(item: $goalDetail) { item in
+                TalkGoalSheet(item: item, used: usedGoalKeys.contains(item.key))
+                    .environmentObject(appState)
+            }
             .sheet(item: summaryBinding) { s in
                 SummarySheet(summary: s, sessionId: sessionId,
                              onDone: endAndClose)
@@ -578,6 +601,7 @@ struct ConversationView: View {
                 Text(explain("nawana needs the microphone and speech recognition to hear you speak. Turn them on in Settings → nawana."))
             }
             .task { refreshDashboard() }
+            .task { goalItems = TalkGoalPicker.pick() }
             .task { canUpgradePlan = await AccountStatus.fetch().isDailyPlan }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.
@@ -1624,6 +1648,7 @@ struct ConversationView: View {
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
         didSaveCurrentSession = false
+        creditGoalChips(turnId: userTurn.id)
 
         if let chunk = chunkState, chunk.nextIndex > 0 {
             await adoptChunkTranscript(chunk, turnId: turnId, guess: finalText)
@@ -1671,6 +1696,7 @@ struct ConversationView: View {
         // whole-turn result may clobber it.
         lastRecognizerText[turnId] = nil
         chunkResolvedTurns.insert(turnId)
+        creditGoalChips(turnId: turnId)
     }
 
     /// Generate the fluent-self reply for `turnId` (the latest user turn).
@@ -1876,6 +1902,7 @@ struct ConversationView: View {
             turns[idx].transcript = heard
             // Ground truth — a late recognizer pass must not overwrite it.
             lastRecognizerText[turnId] = nil
+            creditGoalChips(turnId: turnId)
         }
         Telemetry.log("talk_asr_upgrade", [
             "asr": outcome,
@@ -1973,6 +2000,27 @@ struct ConversationView: View {
               turns[idx].transcript == lastRecognizerText[turnId] else { return }
         turns[idx].transcript = trimmed
         lastRecognizerText[turnId] = trimmed
+        creditGoalChips(turnId: turnId)
+    }
+
+    /// Tick every studying chip this turn just produced.
+    ///
+    /// Runs on EVERY version of a user turn's text — the recognizer's line the
+    /// instant they stop talking, its rescored pass, and Gemini's
+    /// audio-grounded rewrite. The first one is what makes the tick feel like
+    /// an answer to what they just said; the later ones can only add. Ticks are
+    /// never removed: the same detector runs over the finished transcript at
+    /// session end, so the wrap-up is where the count is settled, and a check
+    /// that vanished mid-call would read as the app taking something back.
+    private func creditGoalChips(turnId: UUID) {
+        guard !goalItems.isEmpty,
+              let turn = turns.first(where: { $0.id == turnId }) else { return }
+        let pending = goalItems.filter { !usedGoalKeys.contains($0.key) }
+        guard !pending.isEmpty else { return }
+        let hits = TalkGoalPicker.hits(in: turn, among: pending)
+        guard !hits.isEmpty else { return }
+        withAnimation(.easeInOut(duration: 0.25)) { usedGoalKeys.formUnion(hits) }
+        HapticEngine.success()
     }
 
     /// Stop holding a user turn's bubble for the audio-grounded rewrite —

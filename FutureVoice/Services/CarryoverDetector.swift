@@ -211,6 +211,18 @@ enum CarryoverDetector {
         return nil
     }
 
+    /// Could this phrase EVER be credited? The token bars in `firstMatch`
+    /// reject an item before any transcript is looked at, so a phrase that
+    /// fails here can never come back as a hit no matter what the learner says.
+    ///
+    /// Live surfaces need to ask this BEFORE they promise anything: a chip
+    /// offering "thanks a lot" as something to use today is a checkbox that
+    /// cannot tick, and one of those teaches the learner the whole row is
+    /// decorative.
+    static func isCreditable(_ phrase: String) -> Bool {
+        tokens(phrase).count >= minTokens && contentTokens(phrase).count >= minContentTokens
+    }
+
     /// First user turn that used `lemma`. Lemma-based, so the notebook's
     /// headword matches whatever form the learner actually inflected it into.
     static func firstLemmaMatch(of lemma: String, in userTurns: [Turn]) -> Hit? {
