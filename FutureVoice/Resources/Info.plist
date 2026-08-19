@@ -30,7 +30,7 @@
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
-	<string>9</string>
+	<string>10</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -49,18 +49,6 @@
 	<array>
 		<string>GeistPixel-Square.ttf</string>
 	</array>
-	<!-- A call must survive the screen going dark. Without this the system
-	     suspends the app seconds after the learner locks the phone or checks
-	     a message: the audio engine stops mid-sentence, the recognition task
-	     dies, and coming back finds a call that is still on screen but deaf.
-	     The mode is honest here — the app's main function IS audio, and it is
-	     audible and recording for the whole time it holds the session. It is
-	     claimed only while a call is up: `CallNowPlaying.begin/end` bracket it
-	     with the lock-screen controls, and every other surface deactivates its
-	     session as before.
-	     NOTE: `scripts/beta.sh` bumps CFBundleVersion with PlistBuddy, which
-	     rewrites this file and drops every comment in it. If a build bump ever
-	     lands with this paragraph missing, that is why — put it back. -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
