@@ -39,6 +39,10 @@ enum BackupService {
         var files = 0
         var defaults = 0
         var skipped = 0
+        /// Entries whose path had to be repaired on the way in — see
+        /// `normalizedPath`. Non-zero means the envelope came from a build
+        /// with the truncated-path bug.
+        var repaired = 0
     }
 
     /// Where a running export/import has got to.
@@ -118,6 +122,49 @@ enum BackupService {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     }
 
+    // MARK: - Paths
+
+    /// `url`'s path relative to `root`, or nil if it isn't under it.
+    ///
+    /// Compared COMPONENT BY COMPONENT, with symlinks resolved on both sides,
+    /// because string arithmetic on the two paths is not safe: on iOS the
+    /// container lives under `/var/mobile/…`, which is a symlink to
+    /// `/private/var/mobile/…`, and `FileManager.enumerator` hands back the
+    /// RESOLVED path while `urls(for:)` returns the unresolved one. Dropping
+    /// `root.path.count + 1` characters from a path that is 8 characters
+    /// longer at the FRONT ate the wrong end: every entry in every backup ever
+    /// exported from a device was filed as `cuments/lang/en/sessions.json`
+    /// (the tail of "Documents"), so a restore laid the whole library down in
+    /// `Documents/cuments/…` — a directory nothing reads — reported "restored
+    /// N files", and the receiving install showed no practice data at all.
+    /// It also defeated `excludedFolders`, whose test is the FIRST component,
+    /// which is why those exports carried the entire PhraseAudio cache.
+    static func relativePath(of url: URL, under root: URL) -> String? {
+        let child = url.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        let base = root.resolvingSymlinksInPath().standardizedFileURL.pathComponents
+        guard child.count > base.count, Array(child.prefix(base.count)) == base else { return nil }
+        return child.dropFirst(base.count).joined(separator: "/")
+    }
+
+    /// Repairs a path written by a build with the bug described above, so the
+    /// backups already sitting in people's Files app still import.
+    ///
+    /// The damage is always the same shape: a leading component that is a
+    /// PROPER SUFFIX of "Documents" (`cuments` for the 8-character `/private`
+    /// prefix). Nothing this app writes to Documents is named that, so the
+    /// test can't catch a real folder.
+    static func normalizedPath(_ path: String) -> String {
+        var parts = path.split(separator: "/").map(String.init)
+        guard let first = parts.first,
+              first != "Documents",
+              !first.isEmpty,
+              "Documents".hasSuffix(first),
+              parts.count > 1
+        else { return path }
+        parts.removeFirst()
+        return parts.joined(separator: "/")
+    }
+
     /// Writes the envelope into tmp and returns its URL for the share sheet.
     ///
     /// `nonisolated` on purpose: the caller is a view, so an inherited main
@@ -167,7 +214,7 @@ enum BackupService {
         else { return [] }
         var found: [(url: URL, path: String)] = []
         for case let url as URL in enumerator {
-            let rel = String(url.path.dropFirst(docs.path.count + 1))
+            guard let rel = relativePath(of: url, under: docs) else { continue }
             if let top = rel.split(separator: "/").first,
                excludedFolders.contains(String(top)) {
                 if (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
@@ -223,8 +270,10 @@ enum BackupService {
             if index % progressStride == 0 {
                 await onProgress(.restoring(done: index + 1, total: envelope.files.count))
             }
+            let path = normalizedPath(file.path)
+            if path != file.path { report.repaired += 1 }
             // Never let a crafted path escape Documents.
-            let dest = docs.appendingPathComponent(file.path).standardizedFileURL
+            let dest = docs.appendingPathComponent(path).standardizedFileURL
             guard dest.path.hasPrefix(docs.path + "/") else {
                 report.skipped += 1
                 continue
@@ -236,7 +285,28 @@ enum BackupService {
         }
         await onProgress(.restoring(done: envelope.files.count, total: envelope.files.count))
         report.defaults = applyDefaults(envelope.defaults ?? [:])
+        if report.files > 0 { discardMisfiledTrees(in: docs) }
         return report
+    }
+
+    /// Removes what an import made by a buggy build left behind:
+    /// `Documents/cuments/…`, a full copy of another install's library filed
+    /// under the tail of "Documents" (see `relativePath`). Only ever created
+    /// by that bug, and this restore has just laid the same envelope down in
+    /// the right place, so nothing here is the only copy of anything.
+    ///
+    /// Left alone it isn't merely wasted space — it is inside Documents, so
+    /// the NEXT export packs it too, and each round trip nests another copy.
+    private static func discardMisfiledTrees(in docs: URL) {
+        let fm = FileManager.default
+        let entries = (try? fm.contentsOfDirectory(at: docs, includingPropertiesForKeys: nil)) ?? []
+        for url in entries {
+            let name = url.lastPathComponent
+            guard name != "Documents", !name.isEmpty, "Documents".hasSuffix(name),
+                  (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+            else { continue }
+            try? fm.removeItem(at: url)
+        }
     }
 
     /// Re-applies the carried defaults, re-checking `isCarried` on the way IN
