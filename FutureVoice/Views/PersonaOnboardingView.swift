@@ -163,6 +163,30 @@ struct PersonaOnboardingView: View {
                 TextField("e.g. Wife and 4yo daughter at Kita", text: $persona.household, axis: .vertical)
                     .lineLimit(2...4)
             }
+            rememberedSection
+        }
+    }
+
+    /// The half of this profile the learner didn't type: what the fluent self
+    /// picked up in their calls. Read-only and deletable — it can only be as
+    /// right as what it heard, and a line the learner never meant has to come
+    /// off the same way any other line about them would.
+    @ViewBuilder
+    private var rememberedSection: some View {
+        if !persona.learnedNotes.isEmpty {
+            Section {
+                ForEach(persona.learnedNotes) { note in
+                    Text(note.text)
+                        .font(.subheadline)
+                }
+                .onDelete { offsets in
+                    persona.learnedNotes.remove(atOffsets: offsets)
+                }
+            } header: {
+                Text("What I've picked up")
+            } footer: {
+                Text(explain("From your talks. Swipe to remove anything I got wrong."))
+            }
         }
     }
 

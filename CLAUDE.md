@@ -159,6 +159,55 @@ ends at 4 min 52 s would fail the day. It is currently derived from the plan's
 shape, not from behaviour: `TalkMeter` only shipped 2026-08-11, so almost no
 account emits `talk_seconds` yet. Re-derive it once real days exist.
 
+## The first call, and the memory it leaves (2026-08-19)
+
+Everything the fluent self knew about the learner used to come off a setup
+form, which is not how anyone learns about a person — so the FIRST plain free
+talk is spent meeting them, and what it hears is written down.
+
+- **`UserPersona.metAt == nil` is "we haven't met."** While it is nil, a free
+  talk opens on `FreeTalkOpeners.introOpener` (bundled per language, so the
+  first greeting of all never waits on Gemini, and it outranks both the
+  rotating pool and the fallback) and the conversation prompt carries
+  `ConversationEngine`'s **FIRST CALL** block: say once that this is the first
+  time, then spend the call finding out who they are — one question per turn,
+  never one already answered by the profile, always giving something back.
+  That block explicitly suspends "never quiz them about their own profile" and
+  "don't always end with a question", which otherwise win by volume.
+- **Free talk only, and it is not "the first talk ever."** A scenario casts
+  the model as the barista and a Find-people call as a stranger; neither can
+  run an introduction without breaking what it was launched as (the counterpart
+  block bans that shape by name). So `firstMeeting` is gated on
+  `topic.isEmpty && counterpart == nil` in BOTH `ConversationView` and the
+  engine — someone whose first tap was a news story gets properly introduced
+  on their first free talk instead. `metAt` is stamped when such a talk is
+  SUMMARIZED, so a call that was opened and abandoned has met nobody.
+- **`UserPersona.learnedNotes` is the fluent self's half of the profile.** The
+  summary call returns `about_user` — 0-3 durable facts about the person's
+  LIFE, native language, ≤ 12 words, only what they actually said — and
+  `SessionSummarizer` folds them in via `AppState.rememberAboutUser`. It comes
+  back through `personaBlock` on every later call, which is the whole point:
+  you tell your future self about your job once, out loud, and it knows next
+  week. `absorb` dedupes on a punctuation-stripped key (the model re-tells the
+  same fact differently every session) and keeps the newest 40.
+- **`about_user` is the LAST field in the summary schema, deliberately.** The
+  order above it is load-bearing for `SessionSummarizer.Progress.absorb`;
+  appending is safe, inserting is not. Being last also means a response cut off
+  at the token ceiling loses this and nothing else.
+- **`rememberAboutUser` is not `savePersona`** — it must not wipe topic
+  suggestions or re-sync the public intro on every talk end, and these lines
+  must never reach the Find-people pool: `composedIntro` reads only fields the
+  user typed, and something said to your own future self was not said to
+  strangers. The learner sees the notes in Me → Profile and can swipe any of
+  them away; a memory that can't be corrected is a liability.
+- **`UserPersona` decodes leniently** (custom `init(from:)`, in an extension so
+  the memberwise init survives). A missing key here means `PersonaStore.load()`
+  returns nil, which walks an existing user back into onboarding — every
+  persona already on a phone predates these two fields.
+- `PersonaDeepenSheet`'s auto-prompt stands down once notes exist: the call
+  just asked those three questions out loud, and a form re-asking them reads as
+  the app not having listened.
+
 ## The learning loop (keep it closed)
 
 ```

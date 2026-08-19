@@ -61,6 +61,32 @@ final class FreeTalkOpeners {
         return fallbackOpeners[code] ?? fallbackOpeners["en"]!
     }
 
+    /// The line the VERY FIRST free talk opens on, before the fluent self has
+    /// met the learner (`UserPersona.metAt == nil`). It outranks both the pool
+    /// and the fallback above, because a rotating "good to hear you" is a
+    /// greeting between people who already know each other — and the whole of
+    /// that first call is spent finding out who this person is (see
+    /// `ConversationEngine`'s FIRST CALL block, which the rest of the
+    /// conversation runs on). Bundled for the same reason as the fallback: the
+    /// first greeting of all must never wait on a live Gemini call. MATERIAL →
+    /// target language, and name-free so one cache entry serves everyone.
+    static func introOpener(language: String) -> String {
+        let code = LanguageCatalog.language(language)?.code ?? "en"
+        return introOpeners[code] ?? introOpeners["en"]!
+    }
+
+    private static let introOpeners: [String: String] = [
+        "en": "Hey, this is our first time talking. Tell me about yourself?",
+        "de": "Hey, wir sprechen zum ersten Mal. Erzähl mir ein bisschen von dir?",
+        "ko": "안녕, 우리 처음 얘기하는 거네. 네 얘기 좀 들려줄래?",
+        "ja": "やあ、話すのは初めてだね。きみのこと、聞かせてくれる？",
+        "es": "Hola, es la primera vez que hablamos. Cuéntame algo de ti.",
+        "fr": "Salut, c'est la première fois qu'on se parle. Parle-moi un peu de toi ?",
+        "it": "Ciao, è la prima volta che parliamo. Raccontami un po' di te.",
+        "pt": "Oi, é a primeira vez que a gente conversa. Me conta de você?",
+        "zh": "嘿，这是我们第一次聊天。跟我说说你吧？",
+    ]
+
     private static let fallbackOpeners: [String: String] = [
         "en": "Hey, good to hear you. What's been going on today?",
         "de": "Hey, schön dich zu hören. Was war heute bei dir los?",
@@ -147,7 +173,14 @@ final class FreeTalkOpeners {
     /// every point that mints a new voice id (clone, re-record, accent remix)
     /// — a new id invalidates all warmed audio at once.
     func warmFirstCall(language: String, personaName: String?,
-                       proficiency: CEFRLevel, voiceId: String?) async {
+                       proficiency: CEFRLevel, voiceId: String?,
+                       firstMeeting: Bool = false) async {
+        // The introduction line is what an unmet learner's call actually
+        // opens on — warming the pool around it would leave the one greeting
+        // they're going to hear as the only slow one.
+        if let voiceId, firstMeeting {
+            try? await warmLine(Self.introOpener(language: language), voiceId: voiceId)
+        }
         if let voiceId, !hasPool(language: language, personaName: personaName) {
             try? await warmLine(Self.fallbackOpener(language: language), voiceId: voiceId)
         }

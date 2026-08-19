@@ -871,6 +871,28 @@ final class AppState: ObservableObject {
         Task { await PublicPersonaService.autoSyncMyPersona(p, language: targetLanguage) }
     }
 
+    /// Fold what a talk taught the fluent self into the profile — the other
+    /// half of the persona, written by the caller instead of by the user
+    /// (`UserPersona.learnedNotes`). `metAt` stamps the introduction call, and
+    /// only ever the first one.
+    ///
+    /// Deliberately NOT `savePersona`: that one wipes the topic suggestions
+    /// and re-syncs the public intro, both of which are answers to the user
+    /// EDITING their profile. A remembered line changes neither, and paying
+    /// for regenerated topics at the end of every talk would be a real cost
+    /// for no change on screen. It also keeps these lines OFF the Find-people
+    /// pool by construction — `composedIntro` only ever reads fields the user
+    /// typed, and something said out loud to your own future self was not
+    /// said to strangers. No persona on file means the learner never finished
+    /// onboarding — writing one here would fake that.
+    func rememberAboutUser(_ notes: [PersonaNote], metAt when: Date? = nil) {
+        guard var p = persona else { return }
+        p.absorb(notes: notes)
+        if let when, p.metAt == nil { p.metAt = when }
+        PersonaStore.shared.save(p)
+        persona = p
+    }
+
     func updateTopicSuggestions(_ topics: [SuggestedTopic]) {
         TopicStore.shared.save(topics)
         topicSuggestions = topics
@@ -1027,10 +1049,11 @@ final class AppState: ObservableObject {
         let personaName = persona?.displayName
         let level = proficiency
         let voice = voiceCloneId
+        let unmet = persona?.metAt == nil
         Task.detached(priority: .utility) {
             await FreeTalkOpeners.shared.warmFirstCall(
                 language: language, personaName: personaName,
-                proficiency: level, voiceId: voice)
+                proficiency: level, voiceId: voice, firstMeeting: unmet)
         }
     }
 

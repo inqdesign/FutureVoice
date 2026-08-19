@@ -111,7 +111,8 @@ enum SessionSummarizer {
         let systemP = ConversationEngine.summarySystemPrompt(
             targetLanguage: session.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
-            profile: appState.learnerProfile
+            profile: appState.learnerProfile,
+            knownAboutUser: appState.persona?.knownFacts ?? []
         )
         let transcript = ConversationEngine.formatTranscript(turns)
         let metrics = ScorecardMetrics.compute(turns: turns)
@@ -288,6 +289,28 @@ enum SessionSummarizer {
         // Grow the long-term learner profile — the next conversation's system
         // prompt picks these patterns up.
         appState.recordSessionOutcome(summary: computed, turns: turns)
+        // The other memory: what the talk taught the fluent self about the
+        // PERSON. A learner tells their future self about their job once, out
+        // loud, and expects it to be known next week — so it's written into
+        // the same profile they fill in by hand and read back through
+        // `personaBlock`. Capped at 3 a session: this is a notebook, not a
+        // transcript, and the model volunteers more than it should when a talk
+        // ran long.
+        let learned = payload.about_user
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty && $0.count <= 140 }
+            .prefix(3)
+            .map { PersonaNote(text: $0, sessionId: sessionId, learnedAt: Date()) }
+        // A plain free talk is where the fluent self gets to know someone —
+        // a scenario casts it as a barista and a Find-people call as a
+        // stranger, and neither of those met the learner. Stamping this is
+        // what retires the first-call framing.
+        let wasIntroTalk = session.counterpartId == nil && existingTopic.isEmpty
+        if !learned.isEmpty || (wasIntroTalk && appState.persona?.metAt == nil) {
+            appState.rememberAboutUser(
+                Array(learned),
+                metAt: wasIntroTalk ? (session.endedAt ?? Date()) : nil)
+        }
         // Kick off async weekly-report generation if unlock conditions are
         // met. Fires-and-forgets — UI doesn't block on Gemini.
         appState.maybeGenerateWeeklyReport()

@@ -1364,6 +1364,26 @@ struct ConversationView: View {
                 opener = initialOpener
             } else if topicIsNews, let fromPool = openNewsConversation() {
                 opener = fromPool
+            } else if isFirstMeeting {
+                // They've never spoken. A rotating "good to hear you" is a
+                // greeting between people who know each other — this call
+                // opens by admitting it's the first one and asking who they
+                // are (the FIRST CALL block runs the rest of it). Bundled, so
+                // the first greeting of all never waits on Gemini, and the
+                // pool is written in the background for later sessions.
+                opener = FreeTalkOpeners.introOpener(language: appState.targetLanguage)
+                if !FreeTalkOpeners.shared.hasPool(
+                    language: appState.targetLanguage,
+                    personaName: appState.persona?.displayName) {
+                    let language = appState.targetLanguage
+                    let personaName = appState.persona?.displayName
+                    let proficiency = appState.proficiency
+                    Task.detached(priority: .utility) {
+                        _ = try? await FreeTalkOpeners.shared.generatePool(
+                            language: language, personaName: personaName,
+                            proficiency: proficiency)
+                    }
+                }
             } else if topic.isEmpty, counterpart == nil,
                       let canned = FreeTalkOpeners.shared.next(
                           language: appState.targetLanguage,
@@ -2676,6 +2696,20 @@ struct ConversationView: View {
         return Int(player.duration * 1000)
     }
 
+    /// The call where the fluent self meets the learner for the first time.
+    ///
+    /// A plain free talk only: a scenario casts the model as the barista and a
+    /// Find-people call as a stranger, and neither of those can spend itself
+    /// getting to know the user without breaking what it was launched as. So
+    /// this is not "the first talk ever" but "the first talk where the fluent
+    /// self is itself" — someone whose first tap was a news story still gets
+    /// properly introduced later, which is the point.
+    /// `UserPersona.metAt` is stamped when such a talk gets summarized, so an
+    /// abandoned call that said nothing is not counted as having met anyone.
+    private var isFirstMeeting: Bool {
+        appState.persona?.metAt == nil && topic.isEmpty && counterpart == nil
+    }
+
     private func systemPrompt() -> String {
         let composedTopic = topicBlurb.isEmpty ? topic : "\(topic). \(topicBlurb)"
         return ConversationEngine.conversationSystemPrompt(
@@ -2687,7 +2721,8 @@ struct ConversationView: View {
             topic: composedTopic,
             persona: appState.persona,
             counterpart: counterpart,
-            newsFacts: newsFacts
+            newsFacts: newsFacts,
+            firstMeeting: isFirstMeeting
         )
     }
 }

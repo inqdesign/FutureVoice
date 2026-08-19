@@ -567,7 +567,8 @@ struct ConversationHome: View {
             language: appState.targetLanguage,
             personaName: appState.persona?.displayName,
             proficiency: appState.proficiency,
-            voiceId: appState.voiceCloneId)
+            voiceId: appState.voiceCloneId,
+            firstMeeting: appState.persona?.metAt == nil)
     }
 
     // MARK: - Actions (tap = start the call)
@@ -719,6 +720,10 @@ struct ConversationHome: View {
     /// onboarding deliberately skips and `PersonaDeepenSheet` collects.
     private var personaNeedsDepth: Bool {
         guard let p = appState.persona else { return false }
+        // The first call now asks these out loud and writes down the answers
+        // (`UserPersona.learnedNotes`). Once it has, a form asking the same
+        // three questions reads as the app not having listened.
+        guard p.learnedNotes.isEmpty else { return false }
         return [p.occupation, p.household, p.freeNotes]
             .allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }

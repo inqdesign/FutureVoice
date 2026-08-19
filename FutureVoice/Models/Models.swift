@@ -515,10 +515,20 @@ struct UserPersona: Codable {
     var situations: [String]          // target-language moments — ["Kita parent small talk", "client calls"]
     var freeNotes: String             // catch-all
     var updatedAt: Date
+    /// What the fluent self has picked up about the user IN their calls —
+    /// the other half of this record. Everything above is the user writing
+    /// about themselves; this is the person on the other end of the phone
+    /// remembering what they were told. Same file, same editor, so there is
+    /// one profile rather than two.
+    var learnedNotes: [PersonaNote] = []
+    /// When the fluent self first properly met the user — the free talk that
+    /// was spent getting to know them. Nil until that call has happened, and
+    /// that is what makes the first call read as a first call.
+    var metAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case displayName, city, country, lengthOfStay, occupation, household,
-             interests, freeNotes, updatedAt
+             interests, freeNotes, updatedAt, learnedNotes, metAt
         // Personas on disk predate multi-language prep — keep the legacy key.
         case situations = "englishSituations"
     }
@@ -547,6 +557,85 @@ struct UserPersona: Codable {
             || !interests.isEmpty
             || !situations.isEmpty
         return coreFilled && contextFilled
+    }
+}
+
+/// One thing the fluent self learned about the user during a talk, kept so the
+/// next call starts from what it was told rather than from nothing.
+///
+/// NATIVE language: the learner reads these in their own profile, and they go
+/// back into the conversation prompt as context, never as material.
+struct PersonaNote: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var text: String
+    /// The talk it came out of — provenance, so a note is never orphaned.
+    var sessionId: UUID?
+    var learnedAt: Date
+
+    /// Comparison form for "do we already know this?" — the model rewrites
+    /// the same fact with different punctuation and spacing every session.
+    var dedupeKey: String {
+        text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+extension UserPersona {
+    /// Decoded LENIENTLY, and it has to be: a persona written by an earlier
+    /// build has no `learnedNotes` key, and the synthesized decoder throws on
+    /// a missing key for a non-optional field. Here that throw means
+    /// `PersonaStore.load()` returns nil — which walks an existing user back
+    /// into first-run onboarding and loses their profile. Every field falls
+    /// back instead, so adding the next one can't do that either.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        func value<T: Decodable>(_ key: CodingKeys, _ fallback: T) -> T {
+            ((try? c.decodeIfPresent(T.self, forKey: key)) ?? nil) ?? fallback
+        }
+        displayName = value(.displayName, "")
+        city = value(.city, "")
+        country = value(.country, "")
+        lengthOfStay = value(.lengthOfStay, "")
+        occupation = value(.occupation, "")
+        household = value(.household, "")
+        interests = value(.interests, [])
+        situations = value(.situations, [])
+        freeNotes = value(.freeNotes, "")
+        updatedAt = value(.updatedAt, Date())
+        learnedNotes = value(.learnedNotes, [])
+        metAt = (try? c.decodeIfPresent(Date.self, forKey: .metAt)) ?? nil
+    }
+
+    /// Everything already on file about this person, as plain lines. Handed
+    /// to the summary call as the "don't hand this back as a discovery" list —
+    /// without it the same fact is re-learned every session and the profile
+    /// fills with paraphrases of one sentence.
+    var knownFacts: [String] {
+        var out: [String] = []
+        let place = [city, country].filter { !$0.isEmpty }.joined(separator: ", ")
+        if !place.isEmpty { out.append("Lives in \(place)") }
+        if !occupation.isEmpty { out.append(occupation) }
+        if !household.isEmpty { out.append(household) }
+        if !interests.isEmpty { out.append("Interested in \(interests.joined(separator: ", "))") }
+        if !freeNotes.isEmpty { out.append(freeNotes) }
+        out.append(contentsOf: learnedNotes.map(\.text))
+        return out
+    }
+
+    /// Append what a talk taught, dropping anything already on file. Newest
+    /// last; the oldest fall off past `limit` so the conversation prompt this
+    /// feeds can't grow without bound.
+    mutating func absorb(notes: [PersonaNote], limit: Int = 40) {
+        var seen = Set(learnedNotes.map(\.dedupeKey))
+        for note in notes where !note.dedupeKey.isEmpty && !seen.contains(note.dedupeKey) {
+            seen.insert(note.dedupeKey)
+            learnedNotes.append(note)
+        }
+        if learnedNotes.count > limit {
+            learnedNotes.removeFirst(learnedNotes.count - limit)
+        }
     }
 }
 
