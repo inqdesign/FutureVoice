@@ -39,7 +39,15 @@ enum DrillEnrichmentEngine {
             // the ceiling is not billed, only tokens actually produced.
             maxTokens: 2048,
             purpose: "enrichment",
-            idempotencyKey: "enrichment:\(card.id.uuidString)"
+            // Keyed by the PHRASE, not the card — the same correction can be
+            // opened from a card that no longer exists (see
+            // `DrillEnrichmentStore`), and a card id made every such open a
+            // separate charge.
+            idempotencyKey: "enrichment:" + DrillEnrichmentStore.key(
+                phrase: card.targetPhrase,
+                targetLanguage: targetLanguage,
+                nativeLanguage: nativeLanguage
+            )
         )
 
         return DrillCardEnrichment(

@@ -76,12 +76,25 @@ final class DrillStore: LanguageScopedStore {
         write(all)
     }
 
-    /// Remove every card sourced from a session — used before re-ingesting a
-    /// resumed conversation so its cards don't duplicate.
+    /// Remove every card sourced from a session — for deleting the talk
+    /// itself. Re-analysis must NOT use this: it wipes Leitner progress —
+    /// see `clearUnreviewedCards(for:)`.
     func deleteForSession(_ sessionId: UUID) {
         var all = load()
         all.removeAll { $0.sourceSessionId == sessionId }
         write(all)
+    }
+
+    /// Remove only this session's cards that carry no learner progress yet
+    /// (box 0, never reviewed) — what a re-analysis clears before rebuilding.
+    /// Cards the learner has studied keep their box and schedule.
+    func clearUnreviewedCards(for sessionId: UUID) {
+        var all = load()
+        let before = all.count
+        all.removeAll {
+            $0.sourceSessionId == sessionId && $0.box == 0 && $0.lastReviewedAt == nil
+        }
+        if all.count != before { write(all) }
     }
 
     /// Remove every card minted from one turn — used when the user flags the
@@ -196,7 +209,10 @@ final class DrillStore: LanguageScopedStore {
     @discardableResult
     func ingest(summary: SessionSummary, turns: [Turn], sessionId: UUID, now: Date = Date()) -> Int {
         let existing = load()
-        var seenTargets = Set(existing.map { $0.targetPhrase.lowercased() })
+        // Normalized (not just lowercased) keys: a live-turn suggestion and
+        // the summary's fluent_alternative for the same fix routinely differ
+        // only in punctuation, which used to mint the card twice.
+        var seenTargets = Set(existing.map { Self.normalizedForMatch($0.targetPhrase) })
         var newCards: [DrillCard] = []
 
         // Summary-derived cards quote the user loosely — trace the quote back
@@ -214,7 +230,7 @@ final class DrillStore: LanguageScopedStore {
             // Safety net mirroring the read-time trim: never persist a
             // multi-sentence whole-turn rewrite as a drill target.
             let target = Self.coreSentence(of: target, pairedWith: source)
-            let key = target.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let key = Self.normalizedForMatch(target)
             guard !key.isEmpty, !seenTargets.contains(key) else { return }
             // Safety net: even with the tightened summary prompt, Gemini
             // occasionally produces meta-rule "phrases" like "using articles
@@ -353,6 +369,14 @@ final class DrillStore: LanguageScopedStore {
             .components(separatedBy: .whitespacesAndNewlines)
             .filter { !$0.isEmpty }
             .joined(separator: " ")
+    }
+
+    /// Whether a card with this target survives `load()`'s read-time filter.
+    /// Callers that mint a card outside `ingest` must ask first: a card the
+    /// store silently drops on the next read is worse than no card at all —
+    /// every lookup for it misses, so every visit mints another one.
+    static func isDrillable(_ targetPhrase: String) -> Bool {
+        !looksLikeMetaRule(targetPhrase)
     }
 
     /// Heuristic for "this is a rule, not an utterance". Matches the kinds

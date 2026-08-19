@@ -184,6 +184,15 @@ extension BookDocument {
                                         entries: expressions.map { Entry(text: $0) }))
         }
 
+        // The same fluent-self lines the book's Shadow chapter offers — the
+        // paper copy carries them too, so it can be read as the whole book.
+        let shadowLines = TalkCurriculum.shadowPicks(session: session,
+                                                     proficiency: appState.proficiency)
+        if !shadowLines.isEmpty {
+            doc.sections.append(Section(title: chrome("Shadow"),
+                                        entries: shadowLines.map { Entry(text: $0.transcript) }))
+        }
+
         // Corrections — the learner's own sentence next to the fluent one.
         // Same pairing the Drill chapter shows, so the paper copy and the
         // book can't say different things.

@@ -323,11 +323,11 @@ struct ConversationDetailView: View {
     }
 
     /// The fluent-self lines the wrap-up offers for fresh shadowing — also
-    /// what decides whether the lines chapter exists.
+    /// what decides whether the lines chapter exists. Picked by teachable
+    /// content, not position (`TalkCurriculum.shadowPicks`).
     private var freshShadowLines: [Turn] {
-        Array(session.turns.filter { $0.role == .fluentSelf
-            && $0.transcript.split(separator: " ").count >= 4 }
-            .suffix(4))
+        TalkCurriculum.shadowPicks(session: session,
+                                   proficiency: appState.proficiency)
     }
 
     /// Words the learner used for the first time this talk (the win), minus
@@ -635,15 +635,25 @@ struct ConversationDetailView: View {
             enrichmentCard = hit
             return
         }
+        // Mint it the way `ingest` would: the same one-sentence trim, and only
+        // if the store can read it back. Saving the raw correction meant a
+        // whole-turn rewrite (or a target the read filter drops) came back
+        // from no lookup at all, so every tap minted another card and paid for
+        // another enrichment. The sheet opens either way — its cache is keyed
+        // by the phrase, not by this card.
+        let target = DrillStore.coreSentence(of: item.fluent,
+                                             pairedWith: item.original ?? "")
         let card = DrillCard(sourcePhrase: item.original ?? "",
-                             targetPhrase: item.fluent,
+                             targetPhrase: target,
                              reason: item.reason,
                              createdAt: Date(),
                              nextReviewAt: Date(),
                              box: 0,
                              sourceSessionId: session.id,
                              sourceTurnId: item.sourceTurnId)
-        DrillStore.shared.save(card)
+        if DrillStore.isDrillable(target) {
+            DrillStore.shared.save(card)
+        }
         enrichmentCard = card
     }
 

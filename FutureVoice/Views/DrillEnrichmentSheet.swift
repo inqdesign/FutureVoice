@@ -106,7 +106,7 @@ struct DrillEnrichmentSheet: View {
     @ViewBuilder
     private func examplesSection(_ items: [DrillCardEnrichment.Example]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("In your life", icon: "scope")
+            sectionHeader(explain("In your life"), icon: "scope")
             ForEach(Array(items.enumerated()), id: \.offset) { idx, item in
                 exampleRow(idx: idx, item: item)
             }
@@ -141,7 +141,7 @@ struct DrillEnrichmentSheet: View {
     @ViewBuilder
     private func variantsSection(_ items: [DrillCardEnrichment.Variant]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Variants", icon: "arrow.triangle.branch")
+            sectionHeader(explain("Variants"), icon: "arrow.triangle.branch")
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.phrase)
@@ -174,6 +174,27 @@ struct DrillEnrichmentSheet: View {
     private func loadIfNeeded() async {
         if let cached = card.enrichment {
             enrichment = cached
+            // Lift what older builds only ever wrote onto the card into the
+            // phrase-keyed store, so a re-analysis clearing that card no
+            // longer takes the payload with it.
+            DrillEnrichmentStore.shared.save(cached,
+                                             phrase: card.targetPhrase,
+                                             targetLanguage: appState.targetLanguage,
+                                             nativeLanguage: appState.nativeLanguage)
+            return
+        }
+        // The card is a MIRROR of the cache, never the cache itself — see
+        // `DrillEnrichmentStore`. A correction opened from a talk book often
+        // has no lasting card behind it, and a re-analysis clears the ones
+        // that are still untouched; keyed by the phrase, the payload survives
+        // both, so the same tap never pays twice.
+        if let cached = DrillEnrichmentStore.shared.enrichment(
+            for: card.targetPhrase,
+            targetLanguage: appState.targetLanguage,
+            nativeLanguage: appState.nativeLanguage
+        ) {
+            enrichment = cached
+            mirrorIntoCard(cached)
             return
         }
         await reload()
@@ -191,13 +212,25 @@ struct DrillEnrichmentSheet: View {
                 nativeLanguage: appState.nativeLanguage
             )
             enrichment = fresh
-            // Persist back into the card so next open is free.
-            var updated = card
-            updated.enrichment = fresh
-            DrillStore.shared.save(updated)
+            DrillEnrichmentStore.shared.save(fresh,
+                                             phrase: card.targetPhrase,
+                                             targetLanguage: appState.targetLanguage,
+                                             nativeLanguage: appState.nativeLanguage)
+            mirrorIntoCard(fresh)
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    /// Keep the card's own copy in step — it's what the drill deck's pill
+    /// reads to show a card as already enriched. Only for a card the store
+    /// actually holds: saving one it drops on the next read (a meta-rule
+    /// target) appends a row nothing can ever find again.
+    private func mirrorIntoCard(_ value: DrillCardEnrichment) {
+        guard var stored = DrillStore.shared.load().first(where: { $0.id == card.id }),
+              stored.enrichment != value else { return }
+        stored.enrichment = value
+        DrillStore.shared.save(stored)
     }
 
     private func playExample(idx: Int, text: String) async {
