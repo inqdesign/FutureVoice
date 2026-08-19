@@ -308,9 +308,13 @@ enum DebugCapture {
             // The end-of-talk board, mid-build: the analysis has landed and
             // the counts are filling in. `-start` is the long first step,
             // which is what the learner actually sits through.
-            let p = name == "summary-progress-start"
-                ? SessionSummarizer.Progress()
-                : SessionSummarizer.Progress(words: 6, corrections: 3)
+            var p = SessionSummarizer.Progress()
+            if name != "summary-progress-start" {
+                p.readBack = true
+                p.wroteCorrections = true
+                p.phrases = 4
+                p.wroteDrills = true
+            }
             return AnyView(ZStack {
                 Color(.systemBackground).ignoresSafeArea()
                 SummaryProgressView(progress: p, facts: "9 of your turns · 6 min")

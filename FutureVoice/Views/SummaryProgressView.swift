@@ -26,49 +26,78 @@ struct SummaryProgressView: View {
     private struct Step: Identifiable {
         let id: Int
         let title: LocalizedStringKey
-        let icon: String
-        /// nil = not finished yet. A finished step with 0 shows its tick
-        /// alone: "checked, nothing there" is a result, "0" reads as a score.
+        /// Finished — either the model closed this section, or the local pass
+        /// produced its number.
+        let done: Bool
+        /// nil until the verified number exists. A finished step with 0 shows
+        /// its tick alone: "checked, nothing there" is a result, "0" reads as
+        /// a score.
         let count: Int?
     }
 
+    /// In the order the work actually happens: the model writes its sections
+    /// top to bottom, then the local pass fills in the verified counts, then
+    /// the two steps only the app can do.
     private var steps: [Step] {
         [
-            Step(id: 0, title: "Reading the conversation back", icon: "text.bubble",
-                 count: progress.words == nil ? nil : 0),
-            Step(id: 1, title: "Words and expressions you used", icon: "character.book.closed",
-                 count: progress.words),
-            Step(id: 2, title: "Corrections worth keeping", icon: "checkmark.bubble",
-                 count: progress.corrections),
-            Step(id: 3, title: "Things you'd been studying", icon: "arrow.uturn.up",
-                 count: progress.carryovers),
-            Step(id: 4, title: "Review cards", icon: "rectangle.stack", count: progress.cards),
+            Step(id: 0, title: "Reading the conversation back",
+                 done: progress.readBack, count: nil),
+            Step(id: 1, title: "Lines worth saying differently",
+                 done: progress.wroteCorrections, count: progress.phrases),
+            Step(id: 2, title: "Review cards",
+                 done: progress.wroteDrills, count: progress.cards),
+            Step(id: 3, title: "Words and expressions you used",
+                 done: progress.wroteExpressions, count: progress.words),
+            Step(id: 4, title: "Corrections worth keeping",
+                 done: progress.wroteGrammar, count: progress.corrections),
+            Step(id: 5, title: "Things you'd been studying",
+                 done: progress.carryovers != nil, count: progress.carryovers),
         ]
     }
 
-    private var doneCount: Int { steps.filter { $0.count != nil }.count }
+    private var doneCount: Int { steps.filter(\.done).count }
+
+    /// How many steps are on screen as done. Trails `doneCount` by design:
+    /// the model's sections can land in one burst (a fast write, or a deploy
+    /// with no SSE at all), and six rows ticking in a single frame is the
+    /// "nothing, then everything" the board exists to fix. Nothing is ever
+    /// shown before it is genuinely finished — this only spaces out what is.
+    @State private var shown = 0
+
+    /// Time to walk one step onto the screen. Callers that hold the board
+    /// open at the end (`ConversationView.endSession`) size their beat from
+    /// this, so the reveal can never be cut off by the summary sheet.
+    static let revealInterval: Double = 0.18
+    static let revealTail: Double = revealInterval * 6 + 0.3
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Building your review material")
                     .font(.headline)
-                ProgressView(value: Double(doneCount), total: Double(steps.count))
+                ProgressView(value: Double(shown), total: Double(steps.count))
                     .tint(.accentColor)
             }
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(steps) { step in
-                    row(step, isCurrent: step.id == doneCount)
+                    row(step, isCurrent: step.id == shown)
                 }
             }
         }
         .padding(24)
         .frame(maxWidth: 420)
+        .animation(.easeInOut(duration: 0.25), value: shown)
         .animation(.easeInOut(duration: 0.25), value: progress)
+        .task(id: doneCount) {
+            while shown < doneCount, !Task.isCancelled {
+                shown += 1
+                try? await Task.sleep(nanoseconds: UInt64(Self.revealInterval * 1_000_000_000))
+            }
+        }
     }
 
     private func row(_ step: Step, isCurrent: Bool) -> some View {
-        let done = step.count != nil
+        let done = step.id < shown
         return HStack(spacing: 10) {
             ZStack {
                 if done {

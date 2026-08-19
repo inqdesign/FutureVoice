@@ -9292,6 +9292,16 @@
         }
       }
     },
+    "Lines worth saying differently": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다르게 말해볼 문장"
+          }
+        }
+      }
+    },
     "Lines you saved to say out loud": {
       "extractionState": "stale",
       "localizations": {

@@ -2548,11 +2548,12 @@ struct ConversationView: View {
             let result = try await SessionSummarizer.summarize(
                 session: toAnalyze, appState: appState,
                 onProgress: { summaryProgress = $0 })
-            // The last four steps finish within milliseconds of each other —
-            // the model call is the whole wait. Without a beat here the board
-            // fills and vanishes in the same frame, and the learner never sees
-            // what the talk produced.
-            try? await Task.sleep(nanoseconds: 900_000_000)
+            // Let the board finish walking its last steps onto the screen. The
+            // local half of the wrap-up takes milliseconds, so without this the
+            // rows that land at the end fill and vanish in the same frame and
+            // the learner never sees what their talk produced.
+            try? await Task.sleep(nanoseconds:
+                UInt64(SummaryProgressView.revealTail * 1_000_000_000))
             summary = result.summary
             phase = .idle
             didSaveCurrentSession = true

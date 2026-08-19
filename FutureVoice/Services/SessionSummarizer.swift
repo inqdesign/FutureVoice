@@ -36,6 +36,26 @@ enum SessionSummarizer {
     /// can render it with no state of its own, and a caller that ignores it
     /// costs nothing.
     struct Progress: Equatable {
+        // ── While the model is writing. The summary is ONE call that takes
+        // most of the wait, and it writes its sections in a fixed order, so
+        // the section it has finished is a real, observable fact — see
+        // `absorb(partial:)`. Without these the board sat on step one and
+        // then completed all at once, which is a spinner with extra steps.
+        /// The transcript has been read and titled.
+        var readBack = false
+        /// `phrases_used` — the lines worth saying differently.
+        var wroteCorrections = false
+        /// `suggested_drills` — the review cards.
+        var wroteDrills = false
+        /// `expressions_used`.
+        var wroteExpressions = false
+        /// `grammar_errors`.
+        var wroteGrammar = false
+
+        // ── Final counts, once the local pass has verified everything. Each
+        // is the number the summary sheet then shows.
+        /// Corrected lines the talk produced.
+        var phrases: Int?
         /// Words + expressions the learner used that are new to their pool.
         var words: Int?
         /// Corrections that survived the "they really said this" check.
@@ -46,6 +66,23 @@ enum SessionSummarizer {
         var cards: Int?
         /// Everything above is final.
         var finished = false
+
+        /// Read the model's half-written JSON for which sections are DONE.
+        ///
+        /// A section is finished when the key AFTER it has appeared — the
+        /// cheapest check that can't be fooled by a value still being written,
+        /// and it needs no incremental JSON parsing. Key order is the schema's
+        /// order in `ConversationEngine.summarySystemPrompt`; if that order
+        /// changes, this reports the wrong step (never a wrong NUMBER — every
+        /// count below still comes from the finished payload).
+        mutating func absorb(partial: String) {
+            guard !partial.isEmpty else { return }
+            readBack = readBack || partial.contains("\"phrases_used\"")
+            wroteCorrections = wroteCorrections || partial.contains("\"new_patterns_detected\"")
+            wroteDrills = wroteDrills || partial.contains("\"expressions_used\"")
+            wroteExpressions = wroteExpressions || partial.contains("\"weak_vocab_areas\"")
+            wroteGrammar = wroteGrammar || partial.contains("\"overall_note\"")
+        }
     }
 
     /// Whether a saved talk still owes the learner its review material.
@@ -88,8 +125,17 @@ enum SessionSummarizer {
         // Stable idempotency key: retrying — by re-tapping End, or from the
         // book days later — re-runs the SAME logical request without a
         // second charge, as long as the transcript hasn't grown.
+        // STREAMED, unlike the other analysis calls (see CLAUDE.md), and not
+        // for latency: nothing here can be used before the payload closes, and
+        // `sendJSONStreamAccumulating` still returns the fully decoded object,
+        // so the result is byte-for-byte what the buffered call produced. What
+        // the stream buys is the only honest way to move the wrap-up screen
+        // while the model writes — a call that takes most of the wait and
+        // reports nothing leaves the board on step one until everything
+        // finishes at once. A deploy without SSE degrades to buffering, and
+        // then `onPartial` simply never fires.
         func request() async throws -> ClaudeSummaryPayload {
-            try await GeminiClient.shared.sendJSON(
+            try await GeminiClient.shared.sendJSONStreamAccumulating(
                 system: systemP,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
                 // The schema's worst case is big: up to 15 grammar_errors (quote +
@@ -103,7 +149,8 @@ enum SessionSummarizer {
                 // produced, so the headroom is free.
                 maxTokens: 4096,
                 purpose: "summary",
-                idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)"
+                idempotencyKey: "summary:\(sessionId.uuidString):\(turns.count)",
+                onPartial: { partial in report { $0.absorb(partial: partial) } }
             )
         }
 
@@ -124,6 +171,7 @@ enum SessionSummarizer {
             payload = try await request()
         }
         var computed = payload.toDomain()
+        report { $0.phrases = computed.phrasesUsed.count }
 
         // Fold the user's spoken words into the long-term vocab pool; the
         // freshly-used words ride along on the summary so the wrap-up can
