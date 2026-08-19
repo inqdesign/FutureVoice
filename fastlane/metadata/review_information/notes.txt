@@ -5,7 +5,7 @@ ABOUT THE VOICE CLONE (important for review):
 - Consent is a separate, recorded step shown before the microphone is ever requested (age 16+ and voice-model consent are two distinct toggles), because a voice model is biometric data under GDPR Art. 9, Illinois BIPA, and Korea's PIPA.
 
 REVIEW LOGISTICS:
-- Sign in with Apple is the only auth method; any Apple ID works.
+- "Get started" begins onboarding WITHOUT an account (anonymous session). The voice clone is built first; Sign in with Apple is asked right after, to keep the voice — any Apple ID works. Sign in with Apple is the only auth method.
 - Onboarding requires microphone + speech recognition permissions and the 60-second recording before the main app unlocks.
 - All AI requests (Gemini, ElevenLabs) route through our Supabase Edge Functions; no provider API keys ship in the binary.
 - Subscriptions are auto-renewable and buy talk time per day (Daily 5 min, Unlimited 60 min), with a 7-day free trial. Restore and cancel via the App Store. There is no free tier: the voice clone and the first spoken greeting are free, and the first conversation reaches the paywall.
