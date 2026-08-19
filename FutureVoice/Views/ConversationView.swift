@@ -27,6 +27,9 @@ struct ConversationView: View {
     /// mid-conversation — this drives the full-screen "wrapping up" overlay so
     /// the End tap gives immediate feedback instead of a silent wait.
     @State private var isEnding = false
+    /// Real counts from the wrap-up as each piece of it lands — see
+    /// `SummaryProgressView`.
+    @State private var summaryProgress = SessionSummarizer.Progress()
     @State private var didAutoStart = false
     @State private var isResuming = false
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
@@ -286,11 +289,23 @@ struct ConversationView: View {
 
         var isSettled: Bool { resolved.count + failedCount >= nextIndex }
         var hasFailure: Bool { failedCount > 0 }
+        /// Words the last assembly dropped as echo — logged, so how often the
+        /// model writes its own context back out stays visible.
+        private(set) var echoWords = 0
         /// In-order text of everything resolved so far — the continuity
         /// context for the next piece's call, and the assembled turn text.
+        /// Pieces are STITCHED, not concatenated: see `ConversationView.stitch`.
         func textSoFar() -> String {
-            (0..<nextIndex).compactMap { resolved[$0] }
-                .filter { !$0.isEmpty }.joined(separator: " ")
+            var text = ""
+            var echo = 0
+            for index in 0..<nextIndex {
+                guard let piece = resolved[index], !piece.isEmpty else { continue }
+                let (joined, dropped) = ConversationView.stitch(text, piece)
+                text = joined
+                echo += dropped
+            }
+            echoWords = echo
+            return text
         }
     }
     @State private var chunkASR: ChunkASRState?
@@ -704,16 +719,20 @@ struct ConversationView: View {
     private var endingOverlay: some View {
         if isEnding {
             ZStack {
-                Color(.systemBackground).opacity(0.9).ignoresSafeArea()
-                VStack(spacing: 14) {
-                    ProgressView().controlSize(.large)
-                    Text("Wrapping up your session…")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
+                Color(.systemBackground).opacity(0.95).ignoresSafeArea()
+                SummaryProgressView(progress: summaryProgress, facts: talkFacts)
             }
             .transition(.opacity)
         }
+    }
+
+    /// What we already know about the talk the moment it ends — turns spoken
+    /// and how long it ran. Shown under the analysis step so the longest wait
+    /// says something true instead of nothing.
+    private var talkFacts: String {
+        let spoken = turns.filter { $0.role == .user }.count
+        let minutes = max(1, Int(Date().timeIntervalSince(sessionStartedAt) / 60))
+        return explain("\(spoken) of your turns · \(minutes) min")
     }
 
     // MARK: - Feed
@@ -2525,8 +2544,15 @@ struct ConversationView: View {
         var toAnalyze = draft
         toAnalyze.summary = priorSummary
         do {
-            let result = try await SessionSummarizer.summarize(session: toAnalyze,
-                                                               appState: appState)
+            summaryProgress = SessionSummarizer.Progress()
+            let result = try await SessionSummarizer.summarize(
+                session: toAnalyze, appState: appState,
+                onProgress: { summaryProgress = $0 })
+            // The last four steps finish within milliseconds of each other —
+            // the model call is the whole wait. Without a beat here the board
+            // fills and vanishes in the same frame, and the learner never sees
+            // what the talk produced.
+            try? await Task.sleep(nanoseconds: 900_000_000)
             summary = result.summary
             phase = .idle
             didSaveCurrentSession = true

@@ -1043,6 +1043,22 @@
         }
       }
     },
+    "%lld of your turns · %lld min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of your turns · %2$lld min"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 발화 %1$lld번 · %2$lld분"
+          }
+        }
+      }
+    },
     "%lld phrases saved while watching": {
       "extractionState": "stale",
       "localizations": {
@@ -3458,6 +3474,16 @@
         }
       }
     },
+    "Building your review material": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 대화로 교재 만드는 중"
+          }
+        }
+      }
+    },
     "Busy today?": {
       "localizations": {
         "de": {
@@ -4253,6 +4279,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "머리에 남는 교정"
+          }
+        }
+      }
+    },
+    "Corrections worth keeping": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "챙길 교정 문장"
           }
         }
       }
@@ -12913,6 +12949,16 @@
         }
       }
     },
+    "Reading the conversation back": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대화 다시 읽기"
+          }
+        }
+      }
+    },
     "Ready — assessing your level now…": {
       "localizations": {
         "de": {
@@ -13761,6 +13807,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 교재"
+          }
+        }
+      }
+    },
+    "Review cards": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 카드"
           }
         }
       }
@@ -17237,6 +17293,16 @@
         }
       }
     },
+    "Things you'd been studying": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부한 걸 써먹은 것"
+          }
+        }
+      }
+    },
     "Thinking about tomorrow?": {
       "localizations": {
         "de": {
@@ -19373,6 +19439,16 @@
         }
       }
     },
+    "Words and expressions you used": {
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 쓴 단어·표현"
+          }
+        }
+      }
+    },
     "words and lines mastered, out of %lld your talks and watches have made": {
       "localizations": {
         "de": {
@@ -19536,22 +19612,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이런 걸 적으면 좋아요"
-          }
-        }
-      }
-    },
-    "Wrapping up your session…": {
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sitzung wird abgeschlossen…"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "세션을 마무리하는 중…"
           }
         }
       }

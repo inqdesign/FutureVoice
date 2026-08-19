@@ -24,6 +24,30 @@ enum SessionSummarizer {
         let session: Session
     }
 
+    /// What the wrap-up screen is allowed to say it is doing.
+    ///
+    /// Every field is a REAL count, reported at the point in `summarize` where
+    /// that work actually finished — a wrap-up that narrates steps it isn't
+    /// taking is worse than a spinner, because the next one is disbelieved
+    /// too. `nil` means "not done yet"; the numbers below are the same ones
+    /// the summary sheet then shows.
+    ///
+    /// The shape is a growing struct rather than a stream of events so a view
+    /// can render it with no state of its own, and a caller that ignores it
+    /// costs nothing.
+    struct Progress: Equatable {
+        /// Words + expressions the learner used that are new to their pool.
+        var words: Int?
+        /// Corrections that survived the "they really said this" check.
+        var corrections: Int?
+        /// Things they'd been studying that came out unprompted.
+        var carryovers: Int?
+        /// Review cards minted from this talk.
+        var cards: Int?
+        /// Everything above is final.
+        var finished = false
+    }
+
     /// Whether a saved talk still owes the learner its review material.
     /// Turn-count guard mirrors `endSession`: an empty talk has nothing to
     /// analyze and must not offer a button that can only fail.
@@ -37,9 +61,15 @@ enum SessionSummarizer {
     /// Throws only on the Gemini call — everything after it is local. The
     /// caller's already-saved session row is left untouched on a throw, so a
     /// failure is always retryable and never partial.
-    static func summarize(session: Session, appState: AppState) async throws -> Result {
+    static func summarize(session: Session, appState: AppState,
+                          onProgress: ((Progress) -> Void)? = nil) async throws -> Result {
         let turns = session.turns
         let sessionId = session.id
+        var progress = Progress()
+        func report(_ edit: (inout Progress) -> Void) {
+            edit(&progress)
+            onProgress?(progress)
+        }
 
         let systemP = ConversationEngine.summarySystemPrompt(
             targetLanguage: session.targetLanguage,
@@ -128,6 +158,7 @@ enum SessionSummarizer {
         }
         #endif
         computed.expressionsUsed = verifiedExpressions
+        report { $0.words = freshWords.count + verifiedExpressions.count }
         // A pre-per-key-tracking session being re-analyzed: what it already
         // counted is its previous summary's list — seed the store so those
         // don't count twice (no-op when per-key data exists).
@@ -155,6 +186,7 @@ enum SessionSummarizer {
             return !needle.isEmpty && normalizedHaystack.contains(needle)
                 && needle != normalized($0.correction)
         }
+        report { $0.corrections = computed.grammarIssues.count }
 
         // Did anything they'd been studying actually come out of their mouth?
         // Runs against the drill cards as they stood BEFORE this session's own
@@ -167,6 +199,7 @@ enum SessionSummarizer {
             studyingWords: VocabStore.shared.studying,
             sessionId: sessionId, sessionStartedAt: session.startedAt)
         computed.carryovers = carryovers
+        report { $0.carryovers = carryovers.count }
 
         // Free-talk sessions (no picked topic) take the summary's generated
         // title so History/Practice lists don't fill with identical
@@ -186,7 +219,9 @@ enum SessionSummarizer {
         // has already reviewed carries Leitner progress a re-analysis must
         // not reset; ingest's dedupe skips re-minting the survivors.
         DrillStore.shared.clearUnreviewedCards(for: sessionId)
-        DrillStore.shared.ingest(summary: computed, turns: turns, sessionId: sessionId)
+        let mintedCards = DrillStore.shared.ingest(summary: computed, turns: turns,
+                                                   sessionId: sessionId)
+        report { $0.cards = mintedCards }
         // Producing a card's phrase live outranks any flashcard tap — credit
         // it against the SRS schedule, not just the wrap-up.
         DrillStore.shared.markUsedInConversation(
@@ -222,6 +257,7 @@ enum SessionSummarizer {
         // so the ring works offline and cannot fail.
         appState.refreshDailyCall(force: true)
 
+        report { $0.finished = true }
         return Result(summary: computed, session: saved)
     }
 }

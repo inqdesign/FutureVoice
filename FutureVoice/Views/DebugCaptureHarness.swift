@@ -304,6 +304,17 @@ enum DebugCapture {
                     }
                 }
             })
+        case "summary-progress", "summary-progress-start":
+            // The end-of-talk board, mid-build: the analysis has landed and
+            // the counts are filling in. `-start` is the long first step,
+            // which is what the learner actually sits through.
+            let p = name == "summary-progress-start"
+                ? SessionSummarizer.Progress()
+                : SessionSummarizer.Progress(words: 6, corrections: 3)
+            return AnyView(ZStack {
+                Color(.systemBackground).ignoresSafeArea()
+                SummaryProgressView(progress: p, facts: "9 of your turns · 6 min")
+            })
         case "call-goal-sheet":
             // What a chip opens. A capture run has no session, so the real
             // lookup returns nil and the sheet would render its failure state

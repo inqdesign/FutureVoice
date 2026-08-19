@@ -77,6 +77,8 @@ struct ConversationDetailView: View {
 
     /// Re-running the analysis for a talk whose summary never landed.
     @State private var isRegenerating = false
+    /// Live counts while the rescue analysis runs — see `SummaryProgressView`.
+    @State private var regenProgress = SessionSummarizer.Progress()
     @State private var regenerateError: String?
     @State private var showingPaywall = false
     /// The failure was the 402 credit gate — retrying can only fail again, so
@@ -265,8 +267,16 @@ struct ConversationDetailView: View {
                 Label("Review material missing", systemImage: "exclamationmark.triangle.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.orange)
-                Text(explain("The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now."))
-                    .font(.caption).foregroundStyle(.secondary)
+                if isRegenerating {
+                    // Same board the end of a live call shows — the rescue
+                    // path builds exactly the same things, so it says so the
+                    // same way instead of a bare "Working…".
+                    SummaryProgressView(progress: regenProgress, facts: nil)
+                        .padding(.leading, -24)   // the board carries its own padding
+                } else {
+                    Text(explain("The conversation was saved, but the analysis that turns it into words, corrections and drill cards didn't finish. You can run it now."))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Button {
                     Task { await regenerateSummary() }
                 } label: {
@@ -599,7 +609,14 @@ struct ConversationDetailView: View {
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
             let turnId = UUID(uuid: bytes)
-            let original = session.turns.first { $0.id == turnId }?.transcript
+            // Quote the SENTENCE the correction rewrites, not the whole turn.
+            // A turn can be a minute of speech (and speech recognition
+            // sometimes repeats a stretch of it), so struck through in full it
+            // reads as "everything you said was wrong" next to a two-line fix
+            // — the same reason `ingest` and the drill deck both trim this
+            // side.
+            let original = session.turns.first { $0.id == turnId }
+                .map { DrillStore.relevantFragment(of: $0.transcript, matching: line.text) }
             items.append(CorrectionItem(id: line.id, original: original,
                                         fluent: line.text, reason: line.note,
                                         sourceTurnId: turnId))
@@ -609,7 +626,8 @@ struct ConversationDetailView: View {
             guard seen.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
             else { continue }
             items.append(CorrectionItem(id: p.id,
-                                        original: p.userSaid,
+                                        original: DrillStore.relevantFragment(
+                                            of: p.userSaid, matching: p.fluentAlternative),
                                         fluent: p.fluentAlternative,
                                         reason: p.reason,
                                         sourceTurnId: nil))
@@ -908,10 +926,12 @@ struct ConversationDetailView: View {
     private func regenerateSummary() async {
         guard !isRegenerating else { return }
         isRegenerating = true
+        regenProgress = SessionSummarizer.Progress()
         defer { isRegenerating = false }
         do {
-            let result = try await SessionSummarizer.summarize(session: session,
-                                                              appState: appState)
+            let result = try await SessionSummarizer.summarize(
+                session: session, appState: appState,
+                onProgress: { regenProgress = $0 })
             session = result.session
             refresh()
             Telemetry.log("talk_summary_regenerated", ["turns": String(session.turns.count)])
