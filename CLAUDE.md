@@ -230,10 +230,16 @@ screen and stone deaf.
     20 cm from the mic against a table metres away is 15–20 dB. **Quiet rooms
     are untouched by construction** — there the absolute 0.35 floor is the
     higher bar and decides alone.
-  - A listening turn has a hard 30s ceiling (`maxListenSeconds`, logged as
-    `vad_path=ceiling`). If that turn has no close-mic evidence, the segment
-    is DROPPED and the mic reopened (`restartListeningQuietly`) instead of
-    paying for a reply to a stranger's sentence.
+  - A listening turn has a 30s ceiling (`maxListenSeconds`, logged as
+    `vad_path=ceiling`) — but it fires only while `someoneIsTalkingHere()` is
+    false, because the clock alone cut real 30s+ monologues mid-sentence
+    (reported 2026-08-18, zero silence, quiet room). A person demonstrably
+    still speaking holds the turn open up to `maxListenSecondsHard` (120s),
+    where it ships what it has; a room's babble never clears the voiced
+    threshold, so the café case fires at 30s exactly as before. If a
+    ceiling'd turn has no close-mic evidence, the segment is DROPPED and the
+    mic reopened (`restartListeningQuietly`) instead of paying for a reply
+    to a stranger's sentence.
   - `lastActivityAt` lives OUTSIDE the watch task, because that quiet restart
     re-arms it every 30s and a clock inside the task would never reach the
     bar. Only real activity moves it.

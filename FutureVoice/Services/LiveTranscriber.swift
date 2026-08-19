@@ -31,6 +31,13 @@ final class LiveTranscriber: ObservableObject {
     /// with `captureToFile: true`; the caller owns (moves/deletes) the file.
     private(set) var lastRecordingURL: URL?
 
+    /// The tail of the CHUNK capture when the run stopped — audio recorded
+    /// since the last `rotateCaptureChunk()` (or since start, if none). Set by
+    /// every stop path, like `lastRecordingURL`; the caller owns the file.
+    /// Usually trailing silence (the caller checks voiced time before using
+    /// it), but on a turn that never rotated it holds the whole utterance.
+    private(set) var lastChunkRecordingURL: URL?
+
     /// Word-level audio-time timings from the CURRENT recognition segment.
     /// `startSeconds` is offset into the audio stream of this segment (NOT
     /// wall clock) — pair with `segmentAnchorAt` for absolute time.
@@ -113,6 +120,16 @@ final class LiveTranscriber: ObservableObject {
     private let appender = LiveTranscriberAppender()
     private let fluency = FluencyMeter()
     private let recorder = TurnAudioFileWriter()
+    /// Second, parallel capture of the SAME buffers, cut into pieces at the
+    /// caller's chosen pause boundaries (`rotateCaptureChunk`). Exists so the
+    /// audio-grounded transcription can start while the learner is still
+    /// talking, chunk by chunk, instead of waiting for the whole turn. The
+    /// full-turn file above stays untouched — it remains the listen-back copy
+    /// and the whole-turn transcription fallback.
+    private let chunkRecorder = TurnAudioFileWriter()
+    /// Format the current run's writers were opened with — what a rotation
+    /// must reopen the chunk writer with.
+    private var captureFormat: AVAudioFormat?
     /// Domain vocabulary hints applied to every recognition segment —
     /// topic words, names, news terms the user is likely to say. Biases the
     /// recognizer toward them (SFSpeechRecognizer contextualStrings).
@@ -216,6 +233,11 @@ final class LiveTranscriber: ObservableObject {
     /// - Parameter captureToFile: also write the mic audio to a compact AAC
     ///   file (`lastRecordingURL` after `stop()`) so the user can listen back
     ///   to their own turn.
+    /// - Parameter chunkCapture: additionally keep a SECOND capture of the
+    ///   same audio that the caller cuts into pieces at pause boundaries
+    ///   (`rotateCaptureChunk`) for incremental transcription. Off by
+    ///   default — only the conversation turn pipeline consumes the pieces,
+    ///   and an unconsumed chunk file is a disk leak.
     /// - Parameter voiceProcessing: run the mic through iOS's voice processing
     ///   unit (noise suppression + AGC + echo cancellation) — the same block
     ///   Siri and FaceTime use. Both mic surfaces that SCORE (Talk, Shadow)
@@ -230,6 +252,7 @@ final class LiveTranscriber: ObservableObject {
                measurementMode: Bool? = nil,
                contextualStrings: [String] = [],
                captureToFile: Bool = false,
+               chunkCapture: Bool = false,
                voiceProcessing: Bool = false) throws {
         guard !isRunning else { return }
         self.contextualStrings = Array(contextualStrings.prefix(50))
@@ -315,18 +338,28 @@ final class LiveTranscriber: ObservableObject {
         let localAppender = self.appender
         let localFluency = self.fluency
         let localRecorder = self.recorder
+        let localChunkRecorder = self.chunkRecorder
         fluency.reset()
         lastRecordingURL = nil
+        lastChunkRecordingURL = nil
+        captureFormat = nil
 
         // Re-runnable so the VPIO fallback below can rebuild the tap against
         // the format the raw mic hands back.
-        let arm: (Bool) -> Void = { capture in
+        let arm: (Bool) -> Void = { [weak self] capture in
             let format = input.outputFormat(forBus: 0)
             let sampleRate = format.sampleRate
-            if capture { localRecorder.begin(format: format) }
+            if capture {
+                localRecorder.begin(format: format)
+                if chunkCapture {
+                    localChunkRecorder.begin(format: format)
+                    self?.captureFormat = format
+                }
+            }
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
                 localAppender.append(buffer)
                 localRecorder.append(buffer)
+                localChunkRecorder.append(buffer)
                 let rms = Self.rms(of: buffer)
                 localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
                 Task { @MainActor [weak self] in
@@ -351,8 +384,11 @@ final class LiveTranscriber: ObservableObject {
             guard vpActive else { throw LiveError.engineFailed }
             try? input.setVoiceProcessingEnabled(false)
             vpActive = false
-            // Discard the capture opened at the VPIO format — `arm` reopens one.
+            // Discard the captures opened at the VPIO format — `arm` reopens them.
             if let stale = localRecorder.finish() {
+                try? FileManager.default.removeItem(at: stale)
+            }
+            if let stale = localChunkRecorder.finish() {
                 try? FileManager.default.removeItem(at: stale)
             }
             arm(captureToFile)
@@ -401,6 +437,21 @@ final class LiveTranscriber: ObservableObject {
         startQuietWatcher()
     }
 
+    /// Close the current chunk capture at a pause boundary and start a fresh
+    /// one, returning the closed piece. The caller owns the file. Returns nil
+    /// while nothing is being captured. The full-turn capture is unaffected —
+    /// both writers keep receiving the same tap buffers.
+    ///
+    /// Call this only at genuine silence (the caller's endpoint monitor knows)
+    /// — a cut mid-word splits that word across two files and neither half
+    /// transcribes correctly.
+    func rotateCaptureChunk() -> URL? {
+        guard isRunning, let format = captureFormat else { return nil }
+        let closed = chunkRecorder.finish()
+        chunkRecorder.begin(format: format)
+        return closed
+    }
+
     @discardableResult
     func stop() -> String {
         guard isRunning else { return transcript }
@@ -411,6 +462,7 @@ final class LiveTranscriber: ObservableObject {
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         lastRecordingURL = recorder.finish()
+        lastChunkRecordingURL = chunkRecorder.finish()
         currentRequest?.endAudio()
         currentTask?.finish()
         engine = nil
@@ -437,6 +489,7 @@ final class LiveTranscriber: ObservableObject {
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         lastRecordingURL = recorder.finish()
+        lastChunkRecordingURL = chunkRecorder.finish()
         engine = nil
         level = 0
 
@@ -498,6 +551,7 @@ final class LiveTranscriber: ObservableObject {
         engine?.stop()
         engine?.inputNode.removeTap(onBus: 0)
         lastRecordingURL = recorder.finish()
+        lastChunkRecordingURL = chunkRecorder.finish()
         engine = nil
         level = 0
 

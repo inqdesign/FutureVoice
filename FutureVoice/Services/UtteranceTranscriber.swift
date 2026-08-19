@@ -49,6 +49,63 @@ enum UtteranceTranscriber {
         }
     }
 
+    /// Transcribe ONE PIECE of an utterance that is still being spoken —
+    /// audio cut at a pause boundary while the learner talks, so most of the
+    /// turn is already transcribed by the time it ends. Unlike `transcribe`,
+    /// there is no ASR guess for the span: the prior chunks' text rides along
+    /// as continuity context only (names, topic), never as output material.
+    ///
+    /// - Returns: the verbatim text of THIS audio, "" when the model heard no
+    ///   speech in it, or nil when the call failed — the caller treats nil as
+    ///   "fall back to the whole-turn path".
+    static func transcribeChunk(audio: GeminiClient.Message.InlineAudio,
+                                priorText: String,
+                                targetLanguage: String,
+                                idempotencyKey: String) async -> String? {
+        struct Payload: Decodable { let transcript: String? }
+        let context = priorText.isEmpty ? "(start of utterance)" : priorText
+        do {
+            let payload: Payload = try await GeminiClient.background.sendJSON(
+                system: chunkPrompt(targetLanguage: targetLanguage),
+                messages: [.init(role: .user, content: context, inlineAudio: audio)],
+                model: .flashLite31,
+                maxTokens: 1024,
+                purpose: "transcribe",
+                idempotencyKey: idempotencyKey
+            )
+            // null/empty = "no speech in this piece" — a real, usable answer
+            // (a chunk of trailing quiet), distinct from the call failing.
+            return payload.transcript?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        } catch {
+            return nil
+        }
+    }
+
+    private static func chunkPrompt(targetLanguage: String) -> String {
+        let target = LanguageCatalog.englishName(targetLanguage)
+        return """
+        You transcribe ONE SEGMENT of a longer spoken utterance — the speaker
+        is still mid-turn and this audio is just one piece of it. Output STRICT
+        JSON only — no prose, no code fences: { "transcript": "..." }
+
+        The attached AUDIO is the only source. The text in the user message is
+        the transcript of the utterance SO FAR (earlier segments) — use it only
+        for continuity (names, topic, which of two soundalike words fits).
+        NEVER copy any of it into the output: output ONLY words spoken in the
+        attached audio.
+
+        - "transcript": VERBATIM what is spoken in THIS audio, in \(target).
+          Keep the speaker's exact wording INCLUDING grammar mistakes — this is
+          dictation, never correction. Skip filler sounds (uh, um).
+        - The segment may begin or end mid-sentence. That is expected — write
+          exactly what is heard, never complete or round off a sentence.
+        - Write numbers as the words the speaker actually pronounced unless
+          reading the digit aloud in \(target) reproduces the audio exactly.
+        - If the audio is silent, unintelligible, or not speech, set
+          "transcript" to null. Never invent words.
+        """
+    }
+
     /// The audio-vs-ASR rules that used to live in `turnOutputInstruction`.
     /// They moved here with the audio: the turn call no longer hears anything,
     /// so it has no business judging what was said.
