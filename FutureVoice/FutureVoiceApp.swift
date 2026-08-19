@@ -566,11 +566,28 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Adopt the account's ACTIVE clone whenever the local id isn't it.
+    ///
+    /// This used to return early whenever a voice existed locally ("trust
+    /// local — this is the device that cloned it"), and that made a stale id
+    /// permanent. `voiceCloneId` lives in UserDefaults, per data container, so
+    /// any install that re-cloned somewhere else — a second device, the dev
+    /// build beside the shipped one, a TestFlight install carried across a
+    /// re-record — keeps pointing at a voice the account replaced. The old id
+    /// is not merely out of date: `elevenlabs-voice-delete` marks a row
+    /// inactive only AFTER ElevenLabs has deleted the voice, so a superseded
+    /// id is a voice that no longer exists, and every TTS call on it comes
+    /// back 404. That is a Talk where the reply is written and then never
+    /// spoken — a Retry chip on every single turn, with nothing on screen
+    /// naming the cause. Caught on TestFlight build 7 (2026-08-19), where the
+    /// shipped container still held a clone deleted in June.
+    ///
+    /// The server row is the authority because it is the only place the clone
+    /// is minted: `elevenlabs-voice-clone` inserts and activates it before the
+    /// new id ever reaches the client, so the server can't be BEHIND local.
+    /// Local is kept only when the account has no active row at all (offline,
+    /// or a first clone not yet mirrored) — never overwritten with nothing.
     private func restoreVoiceCloneFromCloud() async {
-        // If we already have a voice locally, trust local — the user just
-        // signed in on the device that originally cloned it.
-        guard voiceCloneId == nil else { return }
-
         struct Row: Decodable { let elevenlabs_voice_id: String }
         do {
             let rows: [Row] = try await SupabaseProvider.shared
@@ -580,9 +597,16 @@ final class AppState: ObservableObject {
                 .limit(1)
                 .execute()
                 .value
-            if let restored = rows.first?.elevenlabs_voice_id {
-                self.voiceCloneId = restored
+            guard let active = rows.first?.elevenlabs_voice_id,
+                  active != voiceCloneId else { return }
+            // A voice staged for deletion is on its way OUT — adopting it
+            // would resurrect it into a re-record the user is still inside.
+            guard active != pendingDeleteVoiceId else { return }
+            if voiceCloneId != nil {
+                Analytics.capture("voice_clone_id_repaired")
+                Telemetry.log("voice_clone_id_repaired")
             }
+            self.voiceCloneId = active
         } catch {
             // Don't surface — onboarding will just have the user re-record,
             // which is the same outcome as a fresh install.

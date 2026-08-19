@@ -652,6 +652,22 @@ extension Error {
     var isVoiceLimitReached: Bool {
         (self as? ElevenLabsError)?.isVoiceLimitReached ?? false
     }
+
+    /// Upstream HTTP status for telemetry, when this is an ElevenLabs failure.
+    ///
+    /// Worth a helper because the obvious thing to log — `(error as NSError)
+    /// .code` — is NOT the case's source order: Swift numbers the cases WITH
+    /// payloads first, so `httpError` is 0 and `invalidResponse` is 1. Every
+    /// upstream failure therefore logged as a flat "ElevenLabsError:0" that
+    /// reads like a decode bug and says nothing about WHICH status came back
+    /// (a dead voice id and a rate limit were indistinguishable). Log the
+    /// status beside the code, and never read the code as an ordinal.
+    var elevenLabsStatus: String? {
+        if case .httpError(let status, _)? = self as? ElevenLabsError {
+            return String(status)
+        }
+        return nil
+    }
 }
 
 // MARK: - Multipart helpers
