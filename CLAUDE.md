@@ -169,11 +169,30 @@ talk is spent meeting them, and what it hears is written down.
   talk opens on `FreeTalkOpeners.introOpener` (bundled per language, so the
   first greeting of all never waits on Gemini, and it outranks both the
   rotating pool and the fallback) and the conversation prompt carries
-  `ConversationEngine`'s **FIRST CALL** block: say once that this is the first
-  time, then spend the call finding out who they are — one question per turn,
-  never one already answered by the profile, always giving something back.
-  That block explicitly suspends "never quiz them about their own profile" and
-  "don't always end with a question", which otherwise win by volume.
+  `ConversationEngine`'s **FIRST CALL** block.
+- **The fluent self introduces ITSELF first** — the opener says who it is
+  (them, a few years on) before it asks anything. A line that opens with
+  "tell me about yourself" is an interview, and this one isn't even a
+  stranger: it's the learner's own cloned voice, which needs explaining
+  before it needs answering. That order is then the call's rule — GIVE, then
+  ASK: every question is followed, once they've answered, by the fluent
+  self's own version of it.
+- **It must not invent the learner's life to do that.** It IS them, so a
+  fabricated job or city is a claim about the user, and the next thing they
+  say will contradict it. The prompt allows exactly one unprompted
+  self-disclosure: what being the fluent version of them is like. Everything
+  else it says about "itself" has to come after they've said it first.
+- **The call is meeting a person, NOT completing a record.** The block used to
+  hand the model a seven-item list (their work, their people, their interests,
+  where they're from…) and told it to "stop collecting" once it had enough —
+  which is an intake form, and reads as one right after an opener that just
+  promised to do this together. It now says the opposite: no list, no order,
+  follow whatever they actually said, and a first call that ends with ONE
+  thing you both enjoyed talking about beat one that got through their
+  biography. The memory still fills — `about_user` reads the transcript, never
+  a checklist, so it never needed the list. It explicitly suspends "never quiz
+  them about their own profile" and "don't always end with a question", which
+  otherwise win by volume, and holds one question per turn.
 - **Free talk only, and it is not "the first talk ever."** A scenario casts
   the model as the barista and a Find-people call as a stranger; neither can
   run an introduction without breaking what it was launched as (the counterpart
@@ -221,6 +240,10 @@ conversation → summary (+ scorecard metrics) → DrillStore.ingest (SRS cards)
 **The notebook is spent in the call** (`TalkGoalChips.swift`, 2026-08-19). A talk is the only place a saved word can actually be used, and nobody remembers mid-sentence what they saved on Tuesday — so today's due studying items ride along the call as one pinned line of chips above the transcript, and a chip ticks the moment the learner says it. Three rules hold it together: the judge is `CarryoverDetector` and nothing else (the same matcher writes the wrap-up's carryovers, so the live tick and the summary can never disagree); ticks are ADDITIVE — every version of a user turn's text is checked, from the recognizer's first line to Gemini's audio-grounded rewrite, and a tick is never taken back; and the row writes nothing to disk, because `VocabStore.ingest` + `CarryoverDetector.detect` already credit the word for real at session end. Items come from `StudyScheduleStore` due-ness, the same schedule the daily words/expressions sessions deal from, so the app never asks for the same thing twice in one day — and a phrase that can't clear `CarryoverDetector.isCreditable` is never offered, since a checkbox that cannot tick teaches the learner the whole row is decorative. **Tapping a chip opens `TalkGoalSheet`** — "Use this in the call", the word, ONE sense, ONE example. The header is an instruction to SPEND the word, not to repeat a line after the app: it's material the learner chose to study, and the call is the only place it gets used. A chip that couldn't be tapped was demanding a word the learner may no longer remember the meaning of. It stays thin on purpose: the full entry belongs to the notebook, and the call is still running underneath (nothing pauses, and `WordLore` is free + globally cached, so a mid-call tap costs nothing metered).
 
 **The wait at the end of a talk shows its work** (`SummaryProgressView`, 2026-08-19). `SessionSummarizer` reports a growing `Progress` struct — words + expressions kept, expressions offered by the fluent self, corrections that survived verification, carryovers found, cards minted — at the exact point each piece finishes, and the wrap-up screen draws it as a checklist with a determinate bar. Every number is real and is the same number the summary sheet then shows; nothing here is a simulated bar. **The steps follow the model's own writing order**, because the one summary call is the whole wait: it streams, and a section counts as finished when the key AFTER it appears in the partial JSON (`Progress.absorb`) — so the board ticks five times while the model works instead of sitting on step one and then completing all at once, which is what a buffered call produced and what the first version of this screen shipped as. The display trails the truth by `revealInterval` per step (`shown`), because the sections can still land in one burst — a fast write, or a deploy with no SSE at all — and seven rows ticking in a single frame is the same problem again; nothing is ever shown before it is genuinely done. `endSession` then holds the board for `revealTail` so the last rows can't be cut off by the summary sheet. `ConversationDetailView`'s rescue path draws the same board, because it builds the same things.
+
+**"Show me this later" is honored by the DEAL, not by one source of it** (2026-08-20). `DailyWordsView.pick` / `DailyExpressionsView.pick` fill the day's hand from four sources — the notebook, unmastered Watch-book items, a recent talk's pickup words, then a core-list top-up — and only the FIRST asked `StudyScheduleStore.isDue`. The other three judge by `VocabStore.records` / `isKnownExpression`, and `addStudying` never writes a record, so a word put away for 10 minutes was excluded from the notebook source and re-added by the core list on the very next deal: closing the session and reopening it dealt the same cards back, and the three delays meant nothing. **The gate now lives inside `pick`'s own `add(_:)`**, the one funnel every source runs through, so a fifth source cannot quietly reintroduce it — never re-gate per source.
+
+**A folder is a WINDOW on the return time, and there is one implementation** (2026-08-20). Both decks drop into `DrillBin`, and both now bucket the same way — `DrillBin.folder(forReturnIn:)`, ≤12h Soon · ≤48h Tomorrow · else Later — over whatever is still waiting: the sentence deck from `DrillStore.nextReviewAt`, the word/expression deck from `StudyScheduleStore.upcoming`. So the folder is where a thing IS, not which button last touched it ("3 days" the drop, "Later" the place), it survives closing the sheet, and any row re-snoozes from its context menu. `StudyDeckView`'s folders used to be a `@State` tally of this session's drops that emptied on dismiss, which is why the same drag meant two different things depending on the deck. **"Got it" is the one folder that stays session-local**, and must: marking something known CLEARS its return date (`ReviewQueue.retire`) — a known item has no return, so there is nothing on disk to list. **A folder row offers the tray's FULL set of verdicts** — all four, minus "Got it" on a row that already has it (the only true no-op; a delay always re-times from now). Filing takes one drag, so re-filing can't take a trip through the notebook, and a menu missing a verdict just moves the dead end. "Got it" is the one that can't be undone by rescheduling alone, because it ERASES the return date instead of writing one: `StudyDeckView.bringBack` stops it being known, returns it to the notebook, then snoozes — `DailyWordsView.resolve`'s delay branch in reverse — and clears only a `.known` record, never the `.used` one a spoken word earns. Re-filing logs NO rep in either deck: the card was counted when it was graded, and changing your mind isn't a second one. The menu is a long-press, so both decks' folder lists carry a footer saying so; an affordance nothing points at is the same dead end as not having one. The chips also stay on the deck's done state, because "where did all that go?" is asked after the last card, and reopening the deck to look was the very thing that made the fix look broken.
 
 Every feature should feed this loop. Per-turn suggestions come back in the SAME Gemini call as the reply (structured JSON) — never split the suggestion out, and never remove the field: `ScorecardMetrics.suggestionRate`, drill ingestion, and the weekly report's repeated-mistake detection all depend on `Turn.suggestion`.
 
@@ -437,6 +460,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
   - Everything else — Shadow, drills, library, counterpart preset voices → `eleven_turbo_v2_5`.
   - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
   - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
+  - **The level changes WHICH WORDS, not HOW MUCH** (2026-08-20, `ConversationEngine.SpeechScale`). Turn length used to scale with the band (2 sentences at A1, 4 at C1); it now stops at 3 for everyone and says one thing — this is a phone call, nobody monologues. A learner doesn't need shorter turns than a fluent speaker gets, they need easier ones, so the band drives vocabulary + sentence SHAPES and nothing else. The old ceiling made replies stop mid-thought and pushed the model to satisfy the count by writing longer sentences, which is how a rule meant to keep the call spoken made it read written. Keep the ceiling COUNTABLE though — the qualitative version lost to the concrete REACT/VARY bullets and an A1 turn came back at four sentences.
 
 ## Audio format
 

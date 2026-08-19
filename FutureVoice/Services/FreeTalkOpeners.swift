@@ -65,26 +65,63 @@ final class FreeTalkOpeners {
     /// met the learner (`UserPersona.metAt == nil`). It outranks both the pool
     /// and the fallback above, because a rotating "good to hear you" is a
     /// greeting between people who already know each other — and the whole of
-    /// that first call is spent finding out who this person is (see
-    /// `ConversationEngine`'s FIRST CALL block, which the rest of the
-    /// conversation runs on). Bundled for the same reason as the fallback: the
-    /// first greeting of all must never wait on a live Gemini call. MATERIAL →
-    /// target language, and name-free so one cache entry serves everyone.
+    /// that first call is spent meeting (see `ConversationEngine`'s FIRST CALL
+    /// block, which the rest of the conversation runs on).
+    ///
+    /// **This one is a PROMISE, not a greeting, and that is deliberate.** It
+    /// says who it is, that it is looking forward to the talks ahead, and
+    /// that the learner can become it — so don't give up, let's do this
+    /// together.
+    ///
+    /// Several rounds were spent writing the casual-phone-call version of
+    /// this line instead, and every one of them failed the same way: "you, a
+    /// few years from now" is a premise to decode, "the you who speaks this
+    /// without thinking about it" is a definition and nobody introduces
+    /// themselves with a relative clause, "same voice, right?" dodges the
+    /// sentence altogether. All of them had the character narrating the app's
+    /// own premise, which reads as a product explaining itself. The fix was
+    /// not a better casual line. It was noticing that the first call is not
+    /// small talk: it is the moment the learner decides whether this is worth
+    /// doing, and the only thing worth saying then is why it is.
+    ///
+    /// So this line breaks a rule the rest of the call keeps, on purpose: it
+    /// runs longer than `ConversationEngine.maxTurnSentences` (that ceiling
+    /// governs the model's turns, not this one — see the type's doc). Nothing
+    /// after it is allowed to sound like this; the FIRST CALL block takes
+    /// over on the next turn and gets on with actually meeting them.
+    ///
+    /// **It still has to end on a question.** The promise is the point, but a
+    /// promise leaves the learner holding an open mic with nothing specific
+    /// to say, and a first call that opens on a silence is a first call that
+    /// gets hung up. The question is small on purpose — "what are you up to
+    /// these days" is answerable in three words at A1 and opens exactly the
+    /// ground the FIRST CALL block wants (what they do with their days),
+    /// where "tell me about yourself" is the interview line and has no floor
+    /// and no ceiling.
+    ///
+    /// Bundled for the same reason as the fallback: the first greeting of all
+    /// must never wait on a live Gemini call. MATERIAL → target language, and
+    /// name-free so one cache entry serves everyone.
+    ///
+    /// Nine entries because `LanguageCatalog.targets` has nine, but only the
+    /// three with a CEFR wordlist are reachable from the picker today (en,
+    /// de, ko — see `selectableTargets`). The other six are written in the
+    /// same voice and wait for their wordlist.
     static func introOpener(language: String) -> String {
         let code = LanguageCatalog.language(language)?.code ?? "en"
         return introOpeners[code] ?? introOpeners["en"]!
     }
 
     private static let introOpeners: [String: String] = [
-        "en": "Hey, this is our first time talking. Tell me about yourself?",
-        "de": "Hey, wir sprechen zum ersten Mal. Erzähl mir ein bisschen von dir?",
-        "ko": "안녕, 우리 처음 얘기하는 거네. 네 얘기 좀 들려줄래?",
-        "ja": "やあ、話すのは初めてだね。きみのこと、聞かせてくれる？",
-        "es": "Hola, es la primera vez que hablamos. Cuéntame algo de ti.",
-        "fr": "Salut, c'est la première fois qu'on se parle. Parle-moi un peu de toi ?",
-        "it": "Ciao, è la prima volta che parliamo. Raccontami un po' di te.",
-        "pt": "Oi, é a primeira vez que a gente conversa. Me conta de você?",
-        "zh": "嘿，这是我们第一次聊天。跟我说说你吧？",
+        "en": "Hi. I'm the future you — the one who speaks English fluently. I can't wait for all the talks ahead of us. Don't give up, and let's get you here, together. So — what are you up to these days?",
+        "de": "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Ich freue mich auf all die Gespräche, die vor uns liegen. Gib nicht auf, und lass uns zusammen dafür sorgen, dass du hierher kommst. Also — was machst du gerade so?",
+        "ko": "안녕. 나는 유창하게 말하는 미래의 너야. 앞으로 너와 함께할 많은 이야기들이 기대된다. 포기하지 말고, 지금의 네가 내가 될 수 있게 같이 해보자. 그래서 말인데, 요즘 어떻게 지내?",
+        "ja": "こんにちは。流暢に話す、未来のきみだよ。これから交わす話が楽しみでならない。あきらめないで、今のきみがここまで来られるように、一緒にやっていこう。それで、最近はどんな感じ？",
+        "es": "Hola. Soy tu yo del futuro, el que habla español con fluidez. Tengo muchas ganas de todas las charlas que nos esperan. No te rindas, y vamos a llevarte hasta aquí, juntos. Bueno — ¿qué tal te va últimamente?",
+        "fr": "Salut. Je suis le toi du futur, celui qui parle français couramment. J'ai hâte de toutes les conversations qui nous attendent. N'abandonne pas, et on va t'amener jusqu'ici, ensemble. Alors — tu fais quoi de tes journées en ce moment ?",
+        "it": "Ciao. Sono il te del futuro, quello che parla italiano fluentemente. Non vedo l'ora di tutte le chiacchierate che ci aspettano. Non mollare, e arriviamoci insieme. Allora — cosa fai di bello in questi giorni?",
+        "pt": "Oi. Sou o você do futuro, o que fala português com fluência. Mal posso esperar por todas as conversas que temos pela frente. Não desista, e vamos chegar até aqui juntos. Então — o que você anda fazendo esses dias?",
+        "zh": "你好。我是流利说中文的未来的你。我很期待我们接下来的每一次聊天。别放弃，我们一起，让现在的你变成我。对了，你最近都在忙什么？",
     ]
 
     private static let fallbackOpeners: [String: String] = [

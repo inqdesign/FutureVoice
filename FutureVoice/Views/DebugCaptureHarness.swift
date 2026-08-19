@@ -132,22 +132,22 @@ enum DebugCapture {
             return AnyView(NavigationStack { VocabularyView() })
         case "daily-words":
             // The Words challenge session (the dealt hand of recommendations).
-            once("vocab") { seedVocab() }
+            once("vocab") { seedVocab(freshSchedule: true) }
             return AnyView(DailyWordsView().environmentObject(appState))
         case "daily-words-tray":
             // The deck mid-drag: folders out, cancel highlighted.
-            once("vocab") { seedVocab() }
+            once("vocab") { seedVocab(freshSchedule: true) }
             stubWordEntry = fatWordEntry
             previewStudyTray = true
             return AnyView(DailyWordsView().environmentObject(appState))
         case "daily-words-full":
             // Same deck, but every lookup returns the fat entry — how much of
             // a full dictionary entry the card fits, on THIS screen size.
-            once("vocab") { seedVocab() }
+            once("vocab") { seedVocab(freshSchedule: true) }
             stubWordEntry = fatWordEntry
             return AnyView(DailyWordsView().environmentObject(appState))
         case "daily-expressions":
-            once("vocab") { seedVocab() }
+            once("vocab") { seedVocab(freshSchedule: true) }
             return AnyView(DailyExpressionsView().environmentObject(appState))
         case "review-due":
             // What a review reminder opens: items whose snooze already ran
@@ -331,6 +331,15 @@ enum DebugCapture {
                                  meaning: "회사에서 정신없는 한 주였어요.")],
                 phrases: [], properNoun: nil)
             return AnyView(GoalSheetPreview().environmentObject(appState))
+        case "first-call":
+            // The introduction call — the REAL ConversationView, opened by a
+            // learner the fluent self has never met (`UserPersona.metAt` nil).
+            // A capture run has no clone, so the opener lands as text rather
+            // than speech; the line itself is the one a real first call
+            // speaks, and the FIRST CALL prompt block is what would run from
+            // the learner's first answer on.
+            once("first-call") { seedUnmetPersona(into: appState) }
+            return AnyView(ConversationView().environmentObject(appState))
         case "level-sheet":
             once("level") { seedSessions() }
             return AnyView(LevelInfoSheet(level: .b1, surface: .watch)
@@ -731,7 +740,27 @@ enum DebugCapture {
         }
     }
 
-    static func seedVocab() {
+    /// `freshSchedule` wipes the study schedule first. The deck's folders now
+    /// read from disk, and that file survives across launches on a simulator —
+    /// so without this a screenshot (and the UI test that asserts every folder
+    /// starts at 0) inherits whatever a previous run happened to snooze.
+    /// A learner who finished setup and has never talked: the four intake
+    /// answers are on file, `metAt` is nil, nothing has been remembered yet.
+    /// Written straight to the store rather than through `savePersona`, which
+    /// would try to sync a public intro from a capture run.
+    static func seedUnmetPersona(into appState: AppState) {
+        var p = UserPersona.empty
+        p.displayName = "Eunggyu"
+        p.city = "Munich"
+        p.country = "Germany"
+        p.interests = ["AI / tech", "parenting"]
+        p.situations = ["Kita / school", "Client calls"]
+        PersonaStore.shared.save(p)
+        appState.persona = p
+    }
+
+    static func seedVocab(freshSchedule: Bool = false) {
+        if freshSchedule { StudyScheduleStore.shared.removeAll() }
         let texts = [
             "I really appreciate you taking the time to meet me today.",
             "Honestly I appreciate how straightforward the whole process was.",
