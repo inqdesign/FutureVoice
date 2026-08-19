@@ -63,11 +63,19 @@ enum UtteranceTranscriber {
                                 targetLanguage: String,
                                 idempotencyKey: String) async -> String? {
         struct Payload: Decodable { let transcript: String? }
-        let context = priorText.isEmpty ? "(start of utterance)" : priorText
         do {
             let payload: Payload = try await GeminiClient.background.sendJSON(
-                system: chunkPrompt(targetLanguage: targetLanguage),
-                messages: [.init(role: .user, content: context, inlineAudio: audio)],
+                system: chunkPrompt(targetLanguage: targetLanguage,
+                                    priorText: Self.contextTail(priorText)),
+                // Audio ONLY. The text so far used to ride here, and a model
+                // handed prose in the user turn continues it: the prior words
+                // came back out ahead of the ones it actually heard, and every
+                // later piece inherited a longer echo (measured 2026-08-19, an
+                // 11-piece turn transcribed the same sentences three times).
+                // As a fenced line in the SYSTEM prompt it reads as reference,
+                // which is all it was ever meant to be.
+                messages: [.init(role: .user, content: "Transcribe the attached audio.",
+                                 inlineAudio: audio)],
                 model: .flashLite31,
                 maxTokens: 1024,
                 purpose: "transcribe",
@@ -81,18 +89,34 @@ enum UtteranceTranscriber {
         }
     }
 
-    private static func chunkPrompt(targetLanguage: String) -> String {
+    /// The last words of the utterance so far. Enough to settle a name or a
+    /// soundalike, short enough that an echo of it costs a line rather than the
+    /// whole turn — the context used to grow with every piece, so the later
+    /// pieces of a long turn carried (and repeated) the most.
+    private static func contextTail(_ text: String, maxWords: Int = 30) -> String {
+        let words = text.split(separator: " ")
+        guard !words.isEmpty else { return "" }
+        return words.suffix(maxWords).joined(separator: " ")
+    }
+
+    private static func chunkPrompt(targetLanguage: String, priorText: String) -> String {
         let target = LanguageCatalog.englishName(targetLanguage)
+        let context = priorText.isEmpty
+            ? "(this is the start of the utterance)"
+            : "<<<ALREADY TRANSCRIBED — REFERENCE ONLY\n\(priorText)\n>>>"
         return """
         You transcribe ONE SEGMENT of a longer spoken utterance — the speaker
         is still mid-turn and this audio is just one piece of it. Output STRICT
         JSON only — no prose, no code fences: { "transcript": "..." }
 
-        The attached AUDIO is the only source. The text in the user message is
-        the transcript of the utterance SO FAR (earlier segments) — use it only
-        for continuity (names, topic, which of two soundalike words fits).
-        NEVER copy any of it into the output: output ONLY words spoken in the
-        attached audio.
+        The attached AUDIO is the only source. The fenced block below is the END
+        of the transcript so far. Those words are ALREADY WRITTEN — someone else
+        transcribed them, they are not yours to repeat. Use them only to settle
+        a name, the topic, or which of two soundalike words fits, then transcribe
+        the audio and nothing else. Your output starts at the FIRST word spoken
+        in the attached audio, even if that continues a sentence begun above.
+
+        \(context)
 
         - "transcript": VERBATIM what is spoken in THIS audio, in \(target).
           Keep the speaker's exact wording INCLUDING grammar mistakes — this is

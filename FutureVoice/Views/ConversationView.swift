@@ -1133,6 +1133,63 @@ struct ConversationView: View {
         state.tasks.append(task)
     }
 
+    /// Append one transcribed piece to the turn text, dropping any leading run
+    /// of words that merely repeats the tail of what is already there.
+    ///
+    /// Each piece is transcribed with the turn's text SO FAR as continuity
+    /// context, and the model sometimes writes that context back out ahead of
+    /// the words it actually heard. Measured 2026-08-19 on a 65-second turn cut
+    /// into 11 pieces: the assembled transcript read the same two sentences
+    /// three times over, and — because a full assembly REPLACES the on-device
+    /// text — that is what reached the bubble, the summary, the drill cards and
+    /// the book. The prompt now fences the context, but the join refuses an
+    /// echo in code too: a prompt is a request, this is a guarantee.
+    ///
+    /// Overlaps shorter than `minEchoWords` are left alone — people really do
+    /// repeat two or three words across a pause, and cutting those would edit
+    /// the learner's own speech.
+    /// - Returns: the joined text, and how many words were dropped as echo.
+    nonisolated static func stitch(_ text: String, _ piece: String) -> (String, Int) {
+        let minEchoWords = 4
+        let maxEchoWords = 80
+        let pieceWords = piece.split(separator: " ").map(String.init)
+        guard !pieceWords.isEmpty else { return (text, 0) }
+        guard !text.isEmpty else { return (piece, 0) }
+
+        // Compare on normalized words (case, punctuation and filler markers
+        // differ between two transcriptions of the same speech); keep a map
+        // back to raw positions so the drop count applies to the real words.
+        let prev = Self.comparableWords(text.split(separator: " ").map(String.init))
+        let cur = Self.comparableWords(pieceWords)
+        var dropRaw = 0
+        let limit = min(prev.count, cur.count, maxEchoWords)
+        if limit >= minEchoWords {
+            for k in stride(from: limit, through: minEchoWords, by: -1) {
+                guard prev.suffix(k).map(\.text) == cur.prefix(k).map(\.text) else { continue }
+                // Everything up to and including the last echoed word.
+                dropRaw = cur[k - 1].rawIndex + 1
+                break
+            }
+        }
+        let kept = pieceWords.dropFirst(dropRaw)
+        guard !kept.isEmpty else { return (text, pieceWords.count) }
+        return (text + " " + kept.joined(separator: " "), dropRaw)
+    }
+
+    /// Words reduced to their comparable form, dropping tokens that normalize
+    /// to nothing (stray punctuation) so they can't align by accident.
+    nonisolated private static func comparableWords(
+        _ words: [String]
+    ) -> [(text: String, rawIndex: Int)] {
+        words.enumerated().compactMap { index, word in
+            let normalized = word.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }
+                .joined()
+            return normalized.isEmpty ? nil : (normalized, index)
+        }
+    }
+
     /// Energy-based endpointing loop, started with the mic. Every tick it
     /// checks how long the mic has ACTUALLY been silent (last voiced audio,
     /// not last transcript change) against the text-completeness tier, and
@@ -1712,6 +1769,10 @@ struct ConversationView: View {
         turnTiming["chunks"] = String(chunk.nextIndex)
         turnTiming["chunk_wait_ms"] = String(waitedMs)
         let assembled = chunk.textSoFar()
+        // Non-zero means a piece repeated what came before it and `stitch`
+        // caught it. Watch it: a rising count says the fenced context is being
+        // continued again, and a re-worded echo would slip past the stitcher.
+        turnTiming["chunk_echo_words"] = String(chunk.echoWords)
         guard chunk.isSettled, !chunk.hasFailure, !assembled.isEmpty,
               let idx = turns.firstIndex(where: { $0.id == turnId }) else {
             turnTiming["chunk_path"] = chunk.hasFailure ? "failed" : "late"
