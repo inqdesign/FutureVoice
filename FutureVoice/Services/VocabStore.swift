@@ -26,9 +26,21 @@ final class VocabStore: ObservableObject {
     /// Expressions the user bookmarked to keep studying — the phrase-level
     /// analogue of `studying`. Lowercased keys, newest first.
     @Published private(set) var studyingExpressions: [String] = []
-    /// Session ids already folded in, so re-ingest is cheap/idempotent.
-    private var ingestedSessions: Set<UUID> = []
-    private var ingestedExpressionSessions: Set<UUID> = []
+    /// Session id → how many of its user texts are already folded in. A
+    /// resumed talk is summarized AGAIN over its whole transcript; counting
+    /// texts (instead of the old all-or-nothing session set) lets the second
+    /// pass fold in just the new suffix — the old guard silently dropped
+    /// every word spoken after a resume from the pool, forever. Legacy
+    /// entries carry `Int.max` ("fully ingested, count unknown").
+    private var ingestedTextCounts: [String: Int] = [:]
+    /// Session id → expression keys already counted for it — key-level for
+    /// the same reason: a re-summary must add the resumed portion's phrases
+    /// without double-counting the first batch.
+    private var ingestedExpressionKeys: [String: Set<String>] = [:]
+    /// Sessions whose expressions were ingested before per-key tracking.
+    /// What they counted is reconstructable: exactly the expression list
+    /// saved on their summary (see `legacyExpressionKeys`).
+    private var legacyExpressionSessions: Set<UUID> = []
 
     private var fileURL: URL
     private var metaURL: URL
@@ -62,8 +74,9 @@ final class VocabStore: ObservableObject {
         studying = []
         expressionRecords = [:]
         studyingExpressions = []
-        ingestedSessions = []
-        ingestedExpressionSessions = []
+        ingestedTextCounts = [:]
+        ingestedExpressionKeys = [:]
+        legacyExpressionSessions = []
         load()
     }
 
@@ -178,13 +191,16 @@ final class VocabStore: ObservableObject {
 
     // MARK: - Mutation
 
-    /// Fold a finished session's USER turns into the pool. No-op if already done.
+    /// Fold a finished session's USER turns into the pool. Only texts beyond
+    /// what this session already contributed are counted, so a full re-run
+    /// after a resume adds the new turns and nothing twice; unchanged = no-op.
     @discardableResult
     func ingest(sessionId: UUID, userTexts: [String], at date: Date = Date()) -> [String] {
-        guard !ingestedSessions.contains(sessionId) else { return [] }
-        ingestedSessions.insert(sessionId)
+        let already = ingestedTextCounts[sessionId.uuidString] ?? 0
+        guard userTexts.count > already else { return [] }
+        ingestedTextCounts[sessionId.uuidString] = userTexts.count
         var newWords: [String] = []
-        for lemma in Self.lemmas(in: userTexts) where CoreVocabulary.set.contains(lemma) {
+        for lemma in Self.lemmas(in: Array(userTexts.dropFirst(already))) where CoreVocabulary.set.contains(lemma) {
             if var r = records[lemma] {
                 r.count += 1
                 r.lastAt = date
@@ -201,16 +217,20 @@ final class VocabStore: ObservableObject {
     // MARK: - Expressions (multi-word phrases the user actually used)
 
     /// Fold this session\'s verified expressions into the long-term pool.
-    /// Idempotent per session. Returns the ones seen for the FIRST time.
+    /// Each phrase is counted at most once per session, so the re-summary of
+    /// a resumed talk adds only what the new turns produced. Returns the ones
+    /// seen for the FIRST time.
     @discardableResult
     func ingestExpressions(sessionId: UUID, phrases: [String], at date: Date = Date()) -> [String] {
-        guard !ingestedExpressionSessions.contains(sessionId) else { return [] }
-        ingestedExpressionSessions.insert(sessionId)
+        var counted = ingestedExpressionKeys[sessionId.uuidString]
+            ?? legacyExpressionKeys(for: sessionId)
         var added: [String] = []
         for raw in phrases {
             let display = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !display.isEmpty else { continue }
-            let key = display.lowercased()
+            let key = exprKey(display)
+            guard !counted.contains(key) else { continue }
+            counted.insert(key)
             if var r = expressionRecords[key] {
                 r.count += 1
                 r.lastAt = date
@@ -220,8 +240,29 @@ final class VocabStore: ObservableObject {
                 added.append(display)
             }
         }
+        ingestedExpressionKeys[sessionId.uuidString] = counted
         saveExpressions()
         return added
+    }
+
+    /// Seed a session's counted-keys from its previous summary — for
+    /// sessions ingested before per-key tracking, whose row on disk may
+    /// already be overwritten by the time a re-analysis runs (the caller
+    /// still holds the old summary in memory). No-op once per-key tracking
+    /// has data for the session.
+    func notePriorExpressions(sessionId: UUID, phrases: [String]) {
+        guard ingestedExpressionKeys[sessionId.uuidString] == nil,
+              !phrases.isEmpty else { return }
+        ingestedExpressionKeys[sessionId.uuidString] = Set(phrases.map(exprKey))
+    }
+
+    /// What a pre-per-key session already counted: the verified list its
+    /// summary carries is exactly what was passed to ingest back then.
+    private func legacyExpressionKeys(for sessionId: UUID) -> Set<String> {
+        guard legacyExpressionSessions.contains(sessionId) else { return [] }
+        let phrases = SessionStore.shared.load()
+            .first { $0.id == sessionId }?.summary?.expressionsUsed ?? []
+        return Set(phrases.map(exprKey))
     }
 
     /// Manually save an expression/phrase the user picked to study later
@@ -489,14 +530,28 @@ final class VocabStore: ObservableObject {
 
     // MARK: - Persistence
 
+    /// New on-disk shape of the expressions-ingested meta. The legacy set
+    /// rides along so sessions never re-touched keep their guard even after
+    /// the file is rewritten in the new format.
+    private struct ExpressionMeta: Codable {
+        var keysBySession: [String: Set<String>]
+        var legacySessions: Set<UUID>
+    }
+
     private func load() {
         if let data = try? Data(contentsOf: fileURL),
            let dict = try? JSONDecoder().decode([String: Record].self, from: data) {
             records = dict
         }
-        if let data = try? Data(contentsOf: metaURL),
-           let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
-            ingestedSessions = ids
+        if let data = try? Data(contentsOf: metaURL) {
+            if let counts = try? JSONDecoder().decode([String: Int].self, from: data) {
+                ingestedTextCounts = counts
+            } else if let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
+                // Pre-count format: how much was folded in is unknown, so
+                // freeze those sessions as fully ingested (old behavior).
+                ingestedTextCounts = Dictionary(
+                    uniqueKeysWithValues: ids.map { ($0.uuidString, Int.max) })
+            }
         }
         if let data = try? Data(contentsOf: studyingURL),
            let list = try? JSONDecoder().decode([String].self, from: data) {
@@ -506,9 +561,13 @@ final class VocabStore: ObservableObject {
            let dict = try? JSONDecoder().decode([String: Record].self, from: data) {
             expressionRecords = dict
         }
-        if let data = try? Data(contentsOf: expressionsMetaURL),
-           let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
-            ingestedExpressionSessions = ids
+        if let data = try? Data(contentsOf: expressionsMetaURL) {
+            if let meta = try? JSONDecoder().decode(ExpressionMeta.self, from: data) {
+                ingestedExpressionKeys = meta.keysBySession
+                legacyExpressionSessions = meta.legacySessions
+            } else if let ids = try? JSONDecoder().decode(Set<UUID>.self, from: data) {
+                legacyExpressionSessions = ids
+            }
         }
         if let data = try? Data(contentsOf: studyingExpressionsURL),
            let list = try? JSONDecoder().decode([String].self, from: data) {
@@ -520,7 +579,7 @@ final class VocabStore: ObservableObject {
         if let data = try? JSONEncoder().encode(records) {
             try? data.write(to: fileURL, options: [.atomic])
         }
-        if let data = try? JSONEncoder().encode(ingestedSessions) {
+        if let data = try? JSONEncoder().encode(ingestedTextCounts) {
             try? data.write(to: metaURL, options: [.atomic])
         }
     }
@@ -545,7 +604,9 @@ final class VocabStore: ObservableObject {
         if let data = try? JSONEncoder().encode(expressionRecords) {
             try? data.write(to: expressionsURL, options: [.atomic])
         }
-        if let data = try? JSONEncoder().encode(ingestedExpressionSessions) {
+        if let data = try? JSONEncoder().encode(ExpressionMeta(
+            keysBySession: ingestedExpressionKeys,
+            legacySessions: legacyExpressionSessions)) {
             try? data.write(to: expressionsMetaURL, options: [.atomic])
         }
     }
