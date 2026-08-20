@@ -14,6 +14,15 @@ struct ProgressTab: View {
 
     // Optional because it doubles as the pager's scrollPosition binding.
     @State private var selected: Dim? = .overall
+    /// False until the first pass over the archive has landed. Every number
+    /// below starts at zero, and zero is a CLAIM here ("nothing measured yet,
+    /// 0/10 min") — so the pages must not be drawn from it before it's been
+    /// read. Set once, never back: a later refresh redraws numbers, it doesn't
+    /// re-open the question of whether there are any.
+    @State private var loaded = false
+    /// The in-flight pass, cancelled when a newer one starts (tab hops are
+    /// cheap to trigger, the walk isn't).
+    @State private var reloadTask: Task<Void, Never>?
     /// "How this is assessed" transparency sheet — the recipe with live numbers.
     @State private var showingHowAssessed = false
     @State private var dashboard = PracticeStats.snapshot()
@@ -215,7 +224,15 @@ struct ProgressTab: View {
     /// now also reachable by swiping the paged TabView.
     @ViewBuilder
     private func content(for dim: Dim) -> some View {
-        if scoredCount == 0 {
+        if !loaded {
+            // Deliberately NOT the first-run explainer: that page says there
+            // is nothing measured yet, which is a lie for everyone with a
+            // history, and it was what the tab showed on first entry until
+            // the (then synchronous) pass finished.
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.top, 48)
+        } else if scoredCount == 0 {
             explainer(for: dim)
         } else {
             switch dim {
@@ -1729,52 +1746,195 @@ struct ProgressTab: View {
 
     // MARK: - Data
 
+    /// The main-actor-only reads the pass can't do for itself: `VocabStore`
+    /// and `PracticeLog` keep their state on this actor, and AppState's
+    /// arrays are the view's own truth for the moment the pass started.
+    private struct ReloadInput {
+        var now: Date
+        /// The last 14 days, oldest first, each with its effort-log row.
+        var days: [(day: Date, log: PracticeLog.Day?)]
+        var drillCards: [DrillCard]
+        var shadowAttempts: [ShadowAttempt]
+        var weeklyReports: [WeeklyReport]
+        /// Words used inside `vocabWindowDays` — the CURRENT vocabulary.
+        var usedWordsRecent: [String]
+        /// First-use date of every graded word ever said — the growth curve.
+        var vocabFirstUses: [Date]
+    }
+
+    /// One finished pass, in one value, so it lands in a single update
+    /// instead of thirty separate ones.
+    private struct Loaded {
+        var dashboard: PracticeStats.Snapshot
+        var dueCount = 0
+        var carryover = PracticeStats.CarryoverSummary()
+        var dailyEffort: [DayEffort] = []
+        var weekReps = 0
+        var daysActiveThisWeek = 0
+        var shadowTrend: PracticeStats.ShadowTrend?
+        var avgShadowScore = 0
+        var perLevel: [CEFRLevel: Int] = [:]
+        var usedTotal = 0
+        var vocabLevel: CEFRLevel?
+        var scoredCount = 0
+        var totalSpeakingMinutes = 0
+        var wpm = 0
+        var articulationWpm = 0
+        var pausesPerMin = 0.0
+        var talkMinutes = 0
+        var wordsPerTurn = 0
+        var grammarScore = 0
+        var slipsPer100Words = 0.0
+        var fluencyTrend: [TrendPoint] = []
+        var grammarTrend: [TrendPoint] = []
+        var expressionTrend: [TrendPoint] = []
+        var vocabTrend: [TrendPoint] = []
+        var aiLevel: CEFRLevel?
+        var levelHistory: [LevelPoint] = []
+        var reportUnlock: WeeklyReportEngine.UnlockState
+        var notesByDim: [Dim: [String]] = [:]
+    }
+
     private func reload() {
-        dashboard = PracticeStats.snapshot()
-        let drillCards = DrillStore.shared.load()
-        dueCount = drillCards.filter { $0.nextReviewAt <= Date() }.count
+        reloadTask?.cancel()
+        reloadTask = Task { await runReload() }
+    }
+
+    /// One refresh: read what only this actor can read, walk the archive OFF
+    /// it, apply.
+    ///
+    /// The walk is heavy — several passes over every ended session, plus a
+    /// scorecard recomputation per talk — and it used to run synchronously
+    /// inside `onAppear`. onAppear fires after the first frame, so the tab
+    /// opened on the still-empty initial state and a learner with a year of
+    /// talks read "no assessment yet · 0/10 min" until the walk finished;
+    /// leaving for another tab and coming back was the only thing that looked
+    /// like a fix, because by then the state was filled.
+    @MainActor
+    private func runReload() async {
+        // The notebook first: it ingests any turns it hasn't seen (a no-op
+        // once a talk has been counted), and the vocabulary level below is
+        // read off it.
         vocab.backfillFromSessions()
+
+        let cal = Calendar.current
+        let now = Date()
+        let todayStart = cal.startOfDay(for: now)
+        let input = ReloadInput(
+            now: now,
+            days: (0..<14).reversed().compactMap { offset in
+                cal.date(byAdding: .day, value: -offset, to: todayStart)
+                    .map { ($0, PracticeLog.shared.day($0)) }
+            },
+            drillCards: DrillStore.shared.load(),
+            shadowAttempts: appState.shadowAttempts,
+            weeklyReports: appState.weeklyReports,
+            usedWordsRecent: vocab.usedWords(withinDays: Self.vocabWindowDays),
+            vocabFirstUses: vocab.records
+                .filter { $0.value.state == .used && CoreVocabulary.level(of: $0.key) != nil }
+                .map(\.value.firstAt))
+
+        let result = await Task.detached(priority: .userInitiated) {
+            Self.compute(input)
+        }.value
+        guard !Task.isCancelled else { return }
+
+        dashboard = result.dashboard
+        dueCount = result.dueCount
+        carryover = result.carryover
+        dailyEffort = result.dailyEffort
+        weekReps = result.weekReps
+        daysActiveThisWeek = result.daysActiveThisWeek
+        shadowTrend = result.shadowTrend
+        avgShadowScore = result.avgShadowScore
+        perLevel = result.perLevel
+        usedTotal = result.usedTotal
+        vocabLevel = result.vocabLevel
+        scoredCount = result.scoredCount
+        totalSpeakingMinutes = result.totalSpeakingMinutes
+        wpm = result.wpm
+        articulationWpm = result.articulationWpm
+        pausesPerMin = result.pausesPerMin
+        talkMinutes = result.talkMinutes
+        wordsPerTurn = result.wordsPerTurn
+        grammarScore = result.grammarScore
+        slipsPer100Words = result.slipsPer100Words
+        fluencyTrend = result.fluencyTrend
+        grammarTrend = result.grammarTrend
+        expressionTrend = result.expressionTrend
+        vocabTrend = result.vocabTrend
+        aiLevel = result.aiLevel
+        levelHistory = result.levelHistory
+        reportUnlock = result.reportUnlock
+        notesByDim = result.notesByDim
+        loaded = true
+
+        // If a read is due, kick it off right here — for the FIRST level and
+        // for re-assessments alike. Otherwise "ready" would sit as a spinner
+        // until the next conversation happened to end.
+        if case .ready = result.reportUnlock {
+            appState.maybeGenerateWeeklyReport()
+        }
+
+        await loadMaterial()
+    }
+
+    /// Whole-library mastery. Talk books DERIVE their material (nothing is
+    /// persisted), so this walks `TalkCurriculum` for every finished talk —
+    /// and `TalkCurriculum` reads the notebook, so it's stuck on this actor.
+    /// It yields every few books instead of holding the frame for the length
+    /// of the archive, and it runs after the pages are already drawn.
+    @MainActor
+    private func loadMaterial() async {
+        let proficiency = appState.proficiency
+        let attempts = appState.shadowAttempts
+        let drillCards = DrillStore.shared.load()
+        var mastered = 0, total = 0
+        let ended = SessionStore.shared.load().filter { $0.endedAt != nil }
+        for (index, session) in ended.enumerated() {
+            if index > 0, index.isMultiple(of: 8) {
+                await Task.yield()
+                if Task.isCancelled { return }
+            }
+            let snap = TalkCurriculum.build(session: session,
+                                            proficiency: proficiency,
+                                            shadowAttempts: attempts,
+                                            drillCards: drillCards)
+            mastered += snap.masteredCount
+            total += snap.totalCount
+        }
+        for sc in appState.scenarios {
+            if let c = sc.curriculum {
+                mastered += c.masteredCount
+                total += c.totalCount
+            }
+        }
+        material = (mastered, total)
+    }
+
+    /// Every number on every page, computed from `input` and the thread-safe
+    /// stores. Nothing here may touch main-actor state — that's what
+    /// `ReloadInput` is for.
+    private static func compute(_ input: ReloadInput) -> Loaded {
+        let effortCal = Calendar.current
+        let effortNow = input.now
+        let drillCards = input.drillCards
+
+        var out = Loaded(dashboard: PracticeStats.snapshot(),
+                         reportUnlock: .lockedFirst(secondsAccumulated: 0,
+                                                    secondsRequired: WeeklyReportEngine.firstReportMinSeconds))
+        out.dueCount = drillCards.filter { $0.nextReviewAt <= effortNow }.count
 
         // --- Effort: PracticeLog going forward; shadow-attempt history and
         // card review dates backfill the days before the log existed. ---
-        let effortCal = Calendar.current
-        let effortNow = Date()
-        let todayStart = effortCal.startOfDay(for: effortNow)
         let allEnded = SessionStore.shared.load().filter { $0.endedAt != nil }
-        carryover = PracticeStats.carryoverSummary(sessions: allEnded)
+        out.carryover = PracticeStats.carryoverSummary(sessions: allEnded)
 
-        // Whole-library mastery. Talk books DERIVE their material (nothing is
-        // persisted), so this walks TalkCurriculum for every finished talk —
-        // off the first-paint path for that reason.
-        let scenarios = appState.scenarios
-        let proficiency = appState.proficiency
-        let attempts = appState.shadowAttempts
-        Task { @MainActor in
-            var mastered = 0, total = 0
-            let drillCards = DrillStore.shared.load()
-            for session in allEnded {
-                let snap = TalkCurriculum.build(session: session,
-                                                proficiency: proficiency,
-                                                shadowAttempts: attempts,
-                                                drillCards: drillCards)
-                mastered += snap.masteredCount
-                total += snap.totalCount
-            }
-            for sc in scenarios {
-                if let c = sc.curriculum {
-                    mastered += c.masteredCount
-                    total += c.totalCount
-                }
-            }
-            material = (mastered, total)
-        }
         var effort: [DayEffort] = []
-        for offset in (0..<14).reversed() {
-            guard let d = effortCal.date(byAdding: .day, value: -offset, to: todayStart) else { continue }
-            let log = PracticeLog.shared.day(d)
+        for (d, log) in input.days {
             // Log going forward; attempt history / card review dates backfill
             // the days before the log existed (same policy as before).
-            let shadowed = appState.shadowAttempts.filter { effortCal.isDate($0.createdAt, inSameDayAs: d) }.count
+            let shadowed = input.shadowAttempts.filter { effortCal.isDate($0.createdAt, inSameDayAs: d) }.count
             let reviewed = drillCards.filter { c in
                 c.lastReviewedAt.map { effortCal.isDate($0, inSameDayAs: d) } ?? false
             }.count
@@ -1791,16 +1951,16 @@ struct ProgressTab: View {
                                     drillReps: max(log?.drillReps ?? 0, reviewed),
                                     talkMinutes: Double(speakMs) / 60000.0))
         }
-        dailyEffort = effort
+        out.dailyEffort = effort
         // "Reps" stays what it always meant — review work (shadow + drill),
         // talk time is counted in minutes, not reps.
-        weekReps = effort.suffix(7).reduce(0) { $0 + $1.shadowReps + $1.drillReps }
-        daysActiveThisWeek = effort.suffix(7).filter { $0.shadowReps + $0.drillReps > 0 }.count
-        shadowTrend = PracticeStats.shadowTrend(attempts: appState.shadowAttempts, now: effortNow)
-        let recentScores = appState.shadowAttempts
+        out.weekReps = effort.suffix(7).reduce(0) { $0 + $1.shadowReps + $1.drillReps }
+        out.daysActiveThisWeek = effort.suffix(7).filter { $0.shadowReps + $0.drillReps > 0 }.count
+        out.shadowTrend = PracticeStats.shadowTrend(attempts: input.shadowAttempts, now: effortNow)
+        let recentScores = input.shadowAttempts
             .sorted { $0.createdAt > $1.createdAt }
             .prefix(10).map(\.matchScore)
-        avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
+        out.avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
 
         // --- Objective vocabulary CEFR estimate (from words actually used) ---
         // CURRENT level = words used in the recent window, not lifetime — a
@@ -1808,14 +1968,14 @@ struct ProgressTab: View {
         // The cumulative growth chart below still uses every word ever.
         var counts: [CEFRLevel: Int] = [:]
         var total = 0
-        for word in vocab.usedWords(withinDays: Self.vocabWindowDays) {
+        for word in input.usedWordsRecent {
             if let lv = CoreVocabulary.level(of: word) {
                 counts[lv, default: 0] += 1
                 total += 1
             }
         }
-        perLevel = counts
-        usedTotal = total
+        out.perLevel = counts
+        out.usedTotal = total
         // Estimated level = highest band where the user productively uses
         // enough distinct words. The bar RISES with the level — six A2 words
         // are decent evidence, but six lucky C1 words (song lyrics, one topic)
@@ -1832,9 +1992,9 @@ struct ProgressTab: View {
         if total >= 15 {
             var est: CEFRLevel?
             for lv in CEFRLevel.allCases where (counts[lv] ?? 0) >= threshold(for: lv) { est = lv }
-            vocabLevel = est ?? .a1
+            out.vocabLevel = est ?? .a1
         } else {
-            vocabLevel = nil
+            out.vocabLevel = nil
         }
 
         // --- Measured signals from recent sessions' turns ---
@@ -1844,7 +2004,7 @@ struct ProgressTab: View {
         let scoredSessions = SessionStore.shared.load()
             .filter { $0.endedAt != nil && $0.archivedAt == nil && $0.summary?.scorecard != nil }
             .sorted { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }
-        scoredCount = scoredSessions.count
+        out.scoredCount = scoredSessions.count
 
         // Accumulated speaking time across every analyzed session — gates the
         // overall level so it's grounded in ~10 min of talk, not one session.
@@ -1852,16 +2012,16 @@ struct ProgressTab: View {
             acc + sess.turns.filter { $0.role == .user }
                 .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
         }
-        totalSpeakingMinutes = Int(totalSpeakSecs / 60.0)
+        out.totalSpeakingMinutes = Int(totalSpeakSecs / 60.0)
 
         let recent = Array(scoredSessions.prefix(5))
         let mets = recent.map { ScorecardMetrics.compute(turns: $0.turns) }
         func mean(_ xs: [Double]) -> Double { xs.isEmpty ? 0 : xs.reduce(0, +) / Double(xs.count) }
-        wpm = Int(mean(mets.map(\.wordsPerMinute).filter { $0 > 0 }).rounded())
-        articulationWpm = Int(mean(mets.map(\.articulationRate).filter { $0 > 0 }).rounded())
-        pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
-        talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
-        wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
+        out.wpm = Int(mean(mets.map(\.wordsPerMinute).filter { $0 > 0 }).rounded())
+        out.articulationWpm = Int(mean(mets.map(\.articulationRate).filter { $0 > 0 }).rounded())
+        out.pausesPerMin = mean(mets.map(\.pausesPerMinute).filter { $0 > 0 })
+        out.talkMinutes = Int((mean(mets.map(\.totalUserSpeakingSeconds)) / 60).rounded())
+        out.wordsPerTurn = Int(mean(mets.map(\.avgWordsPerUserTurn)).rounded())
         // Grammar = the per-talk scorecard score (anchored on verified slips),
         // NOT suggestionRate — that also counts style rephrases and STT noise,
         // so it saturates and contradicts the score each talk shows.
@@ -1869,13 +2029,13 @@ struct ProgressTab: View {
             .compactMap { $0.summary?.scorecard?.grammar.score }
             .filter { (0...100).contains($0) }
             .map(Double.init)
-        grammarScore = Int(mean(recentGrammar).rounded())
+        out.grammarScore = Int(mean(recentGrammar).rounded())
         // Slip density over the SAME window the latest assessment judged —
         // the ≈Grammar band must cite the same number as the verdict's
         // rationale. A recent-5 window can straddle a different set of talks
         // and flip the band one panel below the rationale that contradicts
         // it. No assessment yet → the recent talks.
-        let assessments = appState.weeklyReports
+        let assessments = input.weeklyReports
             .filter { $0.cefrLevel != nil }
             .sorted { $0.generatedAt > $1.generatedAt }
         let densitySessions: [Session]
@@ -1892,7 +2052,7 @@ struct ProgressTab: View {
         let densityMets = densitySessions.map { ScorecardMetrics.compute(turns: $0.turns) }
         let slips = densitySessions.reduce(0) { $0 + ($1.summary?.grammarIssues.count ?? 0) }
         let words = densityMets.reduce(0) { $0 + $1.userWordCount }
-        slipsPer100Words = words > 0 ? Double(slips) / Double(words) * 100 : 0
+        out.slipsPer100Words = words > 0 ? Double(slips) / Double(words) * 100 : 0
 
         // --- Per-skill trends: one point per analyzed talk, oldest first.
         // The SAME deterministic measurements as the headline numbers above,
@@ -1919,18 +2079,15 @@ struct ProgressTab: View {
                 eT.append(TrendPoint(date: date, value: m.avgWordsPerUserTurn))
             }
         }
-        fluencyTrend = fT
-        grammarTrend = gT
-        expressionTrend = eT
+        out.fluencyTrend = fT
+        out.grammarTrend = gT
+        out.expressionTrend = eT
 
         // Vocabulary growth: cumulative distinct graded words, bucketed by
         // the day each word was FIRST used (VocabStore keeps firstAt).
         var cumulative = 0
-        vocabTrend = Dictionary(
-            grouping: vocab.records
-                .filter { $0.value.state == .used && CoreVocabulary.level(of: $0.key) != nil }
-                .map(\.value.firstAt),
-            by: { effortCal.startOfDay(for: $0) })
+        out.vocabTrend = Dictionary(grouping: input.vocabFirstUses,
+                                    by: { effortCal.startOfDay(for: $0) })
             .sorted { $0.key < $1.key }
             .map { day, firsts in
                 cumulative += firsts.count
@@ -1943,13 +2100,13 @@ struct ProgressTab: View {
         // ONLY the weekly report's pooled read (one judgment over a whole
         // window's speech). Per-session reads are too noisy to publish — if
         // the sample isn't big enough yet, we show "building", not a number.
-        aiLevel = appState.weeklyReports
+        out.aiLevel = input.weeklyReports
             .sorted { $0.generatedAt > $1.generatedAt }
             .compactMap { $0.cefrLevel.flatMap { CEFRLevel(rawValue: $0) } }
             .first
 
         // Every read's level, oldest first — the level-over-time chart.
-        levelHistory = appState.weeklyReports
+        out.levelHistory = input.weeklyReports
             .compactMap { r in
                 r.cefrLevel.flatMap { CEFRLevel(rawValue: $0) }.map { lv in
                     LevelPoint(date: r.generatedAt,
@@ -1959,33 +2116,28 @@ struct ProgressTab: View {
             }
             .sorted { $0.date < $1.date }
 
-        // Real unlock state for the building panel — and if the next read is
-        // already unlocked, kick it off RIGHT HERE. Waiting for the next
-        // conversation to end (the only other trigger) would leave the user
-        // staring at a full progress bar with nothing happening.
-        // Same archived-out filter as AppState.maybeGenerateWeeklyReport, so
-        // the unlock bar and the actual generation never disagree.
+        // Real unlock state for the building panel. Same archived-out filter
+        // as AppState.maybeGenerateWeeklyReport, so the unlock bar and the
+        // actual generation never disagree. (The caller kicks generation off
+        // when this comes back `.ready` — waiting for the next conversation
+        // to end would leave the user staring at a full progress bar with
+        // nothing happening.)
         let endedSessions = SessionStore.shared.load()
             .filter { $0.endedAt != nil && $0.archivedAt == nil }
-        reportUnlock = WeeklyReportEngine.unlockState(
+        out.reportUnlock = WeeklyReportEngine.unlockState(
             endedSessions: endedSessions,
-            lastReport: appState.weeklyReports.first
+            lastReport: input.weeklyReports.first
         )
-        // If a read is due, kick it off right here — for the FIRST level and
-        // for re-assessments alike. Otherwise "ready" would sit as a spinner
-        // until the next conversation happened to end.
-        if case .ready = reportUnlock {
-            appState.maybeGenerateWeeklyReport()
-        }
 
         // --- Qualitative coaching notes (LLM) per dimension ---
         func dimNotes(_ get: (SessionScorecard) -> String) -> [String] {
             Array(cards.prefix(3).map(get).filter { !$0.isEmpty })
         }
-        notesByDim = [
+        out.notesByDim = [
             .grammar:        dimNotes { $0.grammar.note },
             .fluency:        dimNotes { $0.fluency.note },
             .expressiveness: dimNotes { $0.expressiveness.note }
         ]
+        return out
     }
 }
