@@ -9,8 +9,78 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { priceFor, charge, refund, insufficientCreditsResponse } from "../_shared/credits.ts"
+import { alertVoiceCapacity, alertVoiceHeadroom } from "../_shared/ops_alert.ts"
 
 const SOURCE_FN = "elevenlabs-voice-clone"
+
+// Upstream failures that mean "OUR account has no room", not "this user did
+// something wrong": the plan's custom-voice slots are full, or ElevenLabs is
+// throttling us. The user cannot act on any of them — only a plan upgrade
+// can — so they get a wait-and-retry sheet and the owner gets a Telegram
+// ping. Everything else keeps the raw upstream error.
+const CAPACITY_MARKERS = [
+  "voice_limit_reached",
+  "voice_add_edit_limit_reached",
+  "max_voice_limit_reached",
+  "professional_voice_limit_reached",
+  "quota_exceeded",
+]
+
+function isCapacityFailure(status: number, body: string): boolean {
+  const lower = body.toLowerCase()
+  if (CAPACITY_MARKERS.some((marker) => lower.includes(marker))) return true
+  return status === 429   // upstream rate limit is our ceiling too
+}
+
+/**
+ * 429, deliberately, not 503: the iOS client auto-retries 5xx three times
+ * (NetworkSupport.withRetry) and this failure will not clear in 500ms — it
+ * clears when a human upgrades the plan. Re-uploading the sample twice more
+ * would only make the user wait longer for the same sheet.
+ *
+ * `error: "voice_capacity"` is the contract the app matches on
+ * (ElevenLabsError.capacityLimited).
+ */
+/**
+ * Heads-up BEFORE the ceiling. Reading the slot count costs one free upstream
+ * GET on a request that already took seconds, and it buys the only thing that
+ * actually prevents the blocked-signup incident: the owner upgrading the plan
+ * while there's still room. Best-effort — a failed check never touches the
+ * clone the user just got.
+ */
+async function warnIfVoiceSlotsLow(apiKey: string): Promise<void> {
+  try {
+    const res = await fetch("https://api.elevenlabs.io/v1/user/subscription", {
+      headers: { "xi-api-key": apiKey },
+    })
+    if (!res.ok) return
+    const sub = await res.json() as { voice_limit?: number; voice_slots_used?: number }
+    const limit = sub.voice_limit
+    const used = sub.voice_slots_used
+    if (typeof limit !== "number" || typeof used !== "number" || limit <= 0) return
+    // Last 10% of the plan, and never less than a 3-slot warning — on a small
+    // plan 10% rounds down to "no warning at all".
+    const cushion = Math.max(3, Math.ceil(limit * 0.1))
+    if (limit - used > cushion) return
+    await alertVoiceHeadroom({ used, limit, sourceFn: SOURCE_FN })
+  } catch (e) {
+    console.error("voice headroom check failed (non-fatal)", e)
+  }
+}
+
+function voiceCapacityResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: "voice_capacity",
+      message: "Voice creation is temporarily at capacity. Your recording is safe — please try again shortly.",
+      retry_after_seconds: 600,
+    }),
+    {
+      status: 429,
+      headers: { "Content-Type": "application/json", "Retry-After": "600", ...cors() },
+    },
+  )
+}
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -107,6 +177,14 @@ Deno.serve(async (req) => {
       })
     }
     const detail = await upstream.text()
+    if (isCapacityFailure(upstream.status, detail)) {
+      // Straight to the owner's phone: every signup behind this one fails the
+      // same way until the plan grows.
+      await alertVoiceCapacity({
+        userId: user.id, sourceFn: SOURCE_FN, status: upstream.status, detail,
+      })
+      return voiceCapacityResponse()
+    }
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
 
@@ -145,6 +223,8 @@ Deno.serve(async (req) => {
       is_active: true,
     })
   if (insErr) console.error("voice_clones insert failed", insErr)
+
+  await warnIfVoiceSlotsLow(apiKey)
 
   return new Response(JSON.stringify(json), {
     status: 200,

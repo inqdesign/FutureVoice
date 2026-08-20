@@ -781,7 +781,7 @@ final class AppState: ObservableObject {
                 sampleAudioURLs: [normalized],
                 removeBackgroundNoise: denoise
             )
-        } catch where error.isVoiceLimitReached && pendingDeleteVoiceId != nil {
+        } catch where error.isVoiceCapacityLimited && pendingDeleteVoiceId != nil {
             // The account's voice slots are full AND this user is re-recording,
             // so one of those slots is their own outgoing clone. Free it and
             // retry once: a re-record shouldn't be blocked by the voice it is
@@ -816,7 +816,7 @@ final class AppState: ObservableObject {
             "first_time": isFirstClone,
             "status": Self.failureStatus(error),
             "reason": String(error.localizedDescription.prefix(200)),
-            "voice_limit_reached": error.isVoiceLimitReached,
+            "voice_limit_reached": error.isVoiceCapacityLimited,
             "after_slot_reclaim": afterReclaim
         ])
     }
@@ -829,6 +829,7 @@ final class AppState: ObservableObject {
         if let e = error as? ElevenLabsError {
             switch e {
             case .insufficientCredits: return 402
+            case .capacityLimited: return 429
             case .httpError(let status, _): return status
             case .invalidResponse: return -1
             }

@@ -13,6 +13,7 @@
 // generates one nonce per request and resends it on retry.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { notifyOwner } from "./ops_alert.ts"
 
 // One internal credit ≈ $0.04 of upstream cost at full retail. Pricing is
 // derived from this so changes to provider rates only need a single edit.
@@ -191,9 +192,9 @@ export async function refund(opts: {
 
 /**
  * Best-effort owner alert the FIRST time a user hits the credit wall.
- * Writes one row to credit_depletion_alerts (dedup by user_id) and, when
- * TELEGRAM_BOT_TOKEN + TELEGRAM_ADMIN_CHAT_ID are configured, pings the
- * owner. Never throws — the 402 to the client must not depend on this.
+ * Writes one row to credit_depletion_alerts (dedup by user_id) and pings the
+ * owner over Telegram (_shared/ops_alert.ts). Never throws — the 402 to the
+ * client must not depend on this.
  */
 async function recordDepletion(userId: string, sourceFn: string): Promise<void> {
   try {
@@ -206,18 +207,7 @@ async function recordDepletion(userId: string, sourceFn: string): Promise<void> 
     const firstTime = (data?.length ?? 0) > 0
     if (!firstTime) return
 
-    const token = Deno.env.get("TELEGRAM_BOT_TOKEN")
-    const chatId = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID")
-    if (token && chatId) {
-      await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: `[FutureVoice] beta user out of credits\nuser: ${userId}\nvia: ${sourceFn}`,
-        }),
-      })
-    }
+    await notifyOwner(`[FutureVoice] beta user out of credits\nuser: ${userId}\nvia: ${sourceFn}`)
   } catch (e) {
     console.error("recordDepletion failed (non-fatal)", e)
   }

@@ -83,6 +83,7 @@ Nothing here names a language. Adding German is a `de` column in the catalog —
 - **Don't write to disk outside `documentDirectory`** unless using `cacheDirectory` with a clear cleanup policy.
 - **Deterministic scores stay deterministic.** Shadow match scores and scorecard metrics are computed in code; the LLM only writes qualitative notes anchored to those numbers. Don't let an LLM invent a number the code can compute.
 - **Drill cards must be speakable utterances**, never meta-rules ("use articles correctly"). `DrillStore.looksLikeMetaRule` is the safety net; keep prompts emitting concrete sentences.
+- **Our capacity ceilings are never user-facing errors.** When the ElevenLabs plan runs out of custom-voice slots, the clone paths show `VoiceCapacitySheet` (too many people at once · your recording is saved · retry shortly) and the owner gets a Telegram ping from `supabase/functions/_shared/ops_alert.ts` — because the only fix is a plan upgrade. Classification lives in ONE place, `ElevenLabsError.from(status:body:)`; don't re-detect it at a call site, and don't hand the user upstream JSON they can't act on.
 
 ## UI rules (strict)
 

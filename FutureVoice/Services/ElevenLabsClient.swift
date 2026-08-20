@@ -295,7 +295,7 @@ final class ElevenLabsClient {
             for try await b in bytes.prefix(512) { errBody.append(b) }
             if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
             let snippet = String(data: errBody, encoding: .utf8) ?? "<binary>"
-            throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
+            throw ElevenLabsError.from(status: http.statusCode, body: snippet)
         }
 
         // The PCM header is the protocol handshake: without it we're talking
@@ -471,7 +471,7 @@ final class ElevenLabsClient {
         guard (200..<300).contains(http.statusCode) else {
             if http.statusCode == 402 { throw ElevenLabsError.insufficientCredits }
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
-            throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
+            throw ElevenLabsError.from(status: http.statusCode, body: snippet)
         }
     }
 }
@@ -480,39 +480,62 @@ enum ElevenLabsError: Error, LocalizedError {
     case invalidResponse
     case httpError(status: Int, body: String)
     case insufficientCredits
+    /// OUR ceiling, not anything the user did: the ElevenLabs plan is out of
+    /// custom-voice slots (or upstream is throttling us). Never rendered as an
+    /// error string on the clone paths — `VoiceCapacitySheet` presents it —
+    /// but it still carries copy for anywhere that only has a description.
+    case capacityLimited
 
     var errorDescription: String? {
         switch self {
         case .invalidResponse: return "ElevenLabs: invalid response"
         case .httpError(let status, let body):
-            // The voice-slot ceiling is OUR capacity problem, not something the
-            // user did — don't hand them a wall of upstream JSON they can't act
-            // on. Everything else keeps the raw body: it's the only diagnostic
-            // a beta tester can screenshot.
-            if Self.isVoiceLimitBody(body) {
-                return "We've hit our voice-creation limit right now — nothing you did wrong. We've been alerted; please try again a bit later."
-            }
+            // The raw body stays: it's the only diagnostic a beta tester can
+            // screenshot. Capacity failures never reach here — `from(status:body:)`
+            // sorts them into `.capacityLimited` first.
             return "ElevenLabs HTTP \(status): \(body)"
         case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
+        case .capacityLimited:
+            // Deliberately says nothing about a saved recording: this case also
+            // covers a throttled TTS call, where there is no recording. The
+            // clone paths add that reassurance in `VoiceCapacitySheet`, where
+            // it's true.
+            return "Too many people are using this at once — nothing you did wrong. We've been alerted and are fixing it; please try again shortly."
         }
     }
 
-    /// True when the account's custom-voice slots are full. The upstream error
-    /// arrives as a 400 with `voice_limit_reached` nested in the body.
-    var isVoiceLimitReached: Bool {
-        if case .httpError(_, let body) = self { return Self.isVoiceLimitBody(body) }
+    /// Sorts a non-2xx response into the right case. Capacity is decided here,
+    /// once, so every call site (buffered, streamed, upload) agrees.
+    static func from(status: Int, body: String) -> ElevenLabsError {
+        if isCapacityBody(body) || status == 429 { return .capacityLimited }
+        return .httpError(status: status, body: body)
+    }
+
+    /// True when this is our capacity ceiling rather than the user's problem.
+    var isVoiceCapacityLimited: Bool {
+        if case .capacityLimited = self { return true }
         return false
     }
 
-    private static func isVoiceLimitBody(_ body: String) -> Bool {
-        body.contains("voice_limit_reached")
+    /// Two shapes, on purpose:
+    ///
+    /// - `voice_capacity` — what our own Edge Function labels it (429).
+    /// - the raw upstream markers — what a build shipped AHEAD of the function
+    ///   deploy still sees (ElevenLabs answers `/voices/add` with a 400 whose
+    ///   body nests `voice_limit_reached`). Dropping these would make the
+    ///   friendly sheet depend on a deploy the App Store can't wait for.
+    private static func isCapacityBody(_ body: String) -> Bool {
+        let lower = body.lowercased()
+        return ["voice_capacity", "voice_limit_reached", "voice_add_edit_limit_reached",
+                "max_voice_limit_reached", "professional_voice_limit_reached"]
+            .contains { lower.contains($0) }
     }
 }
 
 extension Error {
     /// Convenience for call sites that only hold an `Error`.
-    var isVoiceLimitReached: Bool {
-        (self as? ElevenLabsError)?.isVoiceLimitReached ?? false
+    var isVoiceCapacityLimited: Bool {
+        (self as? ElevenLabsError)?.isVoiceCapacityLimited ?? false
     }
 }
 

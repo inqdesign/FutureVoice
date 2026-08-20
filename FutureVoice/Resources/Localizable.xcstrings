@@ -4615,6 +4615,22 @@
         }
       }
     },
+    "Making new voices is full for a moment — nothing you did wrong. We've been alerted and are fixing it right now." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Stimmerstellung ist kurz ausgelastet — es liegt nicht an dir. Wir sind benachrichtigt und beheben es gerade."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "잠깐 목소리 만들기가 꽉 찼어요. 문제가 있는 게 아니에요 — 바로 알림을 받고 지금 해결하는 중이에요."
+          }
+        }
+      }
+    },
     "Mark as known" : {
       "localizations" : {
         "de" : {
@@ -8733,6 +8749,22 @@
         }
       }
     },
+    "Too many people joined at once" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gerade sind zu viele auf einmal dazugekommen"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 가입이 한꺼번에 몰렸어요"
+          }
+        }
+      }
+    },
     "Transcript" : {
       "localizations" : {
         "de" : {
@@ -8777,6 +8809,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "다시 시도"
+          }
+        }
+      }
+    },
+    "Try again in a few minutes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versuch es in ein paar Minuten noch einmal."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "몇 분 뒤에 다시 시도해 주세요."
           }
         }
       }
@@ -10476,6 +10524,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "최근 대화가 더 높은 레벨로 측정됐어요. 이제 채점과 학습 자료 난이도가 새 레벨을 따라갑니다."
+          }
+        }
+      }
+    },
+    "Your recording is safely saved. You won't have to read it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme ist sicher gespeichert. Du musst sie nicht noch einmal einlesen."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음한 목소리는 안전하게 저장됐어요. 다시 읽지 않아도 돼요."
           }
         }
       }

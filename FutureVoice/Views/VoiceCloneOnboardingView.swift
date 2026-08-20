@@ -37,6 +37,10 @@ struct VoiceCloneOnboardingView: View {
 
     @State private var status: Status = .intro
     @State private var error: String?
+    /// Our ElevenLabs plan ran out of voice slots. Not an error line — the
+    /// user did nothing wrong and can't act on it, so it gets its own sheet
+    /// (`VoiceCapacitySheet`) with a retry that reuses the take they read.
+    @State private var capacityBlocked = false
     @State private var startedAt: Date?
     @State private var elapsedSeconds: Double = 0
     @State private var ticker: Timer?
@@ -170,6 +174,9 @@ struct VoiceCloneOnboardingView: View {
         // three wizard steps of slack, so the script step lands with the
         // choice already there instead of popping a picker in mid-read.
         .task { await prepareNativeScript() }
+        .sheet(isPresented: $capacityBlocked) {
+            VoiceCapacitySheet(onRetry: performClone)
+        }
     }
 
     private var contentTopPadding: CGFloat {
@@ -1021,7 +1028,15 @@ struct VoiceCloneOnboardingView: View {
                 status = .meet
                 openMeet()
             } catch {
-                self.error = error.localizedDescription
+                // Our voice-slot ceiling is a capacity incident, not a failed
+                // recording: the sheet says so, and the inline error line stays
+                // empty so the review step doesn't also shout in red.
+                if error.isVoiceCapacityLimited {
+                    self.error = nil
+                    capacityBlocked = true
+                } else {
+                    self.error = error.localizedDescription
+                }
                 status = .reviewing
                 // Only release the hold when there's no voice to fall back to.
                 // On a failed re-clone the old voice is still live, and letting

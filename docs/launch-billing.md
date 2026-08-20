@@ -88,9 +88,42 @@ Watch in Supabase / Telegram:
 2. **Feature mix** — talk vs Watch vs shadow vs clone
 3. **Survey mix** — premium vs pro vs none × period
 4. **Depletion alerts** — first-time empty balance (already wired)
+5. **Voice-slot alerts** — the ElevenLabs plan ran out of custom-voice slots
+   (already wired; see below)
 
 **Do not** change prices mid-beta without a written reason.  
 **Do** upgrade ElevenLabs when the usage dashboard says so — product stays put.
+
+### Voice-slot ceiling (the one alert that needs a same-hour answer)
+
+Every ElevenLabs plan caps how many custom voices the account may hold. Past
+that cap `/v1/voices/add` fails for EVERY new user, at the one step that makes
+the product theirs — and the only fix is a plan upgrade, i.e. a human.
+
+So it is wired end to end:
+
+- `elevenlabs-voice-clone` classifies the upstream failure
+  (`voice_limit_reached` & friends, or a 429) and answers **429
+  `{"error":"voice_capacity"}`** instead of leaking upstream JSON. 429, not
+  5xx: the app auto-retries 5xx three times, and this doesn't clear in 500ms.
+- `_shared/ops_alert.ts` pings Telegram immediately — on the first failure of
+  the hour, then at the 5th, 25th and every 50th, so escalation is visible
+  without a notification storm. Counts live in `ops_alerts` (owner query:
+  `select * from ops_alerts order by last_seen_at desc`).
+- The app shows `VoiceCapacitySheet`: too many people at once, we're on it,
+  your recording is saved, try again in a few minutes. Retry re-uses the take
+  they already read (`VoiceSampleStore`), so it costs them nothing.
+- **Before** the ceiling: every successful clone checks
+  `/v1/user/subscription` and pings once per remaining-slot step per day from
+  the last 10% of the plan (min. 3 slots) — a countdown, so the upgrade
+  happens while there's still room.
+
+Requires `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ADMIN_CHAT_ID` in the function env
+(`supabase secrets set …` — the same pair the depletion alert uses). Without
+them the alert is logged and dropped; the user-facing sheet is unaffected.
+
+After changing any of this: `supabase db push` (for `ops_alerts` +
+`record_ops_alert`) and `supabase functions deploy elevenlabs-voice-clone`.
 
 ---
 

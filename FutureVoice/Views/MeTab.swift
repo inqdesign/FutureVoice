@@ -29,6 +29,10 @@ struct MeTab: View {
     @State private var voiceNameDraft = ""
     @State private var voiceRenameWarning: String?
     @State private var voiceRegenerateError: String?
+    /// Our ElevenLabs plan is out of voice slots — a capacity incident, not a
+    /// failure of theirs, so it gets `VoiceCapacitySheet` instead of the
+    /// red-alert treatment.
+    @State private var voiceCapacityBlocked = false
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     #endif
@@ -336,6 +340,8 @@ struct MeTab: View {
             defer { regeneratingVoice = false }
             do {
                 try await appState.regenerateVoiceClone(fromSampleAt: url)
+            } catch where error.isVoiceCapacityLimited {
+                voiceCapacityBlocked = true
             } catch {
                 // This used to be `try?`: the spinner stopped, nothing changed,
                 // and the failure was invisible — the user walked away thinking
@@ -411,6 +417,9 @@ struct MeTab: View {
             Button("OK") { voiceRegenerateError = nil }
         } message: {
             Text(voiceRegenerateError ?? "")
+        }
+        .sheet(isPresented: $voiceCapacityBlocked) {
+            VoiceCapacitySheet(onRetry: regenerateFromSavedSample)
         }
     }
 
