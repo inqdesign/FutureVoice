@@ -57,6 +57,39 @@ enum ShadowEngine {
         )
     }
 
+    /// Which diff tokens each SPOKEN word of a line occupies.
+    ///
+    /// The diff runs on `expandForDiff` output, which splits hyphens, expands
+    /// contractions and spells out digits — so "Speech-to-text" is ONE word in
+    /// the word map and THREE tokens in the diff, and every index mapped
+    /// straight across after it is off by two (measured: the karaoke line
+    /// coloured "but" for a substitution the diff had recorded on "glitchy").
+    /// Every transform in `expandForDiff` stays inside a whitespace-delimited
+    /// word, so tokenizing each word on its own reproduces the same stream in
+    /// the same order — with the boundaries still known.
+    ///
+    /// Returns one range per input word, indexing into the token stream
+    /// `analyze` diffed. A word that contributes no tokens (a bare "—") keeps
+    /// an empty range at its position instead of being dropped, so callers can
+    /// still index by word.
+    static func tokenSpans(for words: [String], language: String = "en") -> [Range<Int>] {
+        let style = LanguageCatalog.tokenStyle(language)
+        var out: [Range<Int>] = []
+        var cursor = 0
+        for word in words {
+            let count = tokenize(expandForDiff(word, language: language), style: style).count
+            out.append(cursor..<(cursor + count))
+            cursor += count
+        }
+        return out
+    }
+
+    /// Diff ops in TARGET order — one per target slot, `ins` skipped (it holds
+    /// no target word). Indexes line up with `tokenSpans`' ranges.
+    static func targetOps(_ steps: [DiffStep]) -> [DiffOp] {
+        steps.filter { $0.op != .ins }.map(\.op)
+    }
+
     // MARK: - Rhythm (deterministic)
 
     /// One target word the learner also said (diff `match` or `sub`), with
@@ -107,12 +140,19 @@ enum ShadowEngine {
     /// and the learner's (from final file recognition).
     ///
     /// Pairing walks the diff: a target slot (`match`/`sub`/`del`) consumes
-    /// one target timing, a learner slot (`match`/`sub`/`ins`) consumes one
-    /// learner timing; `match` AND `sub` pairs both count — an STT soundalike
-    /// still tells us WHEN the learner hit that slot. Guards mirror
-    /// `LocalAlignment`'s philosophy: any count mismatch between diff slots
-    /// and timing arrays returns nil (never show wrong data), as does CJK
-    /// syllable tokenization (diff tokens ≠ timing words) or < 3 pairs.
+    /// one target TOKEN, a learner slot (`match`/`sub`/`ins`) consumes one
+    /// learner token; `match` AND `sub` pairs both count — an STT soundalike
+    /// still tells us WHEN the learner hit that slot. Tokens are then folded
+    /// back onto WORDS through `tokenSpans`, because that is what a timing is:
+    /// "Speech-to-text" carries one onset and three diff tokens, and a slot
+    /// consuming one timing each drifted out of the array and returned nil for
+    /// every line with a hyphen, a contraction or a number in it. A word takes
+    /// the FIRST learner word it was paired with, and no learner word is used
+    /// twice.
+    ///
+    /// Guards mirror `LocalAlignment`'s philosophy: if the token stream and
+    /// the word spans don't account for each other exactly, return nil (never
+    /// show wrong data); likewise under 3 pairs.
     ///
     /// Normalization: both timelines are re-zeroed on their first paired
     /// onset, then the learner timeline is scaled by targetSpan/learnerSpan.
@@ -121,27 +161,44 @@ enum ShadowEngine {
     static func analyzeRhythm(
         steps: [DiffStep],
         targetTimings: [WordTiming],
-        learnerTimings: [WordTiming]
+        learnerTimings: [WordTiming],
+        language: String = "en"
     ) -> RhythmAnalysis? {
+        // token index → index of the word that owns it, both sides.
+        func wordOfToken(_ words: [String]) -> [Int] {
+            var out: [Int] = []
+            for (i, span) in tokenSpans(for: words, language: language).enumerated() {
+                out.append(contentsOf: Array(repeating: i, count: span.count))
+            }
+            return out
+        }
+        let targetWordOf = wordOfToken(targetTimings.map(\.word))
+        let learnerWordOf = wordOfToken(learnerTimings.map(\.word))
+
         var pairs: [(targetIndex: Int, target: WordTiming, learner: WordTiming)] = []
+        var pairedTargets = Set<Int>(), pairedLearners = Set<Int>()
         var t = 0, l = 0
         for step in steps {
             switch step.op {
             case .match, .sub:
-                guard t < targetTimings.count, l < learnerTimings.count else { return nil }
-                pairs.append((t, targetTimings[t], learnerTimings[l]))
+                guard t < targetWordOf.count, l < learnerWordOf.count else { return nil }
+                let tw = targetWordOf[t], lw = learnerWordOf[l]
+                if !pairedTargets.contains(tw), !pairedLearners.contains(lw) {
+                    pairs.append((tw, targetTimings[tw], learnerTimings[lw]))
+                    pairedTargets.insert(tw); pairedLearners.insert(lw)
+                }
                 t += 1; l += 1
             case .del:
-                guard t < targetTimings.count else { return nil }
+                guard t < targetWordOf.count else { return nil }
                 t += 1
             case .ins:
-                guard l < learnerTimings.count else { return nil }
+                guard l < learnerWordOf.count else { return nil }
                 l += 1
             }
         }
-        // Slot counts must consume BOTH arrays exactly — anything else means
-        // tokenization and timings disagree (CJK, stray punctuation tokens).
-        guard t == targetTimings.count, l == learnerTimings.count,
+        // Slots must consume BOTH token streams exactly — anything else means
+        // the diff and the timings are describing different text.
+        guard t == targetWordOf.count, l == learnerWordOf.count,
               pairs.count >= 3 else { return nil }
 
         let t0 = pairs[0].target.startMs

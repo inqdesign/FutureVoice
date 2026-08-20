@@ -491,14 +491,27 @@ struct ShadowDrillView: View {
     private func positionAlignment() -> PositionAlignment {
         var out = PositionAlignment()
         guard !diffSteps.isEmpty else { return out }
-        var tIdx = 0
-        for step in diffSteps {
-            switch step.op {
-            case .match: out.targetOp[tIdx] = .match; tIdx += 1
-            case .sub:   out.targetOp[tIdx] = .sub;   tIdx += 1
-            case .del:   out.targetOp[tIdx] = .del;   tIdx += 1
-            case .ins:   break  // no target slot to mark
-            }
+        // A word of the line is NOT a token of the diff: `expandForDiff`
+        // splits hyphens, contractions and digits, so walking the steps and
+        // numbering target slots 0,1,2… shifted every colour after the first
+        // such word. Ask the engine which tokens each word owns instead.
+        let words = (activeRange.map { Array(timings[$0]) } ?? timings).map(\.word)
+        let spans = ShadowEngine.tokenSpans(for: words, language: targetLanguage)
+        let ops = ShadowEngine.targetOps(diffSteps)
+        // Same philosophy as analyzeRhythm's guards: if the two streams don't
+        // account for each other exactly, colour nothing rather than something
+        // shifted. A wrong word in orange is worse than no orange.
+        guard spans.last?.upperBound ?? 0 == ops.count else { return out }
+
+        for (i, span) in spans.enumerated() {
+            let slice = ops[span]
+            if slice.isEmpty { out.targetOp[i] = .match; continue }        // punctuation-only
+            if slice.contains(.sub) { out.targetOp[i] = .sub; continue }   // said differently
+            // A word split across tokens counts as attempted unless EVERY
+            // piece went missing — "speech text" for "speech-to-text" is a
+            // wrong word, not a skipped one.
+            out.targetOp[i] = slice.allSatisfy { $0 == .del } ? .del
+                            : (slice.contains(.del) ? .sub : .match)
         }
         return out
     }
@@ -1264,7 +1277,8 @@ struct ShadowDrillView: View {
         rhythm = ShadowEngine.analyzeRhythm(
             steps: analysis.steps,
             targetTimings: targetSlice,
-            learnerTimings: learnerTimings
+            learnerTimings: learnerTimings,
+            language: targetLanguage
         )
         // Learner duration = measured utterance span (first voice → last
         // voice, incl. mid-speech pauses) — NOT the wall clock, which includes
