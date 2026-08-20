@@ -580,6 +580,11 @@ enum DebugCapture {
         case "widget-streak":
             // Just the Streak widget (small + medium), for design review.
             return AnyView(StreakWidgetGallery().fontDesign(nil))
+        case "widget-freetalk":
+            // The Free Talk widget — small (circle) and medium (pill).
+            return AnyView(FreeTalkWidgetGallery(page: 0).fontDesign(nil))
+        case "widget-freetalk-themes":
+            return AnyView(FreeTalkWidgetGallery(page: 1).fontDesign(nil))
         case "tabs":
             // The full tab shell — used to review the floating Free talk pill
             // sitting above the real tab bar.
@@ -1333,6 +1338,56 @@ private struct StreakWidgetGallery: View {
             .frame(width: size.width, height: size.height)
             .background(WidgetGrid(theme: theme, shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous)),
                                    step: streakPixel))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
+    }
+}
+
+/// The Free Talk widget's Futureself surface at both families, then every
+/// theme — the extension can't be screenshotted headlessly, so this renders the
+/// same shared card the widget composes.
+private struct FreeTalkWidgetGallery: View {
+    private let small = CGSize(width: 158, height: 158)
+    private let medium = CGSize(width: 338, height: 158)
+
+    /// 0 = small + medium · 1 = every theme (two screens' worth of tiles).
+    var page: Int = 0
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                if page == 1 { themePage } else { mainPage }
+            }
+            .padding(24)
+        }
+        .background(Color(.systemGroupedBackground))
+    }
+
+    @ViewBuilder private var mainPage: some View {
+        HStack(alignment: .top, spacing: 18) {
+            tile(theme: 0, size: small, compact: true)
+            tile(theme: 4, size: small, compact: true)
+        }
+        tile(theme: 0, size: medium, compact: false)
+        tile(theme: 3, size: medium, compact: false)
+    }
+
+    @ViewBuilder private var themePage: some View {
+        ForEach([[0, 1], [2, 3], [4, 5]], id: \.self) { pair in
+            HStack(alignment: .top, spacing: 18) {
+                ForEach(pair, id: \.self) { t in
+                    tile(theme: t, size: small, compact: true)
+                }
+            }
+        }
+    }
+
+    private func tile(theme: Int, size: CGSize, compact: Bool) -> some View {
+        FreeTalkCard(theme: theme, compact: compact)
+            .frame(width: size.width, height: size.height)
+            .background(WidgetGrid(theme: theme,
+                                   shape: AnyShape(RoundedRectangle(cornerRadius: 24, style: .continuous)),
+                                   step: futureselfCell, freeTalkSurface: compact))
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .shadow(color: .black.opacity(0.25), radius: 10, y: 5)
     }

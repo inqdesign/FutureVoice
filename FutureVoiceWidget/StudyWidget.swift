@@ -259,14 +259,14 @@ struct FreeTalkWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: freeTalkWidgetKind,
                             provider: FreeTalkProvider()) { entry in
+            // The grid is applied inside the view — it needs the family to know
+            // which surface it has to line its lattice up with.
             FreeTalkWidgetView(theme: entry.theme)
-                // Same surface as the Words/Phrases widgets — themed grid + bezel.
-                .containerBackground(for: .widget) { WidgetGrid(theme: entry.theme) }
                 .environment(\.locale, .widgetChrome)
         }
         .configurationDisplayName("Free Talk")
         .description("One tap to call your fluent self.")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
 }
@@ -290,19 +290,18 @@ struct FreeTalkProvider: TimelineProvider {
 }
 
 struct FreeTalkWidgetView: View {
+    @Environment(\.widgetFamily) private var family
     let theme: Int
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "mic.fill")
-                .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(WidgetTheme.vivid(theme))
-            Text("Let's talk")
-                .font(pixelFont(16))
-                .foregroundStyle(WidgetTheme.vivid(theme))
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .widgetURL(URL(string: "futurevoice://freetalk"))
+        let compact = family == .systemSmall
+        FreeTalkCard(theme: theme, compact: compact)
+            // Grid cells ARE the surface's cells — same size, same lattice, so
+            // the two read as one display.
+            .containerBackground(for: .widget) {
+                WidgetGrid(theme: theme, step: futureselfCell, freeTalkSurface: compact)
+            }
+            .widgetURL(URL(string: "futurevoice://freetalk"))
     }
 }
 

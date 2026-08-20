@@ -87,6 +87,8 @@ targets:
       # Shared data contract with the app — keep this list to files with no
       # dependencies on Models.swift or the stores.
       - path: FutureVoice/Shared/StudyWidgetShared.swift
+      # Static CPU port of the Futureself shader — the widget can't run Metal.
+      - path: FutureVoice/Shared/FutureselfPixels.swift
       # Pixel title font, shared with the app (registered in the widget's
       # Info.plist UIAppFonts).
       - path: FutureVoice/Resources/Fonts/GeistPixel-Square.ttf

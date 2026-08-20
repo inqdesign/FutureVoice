@@ -368,6 +368,12 @@ struct WidgetGrid: View {
     /// Grid cell size. Default graph-paper spacing; the streak widget passes
     /// `streakPixel` so its grid matches the mascot's pixels.
     var step: CGFloat = 26
+    /// How present the graph paper is. 0 = a flat ground, no lines at all.
+    var lineOpacity: Double = 0.06
+    /// Set on the Free Talk widget: the paper takes its lattice from the
+    /// Futureself surface in front of it (`compact` picks the circle or the
+    /// pill), so the two are one grid. Left nil, the paper starts at the corner.
+    var freeTalkSurface: Bool? = nil
 
     var body: some View {
         let ground = WidgetTheme.ground(theme)
@@ -376,14 +382,15 @@ struct WidgetGrid: View {
         Canvas { ctx, size in
             ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(ground))
             // Grid lines tinted with the theme's vivid colour, very faint.
-            let line = vivid.opacity(0.06)
-            var x: CGFloat = 0
+            let line = vivid.opacity(lineOpacity)
+            let phase = freeTalkSurface.map { FutureselfLattice.phase(in: size, compact: $0) } ?? .zero
+            var x: CGFloat = phase.width - step
             while x <= size.width {
                 ctx.stroke(Path { $0.move(to: CGPoint(x: x, y: 0)); $0.addLine(to: CGPoint(x: x, y: size.height)) },
                            with: .color(line), lineWidth: 1)
                 x += step
             }
-            var y: CGFloat = 0
+            var y: CGFloat = phase.height - step
             while y <= size.height {
                 ctx.stroke(Path { $0.move(to: CGPoint(x: 0, y: y)); $0.addLine(to: CGPoint(x: size.width, y: y)) },
                            with: .color(line), lineWidth: 1)
@@ -500,6 +507,126 @@ struct StudyCard<Prev: View, Next: View>: View {
             .padding(.horizontal, compact ? 4 : 10)
             .frame(maxWidth: .infinity)
         }
+    }
+}
+
+// MARK: - Free Talk card (the Futureself surface itself), shared
+
+/// The shared pixel unit for the Futureself surface — the app pins every live
+/// surface to this cell size (`virtualHeight: 64` → 64 / 5 rows), so the widget
+/// uses it too and the mosaic never changes scale between them. The background
+/// grid steps by the same number, so surface and graph paper line up as one
+/// display (the same trick the streak widget plays with `streakPixel`).
+let futureselfCell: CGFloat = 12.8
+
+/// Where the lattice that the surface and the background grid SHARE actually
+/// sits. Both derive it from the container size alone, so neither has to
+/// measure the other across two view trees (the grid is a `containerBackground`).
+///
+/// Two rules, and the wide layout needs both. The surface is a whole number of
+/// cells in each direction, so its straight edges land ON lattice lines instead
+/// of slicing a row of slivers the full width of the pill — a circle hides that
+/// (its edge cuts every cell anyway), a capsule puts it on display. And the
+/// lattice is then anchored to the SURFACE rather than the widget's corner, so
+/// the shape stays centred: the leftover fraction moves to the tile's own edge,
+/// where the widget's rounded corner eats it unseen.
+enum FutureselfLattice {
+    /// The surface's padding from the widget edge, before snapping.
+    static func inset(compact: Bool) -> CGFloat { compact ? 12 : 16 }
+
+    static func surfaceSize(in container: CGSize, compact: Bool) -> CGSize {
+        let cell = futureselfCell
+        let pad = inset(compact: compact) * 2
+        func cells(_ available: CGFloat) -> CGFloat {
+            max(cell, (available / cell).rounded(.down) * cell)
+        }
+        if compact {
+            let d = cells(min(container.width, container.height) - pad)
+            return CGSize(width: d, height: d)
+        }
+        // The pill keeps the call bar's proportions: as wide as fits, eight
+        // cells tall (102.4pt — the app's is 64 at the same cell size).
+        return CGSize(width: cells(container.width - pad),
+                      height: min(cells(container.height - pad), cell * 8))
+    }
+
+    /// The lattice offset both the surface and the graph paper start from.
+    static func phase(in container: CGSize, compact: Bool) -> CGSize {
+        let s = surfaceSize(in: container, compact: compact)
+        return CGSize(width: ((container.width - s.width) / 2).truncatingRemainder(dividingBy: futureselfCell),
+                      height: ((container.height - s.height) / 2).truncatingRemainder(dividingBy: futureselfCell))
+    }
+}
+
+/// One tap to call your fluent self — the Futureself surface, wearing the app's
+/// own two poses: the Talk home's CIRCLE on a small widget, the call bar's PILL
+/// on a wide one, with "Let's talk" inside the surface exactly as the app's ring
+/// carries it. The live Metal shader can't run in a widget, so the surface is
+/// `FutureselfPixels`, a static port of the same math.
+struct FreeTalkCard: View {
+    var theme: Int = 0
+    /// Small family → circle; medium → pill.
+    var compact: Bool = true
+    /// The frozen instant of the shader's clock — vary it per widget reload for
+    /// a surface that isn't identical every day.
+    var time: Double = 3.2
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = FutureselfLattice.surfaceSize(in: geo.size, compact: compact)
+            Group {
+                if compact {
+                    surface(Circle()) { label(16) }
+                } else {
+                    surface(Capsule()) { label(24) }
+                }
+            }
+            .frame(width: size.width, height: size.height)
+            // Centred in the widget; the lattice follows the surface, so
+            // centring costs no alignment.
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+
+    // MARK: Pieces
+
+    /// The surface itself, in whatever shape this pose calls for — mosaic, the
+    /// app's uniform inner shadow, a separator hairline, and the ground wash the
+    /// app's ring uses so the type reads.
+    private func surface<S: InsettableShape, Content: View>(
+        _ shape: S, @ViewBuilder content: () -> Content
+    ) -> some View {
+        ZStack {
+            // Cells are the BACKGROUND GRID's cells — the surface reads as that
+            // graph paper lighting up inside the shape, not as a second grid
+            // pasted over it. The surface DEFINES the lattice (it's a whole
+            // number of cells, so its corner is a lattice corner) and the grid
+            // behind it takes the phase; gaps stay clear so the grid's own lines
+            // run straight through.
+            FutureselfPixels(theme: theme, mode: .speaking, level: 0.5,
+                             time: time, cell: futureselfCell,
+                             opaqueGaps: false, dark: true)
+            // The app's ring washes its surface toward the page so the circle
+            // sits IN the page; here the ground is already dark, so this is a
+            // whisper — just enough to seat the type.
+            WidgetTheme.ground(theme).opacity(0.14)
+            shape
+                .strokeBorder(Color.black.opacity(0.45), lineWidth: 10)
+                .blur(radius: 6)
+                .mask(shape)
+            content()
+        }
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Color.white.opacity(0.14), lineWidth: 0.5))
+    }
+
+    private func label(_ size: CGFloat) -> some View {
+        Text("Let's talk")
+            .font(pixelFont(size))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .shadow(color: .black.opacity(0.55), radius: 4, y: 1)
     }
 }
 
