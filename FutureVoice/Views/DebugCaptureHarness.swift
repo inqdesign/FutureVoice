@@ -1368,6 +1368,10 @@ private struct FreeTalkWidgetGallery: View {
             tile(theme: 0, size: small, compact: true)
             tile(theme: 4, size: small, compact: true)
         }
+        HStack(alignment: .top, spacing: 18) {
+            tile(theme: 2, size: small, compact: true)
+            tile(theme: 5, size: small, compact: true)
+        }
         tile(theme: 0, size: medium, compact: false)
         tile(theme: 3, size: medium, compact: false)
     }

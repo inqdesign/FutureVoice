@@ -98,6 +98,14 @@ struct FutureselfPixels: View {
     /// them clear, so whatever is behind the surface — the background grid's
     /// own lines — runs straight through it.
     var opaqueGaps: Bool = true
+    /// How reluctantly a cell takes COLOUR. The ramp's first two steps are
+    /// neutral darks and the last three carry the hue, so raising this pushes
+    /// the middle of the distribution down: the mosaic keeps every one of its
+    /// cells, but fewer of them are coloured. 1 = the shader's own curve.
+    var colourFalloff: Double = 1
+    /// Ceiling on the ramp step, 0…4. Dropping it to 3 withholds the lightest,
+    /// hottest tone — the one that reads as a sparkle in a still.
+    var maxStep: Int = 4
     var dark: Bool = true
 
     var body: some View {
@@ -163,7 +171,9 @@ struct FutureselfPixels: View {
 
         // Snap to the 5 steps, dithered per cell so neighbours never snap in
         // unison — the grid mutates cell by cell.
-        let step = Int(min(max((v * 4 + (r3 - 0.5) * 0.9 + 0.5).rounded(.down), 0), 4))
+        if colourFalloff != 1 { v = pow(min(max(v, 0), 1), colourFalloff) }
+        let top = Double(min(max(maxStep, 0), 4))
+        let step = Int(min(max((v * 4 + (r3 - 0.5) * 0.9 + 0.5).rounded(.down), 0), top))
         var (r, g, b) = FutureselfRamp.rgb(theme: theme, dark: dark, step: step)
 
         // Capsule-SDF recess — shadow pools along the top edge (light from

@@ -523,13 +523,12 @@ let futureselfCell: CGFloat = 12.8
 /// sits. Both derive it from the container size alone, so neither has to
 /// measure the other across two view trees (the grid is a `containerBackground`).
 ///
-/// Two rules, and the wide layout needs both. The surface is a whole number of
-/// cells in each direction, so its straight edges land ON lattice lines instead
-/// of slicing a row of slivers the full width of the pill — a circle hides that
-/// (its edge cuts every cell anyway), a capsule puts it on display. And the
-/// lattice is then anchored to the SURFACE rather than the widget's corner, so
-/// the shape stays centred: the leftover fraction moves to the tile's own edge,
-/// where the widget's rounded corner eats it unseen.
+/// Two rules. The surface is a whole number of cells in each direction, so its
+/// straight edges land ON lattice lines instead of slicing a row of slivers the
+/// full width of the pill. And the lattice is then anchored to the SURFACE
+/// rather than the widget's corner, so the shape stays centred: the leftover
+/// fraction moves to the tile's own edge, where the widget's rounded corner eats
+/// it unseen.
 enum FutureselfLattice {
     /// The surface's padding from the widget edge, before snapping.
     static func inset(compact: Bool) -> CGFloat { compact ? 12 : 16 }
@@ -540,14 +539,13 @@ enum FutureselfLattice {
         func cells(_ available: CGFloat) -> CGFloat {
             max(cell, (available / cell).rounded(.down) * cell)
         }
-        if compact {
-            let d = cells(min(container.width, container.height) - pad)
-            return CGSize(width: d, height: d)
-        }
-        // The pill keeps the call bar's proportions: as wide as fits, eight
-        // cells tall (102.4pt — the app's is 64 at the same cell size).
+        // Both families wear the call bar's pill: as wide as fits, and five
+        // cells tall on a small widget — 64pt, the app's own pill height at this
+        // cell size. The wide one grows to eight so it doesn't read as a stripe
+        // lost in the tile.
+        let rows: CGFloat = compact ? 5 : 8
         return CGSize(width: cells(container.width - pad),
-                      height: min(cells(container.height - pad), cell * 8))
+                      height: min(cells(container.height - pad), cell * rows))
     }
 
     /// The lattice offset both the surface and the graph paper start from.
@@ -558,33 +556,41 @@ enum FutureselfLattice {
     }
 }
 
-/// One tap to call your fluent self — the Futureself surface, wearing the app's
-/// own two poses: the Talk home's CIRCLE on a small widget, the call bar's PILL
-/// on a wide one, with "Let's talk" inside the surface exactly as the app's ring
-/// carries it. The live Metal shader can't run in a widget, so the surface is
-/// `FutureselfPixels`, a static port of the same math.
+/// One tap to call your fluent self — the Futureself surface wearing the app's
+/// call bar: a PILL at both families, with "Let's talk" inside it as the app's
+/// ring carries the same words. The live Metal shader can't run in a widget, so
+/// the surface is `FutureselfPixels`, a static port of the same math.
 struct FreeTalkCard: View {
     var theme: Int = 0
-    /// Small family → circle; medium → pill.
+    /// Small family — a shorter pill and smaller type.
     var compact: Bool = true
     /// The frozen instant of the shader's clock — vary it per widget reload for
     /// a surface that isn't identical every day.
     var time: Double = 3.2
 
+    /// A still is not a live surface, and the shader's own distribution — tuned
+    /// for a mosaic that moves — reads as clutter when it's frozen: colour
+    /// everywhere and the lightest tone sparkling in a dozen places at once. So
+    /// the widget holds the same lit-cell COUNT (the grid is unchanged) and
+    /// pushes the distribution down hard, then withholds the top tone. Blue
+    /// becomes the accent it is in the app, not the background.
+    /// A small pill holds ~50 cells against the wide one's ~190, so the same
+    /// curve leaves it with one or two blue cells — empty, not calm. What the
+    /// two families have to share is the DENSITY (~10% of cells coloured), so
+    /// the small one gets its own, gentler number.
+    private var colourFalloff: Double { compact ? 2.2 : 5 }
+    private let maxStep = 3
+    private let level = 0.5
+    private let wash = 0.14
+
     var body: some View {
         GeometryReader { geo in
             let size = FutureselfLattice.surfaceSize(in: geo.size, compact: compact)
-            Group {
-                if compact {
-                    surface(Circle()) { label(16) }
-                } else {
-                    surface(Capsule()) { label(24) }
-                }
-            }
-            .frame(width: size.width, height: size.height)
-            // Centred in the widget; the lattice follows the surface, so
-            // centring costs no alignment.
-            .frame(width: geo.size.width, height: geo.size.height)
+            surface(Capsule()) { label(compact ? 16 : 24) }
+                .frame(width: size.width, height: size.height)
+                // Centred in the widget; the lattice follows the surface, so
+                // centring costs no alignment.
+                .frame(width: geo.size.width, height: geo.size.height)
         }
     }
 
@@ -603,13 +609,11 @@ struct FreeTalkCard: View {
             // number of cells, so its corner is a lattice corner) and the grid
             // behind it takes the phase; gaps stay clear so the grid's own lines
             // run straight through.
-            FutureselfPixels(theme: theme, mode: .speaking, level: 0.5,
+            FutureselfPixels(theme: theme, mode: .speaking, level: level,
                              time: time, cell: futureselfCell,
-                             opaqueGaps: false, dark: true)
-            // The app's ring washes its surface toward the page so the circle
-            // sits IN the page; here the ground is already dark, so this is a
-            // whisper — just enough to seat the type.
-            WidgetTheme.ground(theme).opacity(0.14)
+                             opaqueGaps: false, colourFalloff: colourFalloff,
+                             maxStep: maxStep, dark: true)
+            WidgetTheme.ground(theme).opacity(wash)
             shape
                 .strokeBorder(Color.black.opacity(0.45), lineWidth: 10)
                 .blur(radius: 6)
