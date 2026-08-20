@@ -380,6 +380,7 @@ final class AppState: ObservableObject {
         setupComplete = UserDefaults.standard.bool(forKey: Self.setupCompleteKey)
         onboardingStarted = UserDefaults.standard.bool(forKey: Self.onboardingStartedKey)
         persona = PersonaStore.shared.load()
+        backfillMetAtIfNeeded()
         topicSuggestions = TopicStore.shared.load()
         // Self-heal Find-people rows duplicated by the old per-render id, and
         // move their talks onto the surviving person (no-op once clean).
@@ -875,6 +876,30 @@ final class AppState: ObservableObject {
         // Keep the user's Find-people presence in step with their profile
         // (no-op when they manage their public intro by hand).
         Task { await PublicPersonaService.autoSyncMyPersona(p, language: targetLanguage) }
+    }
+
+    /// Give an EXISTING learner the `metAt` their history already earned.
+    ///
+    /// The field shipped after they'd had their talks, so on disk it is
+    /// simply absent and decodes to nil — which is the exact same state as a
+    /// brand-new account. Without this, the first free talk after updating
+    /// opens on the introduction greeting and tells someone who has been
+    /// calling for months that the two of you have never spoken. It corrects
+    /// itself after that one call (a summarized free talk stamps `metAt`),
+    /// which is precisely why it has to be fixed here instead: nobody would
+    /// ever see it twice, and everybody would see it once.
+    ///
+    /// Stamped from their EARLIEST finished talk, so the record says when
+    /// they actually met rather than when they updated. Current language
+    /// scope only — a learner whose talks are all in another language is
+    /// worth one odd greeting, not a scan of every store at launch.
+    private func backfillMetAtIfNeeded() {
+        guard var p = persona, p.metAt == nil,
+              let first = SessionStore.shared.load().compactMap(\.endedAt).min()
+        else { return }
+        p.metAt = first
+        PersonaStore.shared.save(p)
+        persona = p
     }
 
     /// Fold what a talk taught the fluent self into the profile — the other
