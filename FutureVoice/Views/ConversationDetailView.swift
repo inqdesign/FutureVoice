@@ -1513,13 +1513,27 @@ private struct TranscriptRow: View {
 /// words that differ from what the user actually said in accent + semibold,
 /// so the fixed parts are visible at a glance. LCS over normalized words —
 /// case/punctuation differences alone don't count as changes.
+///
+/// Neither does a CONTRACTION. Dictation expands them, so the learner's line
+/// arrives as "I am building" however they said it; painting the "I'm" of a
+/// suggestion as the thing they got wrong teaches a mistake they didn't make
+/// (reported 2026-08-21). Both sides go through `ConversationEngine.spokenWords`,
+/// which expands "I'm" into `["i", "am"]` — so the two align and only real
+/// word changes light up. That splits one display token into several
+/// comparison words, hence `owner`: a token is highlighted only when EVERY
+/// word inside it went unmatched.
 func highlightedCorrection(_ alternative: String, original: String, baseFont: Font) -> AttributedString {
-    func norm(_ s: Substring) -> String {
-        s.lowercased().trimmingCharacters(in: .punctuationCharacters)
-    }
     let altWords = alternative.split(separator: " ", omittingEmptySubsequences: true)
-    let a = altWords.map(norm)
-    let o = original.split(separator: " ", omittingEmptySubsequences: true).map(norm)
+    // Comparison words, each tagged with the display token it came from.
+    var a: [String] = []
+    var owner: [Int] = []
+    for (idx, word) in altWords.enumerated() {
+        for spoken in ConversationEngine.spokenWords(String(word)) {
+            a.append(spoken)
+            owner.append(idx)
+        }
+    }
+    let o = ConversationEngine.spokenWords(original)
     let m = a.count, n = o.count
 
     var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
@@ -1536,12 +1550,19 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
         else { j += 1 }
     }
 
+    // Fold the comparison words back onto their display tokens. A token with
+    // no words in it at all is punctuation (a lone dash) — never highlighted.
+    var tokenHasWord = Array(repeating: false, count: altWords.count)
+    var tokenChanged = Array(repeating: false, count: altWords.count)
+    for (position, tokenIndex) in owner.enumerated() {
+        tokenHasWord[tokenIndex] = true
+        if !kept[position] { tokenChanged[tokenIndex] = true }
+    }
+
     var out = AttributedString()
     for (idx, word) in altWords.enumerated() {
         var piece = AttributedString(String(word))
-        // Punctuation-only tokens (a lone dash) normalize to "" — never worth
-        // highlighting on their own.
-        if !kept[idx], !a[idx].isEmpty {
+        if tokenChanged[idx], tokenHasWord[idx] {
             piece.foregroundColor = .accentColor
             piece.font = baseFont.weight(.semibold)
         }

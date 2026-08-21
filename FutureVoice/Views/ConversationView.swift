@@ -304,7 +304,54 @@ struct ConversationView: View {
     /// before falling back to the on-device text: a bounded wait for the
     /// RIGHT text, priced against an instant reply to possibly-wrong text.
     /// `chunk_wait_ms` records what it actually costs per turn.
-    private static let chunkAssemblyDeadlineSeconds: Double = 1.5
+    ///
+    /// 1.5 → 0.35 on 2026-08-21, measured on device: the tail chunk's round
+    /// trip runs ~1.3 s PAST the turn's end, so at 1.5 s this wait sat in
+    /// front of the Gemini call on every turn and still came back `late` on
+    /// long utterances — 1.5 s of the ~6.3 s speech-end→voice gap, sometimes
+    /// bought for nothing. At 0.35 s it only harvests chunks that are
+    /// essentially done; anything slower falls back to the on-device guess
+    /// for the REPLY while the transcript still gets corrected (chunk flush
+    /// or whole-turn ASR, both post-voice). This deliberately re-accepts
+    /// replies-from-ASR-guess on most turns: the learner's complaint was the
+    /// wait, and the wait was this.
+    ///
+    /// 0.35 → 0.1 same day: at 0.35 every measured turn still came back
+    /// `late` (chunk_wait_ms 385–393, all of it wasted) because the tail's
+    /// RTT is ~1.3 s past turn end. 0.1 s is a harvest window, not a wait —
+    /// it collects an assembly that is already done and gives up on the rest.
+    private static let chunkAssemblyDeadlineSeconds: Double = 0.1
+
+    /// True silence before the reply is generated SPECULATIVELY, while the
+    /// VAD is still deciding whether the turn is over. Measured 2026-08-21:
+    /// the model burst-writes (~2 s thinking, then everything at once), so
+    /// the only way to shorten the visible Gemini wait is to start it under
+    /// the VAD confirmation instead of after it. Sits above the chunk-rotate
+    /// cut (0.5 s) and below the shortest VAD tier (0.8 s); combined with the
+    /// `sttSettleSeconds` guard the request fires ~0.7–0.9 s into a pause,
+    /// buying back the rest of the 1.2–1.7 s confirmation wait. A resumed
+    /// voice cancels the task — Gemini is free and rate-capped (the edge
+    /// function charges no credits for `purpose: "turn"`), so a discarded
+    /// speculation costs the learner nothing.
+    private static let speculateAfterSilenceSeconds: Double = 0.6
+
+    /// A reply generation already in flight for a turn the VAD hasn't
+    /// confirmed yet. `text` is the recognizer partial it answered; adoption
+    /// requires the committed turn to still say the same thing
+    /// (`ConversationEngine.saysTheSameThing` — rescoring may shuffle
+    /// punctuation, which must not throw the head start away).
+    private struct SpeculativeReply {
+        let text: String
+        let firedAt: Date
+        let task: Task<ConversationTurnPayload, Error>
+    }
+    @State private var speculativeReply: SpeculativeReply?
+    /// Speculations fired within the current listening turn. Capped: in a
+    /// noisy room the recognizer keeps minting fresh partials out of the
+    /// room's voices, and an uncapped cancel→refire loop would burn the
+    /// day's rate cap on a turn nobody is speaking.
+    private static let maxSpecFiresPerTurn = 3
+    @State private var specFiresThisTurn = 0
 
     /// Per-listening-run state of the chunk pipeline — a class so the send
     /// tasks and the endpoint monitor share one mutable record.
@@ -347,24 +394,43 @@ struct ConversationView: View {
     /// Turns whose transcript was assembled from chunks BEFORE the reply —
     /// already ground truth, so the whole-turn transcription call is skipped.
     @State private var chunkResolvedTurns: Set<UUID> = []
+    /// Assembled chunk text the MODEL is answering, for turns whose bubble is
+    /// still showing the on-device line. The reply must be generated from the
+    /// audio-grounded text — that is the whole point of the chunk pipeline —
+    /// but the learner must not SEE the correction before they hear the
+    /// answer, so the two texts diverge for exactly the length of that wait.
+    /// Cleared the moment `flushDeferredTurnWork` puts it on screen.
+    @State private var chunkModelText: [UUID: String] = [:]
 
     /// Turn work that is deliberately held until the fluent self is AUDIBLE.
     ///
-    /// Both pieces used to run in the gap between "learner stops talking" and
-    /// "fluent self starts talking", and both made that gap worse:
+    /// All three pieces used to run in the gap between "learner stops talking"
+    /// and "fluent self starts talking", and all three made that gap worse:
     ///   • the transcription upload shared one connection with the reply call
     ///     and the TTS stream (all three are the same host + session), so the
     ///     reply's first sentence measured 0.8–2.2 s later on turns that
     ///     carried it — the learner waited on their own correction;
     ///   • the recognizer's rescored line rewrote the bubble mid-wait, which
     ///     reads as "it corrects me FIRST, then answers" even though nothing
-    ///     was ever waiting on it.
-    /// Neither is time-critical. Held here and flushed by `voiceDidStart()`,
+    ///     was ever waiting on it;
+    ///   • the chunk assembly did the same, and worse: it landed BEFORE the
+    ///     reply was even requested, so the corrected line was guaranteed to
+    ///     be on screen a full Gemini + TTS round trip before the voice.
+    /// None is time-critical. Held here and flushed by `voiceDidStart()`,
     /// they become what they were always meant to be: background work.
     private struct DeferredTurnWork {
         let turnId: UUID
         /// The recognizer's late rescored line, if it landed during the wait.
         var recognizerUpgrade: String?
+        /// The chunk pipeline's assembled line — already answered by the
+        /// model, still unseen by the learner. Outranks `recognizerUpgrade`.
+        var chunkTranscript: String?
+        /// The turn's correction card, parked. The payload usually closes
+        /// while the TTS is still loading, so an unheld card is VISIBLE
+        /// before the voice — the most legible form of "it corrects me,
+        /// then answers". Held here it appears WITH the voice: display
+        /// timing only, nothing ever waits on it.
+        var suggestion: TurnSuggestion?
     }
     @State private var deferredTurnWork: DeferredTurnWork?
 
@@ -1174,11 +1240,50 @@ struct ConversationView: View {
         for task in chunk.tasks { task.cancel() }
     }
 
+    /// Fire the reply request for a turn the VAD hasn't confirmed yet, keyed
+    /// to nothing on disk — `requestReply` adopts it only if the committed
+    /// turn still says the same words. Gemini calls are free (rate-capped),
+    /// so a discarded speculation costs the learner nothing.
+    private func fireSpeculativeReply(snapshot: String) {
+        guard activeVoiceId != nil,
+              !snapshot.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let hypothetical = Turn(
+            id: UUID(), role: .user, audioURL: nil,
+            transcript: snapshot, durationMs: 0, timestamp: Date(),
+            suggestion: nil)
+        let messages = ConversationEngine.geminiMessages(from: modelTurns() + [hypothetical])
+        let key = "turn-spec:\(UUID().uuidString)"
+        let task = Task { @MainActor in
+            try await fetchTurnPayload(messages: messages, idempotencyKey: key,
+                                       onReply: { _, _ in })
+        }
+        speculativeReply = SpeculativeReply(text: snapshot, firedAt: Date(), task: task)
+        turnTrace("spec/fired chars=\(snapshot.count)")
+    }
+
+    /// Hand the in-flight speculation to the committed turn — or kill it.
+    /// `answered` must be the text the model WOULD be asked about now (the
+    /// chunk-assembled line when one landed, else the on-device final);
+    /// adopting a speculation that answered different words would have the
+    /// fluent self reply to a sentence the learner never said.
+    private func takeSpeculative(matching answered: String) -> SpeculativeReply? {
+        guard let spec = speculativeReply else { return nil }
+        speculativeReply = nil
+        guard ConversationEngine.saysTheSameThing(spec.text, answered) else {
+            spec.task.cancel()
+            turnTrace("spec/mismatch — discarded")
+            return nil
+        }
+        return spec
+    }
+
     /// Stop the mic on an exit where the turn's audio is NEVER sent (wall
     /// hit, interruption, pause, hang-up) — the chunk pipeline goes with it,
     /// including the stopped run's un-cut tail file.
     private func stopListeningDiscardingChunks() {
         _ = live.stop()
+        speculativeReply?.task.cancel()
+        speculativeReply = nil
         discardChunkPipeline()
         if let stale = live.lastChunkRecordingURL {
             try? FileManager.default.removeItem(at: stale)
@@ -1317,6 +1422,30 @@ struct ConversationView: View {
                    let piece = live.rotateCaptureChunk() {
                     chunk.voicedMark = voicedSecondsThisTurn()
                     sendChunk(piece, state: chunk)
+                }
+                // Speculative reply: the pause has outlived the chunk cut and
+                // the partial has settled — odds are this turn is over, and
+                // the VAD will spend another 0.5–1 s making sure. Spend that
+                // same window on the model's thinking time instead.
+                //
+                // Only a CHANGED PARTIAL invalidates the snapshot — never mic
+                // energy alone. Energy cancelling looked right and churned in
+                // practice (measured 2026-08-21, noise=0.18: fired/cancelled
+                // 4x in one turn — the room's noise reads as "voice" forever).
+                // Correctness never needed it: adoption re-checks the words
+                // (`takeSpeculative`), so a speculation outlived by real new
+                // speech dies at the transcript change or at the match check.
+                if let spec = speculativeReply, live.transcript != spec.text {
+                    spec.task.cancel()
+                    speculativeReply = nil
+                    turnTrace("spec/cancelled — the partial moved on")
+                }
+                if speculativeReply == nil,
+                   specFiresThisTurn < Self.maxSpecFiresPerTurn,
+                   audioSilence >= Self.speculateAfterSilenceSeconds,
+                   sinceTextChange >= Self.sttSettleSeconds {
+                    specFiresThisTurn += 1
+                    fireSpeculativeReply(snapshot: live.transcript)
                 }
                 // Primary: real audio silence for the tier duration, AND the
                 // recognizer's partial has settled (its lag would otherwise
@@ -1725,6 +1854,7 @@ struct ConversationView: View {
             // and less authority the longer they go without needing it.
             sessionPauseFloor *= Self.pauseFloorDecay
             didPreconnectThisTurn = false
+            specFiresThisTurn = 0
             phase = .listening
             startEndpointMonitor()
             isPausedForIdle = false
@@ -1831,6 +1961,11 @@ struct ConversationView: View {
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
 
+        // Hold every rewrite of this bubble from HERE, not from inside
+        // `requestReply`. The chunk wait below and the recognizer's rescored
+        // pass both land in this window, and while nothing was armed they
+        // painted their corrections before the reply had even been asked for.
+        deferredTurnWork = DeferredTurnWork(turnId: turnId)
         if let chunk = chunkState, chunk.nextIndex > 0 {
             await adoptChunkTranscript(chunk, turnId: turnId, guess: finalText)
         }
@@ -1859,7 +1994,7 @@ struct ConversationView: View {
         // continued again, and a re-worded echo would slip past the stitcher.
         turnTiming["chunk_echo_words"] = String(chunk.echoWords)
         guard chunk.isSettled, !chunk.hasFailure, !assembled.isEmpty,
-              let idx = turns.firstIndex(where: { $0.id == turnId }) else {
+              turns.contains(where: { $0.id == turnId }) else {
             turnTiming["chunk_path"] = chunk.hasFailure ? "failed" : "late"
             for task in chunk.tasks { task.cancel() }
             return
@@ -1875,12 +2010,44 @@ struct ConversationView: View {
             "audio": "aac",
             "input": Self.currentInputPortType(),
         ])
+        chunkResolvedTurns.insert(turnId)
+        // The REPLY is generated from this text (see `turnPayload`), but the
+        // bubble keeps the on-device line until the voice is out — a swap here
+        // is the one the learner reads as "it corrects me, then answers", and
+        // it is the most visible of the three because it precedes the Gemini
+        // call itself.
+        if deferredTurnWork?.turnId == turnId {
+            chunkModelText[turnId] = assembled
+            deferredTurnWork?.chunkTranscript = assembled
+            turnTrace("chunk/held wait=\(waitedMs)ms — model gets it, screen doesn't")
+        } else {
+            turnTrace("chunk/applied wait=\(waitedMs)ms — NOT held (voice already out?)")
+            applyChunkTranscript(assembled, to: turnId)
+        }
+    }
+
+    /// One console line per ordering-critical moment of a turn, DEBUG only.
+    ///
+    /// The order these print in IS the bug this instruments: every rewrite of
+    /// the learner's bubble must come after `voice/started`, never before. The
+    /// values themselves go to Telemetry — this exists because the console is
+    /// where the order is READ while testing on a device.
+    private func turnTrace(_ message: @autoclosure () -> String) {
+        #if DEBUG
+        print("🗣️ [turn] \(message())")
+        #endif
+    }
+
+    /// Put the chunk pipeline's assembled line on screen. Ground truth:
+    /// neither the recognizer's late rescore nor any stray whole-turn result
+    /// may clobber it.
+    private func applyChunkTranscript(_ assembled: String, to turnId: UUID) {
+        chunkModelText[turnId] = nil
+        guard let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
+        turnTrace("chunk/applied — bubble changed")
         turns[idx].transcript = assembled
         turns[idx].transcriptPending = false
-        // Ground truth: neither the recognizer's late rescore nor any stray
-        // whole-turn result may clobber it.
         lastRecognizerText[turnId] = nil
-        chunkResolvedTurns.insert(turnId)
         creditGoalChips(turnId: turnId)
     }
 
@@ -1894,6 +2061,10 @@ struct ConversationView: View {
         phase = .thinking
         guard let voiceId = activeVoiceId else {
             phase = .idle
+            // No voice can start for this turn, so nothing else would release
+            // the hold `stopAndSend` armed — the bubble would keep the raw
+            // guess forever and the transcription would never fire.
+            flushDeferredTurnWork()
             resolvePendingTranscript(turnId)
             return
         }
@@ -1911,7 +2082,13 @@ struct ConversationView: View {
         // reply's first sentence arrived 0.8–2.2s later for it. Held work
         // resumes in `voiceDidStart()`; the failure paths below flush it too,
         // so a turn that never speaks still gets its corrected transcript.
-        deferredTurnWork = DeferredTurnWork(turnId: turnId)
+        //
+        // `stopAndSend` normally armed this already, before the chunk wait —
+        // re-arming would drop the assembled line it parked there. Arming is
+        // for the OTHER caller: Retry, which re-enters on a flushed turn.
+        if deferredTurnWork?.turnId != turnId {
+            deferredTurnWork = DeferredTurnWork(turnId: turnId)
+        }
         do {
             let geminiStarted = Date()
             // TTS starts on the reply's FIRST SENTENCE, not the whole reply —
@@ -1957,15 +2134,47 @@ struct ConversationView: View {
                     }
                 }
             }
-            let payload = try await turnPayload(turnId: turnId, onReply: speakEarly)
+            let payload: ConversationTurnPayload
+            let answered = chunkModelText[turnId]
+                ?? turns.first(where: { $0.id == turnId })?.transcript ?? ""
+            if let spec = takeSpeculative(matching: answered) {
+                // The model has been writing since mid-pause. Await what's
+                // left of it; on any failure fall back to a fresh request —
+                // a speculation must never cost a turn its Retry-able path.
+                turnTiming["spec"] = "1"
+                turnTiming["spec_lead_ms"] =
+                    String(Int(Date().timeIntervalSince(spec.firedAt) * 1000))
+                if let early = try? await spec.task.value {
+                    payload = early
+                } else {
+                    payload = try await turnPayload(turnId: turnId, onReply: speakEarly)
+                }
+            } else {
+                payload = try await turnPayload(turnId: turnId, onReply: speakEarly)
+            }
             turnTiming["gemini_ms"] = String(Int(Date().timeIntervalSince(geminiStarted) * 1000))
             // The screen may have closed while the reply was in flight.
             guard !isTornDown else { return }
             let replyText = Self.stripLeakedSchemaTail(payload.reply)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            if let s = payload.turnSuggestion(),
-               let idx = turns.firstIndex(where: { $0.id == turnId }) {
-                turns[idx].suggestion = s
+            if let idx = turns.firstIndex(where: { $0.id == turnId }) {
+                // Judged against the line the MODEL answered — for a
+                // chunk-assembled turn the bubble is still holding the
+                // on-device text (see `chunkModelText`).
+                let modelAnswered = chunkModelText[turnId] ?? turns[idx].transcript
+                if let s = payload.turnSuggestion(for: modelAnswered) {
+                    // Data lands now; the CARD waits for the voice. Applying
+                    // it here painted the correction a full TTS round trip
+                    // before the fluent self spoke.
+                    if deferredTurnWork?.turnId == turnId {
+                        deferredTurnWork?.suggestion = s
+                        turnTrace("suggestion/held for the voice")
+                    } else {
+                        turns[idx].suggestion = s
+                    }
+                } else if payload.suggestion != nil {
+                    turnTrace("suggestion/dropped — only re-spells what they said")
+                }
             }
             // Already speaking from the stream callback: adopt its result so a
             // TTS failure still reaches the catch below and offers Retry.
@@ -2088,6 +2297,7 @@ struct ConversationView: View {
         var outcome = "missing"
         if let heard, !heard.isEmpty, let idx = turns.firstIndex(where: { $0.id == turnId }) {
             outcome = Self.asrDelta(heard: heard, guess: turns[idx].transcript)
+            turnTrace("gemini-asr/applied \(outcome) — bubble changed")
             turns[idx].transcript = heard
             // Ground truth — a late recognizer pass must not overwrite it.
             lastRecognizerText[turnId] = nil
@@ -2161,8 +2371,19 @@ struct ConversationView: View {
     private func flushDeferredTurnWork() {
         guard let work = deferredTurnWork else { return }
         deferredTurnWork = nil
-        if let upgrade = work.recognizerUpgrade {
+        turnTrace("flush — bubble may change from here on"
+                  + (work.chunkTranscript != nil ? " (chunk)"
+                     : work.recognizerUpgrade != nil ? " (recognizer)" : " (nothing held)"))
+        if let assembled = work.chunkTranscript {
+            // Audio-grounded and already answered — the recognizer's guess at
+            // the same words has nothing to add.
+            applyChunkTranscript(assembled, to: work.turnId)
+        } else if let upgrade = work.recognizerUpgrade {
             applyRecognizerUpgrade(upgrade, to: work.turnId)
+        }
+        if let s = work.suggestion,
+           let idx = turns.firstIndex(where: { $0.id == work.turnId }) {
+            turns[idx].suggestion = s
         }
         startTranscription(forUserTurn: work.turnId)
     }
@@ -2180,6 +2401,7 @@ struct ConversationView: View {
         // step the learner has to sit through.
         if deferredTurnWork?.turnId == turnId {
             deferredTurnWork?.recognizerUpgrade = text
+            turnTrace("recognizer/held")
             return
         }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2187,6 +2409,7 @@ struct ConversationView: View {
               let idx = turns.firstIndex(where: { $0.id == turnId }),
               turns[idx].transcript != trimmed,
               turns[idx].transcript == lastRecognizerText[turnId] else { return }
+        turnTrace("recognizer/applied — bubble changed")
         turns[idx].transcript = trimmed
         lastRecognizerText[turnId] = trimmed
         creditGoalChips(turnId: turnId)
@@ -2226,8 +2449,37 @@ struct ConversationView: View {
     /// weekly-report pairs, suggestion_rate metric). Throws on an empty
     /// reply so the caller's audio→text rescue (and the Retry chip) engage
     /// instead of silently dead-ending the turn.
+    /// `turns`, with any chunk-assembled line the bubble is still holding back
+    /// substituted in. The model answers the audio-grounded text; the screen
+    /// catches up when the voice does. Everything downstream of the call —
+    /// summary, drills, the book — reads `turns` after the flush, by which
+    /// time the two are the same text again.
+    private func modelTurns() -> [Turn] {
+        guard !chunkModelText.isEmpty else { return turns }
+        return turns.map { turn in
+            guard let assembled = chunkModelText[turn.id] else { return turn }
+            var copy = turn
+            copy.transcript = assembled
+            return copy
+        }
+    }
+
     private func turnPayload(turnId: UUID,
                              onReply: @MainActor @escaping (String, Bool) -> Void)
+    async throws -> ConversationTurnPayload {
+        try await fetchTurnPayload(
+            messages: ConversationEngine.geminiMessages(from: modelTurns()),
+            // Keyed to the user turn: the inline Retry button re-runs this
+            // same logical request without a second charge.
+            idempotencyKey: "turn:\(turnId.uuidString)",
+            onReply: onReply)
+    }
+
+    /// The turn request itself, parameterized over the message history so the
+    /// speculative path can ask about a turn that isn't committed yet.
+    private func fetchTurnPayload(messages: [GeminiClient.Message],
+                                  idempotencyKey: String,
+                                  onReply: @MainActor @escaping (String, Bool) -> Void)
     async throws -> ConversationTurnPayload {
         do {
             let payload: ConversationTurnPayload = try await GeminiClient.shared.sendJSONStream(
@@ -2235,7 +2487,7 @@ struct ConversationView: View {
                     + ConversationEngine.turnOutputInstruction(
                         targetLanguage: appState.targetLanguage,
                         nativeLanguage: appState.nativeLanguage),
-                messages: ConversationEngine.geminiMessages(from: turns),
+                messages: messages,
                 // Headroom for reply + suggestion: a MAX_TOKENS truncation
                 // shows up here as a DecodingError-failed turn. gen-3 counts
                 // THINKING tokens against this ceiling too, so the budget is
@@ -2247,9 +2499,7 @@ struct ConversationView: View {
                 maxTokens: 2048,
                 temperature: 0.7,
                 purpose: "turn",
-                // Keyed to the user turn: the inline Retry button re-runs this
-                // same logical request without a second charge.
-                idempotencyKey: "turn:\(turnId.uuidString)",
+                idempotencyKey: idempotencyKey,
                 // Speak as soon as the reply's FIRST SENTENCE closes; the rest
                 // of the reply and the suggestion land while the voice loads.
                 earlyField: "reply",
@@ -2313,6 +2563,7 @@ struct ConversationView: View {
     private func voiceDidStart(tts: String, ttsFirstMs: Int? = nil) {
         // The critical path is over — the uplink is free and the bubble can
         // change without reading as "correcting before answering".
+        turnTrace("voice/started tts=\(tts) ← everything above this is pre-voice")
         flushDeferredTurnWork()
         guard !turnTiming.isEmpty else { return }
         var props = turnTiming
@@ -2323,6 +2574,12 @@ struct ConversationView: View {
         }
         turnTiming = [:]
         turnEndedSpeakingAt = nil
+        // Where the wait went, one line per turn: total_ms is speech-end →
+        // first audible voice, and the *_ms entries are its parts (finalize,
+        // chunk_wait, gemini_first, tts_first…). This is the number the
+        // "still slow" reports are about — read it before touching any knob.
+        turnTrace("timing " + props.sorted { $0.key < $1.key }
+            .map { "\($0.key)=\($0.value)" }.joined(separator: " "))
         Telemetry.log("talk_turn_timing", props)
     }
 
@@ -2969,6 +3226,12 @@ private struct TurnView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                // The card appears only after the fluent self is AUDIBLE:
+                // `Turn.suggestion` for a live turn is set by
+                // `flushDeferredTurnWork` (or directly, once the voice is
+                // already out) — never while the reply is still loading.
+                // Painting it earlier read as "it corrects me, then answers"
+                // on every turn, whatever the transcript-swap fixes did.
                 if turn.role == .user, let suggestion = turn.suggestion {
                     SuggestionChip(suggestion: suggestion, original: turn.transcript,
                                    nativeLanguage: nativeLanguage)

@@ -797,6 +797,13 @@ enum ConversationEngine {
           wrong one: "한번" comes through as "1번", which reads "일번". Never
           build a "suggestion" on a digit, a spelling, punctuation or
           capitalization — none of those come from the learner's mouth.
+        - ASR CONTRACTION GUARD: dictation EXPANDS contractions. A learner who
+          said "I'm building" is transcribed "I am building" every time. So a
+          suggestion whose only change is contracting what you received —
+          "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
+          the transcriber, not the learner, and tells them they made a mistake
+          they did not make. NEVER offer one. If the only thing you would
+          change in a line is a contraction, the line was fine: return null.
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already
@@ -831,6 +838,74 @@ enum ConversationEngine {
           never correct the user out loud.
         """
     }
+
+    /// True when a "suggestion" changes nothing the learner actually SAID —
+    /// only how the transcriber wrote it down.
+    ///
+    /// The prompt bans these three ways over (the contraction, digit and
+    /// punctuation guards) and the model still offers them, because on the
+    /// page "I am building" → "I'm building" looks like a real improvement.
+    /// It isn't: dictation expands contractions, so the learner almost
+    /// certainly said the contracted form and is being told they made a
+    /// mistake they did not make. Reported from a live call 2026-08-21.
+    ///
+    /// Deliberately narrow — it only collapses differences no mouth can
+    /// produce: case, punctuation, whitespace, and a FIXED list of English
+    /// contractions. Any real change of words survives it. Other target
+    /// languages get the case/punctuation half, which is the part that isn't
+    /// English-specific.
+    static func saysTheSameThing(_ a: String, _ b: String) -> Bool {
+        let left = spokenWords(a)
+        return !left.isEmpty && left == spokenWords(b)
+    }
+
+    /// Everything a transcriber chooses, normalized away — what's left is the
+    /// sequence of words a mouth produced. "I'm" and "I am" both come back as
+    /// `["i", "am"]`, so they compare and DIFF as the same two words.
+    ///
+    /// Used by `saysTheSameThing` and by the correction highlighter, which
+    /// must not paint a contraction as the thing the learner got wrong.
+    static func spokenWords(_ text: String) -> [String] {
+        var s = text.lowercased()
+        // Curly apostrophes first, or the table below misses every match.
+        s = s.replacingOccurrences(of: "\u{2019}", with: "'")
+        for (contracted, expanded) in contractionExpansions {
+            s = s.replacingOccurrences(of: contracted, with: expanded)
+        }
+        // Drop everything that isn't a letter, digit or space — punctuation is
+        // the transcriber's, never the speaker's.
+        let kept = s.unicodeScalars.map { scalar -> Character in
+            CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
+        }
+        return String(kept).split(separator: " ").map(String.init)
+    }
+
+    /// Contracted → expanded, applied to BOTH sides so either direction of the
+    /// rewrite collapses. Word-boundary-free on purpose: these strings can't
+    /// occur inside a longer word once the apostrophe is required.
+    ///
+    /// "'s" is NOT expanded generically — it is "is", "has" or a possessive
+    /// depending on the sentence, and collapsing "the app's" into "the app is"
+    /// would hide a real suggestion. Only the pronoun forms, which are
+    /// unambiguous, are listed.
+    private static let contractionExpansions: [(String, String)] = [
+        ("cannot", "can not"), ("can't", "can not"), ("won't", "will not"),
+        ("shan't", "shall not"), ("n't", " not"),
+        ("i'm", "i am"), ("i've", "i have"), ("i'll", "i will"), ("i'd", "i would"),
+        ("you're", "you are"), ("you've", "you have"), ("you'll", "you will"),
+        ("you'd", "you would"),
+        ("we're", "we are"), ("we've", "we have"), ("we'll", "we will"),
+        ("we'd", "we would"),
+        ("they're", "they are"), ("they've", "they have"), ("they'll", "they will"),
+        ("they'd", "they would"),
+        ("he's", "he is"), ("she's", "she is"), ("it's", "it is"),
+        ("that's", "that is"), ("there's", "there is"), ("here's", "here is"),
+        ("what's", "what is"), ("who's", "who is"), ("let's", "let us"),
+        ("he'll", "he will"), ("she'll", "she will"), ("it'll", "it will"),
+        ("he'd", "he would"), ("she'd", "she would"),
+        ("would've", "would have"), ("could've", "could have"),
+        ("should've", "should have"), ("might've", "might have"),
+    ]
 
     /// Formats the running transcript for the summary user message.
     static func formatTranscript(_ turns: [Turn]) -> String {
@@ -897,13 +972,21 @@ struct ConversationTurnPayload: Decodable {
     /// on-device STT text everywhere downstream (feed, summary, drills).
     var transcript: String? = nil
 
-    /// Maps to the domain type, dropping junk (empty / rule-like suggestions).
-    func turnSuggestion() -> TurnSuggestion? {
-        guard let s = suggestion,
-              !s.alternative.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return nil
-        }
-        return TurnSuggestion(alternative: s.alternative, reason: s.reason)
+    /// Maps to the domain type, dropping junk (empty / rule-like suggestions)
+    /// and anything that only re-spells what the learner already said.
+    ///
+    /// - Parameter original: the user line the MODEL was answering — for a
+    ///   chunk-assembled turn that is the assembled text, not what is on
+    ///   screen. Comparing against the wrong one would let a real suggestion
+    ///   through as a no-op, or a no-op through as a suggestion.
+    func turnSuggestion(for original: String) -> TurnSuggestion? {
+        guard let s = suggestion else { return nil }
+        let alternative = s.alternative.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !alternative.isEmpty else { return nil }
+        // A prompt is a request; this is the guarantee. See
+        // `ConversationEngine.saysTheSameThing`.
+        guard !ConversationEngine.saysTheSameThing(original, alternative) else { return nil }
+        return TurnSuggestion(alternative: alternative, reason: s.reason)
     }
 }
 

@@ -222,7 +222,12 @@ Deno.serve(async (req) => {
     let last: Response | null = null
     for (const [i, format] of ladder.entries()) {
       const r = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${body.voice_id}/stream?output_format=${format}`,
+        // optimize_streaming_latency=3 — the strongest level that leaves the
+        // text normalizer ON (4 turns it off, and normalization errors are
+        // audible in a cloned voice). Streaming is the live call's path and
+        // its first byte is what the learner is waiting on; the buffered path
+        // below deliberately doesn't send this, fidelity surfaces don't race.
+        `https://api.elevenlabs.io/v1/text-to-speech/${body.voice_id}/stream?output_format=${format}&optimize_streaming_latency=3`,
         fetchOptions,
       )
       last = r
