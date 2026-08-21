@@ -90,7 +90,7 @@ Notes:
 ## Before launch
 
 - [ ] Replace `APP_STORE_URL` in the inline `<script>` at the bottom of BOTH pages with the App Store link (`https://apps.apple.com/app/id<APP_ID>`). All CTAs (`[data-appstore]`) pick it up automatically — **including the two pricing-card buttons**, so an unfilled value leaves the price section pointing at `#`. It is the only value left to fill.
-- [ ] Re-check the pricing figures against `subscription_plans` (Light 150 min / 60 scenes, Plus 1,800 / 600) and the prices against `docs/launch-billing.md`.
+- [ ] Re-check the pricing figures against `subscription_plans` (Light 150 min / 60 scenes; Plus has NO talk cap since `20260821120000` — its card says "No limit" and only its 600 scenes are a number) and the prices against `docs/launch-billing.md`.
 - [ ] Add an `og:image` (1200x630) and reference it in the meta tags.
 - [x] Privacy policy page + footer link (`privacy.html` / `privacy-ko.html`).
 

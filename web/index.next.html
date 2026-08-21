@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>nawana — The future speaks in your voice.</title>
-<meta name="description" content="Language learning with your own fluent voice — talk with it, shadow it, and watch your words add up. On the App Store for iOS." />
-<meta property="og:title" content="nawana — The future speaks in your voice." />
-<meta property="og:description" content="Sixty seconds of your voice becomes the fluent you — your conversation partner, your shadowing target, your proof." />
+<title>nawana: Learn the language with the fluent you</title>
+<meta name="description" content="The most personal way to learn a language. Talk with your fluent future voice every day, then study from a textbook made of what you actually said. iOS app." />
+<meta property="og:title" content="nawana: Learn the language with the fluent you" />
+<meta property="og:description" content="Sixty seconds of recording builds your fluent future voice. Talk with it every day, then study from your own textbook." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://nawana.app/" />
 <link rel="canonical" href="https://nawana.app/" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='224' fill='%23FFFFFF'/%3E%3Cg fill='%23141310'%3E%3Crect x='290' y='237' width='410' height='100'/%3E%3Crect x='186' y='337' width='104' height='349'/%3E%3Crect x='700' y='337' width='104' height='349'/%3E%3Crect x='290' y='686' width='410' height='100'/%3E%3Crect x='806' y='686' width='95' height='100'/%3E%3C/g%3E%3C/svg%3E" />
 <meta name="color-scheme" content="light" />
-<meta name="theme-color" content="#FFFFFF" />
+<meta name="theme-color" content="#0B0A09" />
 <link rel="alternate" hreflang="en" href="https://nawana.app/" />
-<link rel="alternate" hreflang="ko" href="https://nawana.app/ko.html" />
+<link rel="alternate" hreflang="ko" href="https://nawana.app/" />
 <style>
 /* ═══════════════════════════════════════════════════════════
    nawana — pixel editorial, light.
@@ -26,6 +26,13 @@
   font-family: "Geist Pixel";
   font-style: normal; font-weight: 400; font-display: swap;
   src: url(GeistPixel.ttf) format("truetype");
+}
+/* the wordmark's own face — the logo is Pixelify Sans, everything else
+   pixel-flavored stays Geist Pixel */
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(PixelifySans.woff2) format("woff2");
 }
 
 :root {
@@ -49,12 +56,13 @@
 @media (max-width: 700px) { :root { --pad: 20px; --cell: 16px; } }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
 /* The UA's `[hidden] { display: none }` loses to any rule that sets display —
    `.btn` is inline-flex, so the Stripe checkout button rendered beside the App
    Store one on a page with web billing switched off. */
 [hidden] { display: none !important; }
 html { scroll-behavior: smooth; }
-body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.66; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
 ::selection { background: var(--blue); color: #fff; }
 a { color: inherit; }
 .mono { font-family: var(--mono); }
@@ -79,10 +87,14 @@ a { color: inherit; }
 /* glyphs: the app mark, a pixel cell, an action arrow */
 .mark, .dot, .arrow { display: inline-block; flex: none; vertical-align: -0.1em; }
 .mark rect, .dot rect { fill: currentColor; }
+/* <use> clones live in shadow DOM where rect selectors can't reach —
+   fill set on the svg itself INHERITS into them, so the mark follows
+   the nav's light ink on the dark chrome. */
+.mark, .dot { fill: currentColor; }
 
 /* ── type: pixel display, mono labels, sans body ──────────── */
-h1 { font-family: var(--pixel); font-weight: 400; font-size: clamp(44px, 6.4vw, 92px); letter-spacing: -0.01em; line-height: 1.05; }
-h2 { font-family: var(--pixel); font-weight: 400; font-size: clamp(30px, 4vw, 54px); letter-spacing: -0.005em; line-height: 1.12; }
+h1 { font-family: var(--sans); font-weight: 800; font-size: clamp(38px, 5.6vw, 78px); letter-spacing: -0.035em; line-height: 1.12; }
+h2 { font-family: var(--sans); font-weight: 800; font-size: clamp(26px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.22; }
 .kicker {
   font-family: var(--mono); font-size: 12.5px; font-weight: 500;
   letter-spacing: 0.14em; text-transform: uppercase;
@@ -110,33 +122,69 @@ h2 { font-family: var(--pixel); font-weight: 400; font-size: clamp(30px, 4vw, 54
 
 /* ── nav ──────────────────────────────────────────────────── */
 nav.sec {
-  position: sticky; top: 0; z-index: 50;
-  background: rgba(252,251,248,0.85);
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  background: transparent; border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+nav.sec::before { display: none; }
+nav.sec.nav-solid {
+  background: rgba(11,10,9,0.94);
+  border-bottom-color: rgba(245,242,235,0.12);
   backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
-  border-bottom: 1px solid var(--line);
 }
 .nav-in { display: flex; align-items: center; height: 64px; }
-.logo { display: flex; align-items: center; gap: 9px; font-family: var(--pixel); font-size: 19px; font-weight: 400; text-decoration: none; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: "Pixelify Sans", var(--pixel); font-size: 20px; font-weight: 400; text-decoration: none; }
 .logo .mark { width: 19px; height: 19px; }
 .logo sup { font-size: 8px; color: var(--faint); }
 .navlinks { margin-left: auto; display: flex; align-items: center; gap: 26px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .navlinks a { text-decoration: none; }
 .navlinks a:hover { color: var(--ink); }
 .navlinks .btn { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; padding: 11px 18px; }
-@media (max-width: 860px) { .navlinks a:not(.btn) { display: none; } }
+/* mobile: links fold into the burger menu; the store badge stays */
+.nav-burger { display: none; background: none; border: 0; cursor: pointer; padding: 10px 0 10px 6px; color: #F5F2EB; }
+.nav-burger svg { width: 22px; height: 22px; display: block; }
+.nav-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column;
+  background: rgba(11,10,9,0.97); border-bottom: 1px solid rgba(245,242,235,0.12); padding: 8px 0 14px; }
+.nav-menu a { display: block; padding: 14px var(--pad); font-family: var(--mono); font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: #A9A49C; text-decoration: none; }
+.nav-menu a:hover, .nav-menu a:active { color: #F5F2EB; }
+@media (max-width: 860px) {
+  .navlinks a:not(.btn-store) { display: none; }
+  .nav-burger { display: block; }
+  nav.sec.nav-open .nav-menu { display: flex; }
+}
+/* on mobile the header yields while scrolling down, returns on scroll-up */
+nav.sec { transition: transform 0.3s ease; }
+nav.sec.nav-hidden { transform: translateY(-100%); }
 /* the nav sits on the night — dark chrome */
-nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242,235,0.14); background: rgba(11,10,9,0.82); color: var(--ink); border-bottom: 1px solid rgba(245,242,235,0.12); }
+nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #8A857C; --line: rgba(245,242,235,0.14); color: var(--ink); }
+nav.sec .logo { color: #F5F2EB; }
 .navlinks .btn { background: #F5F2EB; color: #12110E; }
 .navlinks .btn:hover { background: #2F6FFF; color: #fff; }
+/* ── the App Store button: Apple's OFFICIAL badge look —
+   black, thin light outline, white  + "App Store에서 / 다운로드" ── */
+.btn-store { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; cursor: pointer;
+  background: #000; color: #fff; border-radius: 13px; padding: 10px 22px 11px 17px;
+  box-shadow: inset 0 0 0 1px #A6A6A6; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+  transition: transform 0.15s ease, opacity 0.15s ease; }
+.btn-store:hover { transform: scale(1.03); }
+.btn-store svg { width: 26px; height: 26px; flex: none; }
+.btn-store .tx { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.16; }
+.btn-store .tx small { font-size: 12px; font-weight: 400; letter-spacing: 0.01em; }
+.btn-store .tx b { font-size: 19.5px; font-weight: 600; letter-spacing: -0.01em; }
+.navlinks .btn-store { padding: 6px 14px 7px 11px; gap: 8px; border-radius: 10px; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; text-transform: none; letter-spacing: 0; }
+.navlinks .btn-store svg { width: 18px; height: 18px; }
+.navlinks .btn-store .tx b { font-size: 14px; }
+.navlinks .btn-store .tx small { display: none; }
 
 /* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
    Screens carry their own light iOS variables so they read identically
    on the night hero and the paper sections. ── */
-.iphone { position: relative; width: 316px; border-radius: 52px; background: #010101; padding: 9px; flex: none;
+.iphone { --dr: 55px; position: relative; width: 316px; border-radius: var(--dr); background: #010101; padding: 9px; flex: none;
   box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 60px 110px -35px rgba(0,0,0,0.6); }
 .iphone .di { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; border-radius: 14px; background: #000; z-index: 5; }
 /* the screen keeps the capture's EXACT aspect (1206×2622) — no crop, no stretch */
-.iphone .screen { position: relative; width: 100%; aspect-ratio: 1206 / 2622; border-radius: 43px; overflow: hidden;
+.iphone .screen { position: relative; width: 100%; aspect-ratio: 1206 / 2622; border-radius: calc(var(--dr, 55px) - 9px); overflow: hidden;
   background: #FFFFFF; color: #101013; display: flex; flex-direction: column;
   --ink: #101013; --dim: #55555A; --faint: #8E8E93; --line: rgba(0,0,0,0.16); --lns: rgba(0,0,0,0.08);
   --surf: #EFEFF4; --surf2: rgba(0,0,0,0.06); }
@@ -145,6 +193,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .sbar .sic svg { height: 11px; width: auto; display: block; }
 .app-top { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 18px 4px; }
 .app-top .t { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.app-top .who2 { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin-bottom: 2px; }
 .app-top .tm { font-family: var(--mono); font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
 .app-body { flex: 1; display: flex; flex-direction: column; padding: 6px 14px 10px; overflow: hidden; min-height: 0; }
 .tabbar { display: flex; border-top: 0.5px solid rgba(0,0,0,0.14); padding: 7px 6px 22px; background: #F9F9FB; }
@@ -155,13 +204,31 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .call-bottom .fs-pill { width: 168px; height: 56px; }
 .call-bottom .end { width: 46px; height: 46px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
 .call-bottom .end svg { width: 20px; height: 20px; transform: rotate(135deg); }
+/* app-scale overrides inside the screen */
 .iphone .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .iphone .dl { gap: 10px; margin-top: auto; }
 .iphone .dl-bub { font-size: 13.5px; padding: 9px 12px; border-radius: 15px; }
+.iphone .dl-call .dl-bub { font-size: 14px; }
 .iphone .dl-name { font-size: 10px; }
 .iphone .f-sug { font-size: 11.5px; padding: 7px 10px; border-radius: 11px; background: rgba(10,92,245,0.08); color: #0847BE; }
 .iphone .f-sug svg { width: 11px; height: 11px; }
-@media (max-width: 700px) { .iphone { width: 282px; } }
+.iphone .dl-acc a { font-size: 10.5px; }
+.iphone .dl-acc svg { width: 10px; height: 10px; }
+.iphone .sc-head .title { font-size: 17px; }
+.iphone .sc-head .who { font-size: 10.5px; }
+.iphone .wc-bar .b { height: 42px; font-size: 13.5px; border-radius: 100px; }
+.iphone .sh-head .l, .iphone .sh-head .r { font-size: 10.5px; }
+.iphone .kara { font-size: 16.5px; margin-top: 8px; }
+.iphone .scrub { padding: 12px; border-radius: 18px; margin-top: 14px; }
+.iphone .track { height: 40px; }
+.iphone .tl-labels { font-size: 10px; margin-top: 9px; }
+.iphone .tl-ctl { gap: 12px; margin-top: 11px; }
+.iphone .tl-ctl > svg { width: 33px; height: 33px; }
+.iphone .tl-ctl .sp { font-size: 12px; padding: 6px 10px; }
+.iphone .tl-ctl .mic { width: 46px; height: 46px; }
+.iphone .tl-ctl .mic svg { width: 18px; height: 18px; }
+.iphone .kv { max-width: none; width: 100%; }
+@media (max-width: 700px) { .iphone { width: 282px; --dr: 50px; } }
 
 /* ── scrollytelling: the phone peeks from the hero's bottom edge, pins
    at the viewport centre, and its SCREEN walks the core flow while a
@@ -169,12 +236,19 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .scrolly { position: relative; height: 620vh; }
 .s-hero { position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 3;
   display: flex; flex-direction: column; align-items: center; text-align: center;
-  padding: 90px var(--pad) 0; pointer-events: none; }
+  padding: 104px var(--pad) 0; pointer-events: none; }
+.s-hero h1 { margin-top: 24px; }
+.s-hero .n-sub { margin-top: 20px; }
+.s-hero .n-ctas { margin-top: 28px; }
+.s-hero .n-note { margin-top: 20px; }
 .s-hero a { pointer-events: auto; }
 .s-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.s-phone { position: relative; z-index: 2; will-change: transform; }
+.s-phone { position: relative; z-index: 2; will-change: transform; transform-origin: 50% 0; }
+/* desktop: size the phone from the viewport HEIGHT so tall screens get a
+   properly big device (caps at 400px; ~85vh tall on a laptop) */
+@media (min-width: 861px) { .s-phone { width: min(400px, 40vh); --dr: min(68px, 7vh); } }
 .s-caps { position: absolute; inset: 0; z-index: 1; }
-.s-cap { position: absolute; top: 50%; left: var(--pad); right: 58%; transform: translateY(calc(-50% + 14px));
+.s-cap { position: absolute; top: 50%; left: var(--pad); right: 66%; transform: translateY(calc(-50% + 14px));
   opacity: 0; transition: opacity 0.45s ease, transform 0.45s ease; padding-left: var(--cell); text-align: left; }
 .s-cap.on { opacity: 1; transform: translateY(-50%); }
 .s-cap .ix { font-family: var(--pixel); font-size: 14px; letter-spacing: 0.12em; color: #7CA5FF; }
@@ -195,6 +269,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
   .s-phone { width: min(272px, 64vw); }
   .s-num { display: none; }
 }
+/* screens: Talk home */
 .home-ring { position: relative; width: 156px; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin: 14px auto 0; box-shadow: inset 0 0 0 0.5px var(--lns); }
 .home-ring canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hr-mic { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -205,6 +280,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .home-row { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; padding: 12px 14px; border-radius: 14px; background: var(--surf); font-size: 12.5px; }
 .home-row b { font-weight: 600; }
 .home-row span { color: var(--faint); font-size: 11px; }
+/* screens: call ended */
 .endwrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
 .endwrap .eb2 { width: 62px; height: 62px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
 .endwrap .eb2 svg { width: 26px; height: 26px; transform: rotate(135deg); }
@@ -213,6 +289,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .endwrap .es i { width: 4px; height: 4px; border-radius: 50%; background: #0A5CF5; animation: blink 1.2s ease-in-out infinite; }
 .endwrap .es i:nth-child(2) { animation-delay: 0.2s; }
 .endwrap .es i:nth-child(3) { animation-delay: 0.4s; }
+/* screens: the book */
 .bk-cover { margin: 10px 4px 2px; border-radius: 14px; background: #101013; color: #F5F2EB; padding: 16px 16px 14px; }
 .bk-cover .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; color: #7CA5FF; text-transform: uppercase; }
 .bk-cover .t2 { margin-top: 6px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
@@ -220,6 +297,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .bk-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; margin-top: 8px; border-radius: 12px; background: var(--surf); font-size: 12.5px; }
 .bk-row b { font-weight: 600; }
 .bk-row span { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+/* screens: study */
 .p-score { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 4px 0; padding: 13px 14px; border-radius: 14px; background: var(--surf); }
 .p-score .n { font-family: var(--pixel); font-size: 30px; color: #0A5CF5; line-height: 1; }
 .p-score .l2 { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); text-transform: uppercase; }
@@ -290,12 +368,12 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .dawn-in { display: flex; flex-direction: column; align-items: center; text-align: center; }
 .dawn .sub { margin-top: 16px; color: var(--dim); font-size: 16.5px; }
 .dawn .f-study { margin-top: 46px; grid-template-columns: repeat(2, 214px); gap: 12px; }
+@media (max-width: 700px) { .dawn .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) {
   .n-hero { padding-top: 64px; }
   .n-story { margin-top: 72px; }
   .n-book { margin-bottom: -84px; }
   .dawn { padding-top: 140px; }
-  .dawn .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ── flow: the one loop, right under the hero — call → book → study.
@@ -357,7 +435,10 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 @keyframes blink { 50% { opacity: 0.25; } }
 
 /* ── manifesto: the core claims, huge and high-contrast ────── */
-.manif { padding-top: 150px; padding-bottom: 60px; }
+.manif { padding-top: 130px; padding-bottom: 40px; }
+.m-kick { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 100px;
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+.m-kick .dot { width: 0.62em; height: 0.62em; color: var(--blue); }
 .m-line { margin: 0 auto 120px; max-width: 15em; text-align: center;
   font-size: clamp(32px, 4.6vw, 68px); font-weight: 800;
   letter-spacing: -0.035em; line-height: 1.18; color: var(--faint); }
@@ -434,6 +515,7 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 
 /* ── pricing ──────────────────────────────────────────────── */
 .pricing-sec { padding-top: 130px; }
+.pr-sub { margin-top: 18px; font-size: 17px; color: var(--dim); }
 .cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
 .cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
 .cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
@@ -463,6 +545,44 @@ nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242
 .p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
 .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
 @media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+
+/* ── faq: hairline accordion on the grid ──────────────────── */
+.faq-sec { padding-top: 130px; }
+.faq-sec h2 { margin-top: 44px; }
+.faq { margin-top: 64px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.faq details { border-bottom: 1px solid var(--lns); }
+.faq summary { display: flex; align-items: baseline; gap: 18px; padding: 22px var(--pad); cursor: pointer; list-style: none; font-size: 17.5px; font-weight: 600; letter-spacing: -0.01em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary .ix { font-family: var(--mono); font-size: 12.5px; color: var(--blue); flex: none; padding-left: var(--cell); }
+.faq summary::after { content: "+"; margin-left: auto; font-family: var(--mono); font-size: 17px; color: var(--faint); }
+.faq details[open] summary::after { content: "\2212"; color: var(--ink); }
+.faq .a { margin: 0; padding: 0 var(--pad) 26px; font-size: 15.5px; color: var(--dim); line-height: 1.68; }
+.faq .a span { display: block; max-width: 40em; padding-left: calc(var(--cell) + 31px); }
+@media (max-width: 700px) { .faq .a span { padding-left: var(--cell); } }
+
+/* ── final demo: the beta hero, brought home — the halftone flower
+   behind, the Futureself surface as a PLAY button, live captions. ── */
+.final-demo { position: relative; background: #121110; overflow: hidden; }
+.final-demo .flower-gl { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.fd-in { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 150px var(--pad) 110px; }
+.fd-sub { margin-top: 18px; color: #A9A49C; font-size: 17px; }
+.fd-demo { margin-top: 64px; display: flex; flex-direction: column; align-items: center; }
+.fd-orb { position: relative; width: 172px; height: 172px; border-radius: 50%; overflow: hidden; border: 0; padding: 0; cursor: pointer; background: transparent;
+  box-shadow: 0 40px 110px -30px rgba(47,111,255,0.45), inset 0 0 0 0.5px rgba(245,242,235,0.18); }
+.fd-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fd-ico { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; color: #14130F; }
+.fd-ico svg { width: 40px; height: 40px; transition: transform 0.15s; }
+.fd-orb:hover .fd-ico svg { transform: scale(1.08); }
+.fd-ico .ico-pause { display: none; }
+.fd-orb.playing .ico-play { display: none; }
+.fd-orb.playing .ico-pause { display: block; }
+.fd-hint { margin-top: 20px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A857C; }
+.fd-cap { margin-top: 26px; min-height: 3.4em; width: min(620px, 86vw); white-space: pre-line;
+  font-family: var(--pixel); font-weight: 400; letter-spacing: 0.01em;
+  font-size: clamp(16px, 1.9vw, 20px); line-height: 1.5; color: #F5F2EB; }
+.fd-ctas { margin-top: 46px; }
+footer.night { background: #121110; }
+@media (max-width: 700px) { .fd-in { padding: 100px var(--pad) 80px; } .fd-orb { width: 148px; height: 148px; } }
 
 /* ── final + footer ───────────────────────────────────────── */
 .final { padding-top: 140px; }
@@ -573,6 +693,7 @@ footer a:hover { color: var(--ink); }
             stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
     </g>
     <g id="pixeldot"><rect x="8" y="8" width="8" height="8"/></g>
+    <g id="applelogo"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></g>
     <g id="appmark">
       <rect x="290" y="237" width="410" height="100"/>
       <rect x="186" y="337" width="104" height="349"/>
@@ -591,9 +712,17 @@ footer a:hover { color: var(--ink); }
       <a href="#watch">Watch</a>
       <a href="#practice">Practice</a>
       <a href="#pricing" id="nav-pricing" hidden>Pricing</a>
-      <a href="ko.html">한국어</a>
-      <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a href="ko.next.html">한국어</a>
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
+  </div>
+  <div class="nav-menu" id="nav-menu">
+    <a href="#talk">Talk</a>
+    <a href="#watch">Watch</a>
+    <a href="#practice">Practice</a>
+    <a href="#pricing" id="nav-pricing-m" hidden>Pricing</a>
+    <a href="ko.next.html">한국어</a>
   </div>
 </nav>
 
@@ -606,34 +735,34 @@ footer a:hover { color: var(--ink); }
     <div class="s-hero">
       <div class="n-kicker rv"><i></i>The most personal way to learn a language</div>
       <h1 class="rv" style="--d:0.06s">Learn the language<br />with the fluent you.</h1>
-      <p class="n-sub rv" style="--d:0.12s">It isn't growing for one reason &mdash; you don't speak enough.</p>
+      <p class="n-sub rv" style="--d:0.12s">Talk when you want, about what you want,<br />and study from your own textbook.</p>
       <div class="n-ctas rv" style="--d:0.18s">
-        <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+        <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
       </div>
       <span class="n-note rv" style="--d:0.24s"><b>iOS 17+</b> · Seven days free</span>
     </div>
     <div class="s-pin">
       <div class="s-caps">
         <div class="s-cap"><div class="ix">01 / 05</div><h3>Conversations start<br />from your interests</h3><p>One tap, like placing a call.</p></div>
-        <div class="s-cap"><div class="ix">02 / 05</div><h3>Talk with the<br />fluent future you</h3><p>From the situations you actually need.</p></div>
-        <div class="s-cap"><div class="ix">03 / 05</div><h3>Every talk becomes<br />your own textbook</h3><p>Your expressions, words, grammar — analyzed.</p></div>
-        <div class="s-cap"><div class="ix">04 / 05</div><h3>Spoken words build<br />your wordbook</h3><p>Everything you say checks itself off.</p></div>
-        <div class="s-cap"><div class="ix">05 / 05</div><h3>Growth,<br />measured</h3><p>Only from what you actually said.</p></div>
+        <div class="s-cap"><div class="ix">02 / 05</div><h3>Talk with the<br />fluent future you</h3><p>Stumble freely. Every turn comes back corrected.</p></div>
+        <div class="s-cap"><div class="ix">03 / 05</div><h3>Study from your<br />own textbook</h3><p>The exact expressions, words, and grammar you used.</p></div>
+        <div class="s-cap"><div class="ix">04 / 05</div><h3>The more you speak,<br />the more it stacks</h3><p>Words, expressions, sentences. Automatically.</p></div>
+        <div class="s-cap"><div class="ix">05 / 05</div><h3>A level measured,<br />not guessed</h3><p>Only from what you actually said.</p></div>
         <span class="s-num">01</span><span class="s-num">02</span><span class="s-num">03</span><span class="s-num">04</span><span class="s-num">05</span>
       </div>
       <div class="iphone s-phone" id="s-phone">
         <div class="screen">
           <div class="s-screens">
             <!-- 01 · Talk home — real capture -->
-            <div class="s-scr on"><img class="shot" src="shots/en-01.png" alt="" /></div>
+            <div class="s-scr on"><img class="shot" src="shots/en-home.png" alt="" /></div>
             <!-- 02 · in-call — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/en-02.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/en-call.png" alt="" /></div>
             <!-- 03 · after the call: the talk is a scored book — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/en-03.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/en-practice.png" alt="" /></div>
             <!-- 04 · word cloud — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/en-04.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/en-words.png" alt="" /></div>
             <!-- 05 · measured level — real capture -->
-            <div class="s-scr"><img class="shot" src="shots/en-05.png" alt="" /></div>
+            <div class="s-scr"><img class="shot" src="shots/en-progress.png" alt="" /></div>
           </div>
         </div>
       </div>
@@ -644,9 +773,20 @@ footer a:hover { color: var(--ink); }
 <!-- ═════════ WHY ═════════ -->
 <section class="sec plain">
   <div class="inner manif">
-    <p class="m-line rv">The goal was never<br />a native's voice.</p>
-    <p class="m-line rv">Speaking, pronunciation, intonation &mdash;<br /><b>practice starts from<br />your own voice.</b></p>
-    <p class="m-line rv">A goal you can reach.<br /><b>Not "like a native" &mdash;<br />the fluent future you.</b></p>
+    <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>One · The voice</div>
+    <p class="m-line rv">Imitate a native all you want.<br /><b>Someone else’s voice<br />never becomes yours.</b></p>
+    <p class="m-line rv">The voice you’ll actually speak with<br /><b>is your own.</b></p>
+    <p class="m-line rv">So, a goal you can reach.<br /><b>Not “like a native”.<br />The fluent future you.</b></p>
+  </div>
+</section>
+
+<!-- ═════════ MANIFESTO 2 — expression ═════════ -->
+<section class="sec alt">
+  <div class="inner manif">
+    <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Two · The training</div>
+    <p class="m-line rv">The reason words won’t come out:<br /><b>pulling thoughts out of your head<br />was never trained.</b></p>
+    <p class="m-line rv">Not memorized lines.<br /><b>Your own thoughts, in your own words.<br />That’s where it starts.</b></p>
+    <p class="m-line rv">Speak, get corrected.<br /><b>What you said out there<br />becomes your own textbook.</b></p>
   </div>
   <div class="marquee" aria-hidden="true">
     <div class="row">
@@ -683,23 +823,17 @@ footer a:hover { color: var(--ink); }
   <div class="stage">
     <div class="stage-copy">
       <div class="kicker rv"><span class="mono">01</span>Talk · Output</div>
-      <h2 class="rv" style="--d:0.06s">It makes you speak,<br />then finds what to fix.</h2>
-      <p class="one rv" style="--d:0.12s"><strong>You only learn to speak by speaking.</strong></p>
+      <h2 class="rv" style="--d:0.06s">Say what you’re thinking,<br />comfortably.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>It’s your voice, not a stranger’s.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your news · your situations · free talk.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>No one to feel judged by.</b> The words start coming out.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your news, your situations, free talk.</b> Whenever you want.</span></li>
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Every turn comes back fluent.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>A scorecard at the end,</b> fumbled lines become drills.</span></li>
       </ul>
     </div>
     <div class="stage-show">
-      <div class="kv kv-talk rv" style="--d:0.1s">
-  <div class="dl dl-call">
-    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Future self</div><div class="dl-bub">So — how'd the interview go?</div></div></div>
-    <div class="dl-turn you"><div class="dl-col"><div class="dl-name">You</div><div class="dl-bub">Honestly? It went really well.</div></div></div>
-    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Future self</div><div class="dl-bub">That's huge. What surprised you most?</div></div></div>
-  </div>
-  <div class="fs-pill"><canvas class="fself" data-shape="pill" aria-hidden="true"></canvas><div class="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div></div>
-</div>
+      <!-- SHOT SLOT: 통화 화면 — replace shots/en-call.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/en-call.png" alt="" /></div></div>
     </div>
   </div>
 </section>
@@ -709,24 +843,17 @@ footer a:hover { color: var(--ink); }
   <div class="stage flip">
     <div class="stage-copy">
       <div class="kicker rv"><span class="mono">02</span>Watch · Input</div>
-      <h2 class="rv" style="--d:0.06s">Tomorrow's conversation,<br />watched today.</h2>
-      <p class="one rv" style="--d:0.12s"><strong>Your fluent self lives the situation first.</strong> Just by watching, what to say sticks in your ear.</p>
+      <h2 class="rv" style="--d:0.06s">The moments you need it<br />are yours alone.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Set the situation ahead of you, and live it early.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>One line of situation</b> — a whole dialogue unfolds.</span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your lines play in your fluent voice.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Any line you want — one tap</b> to shadow it, right there.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Exams, interviews, speeches, travel, small talk.</b> One line opens the whole conversation.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your lines, in your fluent voice.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Any line you want, one tap</b> to shadow it right there.</span></li>
       </ul>
     </div>
     <div class="stage-show">
-      <div class="kv rv" style="--d:0.1s">
-  <div class="sc-head"><div class="who">Mara · Coworker</div><div class="title">Deadline extension</div></div>
-  <div class="dl">
-    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Mara</div><div class="dl-bub">Is Friday still realistic for the handoff?</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
-    <div class="dl-turn you"><div class="dl-col"><div class="dl-name">You</div><div class="dl-bub cur">Honestly, I'd rather flag it now than surprise you on Friday.</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
-    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Mara</div><div class="dl-bub">Okay — what would Monday change?</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
-  </div>
-  <div class="wc-bar"><div class="b restart"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM9 12l9-6v12z"/></svg>Restart</div><div class="b play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play</div></div>
-</div>
+      <!-- SHOT SLOT: Watch 시나리오 북 — replace shots/en-book.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/en-book.png" alt="" /></div></div>
     </div>
   </div>
 </section>
@@ -736,34 +863,17 @@ footer a:hover { color: var(--ink); }
   <div class="stage">
     <div class="stage-copy">
       <div class="kicker rv"><span class="mono">03</span>Practice · Imprint</div>
-      <h2 class="rv" style="--d:0.06s">Shadow it until<br />it's automatic.</h2>
+      <h2 class="rv" style="--d:0.06s">Shadow it until<br />it’s automatic.</h2>
       <p class="one rv" style="--d:0.12s"><strong>The voice you match is your own.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Sync shadowing</b> — per-word verdicts.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Sync shadowing.</b> Per-word verdicts.</span></li>
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Loop the hard part at 0.5×.</b></span></li>
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Spaced repetition,</b> answered out loud.</span></li>
       </ul>
     </div>
     <div class="stage-show">
-      <div class="kv rv" style="--d:0.1s">
-  <div class="sh-head"><span class="l">Target line</span><span class="r">10 words</span></div>
-  <div class="kara"><span class="k">I</span> <span class="k">really</span> <span class="k sel done">appreciate</span> <span class="k sel done">you</span> <span class="k sel now">taking</span> <span class="k sel">the</span> <span class="k">time</span> <span class="k">to</span> <span class="k">help</span> <span class="k">me.</span></div>
-  <div class="scrub">
-    <div class="track"><span class="tick" style="left:5%"></span><span class="tick" style="left:15%"></span><span class="tick" style="left:25%"></span><span class="tick" style="left:35%"></span><span class="tick" style="left:45%"></span><span class="tick" style="left:55%"></span><span class="tick" style="left:65%"></span><span class="tick" style="left:75%"></span><span class="tick" style="left:85%"></span><span class="tick" style="left:95%"></span>
-      <div class="band" style="left:20%; right:42%"></div>
-      <div class="h" style="left:20%"></div><div class="h" style="left:58%"></div>
-      <div class="ph" style="left:34%"></div>
-    </div>
-    <div class="tl-labels"><span>0:00.9</span><span class="loop">loop 0:00.8&#8211;0:02.3</span><span>0:04.0</span></div>
-    <div class="tl-ctl">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor" stroke="none"/></svg>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M8 8h6a3 3 0 0 1 0 6h-1M8 8l2.2-2M8 8l2.2 2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span class="sp">1&#215;</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M17 9a4 4 0 0 1 0 6M19.5 7a7 7 0 0 1 0 10"/></svg>
-      <span class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
-    </div>
-  </div>
-</div>
+      <!-- SHOT SLOT: 샤도잉 화면 — replace shots/en-shadow.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/en-shadow.png" alt="" /></div></div>
     </div>
   </div>
 </section>
@@ -776,19 +886,14 @@ footer a:hover { color: var(--ink); }
       <h2 class="rv" style="--d:0.06s">The people from your life<br />become the cast.</h2>
       <p class="one rv" style="--d:0.12s"><strong>Your people, your situations.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Barista, team lead, doctor</b> — describe them once.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Barista, team lead, doctor.</b> Describe them once, they play in character.</span></li>
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your fluent self at the center.</b></span></li>
       </ul>
     </div>
-    <div class="stage-show"><div class="kv kv-ppl rv" style="--d:0.1s">
-  <div class="you"><div class="disc"><canvas class="fself" data-shape="circle" aria-hidden="true"></canvas></div><div class="nm">You</div></div>
-  <div class="p-bub" style="left:22%; top:16%; animation-delay:0s;"><span class="ava" style="width:64px;height:64px;font-size:20px">S</span><span class="nm">Sofia</span><span class="rl">Barista</span></div>
-  <div class="p-bub" style="left:80%; top:14%; animation-delay:0.8s;"><span class="ava" style="width:56px;height:56px;font-size:18px">DP</span><span class="nm">Dr. Park</span><span class="rl">Family doctor</span></div>
-  <div class="p-bub" style="left:84%; top:54%; animation-delay:1.6s;"><span class="ava" style="width:70px;height:70px;font-size:22px">M</span><span class="nm">Mina</span><span class="rl">Team lead</span></div>
-  <div class="p-bub" style="left:16%; top:58%; animation-delay:2.3s;"><span class="ava" style="width:58px;height:58px;font-size:19px">J</span><span class="nm">Jake</span><span class="rl">Gym buddy</span></div>
-  <div class="p-bub" style="left:30%; top:86%; animation-delay:3.0s;"><span class="ava" style="width:52px;height:52px;font-size:17px">A</span><span class="nm">Alex</span><span class="rl">Landlord</span></div>
-  <div class="p-bub" style="left:72%; top:86%; animation-delay:3.7s;"><span class="ava" style="width:56px;height:56px;font-size:18px">E</span><span class="nm">Emma</span><span class="rl">Classmate</span></div>
-</div></div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: Watch 탭 People + 시나리오 — replace shots/en-people.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/en-people.png" alt="" /></div></div>
+    </div>
   </div>
 </section>
 
@@ -801,30 +906,33 @@ footer a:hover { color: var(--ink); }
       <p class="one rv" style="--d:0.12s"><strong>A living map of your vocabulary.</strong></p>
       <ul class="hows rv" style="--d:0.18s">
         <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your level reads in the grain.</b></span></li>
-        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>One tap</b> — meaning and examples.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>One tap: meaning and examples.</b> Bookmarked means studying, checked means known.</span></li>
       </ul>
     </div>
-    <div class="stage-show"><div class="kv kv-cloud rv" style="--d:0.1s"><span class="cw " style="left:26%; top:12%; font-size:22px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>negotiate</span><span class="cw " style="left:63%; top:10%; font-size:26px">weather</span><span class="cw " style="left:86%; top:20%; font-size:20px">routine</span><span class="cw " style="left:15%; top:28%; font-size:19px">profound</span><span class="cw used" style="left:45%; top:30%; font-size:30px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>work</span><span class="cw " style="left:75%; top:34%; font-size:23px">weekend</span><span class="cw " style="left:28%; top:44%; font-size:18px">tentative</span><span class="cw " style="left:64%; top:46%; font-size:17px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>meticulous</span><span class="cw " style="left:89%; top:44%; font-size:16px">insight</span><span class="cw used" style="left:20%; top:58%; font-size:24px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>travel</span><span class="cw " style="left:48%; top:60%; font-size:19px">opinion</span><span class="cw " style="left:80%; top:60%; font-size:15px">serendipity</span><span class="cw " style="left:13%; top:70%; font-size:17px">downplay</span><span class="cw " style="left:41%; top:74%; font-size:20px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>leverage</span><span class="cw " style="left:71%; top:72%; font-size:18px">nuance</span><span class="cw used" style="left:26%; top:86%; font-size:26px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>people</span><span class="cw " style="left:58%; top:88%; font-size:16px">pragmatic</span><span class="cw " style="left:85%; top:86%; font-size:15px">ephemeral</span></div></div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: 단어 구름 — replace shots/en-words.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/en-words.png" alt="" /></div></div>
+    </div>
   </div>
 </section>
 
 <!-- ═════════ SPEC SHEET ═════════ -->
 <section class="sec plain">
   <div class="inner specs">
-    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Everything inside</div>
-    <h2 class="head rv" style="--d:0.08s">The whole app, as an index.</h2>
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>All of it, in one app</div>
+    <h2 class="head rv" style="--d:0.08s">The whole app,<br />at a glance.</h2>
   </div>
   <div class="spec-table rv" style="--d:0.12s">
-    <div class="srow"><span class="ix">01</span><span class="nm">60-second clone</span><span class="ds">One short recording at setup builds the voice you'll have when you're fluent.</span></div>
-    <div class="srow"><span class="ix">02</span><span class="nm">Fluent rewrites</span><span class="ds">Mid-conversation, your sentence comes back the way your fluent self would say it.</span></div>
-    <div class="srow"><span class="ix">03</span><span class="nm">Sync shadowing</span><span class="ds">Speak along with your fluent line — per-word verdicts and pace against the target.</span></div>
-    <div class="srow"><span class="ix">04</span><span class="nm">People from your life</span><span class="ds">Describe them out loud — they become personas that talk like the real person.</span></div>
-    <div class="srow"><span class="ix">05</span><span class="nm">Scenario dialogues</span><span class="ds">Watch your fluent self handle the situation, and shadow any line on the spot.</span></div>
-    <div class="srow"><span class="ix">06</span><span class="nm">Speak-aloud review</span><span class="ds">Fumbled lines return as drills right before you'd forget — answered out loud, never multiple choice.</span></div>
-    <div class="srow"><span class="ix">07</span><span class="nm">Five-axis scorecard</span><span class="ds">Vocabulary, grammar, expression, fluency, pronunciation — computed in code, not invented by an LLM.</span></div>
-    <div class="srow"><span class="ix">08</span><span class="nm">Words check themselves off</span><span class="ds">A core pool of ~8,000 CEFR-graded words underneath; every word you use is ticked automatically.</span></div>
-    <div class="srow"><span class="ix">09</span><span class="nm">Measured CEFR</span><span class="ds">Your level, estimated from the words you actually used — B1 → B2 is a measurement, not an opinion.</span></div>
-    <div class="srow"><span class="ix">10</span><span class="nm">An honest weekly report</span><span class="ds">Unlocks only after 15+ minutes of real speaking. Nothing, rather than noise. It learns you as you go.</span></div>
+    <div class="srow"><span class="ix">01</span><span class="nm">60-second voice clone</span><span class="ds">One short recording at setup builds your fluent future voice.</span></div>
+    <div class="srow"><span class="ix">02</span><span class="nm">A fluent version, every turn</span><span class="ds">Mid-conversation, what you just said comes back the way your fluent self would say it.</span></div>
+    <div class="srow"><span class="ix">03</span><span class="nm">Sync shadowing</span><span class="ds">Speak along with your fluent line and get per-word verdicts plus pace against the target.</span></div>
+    <div class="srow"><span class="ix">04</span><span class="nm">The people from your life</span><span class="ds">Describe them out loud and they become personas that talk like the real thing.</span></div>
+    <div class="srow"><span class="ix">05</span><span class="nm">Conversations, previewed</span><span class="ds">Watch your fluent self handle the situation, and shadow any line you want on the spot.</span></div>
+    <div class="srow"><span class="ix">06</span><span class="nm">Speak-aloud review</span><span class="ds">Fumbled lines return as drills right before you forget them. Answered out loud, never multiple choice.</span></div>
+    <div class="srow"><span class="ix">07</span><span class="nm">Five-axis scorecard</span><span class="ds">Vocabulary, grammar, expressiveness, fluency, pronunciation. Computed in code, not invented by AI.</span></div>
+    <div class="srow"><span class="ix">08</span><span class="nm">Words check themselves off</span><span class="ds">A pool of ~8,000 CEFR-graded core words sits underneath, and every word you use is ticked automatically.</span></div>
+    <div class="srow"><span class="ix">09</span><span class="nm">CEFR level, measured</span><span class="ds">Your level is estimated from the words you actually used. B1 to B2 is a measurement, not an opinion.</span></div>
+    <div class="srow"><span class="ix">10</span><span class="nm">An honest weekly report</span><span class="ds">Unlocks only after fifteen minutes of real speech. Silence over noise. It fits you better the more you talk.</span></div>
   </div>
 </section>
 
@@ -837,81 +945,127 @@ footer a:hover { color: var(--ink); }
 <section class="sec plain pricing-wrap" id="pricing">
   <div class="inner pricing-sec">
     <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Pricing</div>
-    <h2 class="rv" style="--d:0.08s">Buy a month.<br />Spend it your way.</h2>
+    <h2 class="rv" style="--d:0.08s">Pick the subscription<br />that fits your situation.</h2>
+    <p class="pr-sub rv" style="--d:0.11s">Either way, the first seven days are free.</p>
     <div class="cycle-toggle rv" style="--d:0.14s">
-      <button class="ct on" data-cycle="monthly" type="button">MONTHLY</button>
-      <button class="ct" data-cycle="annual" type="button">ANNUAL</button>
+      <button class="ct on" data-cycle="monthly" type="button">Monthly</button>
+      <button class="ct" data-cycle="annual" type="button">Annual</button>
     </div>
   </div>
   <div class="plans rv" style="--d:0.2s">
     <div class="plan">
       <div><span class="p-name">Light</span></div>
       <div class="p-price" data-price="light">—</div>
-      <p class="p-note">Keep it up as a habit.</p>
+      <p class="p-note">A steady habit, building the routine.</p>
       <dl class="p-specs">
-        <div><dt>Talking</dt><dd data-talk="light">—</dd></div>
-        <div class="p-sub"><dt></dt><dd>about 5 min a day</dd></div>
+        <div><dt>Talk</dt><dd data-talk="light">—</dd></div>
+        <div class="p-sub"><dt></dt><dd>About 5 min a day</dd></div>
         <div><dt>Watch scenes</dt><dd data-scenes="light">—</dd></div>
-        <div><dt>Your own review book</dt><dd>Unlimited</dd></div>
-        <div><dt>Shadowing &middot; words &middot; replays &middot; drills</dt><dd>Unlimited</dd></div>
+        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
+        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
     <div class="plan featured">
-      <div><span class="p-name">Plus</span><span class="p-badge">POPULAR</span></div>
+      <div><span class="p-name">Plus</span><span class="p-badge">Popular</span></div>
       <div class="p-price" data-price="plus">—</div>
-      <p class="p-note">Get fluent for an exam or interview.</p>
+      <p class="p-note">As much as you want, no meter.</p>
       <dl class="p-specs">
-        <div><dt>Talking</dt><dd data-talk="plus">—</dd></div>
-        <div class="p-sub"><dt></dt><dd>about 1 hr a day</dd></div>
+        <div><dt>Talk</dt><dd>Unlimited</dd></div>
         <div><dt>Watch scenes</dt><dd data-scenes="plus">—</dd></div>
-        <div><dt>Your own review book</dt><dd>Unlimited</dd></div>
-        <div><dt>Shadowing &middot; words &middot; replays &middot; drills</dt><dd>Unlimited</dd></div>
+        <div><dt>Personalized review textbook</dt><dd>Unlimited</dd></div>
+        <div><dt>Shadowing · words · replay · drills</dt><dd>Unlimited</dd></div>
       </dl>
-      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Start on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
       <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
     </div>
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
-    <p class="p-fine">The two pools are separate — watching a scene never takes a minute off your talking. Spend either however you like across the month. Seven days free, cancel anytime.</p>
+    <p class="p-fine">Plus puts no cap on talk time. Speaking takes real effort, so there is no reason to make you ration it. Watch scenes play on a single tap, so they are counted per scene. The two pools are separate, and watching never takes a minute off your talking. Seven days free, cancel anytime.</p>
   </div>
 </section>
 
 <!-- ═════════ TRUST ═════════ -->
 <section class="sec alt">
   <div class="inner trust-sec">
-    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Your voice, your rules</div>
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Your voice stays yours</div>
     <h2 class="rv" style="--d:0.08s">A voice clone,<br />treated carefully.</h2>
   </div>
   <div class="trust">
-    <div class="tcell rv"><div class="ix">A</div><h4>One recording, ever</h4><p>Sixty seconds at setup. The app never records you outside a conversation you started.</p></div>
-    <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>Your clone, your call</h4><p>Re-record or delete anytime. Replacing it permanently deletes the old one.</p></div>
-    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Practice stays on device</h4><p>Sessions, drills, and progress live on your iPhone — not on our servers.</p></div>
+    <div class="tcell rv"><div class="ix">A</div><h4>Recorded exactly once</h4><p>Sixty seconds at setup, and that is all. Nothing is ever recorded outside a conversation you started.</p></div>
+    <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>The clone answers to you</h4><p>Re-record or delete it anytime. Replacing it permanently deletes the previous clone.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Practice stays on your device</h4><p>Conversations, drills, and progress live on your iPhone, not on a server.</p></div>
   </div>
 </section>
 
-<!-- ═════════ FINAL ═════════ -->
-<section class="sec plain final">
-  <div class="inner">
+<!-- ═════════ FAQ ═════════ -->
+<section class="sec plain" id="faq">
+  <div class="inner faq-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Frequently asked</div>
+    <h2 class="rv" style="--d:0.08s">Questions.</h2>
+  </div>
+  <div class="faq rv" style="--d:0.12s">
+    <details>
+      <summary><span class="ix">01</span>How is my voice made?</summary>
+      <p class="a"><span>One sixty-second recording at setup, and that is it. No recording is needed after that; your fluent voice speaks every conversation, scene, and shadowing line.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">02</span>Can I try it for free?</summary>
+      <p class="a"><span>Yes, there is a seven-day free trial. The voice clone and your first greeting are free even before that, and you can cancel anytime.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">03</span>What does a subscription buy?</summary>
+      <p class="a"><span>A month of talk time. Light comes with 150 minutes; Plus is unlimited. Watch scenes are a separate pool, so watching never spends your talk time. Review, replay, and building situations are always free.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">04</span>Can a complete beginner use it?</summary>
+      <p class="a"><span>Honestly, if you are starting from zero, it will be hard. It fits best once you can form sentences, however haltingly. From there every turn comes back fluent, the difficulty follows your level, and you speak more and more.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">05</span>How do I know I am improving?</summary>
+      <p class="a"><span>Your CEFR level (A1 to C2) is measured from the words and sentences you actually spoke. It is a measurement, not an opinion, so progress shows up as a number.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">06</span>Is my voice and data safe?</summary>
+      <p class="a"><span>Nothing is ever recorded outside a conversation you started. You can rebuild or delete the clone anytime, and conversations, drills, and progress stay on your iPhone, not on a server.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">07</span>Which languages can I learn?</summary>
+      <p class="a"><span>English, Korean, and German. Korean and German are still in beta. Adding a language never changes the price.</span></p>
+    </details>
+  </div>
+</section>
+
+<!-- ═════════ FINAL — the beta hero, brought home ═════════ -->
+<section class="sec night final-demo">
+  <canvas class="flower-gl" id="flower-gl" aria-hidden="true"></canvas>
+  <div class="fd-in">
     <h2 class="rv">The fluent future you,<br />starting today.</h2>
-    <p class="sub rv" style="--d:0.08s">Sixty seconds of setup. Your first conversation tonight.</p>
-    <div class="hero-ctas rv" style="--d:0.16s">
-      <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+    <div class="fd-demo rv" style="--d:0.14s">
+      <button class="fd-orb" id="d-play" type="button" aria-label="Hear your future voice">
+        <canvas class="fself" id="d-face" data-shape="circle" aria-hidden="true"></canvas>
+        <span class="fd-ico" aria-hidden="true">
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+        </span>
+      </button>
+      <div class="fd-hint">Hear your future voice</div>
+      <div class="fd-cap" id="d-cap" aria-live="polite"></div>
     </div>
-    <div class="callstrip">
-      <span class="tag"><i></i>YOUR FIRST CALL</span>
-      <div class="fs-pill wide"><canvas class="fself" data-shape="pill" aria-hidden="true"></canvas><div class="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div></div>
-      <span class="tag mono">00:00:00</span>
+    <div class="fd-ctas rv" style="--d:0.2s">
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>Download on the</small><b>App Store</b></span></a>
     </div>
   </div>
+  <audio id="d-audio" src="beta-en.mp3" preload="none"></audio>
 </section>
 
-<footer class="sec plain">
+<footer class="sec night">
   <div class="foot-in">
     <span>© 2026 Dear RoRo · Munich</span>
     <div class="links">
+      <a href="privacy.html">Privacy</a>
       <a href="privacy.html">Privacy</a>
       <a href="support.html">Support</a>
       <a href="mailto:hello.dearroroapp@gmail.com">Contact</a>
@@ -931,6 +1085,36 @@ document.querySelectorAll("[data-appstore]").forEach(function (a) {
 });
 
 var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ── mobile nav: burger menu + header that yields on scroll-down ──
+(function () {
+  var nav = document.querySelector("nav.sec");
+  if (!nav) return;
+  var burger = document.getElementById("nav-burger");
+  var menu = document.getElementById("nav-menu");
+  if (burger && menu) {
+    burger.addEventListener("click", function () { nav.classList.toggle("nav-open"); });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { nav.classList.remove("nav-open"); });
+    });
+  }
+  var mq = window.matchMedia("(max-width: 860px)");
+  var lastY = window.pageYOffset;
+  var night = document.querySelector("header.night");
+  function solidCheck(y) {
+    var edge = night ? night.offsetTop + night.offsetHeight - 70 : 400;
+    nav.classList.toggle("nav-solid", y > edge);
+  }
+  solidCheck(window.pageYOffset);
+  window.addEventListener("scroll", function () {
+    var y = window.pageYOffset;
+    solidCheck(y);
+    if (!mq.matches || nav.classList.contains("nav-open")) { nav.classList.remove("nav-hidden"); lastY = y; return; }
+    if (y > lastY + 8 && y > 80) nav.classList.add("nav-hidden");
+    else if (y < lastY - 8) nav.classList.remove("nav-hidden");
+    lastY = y;
+  }, { passive: true });
+})();
 
 // ── scroll reveal ──
 var io = new IntersectionObserver(function (entries) {
@@ -1058,6 +1242,8 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
   var nums = [].slice.call(wrap.querySelectorAll(".s-num"));
   var scrs = [].slice.call(wrap.querySelectorAll(".s-scr"));
   var pill = document.getElementById("s-callpill");
+  var note = wrap.querySelector(".n-note");
+  var applied = 0; // translateY currently on the phone, in px
   var STEPS = 6; // 1 hero + 5 beats
   var dbg = null;
   try { var q = new URLSearchParams(location.search).get("step"); if (q !== null) dbg = +q; } catch (e) {}
@@ -1067,8 +1253,19 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
     var total = r.height - vh;
     var p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
     var f = dbg !== null ? dbg : p * STEPS;
-    // rise from the hero's bottom edge to the centre over the first beat
-    phone.style.transform = "translateY(" + (Math.max(0, 1 - f) * 56).toFixed(2) + "vh)";
+    // At f=0 the phone's top edge sits just under the hero text; it rises
+    // to its resting spot over the first beat. Measured from the phone's
+    // ACTUAL laid-out position (rect minus the transform we applied), so
+    // it holds on any layout — centre on desktop, bottom-anchored on
+    // mobile — instead of assuming a centred pin.
+    var naturalTop = phone.getBoundingClientRect().top - applied;
+    var noteBottom = note ? note.getBoundingClientRect().bottom : vh * 0.5;
+    var rise = Math.max(0, noteBottom + 26 - naturalTop);
+    applied = Math.max(0, 1 - f) * rise;
+    // scale-up entrance: a step smaller in the hero, full size once pinned
+    // (origin is the phone's top edge, so the rise anchor stays exact)
+    var scale = 0.84 + 0.16 * Math.min(1, Math.max(0, f));
+    phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
     var idx = Math.min(5, Math.max(1, Math.floor(f)));
     scrs.forEach(function (el, i) { el.classList.toggle("on", i + 1 === idx); });
     caps.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
@@ -1078,8 +1275,200 @@ document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
   window.addEventListener("scroll", update, { passive: true });
   window.addEventListener("resize", update);
   update();
+  // re-measure once the reveal transitions have settled
+  setTimeout(update, 1000);
+  setTimeout(update, 2200);
 })();
 
+
+</script>
+<script>
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ── key visual: DeskCoach's latest halftone-flower shader ──
+// Verbatim from DeskCoach/site/index.html: ASCII glyph-atlas halftone
+// (density ramp " .,:;=+*#@"), variable-petal polar flower with a top-right
+// light source + soft aura, wind sway, stem, grain. Reduced to ONE flower,
+// and the flower TYPE changed (petal count N). Dark palette forced (this
+// hero is always dark).
+(function () {
+  var FS = 'precision highp float;uniform vec2 r;uniform float t;uniform float s;uniform sampler2D gx;uniform float gn;uniform vec3 pc;uniform vec3 ic;uniform float gr;uniform vec2 uMouse;' +
+    'float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}' +
+    'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);' +
+    'return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}' +
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p*=2.1;a*=.5;}return v;}' +
+    'float flower(vec2 p,vec2 c,float R,float q,float N){' +
+    'vec2 d=p-c;float ang=atan(d.y,d.x)+.07*sin(t*.55+q);float rad=length(d);' +
+    'float w=fbm(vec2(ang*2.3+q*3.,rad*5.)+q);' +
+    // fuller, larger petals (lower exponent = wider lobes)
+    'float lobe=pow(abs(cos(N*.5*ang+q)),.40);' +
+    'float pet=R*(.55+.45*lobe)*(.55+.9*w);' +
+    'float g=smoothstep(pet,pet*.20,rad);' +
+    // per-petal form: a lit centerline ridge fading to shadow at the petal
+    // edges and tip — so each petal shows light-catching and shaded parts
+    'float ridge=abs(cos(N*.5*ang+q));' +
+    'float rr=clamp(rad/max(pet,1e-4),0.,1.);' +
+    'float form=.40+.60*ridge*mix(1.,.55,rr);' +
+    // sun from the top-right: petals facing it brighten, the rest fall away
+    'vec2 u=d/max(rad,1e-4);' +
+    'float sun=.55+.55*dot(u,vec2(.55,.83));' +
+    'g*=clamp(form*sun,0.,1.);' +
+    // soft outer aura (light bleeding past the silhouette)
+    'g=max(g,.14*smoothstep(pet*1.6,pet*.9,rad));' +
+    'return g;}' +
+    'float stem(vec2 p,vec2 c,float q){' +
+    'if(p.y>c.y)return 0.;float dy=c.y-p.y;' +
+    'float x=c.x+.05*sin(dy*4.+q)+dy*dy*.14*sin(t*.5+q);' +
+    'return .30*smoothstep(.006,.002,abs(p.x-x));}' +
+    'void main(){' +
+    'float cell=max(10.,r.y/85.);' +
+    'vec2 id=floor(gl_FragCoord.xy/cell)+.5;vec2 cc=id*cell;' +
+    'vec2 cuv=cc/r;float asp=r.x/r.y;vec2 p=vec2(cuv.x*asp,cuv.y);' +
+    'float L=.05;' +
+    // one flower + its stem — flower TYPE changed to N=8 petals (was 6), bigger
+    // flower center follows the mouse a little (parallax)
+    'vec2 f1=vec2(asp*.70+.02*sin(t*.5+s),.55)+uMouse*vec2(.08,.06);' +
+    'L=max(L,flower(p,f1,.32,s,8.));L=max(L,stem(p,f1,s));' +
+    'float lvl=sqrt(clamp(L,0.,1.));' +
+    'float gi=floor(lvl*(gn-1.)+.5);' +
+    'vec2 iuv=fract(gl_FragCoord.xy/cell);' +
+    'float k=texture2D(gx,vec2((gi+iuv.x)/gn,iuv.y)).r;' +
+    'vec3 paper=pc;vec3 ink=ic;' +
+    'float str=mix(.20,1.,smoothstep(.05,.32,L));' +
+    'vec3 col=mix(paper,ink,k*str);' +
+    'col+=(h(gl_FragCoord.xy)-.5)*gr;' +
+    'gl_FragColor=vec4(col,1.);}';
+  var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+
+  var cv = document.getElementById("flower-gl");
+  if (!cv) return;
+  var gl = cv.getContext('webgl', { antialias: false, alpha: false });
+  if (!gl) return;
+  function sh(ty, src) { var x = gl.createShader(ty); gl.shaderSource(x, src); gl.compileShader(x); return x; }
+  var pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(pr); gl.useProgram(pr);
+  var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var lp = gl.getAttribLocation(pr, 'p');
+  gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 2, gl.FLOAT, false, 0, 0);
+  // glyph atlas: a density ramp built from LETTERS — Korean jamo + Latin,
+  // ordered light→heavy by ink coverage so brightness still maps to a mark.
+  // Index 0 is a space (deepest shadow); the tail is the fullest glyphs.
+  var CH = ' .......ㄱㅏrㄴcㅗtㅓoㄷaㄹeㅋxㅂsㅍwㅁmㅇㅎ', N = CH.length, G = 64;
+  var ac = document.createElement('canvas'); ac.width = N * G; ac.height = G;
+  var cx2 = ac.getContext('2d');
+  cx2.fillStyle = '#000'; cx2.fillRect(0, 0, ac.width, ac.height);
+  cx2.fillStyle = '#fff'; cx2.font = '700 ' + (G * .74) + 'px "Apple SD Gothic Neo","SF Mono",Menlo,monospace';
+  cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+  CH.split('').forEach(function (ch, i) { cx2.fillText(ch, i * G + G / 2, G / 2 + 2); });
+  var tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ac);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(pr, 'gx'), 0);
+  gl.uniform1f(gl.getUniformLocation(pr, 'gn'), N);
+  var uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 's');
+  var uPC = gl.getUniformLocation(pr, 'pc'), uIC = gl.getUniformLocation(pr, 'ic'), uGR = gl.getUniformLocation(pr, 'gr');
+  var uM = gl.getUniformLocation(pr, 'uMouse');
+  // the flower drifts toward the cursor; smoothed so it eases rather than snaps
+  var tmx = 0, tmy = 0, mx = 0, my = 0;
+  window.addEventListener('pointermove', function (e) {
+    tmx = (e.clientX / window.innerWidth - 0.5) * 2;
+    tmy = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+  var t0 = 0;
+  (function frame(ms) {
+    if (!t0) t0 = ms || 0;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = Math.max(2, cv.clientWidth * dpr) | 0, hh = Math.max(2, cv.clientHeight * dpr) | 0;
+    if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; gl.viewport(0, 0, w, hh); }
+    // dark palette (this hero is always dark) — paper ≈ hero bg, ink = subtle
+    gl.uniform3f(uPC, .071, .067, .063); gl.uniform3f(uIC, .58, .55, .5); gl.uniform1f(uGR, .022);
+    mx += (tmx - mx) * 0.045; my += (tmy - my) * 0.045;
+    gl.uniform2f(uM, reduce ? 0 : mx, reduce ? 0 : my);
+    gl.uniform2f(uR, w, hh);
+    gl.uniform1f(uT, reduce ? 4.0 : ((ms || 0) - t0) / 1000);
+    gl.uniform1f(uS, 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (!reduce) requestAnimationFrame(frame);
+  })(0);
+})();
+</script>
+<script>
+// ── final demo: the beta voice, playable in place. The page's own 2D
+// Futureself painter is the play surface — the analyser drives data-drive.
+(function () {
+  var audio = document.getElementById('d-audio');
+  var pb = document.getElementById('d-play');
+  var face = document.getElementById('d-face');
+  var cap = document.getElementById('d-cap');
+  if (!audio || !pb) return;
+  var cues = [], capLoaded = false;
+  function tc(x){ x=x.trim().split(':'); var s=parseFloat(x.pop().replace(',','.'))||0; var m=parseInt(x.pop()||'0',10)||0; var h=parseInt(x.pop()||'0',10)||0; return h*3600+m*60+s; }
+  function parseVTT(text){
+    var out=[], blocks=text.replace(/\r/g,'').split('\n\n');
+    for(var i=0;i<blocks.length;i++){ var ls=blocks[i].split('\n'), ti=-1;
+      for(var j=0;j<ls.length;j++){ if(ls[j].indexOf('-->')>-1){ ti=j; break; } }
+      if(ti<0) continue; var mm=ls[ti].split('-->');
+      var tx=ls.slice(ti+1).join('\n').trim(); if(tx) out.push({s:tc(mm[0]),e:tc(mm[1]),t:tx}); }
+    return out; }
+  function loadCaptions(){ if(capLoaded) return; capLoaded=true;
+    fetch('beta-en.vtt').then(function(r){ return r.ok?r.text():''; })
+      .then(function(x){ cues=x?parseVTT(x):[]; }).catch(function(){ cues=[]; }); }
+  var actx=null, analyser=null, data=null, pumping=false;
+  // file:// taints MediaElementSource and the browser mutes it — only route
+  // through WebAudio on http(s); locally the audio plays directly and the
+  // surface breathes on a synthesized level instead.
+  var canAnalyse = location.protocol === 'http:' || location.protocol === 'https:';
+  function initAudio(){ if(!canAnalyse) return; try{
+      actx=new (window.AudioContext||window.webkitAudioContext)();
+      var srcNode=actx.createMediaElementSource(audio);
+      analyser=actx.createAnalyser(); analyser.fftSize=256;
+      srcNode.connect(analyser); analyser.connect(actx.destination);
+      data=new Uint8Array(analyser.fftSize);
+    }catch(e){ analyser=null; } }
+  function pump(){
+    if(audio.paused){ pumping=false; if(face) delete face.dataset.drive; return; }
+    var level;
+    if(analyser){ analyser.getByteTimeDomainData(data);
+      var sum=0; for(var i=0;i<data.length;i++){ var v=(data[i]-128)/128; sum+=v*v; }
+      level=Math.min(1, Math.sqrt(sum/data.length)*3.4); }
+    else { var ct=audio.currentTime;
+      level=0.45+0.3*Math.abs(Math.sin(ct*2.1))+0.15*Math.sin(ct*5.3); }
+    if(face) face.dataset.drive=(0.12+level*0.88).toFixed(3);
+    requestAnimationFrame(pump); }
+  pb.addEventListener('click', function(){
+    if(!actx) initAudio();
+    if(actx && actx.state==='suspended') actx.resume();
+    loadCaptions();
+    if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); } });
+  audio.addEventListener('play', function(){ pb.classList.add('playing'); if(!pumping){ pumping=true; pump(); } });
+  audio.addEventListener('pause', function(){ pb.classList.remove('playing'); });
+  audio.addEventListener('ended', function(){ pb.classList.remove('playing'); if(cap) cap.textContent=''; });
+  audio.addEventListener('error', function(){ if(cap) cap.textContent='Could not load the audio.'; });
+  audio.addEventListener('timeupdate', function(){
+    if(!cap) return;
+    if(!cues.length){ cap.textContent=''; return; }
+    var ct=audio.currentTime, cur='';
+    for(var i=0;i<cues.length;i++){ if(ct>=cues[i].s && ct<cues[i].e){ cur=cues[i].t; break; } }
+    if(cap.textContent!==cur) cap.textContent=cur; });
+  // PostHog: the same beta_audio_* funnel as the live beta page
+  var started=false, marks={};
+  function track(ev, extra){ try{ if(!window.posthog) return;
+      var props={ lang:'en', t:Math.round(audio.currentTime||0), duration:Math.round(audio.duration||0) };
+      if(extra) for(var k in extra) props[k]=extra[k];
+      posthog.capture(ev, props); }catch(e){} }
+  audio.addEventListener('play', function(){ track('beta_audio_play',{resumed:started}); started=true; });
+  audio.addEventListener('pause', function(){ if(!audio.ended && audio.currentTime>0) track('beta_audio_pause'); });
+  audio.addEventListener('ended', function(){ track('beta_audio_complete'); });
+  audio.addEventListener('timeupdate', function(){ if(!audio.duration) return;
+    var p=audio.currentTime/audio.duration*100;
+    [25,50,75].forEach(function(m){ if(!marks[m]&&p>=m){ marks[m]=1; track('beta_audio_progress',{percent:m}); } }); });
+})();
 
 </script>
 <script type="module">
@@ -1096,24 +1485,25 @@ const BILLING = {
 }
 // Locked launch prices — keep in sync with docs/launch-billing.md.
 //
-// EUR here; the Korean page prints Apple's won price points, because at launch
-// this button goes to the App Store and Apple charges in local currency. When
-// BILLING.enabled flips, Stripe charges EUR everywhere.
+// KRW here, because at launch this button goes to the App Store and Apple
+// charges Korean buyers in won; the EUR figures are on the English page. When
+// BILLING.enabled flips, Stripe charges EUR everywhere — revisit this table
+// then rather than showing a won price that Stripe will not honour.
 //
 // Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
-// Plus. What is printed here is `subscription_plans.monthly_seconds` / 60 and
+// Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
 // `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
 // figures do not change with the cycle — only the price does.
 const PLANS = {
   light: {
-    talk: "150 min/mo", scenes: "60/mo",
-    monthly: { id: "light_monthly", price: "\u20ac9.99",   per: "/ month" },
-    annual:  { id: "light_annual",  price: "\u20ac79.99",  per: "/ year" },
+    talk: "150 min / mo", scenes: "60 / mo",
+    monthly: { id: "light_monthly", price: "$9.99",  per: "/ mo" },
+    annual:  { id: "light_annual",  price: "$74.99", per: "/ yr" },
   },
   plus: {
-    talk: "1,800 min/mo", scenes: "600/mo",
-    monthly: { id: "plus_monthly",  price: "\u20ac19.99",  per: "/ month" },
-    annual:  { id: "plus_annual",   price: "\u20ac199.99", per: "/ year" },
+    talk: "1,800 min / mo", scenes: "600 / mo",
+    monthly: { id: "plus_monthly",  price: "$19.99",  per: "/ mo" },
+    annual:  { id: "plus_annual",   price: "$199.99", per: "/ yr" },
   },
 }
 const TIERS = ["light", "plus"]
@@ -1147,7 +1537,7 @@ const params = new URLSearchParams(location.search)
 if (params.get("checkout") === "success") {
   const toast = document.createElement("div")
   toast.className = "toast"
-  toast.textContent = "Payment complete. Open the app and sign in with the same Apple account — your subscription is already active."
+  toast.textContent = "Payment complete. Open the app and sign in with the same Apple account; your subscription is already active."
   document.body.appendChild(toast)
   setTimeout(() => toast.remove(), 9000)
 }
