@@ -334,6 +334,14 @@ struct ConversationView: View {
     /// function charges no credits for `purpose: "turn"`), so a discarded
     /// speculation costs the learner nothing.
     private static let speculateAfterSilenceSeconds: Double = 0.6
+    /// Partial-settle bar for FIRING a speculation — deliberately looser than
+    /// `sttSettleSeconds` (0.7), which gates the real send. Measured
+    /// 2026-08-21: with both at 0.7 the recognizer's trailing partials pushed
+    /// the fire to ~0.3 s before the VAD confirmed (spec_lead_ms 318–341),
+    /// wasting most of the head start. A snapshot taken mid-rescore just
+    /// mismatches at adoption and refires — free, and capped per turn — so
+    /// the speculation can afford to guess earlier than the send can.
+    private static let speculateSettleSeconds: Double = 0.4
 
     /// A reply generation already in flight for a turn the VAD hasn't
     /// confirmed yet. `text` is the recognizer partial it answered; adoption
@@ -1443,7 +1451,7 @@ struct ConversationView: View {
                 if speculativeReply == nil,
                    specFiresThisTurn < Self.maxSpecFiresPerTurn,
                    audioSilence >= Self.speculateAfterSilenceSeconds,
-                   sinceTextChange >= Self.sttSettleSeconds {
+                   sinceTextChange >= Self.speculateSettleSeconds {
                     specFiresThisTurn += 1
                     fireSpeculativeReply(snapshot: live.transcript)
                 }
