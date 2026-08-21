@@ -73,17 +73,21 @@ and say something else (see the warning below).
 | Product id (permanent) | Display name EN | 표시 이름 KO | Pool per billing period |
 |---|---|---|---|
 | `…daily_monthly` / `…daily_annual` | Light | 라이트 | 150 min talk · 60 Watch scenes |
-| `…unlimited_monthly` / `…unlimited_annual` | Plus | 플러스 | 1,800 min talk · 600 Watch scenes |
+| `…unlimited_monthly` / `…unlimited_annual` | Plus | 플러스 | **Talk: no limit** · 600 Watch scenes |
 
 Descriptions (match the paywall's own lines — one situation, then the size):
 - **Light** — Keep it up as a habit. 150 minutes of talk and 60 Watch scenes each billing period.
-- **Plus** — Get fluent for an exam or interview. 1,800 minutes of talk and 600 Watch scenes each billing period.
+- **Plus** — Talk as much as you want, whenever you want. No limit on talk time; 600 Watch scenes each billing period.
 
-> **Never write "Unlimited" in a display name or description.** The ids read
-> `unlimited_*` only because they were registered before the rename and an Apple
-> product id can never be renamed or reused — not even after removal from sale
-> (`20260820220000_keep_registered_apple_ids`). Plus has a stated ceiling; a
-> display name claiming otherwise is a misleading-subscription rejection.
+> **Never write "Unlimited" in the display NAME.** The ids read `unlimited_*`
+> only because they were registered before the rename and an Apple product id
+> can never be renamed or reused — not even after removal from sale
+> (`20260820220000_keep_registered_apple_ids`). The tier is called **Plus**.
+>
+> Plus's talk time genuinely has no cap since `20260821120000`, so the
+> description may say so — but it must ALSO name the Watch count, which is a
+> real limit. A description that says "unlimited" full stop, with a 600-scene
+> cap unmentioned, is the misleading-subscription rejection.
 > `fastlane/metadata/review_information/notes.txt` explains the mismatch to the
 > reviewer — keep that paragraph.
 
@@ -144,7 +148,7 @@ Descriptions (match the paywall's own lines — one situation, then the size):
 - [ ] Sign Paid Applications agreement + banking/tax info (required to sell subscriptions)
 
 ### 2. Subscriptions (Monetization)
-- [ ] One Subscription Group, two tiers (Standard / Heavy)
+- [ ] One Subscription Group, two tiers — display names **Light** and **Plus** (see the IAP table above; the product ids say something else and cannot be changed)
 - [ ] Product IDs must EXACTLY match the server plan catalog's `apple_product_id` (StoreKitService loads IDs from the server)
 - [ ] Localized display name + description per product (EN + KR)
 - [ ] Prices + free-trial Introductory Offer (paywall has trial logic)
