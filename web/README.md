@@ -2,9 +2,16 @@
 
 Static pages, no build step. Everything (CSS/JS) is inlined.
 
-- `index.html` — English (the site root; was swapped out for a waitlist during the beta and restored 2026-08-18)
-- `waitlist.html` — the beta waitlist page, kept and `noindex`ed
-- `ko.html` — Korean (generated from index.html; marketing copy translated, phone mockup UI stays English like the real app). When you change index.html, port the change to ko.html.
+> **배포 상태 (2026-08-20): 루트는 아직 베타 모집 페이지다.** 새 풀 페이지는
+> `.next.html`로 대기 중 — 공개 결정 전에는 `index.next.html`/`ko.next.html`을
+> `index.html`/`ko.html` 위로 올리지 말 것.
+
+- `index.html` — LIVE: the beta waitlist page (= `beta.html`, audio-play PostHog tracking added 2026-08-20)
+- `ko.html` — LIVE parity: the July marketing page as deployed (unlinked, kept so no live URL changes)
+- `index.next.html` — the NEW English marketing page, work in progress (launch swaps this to index.html)
+- `ko.next.html` — the NEW Korean marketing page (the design lead — Korean is finalized first, then ported to en). App screens live in `shots/` (see shots/README.md for the slot map the user fills)
+- `beta.html` — same as the live root, kept under its own name
+- `waitlist.html` — an older minimal waitlist page, kept and `noindex`ed
 
 ## Replacing mockups with real captures
 
@@ -30,8 +37,21 @@ Any static host works. Point the project root at `web/`:
 
 ## Web billing (Stripe → Supabase → app)
 
-The pricing section is built in but **hidden** until configured (`BILLING.enabled`
-in the inline module script of each page). Flow:
+**The pricing section is always visible** — it states the plans and sends people
+to the App Store, which is the only place the app is sold at launch. What
+`BILLING.enabled` gates is just the BUY BUTTON: flipping it hides the App Store
+CTA (`[data-store-cta]`) and reveals the Stripe one (`.p-buy[data-tier]`). It
+used to hide the whole section, so a page selling an iOS app showed no price at
+all until a payment integration nobody needs at launch was configured.
+
+Prices, tier names and pool figures live in `PLANS` in each page's inline module
+script — keep them in step with `docs/launch-billing.md` and
+`subscription_plans.monthly_seconds` / `monthly_scenes`. The Korean page prints
+Apple's won price points and the English page EUR, because at launch Apple
+charges in local currency; **when `BILLING.enabled` flips, Stripe charges EUR
+everywhere and the won figures have to be revisited.**
+
+Stripe flow:
 
 ```
 site → Sign in with Apple (Supabase OAuth, same identity as the app)
@@ -56,9 +76,9 @@ Go-live checklist, in order:
    Services ID (same Apple team as the app, so the web login resolves to the
    SAME Supabase user as Sign in with Apple in the app) and add the site to
    Auth → URL Configuration → Redirect URLs.
-7. **Page config** — in both `index.html` and `ko.html`, fill `BILLING.supabaseUrl`
-   / `supabaseAnonKey`, set `enabled: true`, and replace the PLACEHOLDER prices
-   in `PLANS` with the real Stripe prices.
+7. **Page config** — in both pages fill `BILLING.supabaseUrl` /
+   `supabaseAnonKey`, set `enabled: true`, and make `PLANS` quote the real
+   Stripe prices (EUR) rather than the App Store price points.
 
 Notes:
 - Never link to this page's checkout from **inside** the iOS app (App Review).
@@ -69,7 +89,8 @@ Notes:
 
 ## Before launch
 
-- [ ] Replace `APP_STORE_URL` in the inline `<script>` at the bottom of BOTH `index.html` and `ko.html` with the App Store link (`https://apps.apple.com/app/id<APP_ID>`). All CTAs (`[data-appstore]`) pick it up automatically. It is the only value left to fill.
+- [ ] Replace `APP_STORE_URL` in the inline `<script>` at the bottom of BOTH pages with the App Store link (`https://apps.apple.com/app/id<APP_ID>`). All CTAs (`[data-appstore]`) pick it up automatically — **including the two pricing-card buttons**, so an unfilled value leaves the price section pointing at `#`. It is the only value left to fill.
+- [ ] Re-check the pricing figures against `subscription_plans` (Light 150 min / 60 scenes, Plus 1,800 / 600) and the prices against `docs/launch-billing.md`.
 - [ ] Add an `og:image` (1200x630) and reference it in the meta tags.
 - [x] Privacy policy page + footer link (`privacy.html` / `privacy-ko.html`).
 

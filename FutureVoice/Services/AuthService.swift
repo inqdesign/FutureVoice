@@ -85,6 +85,16 @@ final class AuthService: NSObject, ObservableObject {
 
     private func observeSession() async {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
+            // NOTE for the next supabase-swift MAJOR (warned about at runtime
+            // on 2.47): today `.initialSession` is emitted only after a
+            // refresh attempt, so what arrives here is valid or nil. The new
+            // behaviour (`emitLocalSessionAsInitialSession: true`) emits the
+            // locally stored session AS IS — possibly expired. Assigning that
+            // unguarded would make `isSignedIn` true on dead credentials, and
+            // `RootView` gates onboarding on exactly that: the learner would
+            // land in the app with a session no edge function will accept.
+            // When upgrading, drop an expired `.initialSession` here.
+            // https://github.com/supabase/supabase-swift/pull/822
             self.session = change.session
             // A code held back by a network blip during sign-up had only one
             // retry trigger — another sign-in, which a signed-in user never

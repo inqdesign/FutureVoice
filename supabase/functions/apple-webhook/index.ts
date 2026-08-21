@@ -6,10 +6,26 @@
 // itself never mints anything (StoreKitService just finishes the
 // transaction).
 //
-// Verification uses Apple's official JS library (SignedDataVerifier): the
-// signedPayload JWS is checked against Apple's pinned root CAs, and the
-// nested signedTransactionInfo / signedRenewalInfo JWS are decoded the same
-// way. verify_jwt = false — Apple can't send a Supabase JWT.
+// Verification is done HERE rather than by Apple's official JS library.
+// `SignedDataVerifier` validates the certificate chain through node:crypto's
+// `X509Certificate.verify()` / `.checkIssued()`, and the Supabase edge
+// runtime implements NEITHER — it throws "Not implemented:
+// crypto.X509Certificate.prototype.verify" with an empty message, so every
+// notification failed identically and said nothing about why. Measured
+// 2026-08-20 with a runtime self-test: the webhook had never once succeeded,
+// and could not have.
+//
+// What replaces it does the same four things, on Web Crypto (which the
+// runtime does implement) via @peculiar/x509:
+//   1. read the JWS header's x5c chain (leaf → intermediate → root),
+//   2. verify each link against the next one's public key,
+//   3. require the root to be byte-identical to a pinned Apple root,
+//   4. verify the JWS body with the leaf's public key.
+// Then the payload's own claims (bundleId, appAppleId, environment) are
+// checked — the library did that too, and skipping it would accept a
+// perfectly-signed notification meant for somebody else's app. The nested
+// signedTransactionInfo / signedRenewalInfo take the same path.
+// verify_jwt = false — Apple can't send a Supabase JWT.
 //
 // User mapping: StoreKitService.purchase() sets appAccountToken to the
 // Supabase user id, so every notification carries the uuid. Transactions
@@ -25,10 +41,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { Buffer } from "node:buffer"
-import {
-  SignedDataVerifier,
-  Environment,
-} from "npm:@apple/app-store-server-library@1.5.0"
+import * as x509 from "npm:@peculiar/x509@1.12.3"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
 
 const SOURCE_FN = "apple-webhook"
@@ -57,12 +70,9 @@ Deno.serve(async (req) => {
   try { body = await req.json() } catch { return json(400, { error: "invalid json" }) }
   if (!body.signedPayload) return json(400, { error: "missing signedPayload" })
 
-  // TestFlight bills through Sandbox, production through Production — accept
-  // both. Each verifier enforces its own environment, so try Production
-  // first and fall back to Sandbox on a mismatch.
-  const decoded = await decodeWithEitherEnvironment(body.signedPayload, bundleId, appAppleId)
+  const decoded = await decodeNotification(body.signedPayload, bundleId, appAppleId)
   if (!decoded) return json(401, { error: "signature verification failed" })
-  const { verifier, payload, environment } = decoded
+  const { payload, environment } = decoded
 
   const db = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -73,9 +83,12 @@ Deno.serve(async (req) => {
     const data = payload.data
     if (!data?.signedTransactionInfo) return json(200, { received: true }) // e.g. TEST notification
 
-    const tx = await verifier.verifyAndDecodeTransaction(data.signedTransactionInfo)
+    // Nested payloads are separately signed by Apple and get the same
+    // treatment — decoding them unverified would leave the amount, the
+    // product and the account token forgeable inside a genuine envelope.
+    const tx = await verifyJWS(data.signedTransactionInfo)
     const renewal = data.signedRenewalInfo
-      ? await verifier.verifyAndDecodeRenewalInfo(data.signedRenewalInfo)
+      ? await verifyJWS(data.signedRenewalInfo)
       : null
 
     const userId = tx.appAccountToken
@@ -136,27 +149,114 @@ Deno.serve(async (req) => {
 
 // ── helpers ────────────────────────────────────────────────────
 
-async function decodeWithEitherEnvironment(
+async function verifyJWS(jws: string): Promise<Record<string, any>> {
+  const [rawHeader, rawBody, rawSig] = jws.split(".")
+  if (!rawHeader || !rawBody || !rawSig) throw new Error("malformed JWS")
+
+  const header = JSON.parse(b64url(rawHeader).toString("utf8"))
+  if (header.alg !== "ES256") throw new Error(`unexpected alg ${header.alg}`)
+  const chain: string[] = header.x5c ?? []
+  if (chain.length < 2) throw new Error(`x5c too short (${chain.length})`)
+
+  const certs = chain.map((c) => new x509.X509Certificate(Buffer.from(c, "base64")))
+
+  // The pinned end of the chain. Byte equality rather than "the issuer name
+  // looks right": a forged chain can restate any name it likes, and this is
+  // the one link an attacker cannot.
+  const rootDer = new Uint8Array(certs[certs.length - 1].rawData)
+  if (!ROOT_CAS.some((pinned) => equalBytes(new Uint8Array(pinned), rootDer))) {
+    throw new Error("chain does not end at a pinned Apple root")
+  }
+
+  // Every link verified against the next one's key. Without this, the check
+  // above would let anyone append Apple's (public) root to their own leaf.
+  const now = new Date()
+  for (let i = 0; i < certs.length; i++) {
+    const cert = certs[i]
+    if (now < cert.notBefore || now > cert.notAfter) {
+      throw new Error(`cert ${i} outside its validity window`)
+    }
+    if (i + 1 < certs.length) {
+      const ok = await cert.verify({ publicKey: certs[i + 1].publicKey, signatureOnly: true })
+      if (!ok) throw new Error(`cert ${i} not signed by cert ${i + 1}`)
+    }
+  }
+
+  const key = await certs[0].publicKey.export()
+  const ok = await crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    b64url(rawSig),
+    new TextEncoder().encode(`${rawHeader}.${rawBody}`),
+  )
+  if (!ok) throw new Error("JWS signature does not match the leaf certificate")
+
+  return JSON.parse(b64url(rawBody).toString("utf8"))
+}
+
+function b64url(s: string): Buffer {
+  return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64")
+}
+
+function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+/**
+ * Verify a notification and confirm it is addressed to THIS app. Sandbox and
+ * Production are both accepted — TestFlight bills through Sandbox — but the
+ * payload has to say which it is, and `appAppleId` is only present, and only
+ * checked, in Production.
+ */
+async function decodeNotification(
   signedPayload: string,
   bundleId: string,
   appAppleId: number,
 ) {
-  for (const environment of [Environment.PRODUCTION, Environment.SANDBOX]) {
-    try {
-      const verifier = new SignedDataVerifier(
-        ROOT_CAS,
-        false, // no online OCSP from the edge runtime
-        environment,
-        bundleId,
-        environment === Environment.PRODUCTION ? appAppleId : undefined,
-      )
-      const payload = await verifier.verifyAndDecodeNotification(signedPayload)
-      return { verifier, payload, environment }
-    } catch {
-      continue
-    }
+  let payload: Record<string, any>
+  try {
+    payload = await verifyJWS(signedPayload)
+  } catch (e) {
+    console.error("apple-webhook signature rejected", {
+      reason: (e as Error)?.message || String(e),
+      unverifiedClaims: peekUnverified(signedPayload),
+    })
+    return null
   }
-  return null
+
+  const data = payload.data ?? {}
+  if (data.bundleId && data.bundleId !== bundleId) {
+    console.error("apple-webhook wrong bundle", { got: data.bundleId, want: bundleId })
+    return null
+  }
+  if (data.environment === "Production" && appAppleId && data.appAppleId !== appAppleId) {
+    console.error("apple-webhook wrong app id", { got: data.appAppleId, want: appAppleId })
+    return null
+  }
+  return { payload, environment: data.environment ?? "unknown" }
+}
+
+/** JWS payload claims WITHOUT signature checking — diagnostics only. */
+function peekUnverified(signedPayload: string) {
+  try {
+    const [, body] = signedPayload.split(".")
+    const json = JSON.parse(
+      Buffer.from(body.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"),
+    )
+    const tx = json?.data?.signedTransactionInfo
+    return {
+      notificationType: json?.notificationType,
+      subtype: json?.subtype,
+      environment: json?.data?.environment,
+      bundleId: json?.data?.bundleId,
+      appAppleId: json?.data?.appAppleId,
+      hasTransaction: typeof tx === "string",
+    }
+  } catch (e) {
+    return { peekFailed: (e as Error)?.message ?? String(e) }
+  }
 }
 
 /// Maps notification type (+subtype) to our status vocabulary:

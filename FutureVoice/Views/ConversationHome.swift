@@ -195,13 +195,16 @@ struct ConversationHome: View {
 
     // MARK: - Hero (welcome question + the goal ring / call button)
 
-    /// The ring's target. Daily-plan subscribers' goal IS their allowance
-    /// (5 min/day) — a self-set 10-minute goal would be unreachable on a
-    /// 5-minute plan, and aligning them makes "goal met" and "today's
-    /// minutes used" the same event. Everyone else keeps the self-set goal.
-    /// The big ring's 100% is the learner's OWN daily talk goal (Me → goal,
-    /// default 10 min) — for every tier. Plans decide what you CAN talk;
-    /// the goal is what you INTEND to talk, and only the learner sets it.
+    /// The ring's 100% is the learner's OWN daily talk goal (Me → goal,
+    /// default 10 min), for every tier.
+    ///
+    /// It briefly became "today's allowance" for Daily subscribers on
+    /// 2026-08-20, while the plan was metered per day and carry-over made
+    /// that number move. Monthly pools ended both premises the same evening:
+    /// nothing is metered per day any more, so there is no "today's
+    /// allowance" to show. Plans decide what you CAN talk; the goal is what
+    /// you INTEND to talk, and only the learner sets that. What's left of the
+    /// month lives on the avatar ring in the header instead.
     private var effectiveGoalMinutes: Int {
         dailyGoalMinutes
     }
@@ -639,21 +642,30 @@ struct ConversationHome: View {
     /// together up here. Each half keeps its own tap: balance → billing,
     /// avatar → profile.
     private var headerControl: some View {
-        // No number up here anymore — a text chip pushed the streak leftward
-        // and put a meter on the home screen. Remaining talk time is a RING
-        // around the avatar instead: full tank = full ring, draining as
-        // minutes go, orange for the last stretch. The exact figure lives one
-        // tap away in Me. Unlimited/subscribed accounts get a clean avatar —
-        // no ring to watch is the point of that tier.
+        // No number up here — a text chip pushed the streak leftward and put
+        // a meter on the home screen. What's left of the month is a RING
+        // around the avatar instead: full pool = empty ring, filling as
+        // minutes go. The exact figures live one tap away in Me.
         Button { showingProfile = true } label: {
             // Ring INSIDE the 30 pt slot (avatar shrinks to make room) — the
             // header buttons sit in glass capsules, and a ring drawn outside
             // the frame gets clipped into broken arcs by the capsule edge.
             ZStack {
-                // Ring for everyone except entitled subscribers — including
-                // the admin unlimited account, which exists to watch real
-                // burn and should see what a free user sees.
-                if let account, !account.isEntitled {
+                // Ring for an account with a pool it could plausibly reach the
+                // end of. Since the allowances went monthly that includes
+                // Light subscribers, not just free accounts — a month-long
+                // pool is exactly the thing worth a quiet gauge, and this is
+                // the quiet form: an arc, no digits, figures one tap away.
+                //
+                // NOT on Plus. 1,800 minutes is an hour every single day, so
+                // the arc sits near empty all month for almost everyone on it
+                // — a gauge that never moves is decoration, and putting one on
+                // the home screen of the tier that bought its way out of
+                // counting is the taximeter this design exists to avoid. They
+                // still have the exact figures in Me, where someone who wants
+                // them goes looking.
+                if let account, !account.isPlusPlan,
+                   account.monthlyCapSeconds != nil || !account.isEntitled {
                     // strokeBorder / inset keep the 3 pt stroke INSIDE the
                     // 30 pt frame — a centered stroke overhangs it by half a
                     // linewidth and the container clips the arc's caps flat.
@@ -676,25 +688,55 @@ struct ConversationHome: View {
             .padding(1)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(account.map {
-            "Profile & settings, \($0.balanceLabel) of \($0.tankMinutes) minutes of talk left"
+        // The label announces the gauge only when the gauge is drawn. On Plus
+        // there is no ring, so reading out a balance would describe something
+        // that isn't on screen.
+        .accessibilityLabel(account.flatMap { a -> String? in
+            a.isPlusPlan ? nil
+                         : "Profile & settings, \(a.balanceLabel) of \(a.tankMinutes) minutes of talk left"
         } ?? "Profile & settings")
     }
 
     private func refreshAccount() {
         #if DEBUG
-        // Screenshot captures run signed-out — inject a half-tank account so
-        // the avatar ring renders for design review.
-        if UserDefaults.standard.string(forKey: "capture") != nil {
-            account = AccountStatus(email: nil, secondsBalance: 2000,
-                                    planId: nil, subscriptionStatus: "inactive")
+        // Screenshot captures run signed-out — inject an account so the ring
+        // renders for design review. `home-light` injects a Light subscriber
+        // mid-period, which is the only way to see the allowance ring at an
+        // interesting value; `home-plus` is the tier that draws NO ring, and
+        // exists so that absence can be reviewed rather than assumed.
+        if let capture = UserDefaults.standard.string(forKey: "capture") {
+            account = capture.hasPrefix("home-light")
+                ? AccountStatus(email: nil, secondsBalance: 0,
+                                planId: "light_monthly", subscriptionStatus: "active",
+                                secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
+                                scenesUsedPeriod: 12, monthlyScenesCap: 60,
+                                fullTankSeconds: 9000)
+                : capture.hasPrefix("home-plus")
+                ? AccountStatus(email: nil, secondsBalance: 0,
+                                planId: "plus_monthly", subscriptionStatus: "active",
+                                secondsUsedPeriod: 3300, monthlyCapSeconds: 108_000,
+                                scenesUsedPeriod: 12, monthlyScenesCap: 600,
+                                fullTankSeconds: 108_000)
+                : AccountStatus(email: nil, secondsBalance: 2000,
+                                planId: nil, subscriptionStatus: "inactive")
+            applyAccountToRing()
             return
         }
         #endif
         // Through the gate, not around it: the ring and the launch decision
         // are the same snapshot, so what the ring shows is what the next tap
         // will be judged against.
-        Task { account = await BillingGate.shared.snapshot(force: true) }
+        Task {
+            account = await BillingGate.shared.snapshot(force: true)
+            applyAccountToRing()
+        }
+    }
+
+    /// The account lands AFTER the first draw. The hero ring no longer
+    /// depends on it (the goal is local), so this only exists to keep the
+    /// morph proxy's label in step when the snapshot changes anything.
+    private func applyAccountToRing() {
+        appState.talkRingHeadline = goalHeadline
     }
 
     // MARK: - First run

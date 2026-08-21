@@ -5,16 +5,51 @@ import SwiftUI
 /// between what we show and what we meter is a trust-breaker.
 ///
 /// The model in one line: talk minutes are spent by the in-call clock and by
-/// NOTHING else; Watch has its own separate daily count of scenes. Everything
-/// else — review, browsing, tapping around — is free.
+/// NOTHING else; Watch has its own separate pool of scenes; both are monthly
+/// and neither has a daily limit. Everything else — review, browsing, tapping
+/// around — is free.
 ///
 /// Scenes used to come out of the same daily minutes as talking, which meant
 /// buying "5 minutes of talk" and silently getting three on any day you also
 /// watched something. Since 2026-08-14 the two allowances are separate, and
 /// this page has to say so or the meter and the explanation disagree.
 struct CreditGuideView: View {
+    /// The viewer's own plan, so the carry-over section can use their real
+    /// numbers instead of a generic example. Nil = don't claim anything about
+    /// carry-over: not every plan has it, and a rule stated to someone it
+    /// doesn't apply to is worse than no rule.
+    var account: AccountStatus? = nil
+
     var body: some View {
         List {
+            // The pool sits FIRST: it is the shape of the whole plan, and
+            // the question that actually brings people here is "what am I
+            // allowed to do?" before "what does it cost me?".
+            if let account, let cap = account.monthlyCapSeconds {
+                Section {
+                    plainRow(icon: "calendar",
+                             title: cap / 60 >= 600
+                                 ? explain("\(cap / 3600) hours a month")
+                                 : explain("\(cap / 60) minutes a month"),
+                             // States the rule POSITIVELY and stops. The
+                             // trailing "there is no daily limit" said the
+                             // same thing again as a denial, and a denial
+                             // needs the reader to have expected the limit.
+                             detail: explain("Use them however you like — all in one call today, or spread over the month."))
+                    if let scenes = account.monthlyScenesCap {
+                        plainRow(icon: "play.circle.fill",
+                                 title: explain("\(scenes) Watch scenes a month"),
+                                 detail: explain("A separate pool. Watching a scene never takes a minute off your talk time."))
+                    }
+                } header: {
+                    Text("What your plan holds")
+                } footer: {
+                    Text(account.renewalLabel.isEmpty
+                         ? explain("Both refill at the start of each billing period.")
+                         : explain("Both refill on \(account.renewalLabel)."))
+                }
+            }
+
             Section {
                 costRow(icon: "phone.fill",
                         title: explain("Talking"), cost: explain("clock time"),
@@ -31,7 +66,7 @@ struct CreditGuideView: View {
             Section {
                 costRow(icon: "play.circle.fill",
                         title: explain("Watching a scene"), cost: explain("1 scene"),
-                        detail: explain("Watch has its own daily count, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."))
+                        detail: explain("Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."))
             } header: {
                 Text("Watch scenes")
             } footer: {
@@ -75,6 +110,23 @@ struct CreditGuideView: View {
                 .font(.subheadline.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(.tint)
+        }
+        .padding(.vertical, 2)
+    }
+
+    /// A rule with no price attached — no trailing tag, because there is no
+    /// number to put there.
+    private func plainRow(icon: String, title: String, detail: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .foregroundStyle(.tint)
+                .frame(width: 24)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.body)
+                Text(detail).font(.footnote).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 2)
     }

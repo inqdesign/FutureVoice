@@ -185,13 +185,46 @@ DB에는 `daily_weekly` / `unlimited_weekly` 행이 있지만 **가격이 확정
 
 ## 5. 상품 외에 반드시 함께 해야 하는 것
 
-- [ ] **App Store Server Notifications V2** 지정
-      → RevenueCat을 쓰면 **RC의 URL**을 넣고, RC에서 우리 `apple-webhook`으로
-        포워딩하도록 설정합니다 (`docs/revenuecat-setup.md` §3).
-      → RC를 안 쓰면 우리 엔드포인트를 직접 넣습니다:
-        `https://chhzjtigzdotacutwcyo.supabase.co/functions/v1/apple-webhook`
-      → **둘 중 하나만** 가능합니다. Apple은 앱당 URL 하나만 받습니다.
-- [ ] Supabase 시크릿 `APPLE_BUNDLE_ID`, `APPLE_APP_ID` 설정 확인
+- [ ] **App Store Server Notifications V2** — 애플 → **RevenueCat** → 우리
+      `apple-webhook`. (2026-08-20 확정. §3의 B안: RC SDK 없음, 앱 코드 수정
+      없음. RC는 결제 관리·분석 레이어이고 권한의 진실은 계속
+      `user_subscriptions`입니다.)
+
+      **① ASC** — <https://appstoreconnect.apple.com/apps/6792794655/appstore/info>
+      → **App Store 서버 알림**. 프로덕션·샌드박스 **두 칸 모두** RC 주소:
+
+      ```
+      https://api.revenuecat.com/v1/incoming-webhooks/apple-server-to-server-notification/cBOtWoIwTjiZzqtkmDCyrIMkvbpEyxgw
+      ```
+
+      버전 드롭다운이 안 보이면 정상입니다(애플이 V1을 접어 신규 설정은 V2 고정).
+
+      **② RC** — Apps → iOS 앱 → **Apple Server Notification Forwarding URL**:
+
+      ```
+      https://chhzjtigzdotacutwcyo.supabase.co/functions/v1/apple-webhook
+      ```
+
+      **이게 빠지면 결제가 우리 DB에 영영 안 들어옵니다.** RC는 애플 원본
+      알림을 그대로 넘기므로 `apple-webhook`은 수정이 필요 없습니다 — 서명도
+      `appAccountToken`도 원본 그대로입니다.
+
+      **③ RC** — 같은 화면의 **"Track new purchases from server-to-server
+      notifications"** 켜기. SDK를 안 쓰므로 꺼져 있으면 RC 대시보드가 빕니다.
+
+      **④ 검증** — TestFlight 결제 한 건. `user_subscriptions`에
+      `status='trialing'` 행이 생기고 `apple_original_tx_id`가 채워지면 성공.
+      (2026-08-20 현재 모든 행의 그 값이 비어 있어, 값이 들어오는 순간이
+      파이프라인이 처음 통과했다는 신호입니다.) RC Customers에도 같은 거래가
+      보여야 ③이 제대로 켜진 겁니다.
+
+      > 알아둘 것: 경로에 서드파티가 한 홉 늘었으므로, RC 포워딩이 어긋나면
+      > 결제는 됐는데 앱은 무구독으로 봅니다. ④를 실제로 통과시키기 전까지
+      > "설정했다"를 "된다"로 여기지 마세요. 그리고 SDK가 없는 동안 RC는
+      > 거래는 보지만 **우리 유저가 누군지는 모릅니다**(§3 한계) — 매출 집계는
+      > 정확하고, 계정 매칭이 필요해지면 그때 §4의 A안입니다.
+
+- [x] Supabase 시크릿 `APPLE_BUNDLE_ID`(`com.roro.futurevoice`) · `APPLE_APP_ID`(`6792794655`) — 2026-08-20 설정 완료
 - [ ] 앱 내 약관/개인정보 링크는 이미 페이월에 있음 (Apple 표준 EULA +
       `nawana.app/privacy.html`). ASC의 App Information에도 **같은** 링크를
       넣어야 합니다 — 서로 다르면 리젝 사유입니다.

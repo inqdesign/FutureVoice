@@ -16,11 +16,16 @@ import Supabase
 final class StoreKitService: ObservableObject {
 
     struct DBPlan: Decodable, Identifiable {
-        let id: String                 // 'daily_monthly'
-        let tier: String               // 'daily' | 'unlimited'
+        let id: String                 // 'light_monthly'
+        let tier: String               // 'light' | 'plus'
         let period: String             // 'weekly' | 'monthly' | 'annual'
-        let daily_seconds: Int?        // per-day talk allowance (minutes-native model)
-        let daily_scenes: Int?         // per-day Watch scene count (scenes left the talk meter 2026-08-14)
+        // Descriptive only since the pools went monthly — the "N minutes a
+        // day" figure the cards print (monthly / 30). Nothing meters a day.
+        let daily_seconds: Int?
+        let daily_scenes: Int?
+        // What is actually enforced: the pool per billing period.
+        let monthly_seconds: Int?
+        let monthly_scenes: Int?
         let apple_product_id: String
     }
 
@@ -122,7 +127,7 @@ final class StoreKitService: ObservableObject {
         do {
             plans = try await SupabaseProvider.shared
                 .from("subscription_plans")
-                .select("id,tier,period,daily_seconds,daily_scenes,apple_product_id")
+                .select("id,tier,period,daily_seconds,daily_scenes,monthly_seconds,monthly_scenes,apple_product_id")
                 .eq("is_active", value: true)
                 .execute()
                 .value

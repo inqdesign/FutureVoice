@@ -397,10 +397,7 @@ final class ElevenLabsClient {
             var errBody = Data()
             for try await b in bytes.prefix(512) { errBody.append(b) }
             let snippet = String(data: errBody, encoding: .utf8) ?? "<binary>"
-            if http.statusCode == 402 {
-                throw snippet.contains("scene_cap_reached")
-                    ? ElevenLabsError.sceneCapReached : ElevenLabsError.insufficientCredits
-            }
+            if http.statusCode == 402 { throw ElevenLabsError.wall(body: snippet) }
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
 
@@ -600,10 +597,7 @@ final class ElevenLabsClient {
         }
         guard (200..<300).contains(http.statusCode) else {
             let snippet = String(data: data.prefix(512), encoding: .utf8) ?? "<binary>"
-            if http.statusCode == 402 {
-                throw snippet.contains("scene_cap_reached")
-                    ? ElevenLabsError.sceneCapReached : ElevenLabsError.insufficientCredits
-            }
+            if http.statusCode == 402 { throw ElevenLabsError.wall(body: snippet) }
             throw ElevenLabsError.httpError(status: http.statusCode, body: snippet)
         }
     }
@@ -616,6 +610,12 @@ enum ElevenLabsError: Error, LocalizedError {
     /// A SUBSCRIBER used up today's Watch scenes. Never a paywall — they
     /// already paid, so `isOutOfCredits` deliberately does not match this.
     case sceneCapReached
+    /// A SUBSCRIBER used up today's TALK allowance (`daily_cap_reached`).
+    /// Same 402 as the two above and the same rule: not a paywall, not a
+    /// failure. Until 2026-08-20 this fell through to `insufficientCredits`
+    /// and told a paying learner they were out of credits — measured on a
+    /// Daily account whose Watch scenes had eaten the day's 300 s.
+    case dailyCapReached
 
     var errorDescription: String? {
         switch self {
@@ -632,7 +632,22 @@ enum ElevenLabsError: Error, LocalizedError {
         case .insufficientCredits: return "You're out of credits. Check your plan under Me → Account."
         case .sceneCapReached:
             return explain("You've watched today's scenes. New ones unlock at midnight — replaying the ones you have is always free.")
+        case .dailyCapReached:
+            // Surfaces that have no cap sheet of their own (drills, library
+            // previews) fall back to this line. It must never say "credits".
+            return explain("You've used today's talk time. It comes back at midnight — reviewing is always free.")
         }
+    }
+
+    /// Which of the three walls a 402 body is. All three are 402 so an old
+    /// client still stops; the `error` field is what says whether the answer
+    /// is "pay", "tomorrow", or "tomorrow, for Watch". Read the body in ONE
+    /// place — the two request paths (streamed / buffered) drifted apart the
+    /// first time this was written by hand twice.
+    static func wall(body: String) -> ElevenLabsError {
+        if body.contains("scene_cap_reached") { return .sceneCapReached }
+        if body.contains("daily_cap_reached") { return .dailyCapReached }
+        return .insufficientCredits
     }
 
     /// True when the account's custom-voice slots are full. The upstream error

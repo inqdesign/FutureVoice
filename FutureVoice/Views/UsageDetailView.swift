@@ -2,12 +2,20 @@ import SwiftUI
 
 /// "Where did my talk time go?" — the receipt behind the plan row.
 ///
-/// A bare "49 of 60 min" is the same opacity that made beta users afraid to
+/// A bare "49 of 150 min" is the same opacity that made beta users afraid to
 /// tap anything: it says how much is gone without saying what took it. This
 /// page answers both halves — what SPENT minutes (talking, Watch scenes),
 /// and, just as deliberately, what didn't (every review surface, listed with
 /// its count and a "Free" tag). Seeing "Review drills · 34 · Free" is the
 /// only way the promise stops being marketing copy.
+///
+/// **The receipt is scoped to the BILLING PERIOD** (2026-08-20). It used to
+/// open with "N of 150 min left this month" and then account for TODAY, with
+/// a "Watch this month" section wedged between two today-scoped ones and a
+/// 7-day chart at the bottom — three time-scales in one screen, and the one
+/// the header actually counts down from was the only one never itemized. The
+/// month leads now; today survives as a slice of it, because "what did the
+/// call I just made cost?" is a real question, just not the page's subject.
 struct UsageDetailView: View {
     let account: AccountStatus
     /// Screenshot harness only — renders this instead of fetching, so the
@@ -23,13 +31,16 @@ struct UsageDetailView: View {
             if loading && !usage.loaded {
                 Section { HStack { Spacer(); ProgressView(); Spacer() } }
             } else {
+                periodSection
                 todaySection
-                scenesSection
                 freeSection
-                weekSection
+                daysSection
             }
         }
-        .navigationTitle("Talk time")
+        // "Usage", not "Talk time" — its parent page is called Talk time now
+        // that buying moved out of it, and two pushes deep with the same title
+        // reads as a navigation bug.
+        .navigationTitle("Usage")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             if let previewUsage {
@@ -37,7 +48,7 @@ struct UsageDetailView: View {
                 loading = false
                 return
             }
-            usage = await UsageBreakdown.fetch()
+            usage = await UsageBreakdown.fetch(periodStart: account.periodStart)
             loading = false
         }
     }
@@ -59,93 +70,129 @@ struct UsageDetailView: View {
         }
     }
 
-    /// The ONE thing the number above can't say for itself: whether it comes
-    /// back. Nil where it has no answer to give — on Unlimited nothing counts
-    /// down, so the header is already the whole story and a caption under it
-    /// ("talk as much as you want") was words with no instruction in them.
+    /// The two things the number above can't say for itself: that nothing is
+    /// rationed per day, and when the pool comes back.
     private var headerCaption: String? {
-        if account.isUnlimitedPlan { return nil }
         if account.isTrialing {
-            // The trial is metered as Daily whatever plan is being trialed.
-            return explain("Your trial gives you \(account.tankMinutes) minutes a day, refilled at midnight.")
+            // The trial is metered at the Light tier's pool, pro-rated to the
+            // length of the sample.
+            return explain("Your trial gives you \(account.tankMinutes) minutes to use however you like.")
         }
         if account.isEntitled {
-            return explain("Refills to \(account.tankMinutes) minutes every day at midnight.")
+            // WHEN it comes back, and nothing else. It used to lead with "no
+            // daily limit", which denies a rule this app has never had — the
+            // useful half was always the date.
+            return account.renewalLabel.isEmpty ? nil
+                : explain("Refills on \(account.renewalLabel).")
         }
         if account.hasLegacyPool {
             // A one-time pool never refills — say so, or the number reads
-            // like a daily allowance that comes back tomorrow. Doesn't name
-            // its source: beta leftovers and an invite bonus land here alike.
+            // like an allowance that comes back. Doesn't name its source:
+            // beta leftovers and an invite bonus land here alike.
             return explain("What's left of your free talk time. It doesn't refill — only talking and Watch scenes use it.")
         }
         return explain("Talking needs a plan.")
     }
 
-    // MARK: - Today
+    // MARK: - This period
 
     /// Scenes left the talk meter on 2026-08-14: with a plan they cost one
-    /// COUNT off `daily_scenes`, not seconds off the talk allowance. Without
-    /// one they're still priced in seconds out of the balance.
-    private var scenesMeteredByCount: Bool { account.dailyScenesCap != nil }
+    /// COUNT off `monthly_scenes`, not seconds off the talk pool. Without one
+    /// they're still priced in seconds out of the balance.
+    private var scenesMeteredByCount: Bool { account.monthlyScenesCap != nil }
 
-    /// The meters that actually spend TALK minutes for this account.
-    private var talkMeters: [UsageBreakdown.Meter] {
-        scenesMeteredByCount ? usage.today.filter { $0.key != "tts_scene" } : usage.today
+    /// The meters that actually spend TALK minutes, out of a given split.
+    private func talkMeters(_ meters: [UsageBreakdown.Meter]) -> [UsageBreakdown.Meter] {
+        scenesMeteredByCount ? meters.filter { $0.key != "tts_scene" } : meters
+    }
+
+    /// Talk seconds this period. The SERVER's figure wherever it has one —
+    /// `talk_allowance` is what the meter enforces, and the header above is
+    /// counting down from it, so re-summing the ledger here would put two
+    /// numbers for one month on one screen. The ledger only fills in for a
+    /// free account, which has no pool for the server to report.
+    private var periodTalkSeconds: Int {
+        account.isEntitled && account.monthlyCapSeconds != nil
+            ? account.secondsUsedPeriod
+            : usage.periodTalkSeconds
     }
 
     @ViewBuilder
-    private var todaySection: some View {
+    private var periodSection: some View {
         Section {
-            if talkMeters.isEmpty {
-                Text(explain("You haven't used any talk time today."))
+            let meters = talkMeters(usage.period)
+            if periodTalkSeconds <= 0 && meters.isEmpty {
+                Text(explain("You haven't used any talk time yet this month."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             } else {
-                ForEach(talkMeters) { meter in
+                // One row per meter, but the TRAILING minutes on the talking
+                // row come from the pool the server enforces — the ledger
+                // supplies the count beside it, never the total.
+                ForEach(meters) { meter in
+                    row(icon: meter.icon,
+                        title: meter.title,
+                        detail: countLabel(meter),
+                        trailing: meter.key == "talk_time"
+                            ? totalLabel(periodTalkSeconds)
+                            : meter.durationLabel,
+                        trailingTint: .primary)
+                }
+                if meters.isEmpty {
+                    row(icon: "phone.fill",
+                        title: explain("Talking"),
+                        detail: nil,
+                        trailing: totalLabel(periodTalkSeconds),
+                        trailingTint: .primary)
+                }
+                // Watch is the SECOND allowance and is counted, not timed, so
+                // it sits with talking as a sibling rather than in a section
+                // of its own — but keeps its own unit, which is what stops it
+                // reading as minutes off the same pool.
+                if let cap = account.monthlyScenesCap {
+                    row(icon: "play.circle.fill",
+                        title: explain("Watch scenes"),
+                        detail: explain("A separate pool"),
+                        trailing: explain("\(account.scenesUsedPeriod) of \(cap)"),
+                        trailingTint: .primary)
+                }
+            }
+        } header: {
+            Text("This month")
+        }
+    }
+
+    // MARK: - Today
+
+    /// Today as a slice of the month above — no total line and no Watch row,
+    /// because neither is the question this section answers ("what did the
+    /// talking I just did cost?"). Hidden entirely on a quiet day: an empty
+    /// state here would be answering a question nobody asked.
+    @ViewBuilder
+    private var todaySection: some View {
+        let meters = talkMeters(usage.today)
+        if !meters.isEmpty {
+            Section {
+                ForEach(meters) { meter in
                     row(icon: meter.icon,
                         title: meter.title,
                         detail: countLabel(meter),
                         trailing: meter.durationLabel,
                         trailingTint: .primary)
                 }
-                HStack {
-                    Text("Total").font(.subheadline.weight(.semibold))
-                    Spacer()
-                    Text(totalLabel(talkMeters.reduce(0) { $0 + $1.seconds }))
-                        .font(.subheadline.weight(.semibold))
-                        .monospacedDigit()
-                }
-            }
-        } header: {
-            Text("Today")
-        }
-        // No footer. It said talking is metered by the call clock, under rows
-        // that already read "Talking · 8 min" — and its second half ("Watch
-        // scenes have their own count") is the Watch section sitting right
-        // below it. A receipt explains itself or it isn't a receipt.
-    }
-
-    /// Watch's own allowance — a COUNT, so it gets its own section rather
-    /// than a minutes row that would imply it drains the same pool.
-    @ViewBuilder
-    private var scenesSection: some View {
-        if let cap = account.dailyScenesCap {
-            Section {
-                row(icon: "play.circle.fill",
-                    title: explain("Watch scenes"),
-                    detail: nil,
-                    trailing: explain("\(account.scenesUsedToday) of \(cap)"),
-                    trailingTint: .primary)
             } header: {
-                Text("Watch today")
+                Text("Today")
             }
         }
     }
 
-    private func countLabel(_ meter: UsageBreakdown.Meter) -> String {
-        meter.key == "tts_scene"
-            ? explain("\(meter.count) lines played")
-            : explain("\(meter.count) check-ins")
+    /// The count under a meter's name, or nil where there isn't an honest
+    /// one. Talking used to show "24 check-ins", which counted `talk-tick`
+    /// posts — a 30-second server heartbeat, not anything the learner did.
+    /// The minutes beside it are the whole fact; a second number derived from
+    /// the same seconds only invited the reader to work out what it meant.
+    private func countLabel(_ meter: UsageBreakdown.Meter) -> String? {
+        meter.key == "tts_scene" ? explain("\(meter.count) lines played") : nil
     }
 
     // MARK: - Free
@@ -167,10 +214,10 @@ struct UsageDetailView: View {
         }
     }
 
-    // MARK: - Last 7 days
+    // MARK: - Recent days
 
     @ViewBuilder
-    private var weekSection: some View {
+    private var daysSection: some View {
         if !usage.days.isEmpty {
             Section {
                 ForEach(usage.days) { day in
@@ -195,7 +242,10 @@ struct UsageDetailView: View {
                     }
                 }
             } header: {
-                Text("Last 7 days")
+                // Not "Last N days": the window now follows the billing
+                // period, so any fixed number in this header would be wrong
+                // for most accounts on most days.
+                Text("Recent days")
             }
         }
     }
@@ -219,10 +269,11 @@ struct UsageDetailView: View {
                       : explain("\(seconds) sec")
     }
 
-    /// `detail` is a COUNT, not prose — "18 check-ins", "34 times today". A
-    /// row with nothing to count passes nil rather than a sentence: the
-    /// Watch row's caption used to explain the rules of scene counting in the
-    /// slot where every other row shows a number.
+    /// `detail` is a COUNT, not prose — "34 times today". A row with nothing
+    /// to count passes nil rather than a sentence: the Watch row's caption
+    /// used to explain the rules of scene counting in the slot where every
+    /// other row shows a number. ("A separate pool" is the one exception, and
+    /// earns it — it is the whole reason that row shows a different unit.)
     private func row(icon: String, title: String, detail: String?,
                      trailing: String, trailingTint: Color) -> some View {
         HStack(spacing: 12) {

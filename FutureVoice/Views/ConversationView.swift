@@ -35,6 +35,24 @@ struct ConversationView: View {
     /// Set when a reply (Gemini/TTS) fails for the latest user turn — drives
     /// an inline Retry button so a network blip doesn't lose what they said.
     @State private var failedTurnId: UUID?
+
+    /// Whether the feed still follows new lines to the bottom.
+    ///
+    /// It has to be a state, not a reflex. Live dictation rewrites the
+    /// partial bubble many times a second and every one of those used to
+    /// yank the view back down — so a learner reading back what they said
+    /// three turns ago got dragged to the floor while they were still
+    /// talking, which is the one moment they cannot do anything about it.
+    /// A DRAG is the only thing that turns following off, and coming back to
+    /// the bottom is the only thing that turns it on: content arriving must
+    /// never decide this, or appending a line would look exactly like the
+    /// learner scrolling away and following would end up switching itself
+    /// off the first time anyone spoke.
+    @State private var followTail = true
+    /// Viewport height of the feed, read from a background overlay so it
+    /// costs no layout. Paired with the bottom sentinel's offset to answer
+    /// "is the end of the transcript on screen".
+    @State private var feedViewportHeight: CGFloat = 0
     /// The last failure was a 402 — the user is out of credits. Retry is
     /// pointless until they top up, so the recovery UI leads with the paywall.
     @State private var outOfCredits = false
@@ -43,14 +61,31 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
-    /// Today's talk allowance is spent. Its own alert, not the error one —
+    /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
-    /// This account is on Daily, so there IS somewhere to go when the day
-    /// runs out. Resolved at call start so the alert's button is there the
-    /// moment the wall lands. False on Unlimited: nothing left to sell, and
-    /// the answer really is tomorrow.
+    /// This account is on Light, so there IS somewhere to go when the pool
+    /// runs out. Resolved at call start so the sheet's button is there the
+    /// moment the wall lands. False on Plus: nothing left to sell, and the
+    /// answer really is next month.
     @State private var canUpgradePlan = false
+    /// The plan's own pool in whole minutes, from the account snapshot.
+    /// Never hardcoded: the number is a plan setting on the server and a
+    /// stale constant here would misstate what they bought.
+    @State private var poolMinutes: Int?
+    /// When the pool refills, for the sheet's "back on the 14th" line.
+    @State private var renewalLabel = ""
+    /// What the cap sheet was dismissed FOR. A sheet can't raise the next
+    /// sheet while it is closing, so the choice is recorded and acted on in
+    /// `onDismiss`.
+    @State private var capChoice: CapChoice?
+    /// Set while the exit is on its way to the Practice tab — staged only
+    /// once the call screen is actually gone (see `close`).
+    @State private var routeToPracticeOnClose = false
+    /// Which tier the paywall should open on, when a caller named one.
+    @State private var paywallTier: String?
+
+    private enum CapChoice { case upgrade, review }
     /// Unified beta feedback modal — set to a milestone to present it.
     @State private var feedbackContext: FeedbackSheet.Context?
     /// endAndClose defers its dismiss until the first-talk feedback closes.
@@ -574,25 +609,33 @@ struct ConversationView: View {
             } message: {
                 Text(error ?? "")
             }
-            // A spent day is its own alert. On Daily it offers the way to
-            // keep going TODAY; on Unlimited there's nothing to sell, so it
-            // stays what it was — see you tomorrow.
-            .alert("That's today's talk time", isPresented: $dailyCapReached) {
-                if canUpgradePlan {
-                    Button("See Unlimited") {
-                        dailyCapReached = false
-                        showingPaywall = true
-                    }
+            // A spent pool is its own SHEET. It was an alert until 2026-08-20,
+            // which could state the rule but had nowhere to put the thing to
+            // do next — so a month that ran out read as a dead end with an
+            // upsell on it.
+            .sheet(isPresented: $dailyCapReached, onDismiss: {
+                switch capChoice {
+                case .upgrade:
+                    paywallTier = "unlimited"
+                    showingPaywall = true
+                case .review:  leaveForPractice()
+                case nil:      break
                 }
-                Button("OK") { dailyCapReached = false }
-            } message: {
-                Text(canUpgradePlan
-                     ? explain("Upgrading to Unlimited lets you keep talking today.")
-                     : explain("Your minutes reset at midnight. This call is saved — pick it up tomorrow."))
+                capChoice = nil
+            }) {
+                DailyAllowanceSheet(
+                    kind: .talk,
+                    canUpgrade: canUpgradePlan,
+                    allowance: poolMinutes,
+                    renewsOn: renewalLabel,
+                    onReview: { capChoice = .review },
+                    onUpgrade: { capChoice = .upgrade })
             }
-            .sheet(isPresented: $showingPaywall) {
+            .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
                 // Reached here from an out-of-credits failure → no trial pitch.
-                PaywallView()
+                // Opened FROM the spent-day sheet it carries the tier that
+                // sheet named, so "Go Unlimited" doesn't land on Daily.
+                PaywallView(preselectTier: paywallTier)
             }
             .sheet(item: $feedbackContext, onDismiss: {
                 if dismissAfterFeedback { dismissAfterFeedback = false; close() }
@@ -617,7 +660,12 @@ struct ConversationView: View {
             }
             .task { refreshDashboard() }
             .task { goalItems = TalkGoalPicker.pick() }
-            .task { canUpgradePlan = await AccountStatus.fetch().isDailyPlan }
+            .task {
+                let account = await AccountStatus.fetch()
+                canUpgradePlan = account.isLightPlan
+                poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
+                renewalLabel = account.renewalLabel
+            }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.
             // Nothing used to notice: the call stayed on screen, deaf, until
@@ -782,11 +830,39 @@ struct ConversationView: View {
                     }
                     // Bottom spacer so the last line isn't hidden behind controls
                     Color.clear.frame(height: 8).id(Self.bottomId)
+                        .background(GeometryReader { g in
+                            Color.clear.preference(
+                                key: FeedTailOffsetKey.self,
+                                value: g.frame(in: .named(Self.feedSpace)).minY)
+                        })
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 4)
             }
+            .coordinateSpace(name: Self.feedSpace)
+            // Background, so measuring the viewport can't affect the layout
+            // it is measuring.
+            .background(GeometryReader { g in
+                Color.clear
+                    .onAppear { feedViewportHeight = g.size.height }
+                    .onChange(of: g.size.height) { _, h in feedViewportHeight = h }
+            })
+            // Scrolling back to the end opts back in — the same gesture that
+            // opted out, in reverse. Only ever turns following ON: see
+            // `followTail`.
+            .onPreferenceChange(FeedTailOffsetKey.self) { minY in
+                guard minY <= feedViewportHeight + Self.tailSlack else { return }
+                if !followTail { followTail = true }
+            }
+            // The learner's hand outranks the transcript. `simultaneous` so
+            // the scroll view still scrolls normally; the minimum distance
+            // keeps a tap on a bubble from counting.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 8).onChanged { _ in
+                    if followTail { followTail = false }
+                }
+            )
             .onChange(of: turns.count) { _, _ in scroll(proxy) }
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
@@ -795,8 +871,14 @@ struct ConversationView: View {
 
     private static let partialId = "partial-indicator"
     private static let bottomId  = "feed-bottom"
+    private static let feedSpace = "conversation-feed"
+    /// How near the end still counts as being at the end. A live partial
+    /// bubble grows a line at a time, so an exact test would drop following
+    /// on the learner's own next word.
+    private static let tailSlack: CGFloat = 64
 
     private func scroll(_ proxy: ScrollViewProxy) {
+        guard followTail else { return }
         withAnimation(.easeOut(duration: 0.2)) {
             proxy.scrollTo(Self.bottomId, anchor: .bottom)
         }
@@ -1505,9 +1587,12 @@ struct ConversationView: View {
                 await startRecording()
             }
         } catch {
+            phase = .idle
+            // A spent day is not a failed opener — same rule as the meter's
+            // own wall, so it lands on the same sheet.
+            if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
-            phase = .idle
         }
     }
 
@@ -1916,13 +2001,17 @@ struct ConversationView: View {
                 "status": error.elevenLabsStatus ?? "",
                 "out_of_credits": error.isOutOfCredits ? "1" : "0",
             ])
-            outOfCredits = error.isOutOfCredits
-            failedTurnId = turnId
             phase = .idle
             // No voice will start for this turn, so nothing else will release
             // the held work. The learner still deserves the corrected line —
             // and Retry reuses this same user turn.
             flushDeferredTurnWork()
+            // Today's allowance, not a blip: no Retry row (retrying can only
+            // fail again today) and no error alert — the sheet says what
+            // happened and what's left to do.
+            if error.isDailyCapReached { dailyCapReached = true; return }
+            outOfCredits = error.isOutOfCredits
+            failedTurnId = turnId
         }
     }
 
@@ -2683,6 +2772,26 @@ struct ConversationView: View {
     private func close() {
         tearDown()
         if let onClose { onClose() } else { dismiss() }
+        // Staged AFTER the screen is gone, never before: the Practice tab
+        // lives UNDER this overlay, and a route consumed while the call is
+        // still fading would present the review deck on top of it.
+        if routeToPracticeOnClose {
+            routeToPracticeOnClose = false
+            appState.pendingPracticeRoute = .studying
+        }
+    }
+
+    /// "Go to Practice" from the spent-day sheet. The call can't continue
+    /// today, so leaving IS the answer — but a talk carrying the learner's
+    /// own turns is never dropped on the way out: it wraps up first (summary,
+    /// drills, book) and the Practice tab is where that flow's Done lands.
+    private func leaveForPractice() {
+        routeToPracticeOnClose = true
+        if turns.contains(where: { $0.role == .user }) && !didSaveCurrentSession {
+            Task { await endSession() }
+        } else {
+            close()
+        }
     }
 
     /// Hard-stop every live pipeline this screen owns, and mark the screen
@@ -2789,6 +2898,17 @@ struct ConversationView: View {
 }
 
 // MARK: - Subviews
+
+/// Where the end of the transcript sits relative to the top of the feed's
+/// viewport. Compared against the viewport height to answer one question:
+/// is the learner still reading the live end of the call, or did they scroll
+/// back into it? See `ConversationView.followTail`.
+private struct FeedTailOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = .greatestFiniteMagnitude
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
 
 private struct TurnView: View {
     let turn: Turn

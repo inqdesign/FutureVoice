@@ -52,15 +52,25 @@ struct UsageBreakdown {
         var minutes: Int { seconds / 60 }
     }
 
+    /// Everything since the billing period started — the axis the pool is
+    /// actually measured on since it went monthly. `today` is the same split
+    /// narrowed to the current UTC day, kept because "what did this call just
+    /// cost me?" is a different question from "where did the month go?".
+    var period: [Meter] = []
     var today: [Meter] = []
-    var week: [Meter] = []
     var freeToday: [FreeItem] = []
     var days: [Day] = []
     /// True once a fetch has landed — separates "nothing yet" from "empty".
     var loaded = false
 
-    var todaySeconds: Int { today.reduce(0) { $0 + $1.seconds } }
-    var weekSeconds: Int { week.reduce(0) { $0 + $1.seconds } }
+    /// Talk seconds this period as the LEDGER counts them. Only used where
+    /// the server has no pool figure of its own (a free account, whose
+    /// `talk_allowance` reports no cap) — a subscriber's month is read off
+    /// `AccountStatus.secondsUsedPeriod`, which is the number the meter
+    /// itself enforces. Two counts of the same month can only drift.
+    var periodTalkSeconds: Int {
+        period.first { $0.key == "talk_time" }?.seconds ?? 0
+    }
 
     // MARK: - Fetch
 
@@ -76,15 +86,30 @@ struct UsageBreakdown {
         }
     }
 
-    /// Last 7 days of ledger rows for the signed-in user, aggregated.
+    /// The window the receipt covers, in days back from now. The billing
+    /// period when the account has one — the pool is monthly, so a 7-day
+    /// receipt under a "150 min this month" header could never add up — and
+    /// two weeks otherwise, which is enough for the day bars to show a shape.
+    ///
+    /// Capped at 31 days + a day of slack: `billing_period_start` can sit
+    /// further back on an annual plan, and a year of turn rows is neither
+    /// fetchable nor a thing anyone reads.
+    static func windowDays(periodStart: Date?) -> Int {
+        guard let periodStart else { return 14 }
+        let days = Calendar.current.dateComponents([.day], from: periodStart, to: Date()).day ?? 14
+        return min(32, max(14, days + 1))
+    }
+
+    /// The billing period's ledger rows for the signed-in user, aggregated.
     /// Best-effort: any failure returns an unloaded breakdown rather than
     /// throwing — a usage page is never worth blocking settings for.
-    static func fetch() async -> UsageBreakdown {
+    static func fetch(periodStart: Date? = nil) async -> UsageBreakdown {
         guard let session = try? await SupabaseProvider.shared.auth.session else {
             return UsageBreakdown()
         }
+        let days = windowDays(periodStart: periodStart)
         let since = ISO8601DateFormatter().string(
-            from: Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date())
+            from: Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date())
 
         guard let rows: [LedgerRow] = try? await SupabaseProvider.shared
             .from("usage_ledger")
@@ -92,14 +117,18 @@ struct UsageBreakdown {
             .eq("user_id", value: session.user.id.uuidString)
             .gte("created_at", value: since)
             .order("created_at", ascending: false)
-            // A heavy week is a few thousand rows (every turn writes one);
-            // the cap keeps a pathological account from paging forever.
-            .limit(4000)
+            // A heavy month is several thousand rows (every turn writes one);
+            // the cap keeps a pathological account from paging forever. It
+            // truncates the OLDEST rows, which is why the headline minutes on
+            // the page come from the server's own pool figure and not from
+            // this sum — a clipped ledger costs the split some counts, never
+            // the number the learner is being held to.
+            .limit(8000)
             .execute()
             .value
         else { return UsageBreakdown() }
 
-        return aggregate(rows)
+        return aggregate(rows, since: periodStart)
     }
 
     // MARK: - Aggregation
@@ -140,26 +169,34 @@ struct UsageBreakdown {
         }
     }
 
-    private static func aggregate(_ rows: [LedgerRow]) -> UsageBreakdown {
+    private static func aggregate(_ rows: [LedgerRow], since periodStart: Date?) -> UsageBreakdown {
         var out = UsageBreakdown()
         out.loaded = true
 
         let todayKey = dayKey(Date())
+        // Rows older than the billing period are still fetched (the window is
+        // rounded up in whole days) but must not be counted into "this
+        // month" — the period's first day would otherwise carry the tail of
+        // the previous one.
+        let periodKey = periodStart.map(dayKey)
         var todayMeters: [String: Meter] = [:]
-        var weekMeters: [String: Meter] = [:]
+        var periodMeters: [String: Meter] = [:]
         var free: [String: FreeItem] = [:]
         var dayTotals: [String: Day] = [:]
 
         for row in rows {
             let day = String(row.created_at.prefix(10))
             let seconds = row.metadata?.seconds ?? 0
+            let inPeriod = periodKey.map { day >= $0 } ?? true
 
             if let (title, icon) = meterTitle(row.action), seconds > 0 {
-                var week = weekMeters[row.action]
-                    ?? Meter(key: row.action, title: title, icon: icon, seconds: 0, count: 0)
-                week.seconds += seconds
-                week.count += 1
-                weekMeters[row.action] = week
+                if inPeriod {
+                    var m = periodMeters[row.action]
+                        ?? Meter(key: row.action, title: title, icon: icon, seconds: 0, count: 0)
+                    m.seconds += seconds
+                    m.count += 1
+                    periodMeters[row.action] = m
+                }
 
                 var totals = dayTotals[day] ?? Day(date: day)
                 if row.action == "tts_scene" { totals.sceneSeconds += seconds }
@@ -192,28 +229,32 @@ struct UsageBreakdown {
         // Talking first, then scenes — the order they cost, most first.
         let order = ["talk_time", "tts_scene"]
         out.today = order.compactMap { todayMeters[$0] }
-        out.week = order.compactMap { weekMeters[$0] }
+        out.period = order.compactMap { periodMeters[$0] }
         out.freeToday = free.values.sorted { $0.count > $1.count }
         out.days = dayTotals.values.sorted { $0.date > $1.date }
         return out
     }
 
     #if DEBUG
-    /// A representative day + week for the screenshot harness.
+    /// A representative period + day for the screenshot harness.
     ///
     /// The numbers have to ADD UP against the sample account in
-    /// `DebugCaptureHarness` (Daily: 300 s/day): talk seconds here are what
-    /// its header counts down from, so 512 s under a 300 s cap shot a page
-    /// that said "3 min left" over rows totalling 8 min. Days are under the
-    /// cap for the same reason.
+    /// `DebugCaptureHarness` (Light: 3300 s spent of a 9000 s month): the
+    /// period rows are what its header counts down from, so a sample richer
+    /// than the pool shoots a page whose own two halves disagree. `today` is
+    /// a slice OF the period, never a separate story.
     static var sample: UsageBreakdown {
         var out = UsageBreakdown()
         out.loaded = true
+        out.period = [
+            Meter(key: "talk_time", title: explain("Talking"),
+                  icon: "phone.fill", seconds: 3300, count: 24),
+            Meter(key: "tts_scene", title: explain("Watch scenes"),
+                  icon: "play.circle.fill", seconds: 780, count: 12),
+        ]
         out.today = [
             Meter(key: "talk_time", title: explain("Talking"),
-                  icon: "phone.fill", seconds: 120, count: 4),
-            Meter(key: "tts_scene", title: explain("Watch scenes"),
-                  icon: "play.circle.fill", seconds: 143, count: 22),
+                  icon: "phone.fill", seconds: 120, count: 2),
         ]
         out.freeToday = [
             FreeItem(key: "drills", title: explain("Review drills"),
@@ -226,7 +267,10 @@ struct UsageBreakdown {
                      icon: "doc.text.fill", count: 3),
         ]
         let today = dayKey(Date())
-        out.days = [110, 300, 0, 240, 180, 295, 60].enumerated().map { i, secs in
+        // Sums to the period's 3300 s above, today's 120 s included — the
+        // bars and the month row are the same spend, drawn twice.
+        out.days = [120, 420, 0, 360, 180, 540, 90,
+                    300, 0, 240, 480, 150, 210, 210].enumerated().map { i, secs in
             Day(date: dayKey(Date().addingTimeInterval(Double(-i) * 86_400)),
                 talkSeconds: secs)
         }.filter { $0.seconds > 0 || $0.date == today }

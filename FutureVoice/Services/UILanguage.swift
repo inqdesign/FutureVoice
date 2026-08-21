@@ -76,6 +76,19 @@ func explain(_ key: String.LocalizationValue) -> String {
     String(localized: key, bundle: .explanations)
 }
 
+/// `explain`, for the rare English word that means two unrelated things in
+/// this app. A string catalog is keyed by the English text, so two such uses
+/// share ONE row and one translation — whichever was written last silently
+/// wins on both screens.
+///
+/// It has happened once, and visibly: the Light PLAN and the Light APPEARANCE
+/// mode both went through `explain("Light")`, so naming the tier 라이트
+/// renamed the appearance picker's row from 밝게 to 라이트. Give the newcomer
+/// its own key here rather than reword either screen around the collision.
+func explain(key: StaticString, default value: String.LocalizationValue) -> String {
+    String(localized: key, defaultValue: value, bundle: .explanations)
+}
+
 /// Marks a string as CHROME that can't be written as `Text("literal")` —
 /// it has to flow through a `String` first (a computed navigation title, a
 /// `switch` that returns a label, an interpolated headline).

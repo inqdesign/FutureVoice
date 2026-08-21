@@ -65,11 +65,34 @@
 ---
 
 ## In-App Purchases (fill display names / descriptions in ASC)
-Two subscription tiers (from the paywall):
-- **Standard** — For a steady daily habit: conversations, shadowing, and review.
-- **Heavy / Pro** — For heavy daily use: longer calls, more dialogues, more drills.
 
-> Confirm exact product IDs, prices, and durations in `PaywallView.swift` / App Store Connect before submission.
+Two tiers, four products. **The buyer only ever reads the localized Display
+Name**, so that is where the real tier name goes — the product ids are permanent
+and say something else (see the warning below).
+
+| Product id (permanent) | Display name EN | 표시 이름 KO | Pool per billing period |
+|---|---|---|---|
+| `…daily_monthly` / `…daily_annual` | Light | 라이트 | 150 min talk · 60 Watch scenes |
+| `…unlimited_monthly` / `…unlimited_annual` | Plus | 플러스 | 1,800 min talk · 600 Watch scenes |
+
+Descriptions (match the paywall's own lines — one situation, then the size):
+- **Light** — Keep it up as a habit. 150 minutes of talk and 60 Watch scenes each billing period.
+- **Plus** — Get fluent for an exam or interview. 1,800 minutes of talk and 600 Watch scenes each billing period.
+
+> **Never write "Unlimited" in a display name or description.** The ids read
+> `unlimited_*` only because they were registered before the rename and an Apple
+> product id can never be renamed or reused — not even after removal from sale
+> (`20260820220000_keep_registered_apple_ids`). Plus has a stated ceiling; a
+> display name claiming otherwise is a misleading-subscription rejection.
+> `fastlane/metadata/review_information/notes.txt` explains the mismatch to the
+> reviewer — keep that paragraph.
+
+> These were "Standard" and "Heavy / Pro" until 2026-08-20. A name must not tell
+> the buyer what they are: "heavy user" tells someone they are the small one.
+> Tier names say SIZE. See `AccountStatus.tierName`, the one place they live.
+
+> Confirm exact product IDs, prices, and durations in `PaywallView.swift` /
+> `subscription_plans` / App Store Connect before submission.
 
 ---
 

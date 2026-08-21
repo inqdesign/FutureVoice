@@ -84,6 +84,25 @@ struct MeTab: View {
                     }
                 }
 
+                // The subscription, on its own, first. It used to be a button
+                // three rows deep inside "Plan & talk time" — the one control
+                // that decides whether the app works at all, filed under a
+                // page about how many minutes are left. Buying and metering
+                // are different questions; only one of them is asked by
+                // someone who cannot talk yet.
+                Section {
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        row(icon: "sparkles",
+                            title: account.isEntitled ? explain("Subscription")
+                                                      : explain("Subscribe"),
+                            subtitle: account.isEntitled ? nil
+                                                         : explain("Talking needs a plan"),
+                            value: account.isEntitled ? account.planLabel : nil)
+                    }
+                }
+
                 // One row per topic, current state in the subtitle, details
                 // behind a push — the flat 25-row list buried what mattered.
                 Section {
@@ -91,8 +110,8 @@ struct MeTab: View {
                         planPage
                     } label: {
                         row(icon: "bolt.fill",
-                            title: explain("Plan & talk time"),
-                            subtitle: "\(account.talkTimeLabel) · \(account.planLabel)")
+                            title: explain("Talk time"),
+                            subtitle: account.talkTimeLabel)
                     }
                     // Sits under the plan row because both are about how much
                     // this account actually speaks — the row above says what
@@ -842,7 +861,11 @@ struct MeTab: View {
 
     /// `value` is for rows that state a number and go nowhere — a standing
     /// allowance rather than a destination.
-    private func row(icon: String, title: String, subtitle: String,
+    /// `subtitle` is optional: a row whose title and trailing value already
+    /// say everything ("Talk time … 132 / 150 min") must not be given a line
+    /// of prose to fill the slot. Existing callers pass a plain `String` and
+    /// promote for free.
+    private func row(icon: String, title: String, subtitle: String?,
                      value: String? = nil) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
@@ -851,7 +874,9 @@ struct MeTab: View {
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.body)
-                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                if let subtitle {
+                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                }
             }
             if let value {
                 Spacer(minLength: 8)
@@ -884,56 +909,7 @@ struct MeTab: View {
     }
 
     private var planPage: some View {
-        List {
-            Section {
-                // Tapping the balance opens the receipt: what spent minutes,
-                // and what didn't. "N of M min" alone is the same opacity
-                // that made beta users afraid to tap.
-                NavigationLink {
-                    UsageDetailView(account: account)
-                } label: {
-                    row(icon: "bolt.fill",
-                        title: account.talkTimeLabel,
-                        subtitle: explain("\(account.planLabel) · see where it went"))
-                }
-                Button {
-                    showingPaywall = true
-                } label: {
-                    row(icon: "sparkles",
-                        title: account.isEntitled ? explain("Manage plan") : explain("See plans"),
-                        subtitle: explain("Talk time lands automatically every cycle"))
-                }
-                // Watch is a SECOND allowance since 2026-08-14, and an
-                // invisible allowance is the thing that made the old shared
-                // meter feel dishonest. Shown only when a plan actually grants
-                // scenes — a free account still pays for them in seconds, so
-                // a count would be a lie there.
-                if let scenes = account.dailyScenesCap {
-                    row(icon: "play.circle.fill",
-                        title: account.sceneAllowanceLabel,
-                        subtitle: explain("Separate from your talk minutes"),
-                        value: "\(account.scenesUsedToday) / \(scenes)")
-                }
-                NavigationLink {
-                    CreditGuideView()
-                } label: {
-                    row(icon: "questionmark.circle",
-                        title: explain("What uses talk time?"),
-                        subtitle: explain("And what's always free"))
-                }
-                NavigationLink {
-                    InviteView()
-                } label: {
-                    row(icon: "gift",
-                        title: explain("Invite & earn talk time"),
-                        subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
-                }
-            } footer: {
-                Text(explain("Minutes buy talk time with your fluent self. Invite friends to earn more — reviewing always stays free."))
-            }
-        }
-        .navigationTitle("Plan & talk time")
-        .navigationBarTitleDisplayMode(.inline)
+        PlanPageView(account: account)
     }
 
     private var dailyCallPage: some View {

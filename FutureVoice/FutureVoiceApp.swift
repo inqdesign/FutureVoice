@@ -1126,7 +1126,7 @@ final class AppState: ObservableObject {
             // Both walls are 402 on the wire; a clone can only ever hit the
             // credit one, but the status has to stay faithful to what the
             // server actually answered.
-            case .insufficientCredits, .sceneCapReached: return 402
+            case .insufficientCredits, .sceneCapReached, .dailyCapReached: return 402
             case .httpError(let status, _): return status
             case .invalidResponse: return -1
             }

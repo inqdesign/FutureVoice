@@ -1,0 +1,1231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>nawana — The future speaks in your voice.</title>
+<meta name="description" content="Language learning with your own fluent voice — talk with it, shadow it, and watch your words add up. On the App Store for iOS." />
+<meta property="og:title" content="nawana — The future speaks in your voice." />
+<meta property="og:description" content="Sixty seconds of your voice becomes the fluent you — your conversation partner, your shadowing target, your proof." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://nawana.app/" />
+<link rel="canonical" href="https://nawana.app/" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='224' fill='%23FFFFFF'/%3E%3Cg fill='%23141310'%3E%3Crect x='290' y='237' width='410' height='100'/%3E%3Crect x='186' y='337' width='104' height='349'/%3E%3Crect x='700' y='337' width='104' height='349'/%3E%3Crect x='290' y='686' width='410' height='100'/%3E%3Crect x='806' y='686' width='95' height='100'/%3E%3C/g%3E%3C/svg%3E" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#FFFFFF" />
+<link rel="alternate" hreflang="en" href="https://nawana.app/" />
+<link rel="alternate" hreflang="ko" href="https://nawana.app/ko.html" />
+<style>
+/* ═══════════════════════════════════════════════════════════
+   nawana — pixel editorial, light.
+   The app's identity on paper: Geist Pixel display type, mono
+   labels, a hairline column grid, and ONE color — the mosaic
+   blue of the Futureself surface. Everything else is ink.
+   ═══════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(GeistPixel.ttf) format("truetype");
+}
+
+:root {
+  --paper:  #FCFBF8;              /* plain sections */
+  --paper2: #F1F0EA;              /* alt sections — warm gray */
+  --ink:    #141310;
+  --dim:    #57544D;
+  --faint:  #918E85;
+  --line:   rgba(20,19,16,0.16);
+  --lns:    rgba(20,19,16,0.07);
+  --blue:   #0A5CF5;              /* the mosaic's hot cell — the only color */
+  --blue-ink: #0847BE;
+
+  --sans:  "Helvetica Neue", Helvetica, -apple-system, "Apple SD Gothic Neo", Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+  --pixel: "Geist Pixel", "Helvetica Neue", -apple-system, "Apple SD Gothic Neo", sans-serif;
+
+  --pad: 40px;    /* outer gutter — the grid lines live here */
+  --cell: 30px;   /* content inset from its column line */
+}
+@media (max-width: 700px) { :root { --pad: 20px; --cell: 16px; } }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+/* The UA's `[hidden] { display: none }` loses to any rule that sets display —
+   `.btn` is inline-flex, so the Stripe checkout button rendered beside the App
+   Store one on a page with web billing switched off. */
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--blue); color: #fff; }
+a { color: inherit; }
+.mono { font-family: var(--mono); }
+
+/* section worlds: every section carries the hairline column grid */
+.sec { position: relative; }
+.sec::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: var(--pad); right: var(--pad);
+  pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(var(--gl), var(--gl)) no-repeat 0 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 25% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 50% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 75% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 100% 0 / 1px 100%;
+}
+.plain { --gl: var(--lns);  background: var(--paper);  --surf: #F0EFE9; --surf2: rgba(20,19,16,0.08); }
+.alt   { --gl: rgba(20,19,16,0.055); background: var(--paper2); --surf: #FFFFFF; --surf2: rgba(20,19,16,0.07); }
+.inner { position: relative; z-index: 1; padding-left: var(--pad); padding-right: var(--pad); }
+
+/* glyphs: the app mark, a pixel cell, an action arrow */
+.mark, .dot, .arrow { display: inline-block; flex: none; vertical-align: -0.1em; }
+.mark rect, .dot rect { fill: currentColor; }
+
+/* ── type: pixel display, mono labels, sans body ──────────── */
+h1 { font-family: var(--pixel); font-weight: 400; font-size: clamp(44px, 6.4vw, 92px); letter-spacing: -0.01em; line-height: 1.05; }
+h2 { font-family: var(--pixel); font-weight: 400; font-size: clamp(30px, 4vw, 54px); letter-spacing: -0.005em; line-height: 1.12; }
+.kicker {
+  font-family: var(--mono); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px; color: var(--dim);
+}
+.kicker .dot { width: 0.62em; height: 0.62em; color: var(--blue); vertical-align: 0; }
+.kicker .mono { color: var(--blue); }
+
+/* ── buttons: sharp editorial blocks ──────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 24px;
+  font-family: var(--sans); font-size: 15px; font-weight: 500;
+  padding: 15px 22px; text-decoration: none; cursor: pointer;
+  border: 0; border-radius: 0; transition: background 0.16s, color 0.16s, box-shadow 0.16s;
+}
+.btn .arrow { width: 1.15em; height: 1.15em; vertical-align: -0.24em; }
+.btn-white, .btn-black { background: var(--ink); color: var(--paper); }
+.btn-white:hover, .btn-black:hover { background: var(--blue); color: #fff; }
+.btn-dim { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.btn-dim:hover { box-shadow: inset 0 0 0 1px var(--ink); }
+
+/* ── reveal ───────────────────────────────────────────────── */
+.js .rv { opacity: 0; transform: translateY(20px); transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.2,0.7,0.2,1); transition-delay: var(--d, 0s); }
+.rv.in { opacity: 1; transform: none; }
+
+/* ── nav ──────────────────────────────────────────────────── */
+nav.sec {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(252,251,248,0.85);
+  backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
+  border-bottom: 1px solid var(--line);
+}
+.nav-in { display: flex; align-items: center; height: 64px; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: var(--pixel); font-size: 19px; font-weight: 400; text-decoration: none; }
+.logo .mark { width: 19px; height: 19px; }
+.logo sup { font-size: 8px; color: var(--faint); }
+.navlinks { margin-left: auto; display: flex; align-items: center; gap: 26px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.navlinks a { text-decoration: none; }
+.navlinks a:hover { color: var(--ink); }
+.navlinks .btn { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; padding: 11px 18px; }
+@media (max-width: 860px) { .navlinks a:not(.btn) { display: none; } }
+/* the nav sits on the night — dark chrome */
+nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65; --line: rgba(245,242,235,0.14); background: rgba(11,10,9,0.82); color: var(--ink); border-bottom: 1px solid rgba(245,242,235,0.12); }
+.navlinks .btn { background: #F5F2EB; color: #12110E; }
+.navlinks .btn:hover { background: #2F6FFF; color: #fff; }
+
+/* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
+   Screens carry their own light iOS variables so they read identically
+   on the night hero and the paper sections. ── */
+.iphone { position: relative; width: 316px; border-radius: 52px; background: #010101; padding: 9px; flex: none;
+  box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 60px 110px -35px rgba(0,0,0,0.6); }
+.iphone .di { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; border-radius: 14px; background: #000; z-index: 5; }
+/* the screen keeps the capture's EXACT aspect (1206×2622) — no crop, no stretch */
+.iphone .screen { position: relative; width: 100%; aspect-ratio: 1206 / 2622; border-radius: 43px; overflow: hidden;
+  background: #FFFFFF; color: #101013; display: flex; flex-direction: column;
+  --ink: #101013; --dim: #55555A; --faint: #8E8E93; --line: rgba(0,0,0,0.16); --lns: rgba(0,0,0,0.08);
+  --surf: #EFEFF4; --surf2: rgba(0,0,0,0.06); }
+.sbar { display: flex; justify-content: space-between; align-items: center; padding: 17px 27px 4px; font-size: 13.5px; font-weight: 600; }
+.sbar .sic { display: flex; gap: 5px; align-items: center; }
+.sbar .sic svg { height: 11px; width: auto; display: block; }
+.app-top { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 18px 4px; }
+.app-top .t { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.app-top .tm { font-family: var(--mono); font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.app-body { flex: 1; display: flex; flex-direction: column; padding: 6px 14px 10px; overflow: hidden; min-height: 0; }
+.tabbar { display: flex; border-top: 0.5px solid rgba(0,0,0,0.14); padding: 7px 6px 22px; background: #F9F9FB; }
+.tabbar .ti { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: #8E8E93; }
+.tabbar .ti svg { width: 21px; height: 21px; }
+.tabbar .ti.on { color: #0A5CF5; }
+.call-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 22px; }
+.call-bottom .fs-pill { width: 168px; height: 56px; }
+.call-bottom .end { width: 46px; height: 46px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.call-bottom .end svg { width: 20px; height: 20px; transform: rotate(135deg); }
+.iphone .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.iphone .dl { gap: 10px; margin-top: auto; }
+.iphone .dl-bub { font-size: 13.5px; padding: 9px 12px; border-radius: 15px; }
+.iphone .dl-name { font-size: 10px; }
+.iphone .f-sug { font-size: 11.5px; padding: 7px 10px; border-radius: 11px; background: rgba(10,92,245,0.08); color: #0847BE; }
+.iphone .f-sug svg { width: 11px; height: 11px; }
+@media (max-width: 700px) { .iphone { width: 282px; } }
+
+/* ── scrollytelling: the phone peeks from the hero's bottom edge, pins
+   at the viewport centre, and its SCREEN walks the core flow while a
+   big caption changes beside it. Height = 1 hero + 5 beats. ── */
+.scrolly { position: relative; height: 620vh; }
+.s-hero { position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 90px var(--pad) 0; pointer-events: none; }
+.s-hero a { pointer-events: auto; }
+.s-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.s-phone { position: relative; z-index: 2; will-change: transform; }
+.s-caps { position: absolute; inset: 0; z-index: 1; }
+.s-cap { position: absolute; top: 50%; left: var(--pad); right: 58%; transform: translateY(calc(-50% + 14px));
+  opacity: 0; transition: opacity 0.45s ease, transform 0.45s ease; padding-left: var(--cell); text-align: left; }
+.s-cap.on { opacity: 1; transform: translateY(-50%); }
+.s-cap .ix { font-family: var(--pixel); font-size: 14px; letter-spacing: 0.12em; color: #7CA5FF; }
+.s-cap h3 { margin-top: 14px; font-weight: 800; font-size: clamp(30px, 3.4vw, 52px); letter-spacing: -0.03em; line-height: 1.16; }
+.s-cap p { margin-top: 14px; font-size: 17px; color: var(--dim); max-width: 20em; }
+.s-num { position: absolute; top: 50%; right: var(--pad); transform: translateY(-50%); z-index: 0;
+  font-family: var(--pixel); font-size: clamp(70px, 9vw, 150px); color: rgba(124,165,255,0.2);
+  opacity: 0; transition: opacity 0.45s ease; }
+.s-num.on { opacity: 1; }
+.s-screens { position: relative; flex: 1; min-height: 0; display: flex; }
+.s-scr { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.4s ease; }
+.s-scr.on { opacity: 1; }
+@media (max-width: 860px) {
+  .s-cap { left: var(--pad); right: var(--pad); top: 6vh; bottom: auto; text-align: center; transform: translateY(10px); padding-left: 0; }
+  .s-cap.on { transform: none; }
+  .s-cap p { margin-left: auto; margin-right: auto; }
+  .s-pin { align-items: flex-end; padding-bottom: 3vh; }
+  .s-phone { width: min(272px, 64vw); }
+  .s-num { display: none; }
+}
+.home-ring { position: relative; width: 156px; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin: 14px auto 0; box-shadow: inset 0 0 0 0.5px var(--lns); }
+.home-ring canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hr-mic { position: absolute; inset: 0; display: grid; place-items: center; }
+.hr-mic i { width: 46px; height: 46px; border-radius: 50%; background: #0A5CF5; color: #fff; display: grid; place-items: center; }
+.hr-mic svg { width: 19px; height: 19px; }
+.home-lb { text-align: center; font-size: 14px; font-weight: 600; margin-top: 10px; }
+.home-sub { text-align: center; font-size: 11px; color: var(--faint); margin-top: 2px; }
+.home-row { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; padding: 12px 14px; border-radius: 14px; background: var(--surf); font-size: 12.5px; }
+.home-row b { font-weight: 600; }
+.home-row span { color: var(--faint); font-size: 11px; }
+.endwrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.endwrap .eb2 { width: 62px; height: 62px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.endwrap .eb2 svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.endwrap .et { font-size: 15px; font-weight: 700; }
+.endwrap .es { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.endwrap .es i { width: 4px; height: 4px; border-radius: 50%; background: #0A5CF5; animation: blink 1.2s ease-in-out infinite; }
+.endwrap .es i:nth-child(2) { animation-delay: 0.2s; }
+.endwrap .es i:nth-child(3) { animation-delay: 0.4s; }
+.bk-cover { margin: 10px 4px 2px; border-radius: 14px; background: #101013; color: #F5F2EB; padding: 16px 16px 14px; }
+.bk-cover .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; color: #7CA5FF; text-transform: uppercase; }
+.bk-cover .t2 { margin-top: 6px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.bk-cover .m { margin-top: 12px; font-family: var(--mono); font-size: 9.5px; color: rgba(245,242,235,0.6); }
+.bk-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; margin-top: 8px; border-radius: 12px; background: var(--surf); font-size: 12.5px; }
+.bk-row b { font-weight: 600; }
+.bk-row span { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+.p-score { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 4px 0; padding: 13px 14px; border-radius: 14px; background: var(--surf); }
+.p-score .n { font-family: var(--pixel); font-size: 30px; color: #0A5CF5; line-height: 1; }
+.p-score .l2 { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); text-transform: uppercase; }
+.p-bars { display: flex; gap: 4px; align-items: flex-end; height: 26px; width: 76px; }
+.p-bars i { flex: 1; border-radius: 2px; background: #0A5CF5; }
+.p-drill { margin: 8px 4px 0; padding: 12px 14px; border-radius: 14px; background: var(--surf); }
+.p-drill .q { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.p-drill .a { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #0A5CF5; }
+.p-drill .a svg { width: 12px; height: 12px; }
+.p-chiprow { display: flex; gap: 6px; margin: 8px 4px 0; flex-wrap: wrap; }
+.p-chip { font-size: 11px; padding: 6px 10px; border-radius: 100px; background: var(--surf); color: var(--ink); }
+.p-chip.b { background: rgba(10,92,245,0.1); color: #0847BE; }
+
+/* ── night: the page opens as an incoming call from the future self.
+   One glowing thread runs from the ring to the hang-up; the page turns
+   to paper the moment the textbook is born. ── */
+.night {
+  background: #0B0A09; color: #F5F2EB;
+  --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65;
+  --line: rgba(245,242,235,0.16); --lns: rgba(245,242,235,0.07);
+  --gl: rgba(245,242,235,0.045); --surf: #1C1A17; --surf2: rgba(245,242,235,0.1);
+}
+.n-glow { position: absolute; left: 50%; top: 560px; width: 1000px; height: 1000px; transform: translate(-50%,-50%); pointer-events: none; background: radial-gradient(closest-side, rgba(47,111,255,0.17), transparent 70%); }
+.n-hero { position: relative; z-index: 1; padding: 92px var(--pad) 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.n-kicker { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #7CA5FF; display: flex; gap: 10px; align-items: center; }
+.n-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #2F6FFF; animation: blink 1.6s ease-in-out infinite; }
+.night h1 { margin-top: 32px; font-size: clamp(46px, 7vw, 110px); }
+.n-sub { margin-top: 28px; max-width: 30em; font-size: 19px; line-height: 1.6; color: #C9C4BA; }
+/* the ringing orb — double-ring cadence, like a phone */
+.n-orbwrap { position: relative; margin-top: 66px; width: min(62vw, 330px); aspect-ratio: 1; }
+.n-orb { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; box-shadow: 0 50px 130px -30px rgba(47,111,255,0.5), inset 0 0 0 0.5px var(--line); animation: dring 2.6s ease-in-out infinite; }
+.n-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.halo { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(124,165,255,0.5); opacity: 0; animation: haloout 2.6s ease-out infinite; pointer-events: none; }
+.halo.h2 { animation-delay: 0.3s; }
+@keyframes dring { 0%, 20%, 100% { transform: scale(1); } 5%, 15% { transform: scale(1.03); } 10% { transform: scale(1); } }
+@keyframes haloout { 0% { transform: scale(1); opacity: 0.55; } 60% { transform: scale(1.5); opacity: 0; } 100% { transform: scale(1.5); opacity: 0; } }
+.n-caller { margin-top: 32px; font-size: 16px; color: var(--ink); font-weight: 600; }
+.n-caller span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 11.5px; font-weight: 400; letter-spacing: 0.12em; color: var(--faint); text-transform: uppercase; }
+.n-ctas { margin-top: 38px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.night .btn-white, .night .btn-black { background: #F5F2EB; color: #12110E; }
+.night .btn-white:hover, .night .btn-black:hover { background: #2F6FFF; color: #fff; }
+.n-note { display: block; margin-top: 26px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--faint); }
+.n-note b { font-weight: 500; color: var(--dim); }
+/* the call thread */
+.n-story { position: relative; z-index: 1; margin-top: 100px; padding: 0 var(--pad); display: flex; flex-direction: column; align-items: center; }
+.n-story::before { content: ""; position: absolute; left: 50%; top: -70px; bottom: 120px; width: 1px; background: linear-gradient(rgba(47,111,255,0), rgba(47,111,255,0.55) 10%, rgba(47,111,255,0.55) 90%, rgba(47,111,255,0)); }
+.n-beat { position: relative; display: flex; flex-direction: column; align-items: center; padding: 52px 0; }
+.n-time { font-family: var(--pixel); font-size: 15px; letter-spacing: 0.1em; color: #7CA5FF; background: #0B0A09; padding: 7px 13px; box-shadow: inset 0 0 0 1px rgba(124,165,255,0.35); }
+.n-dl { margin-top: 36px; width: min(560px, 100%); display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.n-dl .dl-bub { font-size: 17px; padding: 13px 17px; border-radius: 20px; }
+.n-dl .f-sug { font-size: 14.5px; padding: 10px 14px; background: rgba(93,140,255,0.16); color: #A9C4FF; }
+.n-cap { margin-top: 34px; font-size: 15.5px; color: var(--dim); text-align: center; }
+.n-cap b { color: var(--ink); font-weight: 600; }
+.n-endrow { margin-top: 36px; display: flex; align-items: center; gap: 18px; font-family: var(--pixel); font-size: 16px; color: var(--dim); }
+.n-endrow .eb { width: 58px; height: 58px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 10px 30px -8px rgba(224,72,60,0.6); }
+.n-endrow .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+/* the book is born on the seam — half night, half day */
+.n-bookbeat { padding-bottom: 0; }
+.n-bookbeat h2 { margin-top: 26px; max-width: 15em; text-align: center; }
+.n-book { position: relative; z-index: 2; margin-top: 56px; margin-bottom: -100px; }
+.n-book .bcov { position: relative; width: 302px; border-radius: 8px 18px 18px 8px; background: #FCFBF8; color: #141310; padding: 36px 30px 30px 42px; text-align: left; box-shadow: 0 60px 120px -30px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(20,19,16,0.1); }
+.n-book .bcov::before { content: ""; position: absolute; left: 17px; top: 0; bottom: 0; width: 1px; background: rgba(20,19,16,0.16); }
+.n-book .bk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #0A5CF5; }
+.n-book .bt { margin-top: 12px; font-family: var(--pixel); font-size: 30px; line-height: 1.12; }
+.n-book .bm { margin-top: 36px; font-family: var(--mono); font-size: 11.5px; color: rgba(20,19,16,0.55); }
+/* dawn: paper again — you study what the night produced */
+.dawn { padding-top: 170px; padding-bottom: 30px; }
+.dawn-in { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dawn .sub { margin-top: 16px; color: var(--dim); font-size: 16.5px; }
+.dawn .f-study { margin-top: 46px; grid-template-columns: repeat(2, 214px); gap: 12px; }
+@media (max-width: 700px) {
+  .n-hero { padding-top: 64px; }
+  .n-story { margin-top: 72px; }
+  .n-book { margin-bottom: -84px; }
+  .dawn { padding-top: 140px; }
+  .dawn .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── flow: the one loop, right under the hero — call → book → study.
+   Each step SHOWS the app (iOS-shaped artifacts, like .kv), text only frames. ── */
+.flow { padding-top: 96px; padding-bottom: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.flow .kicker { justify-content: center; }
+.flow-steps { margin-top: 58px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.fstep { display: flex; flex-direction: column; align-items: center; }
+.fstep h3 { font-family: var(--sans); font-weight: 800; font-size: clamp(24px, 3.2vw, 40px); letter-spacing: -0.03em; line-height: 1.18; }
+.fstep p { margin-top: 10px; font-size: 16px; color: var(--dim); }
+.flink { width: 1px; height: 52px; margin: 26px 0; background: var(--line); position: relative; }
+.flink::after { content: ""; position: absolute; left: 50%; bottom: -3px; width: 8px; height: 8px; background: var(--blue); transform: translateX(-50%); }
+.fart { margin-top: 28px; }
+.f-call { display: flex; align-items: center; gap: 16px; padding: 13px 18px 13px 13px; border-radius: 26px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.f-call .fs-pill { width: 116px; height: 44px; border-radius: 18px; }
+.f-call .tag { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--dim); display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.f-call .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; animation: blink 1.6s ease-in-out infinite; }
+.f-dl { width: 340px; max-width: 86vw; text-align: left; }
+.f-sug { margin-top: 7px; display: inline-flex; align-items: center; gap: 7px; text-align: left; font-size: 13px; font-weight: 600; color: var(--blue-ink); background: rgba(10,92,245,0.09); padding: 9px 13px; border-radius: 14px; line-height: 1.35; }
+.f-sug svg { width: 13px; height: 13px; flex: none; color: var(--blue); }
+.f-end { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.f-end .eb { width: 56px; height: 56px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px -6px rgba(224,72,60,0.55); }
+.f-end .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.f-book { position: relative; }
+.f-book .back { position: absolute; inset: 0; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--lns); }
+.f-book .back.b1 { transform: translate(7px, 7px); }
+.f-book .back.b2 { transform: translate(14px, 14px); opacity: 0.7; }
+.f-book .cover { position: relative; width: 252px; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--line); padding: 26px 24px 22px 32px; text-align: left; }
+.f-book .cover::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.f-book .bk { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); }
+.f-book .bt { margin-top: 10px; font-size: 25px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.f-book .bm { margin-top: 30px; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.f-study { display: grid; grid-template-columns: repeat(2, 186px); gap: 10px; }
+.f-card { border-radius: 18px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); padding: 14px 16px 15px; text-align: left; }
+.f-card.wide { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.f-card .l { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.f-card .v { margin-top: 7px; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); line-height: 1.35; }
+.f-card .s { margin-top: 5px; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+.f-card .s svg { width: 12px; height: 12px; color: var(--blue); }
+.f-card .cefr { display: inline-block; margin-left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 400; padding: 2.5px 6px; background: rgba(10,92,245,0.1); color: var(--blue-ink); border-radius: 6px; vertical-align: 2px; }
+.f-score { margin-top: 8px; font-family: var(--pixel); font-size: 46px; line-height: 1; color: var(--blue); }
+.f-bars { display: flex; gap: 6px; align-items: flex-end; height: 40px; width: 120px; padding-bottom: 4px; }
+.f-bars i { flex: 1; border-radius: 3px; background: var(--blue); }
+@media (max-width: 700px) {
+  .flow { padding-top: 72px; padding-bottom: 84px; }
+  .flink { height: 40px; margin: 18px 0; }
+  .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 384px; }
+}
+
+/* ── call strip: a live line ruled across the page ────────── */
+.callstrip {
+  margin-top: 88px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 22px; padding: 18px 0;
+  position: relative; z-index: 1;
+}
+.callstrip .tag { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--dim); display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.callstrip .tag.mono { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.callstrip .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; flex: none; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+/* ── manifesto: the core claims, huge and high-contrast ────── */
+.manif { padding-top: 150px; padding-bottom: 60px; }
+.m-line { margin: 0 auto 120px; max-width: 15em; text-align: center;
+  font-size: clamp(32px, 4.6vw, 68px); font-weight: 800;
+  letter-spacing: -0.035em; line-height: 1.18; color: var(--faint); }
+.m-line b { color: var(--ink); font-weight: 800; }
+.m-line:last-child { margin-bottom: 100px; }
+@media (max-width: 700px) { .manif { padding-top: 100px; } .m-line { margin-bottom: 80px; } }
+
+/* ── why: lead + idea cells on the grid ───────────────────── */
+.why { padding-top: 110px; }
+.why .lead { margin-top: 44px; font-size: clamp(23px, 2.4vw, 32px); line-height: 1.42; letter-spacing: -0.015em; max-width: 24em; }
+.ideas {
+  margin-top: 100px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.idea { padding: 50px var(--cell) 92px; }
+.idea .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.idea h4 { margin-top: 42px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.idea p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .ideas { grid-template-columns: 1fr; } .idea { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── marquee: the loop, in pixels ─────────────────────────── */
+.marquee { border-top: 1px solid var(--line); margin-top: 0; padding: 52px 0; overflow: hidden; white-space: nowrap; position: relative; z-index: 1; }
+.marquee .row { display: inline-flex; align-items: center; gap: 58px; font-family: var(--pixel); font-size: clamp(44px, 5.2vw, 76px); color: var(--ink); animation: slide 40s linear infinite; padding-right: 58px; }
+.marquee .dot { width: 0.26em; height: 0.26em; color: var(--blue); vertical-align: 0.06em; }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ── stages: copy + live app artifact, ruled apart ────────── */
+.stage {
+  border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: 1fr 1fr; min-height: 620px;
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.stage-copy { padding: 88px var(--cell) 100px; display: flex; flex-direction: column; }
+.stage.flip .stage-copy { order: 2; }
+.stage-copy h2 { margin-top: 46px; max-width: 10em; font-size: clamp(28px, 3.8vw, 52px); }
+.stage-copy .one { margin-top: 24px; font-size: 19px; color: var(--dim); max-width: 26em; line-height: 1.6; }
+.stage-copy .one strong { color: var(--ink); font-weight: 700; }
+.hows { margin-top: auto; padding-top: 52px; list-style: none; }
+.hows li { border-top: 1px solid var(--lns); padding: 16px 0; font-size: 16px; color: var(--dim); display: flex; gap: 13px; line-height: 1.55; }
+.hows li b { color: var(--ink); font-weight: 700; }
+.hows li .dot { width: 9px; height: 9px; margin-top: 7px; color: var(--blue); }
+.stage-show { padding: 88px var(--cell) 100px; display: flex; align-items: center; justify-content: center; }
+@media (max-width: 960px) {
+  .stage, .stage.flip { grid-template-columns: 1fr; min-height: 0; }
+  .stage-copy, .stage.flip .stage-copy { order: 0; padding-bottom: 36px; }
+  .stage-show { padding-top: 0; }
+}
+
+/* ── spec sheet: an index, ruled row by row ───────────────── */
+.specs { padding-top: 130px; }
+.specs .head { margin-top: 44px; max-width: 14em; }
+.spec-table { margin-top: 84px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.srow { display: grid; grid-template-columns: 1fr 1fr 2fr; padding: 24px var(--pad); border-bottom: 1px solid var(--lns); align-items: baseline; transition: background 0.15s; }
+.srow:hover { background: rgba(10,92,245,0.04); }
+.srow .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); padding-left: var(--cell); }
+.srow .nm { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; padding-left: var(--cell); }
+.srow .ds { font-size: 15px; color: var(--dim); line-height: 1.55; padding: 0 var(--cell); }
+@media (max-width: 860px) { .srow { grid-template-columns: 1fr 3fr; } .srow .ds { grid-column: 2; } }
+
+/* ── trust cells ──────────────────────────────────────────── */
+.trust-sec { padding-top: 130px; }
+.trust-sec h2 { margin-top: 44px; }
+.trust {
+  margin-top: 84px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.tcell { padding: 50px var(--cell) 92px; }
+.tcell .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.tcell h4 { margin-top: 40px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.tcell p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .trust { grid-template-columns: 1fr; } .tcell { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── pricing ──────────────────────────────────────────────── */
+.pricing-sec { padding-top: 130px; }
+.cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
+.cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
+.cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
+.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; padding: 0 var(--pad); position: relative; z-index: 1; }
+.plan { padding: 50px var(--cell) 66px; display: flex; flex-direction: column; align-items: flex-start; }
+.plan .p-name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan .p-badge { margin-left: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; background: var(--blue); color: #fff; padding: 3px 8px; }
+.plan .p-price { margin-top: 30px; font-family: var(--pixel); font-size: clamp(34px, 3.4vw, 48px); letter-spacing: -0.01em; }
+.plan .p-price span { font-family: var(--mono); font-size: 14px; color: var(--faint); letter-spacing: 0; }
+.plan .p-credits { margin-top: 8px; font-size: 15px; color: var(--ink); }
+.plan .p-note { margin-top: 14px; font-size: 14.5px; color: var(--dim); max-width: 22em; }
+/* The same two labelled rows, in the same order, on both cards — the shape the
+   app's own plan picker uses, so the site and the paywall compare alike. A
+   prose sentence per plan cannot be compared across a gutter. */
+.p-specs { margin-top: 26px; width: 100%; max-width: 20em; border-top: 1px solid var(--lns); }
+.p-specs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--lns); }
+.p-specs dt { font-size: 14.5px; color: var(--dim); }
+.p-specs dd { margin: 0; font-family: var(--mono); font-size: 15px; letter-spacing: 0.02em; }
+/* The per-day equivalent, under the monthly figure it converts. A size cue for
+   a number nobody has an instinct for — never a limit; the pool has none. */
+.p-specs .p-sub { border-bottom: 0; padding: 0 0 11px; margin-top: -9px; }
+.p-specs .p-sub dd { font-size: 12.5px; color: var(--faint); }
+.plan .p-buy { margin-top: 38px; }
+.plan .p-buy[disabled] { opacity: 0.5; cursor: default; }
+.p-fine { margin-top: 40px; font-size: 13.5px; color: var(--faint); max-width: 46em; padding-bottom: 60px; line-height: 1.6; }
+.p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
+@media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+
+/* ── final + footer ───────────────────────────────────────── */
+.final { padding-top: 140px; }
+.final h2 { max-width: 13em; }
+.final .sub { margin-top: 24px; color: var(--dim); font-size: 17.5px; }
+.final .hero-ctas { margin-top: 40px; justify-content: flex-start; }
+.final .callstrip { margin-top: 100px; }
+footer { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--faint); }
+.foot-in { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 26px var(--pad) 34px; position: relative; z-index: 1; }
+.foot-in .links { margin-left: auto; display: flex; gap: 24px; }
+footer a { color: var(--dim); text-decoration: none; }
+footer a:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .js .rv { opacity: 1; transform: none; }
+  .marquee .row { animation: none; }
+}
+
+/* ═══════ live app key-UI — the app's face, drawn in place ═══════ */
+/* These stay iOS-shaped on purpose: rounded, system-blue, alive.  */
+:root { --ac: #0A5CF5; }
+.kv { width: 100%; max-width: 380px; margin: 0 auto; font-family: var(--sans); }
+.kv-talk { min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 22px; }
+.dl { display: flex; flex-direction: column; gap: 12px; }
+.dl-turn { display: flex; }
+.dl-turn.you { justify-content: flex-end; }
+.dl-col { display: flex; flex-direction: column; max-width: 84%; }
+.dl-turn.you .dl-col { align-items: flex-end; }
+.dl-name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--faint); margin: 0 4px 5px; }
+.dl-bub { font-size: 15.5px; line-height: 1.36; letter-spacing: -0.01em; padding: 11px 14px; border-radius: 18px; background: var(--surf); color: var(--ink); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.dl-turn.you .dl-bub { background: var(--ac); color: #fff; box-shadow: none; }
+.dl-bub.cur { box-shadow: 0 0 0 2px rgba(10,92,245,0.35); }
+.dl-call .dl-bub { font-size: 17px; }
+.dl-acc { display: flex; gap: 16px; margin: 7px 4px 0; }
+.dl-turn.you .dl-acc { justify-content: flex-end; }
+.dl-acc a { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ac); }
+.dl-acc svg { width: 12px; height: 12px; }
+.fs-pill { position: relative; width: 176px; height: 62px; border-radius: 26px; overflow: hidden; align-self: center; box-shadow: inset 0 0 0 0.5px var(--line); }
+.fs-pill.wide { flex: none; }
+.fs-pill canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fs-ic { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink); }
+.fs-ic svg { width: 22px; height: 22px; }
+.sc-head { margin-bottom: 10px; }
+.sc-head .who { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--faint); }
+.sc-head .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 3px; color: var(--ink); }
+.wc-bar { display: flex; gap: 10px; margin-top: 18px; }
+.wc-bar .b { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 100px; font-size: 15.5px; font-weight: 600; }
+.wc-bar .b svg { width: 16px; height: 16px; }
+.wc-bar .restart { background: var(--surf2); color: var(--ac); }
+.wc-bar .play { background: var(--ac); color: #fff; }
+.sh-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sh-head .l { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.sh-head .r { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.kara { font-size: 23px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.5; margin-top: 10px; }
+.kara .k { color: var(--faint); padding: 1px 3px; border-radius: 6px; }
+.kara .k.sel { background: rgba(10,92,245,0.13); }
+.kara .k.done { color: var(--ink); }
+.kara .k.now { color: var(--ac); }
+.scrub { margin-top: 20px; padding: 16px; border-radius: 24px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.track { position: relative; height: 52px; border-radius: 10px; background: var(--surf2); }
+.track .tick { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 1.5px; height: 16px; background: var(--faint); opacity: 0.55; }
+.track .band { position: absolute; top: 0; bottom: 0; background: rgba(10,92,245,0.16); border-radius: 10px; }
+.track .h { position: absolute; top: 0; bottom: 0; width: 14px; border-radius: 5px; background: var(--ac); transform: translateX(-50%); display: grid; place-items: center; }
+.track .h::after { content: ""; width: 2px; height: 16px; border-radius: 2px; background: rgba(255,255,255,0.9); }
+.track .ph { position: absolute; top: -4px; bottom: -4px; width: 2.5px; border-radius: 2px; background: var(--ink); }
+.tl-labels { display: flex; justify-content: space-between; margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tl-labels .loop { color: var(--ac); }
+.tl-ctl { display: flex; align-items: center; gap: 18px; margin-top: 14px; position: relative; }
+.tl-ctl > svg { width: 42px; height: 42px; color: var(--ac); }
+.tl-ctl .sp { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; padding: 8px 12px; border-radius: 100px; background: var(--surf2); }
+.tl-ctl .mic { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 56px; height: 56px; border-radius: 50%; background: var(--ac); display: grid; place-items: center; box-shadow: 0 6px 18px -6px rgba(8,71,190,0.6); }
+.tl-ctl .mic svg { width: 22px; height: 22px; color: #fff; }
+.kv-ppl { position: relative; height: 420px; }
+.kv-ppl .you { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.kv-ppl .you .disc { width: 94px; height: 94px; border-radius: 50%; overflow: hidden; position: relative; box-shadow: inset 0 0 0 0.5px var(--line); }
+.kv-ppl .you .disc canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kv-ppl .you .nm { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.p-bub { position: absolute; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; animation: kvbob 5s ease-in-out infinite; }
+.p-bub .ava { border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: rgba(10,92,245,0.1); color: var(--ac); box-shadow: inset 0 0 0 1px rgba(10,92,245,0.28); }
+.p-bub .nm { font-size: 12px; font-weight: 600; color: var(--ink); }
+.p-bub .rl { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+@keyframes kvbob { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-50%,-57%); } }
+.kv-cloud { position: relative; height: 420px; }
+.cw { position: absolute; transform: translate(-50%,-50%); font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); }
+.cw.used { color: var(--faint); font-weight: 500; }
+.cw .badge { position: absolute; left: -6px; top: -8px; }
+.cw .badge svg { width: 12px; height: 12px; }
+.cw .book { color: var(--ac); }
+.cw .check { color: #1E9E5A; }
+@media (prefers-reduced-motion: reduce) { .p-bub { animation: none; } }
+</style>
+<!-- PostHog web analytics -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  // Never track local dev (file://, localhost) or opted-out browsers (nawana.app/?ph=off).
+  var _opt=(location.protocol==='file:')||/^(localhost|127\.|0\.0\.0\.0|\[?::1)/.test(location.hostname);
+  try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
+  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
+</script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="arrowr">
+      <path d="M3.5 12h15M12.5 6l6 6-6 6" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
+    </g>
+    <g id="pixeldot"><rect x="8" y="8" width="8" height="8"/></g>
+    <g id="appmark">
+      <rect x="290" y="237" width="410" height="100"/>
+      <rect x="186" y="337" width="104" height="349"/>
+      <rect x="700" y="337" width="104" height="349"/>
+      <rect x="290" y="686" width="410" height="100"/>
+      <rect x="806" y="686" width="95" height="100"/>
+    </g>
+  </defs>
+</svg>
+
+<nav class="sec plain">
+  <div class="inner nav-in">
+    <a class="logo" href="#"><svg class="mark" viewBox="0 0 1024 1024"><use href="#appmark"/></svg>nawana<sup>™</sup></a>
+    <div class="navlinks">
+      <a href="#talk">Talk</a>
+      <a href="#watch">Watch</a>
+      <a href="#practice">Practice</a>
+      <a href="#pricing" id="nav-pricing" hidden>Pricing</a>
+      <a href="ko.html">한국어</a>
+      <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═════════ NIGHT — an incoming call from the future self.
+     The whole top of the page is one scene: the ring, the talk, the
+     hang-up — and the textbook is born on the seam into daylight. ═════════ -->
+<header class="sec night" id="story">
+  <div class="n-glow" aria-hidden="true"></div>
+  <div class="scrolly" id="scrolly">
+    <div class="s-hero">
+      <div class="n-kicker rv"><i></i>The most personal way to learn a language</div>
+      <h1 class="rv" style="--d:0.06s">Learn the language<br />with the fluent you.</h1>
+      <p class="n-sub rv" style="--d:0.12s">It isn't growing for one reason &mdash; you don't speak enough.</p>
+      <div class="n-ctas rv" style="--d:0.18s">
+        <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      </div>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17+</b> · Seven days free</span>
+    </div>
+    <div class="s-pin">
+      <div class="s-caps">
+        <div class="s-cap"><div class="ix">01 / 05</div><h3>Conversations start<br />from your interests</h3><p>One tap, like placing a call.</p></div>
+        <div class="s-cap"><div class="ix">02 / 05</div><h3>Talk with the<br />fluent future you</h3><p>From the situations you actually need.</p></div>
+        <div class="s-cap"><div class="ix">03 / 05</div><h3>Every talk becomes<br />your own textbook</h3><p>Your expressions, words, grammar — analyzed.</p></div>
+        <div class="s-cap"><div class="ix">04 / 05</div><h3>Spoken words build<br />your wordbook</h3><p>Everything you say checks itself off.</p></div>
+        <div class="s-cap"><div class="ix">05 / 05</div><h3>Growth,<br />measured</h3><p>Only from what you actually said.</p></div>
+        <span class="s-num">01</span><span class="s-num">02</span><span class="s-num">03</span><span class="s-num">04</span><span class="s-num">05</span>
+      </div>
+      <div class="iphone s-phone" id="s-phone">
+        <div class="screen">
+          <div class="s-screens">
+            <!-- 01 · Talk home — real capture -->
+            <div class="s-scr on"><img class="shot" src="shots/en-01.png" alt="" /></div>
+            <!-- 02 · in-call — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-02.png" alt="" /></div>
+            <!-- 03 · after the call: the talk is a scored book — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-03.png" alt="" /></div>
+            <!-- 04 · word cloud — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-04.png" alt="" /></div>
+            <!-- 05 · measured level — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/en-05.png" alt="" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ WHY ═════════ -->
+<section class="sec plain">
+  <div class="inner manif">
+    <p class="m-line rv">The goal was never<br />a native's voice.</p>
+    <p class="m-line rv">Speaking, pronunciation, intonation &mdash;<br /><b>practice starts from<br />your own voice.</b></p>
+    <p class="m-line rv">A goal you can reach.<br /><b>Not "like a native" &mdash;<br />the fluent future you.</b></p>
+  </div>
+  <div class="marquee" aria-hidden="true">
+    <div class="row">
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 01 TALK ═════════ -->
+<section class="sec alt" id="talk">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">01</span>Talk · Output</div>
+      <h2 class="rv" style="--d:0.06s">It makes you speak,<br />then finds what to fix.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>You only learn to speak by speaking.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your news · your situations · free talk.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Every turn comes back fluent.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>A scorecard at the end,</b> fumbled lines become drills.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <div class="kv kv-talk rv" style="--d:0.1s">
+  <div class="dl dl-call">
+    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Future self</div><div class="dl-bub">So — how'd the interview go?</div></div></div>
+    <div class="dl-turn you"><div class="dl-col"><div class="dl-name">You</div><div class="dl-bub">Honestly? It went really well.</div></div></div>
+    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Future self</div><div class="dl-bub">That's huge. What surprised you most?</div></div></div>
+  </div>
+  <div class="fs-pill"><canvas class="fself" data-shape="pill" aria-hidden="true"></canvas><div class="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div></div>
+</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 02 WATCH ═════════ -->
+<section class="sec plain" id="watch">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">02</span>Watch · Input</div>
+      <h2 class="rv" style="--d:0.06s">Tomorrow's conversation,<br />watched today.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Your fluent self lives the situation first.</strong> Just by watching, what to say sticks in your ear.</p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>One line of situation</b> — a whole dialogue unfolds.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your lines play in your fluent voice.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Any line you want — one tap</b> to shadow it, right there.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <div class="kv rv" style="--d:0.1s">
+  <div class="sc-head"><div class="who">Mara · Coworker</div><div class="title">Deadline extension</div></div>
+  <div class="dl">
+    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Mara</div><div class="dl-bub">Is Friday still realistic for the handoff?</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
+    <div class="dl-turn you"><div class="dl-col"><div class="dl-name">You</div><div class="dl-bub cur">Honestly, I'd rather flag it now than surprise you on Friday.</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
+    <div class="dl-turn"><div class="dl-col"><div class="dl-name">Mara</div><div class="dl-bub">Okay — what would Monday change?</div><div class="dl-acc"><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>Shadow this</a><a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Save phrase</a></div></div></div>
+  </div>
+  <div class="wc-bar"><div class="b restart"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zM9 12l9-6v12z"/></svg>Restart</div><div class="b play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>Play</div></div>
+</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 03 PRACTICE ═════════ -->
+<section class="sec alt" id="practice">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">03</span>Practice · Imprint</div>
+      <h2 class="rv" style="--d:0.06s">Shadow it until<br />it's automatic.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>The voice you match is your own.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Sync shadowing</b> — per-word verdicts.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Loop the hard part at 0.5×.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Spaced repetition,</b> answered out loud.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <div class="kv rv" style="--d:0.1s">
+  <div class="sh-head"><span class="l">Target line</span><span class="r">10 words</span></div>
+  <div class="kara"><span class="k">I</span> <span class="k">really</span> <span class="k sel done">appreciate</span> <span class="k sel done">you</span> <span class="k sel now">taking</span> <span class="k sel">the</span> <span class="k">time</span> <span class="k">to</span> <span class="k">help</span> <span class="k">me.</span></div>
+  <div class="scrub">
+    <div class="track"><span class="tick" style="left:5%"></span><span class="tick" style="left:15%"></span><span class="tick" style="left:25%"></span><span class="tick" style="left:35%"></span><span class="tick" style="left:45%"></span><span class="tick" style="left:55%"></span><span class="tick" style="left:65%"></span><span class="tick" style="left:75%"></span><span class="tick" style="left:85%"></span><span class="tick" style="left:95%"></span>
+      <div class="band" style="left:20%; right:42%"></div>
+      <div class="h" style="left:20%"></div><div class="h" style="left:58%"></div>
+      <div class="ph" style="left:34%"></div>
+    </div>
+    <div class="tl-labels"><span>0:00.9</span><span class="loop">loop 0:00.8&#8211;0:02.3</span><span>0:04.0</span></div>
+    <div class="tl-ctl">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M10 8l6 4-6 4z" fill="currentColor" stroke="none"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="12" r="10"/><path d="M8 8h6a3 3 0 0 1 0 6h-1M8 8l2.2-2M8 8l2.2 2" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="sp">1&#215;</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M4 20a5 5 0 0 1 10 0"/><path d="M17 9a4 4 0 0 1 0 6M19.5 7a7 7 0 0 1 0 10"/></svg>
+      <span class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></span>
+    </div>
+  </div>
+</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ PEOPLE ═════════ -->
+<section class="sec plain" id="people">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>People · Personas</div>
+      <h2 class="rv" style="--d:0.06s">The people from your life<br />become the cast.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>Your people, your situations.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Barista, team lead, doctor</b> — describe them once.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your fluent self at the center.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show"><div class="kv kv-ppl rv" style="--d:0.1s">
+  <div class="you"><div class="disc"><canvas class="fself" data-shape="circle" aria-hidden="true"></canvas></div><div class="nm">You</div></div>
+  <div class="p-bub" style="left:22%; top:16%; animation-delay:0s;"><span class="ava" style="width:64px;height:64px;font-size:20px">S</span><span class="nm">Sofia</span><span class="rl">Barista</span></div>
+  <div class="p-bub" style="left:80%; top:14%; animation-delay:0.8s;"><span class="ava" style="width:56px;height:56px;font-size:18px">DP</span><span class="nm">Dr. Park</span><span class="rl">Family doctor</span></div>
+  <div class="p-bub" style="left:84%; top:54%; animation-delay:1.6s;"><span class="ava" style="width:70px;height:70px;font-size:22px">M</span><span class="nm">Mina</span><span class="rl">Team lead</span></div>
+  <div class="p-bub" style="left:16%; top:58%; animation-delay:2.3s;"><span class="ava" style="width:58px;height:58px;font-size:19px">J</span><span class="nm">Jake</span><span class="rl">Gym buddy</span></div>
+  <div class="p-bub" style="left:30%; top:86%; animation-delay:3.0s;"><span class="ava" style="width:52px;height:52px;font-size:17px">A</span><span class="nm">Alex</span><span class="rl">Landlord</span></div>
+  <div class="p-bub" style="left:72%; top:86%; animation-delay:3.7s;"><span class="ava" style="width:56px;height:56px;font-size:18px">E</span><span class="nm">Emma</span><span class="rl">Classmate</span></div>
+</div></div>
+  </div>
+</section>
+
+<!-- ═════════ WORDS ═════════ -->
+<section class="sec alt" id="words">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Words · Vocabulary</div>
+      <h2 class="rv" style="--d:0.06s">Every word you speak<br />joins your world.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>A living map of your vocabulary.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>Your level reads in the grain.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>One tap</b> — meaning and examples.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show"><div class="kv kv-cloud rv" style="--d:0.1s"><span class="cw " style="left:26%; top:12%; font-size:22px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>negotiate</span><span class="cw " style="left:63%; top:10%; font-size:26px">weather</span><span class="cw " style="left:86%; top:20%; font-size:20px">routine</span><span class="cw " style="left:15%; top:28%; font-size:19px">profound</span><span class="cw used" style="left:45%; top:30%; font-size:30px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>work</span><span class="cw " style="left:75%; top:34%; font-size:23px">weekend</span><span class="cw " style="left:28%; top:44%; font-size:18px">tentative</span><span class="cw " style="left:64%; top:46%; font-size:17px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>meticulous</span><span class="cw " style="left:89%; top:44%; font-size:16px">insight</span><span class="cw used" style="left:20%; top:58%; font-size:24px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>travel</span><span class="cw " style="left:48%; top:60%; font-size:19px">opinion</span><span class="cw " style="left:80%; top:60%; font-size:15px">serendipity</span><span class="cw " style="left:13%; top:70%; font-size:17px">downplay</span><span class="cw " style="left:41%; top:74%; font-size:20px"><span class="badge book"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg></span>leverage</span><span class="cw " style="left:71%; top:72%; font-size:18px">nuance</span><span class="cw used" style="left:26%; top:86%; font-size:26px"><span class="badge check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>people</span><span class="cw " style="left:58%; top:88%; font-size:16px">pragmatic</span><span class="cw " style="left:85%; top:86%; font-size:15px">ephemeral</span></div></div>
+  </div>
+</section>
+
+<!-- ═════════ SPEC SHEET ═════════ -->
+<section class="sec plain">
+  <div class="inner specs">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Everything inside</div>
+    <h2 class="head rv" style="--d:0.08s">The whole app, as an index.</h2>
+  </div>
+  <div class="spec-table rv" style="--d:0.12s">
+    <div class="srow"><span class="ix">01</span><span class="nm">60-second clone</span><span class="ds">One short recording at setup builds the voice you'll have when you're fluent.</span></div>
+    <div class="srow"><span class="ix">02</span><span class="nm">Fluent rewrites</span><span class="ds">Mid-conversation, your sentence comes back the way your fluent self would say it.</span></div>
+    <div class="srow"><span class="ix">03</span><span class="nm">Sync shadowing</span><span class="ds">Speak along with your fluent line — per-word verdicts and pace against the target.</span></div>
+    <div class="srow"><span class="ix">04</span><span class="nm">People from your life</span><span class="ds">Describe them out loud — they become personas that talk like the real person.</span></div>
+    <div class="srow"><span class="ix">05</span><span class="nm">Scenario dialogues</span><span class="ds">Watch your fluent self handle the situation, and shadow any line on the spot.</span></div>
+    <div class="srow"><span class="ix">06</span><span class="nm">Speak-aloud review</span><span class="ds">Fumbled lines return as drills right before you'd forget — answered out loud, never multiple choice.</span></div>
+    <div class="srow"><span class="ix">07</span><span class="nm">Five-axis scorecard</span><span class="ds">Vocabulary, grammar, expression, fluency, pronunciation — computed in code, not invented by an LLM.</span></div>
+    <div class="srow"><span class="ix">08</span><span class="nm">Words check themselves off</span><span class="ds">A core pool of ~8,000 CEFR-graded words underneath; every word you use is ticked automatically.</span></div>
+    <div class="srow"><span class="ix">09</span><span class="nm">Measured CEFR</span><span class="ds">Your level, estimated from the words you actually used — B1 → B2 is a measurement, not an opinion.</span></div>
+    <div class="srow"><span class="ix">10</span><span class="nm">An honest weekly report</span><span class="ds">Unlocks only after 15+ minutes of real speaking. Nothing, rather than noise. It learns you as you go.</span></div>
+  </div>
+</section>
+
+<!-- ═════════ PRICING ═════════
+     Visible at launch. The section used to be hidden behind BILLING.enabled —
+     the flag that turns on Stripe web checkout — so a page selling an iOS app
+     showed no price at all until a payment integration nobody needs at launch
+     was configured. Prices now always render; only the BUY BUTTON is gated:
+     App Store today, Stripe checkout the day BILLING.enabled flips. -->
+<section class="sec plain pricing-wrap" id="pricing">
+  <div class="inner pricing-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Pricing</div>
+    <h2 class="rv" style="--d:0.08s">Buy a month.<br />Spend it your way.</h2>
+    <div class="cycle-toggle rv" style="--d:0.14s">
+      <button class="ct on" data-cycle="monthly" type="button">MONTHLY</button>
+      <button class="ct" data-cycle="annual" type="button">ANNUAL</button>
+    </div>
+  </div>
+  <div class="plans rv" style="--d:0.2s">
+    <div class="plan">
+      <div><span class="p-name">Light</span></div>
+      <div class="p-price" data-price="light">—</div>
+      <p class="p-note">Keep it up as a habit.</p>
+      <dl class="p-specs">
+        <div><dt>Talking</dt><dd data-talk="light">—</dd></div>
+        <div class="p-sub"><dt></dt><dd>about 5 min a day</dd></div>
+        <div><dt>Watch scenes</dt><dd data-scenes="light">—</dd></div>
+        <div><dt>Your own review book</dt><dd>Unlimited</dd></div>
+        <div><dt>Shadowing &middot; words &middot; replays &middot; drills</dt><dd>Unlimited</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+    <div class="plan featured">
+      <div><span class="p-name">Plus</span><span class="p-badge">POPULAR</span></div>
+      <div class="p-price" data-price="plus">—</div>
+      <p class="p-note">Get fluent for an exam or interview.</p>
+      <dl class="p-specs">
+        <div><dt>Talking</dt><dd data-talk="plus">—</dd></div>
+        <div class="p-sub"><dt></dt><dd>about 1 hr a day</dd></div>
+        <div><dt>Watch scenes</dt><dd data-scenes="plus">—</dd></div>
+        <div><dt>Your own review book</dt><dd>Unlimited</dd></div>
+        <div><dt>Shadowing &middot; words &middot; replays &middot; drills</dt><dd>Unlimited</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>Subscribe <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+  </div>
+  <div class="inner">
+    <p class="p-error" id="pricing-error"></p>
+    <p class="p-fine">The two pools are separate — watching a scene never takes a minute off your talking. Spend either however you like across the month. Seven days free, cancel anytime.</p>
+  </div>
+</section>
+
+<!-- ═════════ TRUST ═════════ -->
+<section class="sec alt">
+  <div class="inner trust-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Your voice, your rules</div>
+    <h2 class="rv" style="--d:0.08s">A voice clone,<br />treated carefully.</h2>
+  </div>
+  <div class="trust">
+    <div class="tcell rv"><div class="ix">A</div><h4>One recording, ever</h4><p>Sixty seconds at setup. The app never records you outside a conversation you started.</p></div>
+    <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>Your clone, your call</h4><p>Re-record or delete anytime. Replacing it permanently deletes the old one.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>Practice stays on device</h4><p>Sessions, drills, and progress live on your iPhone — not on our servers.</p></div>
+  </div>
+</section>
+
+<!-- ═════════ FINAL ═════════ -->
+<section class="sec plain final">
+  <div class="inner">
+    <h2 class="rv">The fluent future you,<br />starting today.</h2>
+    <p class="sub rv" style="--d:0.08s">Sixty seconds of setup. Your first conversation tonight.</p>
+    <div class="hero-ctas rv" style="--d:0.16s">
+      <a class="btn btn-white" href="#" data-appstore>Get it on the App Store <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+    </div>
+    <div class="callstrip">
+      <span class="tag"><i></i>YOUR FIRST CALL</span>
+      <div class="fs-pill wide"><canvas class="fself" data-shape="pill" aria-hidden="true"></canvas><div class="fs-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div></div>
+      <span class="tag mono">00:00:00</span>
+    </div>
+  </div>
+</section>
+
+<footer class="sec plain">
+  <div class="foot-in">
+    <span>© 2026 Dear RoRo · Munich</span>
+    <div class="links">
+      <a href="privacy.html">Privacy</a>
+      <a href="support.html">Support</a>
+      <a href="mailto:hello.dearroroapp@gmail.com">Contact</a>
+      <a href="#" data-appstore>App Store</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add("js");
+
+// ── App Store link — the ONE value to fill at launch ──
+var APP_STORE_URL = "#"; // e.g. "https://apps.apple.com/app/id0000000000"
+document.querySelectorAll("[data-appstore]").forEach(function (a) {
+  a.href = APP_STORE_URL;
+  if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
+});
+
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ── scroll reveal ──
+var io = new IntersectionObserver(function (entries) {
+  entries.forEach(function (e) {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  });
+}, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
+
+// ── Futureself: the app's call surface, ported from FutureVoice/Shaders/
+// Futureself.metal. A quantized 5-row pixel mosaic snapped to a 5-step
+// palette, each cell breathing on its own slow phase — idle mode (mode 0,
+// level 0), light palette (theme "blue"). Keep the palette and the cell
+// math in sync with the shader; this is the product's face.
+(function () {
+  // kPalette[0 /* blue */][1 /* light */] — base → hottest.
+  var RAMP = ["#F6F8FF", "#E6EBF7", "#B8D4FF", "#73ADFF", "#0A5CF5"];
+  var TAU = Math.PI * 2;
+
+  function fract(x) { return x - Math.floor(x); }
+  // hash21 from the shader, component for component.
+  function hash21(px, py) {
+    var x = fract(px * 123.34), y = fract(py * 456.21);
+    var d = x * (x + 45.32) + y * (y + 45.32);
+    x = fract(x + d); y = fract(y + d);
+    return fract(x * y);
+  }
+
+  // Cell size is PINNED (12.8pt in the app, whatever the surface size), so a
+  // bigger surface gets MORE cells, never bigger ones — the mosaic stays
+  // icon-scaled on the home circle and the in-call pill alike.
+  var CELL_CSS = 12.8;
+
+  function paint(cv, ctx, t, dpr) {
+    var w = cv.width, h = cv.height;
+    if (!w || !h) return;
+    var cellPt = CELL_CSS * dpr;
+    var cols = Math.ceil(w / cellPt), rows = Math.ceil(h / cellPt);
+    var seed = +(cv.dataset.seed || 0);
+    // Speaking: the surface rides playback energy, blooming outward from the
+    // centre. This is the fluent self actually talking — the product's face.
+    // A surface with data-drive set is scene-driven (the hero call demo):
+    // it smooths toward that level instead of idling on the sine.
+    var level;
+    if (cv.dataset.drive !== undefined) {
+      var target = +cv.dataset.drive;
+      cv._d = cv._d === undefined ? target : cv._d + (target - cv._d) * 0.07;
+      level = 0.1 + 0.62 * cv._d + 0.08 * cv._d * Math.sin(t * 2.6 + seed);
+    } else {
+      level = 0.26 + 0.22 * Math.abs(Math.sin(t * 0.85 + seed))
+            + 0.07 * Math.sin(t * 2.3 + seed * 2.0);
+    }
+    var drive = Math.max(0, Math.min(1, level)) * 1.15;
+
+    ctx.fillStyle = RAMP[0];                  // base fills the hairline gaps
+    ctx.fillRect(0, 0, w, h);
+    for (var cy = 0; cy < rows; cy++) {
+      for (var cx = 0; cx < cols; cx++) {
+        var r1 = hash21(cx + 0.13, cy + 0.13);
+        var r2 = hash21(cx + 7.77, cy + 7.77);
+        var r3 = hash21(cx + 23.19, cy + 23.19);
+        var ux = (cx + 0.5) * cellPt / w;
+        // ambient breathing — every cell on its own slow phase
+        var v = 0.16 + 0.14 * Math.sin(t * (0.35 + 0.55 * r2) + r3 * TAU);
+        // ignition order: random, biased centre-out while speaking
+        var bias = Math.abs(ux - 0.5) * 2;
+        var order = Math.max(0, Math.min(1, r1 + (bias - r1) * 0.45));
+        var ig = smoothstep(order, order + 0.22, drive);
+        v += ig * (0.55 + 0.30 * r2);
+        v += ig * 0.08 * Math.sin(t * (2 + 3 * r1) + r2 * TAU);
+
+        var step = Math.floor(v * 4 + (r3 - 0.5) * 0.9 + 0.5);
+        step = step < 0 ? 0 : step > 4 ? 4 : step;
+        ctx.fillStyle = RAMP[step];
+        ctx.fillRect(cx * cellPt + 0.7, cy * cellPt + 0.7, cellPt - 1.4, cellPt - 1.4);
+      }
+    }
+    // inner shadow: light from above, so the surface reads recessed not flat
+    var g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgba(10,40,90,0.16)");
+    g.addColorStop(0.5, "rgba(10,40,90,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  function smoothstep(a, b, x) {
+    var u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return u * u * (3 - 2 * u);
+  }
+
+  var surfaces = [].slice.call(document.querySelectorAll("canvas.fself"));
+  if (!surfaces.length) return;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize() {
+    surfaces.forEach(function (cv) {
+      var r = cv.getBoundingClientRect();
+      var w = Math.max(1, Math.round(r.width * dpr));
+      var h = Math.max(1, Math.round(r.height * dpr));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    });
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  var ctxs = surfaces.map(function (cv) { return cv.getContext("2d"); });
+  surfaces.forEach(function (cv, i) { cv.dataset.seed = (i * 2.7).toFixed(2); });
+  function frame(ms) {
+    var t = (ms || 0) / 1000;
+    for (var i = 0; i < surfaces.length; i++) paint(surfaces[i], ctxs[i], t, dpr);
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  frame(reduce ? 4200 : 0);
+})();
+
+// ── scrollytelling: the phone peeks from the hero, pins at the centre,
+// and its screen walks the core flow (home → call → hang-up → book →
+// study) while the caption beside it changes. Scrubbing is scroll-tied;
+// ?step=N forces a beat for debugging.
+(function () {
+  var wrap = document.getElementById("scrolly");
+  if (!wrap) return;
+  var phone = document.getElementById("s-phone");
+  var caps = [].slice.call(wrap.querySelectorAll(".s-cap"));
+  var nums = [].slice.call(wrap.querySelectorAll(".s-num"));
+  var scrs = [].slice.call(wrap.querySelectorAll(".s-scr"));
+  var pill = document.getElementById("s-callpill");
+  var STEPS = 6; // 1 hero + 5 beats
+  var dbg = null;
+  try { var q = new URLSearchParams(location.search).get("step"); if (q !== null) dbg = +q; } catch (e) {}
+  function update() {
+    var vh = window.innerHeight || 1;
+    var r = wrap.getBoundingClientRect();
+    var total = r.height - vh;
+    var p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
+    var f = dbg !== null ? dbg : p * STEPS;
+    // rise from the hero's bottom edge to the centre over the first beat
+    phone.style.transform = "translateY(" + (Math.max(0, 1 - f) * 56).toFixed(2) + "vh)";
+    var idx = Math.min(5, Math.max(1, Math.floor(f)));
+    scrs.forEach(function (el, i) { el.classList.toggle("on", i + 1 === idx); });
+    caps.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    nums.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    if (pill) pill.dataset.drive = idx === 2 ? 0.9 : 0.15;
+  }
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+})();
+
+
+</script>
+<script type="module">
+// ── Web billing (Stripe Checkout via Supabase Edge Functions) ──
+// Stays fully hidden until configured. To go live: fill supabaseUrl/anonKey,
+// set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
+// (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
+const BILLING = {
+  // Flip to true once Stripe Products/Prices exist and
+  // subscription_plans.stripe_price_id is filled (see web/README.md).
+  enabled: false,
+  supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
+}
+// Locked launch prices — keep in sync with docs/launch-billing.md.
+//
+// EUR here; the Korean page prints Apple's won price points, because at launch
+// this button goes to the App Store and Apple charges in local currency. When
+// BILLING.enabled flips, Stripe charges EUR everywhere.
+//
+// Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
+// Plus. What is printed here is `subscription_plans.monthly_seconds` / 60 and
+// `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
+// figures do not change with the cycle — only the price does.
+const PLANS = {
+  light: {
+    talk: "150 min/mo", scenes: "60/mo",
+    monthly: { id: "light_monthly", price: "\u20ac9.99",   per: "/ month" },
+    annual:  { id: "light_annual",  price: "\u20ac79.99",  per: "/ year" },
+  },
+  plus: {
+    talk: "1,800 min/mo", scenes: "600/mo",
+    monthly: { id: "plus_monthly",  price: "\u20ac19.99",  per: "/ month" },
+    annual:  { id: "plus_annual",   price: "\u20ac199.99", per: "/ year" },
+  },
+}
+const TIERS = ["light", "plus"]
+
+// Prices render ALWAYS — they are the section, and they need no backend.
+;(function renderPricing() {
+  let cycle = "monthly"
+  function paint() {
+    for (const tier of TIERS) {
+      const t = PLANS[tier], p = t[cycle]
+      document.querySelector(`[data-price="${tier}"]`).innerHTML =
+        p.price + ' <span>' + p.per + "</span>"
+      document.querySelector(`[data-talk="${tier}"]`).textContent = t.talk
+      document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
+    }
+  }
+  paint()
+  document.querySelectorAll(".cycle-toggle .ct").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      cycle = btn.dataset.cycle
+      document.querySelectorAll(".cycle-toggle .ct").forEach((b) =>
+        b.classList.toggle("on", b === btn))
+      paint()
+      window.__cycle = cycle
+    })
+  })
+  window.__cycle = cycle
+})()
+
+const params = new URLSearchParams(location.search)
+if (params.get("checkout") === "success") {
+  const toast = document.createElement("div")
+  toast.className = "toast"
+  toast.textContent = "Payment complete. Open the app and sign in with the same Apple account — your subscription is already active."
+  document.body.appendChild(toast)
+  setTimeout(() => toast.remove(), 9000)
+}
+
+// The nav link points at a section that is always there now.
+const navPricing = document.getElementById("nav-pricing")
+if (navPricing) navPricing.hidden = false
+
+if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
+  // Web checkout is live: swap the App Store CTA for the Stripe one. Until
+  // this runs, the cards sell the iOS app, which is the only thing on sale.
+  document.querySelectorAll("[data-store-cta]").forEach((a) => { a.hidden = true })
+  document.querySelectorAll(".p-buy[data-tier]").forEach((b) => { b.hidden = false })
+
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+  const sb = createClient(BILLING.supabaseUrl, BILLING.supabaseAnonKey)
+  const errEl = document.getElementById("pricing-error")
+
+  function baseUrl() { return location.origin + location.pathname }
+
+  function showError(msg) {
+    errEl.textContent = msg
+    errEl.style.display = "block"
+  }
+
+  async function checkout(session, planId) {
+    const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/stripe-checkout", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + session.access_token,
+        apikey: BILLING.supabaseAnonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ plan_id: planId, return_url: baseUrl() }),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok || !data.url) throw new Error(data.error || "checkout failed")
+    location.href = data.url
+  }
+
+  async function buy(planId, button) {
+    errEl.style.display = "none"
+    button.disabled = true
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        // Same Apple identity as the app → same Supabase user, no email matching.
+        await sb.auth.signInWithOAuth({
+          provider: "apple",
+          options: { redirectTo: baseUrl() + "?plan=" + planId },
+        })
+        return
+      }
+      await checkout(session, planId)
+    } catch (e) {
+      showError("Something went wrong starting checkout. Please try again.")
+      console.error(e)
+    } finally {
+      button.disabled = false
+    }
+  }
+
+  // The cycle lives on the renderer above (window.__cycle), so the toggle and
+  // the checkout can never disagree about which SKU is on screen.
+  document.querySelectorAll(".p-buy[data-tier]").forEach((btn) => {
+    btn.addEventListener("click", () => buy(PLANS[btn.dataset.tier][window.__cycle].id, btn))
+  })
+
+  // Returning from the Apple sign-in redirect with ?plan= → continue to checkout.
+  const pendingPlan = params.get("plan")
+  if (pendingPlan) {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      history.replaceState(null, "", baseUrl())
+      checkout(session, pendingPlan).catch((e) => { showError("Something went wrong starting checkout. Please try again."); console.error(e) })
+    }
+  }
+}
+</script>
+</body>
+</html>

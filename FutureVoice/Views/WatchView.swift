@@ -300,11 +300,31 @@ struct WatchView: View {
     /// and the answer is tomorrow.
     @State private var sceneCapReached = false
 
-    /// This account is on Daily, so the spent-allowance alert has somewhere
-    /// to send them. Resolved when the cap actually lands — Watch views are
-    /// made often and most never hit it. False on Unlimited: nothing left to
-    /// sell there, and the answer really is tomorrow.
+    /// WHICH pool ran out. Scenes, normally — but a client that predates
+    /// scene counts (or a free account) still meters scene audio in seconds
+    /// off the talk pool, and that lands here as the talk cap.
+    @State private var capKind: DailyAllowanceSheet.Kind = .scenes
+
+    /// This account is on Light, so the spent-pool sheet has somewhere to
+    /// send them. Resolved when the cap actually lands — Watch views are made
+    /// often and most never hit it. False on Plus: nothing left to sell
+    /// there, and the answer really is next month.
     @State private var canUpgradePlan = false
+
+    /// The pool size for whichever cap landed — scenes or minutes — read
+    /// from the account snapshot, never hardcoded.
+    @State private var capAllowance: Int?
+    /// When that pool refills.
+    @State private var renewalLabel = ""
+
+    /// What the cap sheet was dismissed FOR; acted on in `onDismiss`, because
+    /// a sheet can't raise the next one while it is closing.
+    @State private var capChoice: CapChoice?
+
+    /// Which tier the paywall should open on, when a caller named one.
+    @State private var paywallTier: String?
+
+    private enum CapChoice { case upgrade, review }
 
     /// Everything needed to synthesize one line, resolved on the main actor
     /// before any concurrency so a prefetch can't race `turns` growing under
@@ -383,25 +403,30 @@ struct WatchView: View {
             Button("OK") { error = nil }
         } message: { Text(error ?? "") }
         // Deliberately NOT the error alert: this learner is a subscriber who
-        // used up today's scenes, which is not a failure. On Daily it offers
-        // the way to keep going TODAY; on Unlimited there is nothing to sell,
-        // so the answer stays tomorrow — and either way what they already
-        // generated still replays free.
-        .alert("That's today's scenes", isPresented: $sceneCapReached) {
-            if canUpgradePlan {
-                Button("See Unlimited") {
-                    sceneCapReached = false
-                    showingPaywall = true
-                }
+        // used up this month's pool, which is not a failure. Same sheet the
+        // call screen raises — one spent-pool surface, so the two can't drift.
+        .sheet(isPresented: $sceneCapReached, onDismiss: {
+            switch capChoice {
+            case .upgrade:
+                paywallTier = "unlimited"
+                showingPaywall = true
+            // Switching tabs is enough: RootTabView follows the staged route,
+            // and this scene stays pushed for whenever they come back to it.
+            case .review:  appState.pendingPracticeRoute = .studying
+            case nil:      break
             }
-            Button("OK") { sceneCapReached = false }
-        } message: {
-            Text(canUpgradePlan
-                 ? explain("Upgrading to Unlimited lets you watch more today.")
-                 : explain("New scenes unlock at midnight. Replaying the ones you already have is always free."))
+            capChoice = nil
+        }) {
+            DailyAllowanceSheet(
+                kind: capKind,
+                canUpgrade: canUpgradePlan,
+                allowance: capAllowance,
+                renewsOn: renewalLabel,
+                onReview: { capChoice = .review },
+                onUpgrade: { capChoice = .upgrade })
         }
-        .sheet(isPresented: $showingPaywall) {
-            PaywallView()
+        .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
+            PaywallView(preselectTier: paywallTier)
         }
         .sheet(item: $bridge) { b in
             ShadowDrillView(turn: b.turn, targetLanguage: appState.targetLanguage)
@@ -756,11 +781,17 @@ struct WatchView: View {
                     // Streaming unavailable — classic fetch-then-play.
                     try await playAndWait(try await loadOrSynthesize(request))
                 }
-            } catch ElevenLabsError.sceneCapReached {
-                // Out of today's scenes. Say so where the scene was going to
-                // play. Resolve the plan first so the alert opens with its
+            } catch let capped where capped.isDayCapped {
+                // Out of today's allowance. Say so where the scene was going
+                // to play. Resolve the plan first so the sheet opens with its
                 // button already decided instead of growing one a beat later.
-                canUpgradePlan = await AccountStatus.fetch().isDailyPlan
+                let account = await AccountStatus.fetch()
+                capKind = capped.isDailyCapReached ? .talk : .scenes
+                canUpgradePlan = account.isLightPlan
+                capAllowance = capKind == .talk
+                    ? account.monthlyCapSeconds.map { $0 / 60 }
+                    : account.monthlyScenesCap
+                renewalLabel = account.renewalLabel
                 sceneCapReached = true
                 isPlaying = false
                 return

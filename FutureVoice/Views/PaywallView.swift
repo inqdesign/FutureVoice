@@ -20,8 +20,15 @@ struct PaywallView: View {
     /// would dead-end into a wall. Sheet callers leave it nil.
     private let onClose: (() -> Void)?
 
-    init(onClose: (() -> Void)? = nil) {
+    /// The tier this sheet was OPENED for, when the caller named one. It
+    /// outranks the held plan below: someone who arrives by tapping "Move to
+    /// Plus" on the spent-allowance sheet must not land on a screen with
+    /// Light — the plan they already have — selected.
+    private let preselectTier: String?
+
+    init(onClose: (() -> Void)? = nil, preselectTier: String? = nil) {
         self.onClose = onClose
+        self.preselectTier = preselectTier
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -37,7 +44,7 @@ struct PaywallView: View {
     // Monthly by default: it is the smaller commitment, and a paywall that
     // opens on the year-long option reads as pressure rather than a choice.
     @State private var period: PlanPeriod = .monthly
-    @State private var selectedTier: String = "unlimited"
+    @State private var selectedTier: String = "plus"
 
     /// `.resolving` is the state before StoreKit and the account snapshot
     /// have answered. Without it the sheet opened on `.pitch` and jumped to
@@ -80,7 +87,7 @@ struct PaywallView: View {
     /// backwards into a trial pitch for something they already pay for.
     private var walkedTrialFunnel: Bool { showsTrial && !isSubscriber }
 
-    /// The plan this account holds right now (`daily_monthly`), or nil.
+    /// The plan this account holds right now (`light_monthly`), or nil.
     private var currentPlanId: String? { isSubscriber ? account.planId : nil }
 
     private func isCurrentPlan(tier: String, period: PlanPeriod) -> Bool {
@@ -93,18 +100,19 @@ struct PaywallView: View {
         isCurrentPlan(tier: selectedTier, period: period)
     }
 
-    /// The held plan, named the way the CARDS name it ("Unlimited · Monthly")
-    /// — `AccountStatus.planLabel` capitalizes the raw plan id, so it reads
-    /// English beside a Korean card that says 무제한.
+    /// The held plan, named the way the CARDS name it ("Plus · Monthly") —
+    /// `AccountStatus.planLabel` builds the same string but joins its own
+    /// period label, so the two would drift the moment either is reworded.
+    /// The TIER half comes from the one place tier names live.
     private var currentPlanLabel: String {
         guard let id = currentPlanId else { return "" }
-        let parts = id.split(separator: "_").map(String.init)
-        let name = parts.first == "unlimited" ? explain("Unlimited") : explain("Daily")
-        // The trial is metered as Daily whatever plan it trials, so the tier
-        // it names is the plan it will BECOME, not today's allowance.
+        let name = AccountStatus.tierName(id)
+        // The trial is metered at the Light pool pro-rated, whatever plan it
+        // trials, so the tier it names is the plan it will BECOME, not what
+        // it currently allows.
         if account.isTrialing { return explain("\(name) trial") }
-        guard let raw = parts.dropFirst().first,
-              let held = PlanPeriod(rawValue: raw) else { return name }
+        guard let raw = id.split(separator: "_").dropFirst().first,
+              let held = PlanPeriod(rawValue: String(raw)) else { return name }
         return "\(name) · \(held.label)"
     }
 
@@ -156,10 +164,20 @@ struct PaywallView: View {
                 if let raw = parts.dropFirst().first,
                    let held = PlanPeriod(rawValue: String(raw)) { period = held }
             }
+            // The billing cycle still comes from the plan they hold (or the
+            // monthly default) — only the TIER is what the caller asked for.
+            if let preselectTier { selectedTier = preselectTier }
             // Pitch the trial only to someone who could actually take it:
             // not a current subscriber, not during the beta, and only while
             // Apple still offers this account an intro offer.
             step = walkedTrialFunnel ? .pitch : .plans
+            #if DEBUG
+            // Screenshot harness: the plan cards are two taps in, and a
+            // capture run can't tap. Never reachable outside `-capture`.
+            if UserDefaults.standard.string(forKey: "capture") == "paywall-plans" {
+                step = .plans
+            }
+            #endif
         }
         .onChange(of: store.purchaseState) { _, state in
             if state == .purchased, showsTrial {
@@ -346,7 +364,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 0) {
                 timelineRow(icon: "lock.open.fill",
                             title: explain("Today"),
-                            caption: explain("Your trial starts — five minutes of talk a day, and all the review it produces."),
+                            caption: explain("Your trial starts — a week's worth of talk, and all the review it produces."),
                             showsLine: true)
                 timelineRow(icon: "bell.fill",
                             title: explain("Day \(max(1, store.trialDays - 2))"),
@@ -422,46 +440,42 @@ struct PaywallView: View {
             }
 
             VStack(spacing: 14) {
-                // Tier = amount of talk time, not features — the names say
-                // the quantity so the plans read as phone-plan sizes.
                 // The plans differ in AMOUNT — that is the honest axis, and
                 // pretending otherwise (purpose, level, "serious learners")
                 // would send people to the wrong plan. But the label must not
                 // grade the buyer: "heavy/light user" tells someone they are
-                // the small one. So each card asks the same question about
-                // the same number and lets the reader recognise themselves.
-                planCard(tier: "unlimited",
-                         audience: explain("If five minutes isn't enough"),
-                         name: explain("Unlimited"),
-                         blurb: explain("Long sessions, several a day — as many calls and scenes as you want."))
-                planCard(tier: "daily",
-                         audience: explain("If five minutes a day is enough"),
-                         name: explain("Daily"),
-                         blurb: explain("The same five minutes every day — small enough that you actually do it."))
+                // the small one. So each card carries the SAME two rows in the
+                // SAME order and units, and lets the reader compare.
+                // This line is the only PITCH on the card — the rows below
+                // already state the size, so a line that restates the size in
+                // words ("talk at length, most days") is the meter reading
+                // twice and sells nothing. It names the SITUATION the plan
+                // suits.
+                //
+                // A situation, and deliberately not a PERSON. The tiers are
+                // feature-identical, so "for experts / for beginners" promises
+                // a difference that isn't there — and it misroutes: someone
+                // prepping one interview needs ~90 minutes total and belongs
+                // on Light, while a hobbyist who talks daily needs Plus.
+                // Naming what you're DOING keeps the recognition and keeps the
+                // claim true, because a deadline really does mean long daily
+                // calls and habit-building really does mean short frequent
+                // ones — the situations line up with the amounts. The label
+                // must still never grade the buyer: no "heavy user", no
+                // "serious learners".
+                planCard(tier: "plus",
+                         audience: explain("Get fluent for an exam or interview"),
+                         name: AccountStatus.tierName("plus"))
+                planCard(tier: "light",
+                         audience: explain("Keep it up as a habit"),
+                         name: AccountStatus.tierName("light"))
             }
 
-            // A missing price is a StoreKit state the learner can do
-            // nothing about — explaining it ("prices load from the App
-            // Store") turned a blank into an apology on every open. The card
-            // simply omits the price.
-            //
-            // Directly under the cards on purpose: the question in a buyer's
-            // head right after picking is "what happens if I stop paying?".
-            // It used to sit last, below the fold, while the paragraph above
-            // made the same promise in prose — one place, and the concrete
-            // one, is enough.
-            VStack(alignment: .leading, spacing: 12) {
-                Text(explain("Always free"))
-                    .font(.footnote.weight(.semibold))
-                freeRow("repeat", explain("Replay shadow lines"), explain("Loop and slow down cached audio."))
-                freeRow("rectangle.stack.fill", explain("Review drills"), explain("Spaced repetition, graded on device."))
-                freeRow("play.rectangle.on.rectangle", explain("Re-watch dialogues"), explain("Generated once, then cached."))
-            }
-            .padding(.top, 4)
-
-            Text(explain("Your plan buys talk time with your fluent self plus a number of Watch scenes each day — two separate daily allowances, both refilling at midnight."))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Nothing between the cards and the legal block. There used to be
+            // a sentence ("both refill every billing period" — now carried by
+            // the "/mo" on each figure) and an "Always free" box, whose three
+            // items are rows on the cards themselves now. Everything the
+            // buyer is choosing between is inside the thing they tap.
 
             subscriptionLegal
         }
@@ -518,35 +532,74 @@ struct PaywallView: View {
                                   : "https://nawana.app/privacy.html")!
     }
 
-    private func freeRow(_ icon: String, _ title: String, _ caption: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
+    /// Talk minutes, as a plan card prints them.
+    ///
+    /// **Both tiers use MINUTES**, deliberately. The big figure used to switch
+    /// to hours ("30 hours" beside Light's "150 min"), which made the two
+    /// cards non-comparable at the exact moment the reader is comparing them —
+    /// nobody divides 30 by 2.5 in their head, and a plan picker whose whole
+    /// job is one ratio must not hide it behind a unit change.
+    ///
+    /// The reason hours were reached for was real, and is handled here
+    /// instead: an interpolated `Int` is grouped by the FORMATTING locale, so
+    /// a German-grouped "1.800" inside a Korean sentence reads as one point
+    /// eight. Grouping explicitly in the learner's own language fixes that
+    /// without touching the unit.
+    private func minutesLabel(_ minutes: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: LanguageCatalog.currentNative)
+        let grouped = f.string(from: NSNumber(value: minutes)) ?? "\(minutes)"
+        // The PERIOD rides on the figure. It used to sit in a sentence under
+        // the cards ("both refill every billing period"), which is a thing
+        // nobody reads and which left "1,800 min" period-less on the card
+        // itself. It also does the work of showing that the pool is the same
+        // on the annual cycle — only the price below it changes.
+        return explain("\(grouped) min/mo")
+    }
+
+    /// One line of a card's spec block. Label left, figure right — the same
+    /// labels in the same order on both cards, so the eye compares down the
+    /// column instead of parsing two sentences.
+    ///
+    /// `note` is a smaller line UNDER the figure, for the one row that needs
+    /// converting: a month is the unit the plan is sold in, but nobody has an
+    /// instinct for what 1,800 minutes feels like. It is a size cue, not a
+    /// rule — the pool has no daily limit, which is why this sits under the
+    /// monthly figure as an aside rather than replacing it.
+    private func specRow(_ label: String, _ value: String, note: String? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
                 .font(.subheadline)
-                .foregroundStyle(.green)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.subheadline.weight(.medium))
-                Text(caption).font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(Color.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 8)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+                if let note {
+                    Text(note)
+                        .font(.caption2)
+                        .foregroundStyle(Color.secondary)
+                }
             }
-            Spacer(minLength: 0)
+            .layoutPriority(1)
         }
     }
 
-    /// Talk time per day this plan buys — the server's per-day allowance
-    /// (`subscription_plans.daily_seconds`), shown in minutes.
-    /// "5 min of talk a day · 2 scenes" — the two allowances a metered plan
-    /// buys, in one line. Scenes left the talk meter on 2026-08-14 and are
-    /// counted separately, so a card that names only minutes is now lying by
-    /// omission about half of what the plan includes.
-    private func allowanceLine(seconds: Int, scenes: Int?) -> String {
-        let mins = explain("\(dailyTalkMinutes(seconds: seconds)) min of talk a day")
-        guard let scenes, scenes > 0 else { return mins }
-        return explain("\(mins) · \(scenes) scenes")
-    }
-
-    private func dailyTalkMinutes(seconds: Int) -> Int {
-        max(1, seconds / 60)
+    /// "about 5 min a day" — what the month's pool works out to per day, from
+    /// the catalog's own `daily_seconds`, which the migration defines as
+    /// `monthly_seconds / 30` and exists for exactly this line. Falls back to
+    /// the division so an older catalog row still prints something true.
+    private func perDayLabel(_ opt: StoreKitService.PlanOption?) -> String? {
+        guard let plan = opt?.plan else { return nil }
+        let seconds = plan.daily_seconds ?? (plan.monthly_seconds.map { $0 / 30 } ?? 0)
+        guard seconds > 0 else { return nil }
+        if seconds >= 3600 {
+            return explain("about \(seconds / 3600) hr a day")
+        }
+        return explain("about \(seconds / 60) min a day")
     }
 
     /// What price a card may show. Live App Store price whenever there is
@@ -566,11 +619,9 @@ struct PaywallView: View {
     /// Percentage the annual plan saves versus paying monthly for a year, for
     /// one tier. nil when either price is unknown or annual isn't cheaper.
     private func annualSavingsPercent(tier: String) -> Int? {
-        // Live prices decide the badge. The planned map is a fallback only
-        // in the survey, for the same reason as `displayPrice` — otherwise a
-        // card showing "—" would still claim a savings percentage computed
-        // from numbers the viewer is never shown.
-        let storefront = store.options.first?.storefrontCountry
+        // Live prices decide the badge — nothing else may. A hardcoded
+        // fallback would claim a savings percentage computed from numbers the
+        // viewer is never shown, on a card whose price field is blank.
         func value(_ period: String) -> Decimal? {
             let opt = store.options.first { $0.plan.tier == tier && $0.plan.period == period }
             return opt?.priceValue
@@ -593,55 +644,73 @@ struct PaywallView: View {
     }
 
     @ViewBuilder
-    private func planCard(tier: String, audience: String, name: String, blurb: String) -> some View {
+    /// The plan's monthly pools, as the card prints them. Nil where the
+    /// catalog hasn't loaded — a card with no numbers is better than a card
+    /// with guessed ones.
+    private func pools(_ opt: StoreKitService.PlanOption?) -> (minutes: Int, scenes: Int)? {
+        guard let seconds = opt?.plan.monthly_seconds, seconds > 0,
+              let scenes = opt?.plan.monthly_scenes else { return nil }
+        return (seconds / 60, scenes)
+    }
+
+    private func planCard(tier: String, audience: String, name: String) -> some View {
         let opt = option(tier: tier)
         let isSelected = selectedTier == tier
         let isCurrent = isCurrentPlan(tier: tier, period: period)
-        Button {
+        let pool = pools(opt)
+        return Button {
             selectedTier = tier
         } label: {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
-                    // A filled capsule reads as an award — it ranked the
-                    // plans on one axis and made Daily look like less. This
-                    // is a quiet label that tells you which one is yours.
-                    // For the plan already held, WHICH ONE IT IS outranks the
-                    // "is this you?" question the audience line asks.
-                    Text(isCurrent ? explain("Current plan") : audience)
-                        .font(.caption.weight(isCurrent ? .semibold : .medium))
-                        .foregroundStyle(isCurrent ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name).font(.title3.weight(.bold))
+                        // A filled capsule reads as an award — it ranked the
+                        // plans on one axis and made the smaller one look
+                        // like less. This is a quiet line that says who the
+                        // plan is for. For the plan already held, WHICH ONE
+                        // IT IS outranks that question.
+                        Text(isCurrent ? explain("Current plan") : audience)
+                            .font(.caption.weight(isCurrent ? .semibold : .regular))
+                            .foregroundStyle(isCurrent ? AnyShapeStyle(.tint)
+                                                       : AnyShapeStyle(Color.secondary))
+                    }
                     Spacer(minLength: 8)
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                         .font(.title3)
                 }
-                Text(name).font(.title3.weight(.bold))
-                Text(blurb).font(.subheadline).foregroundStyle(.secondary)
-                HStack(alignment: .firstTextBaseline) {
-                    // What the plan buys, per day. Unlimited deliberately
-                    // shows NO number: its allowance is a fair-use ceiling,
-                    // and printing "60 min" next to the word Unlimited reads
-                    // as a cap the buyer has to ration.
-                    if tier == "unlimited" {
-                        Text(explain("Unlimited talk & scenes"))
-                            .font(.footnote.weight(.semibold))
-                    } else if let capSeconds = opt?.plan.daily_seconds {
-                        Text(allowanceLine(seconds: capSeconds, scenes: opt?.plan.daily_scenes))
-                            .font(.footnote.weight(.semibold))
+                // Everything the plan holds, in one list: the two metered
+                // pools with their sizes, then the two that aren't metered at
+                // all. They used to be split — sizes on the card, "Always
+                // free" in a box underneath — which asked the reader to
+                // assemble the offer from two places and made the free half
+                // look like a consolation prize rather than part of what they
+                // are buying. Both tiers carry all four rows; the last two are
+                // identical by design, because they really are the same.
+                if let pool {
+                    VStack(spacing: 6) {
+                        specRow(explain("Talking"), minutesLabel(pool.minutes),
+                                note: perDayLabel(opt))
+                        specRow(explain("Watch scenes"), explain("\(pool.scenes)/mo"))
+                        specRow(explain("Your own review book"), explain("Unlimited"))
+                        specRow(explain("Shadowing · words · replays · drills"),
+                                explain("Unlimited"))
                     }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        // No placeholder when StoreKit hasn't priced it: a
-                        // dash reads as a broken field, and an absent price
-                        // says the same thing more quietly.
-                        if let price = displayPrice(opt) {
-                            Text("\(price) / \(period.cycleNoun)")
-                                .font(.footnote.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                        }
+                }
+                // No placeholder when StoreKit hasn't priced it: a dash reads
+                // as a broken field, and an absent price says the same thing
+                // more quietly. The whole ROW goes with it — an HStack of two
+                // absent children still takes the VStack's spacing, which
+                // left a card with unexplained air under its figures.
+                if let price = displayPrice(opt) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(price) / \(period.cycleNoun)")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 8)
                         if period == .annual, let saved = annualSavingsPercent(tier: tier) {
                             Text(explain("Save \(saved)% vs monthly"))
-                                .font(.caption2.weight(.semibold))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(.green)
                         }
                     }

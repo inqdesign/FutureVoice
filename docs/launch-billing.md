@@ -7,6 +7,32 @@
 
 ---
 
+## Pricing principle (owner, 2026-08-20)
+
+**We do not make money from people being unable to use what they bought.**
+Stated by the owner directly: the wish is that every Daily subscriber really
+does talk their five minutes a day. If that leaves no margin, the answer is a
+higher price — not a structure that quietly relies on the allowance going
+unspent, and not one that makes the allowance harder to reach.
+
+This is a constraint on design, and it rules things out:
+
+- No mechanism whose PURPOSE is to keep usage below what was sold. Caps exist
+  to bound cost per unit and to keep one account from starving the rest; they
+  must never be tuned to make the plan's own number unreachable.
+- "Acceptable with normal under-use" is not a verdict a plan may pass on. The
+  question to ask of a price is **what it earns when every subscriber uses
+  everything**, not what it earns on today's usage curve.
+- Where full use doesn't clear cost, the fix is the PRICE (or the cost), and
+  the numbers below are the ones that need re-deriving — see §4, whose current
+  verdicts still lean on under-use and predate both the minutes model and the
+  2x fidelity model on scenes.
+
+The flat-rate-bias note further down is about not putting a METER in front of
+people, which stays true. It is not a licence to price against under-use.
+
+---
+
 ## 2026-08-11 revision — credits → minutes
 
 Beta feedback was unanimous: per-click credit charges ("복습만 해도 6~10씩
@@ -28,6 +54,48 @@ Everything else is free, defended by invisible daily caps.**
 | **4. Hard paywall + trial** | No free tier: new signups get 0 seconds (`handle_new_user_credits` creates the row at zero), so the first talk 402s into the paywall — voice clone + onboarding greeting stay free as the hook. The 7-day trial is Apple's intro offer (`status='trialing'` via apple-webhook) and is metered at the **Daily** allowance (300 s/day) regardless of which plan is being trialed, so a trial-then-cancel can't cost 7 × 60 min. `PaywallView.offerTrial` removed — Apple's `isEligibleForIntroOffer` is the only trial gate now. Migration `20260811180000_hard_paywall_trial`. **BLOCKED on ASC**: products must exist under the new ids (`com.roro.futurevoice.daily_monthly` …) with a 7-day free-trial intro offer, and the beta's survey-mode paywall had to go — done 2026-08-18, `BetaConfig` deleted with it. | **Server shipped 2026-08-11 / app gated** |
 
 | **5. Watch leaves the talk meter** | Talk seconds meter against `daily_seconds` ALONE. Watch scenes meter by **count** against a new `subscription_plans.daily_scenes` (**Daily 2/day**, **Unlimited 20/day** fair-use), claimed once per scene via `begin_scene_play(user, scene_key)` — one key across every line of a scene, so a ten-line scene costs one count and a scene under way is never cut off. Cap-out returns 402 `scene_cap_reached` (never a paywall). Cached scenes never reach the server, so replays cost nothing, as promised. Backward compatible: a client that sends no `scene_key` stays on the `scene_seconds` pool and keeps today's economics exactly — only a registered scene moves to `scene_counted`, which the daily-seconds cap ignores. Migration `20260814100000_watch_scenes_by_count`. | **Shipped 2026-08-14 (server) / app in this build** |
+
+| **6. Monthly pools, and Daily/Unlimited → Light/Plus** | Allowances become **pools per billing period**, like a mobile data plan: **Light 150 min + 60 scenes**, **Plus 1800 min + 600 scenes**. No daily ceiling of any kind — spend the month in one call if you like. `daily_seconds` / `daily_scenes` survive as the DESCRIPTIVE "5 minutes a day" figure only; `monthly_seconds` / `monthly_scenes` are what `consume_metered_seconds` and `begin_scene_play` enforce, both counted from `billing_period_start()`. The trial is pro-rated 7/30 (≈35 min, 14 scenes) so a week's sample can't spend a month. Tier names and internal plan ids move to `light_*` / `plus_*`; the **Apple product ids do NOT** (`20260820220000`) — four subscriptions were already registered in ASC under the old names, and an Apple product id is permanent per app. Migration `20260820180000_monthly_pools_light_and_plus`. | **Shipped 2026-08-20** |
+
+Four designs were shipped and replaced in one day getting here; the discarded
+ones are worth knowing so they don't come back.
+
+1. **Daily cap, no carry-over** (the original). Broke on the person whose week
+   only has room for Saturday: they got 5 minutes on Saturday and lost the
+   other six days. Not "some waste" — a hard ceiling on the one day they
+   turned up.
+2. **A BANK of unused days** (`20260820120000`). Computed today's extra as "the
+   unused seconds of the last N days". It reads correctly and double-spends:
+   nothing debits an idle day once it has been drawn, so every window still
+   containing it counts it again. Measured +40%. A bank must be debited to be
+   correct, which means storing a balance.
+3. **A rolling 7-day WINDOW** (`140000`, `160000`). Correct — the usage rows are
+   the ledger, so no stretch of 7 days can exceed 7 × daily — but it needed a
+   signup clamp to stop a new subscriber's first day opening with the whole
+   week, and it could not be explained in a sentence. Three migrations of
+   arithmetic to answer what a data plan answers with one number.
+4. **Monthly pool** — where it landed. The objection that had ruled it out was
+   fill rate: a visible monthly balance gets spent, and this tier's margin came
+   from the allowance going unspent. **That objection was retired by the
+   pricing principle at the top of this file**, not out-argued.
+
+What survives from the window era: the taximeter risk is real and is handled in
+the UI rather than the meter — the figures live one tap away in Me, and the
+home shows an arc with no digits.
+
+**Watch scenes are a separate pool, not a share of the talk one** (since phase
+5) and they do NOT get a daily allowance either. 60 a month on Light, spent
+whenever.
+
+**The Apple product ids stay `…daily_monthly` / `…unlimited_annual` and that is correct.** They were registered before the rename, and an Apple product id can never be renamed or reused — not even after removal from sale. Nobody ever reads one; what a buyer sees is the localized Display Name, which IS editable, so the tiers are renamed there instead. `apple-webhook` resolves `apple_product_id` → `subscription_plans.id` and the app reads ids out of the catalog, so the two id spaces were already independent. Read `apple_product_id` as "what Apple calls this", never as "what this plan is". Registering four fresh ids would burn four more permanent strings, need four more introductory offers, and leave four dead products in the group forever.
+
+Why the names: "Daily" named a unit that no longer exists, and "Unlimited"
+named something that was never true — that tier has always had a fair-use
+ceiling, and under the pricing principle we don't sell a promise the meter
+doesn't keep (its 1800 min / 600 scenes are now printed on the card). The SIZE
+isn't in the name because the numbers are still being tuned and an Apple
+product id is permanent once it has sold. Not Light/**Heavy** because
+`PaywallView` has always held that the label must not grade the BUYER.
 
 Why: measured on 2026-08-13, the one active Daily subscriber spent 101/164/95 s
 a day on scenes — about a fifth of a 300 s allowance — so someone using Watch
@@ -181,10 +249,14 @@ Later (if annual share is high): drip annual credits 1/12 per month via cron.
 
 Apple (blocking — nothing sells until these are done):
 
-- [ ] **Four products in ASC under the RENAMED ids** — `com.roro.futurevoice.{daily,unlimited}_{monthly,annual}` (renamed 2026-08-11; they must match `subscription_plans.apple_product_id`). **Weekly is NOT sold** — already switched off in `20260811190000_weekly_off_catalog` (`is_active = false`), and the client selects on `is_active`. Two independent guards keep it hidden: the plan never loads, and `PaywallView.availablePeriods` only offers a period whose StoreKit product actually loaded. Re-enabling it later is one flag plus the ASC products — no migration, no code change.
+- [x] **Four products exist in ASC** — `com.roro.futurevoice.{daily,unlimited}_{monthly,annual}`. **Keep these ids** (see above); they must keep matching `subscription_plans.apple_product_id`.
+- [ ] **Rename what the BUYER sees** — each product's Reference Name and its localized Display Name to Light / Plus (ko: 라이트 / 플러스). The product id stays as it is and is never shown.
+- [ ] **All four in ONE subscription group** — otherwise Light ↔ Plus can't be an upgrade/downgrade, and Apple's one-intro-offer-per-group rule doesn't apply the way the trial funnel assumes. **Weekly is NOT sold** — already switched off in `20260811190000_weekly_off_catalog` (`is_active = false`), and the client selects on `is_active`. Two independent guards keep it hidden: the plan never loads, and `PaywallView.availablePeriods` only offers a period whose StoreKit product actually loaded. Re-enabling it later is one flag plus the ASC products — no migration, no code change.
 - [ ] **7-day free-trial introductory offer on each** — the trial funnel reads `product.subscription.introductoryOffer`; with none, the paywall silently degrades to "Subscribe"
-- [ ] `APPLE_BUNDLE_ID` / `APPLE_APP_ID` secrets set
-- [ ] `apple-webhook` deployed; ASC Server Notifications V2 pointed at it
+- [x] `APPLE_BUNDLE_ID` (`com.roro.futurevoice`) / `APPLE_APP_ID` (`6792794655`) secrets set — 2026-08-20. Note `APPLE_APP_ID` is passed to the verifier for PRODUCTION only (`environment === PRODUCTION ? appAppleId : undefined`), so TestFlight/Sandbox needs the bundle id alone.
+- [x] `apple-webhook` deployed (v2, ACTIVE) — **and rewritten 2026-08-20**: Apple's `SignedDataVerifier` cannot verify a chain on the Supabase edge runtime (`X509Certificate.verify` / `.checkIssued` are unimplemented, and throw with an empty message), so it had never accepted a single notification. Now verifies the JWS itself on Web Crypto via `@peculiar/x509`. Don't "simplify" it back to the library.
+- [x] **End-to-end verified 2026-08-20** — Sandbox purchase → RC → webhook `200` → `user_subscriptions` row (`apple_original_tx_id 2000001224361429`, `light_monthly`, active). The Apple product id `…daily_monthly` resolved to plan `light_monthly`, confirming the id split.
+- [ ] **ASC Server Notifications V2 → RevenueCat → us** (decided 2026-08-20, plan B in `docs/revenuecat-setup.md` §3: no SDK, no app change). ASC's Production AND Sandbox URLs both point at RC's incoming webhook; RC's *Apple Server Notification Forwarding URL* points at `…/functions/v1/apple-webhook`; RC's *Track new purchases from server-to-server notifications* is ON. RC forwards Apple's original signed payload, so the function needs no change and `user_subscriptions` stays the source of truth for entitlement. **All three or none** — with the ASC half alone a purchase never reaches our DB and the buyer gets nothing, so verify with a real Sandbox purchase rather than the settings screen.
 - [ ] TestFlight: purchase → `user_subscriptions` row goes `trialing`, and talk meters at 5 min/day
 - [ ] Ship only builds that set `appAccountToken` (older builds can't attribute)
 

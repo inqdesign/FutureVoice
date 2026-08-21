@@ -99,6 +99,26 @@ enum DebugCapture {
 
     // MARK: - Routing
 
+    /// The account every billing capture renders against: a Light subscriber
+    /// mid-period, 55 of 150 minutes and 12 of 60 scenes spent, refilling on
+    /// the 14th. ONE sample for all three pages on purpose — they quote each
+    /// other's numbers, so reviewing them against different accounts would
+    /// hide exactly the disagreement the captures exist to catch. It also has
+    /// to be an account that could EXIST: a made-up pool gets the copy checked
+    /// against a figure no customer will ever see. `UsageBreakdown.sample` is
+    /// written to add up against these.
+    static var sampleLightAccount: AccountStatus {
+        var out = AccountStatus(
+            email: nil, secondsBalance: 0,
+            planId: "light_monthly", subscriptionStatus: "active",
+            secondsUsedPeriod: 3300, monthlyCapSeconds: 9000,
+            scenesUsedPeriod: 12, monthlyScenesCap: 60,
+            fullTankSeconds: 9000)
+        out.periodEnd = Calendar.current.date(byAdding: .day, value: 18, to: Date())
+        out.periodStart = Calendar.current.date(byAdding: .day, value: -12, to: Date())
+        return out
+    }
+
     /// Seeds synchronously (before the child view's onAppear reads the stores),
     /// then returns the REAL screen. nil for an unknown name.
     static func view(for name: String, appState: AppState) -> AnyView? {
@@ -191,23 +211,22 @@ enum DebugCapture {
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
         case "usage":
-            // The talk-time receipt. Captures run signed-out, so the page
-            // gets a representative account (a Daily subscriber mid-day).
+            // The talk-time receipt, for the shared sample account below.
             return AnyView(NavigationStack {
-                UsageDetailView(
-                    account: AccountStatus(
-                        email: nil, secondsBalance: 0,
-                        planId: "daily_monthly", subscriptionStatus: "active",
-                        // 300 s is what Daily actually grants
-                        // (`subscription_plans.daily_seconds`, migration
-                        // 20260811160000). This used to say 1800 and shot a
-                        // "30 min" screen no customer has ever had — a
-                        // sample account has to be an account that exists,
-                        // or the copy gets reviewed against a fake number.
-                        secondsUsedToday: 120, dailyCapSeconds: 300,
-                        scenesUsedToday: 1, dailyScenesCap: 2,
-                        fullTankSeconds: 300),
-                    previewUsage: .sample)
+                UsageDetailView(account: Self.sampleLightAccount, previewUsage: .sample)
+            })
+        case "plan":
+            // Me → Plan & talk time, for the same Light subscriber the usage
+            // receipt uses — the two pages quote each other's numbers, so they
+            // have to be reviewed against ONE account or the check is worthless.
+            return AnyView(NavigationStack {
+                PlanPageView(account: Self.sampleLightAccount)
+            })
+        case "plan-guide":
+            // The transparency page for a Light subscriber — the one place
+            // the plan's shape is stated in full.
+            return AnyView(NavigationStack {
+                CreditGuideView(account: Self.sampleLightAccount)
             })
         case "level-header":
             // The two-line conversation title in a real inline bar.
@@ -347,6 +366,30 @@ enum DebugCapture {
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
+        case "home-plus":
+            // The same home for a PLUS subscriber, which draws NO ring — an
+            // hour a day is a pool the arc would sit near-empty on all month.
+            // Its own capture so the absence is reviewed, not assumed.
+            once("home-plus") {
+                seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                TalkTimeLog.add(seconds: 180, language: appState.targetLanguage)
+            }
+            return AnyView(ConversationHome())
+        case "home-light", "home-light-fresh":
+            // The Talk home for a LIGHT subscriber — the avatar ring in the
+            // header draws down this month's pool. The account is injected by
+            // `ConversationHome.refreshAccount` (it keys off this capture
+            // name); `-fresh` seeds nothing so the hero ring sits at zero.
+            if name == "home-light" {
+                once("home-light") {
+                    seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                    // The arc reads TalkTimeLog, not the injected snapshot —
+                    // seed today so the ring is shown part-spent rather than
+                    // empty, which is the state worth reviewing.
+                    TalkTimeLog.add(seconds: 180, language: appState.targetLanguage)
+                }
+            }
+            return AnyView(ConversationHome())
         case "talk-alt":
             // Layout experiment — How-We-Feel-style Talk home (design review).
             return AnyView(TalkHomeExperiment())
@@ -478,7 +521,7 @@ enum DebugCapture {
             once("deepen") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(DeepenCaptureHost(expanded: name == "deepen-full")
                 .environmentObject(appState))
-        case "paywall":
+        case "paywall", "paywall-plans":
             // The out-of-credits paywall (no trial pitch), as presented from
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))
@@ -487,6 +530,14 @@ enum DebugCapture {
             // ends into. Reachable no other way in a capture run: it fires
             // once, after a real conversation has been summarized.
             return AnyView(FeedbackCaptureHost().environmentObject(appState))
+        case "day-spent", "day-spent-unlimited", "day-spent-scenes":
+            // The spent-allowance sheet, both sides of it: Daily (there is
+            // something to offer) and Unlimited (there isn't). Unreachable in
+            // a capture run — it takes a real account that talked out its day.
+            return AnyView(DaySpentCaptureHost(
+                kind: name == "day-spent-scenes" ? .scenes : .talk,
+                canUpgrade: name != "day-spent-unlimited")
+                .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
             // the fluent self can't reply because credits ran out.
@@ -1095,6 +1146,27 @@ private struct BookCaptureHost: View {
 
 /// Presents `FeedbackSheet` over the Talk home, the way it arrives at the
 /// end of the first call.
+/// Presents `DailyAllowanceSheet` over the Talk home, the way the call screen
+/// raises it when the day's allowance runs out.
+private struct DaySpentCaptureHost: View {
+    let kind: DailyAllowanceSheet.Kind
+    let canUpgrade: Bool
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                DailyAllowanceSheet(kind: kind, canUpgrade: canUpgrade,
+                                    allowance: kind == .talk ? 150 : 60,
+                                    renewsOn: "Sep 14",
+                                    onReview: {}, onUpgrade: {})
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
+    }
+}
+
 private struct FeedbackCaptureHost: View {
     @State private var showing = false
 
