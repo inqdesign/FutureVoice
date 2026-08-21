@@ -65,6 +65,10 @@ struct AccountStatus {
     /// When this pool refills — the end of the billing period. Nil for free
     /// accounts, whose balance never refills at all.
     var periodEnd: Date?
+    /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
+    /// `20260821100000`, so for a subscriber this is time on top of the plan
+    /// rather than the "kept for after you cancel" balance it used to be.
+    var bonusSeconds: Int = 0
     /// When the current billing period began. The usage receipt reads its
     /// ledger window from this: the pool is monthly, so a fixed 7-day window
     /// could never account for the month the header counts down from.
@@ -211,6 +215,10 @@ struct AccountStatus {
     /// Minutes of metered audio spent this period.
     var minutesUsedPeriod: Int { secondsUsedPeriod / 60 }
 
+    /// Invite minutes waiting to be spent, 0 when there are none.
+    var bonusMinutes: Int { bonusSeconds / 60 }
+    var hasBonusMinutes: Bool { bonusMinutes > 0 }
+
     /// When the pool refills, as a short date ("9월 14일"). Empty when there
     /// is nothing to refill.
     ///
@@ -241,7 +249,11 @@ struct AccountStatus {
         // half of dropping the avatar ring on Plus.)
         if isPlusPlan { return explain("\(minutesUsedPeriod) min talked this month") }
         if isEntitled {
-            return explain("\(minutesRemaining) of \(tankMinutes) min left this month")
+            let plan = explain("\(minutesRemaining) of \(tankMinutes) min left this month")
+            // Invite minutes are spent first, so they are not part of the
+            // month's fraction and must not be folded into it — they are
+            // named separately or the two numbers stop adding up.
+            return hasBonusMinutes ? plan + explain(" + \(bonusMinutes) invite min") : plan
         }
         if hasLegacyPool {
             // A one-time pool with nothing to refill toward, so no

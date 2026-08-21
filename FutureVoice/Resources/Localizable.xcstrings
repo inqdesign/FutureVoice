@@ -23144,6 +23144,48 @@
           }
         }
       }
+    },
+    " + %lld invite min" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " + 초대 %lld분"
+          }
+        }
+      }
+    },
+    "A" : {
+      "shouldTranslate" : false
+    },
+    "I'm practicing speaking with my own AI voice on nawana. Enter my code %@ when you sign up and we both get %lld minutes of talk time." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "I'm practicing speaking with my own AI voice on nawana. Enter my code %1$@ when you sign up and we both get %2$lld minutes of talk time."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana에서 내 목소리로 말하기 연습하고 있어요. 가입할 때 코드 %@ 를 넣으면 둘 다 통화 %lld분을 받아요."
+          }
+        }
+      }
+    },
+    "Invite minutes are used before your monthly time, so they come off the top. Reviewing is always free." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대로 받은 시간이 이번 달 시간보다 먼저 쓰여요. 복습은 언제나 무료예요."
+          }
+        }
+      }
+    },
+    "It went well. I commuted for almost an hour, though." : {
+      "shouldTranslate" : false
     }
   },
   "version" : "1.1"

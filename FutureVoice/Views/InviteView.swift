@@ -33,11 +33,11 @@ struct InviteView: View {
                         .foregroundStyle(.secondary)
                 }
             } footer: {
-                // A subscriber's invite minutes land in the one-time pool,
-                // which a subscription never spends — say so rather than
-                // promise time they won't see this month.
+                // Invite minutes are spent BEFORE the plan's monthly pool
+                // (20260821100000), so a subscriber sees them immediately —
+                // this line used to have to apologise that they wouldn't.
                 Text(account.isEntitled
-                     ? explain("Invite minutes are kept for after your plan ends. Reviewing is always free.")
+                     ? explain("Invite minutes are used before your monthly time, so they come off the top. Reviewing is always free.")
                      : explain("Minutes buy talk time with your fluent self. Reviewing is always free."))
             }
 
@@ -55,7 +55,12 @@ struct InviteView: View {
                         }
                         .buttonStyle(.borderless)
                     }
-                    ShareLink(item: shareText(code)) {
+                    // The LINK is the item and the sentence rides along as the
+                    // message: shared that way the recipient gets a tappable
+                    // App Store card, not a paragraph they have to act on.
+                    ShareLink(item: ReferralService.appStoreURL,
+                              subject: Text("nawana"),
+                              message: Text(shareText(code))) {
                         Label("Share invite", systemImage: "square.and.arrow.up")
                     }
                     HStack {
@@ -123,7 +128,7 @@ struct InviteView: View {
     }
 
     private func shareText(_ code: String) -> String {
-        explain("I'm practicing speaking with my own AI voice on nawana. Join with my code \(code) and we both get \(bonusMinutes) minutes of talk time.")
+        explain("I'm practicing speaking with my own AI voice on nawana. Enter my code \(code) when you sign up and we both get \(bonusMinutes) minutes of talk time.")
     }
 
     private func reload() async {

@@ -28,6 +28,14 @@ enum ReferralService {
     /// friend still gets theirs.
     static let rewardedInviteCap = 10
 
+    /// Where a shared invite sends the friend. The code alone was the whole
+    /// message until 2026-08-21, which left the recipient holding six letters
+    /// and no way to get the app — they had to go and find it by name. The
+    /// numeric id is the App Store's own (`6792794655`); it is permanent, and
+    /// it is the same id `apple-webhook` verifies production notifications
+    /// against.
+    static let appStoreURL = URL(string: "https://apps.apple.com/app/id6792794655")!
+
     /// My own code, how many friends have redeemed it, and the code I joined
     /// with. Best-effort.
     static func fetchMine() async -> ReferralStatus {
