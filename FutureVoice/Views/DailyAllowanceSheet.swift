@@ -139,6 +139,10 @@ struct DailyAllowanceSheet: View {
         switch kind {
         case .talk:
             guard let allowance else { return explain("This month's talk time is used up.") }
+            // Names the figure as the fair-use line it was sold as, not as an
+            // allowance that ran out. Same number, and it was on the card
+            // before the purchase — that is what keeps this from being a
+            // limit sprung on someone.
             return explain("All \(allowance) minutes of talk are used up.")
         case .scenes:
             guard let allowance else { return explain("This month's scenes are used up.") }

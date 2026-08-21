@@ -690,7 +690,10 @@ struct ConversationView: View {
             .sheet(isPresented: $dailyCapReached, onDismiss: {
                 switch capChoice {
                 case .upgrade:
-                    paywallTier = "unlimited"
+                    // "plus", not "unlimited" — the paywall matches this against its own
+                    // tier ids, so the old name silently preselected nothing and left
+                    // the sheet on the plan they already hold.
+                    paywallTier = "plus"
                     showingPaywall = true
                 case .review:  leaveForPractice()
                 case nil:      break

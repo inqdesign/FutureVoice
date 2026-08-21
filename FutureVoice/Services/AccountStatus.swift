@@ -50,7 +50,11 @@ struct AccountStatus {
     /// is measured in. From `talk_allowance()`.
     var secondsUsedPeriod: Int = 0
     /// The period's whole talk pool in seconds (`monthly_seconds`: 9000 on
-    /// Light, 108000 on Plus, pro-rated during a trial). Nil for free users.
+    /// Light, pro-rated during a trial). **Nil means one of two things**, and
+    /// `isEntitled` tells them apart: no plan at all, or an entitled plan with
+    /// NO talk ceiling (Plus, since `20260821120000_plus_talk_unlimited` —
+    /// talking is bounded by the effort of speaking, so a ceiling was doing no
+    /// work). Watch is unaffected; `monthlyScenesCap` is always set on a plan.
     var monthlyCapSeconds: Int?
     /// Watch scenes started this period, and the pool's size
     /// (`monthly_scenes`: 60 on Light, 600 on Plus). Nil cap = no
@@ -229,6 +233,13 @@ struct AccountStatus {
     /// would be the same concealment the rename was made to end.
     var talkTimeLabel: String {
         if unlimited { return explain("\(minutesRemaining) min left") }
+        // Plus does not count DOWN. Its pool is a fair-use line the account
+        // will almost never approach, so "1,745 of 1,800 min left" is a
+        // monthly receipt for time NOT used — it reads as money wasted and
+        // is the one number most likely to end the subscription. The same
+        // seconds, told forward, read as something done. (This is the other
+        // half of dropping the avatar ring on Plus.)
+        if isPlusPlan { return explain("\(minutesUsedPeriod) min talked this month") }
         if isEntitled {
             return explain("\(minutesRemaining) of \(tankMinutes) min left this month")
         }
@@ -306,6 +317,8 @@ struct AccountStatus {
             .execute()
             .value {
             out.secondsUsedPeriod = talk.used
+            // Nil cap on an entitled plan is "uncapped", not "no plan" — the
+            // RPC says which via `metered_by`, and `used` is real either way.
             out.monthlyCapSeconds = talk.cap
             out.periodStart = talk.period_start.flatMap(Self.day(from:))
             out.periodEnd = talk.period_end.flatMap(Self.day(from:))

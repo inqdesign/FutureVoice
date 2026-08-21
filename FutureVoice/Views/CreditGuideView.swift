@@ -25,17 +25,26 @@ struct CreditGuideView: View {
             // The pool sits FIRST: it is the shape of the whole plan, and
             // the question that actually brings people here is "what am I
             // allowed to do?" before "what does it cost me?".
-            if let account, let cap = account.monthlyCapSeconds {
+            // Gated on the SCENE cap, not the talk one: Plus has no talk cap
+            // any more, and gating on it made this whole section vanish for
+            // the tier whose shape most needs explaining.
+            if let account, account.monthlyScenesCap != nil {
                 Section {
                     plainRow(icon: "calendar",
-                             title: cap / 60 >= 600
-                                 ? explain("\(cap / 3600) hours a month")
-                                 : explain("\(cap / 60) minutes a month"),
+                             title: account.monthlyCapSeconds.map {
+                                 explain("\($0 / 60) minutes a month")
+                             } ?? explain("Talk as much as you want"),
                              // States the rule POSITIVELY and stops. The
                              // trailing "there is no daily limit" said the
                              // same thing again as a denial, and a denial
                              // needs the reader to have expected the limit.
-                             detail: explain("Use them however you like — all in one call today, or spread over the month."))
+                             // No fair-use figure to state any more: talking
+                             // is genuinely uncapped, and the honest reason is
+                             // worth saying out loud — speaking is its own
+                             // limit, which is exactly what watching is not.
+                             detail: account.monthlyCapSeconds == nil
+                                 ? explain("No limit and no rationing. Talking takes real effort, so there is nothing here to ration.")
+                                 : explain("Use them however you like — all in one call today, or spread over the month."))
                     if let scenes = account.monthlyScenesCap {
                         plainRow(icon: "play.circle.fill",
                                  title: explain("\(scenes) Watch scenes a month"),
@@ -45,8 +54,8 @@ struct CreditGuideView: View {
                     Text("What your plan holds")
                 } footer: {
                     Text(account.renewalLabel.isEmpty
-                         ? explain("Both refill at the start of each billing period.")
-                         : explain("Both refill on \(account.renewalLabel)."))
+                         ? explain("Scenes refill at the start of each billing period.")
+                         : explain("Scenes refill on \(account.renewalLabel)."))
                 }
             }
 

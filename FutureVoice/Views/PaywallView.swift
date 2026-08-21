@@ -464,7 +464,7 @@ struct PaywallView: View {
                 // must still never grade the buyer: no "heavy user", no
                 // "serious learners".
                 planCard(tier: "plus",
-                         audience: explain("Get fluent for an exam or interview"),
+                         audience: explain("As much as you want, whenever you want"),
                          name: AccountStatus.tierName("plus"))
                 planCard(tier: "light",
                          audience: explain("Keep it up as a habit"),
@@ -546,10 +546,7 @@ struct PaywallView: View {
     /// eight. Grouping explicitly in the learner's own language fixes that
     /// without touching the unit.
     private func minutesLabel(_ minutes: Int) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.locale = Locale(identifier: LanguageCatalog.currentNative)
-        let grouped = f.string(from: NSNumber(value: minutes)) ?? "\(minutes)"
+        let grouped = grouped(minutes)
         // The PERIOD rides on the figure. It used to sit in a sentence under
         // the cards ("both refill every billing period"), which is a thing
         // nobody reads and which left "1,800 min" period-less on the card
@@ -586,6 +583,37 @@ struct PaywallView: View {
             }
             .layoutPriority(1)
         }
+    }
+
+    /// A figure grouped in the LEARNER's language, for any card number that
+    /// can reach four digits.
+    ///
+    /// **Never interpolate such an `Int` straight into a localized string.**
+    /// `%lld` is grouped by the RESOLVING locale, which follows the device
+    /// region rather than the app language — that is how "공정 사용 월
+    /// 1,800분" shipped as "1.800분", a German grouping inside a Korean
+    /// sentence, where it reads as one point eight. Format here, pass the
+    /// result in as `%@`.
+    private func grouped(_ n: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: LanguageCatalog.currentNative)
+        return f.string(from: NSNumber(value: n)) ?? "\(n)"
+    }
+
+    /// True for the tier whose TALKING is not capped at all. One place,
+    /// because the card and every screen that reports usage have to agree
+    /// about whether this account is counting minutes.
+    ///
+    /// Read from the TIER rather than from `subscription_plans.talk_unlimited`,
+    /// which is the server's enforcement switch. Selecting that column would
+    /// couple the catalog fetch to a migration having landed — and a
+    /// `.select()` naming a column the database doesn't have yet fails the
+    /// WHOLE query, which empties the plan list and renders a paywall with no
+    /// plans on it. The client must not be one deploy-ordering mistake away
+    /// from having nothing to sell.
+    private func isUncappedTalk(_ opt: StoreKitService.PlanOption?) -> Bool {
+        opt?.plan.tier == "plus"
     }
 
     /// "about 5 min a day" — what the month's pool works out to per day, from
@@ -680,23 +708,38 @@ struct PaywallView: View {
                         .foregroundStyle(isSelected ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                         .font(.title3)
                 }
-                // Everything the plan holds, in one list: the two metered
-                // pools with their sizes, then the two that aren't metered at
-                // all. They used to be split — sizes on the card, "Always
-                // free" in a box underneath — which asked the reader to
-                // assemble the offer from two places and made the free half
-                // look like a consolation prize rather than part of what they
-                // are buying. Both tiers carry all four rows; the last two are
-                // identical by design, because they really are the same.
-                if let pool {
-                    VStack(spacing: 6) {
+                // Everything the plan holds, in one list: what is metered
+                // with its size, then what isn't metered at all. These used to
+                // be split — sizes on the card, "Always free" in a box
+                // underneath — which asked the reader to assemble the offer
+                // from two places and made the free half look like a
+                // consolation prize rather than part of what they are buying.
+                VStack(spacing: 6) {
+                    if isUncappedTalk(opt) {
+                        // Plus does not cap TALKING at all (server-side since
+                        // `20260821120000_plus_talk_unlimited`): talking costs
+                        // the learner effort, and effort is a better limiter
+                        // than any ceiling — nobody speaks for six hours. So
+                        // there is no figure to print and none is printed.
+                        //
+                        // WATCH still counts, because a scene plays itself: it
+                        // can be consumed by tapping, costs us ~2x per
+                        // character on `fidelityModelId`, and a count is the
+                        // only thing between us and an afternoon of farming.
+                        // That number stays on the card — it is a real limit
+                        // and hiding a real limit is how you ambush someone.
+                        specRow(explain("Talking"), explain("No limit"))
+                        if let pool {
+                            specRow(explain("Watch scenes"), explain("\(pool.scenes)/mo"))
+                        }
+                    } else if let pool {
                         specRow(explain("Talking"), minutesLabel(pool.minutes),
                                 note: perDayLabel(opt))
                         specRow(explain("Watch scenes"), explain("\(pool.scenes)/mo"))
-                        specRow(explain("Your own review book"), explain("Unlimited"))
-                        specRow(explain("Shadowing · words · replays · drills"),
-                                explain("Unlimited"))
                     }
+                    specRow(explain("Your own review book"), explain("Unlimited"))
+                    specRow(explain("Shadowing · words · replays · drills"),
+                            explain("Unlimited"))
                 }
                 // No placeholder when StoreKit hasn't priced it: a dash reads
                 // as a broken field, and an absent price says the same thing

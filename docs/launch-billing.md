@@ -110,6 +110,40 @@ as the Daily tier's cost ceiling; a count is what replaces that bound. At 2
 scenes/day a maxed Daily subscriber lands near €7.10 net rather than above it.
 Do NOT raise `daily_scenes` on the Daily tier without redoing that arithmetic.
 
+## Plus: no talk ceiling (2026-08-21, `20260821120000_plus_talk_unlimited`)
+
+Talking is uncapped on Plus. Watch keeps `monthly_scenes` on every tier.
+
+**The asymmetry is the whole argument.** A Watch scene is consumed by TAPPING —
+an idle afternoon can farm a month of them, and each is billed to us on
+`fidelityModelId` at roughly twice the per-character rate of a talk turn, so a
+count is the only thing between us and that. Talking is consumed by SPEAKING.
+Nobody talks for six hours; effort is the limiter, and it is one no ceiling can
+improve on. At 1,800 min the pool was therefore doing no work — that is an hour
+every day, which almost no account approaches — while costing us exactly what
+the ceiling existed to protect: a subscriber who has to ration the one activity
+the product is for.
+
+**This is a measurement decision as much as a pricing one.** No account has ever
+run without a talk ceiling, so the honest ceiling cannot be derived from
+anything we currently hold. Usage keeps being recorded in full
+(`tts_char_pool`, `usage_ledger`, `talk_seconds_by_language`); revisit with real
+data rather than an estimate. `talk_unlimited` is a COLUMN precisely so
+restoring the ceiling is one `UPDATE` — but note the client reads the TIER, so
+flipping it back means updating the paywall card in the same release or the card
+will keep promising "No limit".
+
+**What this depends on:** the meter must charge for SPEECH, not for a screen
+left open. `TalkMeter.isBillable` + `ConversationView.someoneIsTalkingHere()`
+(close-mic voiced audio, three witnesses, café-tested 2026-08-18) are what make
+the effort argument true. Weaken them and this becomes an open tab, and the
+margin arithmetic below stops holding.
+
+**Margin exposure:** unbounded per subscriber in principle. Bounded in practice
+by how much a person will talk, and by the server's chars-per-minute floor on
+turn TTS. Watch — the farmable half, and the expensive one per character —
+is still capped, so the tail this removes is the talking tail only.
+
 Rationale in one line: flat-rate bias — subscription revenue comes from
 people who under-use, and a visible per-click meter destroys the willingness
 of exactly those people. Guardrails (caps) protect the tail; prices don't

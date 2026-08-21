@@ -36,15 +36,17 @@ struct PlanPageView: View {
                 // meter feel dishonest. Shown only when a plan actually grants
                 // scenes — a free account still pays for them in seconds, so a
                 // count would be a lie there.
-                if let scenes = account.monthlyScenesCap {
+                if account.monthlyScenesCap != nil {
                     row(icon: "play.circle.fill",
                         title: explain("Watch scenes"),
-                        value: "\(account.scenesUsedPeriod) / \(scenes)")
+                        value: sceneAllowanceValue)
                 }
                 // WHEN the pool refills — in the same section as the numbers
                 // it refills, because it is a fact ABOUT them. A monthly pool
                 // has a date; without it the fractions above are a countdown
-                // to nothing in particular.
+                // to nothing in particular. Plus counts no talk minutes
+                // down, but its SCENES still
+                // refill, so the date keeps its meaning on both tiers.
                 if account.isEntitled, !account.renewalLabel.isEmpty {
                     row(icon: "arrow.clockwise",
                         title: explain("Refills on \(account.renewalLabel)"))
@@ -90,11 +92,23 @@ struct PlanPageView: View {
     /// account with neither has nothing to count at all.
     private var talkAllowanceValue: String {
         if account.unlimited { return explain("\(account.minutesRemaining) min") }
+        // Plus is told forward — what was SPENT, never what is left. See
+        // `AccountStatus.talkTimeLabel` for why a remainder is the wrong
+        // number to hand an account that isn't rationing.
+        if account.isPlusPlan { return explain("\(account.minutesUsedPeriod) min") }
         if account.isEntitled {
             return explain("\(account.minutesRemaining) / \(account.tankMinutes) min")
         }
         if account.hasLegacyPool { return explain("\(account.minutesRemaining) min") }
         return explain("None")
+    }
+
+    /// Scenes are capped on EVERY tier — a scene plays itself, so a count is
+    /// the only limit there is — which is why this stays a fraction even for
+    /// the plan whose talking isn't counted at all.
+    private var sceneAllowanceValue: String {
+        guard let cap = account.monthlyScenesCap else { return "" }
+        return "\(account.scenesUsedPeriod) / \(cap)"
     }
 
     /// The same shape as `MeTab`'s settings row, so a pushed page can't drift

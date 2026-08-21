@@ -358,6 +358,18 @@ struct WatchView: View {
         feed?.$title.eraseToAnyPublisher() ?? Empty().eraseToAnyPublisher()
     }
 
+    /// Pulled out of `body`: one more argument on this call tipped the whole
+    /// view past the type-checker's budget.
+    private var capSheet: some View {
+        DailyAllowanceSheet(
+            kind: capKind,
+            canUpgrade: canUpgradePlan,
+            allowance: capAllowance,
+            renewsOn: renewalLabel,
+            onReview: { capChoice = .review },
+            onUpgrade: { capChoice = .upgrade })
+    }
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -408,7 +420,10 @@ struct WatchView: View {
         .sheet(isPresented: $sceneCapReached, onDismiss: {
             switch capChoice {
             case .upgrade:
-                paywallTier = "unlimited"
+                // "plus", not "unlimited" — the paywall matches this against its
+                // own tier ids, so the old name silently preselected nothing
+                // and left the sheet on the plan they already hold.
+                paywallTier = "plus"
                 showingPaywall = true
             // Switching tabs is enough: RootTabView follows the staged route,
             // and this scene stays pushed for whenever they come back to it.
@@ -417,13 +432,7 @@ struct WatchView: View {
             }
             capChoice = nil
         }) {
-            DailyAllowanceSheet(
-                kind: capKind,
-                canUpgrade: canUpgradePlan,
-                allowance: capAllowance,
-                renewsOn: renewalLabel,
-                onReview: { capChoice = .review },
-                onUpgrade: { capChoice = .upgrade })
+            capSheet
         }
         .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
             PaywallView(preselectTier: paywallTier)
