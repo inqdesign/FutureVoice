@@ -674,6 +674,18 @@ footer a:hover { color: var(--ink); }
 .cw .book { color: var(--ac); }
 .cw .check { color: #1E9E5A; }
 @media (prefers-reduced-motion: reduce) { .p-bub { animation: none; } }
+
+/* ── EN only: headings speak the brand's pixel face (Latin-only Geist
+   Pixel, single 400 weight — no faux bold, wider set so sizes step down;
+   the ko page keeps sans 800 because the face has no Hangul). ── */
+h1, h2, .s-cap h3, .m-line { font-family: var(--pixel); font-weight: 400; letter-spacing: 0.01em; }
+.m-line b { font-weight: 400; }
+.night h1 { font-size: clamp(36px, 5.4vw, 84px); }
+h2 { font-size: clamp(24px, 3vw, 44px); }
+.stage-copy h2 { font-size: clamp(24px, 3vw, 42px); }
+.s-cap h3 { font-size: clamp(24px, 2.8vw, 42px); }
+.m-line { font-size: clamp(26px, 3.6vw, 54px); }
+.final-demo h2, .final h2 { font-size: clamp(26px, 3.2vw, 48px); }
 </style>
 <!-- PostHog web analytics -->
 <script>
@@ -1498,12 +1510,12 @@ const PLANS = {
   light: {
     talk: "150 min / mo", scenes: "60 / mo",
     monthly: { id: "light_monthly", price: "$9.99",  per: "/ mo" },
-    annual:  { id: "light_annual",  price: "$74.99", per: "/ yr" },
+    annual:  { id: "light_annual",  price: "$79.99", per: "/ yr" },
   },
   plus: {
     talk: "1,800 min / mo", scenes: "600 / mo",
     monthly: { id: "plus_monthly",  price: "$19.99",  per: "/ mo" },
-    annual:  { id: "plus_annual",   price: "$199.99", per: "/ yr" },
+    annual:  { id: "plus_annual",   price: "$143.99", per: "/ yr" },
   },
 }
 const TIERS = ["light", "plus"]

@@ -13,7 +13,7 @@
 ## 0. 먼저 — 구독 그룹 하나 만들기
 
 6개(런칭은 4개) 상품은 **전부 같은 그룹**에 들어갑니다. 같은 그룹이어야
-데일리 ↔ 무제한 전환을 Apple이 업그레이드/다운그레이드로 처리하고 일할
+라이트 ↔ 플러스 전환을 Apple이 업그레이드/다운그레이드로 처리하고 일할
 정산을 해줍니다. 그룹이 다르면 두 개를 동시에 구독하는 사고가 납니다.
 
 | 필드 | 값 |
@@ -31,68 +31,86 @@
 | 3 | Daily Annual |
 | 4 | Daily Monthly |
 
-무제한이 데일리보다 위여야 데일리 → 무제한 전환이 **즉시 업그레이드**로
+플러스가 라이트보다 위여야 라이트 → 플러스 전환이 **즉시 업그레이드**로
 처리됩니다. 반대로 두면 다음 갱신일까지 기다리게 됩니다.
 
 ---
 
 ## 1. 상품 4개 — 런칭 대상
 
-### ① Daily Monthly
+> **가격 기준은 USD입니다** (2026-08-21 등록 완료 — 아래는 제안이 아니라 실제 값).
+> ASC에는 USD만 넣으면 나머지 174개 스토어프론트가 자동 생성돼요. 단 **한국은 직접 지정**하세요 — 메인 마켓이고,
+> 애플 환산은 Speak가 한국 기대치를 ₩29,000/₩129,000에 고정해 놨다는 걸 모릅니다.
+> 그리고 **자동 갱신 구독은 애플이 나중에 재조정해 주지 않습니다.**
+>
+> **Product ID는 절대 못 바꿉니다** — `daily_*`/`unlimited_*`는 티어 개명 전에
+> 등록된 값이고, 애플 상품 id는 앱당 영구입니다. 구매자가 읽는 건 Display Name뿐이라
+> 거기만 라이트/플러스로 둡니다. Reference Name은 내부용이라 수정 가능해요.
+
+### ① Light Monthly
 
 | 필드 | 값 |
 |---|---|
-| Reference Name | `Daily Monthly` |
-| **Product ID** | `com.roro.futurevoice.daily_monthly` |
+| Reference Name | `Light Monthly` |
+| **Product ID** | `com.roro.futurevoice.daily_monthly` (고정) |
 | Duration | 1 Month |
-| Price (기준) | **€9.99** |
-| Price (한국) | **₩15,000** — Apple 제안가 |
-| Display Name — English | `Daily Monthly` |
-| Display Name — 한국어 | `데일리 월간` |
-| Description — English | `5 minutes of talk a day in your own voice` |
-| Description — 한국어 | `내 목소리로 하루 5분 대화` |
+| Price (기준·USD) | **$9.99** |
+| Price (유럽) | €9.99 — 애플 자동 |
+| Price (한국) | **₩15,000** — 직접 지정 |
+| Display Name — English | `Light` |
+| Display Name — 한국어 | `라이트` |
+| Description — English | `150 min of talk, 60 scenes a month` |
+| Description — 한국어 | `한 달 통화 150분 · 상황연습 60개` |
 
-### ② Daily Annual
+### ② Light Annual
 
 | 필드 | 값 |
 |---|---|
-| Reference Name | `Daily Annual` |
-| **Product ID** | `com.roro.futurevoice.daily_annual` |
+| Reference Name | `Light Annual` |
+| **Product ID** | `com.roro.futurevoice.daily_annual` (고정) |
 | Duration | 1 Year |
-| Price (기준) | **€79.99** |
-| Price (한국) | **₩110,000** — Apple 제안가 |
-| Display Name — English | `Daily Annual` |
-| Display Name — 한국어 | `데일리 연간` |
-| Description — English | `5 minutes of talk a day, 2 months free` |
-| Description — 한국어 | `하루 5분 대화, 2개월 무료` |
+| Price (기준·USD) | **$79.99** — 33% 할인 |
+| Price (유럽) | €89.99 — 애플 자동 (25%) |
+| Price (한국) | **₩110,000** — 직접 지정 (39%) |
+| Display Name — English | `Light` |
+| Display Name — 한국어 | `라이트` |
+| Description — English | `150 min of talk, 60 scenes a month` |
+| Description — 한국어 | `한 달 통화 150분 · 상황연습 60개` |
 
-### ③ Unlimited Monthly
+### ③ Plus Monthly
 
 | 필드 | 값 |
 |---|---|
-| Reference Name | `Unlimited Monthly` |
-| **Product ID** | `com.roro.futurevoice.unlimited_monthly` |
+| Reference Name | `Plus Monthly` |
+| **Product ID** | `com.roro.futurevoice.unlimited_monthly` (고정) |
 | Duration | 1 Month |
-| Price (기준) | **€19.99** |
-| Price (한국) | **₩29,000** — Apple 제안가 |
-| Display Name — English | `Unlimited Monthly` |
-| Display Name — 한국어 | `무제한 월간` |
-| Description — English | `Talk as much as you want, every day` |
-| Description — 한국어 | `매일 원하는 만큼 대화` |
+| Price (기준·USD) | **$19.99** |
+| Price (유럽) | €22.99 — 애플 자동 |
+| Price (한국) | **₩29,000** — 직접 지정 |
+| Display Name — English | `Plus` |
+| Display Name — 한국어 | `플러스` |
+| Description — English | `Unlimited talk, 600 scenes a month` |
+| Description — 한국어 | `통화 무제한 · 상황연습 월 600개` |
 
-### ④ Unlimited Annual
+### ④ Plus Annual
 
 | 필드 | 값 |
 |---|---|
-| Reference Name | `Unlimited Annual` |
-| **Product ID** | `com.roro.futurevoice.unlimited_annual` |
+| Reference Name | `Plus Annual` |
+| **Product ID** | `com.roro.futurevoice.unlimited_annual` (고정) |
 | Duration | 1 Year |
-| Price (기준) | **€199.99** |
-| Price (한국) | **₩299,000** — Apple 제안가 |
-| Display Name — English | `Unlimited Annual` |
-| Display Name — 한국어 | `무제한 연간` |
-| Description — English | `Unlimited talk, 2 months free` |
-| Description — 한국어 | `무제한 대화, 2개월 무료` |
+| Price (기준·USD) | **$143.99** — 40% 할인 |
+| Price (유럽) | €149.99 — 애플 자동 (46%) |
+| Price (한국) | **₩209,000** — 직접 지정 (40%) |
+| Display Name — English | `Plus` |
+| Display Name — 한국어 | `플러스` |
+| Description — English | `Unlimited talk, 600 scenes a month` |
+| Description — 한국어 | `통화 무제한 · 상황연습 월 600개` |
+
+> **상위 티어의 할인이 하위보다 얕으면 안 됩니다.** 플러스 40% ≥ 라이트 33%.
+> 2026-08-21 이전에는 반대였고(17% vs 33%), 페이월에 `39% 절약` 옆에 `14% 절약`이
+> 나란히 떠서 우리가 가장 팔고 싶은 요금제가 더 나쁜 거래로 보였습니다.
+> 근거는 `docs/launch-billing.md`의 Prices 절에 있어요. |
 
 > Display Name은 30자, Description은 45자 제한입니다. 위 값은 모두 그 안에
 > 들어갑니다. Display Name은 **설정 › Apple 계정 › 구독**에 그대로 보이는
@@ -130,7 +148,7 @@ App Store Connect → Apps → nawana → (좌측) Subscriptions
 
 **대상 지정 항목은 없습니다.** Introductory Offer는 자격이 자동으로
 정해집니다 — 해당 **구독 그룹에서 체험을 한 번도 안 쓴 사람**만 받습니다.
-즉 데일리 월간으로 7일 체험을 쓴 사람은 무제한 월간으로 갈아타도 다시
+즉 라이트 월간으로 7일 체험을 쓴 사람은 플러스 월간으로 갈아타도 다시
 공짜 7일을 받지 못합니다(그룹당 1회). 4개에 모두 거는 이유는 "어느 상품을
 먼저 고르든 체험이 붙게" 하기 위한 것이지, 4번 줄 수 있어서가 아닙니다.
 
@@ -138,7 +156,7 @@ App Store Connect → Apps → nawana → (좌측) Subscriptions
 > 이게 없으면 CTA가 조용히 "Subscribe"로 바뀌고 3단계 퍼널이 통째로
 > 사라집니다 — 에러는 안 나므로 눈치채기 어렵습니다.
 >
-> **체험 기간에는 어떤 플랜을 체험하든 하루 5분(데일리 허용량)으로 계량됩니다**
+> **체험 기간에는 어떤 플랜을 체험하든 라이트 몫을 7/30로 안분해 계량됩니다**
 > (`20260811180000_hard_paywall_trial`). 무제한을 7일 체험하면서 하루 60분씩
 > 쓰고 해지하는 걸 막기 위한 것으로, 서버에서 이미 강제됩니다.
 
@@ -242,4 +260,4 @@ DB에는 `daily_weekly` / `unlimited_weekly` 행이 있지만 **가격이 확정
    ```
    `status = 'trialing'` 이어야 합니다.
 3. 5분 넘게 통화 → 402 `daily_cap_reached` (페이월이 아니라 "내일 다시" 문구)
-4. 설정 › 구독에서 이름이 `데일리 월간` 처럼 보이는지 확인
+4. 설정 › 구독에서 이름이 `라이트` 처럼 보이는지 확인

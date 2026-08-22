@@ -1017,7 +1017,7 @@ footer a:hover { color: var(--ink); }
     </details>
     <details>
       <summary><span class="ix">03</span>구독하면 뭘 얻나요?</summary>
-      <p class="a"><span>한 달치 통화 시간을 사는 거예요. 라이트는 150분, 플러스는 1,800분이에요. 상황연습은 별도 몫(60개/600개)이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·상황 만들기는 언제나 무료예요.</span></p>
+      <p class="a"><span>라이트는 한 달 150분의 통화 시간을 사는 거예요. 플러스는 통화에 제한이 없어요. 상황연습은 별도 몫이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·상황 만들기는 언제나 무료예요.</span></p>
     </details>
     <details>
       <summary><span class="ix">04</span>완전 초보도 할 수 있나요?</summary>
@@ -1487,8 +1487,8 @@ const BILLING = {
 //
 // KRW here, because at launch this button goes to the App Store and Apple
 // charges Korean buyers in won; the EUR figures are on the English page. When
-// BILLING.enabled flips, Stripe charges EUR everywhere — revisit this table
-// then rather than showing a won price that Stripe will not honour.
+// BILLING.enabled flips, Stripe charges one currency everywhere — revisit
+// this table then rather than showing a won price that Stripe will not honour.
 //
 // Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
 // Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
@@ -1503,7 +1503,7 @@ const PLANS = {
   plus: {
     talk: "1,800분/월", scenes: "600개/월",
     monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
-    annual:  { id: "plus_annual",   price: "₩299,000", per: "/ 년" },
+    annual:  { id: "plus_annual",   price: "₩209,000", per: "/ 년" },
   },
 }
 const TIERS = ["light", "plus"]

@@ -178,20 +178,54 @@ Credits only gate *creating new audio/AI* — never practicing with what exists.
 
 ### Prices
 
-| Plan | EUR (list, incl. VAT) | KRW (App Store fallback) | Net ~Apple SB (71%) |
-|------|----------------------|---------------------------|---------------------|
-| daily monthly | **€9.99** | **₩15,000** | ~€7.10 |
-| daily annual | **€79.99** | **₩110,000** | ~€57 (33% off 12× monthly; 39% in KRW) |
-| premium monthly | **€19.99** | **₩29,000** | ~€14.30 |
-| premium annual | **€199.99** | **₩299,000** | ~€143 (~17% off 12× monthly) |
+| Plan | USD (base) | EUR (Apple auto) | KRW (set by hand) | Annual discount |
+|------|-----------|------------------|-------------------|-----------------|
+| light monthly | **$9.99** | €9.99 | **₩15,000** | — |
+| light annual | **$79.99** | €89.99 | **₩110,000** | 33% / 25% / 39% |
+| plus monthly | **$19.99** | €22.99 | **₩29,000** | — |
+| plus annual | **$143.99** | €149.99 | **₩209,000** | 40% / 46% / 40% |
 
-All four KRW figures are Apple's own suggested price points for the EUR base
-(App Store Connect, 2026-08-11). Our pre-launch estimates matched on the
-unlimited pair and were off by one tier on daily (14,000 → 15,000, 119,000 →
-110,000). Note the annual discount lands deeper in KRW (39%) than in EUR (33%)
-— price points are a tier table, not a conversion.
+**Registered 2026-08-21; these are the live ASC values, not a proposal.** USD is
+the base storefront — Apple auto-generates the other 174 from it, and the EUR
+column above is what it produced (VAT-inclusive, hence higher than USD). **KRW
+was overridden by hand**, because Korea is a main market and Apple's conversion
+knows the exchange rate but not that Speak has anchored Korean expectations at
+₩29,000 / ₩129,000; left on auto, Light annual would have landed at ₩129,000
+(28% off) and Plus annual at ~₩232,000 (33%).
 
-Annual story = **cheaper sticker price** (“~2 months free”), **not** extra credits.
+**Apple never re-adjusts an auto-renewable subscription** for FX or tax drift,
+so every figure above stays until someone edits it.
+
+**Apple's actual take is better than this doc long assumed.** The ASC price
+table reports Year-1 proceeds of **85.0% in the US** and **77.3% in Korea and
+Japan** — the latter being `list ÷ 1.1 VAT × 0.85`, i.e. the Small Business
+Program rate on the VAT-exclusive amount. The old "~71% net" figure below was
+conservative by 9–20%, so **every margin verdict in §4 is more favourable than
+it reads** — re-derive them against 85% / 77.3% before concluding anything
+about price.
+
+**The one soft spot: Light annual is 25% in EUR** because its monthly stayed on
+the old €9.99 while the annual was regenerated to €89.99. It is the shallowest
+discount in the table and sits under Fluently's 30%. Setting EUR Light annual to
+€79.99 by hand restores 33% and leaves the Plus-deeper-than-Light ordering
+intact. Not urgent — the ordering is what mattered, and it is correct.
+
+Annual story = **cheaper sticker price**, **not** extra allowance.
+
+**The discount is ~33% on Light and ~40% on Plus, and the higher tier must
+never be the shallower one.** It was, until 2026-08-21: the rule here used to
+read "~2 months free", which is 17%. Plus followed it exactly (€199.99) and
+Light happened not to (€79.99 = 33%), so the paywall showed `39% off` beside
+`14% off` and the plan we most want people on looked like the worse deal. The
+comparable set is nowhere near 17% — Speak is 50% on Premium and 62% on
+Premium Plus, Fluently 30% — and Speak, the market leader in Korea, discounts
+its TOP tier deepest. **Do not restore a flat "two months free" rule.**
+
+Plus stops at 40% rather than matching Speak's 62% for one reason: since
+`20260821120000` its talk time has no ceiling, while Speak Premium Plus is
+lesson-based and therefore bounded. Selling uncapped voice minutes a year in
+advance at half price is the one combination we cannot price from an estimate
+— revisit once real usage exists.
 
 ### Credits per cycle (exact 12× for annual)
 
