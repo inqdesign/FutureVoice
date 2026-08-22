@@ -48,8 +48,18 @@ struct PlanPageView: View {
                 // down, but its SCENES still
                 // refill, so the date keeps its meaning on both tiers.
                 if account.isEntitled, !account.renewalLabel.isEmpty {
-                    row(icon: "arrow.clockwise",
-                        title: explain("Refills on \(account.renewalLabel)"))
+                    // A trial's date is not a refill — it is the day it starts
+                    // costing money, which is the one date somebody in a trial
+                    // is actually looking for. It is also the promise that
+                    // survives a declined notification prompt: the reminder is
+                    // best effort, this is always here.
+                    row(icon: account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise",
+                        title: account.isTrialing
+                            ? explain("Your trial becomes paid on \(account.renewalLabel)")
+                            : explain("Refills on \(account.renewalLabel)"),
+                        subtitle: account.isTrialing
+                            ? explain("Cancel any time before then in the App Store")
+                            : nil)
                 }
                 // Tapping through opens the receipt: what spent minutes, and
                 // what didn't. A fraction alone is the same opacity that made

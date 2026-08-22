@@ -115,6 +115,10 @@ struct FutureVoiceApp: App {
                 // Same reason as the two above: the app cannot know it, and
                 // the answer only matters when it has changed.
                 Task { await AppUpdateService.shared.check() }
+                // Drop the trial-ending notice once the trial isn't one any
+                // more. Reads the billing snapshot the app already keeps, so
+                // it usually costs nothing.
+                Task { await TrialReminder.reconcile() }
                 // The seat grid draws each member in the palette their own
                 // app wears, so the palette has to leave the device. Here
                 // rather than in the theme picker: a member who changed

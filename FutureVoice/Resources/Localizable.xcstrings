@@ -2250,6 +2250,16 @@
         }
       }
     },
+    "A reminder that your trial is about to convert — we ask to send notifications when the trial starts." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "체험이 곧 결제로 바뀐다는 알림이에요. 체험이 시작될 때 알림 권한을 여쭤봐요."
+          }
+        }
+      }
+    },
     "A scene costs one count however long it runs, and the count resets every day." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4086,6 +4096,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "취소"
+          }
+        }
+      }
+    },
+    "Cancel any time before then in the App Store" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "그전까지 App Store에서 언제든 해지할 수 있어요"
           }
         }
       }
@@ -20048,6 +20068,7 @@
       }
     },
     "We send a reminder that your trial is about to end." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
@@ -20057,7 +20078,18 @@
         }
       }
     },
+    "We'll remind you before it converts, and the date is always in Me → Talk time." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결제로 바뀌기 전에 알려드리고, 날짜는 나 → 통화 시간에 늘 적혀 있어요."
+          }
+        }
+      }
+    },
     "We'll remind you before your trial ends." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -22314,6 +22346,16 @@
         }
       }
     },
+    "Your free trial ends soon" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "무료 체험이 곧 끝나요"
+          }
+        }
+      }
+    },
     "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." : {
       "localizations" : {
         "en" : {
@@ -23070,6 +23112,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "함께한 대화"
+          }
+        }
+      }
+    },
+    "Your trial becomes a paid subscription in %lld days. You can cancel any time in the App Store." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld일 뒤에 체험이 유료 구독으로 바뀌어요. App Store에서 언제든 해지할 수 있어요."
+          }
+        }
+      }
+    },
+    "Your trial becomes paid on %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 체험이 유료로 바뀌어요"
           }
         }
       }

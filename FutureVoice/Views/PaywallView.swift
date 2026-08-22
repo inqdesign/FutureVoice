@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 import Supabase
 
 /// Three-step trial-first paywall (pitch → trial timeline → plan picker),
@@ -181,7 +180,7 @@ struct PaywallView: View {
         }
         .onChange(of: store.purchaseState) { _, state in
             if state == .purchased, showsTrial {
-                scheduleTrialEndingReminder(trialDays: store.trialDays)
+                Task { await TrialReminder.schedule(trialDays: store.trialDays) }
             }
         }
         .alert(Text(explain("You're in")), isPresented: purchasedBinding) {
@@ -355,7 +354,7 @@ struct PaywallView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(explain("\(store.trialDays) days free, no surprises"))
                     .font(.largeTitle.weight(.bold))
-                Text(explain("We'll remind you before your trial ends."))
+                Text(explain("We'll remind you before it converts, and the date is always in Me → Talk time."))
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }
@@ -368,7 +367,7 @@ struct PaywallView: View {
                             showsLine: true)
                 timelineRow(icon: "bell.fill",
                             title: explain("Day \(max(1, store.trialDays - 2))"),
-                            caption: explain("We send a reminder that your trial is about to end."),
+                            caption: explain("A reminder that your trial is about to convert — we ask to send notifications when the trial starts."),
                             showsLine: true)
                 timelineRow(icon: "crown.fill",
                             title: explain("Day \(store.trialDays)"),
@@ -783,21 +782,6 @@ struct PaywallView: View {
 
     /// Honor the timeline promise: a local reminder two days before the
     /// trial converts. Quietly skipped if notifications are denied.
-    private func scheduleTrialEndingReminder(trialDays: Int) {
-        guard trialDays > 2 else { return }
-        let content = UNMutableNotificationContent()
-        content.title = "Your free trial ends soon"
-        content.body = "Your nawana trial converts in 2 days. Cancel anytime in the App Store."
-        content.sound = .default
-        let fireIn = TimeInterval((trialDays - 2) * 24 * 60 * 60)
-        let request = UNNotificationRequest(
-            identifier: "futurevoice.trial-ending",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: fireIn, repeats: false)
-        )
-        UNUserNotificationCenter.current().add(request)
-    }
-
     // MARK: - Bindings
 
     private var purchasedBinding: Binding<Bool> {
