@@ -346,9 +346,25 @@ struct ConversationHome: View {
             scrollOffset = max(0, heroTopY - y)
         }
         .onPreferenceChange(TalkRingFrameKey.self) { appState.talkRingFrame = $0 }
+        // This task RE-RUNS on every re-appearance — including the daily
+        // call's fullScreenCover lifting. A fixed one-shot sample here is
+        // what sank the page after an answered call: the 250ms landed
+        // mid-dismissal and adopted the pre-inset 0, pushing the hero down
+        // by a nav bar until a tab switch re-measured. Adopt only a report
+        // that is PLAUSIBLE (a rest top always has a status bar above it)
+        // and SETTLED (unchanged across two samples), waiting as long as
+        // that takes.
         .task {
-            try? await Task.sleep(nanoseconds: 250_000_000)
-            heroTopY = latestHeroTopReport
+            var previous = CGFloat.nan
+            while !Task.isCancelled {
+                let current = latestHeroTopReport
+                if current > 40, abs(current - previous) < 0.5 {
+                    heroTopY = current
+                    return
+                }
+                previous = current
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
         }
     }
 
@@ -427,6 +443,19 @@ struct ConversationHome: View {
             // little comet instead of a smeared translucent pill. (Zero
             // progress also needs the hide below: a near-empty trim under
             // the angular gradient renders as a half-cut dot at 12.)
+            // At zero the arc hides entirely (see below), which left the ring
+            // showing nothing at all — a 1.5% track is sensed, not seen. One
+            // round-cap dot at 12 marks the start line instead: same width,
+            // same spot the arc's head departs from, so the first minute reads
+            // as the dot setting off rather than a new shape appearing. Drawn
+            // as a degenerate trim so it sits ON the stroke path — no manual
+            // offset to drift if the ring is ever resized.
+            Circle()
+                .trim(from: 0, to: 0.0001)
+                .stroke(Color.accentColor,
+                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .opacity(goalProgress0to1 > 0.005 ? 0 : 1)
             let fadeEnd = min(0.5, 0.25 / max(goalProgress0to1, 0.001))
             Circle()
                 .trim(from: 0, to: goalProgress0to1)
