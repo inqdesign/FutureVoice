@@ -111,6 +111,10 @@ struct FutureVoiceApp: App {
                 // is news that only exists server-side, and the grant it
                 // brings lands in a number nobody watches.
                 Task { await ReferralService.announceJoins() }
+                // Whether this build is still the one the server describes.
+                // Same reason as the two above: the app cannot know it, and
+                // the answer only matters when it has changed.
+                Task { await AppUpdateService.shared.check() }
                 // The seat grid draws each member in the palette their own
                 // app wears, so the palette has to leave the device. Here
                 // rather than in the theme picker: a member who changed

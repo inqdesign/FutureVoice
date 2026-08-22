@@ -41,6 +41,7 @@ struct RootTabView: View {
     /// exists yet), so it drops the plan here and this picks it up.
     @ObservedObject private var callInbox = DailyCallInbox.shared
     @ObservedObject private var referralInbox = ReferralInbox.shared
+    @ObservedObject private var updates = AppUpdateService.shared
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -239,6 +240,15 @@ struct RootTabView: View {
         // (no push infrastructure), announced quietly, and shown here.
         .sheet(item: $referralInbox.pendingJoin) { join in
             ReferralJoinSheet(join: join)
+        }
+        // A newer build exists. Presented from the tab root so it can never
+        // be raised behind another sheet, and last in the chain so it never
+        // pre-empts something the learner opened themselves.
+        .sheet(item: $updates.pending) { update in
+            UpdateAvailableSheet(update: update) {
+                AppUpdateService.shared.markSeen(update)
+                AppUpdateService.shared.pending = nil
+            }
         }
     }
 

@@ -95,6 +95,66 @@ IPA=$(find "$EXPORT_DIR" -name '*.ipa' | head -1)
 [[ -n "$IPA" ]] || { echo "✗ Export produced no .ipa" >&2; exit 1; }
 echo "▸ Exported $IPA"
 
+# --- 6. Tell the app a newer build exists ---------------------------------
+# `app_release.latest_build` is what a running install compares its own
+# CFBundleVersion against (see AppUpdateService). Uploading without moving it
+# means the update sheet never appears, so this is not a separate chore — it is
+# the last step OF shipping, and it lives here so it cannot be forgotten.
+#
+# AFTER a successful upload on purpose: announcing a build that failed to
+# upload would send every tester to an App Store page that doesn't have it.
+#
+# Release notes come from the same files App Store Connect gets, so the sheet
+# and the store never say different things.
+#
+# `min_build` is deliberately NOT touched. It locks people out and belongs to a
+# decision, not a build: raise it by hand only when the SERVER has moved
+# somewhere older clients misreport it.
+publish_release_row() {
+  local raw token notes_ko notes_en payload
+  raw=$(security find-generic-password -s "Supabase CLI" -w 2>/dev/null) || {
+    echo "  ! Supabase token not in the keychain — app_release NOT updated." >&2
+    echo "    Testers will not be offered $VERSION ($BUILD) until you run:" >&2
+    echo "    update app_release set latest_build=$BUILD, latest_version='$VERSION' where platform='ios';" >&2
+    return 0
+  }
+  token=$(echo "${raw#go-keyring-base64:}" | base64 -d)
+  notes_ko=$(cat fastlane/metadata/ko/release_notes.txt 2>/dev/null || echo "")
+  notes_en=$(cat fastlane/metadata/en-US/release_notes.txt 2>/dev/null || echo "")
+
+  payload=$(BUILD="$BUILD" VERSION="$VERSION" NOTES_KO="$notes_ko" NOTES_EN="$notes_en" python3 - <<'PYEOF'
+import json, os
+# Dollar-quoting, not quote-doubling: the notes are multi-line and the English
+# ones contain an apostrophe, which is exactly what silently broke the first
+# version of this. The tag is checked against the text so it can never be
+# closed early by the content itself.
+def q(text: str) -> str:
+    tag = "n"
+    while f"${tag}$" in text:
+        tag += "n"
+    return f"${tag}${text}${tag}$"
+
+sql = (
+    "update public.app_release set "
+    f"latest_build = {int(os.environ['BUILD'])}, "
+    f"latest_version = {q(os.environ['VERSION'])}, "
+    f"notes_ko = {q(os.environ['NOTES_KO'])}, "
+    f"notes_en = {q(os.environ['NOTES_EN'])}, "
+    "updated_at = now() where platform = 'ios';"
+)
+print(json.dumps({"query": sql}))
+PYEOF
+)
+  if curl -sf -X POST \
+       "https://api.supabase.com/v1/projects/chhzjtigzdotacutwcyo/database/query" \
+       -H "Authorization: Bearer $token" -H "Content-Type: application/json" \
+       -d "$payload" >/dev/null; then
+    echo "▸ app_release.latest_build → $BUILD (older installs now see the update sheet)"
+  else
+    echo "  ! app_release update failed — testers will not be offered $BUILD yet." >&2
+  fi
+}
+
 # --- 5. Upload ------------------------------------------------------------
 # NO API KEY NEEDED. `-exportArchive` with `destination: upload` hands the
 # archive to App Store Connect using the Apple ID already signed into Xcode
@@ -126,6 +186,7 @@ if xcodebuild -exportArchive \
      -allowProvisioningUpdates \
      | grep -E '^\*\* |Upload succeeded|error: ' ; then
   echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight once Apple finishes processing."
+  publish_release_row
   echo "  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST"
 else
   cat <<NOTE

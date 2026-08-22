@@ -530,6 +530,10 @@ enum DebugCapture {
             // ends into. Reachable no other way in a capture run: it fires
             // once, after a real conversation has been summarized.
             return AnyView(FeedbackCaptureHost().environmentObject(appState))
+        case "update", "update-required":
+            // The update notice, both temperaments. Unreachable in a capture
+            // run — it needs a server that has moved past this build.
+            return AnyView(UpdateCaptureHost(required: name == "update-required"))
         case "day-spent", "day-spent-unlimited", "day-spent-scenes":
             // The spent-allowance sheet, both sides of it: Daily (there is
             // something to offer) and Unlimited (there isn't). Unreachable in
@@ -1160,6 +1164,28 @@ private struct DaySpentCaptureHost: View {
                                     allowance: kind == .talk ? 150 : 60,
                                     renewsOn: "Sep 14",
                                     onReview: {}, onUpgrade: {})
+            }
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
+            }
+    }
+}
+
+/// Presents `UpdateAvailableSheet` over the Talk home, as the tab root does.
+private struct UpdateCaptureHost: View {
+    let required: Bool
+    @State private var showing = false
+
+    var body: some View {
+        ConversationHome()
+            .sheet(isPresented: $showing) {
+                UpdateAvailableSheet(
+                    update: .init(latestBuild: 15, latestVersion: "1.0.1",
+                                  notes: required
+                                      ? nil
+                                      : "초대로 받은 시간을 이번 달 통화 시간보다 먼저 쓰도록 고쳤어요.",
+                                  required: required),
+                    onDismiss: {})
             }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }
