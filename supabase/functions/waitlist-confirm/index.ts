@@ -14,6 +14,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
+import { timingSafeEqual } from "../_shared/auth.ts"
 
 const GMAIL_USER = Deno.env.get("GMAIL_USER") ?? ""
 const GMAIL_APP_PASSWORD = Deno.env.get("GMAIL_APP_PASSWORD") ?? ""
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return new Response("method not allowed", { status: 405 })
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD || !WEBHOOK_SECRET)
     return new Response("not configured", { status: 500 })
-  if (req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET)
+  if (!timingSafeEqual(req.headers.get("x-webhook-secret") ?? "", WEBHOOK_SECRET))
     return new Response("forbidden", { status: 403 })
 
   const payload = await req.json().catch(() => null)

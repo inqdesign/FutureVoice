@@ -52,6 +52,7 @@ enum Analytics {
     /// uppercase, so compare `userId.uppercased()` against these.
     private static let excludedUserIds: Set<String> = [
         "72BCAA7E-3DD2-4364-B197-078BA59C1CE4",   // owner
+        "C7565D27-528C-46C1-9662-37248EC8AA36",   // team
     ]
 
     static func capture(_ event: String, _ props: [String: Any] = [:]) {

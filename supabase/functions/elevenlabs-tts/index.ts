@@ -18,10 +18,33 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { chargePooledTTS, chargeFreePooledTTS, chargeTurnTTSFloored, refund,
-         beginScenePlay, insufficientCreditsResponse, dailyCapResponse,
-         sceneCapResponse } from "../_shared/credits.ts"
+         beginScenePlay, enforceRequestRate, insufficientCreditsResponse,
+         dailyCapResponse, sceneCapResponse, rateLimitedResponse,
+         billingClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-tts"
+
+// Which ElevenLabs model the client may request. The fidelity model bills ~2x
+// per char upstream at the SAME price to us, so a client sending it on every
+// turn doubles our cost — allowlist it only to the purposes that are meant to
+// use it (scenes + the onboarding entry lines, both cached or once-per-user).
+const CONVERSATION_MODEL = "eleven_turbo_v2_5"
+const FIDELITY_MODEL = "eleven_multilingual_v2"
+const FLASH_MODEL = "eleven_flash_v2_5"
+const ALLOWED_MODELS = new Set([CONVERSATION_MODEL, FIDELITY_MODEL, FLASH_MODEL])
+const FIDELITY_PURPOSES = new Set(["scene", "greeting", "voice_comparison"])
+
+// The four counterpart preset voices (VoicePreset.catalog). A caller may only
+// synthesize with one of these OR their own cloned voice — never a voice_id
+// that belongs to another user.
+const PRESET_VOICE_IDS = new Set([
+  "NDTYOmYEjbDIVCKB35i3", "UgBBYS2sOqTuMpoF3BR0",
+  "FF59babHL8N8gfTgtBMT", "L0Dsvb3SLTyegXwtm47J",
+])
+
+// Idempotency-proof hourly backstop (see enforceRequestRate) — above a heavy
+// hour of talk turns + scene lines.
+const HOURLY_REQUEST_LIMIT = 900
 
 // REVIEW surfaces synthesize free (2026-08 free-learning-loop change): short
 // lines, cached forever client-side after first synthesis, and their material
@@ -49,6 +72,12 @@ const TALK_PURPOSES = new Set(["turn", "opener"])
 // memory only — a cold start re-probes once. Set ONLY from ladder requests,
 // so a legacy pcm_22050-only call can never pin new clients to 22.05 kHz.
 let cachedStreamFormat: string | null = null
+
+// Verified (user, voice) ownership pairs, remembered per edge instance so the
+// ownership check below adds a DB round-trip at most ONCE per warm instance
+// rather than on every conversation turn (the latency-critical path). A pair
+// is only ever added after a positive DB check; a cold start re-verifies once.
+const verifiedVoiceOwners = new Set<string>()
 
 Deno.serve(async (req) => {
   const pre = handlePreflight(req)
@@ -94,6 +123,45 @@ Deno.serve(async (req) => {
   if (!body.voice_id || !body.text) {
     return errorResponse(400, "voice_id and text required")
   }
+
+  // Idempotency-proof hourly backstop, before any upstream spend.
+  const rate = await enforceRequestRate({
+    userId: user.id, sourceFn: SOURCE_FN, limit: HOURLY_REQUEST_LIMIT,
+  })
+  if (!rate.ok) return rateLimitedResponse(cors())
+
+  // Voice ownership: a caller may synthesize only with a counterpart preset or
+  // their OWN cloned voice. Without this, anyone who learns another user's
+  // voice_id can speak arbitrary text in that person's cloned voice — a
+  // deepfake primitive against our users' biometric data.
+  const ownerKey = `${user.id}:${body.voice_id}`
+  if (!PRESET_VOICE_IDS.has(body.voice_id) && !verifiedVoiceOwners.has(ownerKey)) {
+    const { data: owned, error: ownErr } = await billingClient()
+      .from("voice_clones")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("elevenlabs_voice_id", body.voice_id)
+      .limit(1)
+      .maybeSingle()
+    if (ownErr) return errorResponse(500, "voice ownership check failed", ownErr.message)
+    if (!owned) return errorResponse(403, "voice_id not permitted")
+    verifiedVoiceOwners.add(ownerKey)
+  }
+
+  // Model allowlist: the fidelity model costs ~2x upstream at the SAME price to
+  // us, so it's reserved for the purposes meant to use it (scenes + once-per-
+  // user entry lines, all cached). A fidelity request on any other purpose is
+  // silently DOWNGRADED to the conversation model rather than rejected — that
+  // holds the cost line without breaking the DEBUG turns-on-fidelity A/B, which
+  // sends purpose "turn". An entirely unknown model id is still a 400.
+  const clientModel = body.model_id ?? CONVERSATION_MODEL
+  if (!ALLOWED_MODELS.has(clientModel)) {
+    return errorResponse(400, "unsupported model_id")
+  }
+  const requestedModel =
+    clientModel === FIDELITY_MODEL && !FIDELITY_PURPOSES.has(body.purpose ?? "")
+      ? CONVERSATION_MODEL
+      : clientModel
 
   const apiKey = Deno.env.get("ELEVENLABS_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing ELEVENLABS_API_KEY")
@@ -170,7 +238,7 @@ Deno.serve(async (req) => {
     return errorResponse(500, "charge failed", ch.detail)
   }
 
-  const modelId = body.model_id ?? "eleven_turbo_v2_5"
+  const modelId = requestedModel
   const streaming = body.stream === true && !body.with_timestamps
 
   const fetchOptions: RequestInit = {

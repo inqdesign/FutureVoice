@@ -19,14 +19,19 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0"
+import { timingSafeEqual } from "../_shared/auth.ts"
 
-/// How long an unclaimed anonymous user is left alone. Generous on purpose:
-/// the cost of waiting is one voice slot, the cost of being wrong is deleting
-/// the voice of someone who is still reading the sign-up screen.
-const GRACE_HOURS = 48
+/// How long an unclaimed anonymous user is left alone, in MINUTES. Short on
+/// purpose: an abandoned clone holds a paid ElevenLabs voice slot, and the
+/// source recording stays on the device, so a returning real user rebuilds
+/// with no re-recording. The only thing this window must outlast is ONE live
+/// onboarding session (greeting → Meet → daily-call intro), which is a few
+/// minutes; 30 clears it with margin. Paired with a 15-min sweep, an
+/// abandoned clone is reclaimed within ~45 min instead of the old ~48-72h.
+const GRACE_MINUTES = 30
 /// Bounded per run so one invocation can't spend minutes in ElevenLabs calls.
-/// Anything left over is collected by the next run.
-const MAX_PER_RUN = 100
+/// Anything left over is collected by the next run (now every 15 min).
+const MAX_PER_RUN = 200
 
 Deno.serve(async (req) => {
   if (req.method !== "POST") {
@@ -34,7 +39,7 @@ Deno.serve(async (req) => {
   }
 
   const secret = Deno.env.get("CLEANUP_SECRET")
-  if (!secret || req.headers.get("X-Cleanup-Secret") !== secret) {
+  if (!secret || !timingSafeEqual(req.headers.get("X-Cleanup-Secret") ?? "", secret)) {
     return new Response("forbidden", { status: 403 })
   }
 
@@ -48,7 +53,7 @@ Deno.serve(async (req) => {
   // and is not exposed through PostgREST, so this goes through the RPC that
   // reads it under SECURITY DEFINER.
   const { data: stale, error } = await admin.rpc("stale_anonymous_users", {
-    p_older_than_hours: GRACE_HOURS,
+    p_older_than_minutes: GRACE_MINUTES,
     p_limit: MAX_PER_RUN,
   })
   if (error) {

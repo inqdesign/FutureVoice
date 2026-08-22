@@ -214,6 +214,32 @@ export async function chargeTurnTTSFloored(opts: {
   }
 }
 
+/**
+ * Idempotency-proof hourly abuse cap (the `bump_request_rate` SQL function).
+ *
+ * Every free/pooled metering RPC short-circuits on a duplicate idempotency key
+ * without raising, so a client that pins one key never advances a daily cap and
+ * never pays — an unlimited free faucet on both provider keys. This limiter
+ * increments UNCONDITIONALLY per request, so a replayed key hits the ceiling
+ * like any other traffic. It sits IN FRONT of the per-purpose daily caps as a
+ * backstop; honest use never approaches `limit`. Returns rate_limited only when
+ * the DB actually raised — a DB error fails OPEN (never block a paying call on
+ * a limiter hiccup; the daily caps and charges are still behind it).
+ */
+export async function enforceRequestRate(opts: {
+  userId: string
+  sourceFn: string
+  limit: number
+}): Promise<{ ok: true } | { ok: false }> {
+  const { error } = await billingClient().rpc("bump_request_rate", {
+    p_user_id: opts.userId,
+    p_source_fn: opts.sourceFn,
+    p_limit: opts.limit,
+  })
+  if (error?.message?.includes("RATE_LIMITED")) return { ok: false }
+  return { ok: true }
+}
+
 export function rateLimitedResponse(corsHeaders: HeadersInit): Response {
   return new Response(
     JSON.stringify({

@@ -18,10 +18,23 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { recordFreeUsage, rateLimitedResponse,
+import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
          type ChargeableAction } from "../_shared/credits.ts"
 
 const SOURCE_FN = "gemini"
+
+// The `model` string is interpolated straight into the upstream URL path, so
+// it must be an allowlisted id — never arbitrary client text — to keep path /
+// query manipulation off the Google endpoint. Mirrors GeminiClient.Model.
+const ALLOWED_MODELS = new Set([
+  "gemini-3.6-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",       // rollback hatch, retires 2026-10-16
+])
+
+// Hourly per-user backstop that a replayed idempotency key cannot skip (see
+// enforceRequestRate). Well above a very heavy hour of talking + review.
+const HOURLY_REQUEST_LIMIT = 900
 
 // Requests per user per day, by purpose. Sized ~5-10x above a very heavy real
 // user so only scripts ever collide with them. Unknown purposes get DEFAULT.
@@ -58,9 +71,17 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing GEMINI_API_KEY")
 
+  // Idempotency-proof hourly backstop, BEFORE any upstream spend. Blocks the
+  // pinned-key faucet that the daily caps below cannot see.
+  const rate = await enforceRequestRate({
+    userId: user.id, sourceFn: SOURCE_FN, limit: HOURLY_REQUEST_LIMIT,
+  })
+  if (!rate.ok) return rateLimitedResponse(cors())
+
   let body: { model?: string; purpose?: string; [k: string]: unknown }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const model = body.model ?? "gemini-2.5-flash"
+  if (!ALLOWED_MODELS.has(model)) return errorResponse(400, "unsupported model")
   const purpose = body.purpose
   const stream = body.stream === true
   const { model: _m, purpose: _p, stream: _s, ...geminiBody } = body

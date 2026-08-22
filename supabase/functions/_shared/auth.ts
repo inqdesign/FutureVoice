@@ -57,3 +57,18 @@ export function errorResponse(status: number, message: string, detail?: unknown)
     headers: { "Content-Type": "application/json", ...cors() },
   })
 }
+
+/**
+ * Constant-time string compare for shared secrets (cron/webhook headers), so a
+ * `===` on an attacker-supplied value can't leak the secret one byte at a time
+ * through response timing. Length is compared first (unavoidably non-secret),
+ * then every byte is XOR-accumulated so the loop can't short-circuit early.
+ */
+export function timingSafeEqual(a: string, b: string): boolean {
+  const ab = new TextEncoder().encode(a)
+  const bb = new TextEncoder().encode(b)
+  if (ab.length !== bb.length) return false
+  let diff = 0
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i]
+  return diff === 0
+}
