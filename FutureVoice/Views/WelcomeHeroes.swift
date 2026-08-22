@@ -23,6 +23,16 @@ import SwiftUI
 /// from the shared components or mirrors its home surface 1:1. The heroes
 /// assume a `Color(.systemBackground)` ground (like the real conversation
 /// screens) so DialogueLine's neutral bubble fill reads as filled, not empty.
+///
+/// **The carousel's five are now** (2026-08-23) `CallHero`, `HomeHero`,
+/// `BookHero`, `ShadowHero`, `LevelHero` — the same five-beat story the
+/// landing page's scrollytelling tells, except at beat four, where the app
+/// shows shadowing and the page shows the word cloud. The old set pitched
+/// FEATURES (Talk, Watch, People, Shadow, Vocabulary) and between them never
+/// showed the thing a talk actually LEAVES: the book. `TalkHero`,
+/// `WatchHero`, `PeopleHero` and `VocabHero` stay in the file as the
+/// alternates; re-pointing `WelcomeView.mock(_:)` at one is a one-line
+/// change.
 
 // MARK: - 1. Talk
 
@@ -378,6 +388,8 @@ struct ShadowHero: View {
     // Timeline geometry — matched to ShadowTimelinePlayer's TLConst.
     private static let trackHeight: CGFloat = 54
     private static let handleW: CGFloat = 14
+    /// What `ShadowTimelinePlayer.speedLabel(1.0)` returns.
+    private static let speedLabel = "1×"
 
     @State private var start = Date()
 
@@ -525,8 +537,15 @@ struct ShadowHero: View {
                 .frame(width: 44, height: 44)
                 .foregroundStyle(Color.accentColor)
             Spacer(minLength: 72)
-            Text("1×")
+            // `Text(String)`, never a literal — `ShadowTimelinePlayer` builds
+            // this label with `speedLabel(_:)`, so the real pill never goes
+            // through the string catalog. Written as a literal here it did,
+            // and ko translates "1×" to "1배", which then wrapped inside the
+            // capsule as "1 / 배". lineLimit + fixedSize mirror the real one.
+            Text(Self.speedLabel)
                 .font(.subheadline.weight(.semibold)).monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(.primary)
                 .padding(.horizontal, 12).padding(.vertical, 9)
                 .background(Capsule().fill(Color(.tertiarySystemFill)))
@@ -657,6 +676,700 @@ struct VocabHero: View {
             try? await Task.sleep(nanoseconds: 2_000_000_000)
             withAnimation(.easeInOut(duration: 1.4)) { pan = drifts[i % drifts.count] }
             i += 1
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// The five the carousel actually shows.
+//
+// Each one is the REAL screen, mirrored — same components where they're
+// shareable (`DialogueLine`, `Futureself`, `BookmarkedPage`, `LevelEqualizer`,
+// `CloudLayout`), same fonts, fills and metrics where they aren't. Sample
+// content is passed as `String` variables on purpose: a `Text(variable)` is
+// never localized, so the material stays in the target language while the
+// chrome literals around it follow the learner's UI language.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// MARK: - 1. The call
+
+/// The live call, mirrored from `ConversationView`: the title bar (topic,
+/// level, elapsed), the transcript in real `DialogueLine`s at call scale, and
+/// the `sparkles` correction card that lands under the learner's line — with
+/// the voice, never before it, which is the rule the real screen keeps.
+/// The exchange rotates so it reads as any conversation, not one clip.
+struct CallHero: View {
+    private struct Exchange {
+        let topic: String
+        let level: String
+        let elapsed: String
+        /// Always three lines: fluent self, learner, fluent self.
+        let lines: [(speaker: DialogueSpeaker, text: String)]
+        /// The fix offered on the learner's line.
+        let fix: String
+    }
+
+    private static let exchanges: [Exchange] = [
+        Exchange(topic: "Job interview", level: "B1", elapsed: "7 min",
+                 lines: [(.other, "So — how did the interview go yesterday?"),
+                         (.user,  "It went really good. I was preparing a lot."),
+                         (.other, "Nice. What did they ask you first?")],
+                 fix: "It went really well. I'd prepared a lot."),
+
+        Exchange(topic: "Four-day work week", level: "B1", elapsed: "3 min",
+                 lines: [(.other, "Would you actually want a four-day week?"),
+                         (.user,  "Yes, but I worry about the work who stays."),
+                         (.other, "Fair — so the same load in fewer days?")],
+                 fix: "Yes, but I worry about the work that's left over."),
+
+        Exchange(topic: "Free talk", level: "B1", elapsed: "12 min",
+                 lines: [(.other, "So — anything on your mind?"),
+                         (.user,  "I think about to move to another city."),
+                         (.other, "Oh? What's pulling you somewhere else?")],
+                 fix: "I'm thinking about moving to another city."),
+    ]
+
+    @State private var take = 0
+    @State private var shown = 0
+    @State private var showFix = false
+
+    private var e: Exchange { Self.exchanges[take] }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            callBar
+            feed
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .task { await run() }
+    }
+
+    /// The call's title bar: close, the topic with its level and elapsed
+    /// time, and End — `ConversationView`'s header, verbatim.
+    private var callBar: some View {
+        HStack {
+            circleButton("xmark", tint: .primary)
+            Spacer(minLength: 8)
+            VStack(spacing: 2) {
+                Text(e.topic)
+                    .font(.headline)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(e.level)
+                    Image(systemName: "chevron.right").font(.caption2)
+                    Text("·")
+                    Image(systemName: "clock").font(.caption2)
+                    Text(e.elapsed)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Text("End")
+                .font(.body.weight(.medium))
+                .foregroundStyle(.red)
+                .frame(width: 44, height: 44)
+        }
+    }
+
+    private func circleButton(_ symbol: String, tint: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(tint)
+            .frame(width: 44, height: 44)
+            .background(Circle().fill(Color(.secondarySystemBackground)))
+    }
+
+    private var feed: some View {
+        VStack(spacing: 14) {
+            ForEach(Array(e.lines.enumerated()), id: \.offset) { i, line in
+                if i < shown {
+                    DialogueLine(speaker: line.speaker,
+                                 name: line.speaker.isUser ? "You" : "Future self",
+                                 scale: .call) {
+                        Text(line.text)
+                    } accessory: {
+                        if line.speaker.isUser && showFix { correction }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
+            }
+        }
+    }
+
+    /// `SuggestionChip`, mirrored — the corrected line with the changed words
+    /// lit, under the `sparkles` mark.
+    private var correction: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "sparkles")
+                .foregroundStyle(.tint)
+                .font(.footnote)
+                .padding(.top, 2)
+            Text(highlightedCorrection(e.fix, original: e.lines[1].text, baseFont: .subheadline))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .transition(.opacity)
+    }
+
+    /// The turn's rhythm: it asks, you answer, the correction arrives with the
+    /// next reply, then the call moves on to a different topic.
+    private func run() async {
+        while !Task.isCancelled {
+            for n in 1...2 {
+                withAnimation(.spring(duration: 0.45)) { shown = n }
+                await pause(n == 1 ? 1.7 : 1.1)
+                if Task.isCancelled { return }
+            }
+            withAnimation(.easeOut(duration: 0.35)) { showFix = true }
+            await pause(0.5)
+            withAnimation(.spring(duration: 0.45)) { shown = 3 }
+            await pause(2.9)
+            if Task.isCancelled { return }
+            withAnimation(.easeInOut(duration: 0.3)) { shown = 0; showFix = false }
+            await pause(0.4)
+            take = (take + 1) % Self.exchanges.count
+        }
+    }
+
+    private func pause(_ s: Double) async {
+        try? await Task.sleep(nanoseconds: UInt64(s * 1_000_000_000))
+    }
+}
+
+// MARK: - 2. The Talk home
+
+/// `ConversationHome`, mirrored: the pixel greeting, the talk ring with the
+/// day's goal under "Let's talk", and the Discover section below it — whose
+/// chips flip between News and Scenarios on their own, because "any topic,
+/// whenever you want" is a claim only the switching makes.
+struct HomeHero: View {
+    private struct Row {
+        let icon: String
+        let title: String
+        let caption: String
+    }
+
+    private static let news = [
+        Row(icon: "cpu", title: "Did you hear about OpenAI's model hacking a company?", caption: "AI / Tech"),
+        Row(icon: "chart.line.uptrend.xyaxis", title: "Germany weighs a four-day work week", caption: "Business"),
+        Row(icon: "airplane", title: "The slow-travel comeback", caption: "Travel"),
+    ]
+    private static let scenarios = [
+        Row(icon: "cup.and.saucer", title: "Ordering at a busy café", caption: "with Sofia"),
+        Row(icon: "person.badge.clock", title: "Asking your boss for Friday off", caption: "with Mina"),
+        Row(icon: "stethoscope", title: "Describing a cough that won't go", caption: "with Dr. Park"),
+    ]
+
+    @State private var onScenarios = false
+
+    private var rows: [Row] { onScenarios ? Self.scenarios : Self.news }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("What's on your mind?")
+                .geistPixel(24)
+                .multilineTextAlignment(.center)
+            talkRing
+            discover
+            Spacer(minLength: 0)
+        }
+        .task { await run() }
+    }
+
+    /// The home's protagonist: the goal arc, the living surface, and the two
+    /// lines inside it. Scaled from the real 280pt ring to fit the hero.
+    private var talkRing: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.primary.opacity(0.015), lineWidth: 11)
+            Circle()
+                .trim(from: 0, to: 0.3)
+                .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 11, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                .frame(width: 146, height: 146)
+                .clipShape(Circle())
+                .overlay(Circle().fill(Color(.systemBackground).opacity(0.35)))
+                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+            VStack(spacing: 5) {
+                Text("Let's talk").geistPixel(18)
+                // Same interpolation the home builds its goal line from, so
+                // the carousel picks up the translation the real screen has.
+                Text("\(3) of \(10) min today")
+                    .font(.caption.weight(.medium))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(width: 158, height: 158)
+    }
+
+    private var discover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                chip("News", on: !onScenarios)
+                chip("Scenarios", on: onScenarios)
+                Spacer()
+                Image(systemName: "slider.horizontal.3")
+                Image(systemName: "arrow.clockwise")
+            }
+            .font(.subheadline)
+            .foregroundStyle(.tint)
+            .padding(.horizontal, 20)
+
+            VStack(spacing: 10) {
+                ForEach(rows.prefix(2), id: \.title) { listCard($0) }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private func chip(_ title: LocalizedStringKey, on: Bool) -> some View {
+        Text(title)
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(on ? Color(.label) : Color(.secondarySystemBackground)))
+            .foregroundStyle(on ? Color(.systemBackground) : Color.primary)
+    }
+
+    private func listCard(_ row: Row) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 36, height: 36)
+                Image(systemName: row.icon).font(.subheadline).foregroundStyle(.tint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(row.title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(row.caption).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(Color(.secondarySystemBackground)))
+    }
+
+    private func run() async {
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 3_600_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeInOut(duration: 0.35)) { onScenarios.toggle() }
+        }
+    }
+}
+
+// MARK: - 3. The book
+
+/// The book a finished talk becomes — the REAL `BookmarkedPage`, with the
+/// same ribbon bookmarks `ConversationDetailView` puts on it, and a tap
+/// landing on one ribbon after another so the carousel shows the book being
+/// FLIPPED THROUGH rather than a still of its cover. The chapters are the
+/// real ones: Overview · Words · Expressions · Shadow · Drill.
+struct BookHero: View {
+    enum Chapter: Hashable, CaseIterable {
+        case intro, words, expressions, lines, cards
+    }
+
+    /// Mirrors `ConversationDetailView.allTabs`.
+    private static let tabs: [BookmarkTab<Chapter>] = [
+        BookmarkTab(id: .intro, icon: "book.closed", title: "Overview"),
+        BookmarkTab(id: .words, icon: "textformat", title: "Words", done: 5, total: 9),
+        BookmarkTab(id: .expressions, icon: "quote.opening", title: "Expressions", count: 6),
+        BookmarkTab(id: .lines, icon: "waveform.badge.mic", title: "Shadow", count: 4),
+        BookmarkTab(id: .cards, icon: "rectangle.stack", title: "Drill", count: 3),
+    ]
+
+    /// Ribbon geometry, mirrored from `BookmarkPage.swift`: 10pt of padding
+    /// above and below, the icon line, then the badge line on every ribbon
+    /// but the cover's. Only the tap ripple needs it — the ribbons themselves
+    /// are drawn by the real component.
+    private static let ribbonHeights: [CGFloat] = [40, 57, 57, 57, 57]
+    private static let ribbonSpacing: CGFloat = 4
+
+    /// Material, not chrome — the talk's own title.
+    private static let talkTitle = "Job interview"
+
+    @State private var chapter: Chapter = .intro
+    @State private var tapAt: Int?
+    @State private var tapping = false
+
+    var body: some View {
+        BookmarkedPage(tabs: Self.tabs, selection: chapter, onSelect: { chapter = $0 }) {
+            page
+        }
+        .padding(.trailing, 16)
+        .padding(.vertical, 8)
+        .background(Color(.systemGroupedBackground))
+        .overlay(alignment: .topLeading) { ripple }
+        .task { await run() }
+    }
+
+    /// The tap: a ring that blooms on the ribbon a moment BEFORE the page
+    /// turns, so the page reads as its consequence.
+    @ViewBuilder
+    private var ripple: some View {
+        if let i = tapAt {
+            Circle()
+                .fill(Color.accentColor.opacity(0.18))
+                .overlay(Circle().strokeBorder(Color.accentColor.opacity(0.45), lineWidth: 1.5))
+                .frame(width: 38, height: 38)
+                .scaleEffect(tapping ? 1.0 : 0.45)
+                .opacity(tapping ? 0 : 0.95)
+                .offset(x: 5, y: 8 + ribbonCenter(i) - 19)
+                .allowsHitTesting(false)
+        }
+    }
+
+    private func ribbonCenter(_ index: Int) -> CGFloat {
+        let above = Self.ribbonHeights.prefix(index)
+        return above.reduce(0, +)
+            + CGFloat(index) * Self.ribbonSpacing
+            + Self.ribbonHeights[index] / 2
+    }
+
+    // MARK: The open chapter
+
+    @ViewBuilder
+    private var page: some View {
+        switch chapter {
+        case .intro:       cover
+        case .words:       chapterPage("Words") { wordRows }
+        case .expressions: chapterPage("Expressions") { expressionRows }
+        case .lines:       chapterPage("Shadow") { shadowRows }
+        case .cards:       chapterPage("Drill") { drillRows }
+        }
+    }
+
+    private func chapterPage<C: View>(_ title: LocalizedStringKey, @ViewBuilder rows: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.headline)
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+                .padding(.bottom, 6)
+            rows()
+        }
+    }
+
+    /// The cover — `ConversationDetailView`'s intro header: what the talk was,
+    /// how much of it is mastered, and the two things you can do with it.
+    private var cover: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 56, height: 56)
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.title2).foregroundStyle(.tint)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    // A talk's title is MATERIAL — it comes back in the target
+                    // language, so it goes through a variable and is never
+                    // extracted for translation.
+                    Text(Self.talkTitle)
+                        .font(.title3.weight(.semibold))
+                    // The same two interpolations the real cover builds, so
+                    // both lines read in the learner's language and format.
+                    Text("\(Date().formatted(date: .abbreviated, time: .shortened)) · \(14) turns spoken")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                ProgressView(value: 9.0 / 14.0)
+                Text("\(9) of \(14) mastered")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            HStack(spacing: 10) {
+                Label("Continue", systemImage: "bubble.left.and.bubble.right.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Capsule().fill(Color.accentColor))
+                Label("Replay", systemImage: "play.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.15)))
+            }
+        }
+        .padding(20)
+    }
+
+    private var wordRows: some View {
+        VStack(spacing: 0) {
+            wordRow("prepared", note: "ready in advance", mastered: true)
+            Divider().padding(.leading, 44)
+            wordRow("nervous", note: "worried, on edge", mastered: true)
+            Divider().padding(.leading, 44)
+            wordRow("straightforward", note: "easy to understand", mastered: false)
+            Divider().padding(.leading, 44)
+            wordRow("follow-up", note: "the next contact", mastered: false)
+        }
+    }
+
+    /// `word` is material and stays in the target language; `note` is the
+    /// gloss the learner READS, so it takes a localized key.
+    private func wordRow(_ word: String, note: LocalizedStringKey, mastered: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: mastered ? "checkmark.circle.fill" : "circle")
+                .font(.body)
+                .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(word)
+                    .font(.body)
+                    .foregroundStyle(mastered ? Color.secondary : Color.primary)
+                Text(note).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 11)
+    }
+
+    private var expressionRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            groupHeader("From your fluent self", icon: "quote.opening")
+            expressionRow("it went really well", icon: "quote.opening")
+            expressionRow("I'd prepared for that", icon: "quote.opening")
+            Divider().padding(.leading, 16)
+            groupHeader("You said these", icon: "checkmark")
+            expressionRow("to be honest", icon: "checkmark")
+            expressionRow("I was worried about", icon: "checkmark")
+        }
+    }
+
+    private func groupHeader(_ title: LocalizedStringKey, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 2)
+    }
+
+    private func expressionRow(_ phrase: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tint)
+                .padding(.top, 3)
+            Text(phrase)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 2)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private var shadowRows: some View {
+        VStack(spacing: 0) {
+            shadowRow("It went really well — I'd prepared a lot.", score: 92, mastered: true)
+            shadowRow("They asked about my last project first.", score: 78, mastered: false)
+            shadowRow("I'll follow up with them on Thursday.", score: 64, mastered: false)
+        }
+    }
+
+    private func shadowRow(_ line: String, score: Int, mastered: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Image(systemName: mastered ? "checkmark.circle.fill" : "circle")
+                .font(.body)
+                .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.tertiary))
+            Text(line).font(.subheadline).lineSpacing(2)
+            Spacer(minLength: 8)
+            Text("\(score)")
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .foregroundStyle(mastered ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 9)
+    }
+
+    private var drillRows: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            groupHeader("Say it better", icon: "sparkles")
+            drillRow(was: "It went really good.",
+                     now: "It went really well.",
+                     why: "\u{201C}Well\u{201D} describes how something went.")
+            drillRow(was: "I was preparing a lot.",
+                     now: "I'd prepared a lot.",
+                     why: "The preparing finished before the interview.")
+        }
+    }
+
+    /// Both sentences are material; the reason is coaching, so it takes a
+    /// localized key.
+    private func drillRow(was: String, now: String, why: LocalizedStringKey) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(was)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .strikethrough()
+                Text(highlightedCorrection(now, original: was, baseFont: .subheadline))
+                    .font(.subheadline)
+                Text(why).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 9)
+    }
+
+    // MARK: The flip-through
+
+    private func run() async {
+        let order = Array(Chapter.allCases.enumerated())
+        while !Task.isCancelled {
+            for (i, c) in order {
+                tapping = false
+                withAnimation(.easeOut(duration: 0.1)) { tapAt = i }
+                withAnimation(.easeOut(duration: 0.45)) { tapping = true }
+                try? await Task.sleep(nanoseconds: 260_000_000)
+                if Task.isCancelled { return }
+                withAnimation(.easeOut(duration: 0.25)) { chapter = c }
+                try? await Task.sleep(nanoseconds: 2_300_000_000)
+                if Task.isCancelled { return }
+                tapAt = nil
+            }
+        }
+    }
+}
+
+// MARK: - 5. The measured level
+
+/// `ProgressTab`'s estimate panel, mirrored: the band in the pixel face, what
+/// it means in a sentence, and the assessment that produced it — then the
+/// per-skill rows. It plays the one thing the still can't say: the next
+/// assessment filling up, and the band moving when it lands.
+struct LevelHero: View {
+    @State private var progress: Double = 0.55
+    /// The band before and after the assessment the bar is filling toward.
+    @State private var reassessed = false
+
+    private var level: String { reassessed ? "B2" : "B1" }
+    /// ProgressTab's own can-do lines, quoted verbatim so the carousel and
+    /// the real screen say the same sentence in every language.
+    private var canDo: String {
+        reassessed
+            ? explain("Clear, detailed talk on many topics, including some abstract ones.")
+            : explain("Familiar topics fluently enough to get by, and tell a simple story.")
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            estimatePanel
+            skillsPanel
+        }
+        .padding(.horizontal, 18)
+        .task { await run() }
+    }
+
+    private var estimatePanel: some View {
+        panel {
+            Text("Estimated level")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(level)
+                .geistPixel(52)
+                .foregroundStyle(.tint)
+                .contentTransition(.numericText())
+            Text(canDo)
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Next assessment")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    // Progress's own key, so the line reads in the learner's
+                    // language rather than being a second English one.
+                    Text("New talk \(Int((progress * 10).rounded()))/10 min")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .contentTransition(.numericText())
+                }
+                ProgressView(value: progress)
+            }
+        }
+    }
+
+    private var skillsPanel: some View {
+        panel {
+            Text("Across skills").font(.headline)
+            skillRow("Vocabulary", value: level)
+            skillRow("Fluency", value: "\u{2248}B1")
+            skillRow("Grammar", value: "\u{2248}B2")
+        }
+    }
+
+    private func skillRow(_ name: String, value: String) -> some View {
+        HStack {
+            Text(name).font(.subheadline)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func panel<C: View>(@ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 10) { content() }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: 20).fill(Color(.secondarySystemBackground)))
+    }
+
+    /// Talk fills the bar; when it's full the band is re-read. Nothing here
+    /// is a number the app doesn't compute — the level moves only because an
+    /// assessment ran, which is the whole claim of this slide.
+    private func run() async {
+        while !Task.isCancelled {
+            withAnimation(.easeInOut(duration: 2.4)) { progress = 1.0 }
+            try? await Task.sleep(nanoseconds: 2_800_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeOut(duration: 0.5)) { reassessed = true }
+            try? await Task.sleep(nanoseconds: 3_200_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeInOut(duration: 0.4)) {
+                progress = 0.55
+                reassessed = false
+            }
+            try? await Task.sleep(nanoseconds: 900_000_000)
         }
     }
 }

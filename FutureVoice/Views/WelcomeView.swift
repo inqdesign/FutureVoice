@@ -39,24 +39,34 @@ struct WelcomeView: View {
     /// learner who can't read the claim can't agree with it. Computed, not a
     /// `let` — a stored static would resolve its strings once per process, and
     /// setup's first question can change the learner's language behind it.
+    /// The same five beats the landing page's scrollytelling tells, in the
+    /// same order — the claim, then when and what you talk about, then the
+    /// BOOK the talk leaves, then what it accumulates, then the level. The
+    /// carousel used to name five features instead and never showed the book,
+    /// which is the one thing the learner keeps.
     private static var features: [Feature] {
         [
-            // Slide one carries the whole product in two lines — the user should
-            // agree with THIS before anything else: another you, already fluent,
-            // and you learn English by talking with it.
-            Feature(title: explain("Another you.\nAlready fluent."),
-                    subtitle: explain("Free talk, today's topics, real situations — speaking practice with your fluent self, in your voice.")),
-            // Watch comes BEFORE People: first the idea (make any situation,
-            // watch your fluent self handle it — that's where expressions come
-            // from), then the deepening (do it with your real people).
-            Feature(title: explain("Watch yourself\nhandle it"),
-                    subtitle: explain("Make any situation — watch your fluent self handle it. That's where the ideas come from.")),
-            Feature(title: explain("Then, with\nyour people"),
-                    subtitle: explain("Your barista, your boss, your doctor — watch your fluent self talk with them, then practice it.")),
-            Feature(title: explain("Make the words yours"),
-                    subtitle: explain("Shadow the exact lines in your own voice, at any speed, until they stick.")),
-            Feature(title: explain("Grow your word world"),
-                    subtitle: explain("Every word you speak joins your cloud — drag through it, tap any word for meaning and examples."))
+            // Slide one carries the whole product in two lines — the user
+            // should agree with THIS before anything else: it's your voice,
+            // already fluent, and you learn by talking with it.
+            Feature(title: explain("Learn the language\nwith the fluent you"),
+                    subtitle: explain("It's your own voice, already fluent. Say it however it comes out — every turn comes back the way you'll want to say it next time.")),
+            Feature(title: explain("When you want,\nabout what you want"),
+                    subtitle: explain("Today's news, a situation you're walking into this week, or nothing in particular. One tap, like placing a call.")),
+            // The beat that was missing. A talk isn't spent when it ends —
+            // it's bound into a book, and that's what the ribbons show.
+            Feature(title: explain("Every talk becomes\nyour own textbook"),
+                    subtitle: explain("The words, the expressions, the lines you actually spoke — bound into a book you flip through, shadow and keep.")),
+            // Slide four is the ONE place the carousel shows a mouth doing
+            // the work. The word cloud sat here first and it was the wrong
+            // pick: what a talk accumulates is already visible on the book
+            // (its chapters and mastery), while shadowing — the step that
+            // turns material into something you can say without thinking —
+            // had no picture anywhere.
+            Feature(title: explain("The more you say it,\nthe more it's yours"),
+                    subtitle: explain("Shadow your fluent self's lines in your own voice. Slow it down, loop the part that trips you, until it comes out without thinking.")),
+            Feature(title: explain("A level measured,\nnot guessed"),
+                    subtitle: explain("Your level is read from the words you actually used in a talk. No quiz, no self-rating."))
         ]
     }
 
@@ -105,12 +115,14 @@ struct WelcomeView: View {
                 // bottom edges so the asset dissolves into the ground.
                 .mask(
                     LinearGradient(
-                        stops: [
-                            .init(color: .clear, location: 0),
-                            .init(color: .black, location: 0.07),
-                            .init(color: .black, location: 0.93),
-                            .init(color: .clear, location: 1)
-                        ],
+                        stops: mockFades(i)
+                            ? [
+                                .init(color: .clear, location: 0),
+                                .init(color: .black, location: 0.07),
+                                .init(color: .black, location: 0.93),
+                                .init(color: .clear, location: 1)
+                              ]
+                            : [.init(color: .black, location: 0), .init(color: .black, location: 1)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -134,19 +146,26 @@ struct WelcomeView: View {
     // MARK: - Key visuals — the real components, alive
 
     /// Each slide is a LIVE composition of the actual app UI (WelcomeHeroes):
-    /// the real Futureself pill taking a call turn, the real PersonBubbles
-    /// drifting, a scene playing through DialogueLine, the shadow karaoke
-    /// line, and the word cloud panning itself. No screenshots.
+    /// the call transcript in real `DialogueLine`s, the home's own talk ring,
+    /// the book on the REAL `BookmarkedPage` with its ribbons being tapped,
+    /// the shadow line sweeping over `ShadowTimelinePlayer`'s scrubber, and
+    /// the Progress estimate panel. No screenshots.
     @ViewBuilder
     private func mock(_ i: Int) -> some View {
         switch i {
-        case 0:  TalkHero()
-        case 1:  WatchHero()    // the situation, watched line by line
-        case 2:  PeopleHero()   // then the same, with your real people
-        case 3:  ShadowHero()
-        default: VocabHero()
+        case 0:  CallHero()     // the fluent self answers, in your voice
+        case 1:  HomeHero()     // any topic, whenever you want
+        case 2:  BookHero()      // the talk, bound into your own textbook
+        case 3:  ShadowHero()    // said back in your own voice, until it sticks
+        default: LevelHero()     // measured, not guessed
         }
     }
+
+    /// Whether the hero's top and bottom edges dissolve into the ground.
+    /// Right for the heroes whose content genuinely CONTINUES past the frame
+    /// (a transcript, a list, a cloud); wrong for the two that are cards —
+    /// fading a card's own edge reads as a rendering fault, not a window.
+    private func mockFades(_ i: Int) -> Bool { i != 2 && i != 4 }
 
     // MARK: - Page dots + sign in
 
