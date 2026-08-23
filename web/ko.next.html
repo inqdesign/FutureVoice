@@ -134,7 +134,10 @@ nav.sec.nav-solid {
 }
 .nav-in { display: flex; align-items: center; height: 64px; }
 .logo { display: flex; align-items: center; gap: 9px; font-family: "Pixelify Sans", var(--pixel); font-size: 20px; font-weight: 400; text-decoration: none; }
-.logo .mark { width: 19px; height: 19px; }
+/* "nawana" has no ascender and no descender, so its ink sits 0.1em BELOW the
+   line box centre that align-items:center squares the mark against — optically
+   the mark floats. The nudge puts the mark's own centre on the x-height's. */
+.logo .mark { width: 19px; height: 19px; transform: translateY(0.1em); }
 .logo sup { font-size: 8px; color: var(--faint); }
 .navlinks { margin-left: auto; display: flex; align-items: center; gap: 26px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
 .navlinks a { text-decoration: none; }
@@ -435,8 +438,24 @@ nav.sec .logo { color: #F5F2EB; }
 @keyframes blink { 50% { opacity: 0.25; } }
 
 /* ── manifesto: the core claims, huge and high-contrast ────── */
-.manif { padding-top: 130px; padding-bottom: 40px; }
-.m-kick { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 100px;
+/* One claim at a time: the section pins and each line takes its own
+   stretch of scroll, so nothing stacks and the eye has one thing to
+   read. Height = one viewport per line. */
+.manif { padding: 0; }
+.m-track { position: relative; height: calc(var(--n, 3) * 100vh); }
+.m-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+.m-pin > .inner { width: 100%; }
+.m-stack { position: relative; height: 46vh; }
+.js .m-stack .m-line { position: absolute; left: 0; right: 0; top: 50%; margin: 0 auto;
+  opacity: 0; transform: translateY(calc(-50% + 22px));
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.7,0.2,1); }
+.js .m-stack .m-line.live { opacity: 1; transform: translateY(-50%); }
+/* reduced motion (and no-JS): the three claims simply stack and sit still */
+.m-track.m-static { height: auto; }
+.m-track.m-static .m-pin { position: static; height: auto; padding: 120px 0 100px; }
+.m-track.m-static .m-stack { height: auto; }
+.m-track.m-static .m-line { position: relative; top: auto; opacity: 1; transform: none; margin: 0 auto 110px; }
+.m-kick { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 46px;
   font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
 .m-kick .dot { width: 0.62em; height: 0.62em; color: var(--blue); }
 .m-line { margin: 0 auto 120px; max-width: 15em; text-align: center;
@@ -444,7 +463,7 @@ nav.sec .logo { color: #F5F2EB; }
   letter-spacing: -0.035em; line-height: 1.18; color: var(--faint); }
 .m-line b { color: var(--ink); font-weight: 800; }
 .m-line:last-child { margin-bottom: 100px; }
-@media (max-width: 700px) { .manif { padding-top: 100px; } .m-line { margin-bottom: 80px; } }
+@media (max-width: 700px) { .m-stack { height: 52vh; } }
 
 /* ── why: lead + idea cells on the grid ───────────────────── */
 .why { padding-top: 110px; }
@@ -674,6 +693,16 @@ footer a:hover { color: var(--ink); }
 .cw .book { color: var(--ac); }
 .cw .check { color: #1E9E5A; }
 @media (prefers-reduced-motion: reduce) { .p-bub { animation: none; } }
+
+/* ── manifesto reading: the claim lights word by word as you scroll,
+   the same karaoke idea the shadowing screen uses. Scroll-linked, so
+   it reads at whatever pace the reader moves. ── */
+/* ONE light tone for the whole line — premise and not-yet-lit words are
+   the same colour, so the only contrast on the page is what the scroll
+   has lit. A second, subtler light tone read as a mistake. */
+.m-line b .w { color: var(--faint); transition: color 0.42s ease; }
+.m-line b .w.on { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .m-line b .w { color: var(--ink); } }
 </style>
 <!-- PostHog web analytics -->
 <script>
@@ -772,21 +801,33 @@ footer a:hover { color: var(--ink); }
 
 <!-- ═════════ WHY ═════════ -->
 <section class="sec plain">
-  <div class="inner manif">
-    <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>하나 · 목소리</div>
-    <p class="m-line rv">원어민을 아무리 따라 해도,<br /><b>남의 목소리는<br />내 것이 되지 않는다.</b></p>
-    <p class="m-line rv">어차피 실전에서 말할 목소리는<br /><b>내 목소리다.</b></p>
-    <p class="m-line rv">그래서, 닿을 수 있는 목표.<br /><b>원어민처럼이 아니라<br />미래의 유창한 나.</b></p>
+  <div class="m-track">
+    <div class="m-pin">
+      <div class="inner manif">
+        <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>하나 · 목소리</div>
+        <div class="m-stack">
+          <p class="m-line">원어민을 아무리 따라 해도,<br /><b>남의 목소리는<br />내 것이 되지 않는다.</b></p>
+          <p class="m-line">어차피 실전에서 말할 목소리는<br /><b>내 목소리다.</b></p>
+          <p class="m-line">그래서, 닿을 수 있는 목표.<br /><b>원어민처럼이 아니라<br />미래의 유창한 나.</b></p>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
 <!-- ═════════ MANIFESTO 2 — expression ═════════ -->
 <section class="sec alt">
-  <div class="inner manif">
-    <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>둘 · 훈련</div>
-    <p class="m-line rv">말이 안 나오는 이유는,<br /><b>머릿속 생각을 꺼내는 훈련이<br />안 되어 있어서다.</b></p>
-    <p class="m-line rv">외운 문장이 아니라,<br /><b>내 생각을 나만의 언어로.<br />그게 시작이다.</b></p>
-    <p class="m-line rv">말하고, 문법과 표현을 고침받고.<br /><b>내가 실전에서 말한 것이<br />나만의 교재가 된다.</b></p>
+  <div class="m-track">
+    <div class="m-pin">
+      <div class="inner manif">
+        <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>둘 · 훈련</div>
+        <div class="m-stack">
+          <p class="m-line">말이 안 나오는 이유는,<br /><b>머릿속 생각을 꺼내는 훈련이<br />안 되어 있어서다.</b></p>
+          <p class="m-line">외운 문장이 아니라,<br /><b>내 생각을 나만의 언어로.<br />그게 시작이다.</b></p>
+          <p class="m-line">말하고, 문법과 표현을 고침받고.<br /><b>내가 실전에서 말한 것이<br />나만의 교재가 된다.</b></p>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="marquee" aria-hidden="true">
     <div class="row">
@@ -1470,6 +1511,72 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     [25,50,75].forEach(function(m){ if(!marks[m]&&p>=m){ marks[m]=1; track('beta_audio_progress',{percent:m}); } }); });
 })();
 
+</script>
+<script>
+// ── manifesto stage: the section pins and hands each claim its own
+// stretch of scroll. One line is live at a time, and its words turn to
+// ink across that stretch — the sentence completes at reading pace,
+// then the next one takes the stage. Colour + a small fade only; the
+// track's height is what actually paces it.
+(function () {
+  var tracks = [].slice.call(document.querySelectorAll(".m-track"));
+  if (!tracks.length) return;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var stages = tracks.map(function (track) {
+    var lines = [].slice.call(track.querySelectorAll(".m-line")).map(function (line) {
+      var b = line.querySelector("b"), words = [];
+      if (b) {
+        var kids = [].slice.call(b.childNodes);
+        b.textContent = "";
+        kids.forEach(function (node) {
+          if (node.nodeType === 3) {
+            node.nodeValue.split(/(\s+)/).forEach(function (chunk) {
+              if (!chunk) return;
+              if (/^\s+$/.test(chunk)) { b.appendChild(document.createTextNode(chunk)); return; }
+              var w = document.createElement("span");
+              w.className = "w"; w.textContent = chunk;
+              b.appendChild(w); words.push(w);
+            });
+          } else { b.appendChild(node); }
+        });
+      }
+      return { line: line, words: words };
+    });
+    track.style.setProperty("--n", lines.length);
+    return { track: track, lines: lines };
+  });
+  if (reduce) { tracks.forEach(function (t) { t.classList.add("m-static"); }); return; }
+  var ticking = false;
+  function paint() {
+    ticking = false;
+    var vh = window.innerHeight || 1;
+    stages.forEach(function (st) {
+      var r = st.track.getBoundingClientRect();
+      var span = r.height - vh;
+      var p = span > 0 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
+      var n = st.lines.length;
+      var seg = p * n;
+      var idx = Math.max(0, Math.min(n - 1, Math.floor(seg)));
+      // words finish before the segment does, so the completed line has a
+      // beat to be read whole before the next one arrives
+      var t = Math.max(0, Math.min(1, (seg - idx) / 0.62));
+      st.lines.forEach(function (it, i) {
+        it.line.classList.toggle("live", i === idx);
+        var lit = i < idx ? it.words.length
+                : i > idx ? 0
+                : Math.round(t * it.words.length);
+        for (var k = 0; k < it.words.length; k++) {
+          it.words[k].classList.toggle("on", k < lit);
+        }
+      });
+    });
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+  }, { passive: true });
+  window.addEventListener("resize", paint);
+  paint();
+})();
 </script>
 <script type="module">
 // ── Web billing (Stripe Checkout via Supabase Edge Functions) ──
