@@ -89,8 +89,8 @@
 | Price (한국) | **₩29,000** — 직접 지정 |
 | Display Name — English | `Plus` |
 | Display Name — 한국어 | `플러스` |
-| Description — English | `Unlimited talk, 600 scenes a month` |
-| Description — 한국어 | `통화 무제한 · 상황연습 월 600개` |
+| Description — English | `Unlimited talk, 120 scenes a month` |
+| Description — 한국어 | `통화 무제한 · 상황연습 월 120개` |
 
 ### ④ Plus Annual
 
@@ -104,13 +104,21 @@
 | Price (한국) | **₩209,000** — 직접 지정 (40%) |
 | Display Name — English | `Plus` |
 | Display Name — 한국어 | `플러스` |
-| Description — English | `Unlimited talk, 600 scenes a month` |
-| Description — 한국어 | `통화 무제한 · 상황연습 월 600개` |
+| Description — English | `Unlimited talk, 120 scenes a month` |
+| Description — 한국어 | `통화 무제한 · 상황연습 월 120개` |
 
 > **상위 티어의 할인이 하위보다 얕으면 안 됩니다.** 플러스 40% ≥ 라이트 33%.
 > 2026-08-21 이전에는 반대였고(17% vs 33%), 페이월에 `39% 절약` 옆에 `14% 절약`이
 > 나란히 떠서 우리가 가장 팔고 싶은 요금제가 더 나쁜 거래로 보였습니다.
 > 근거는 `docs/launch-billing.md`의 Prices 절에 있어요. |
+
+> **2026-08-23: 플러스의 상황연습이 600 → 120으로 바뀌었습니다**
+> (`20260823140000_plus_scene_count`). 600은 하루 20개로 아무도 다 쓸 수 없는
+> 숫자였고, 원가로는 월 $114 — 순매출 $17의 6.7배였습니다. 근거는
+> `docs/launch-billing.md`의 "Plus: Watch scenes 600 → 120" 절에 있어요.
+> **ASC에 이미 입력했다면 위 두 Description을 직접 고쳐야 합니다** — 앱의
+> 페이월은 `monthly_scenes`를 DB에서 읽어 이미 120을 보여주고 있어서,
+> 여기만 600으로 남아 있으면 App Store가 앱보다 많은 걸 약속하게 됩니다.
 
 > Display Name은 30자, Description은 45자 제한입니다. 위 값은 모두 그 안에
 > 들어갑니다. Display Name은 **설정 › Apple 계정 › 구독**에 그대로 보이는
