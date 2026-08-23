@@ -41,6 +41,14 @@ final class NetworkPathStatus: @unchecked Sendable {
 /// Never throws, never blocks the caller, silently drops when signed out —
 /// a telemetry failure must not become a second user-facing failure.
 enum Telemetry {
+    /// Read straight off the bundle rather than through `AppUpdateService`,
+    /// which is `@MainActor` and therefore unreachable from the detached task
+    /// below. `Bundle.main.infoDictionary` is safe from any thread, and both
+    /// values are constant for the process, so they're resolved once.
+    private static let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?"
+    private static let version =
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+
     static func log(_ event: String, _ properties: [String: String] = [:]) {
         Task.detached(priority: .utility) {
             struct Row: Encodable {
@@ -51,6 +59,14 @@ enum Telemetry {
             guard let session = try? await SupabaseProvider.shared.auth.session else { return }
             var props = properties
             props["network"] = NetworkPathStatus.shared.label
+            // Which build produced this event. Without it, every gap in
+            // server-side data is unfalsifiable: talk-tick rows missing for an
+            // account read identically whether the meter is broken or the
+            // phone is simply on a build that predates it — which is exactly
+            // the question that could not be answered on 2026-08-23. One
+            // string per event, and it makes the whole table diagnosable.
+            props["build"] = Self.build
+            props["version"] = Self.version
             try? await SupabaseProvider.shared
                 .from("client_events")
                 .insert(Row(user_id: session.user.id.uuidString,
