@@ -183,7 +183,7 @@ struct RootView: View {
     /// Page/navigation titles render in Geist Pixel (bundled). Falls back to
     /// SF Pro Rounded if the font ever fails to load, so titles never vanish.
     static func roundedNavFont(_ size: CGFloat, _ weight: UIFont.Weight) -> UIFont {
-        if let pixel = UIFont(name: "GeistPixel-Square", size: size) { return pixel }
+        if let pixel = UIFont.appPixel(size) { return pixel }
         let base = UIFont.systemFont(ofSize: size, weight: weight)
         guard let d = base.fontDescriptor.withDesign(.rounded) else { return base }
         return UIFont(descriptor: d, size: size)
@@ -201,7 +201,26 @@ extension Font {
     /// this Font alone renders as SF Rounded, not pixels. The View modifier
     /// pairs it with the required `.fontDesign(nil)` reset.
     static func geistPixel(_ size: CGFloat) -> Font {
-        .custom("GeistPixel-Square", size: size)
+        guard let ui = UIFont.appPixel(size) else { return .custom("GeistPixel-Square", size: size) }
+        return Font(ui)
+    }
+}
+
+extension UIFont {
+    /// The display face as ONE voice across scripts. Geist Pixel carries no
+    /// Hangul, so Korean titles used to drop to the system font mid-line —
+    /// "복습" in SF beside "Talk" in pixels. The cascade hands those glyphs to
+    /// Galmuri (bundled, subset), which is a pixel face too, so a mixed title
+    /// like "nawana로 대화" reads in one design.
+    ///
+    /// Returns nil only if the bundled Latin face is missing, so callers keep
+    /// their own fallback. Scaled through UIFontMetrics because the SwiftUI
+    /// `.custom(_:size:)` this replaced tracked Dynamic Type.
+    static func appPixel(_ size: CGFloat) -> UIFont? {
+        guard UIFont(name: "GeistPixel-Square", size: size) != nil else { return nil }
+        let descriptor = UIFontDescriptor(name: "GeistPixel-Square", size: size)
+            .addingAttributes([.cascadeList: [UIFontDescriptor(name: "Galmuri14-Regular", size: size)]])
+        return UIFontMetrics.default.scaledFont(for: UIFont(descriptor: descriptor, size: size))
     }
 }
 
