@@ -64,3 +64,10 @@ android/captures/
 
 # Release build output (xcodebuild -derivedDataPath)
 build-release/
+
+# Admin console build output — contains real user emails and personal intros.
+scripts/admin/build/
+
+# Python bytecode (scripts/admin)
+__pycache__/
+*.pyc

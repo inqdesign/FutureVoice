@@ -1,0 +1,625 @@
+<title>nawana 유저 활동</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --ring:rgba(11,11,11,.10);
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --seq100:#cde2fb; --seq250:#86b6ef; --seq400:#3987e5; --seq550:#1c5cab; --seq700:#0d366b;
+  --good:#0ca30c; --crit:#d03b3b; --warn:#fab219;
+  --good-text:#006300;
+  --chip:#f0efec;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --ring:rgba(255,255,255,.10);
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+    --seq100:#184f95; --seq250:#256abf; --seq400:#3987e5; --seq550:#6da7ec; --seq700:#b7d3f6;
+    --good:#0ca30c; --crit:#e66767; --warn:#fab219;
+    --good-text:#0ca30c;
+    --chip:#262624;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --ring:rgba(255,255,255,.10);
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --seq100:#184f95; --seq250:#256abf; --seq400:#3987e5; --seq550:#6da7ec; --seq700:#b7d3f6;
+  --good:#0ca30c; --crit:#e66767; --warn:#fab219;
+  --good-text:#0ca30c;
+  --chip:#262624;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--page); color:var(--ink);
+  font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size:15px; line-height:1.55;
+}
+.wrap{max-width:1060px; margin:0 auto; padding:40px 24px 80px}
+header{display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px 24px; margin-bottom:28px}
+.eyebrow{font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; margin:0 0 6px}
+h1{font-size:30px; font-weight:700; margin:0; text-wrap:balance; letter-spacing:-.01em}
+.asof{color:var(--ink-2); font-size:13px; margin-top:6px}
+.toggle{margin-left:auto; display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--ring); border-radius:8px; padding:8px 12px; cursor:pointer; user-select:none}
+.toggle input{accent-color:var(--s1); width:15px; height:15px; margin:0; cursor:pointer}
+.toggle:focus-within{outline:2px solid var(--s1); outline-offset:2px}
+
+section{margin-top:36px}
+h2{font-size:17px; font-weight:600; margin:0 0 4px}
+.sub{color:var(--ink-2); font-size:13px; margin:0 0 14px; max-width:66ch}
+.card{background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:18px 20px}
+
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px}
+.tile{background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:14px 16px}
+.tile .k{font-size:12px; color:var(--muted); font-weight:500}
+.tile .v{font-size:26px; font-weight:700; letter-spacing:-.01em; margin-top:2px}
+.tile .d{font-size:12px; color:var(--ink-2); margin-top:2px}
+
+.panel{margin-top:10px}
+.panel-label{font-size:12px; color:var(--ink-2); font-weight:600; margin-bottom:2px; display:flex; gap:8px; align-items:center}
+.swatch{width:9px; height:9px; border-radius:2px; display:inline-block}
+svg text{font-family:inherit}
+.axis{font-size:10.5px; fill:var(--muted)}
+.gridline{stroke:var(--grid); stroke-width:1}
+.baseline{stroke:var(--baseline); stroke-width:1}
+
+table{width:100%; border-collapse:collapse; font-size:13.5px}
+th{font-size:11.5px; letter-spacing:.03em; color:var(--muted); font-weight:600; text-align:left; padding:8px 10px; border-bottom:1px solid var(--grid); white-space:nowrap}
+td{padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
+.uname{font-weight:600}
+.usub{font-size:11.5px; color:var(--muted); margin-top:1px}
+.chip{display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:500; background:var(--chip); color:var(--ink-2); border-radius:20px; padding:2px 9px; white-space:nowrap}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.devchip{font-size:10.5px; font-weight:600; color:var(--muted); border:1px solid var(--ring); border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px}
+.scroll{overflow-x:auto}
+
+.hm-row{display:flex; align-items:center; gap:8px}
+.hm-name{width:150px; flex:none; font-size:12px; color:var(--ink-2); text-align:right; padding-right:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.legend{display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted); margin-top:10px}
+.legend .cell{width:11px;height:11px;border-radius:2px}
+
+.bars .row{display:flex; align-items:center; gap:10px; margin:6px 0}
+.bars .lbl{width:150px; flex:none; font-size:12.5px; color:var(--ink-2); text-align:right}
+.bars .track{flex:1; height:18px; position:relative}
+.bars .fill{position:absolute; left:0; top:2px; bottom:2px; border-radius:0 4px 4px 0; background:var(--s1); min-width:2px}
+.bars .val{font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap}
+
+#tooltip{position:fixed; pointer-events:none; z-index:10; background:var(--ink); color:var(--page);
+  font-size:12px; line-height:1.45; padding:7px 10px; border-radius:7px; max-width:260px; display:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#tooltip b{font-weight:600}
+
+.notes{font-size:13px; color:var(--ink-2)}
+.notes li{margin:6px 0}
+.notes ul{margin:0; padding-left:18px}
+
+/* 유저 카드 */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(310px,1fr)); gap:12px}
+.pcard{background:var(--surface); border:1px solid var(--ring); border-radius:10px; padding:16px 18px; display:flex; flex-direction:column; gap:9px}
+.pcard .top{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.pcard .nm{font-size:17px; font-weight:700; letter-spacing:-.01em}
+.pcard .mail{font-size:12.5px; color:var(--ink-2); word-break:break-all; user-select:all}
+.pcard .mail .relay{color:var(--muted); font-size:11.5px}
+.meta{display:flex; flex-wrap:wrap; gap:6px}
+.pcard .bio{font-size:13px; color:var(--ink-2); white-space:pre-wrap; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; line-clamp:4}
+.pcard .bio.open{display:block; overflow:visible}
+.pcard .more{margin-top:4px; background:none; border:none; padding:0; font:inherit; font-size:12px;
+  font-weight:600; color:var(--s1); cursor:pointer}
+.pcard .more:hover{text-decoration:underline}
+.pcard .quote{font-size:13px; border-left:2px solid var(--s2); padding:2px 0 2px 10px; color:var(--ink)}
+.pcard .quote .ctx{font-size:11px; color:var(--muted); display:block; margin-top:3px}
+.pcard .foot{margin-top:auto; padding-top:8px; border-top:1px solid var(--grid); font-size:12px; color:var(--ink-2);
+  font-variant-numeric:tabular-nums; display:flex; flex-wrap:wrap; gap:4px 12px}
+.pcard .foot b{color:var(--ink); font-weight:600}
+.stars{color:var(--warn); letter-spacing:1px; font-size:12px}
+
+/* streak 레인 */
+.lane-name{font-size:12px; fill:var(--ink-2)}
+.lane-stat{font-size:11.5px; fill:var(--muted)}
+.lane-stat b{font-weight:600}
+@media (prefers-reduced-motion: no-preference){
+  .tile, .card{transition:border-color .15s}
+}
+</style>
+
+<div class="wrap">
+<header>
+  <div>
+    <p class="eyebrow">nawana · 내부 분석</p>
+    <h1>유저 활동</h1>
+    <p class="asof" id="asof"></p>
+  </div>
+  <label class="toggle"><input type="checkbox" id="devToggle"> 개발·테스트 계정 포함</label>
+</header>
+
+<section>
+  <div class="tiles" id="tiles"></div>
+</section>
+
+<section>
+  <h2>이 사람들은 누구인가</h2>
+  <p class="sub">애플 비공개 릴레이 주소 뒤의 실제 신원 — 웨이트리스트 가입 이메일(<code>user_waitlist_mapping</code>)과 온보딩에서 본인이 쓴 자기소개(<code>public_personas</code>)를 붙였어요. 자기소개는 클릭하면 전체가 펼쳐져요.</p>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section>
+  <h2>일별 활동</h2>
+  <p class="sub">활동 = 그날 서버 원장에 기록이 있는 계정. 대화 턴은 통화 중 Gemini 응답 호출 수예요.</p>
+  <div class="card scroll" id="dailyCard"></div>
+</section>
+
+<section>
+  <h2>유저별 현황</h2>
+  <p class="sub">마지막 활동 기준 최신순. 통화 시간은 8/10부터 측정된 값이라 그 이전의 대화는 턴 수로만 남아 있어요.</p>
+  <div class="card scroll"><table id="userTable"></table></div>
+</section>
+
+<section>
+  <h2>연속 사용 (streak)</h2>
+  <p class="sub">가입일을 0일에 맞춰 나란히 세운 차트예요 — 가입 시점이 달라도 행동 패턴을 겹쳐 볼 수 있어요. 파란 막대 하나가 연속으로 대화한 구간이고, 빈칸은 쉰 날이에요. Core 클럽 자격은 <b>30일 연속</b>인데, 실사용자 최장 기록은 아래에서 확인할 수 있어요.</p>
+  <div class="card scroll" id="lanes"></div>
+</section>
+
+<section style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px">
+  <div>
+    <h2>돌아오기까지 걸린 시간</h2>
+    <p class="sub">쉬었다가 다시 대화한 간격. 이탈이 아니라 휴지기라면 여기에 쌓여요.</p>
+    <div class="card bars" id="gapChart"></div>
+  </div>
+  <div>
+    <h2>가입 후 주차별 잔존</h2>
+    <p class="sub">그 주에 한 번이라도 대화한 사람 수. 해당 주를 다 채운 유저만 셈에 넣어요.</p>
+    <div class="card bars" id="retention"></div>
+  </div>
+</section>
+
+<section>
+  <h2>활동 히트맵</h2>
+  <p class="sub">칸의 진하기 = 그날의 서버 기록 수. 하루라도 색이 있으면 그날 앱을 실제로 썼다는 뜻이에요.</p>
+  <div class="card scroll" id="heatmap"></div>
+</section>
+
+<section style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px">
+  <div>
+    <h2>통화 세션 길이</h2>
+    <p class="sub">8/10 이후 측정된 세션 기준.</p>
+    <div class="card" id="sessHist"></div>
+  </div>
+  <div>
+    <h2>턴 오류</h2>
+    <p class="sub">통화 중 응답 생성이 실패한 턴 (client_events).</p>
+    <div class="card scroll" id="errChart"></div>
+  </div>
+</section>
+
+<section>
+  <h2>기능 사용</h2>
+  <p class="sub">무료 기능의 일일 사용 기록(free_usage_daily) 누적 호출 수 — 전 계정 합산이라 개발 계정 토글의 영향을 받지 않아요.</p>
+  <div class="card bars" id="features"></div>
+</section>
+
+<section>
+  <h2>유입 경로</h2>
+  <p class="sub">웨이트리스트 15명이 어디서 왔는지 (<code>waitlist.referrer</code>). 앱 가입까지 이어져 매핑된 사람은 4명이에요.</p>
+  <div class="card bars" id="channels"></div>
+</section>
+
+<section>
+  <h2>데이터 주석</h2>
+  <div class="card notes"><ul>
+    <li><b>통화 시간</b>은 TalkMeter가 배포된 <b>2026-08-10부터</b>만 측정돼요. 베타 유저들의 7월 대화는 턴 수에는 있지만 통화 시간에는 0으로 보여요.</li>
+    <li><b>Watch 장면</b>도 장면 단위 과금이 시작된 8/10 이후 기록이에요.</li>
+    <li><b>이 페이지에는 실명·실제 이메일·자기소개가 들어 있어요.</b> 아티팩트는 기본이 비공개예요 — 공유 링크를 만들지 마세요.</li>
+    <li><b>streak는 "대화한 날"</b>(그날 대화 턴이 1개 이상) 기준이에요. 서버 기록만 있고 대화가 없던 날은 102일 중 4일뿐이라 활동일과 거의 같아요.</li>
+    <li><b>Core 클럽 자격</b>(30일 연속, 하루 240초 이상 통화)은 아직 판정할 수 없어요 — 통화 시간이 측정되는 실사용자가 1명뿐이라, 하루 240초를 넘긴 날은 개발 계정에만 있어요.</li>
+    <li>레벨(proficiency)은 전원 <code>b1</code>이라 온보딩 기본값일 가능성이 높아요 — 실력 지표로 읽지 마세요.</li>
+    <li>웨이트리스트 매핑은 <code>matched_by=manual</code>, 즉 손으로 이어붙인 값이에요. 8/16·8/18 가입자 2명은 매핑이 없어요(TestFlight 직접 설치로 보여요).</li>
+    <li>개발 계정 2개(본인 계정, android-dev-test)는 기본으로 제외돼요 — 본인 계정이 전체 활동의 대부분이라 포함하면 실제 유저의 패턴이 묻혀요.</li>
+    <li>출처: 프로덕션 Supabase — usage_ledger · talk_seconds_by_language · scene_plays · free_usage_daily · client_events · user_subscriptions · beta_reviews.</li>
+  </ul></div>
+</section>
+</div>
+<div id="tooltip"></div>
+
+<script>
+const DATA = __DATA__;
+
+const tooltip = document.getElementById('tooltip');
+function showTip(html, ev){
+  tooltip.innerHTML = html; tooltip.style.display='block';
+  const pad=14, w=tooltip.offsetWidth, h=tooltip.offsetHeight;
+  let x=ev.clientX+pad, y=ev.clientY+pad;
+  if(x+w>innerWidth-8) x=ev.clientX-w-pad;
+  if(y+h>innerHeight-8) y=ev.clientY-h-pad;
+  tooltip.style.left=x+'px'; tooltip.style.top=y+'px';
+}
+function hideTip(){ tooltip.style.display='none'; }
+
+const fmtD = s => { const [y,m,d]=s.split('-'); return `${+m}/${+d}`; };
+const fmtDate = s => { const [y,m,d]=s.split('-'); return `${+m}월 ${+d}일`; };
+const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round(secs%3600/60)}분`
+  : secs>=60 ? `${Math.round(secs/60)}분` : `${secs}초`;
+const num = n => n.toLocaleString('ko-KR');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const nameOf = u => u.name || (u.email ? u.email.split('@')[0] : u.label);
+
+const LANG_KO = {en:'영어', de:'독일어', ko:'한국어', ja:'일본어', fr:'프랑스어', es:'스페인어'};
+const PLAN_KO = {light_monthly:'라이트', plus_monthly:'플러스', light_yearly:'라이트(연)', plus_yearly:'플러스(연)'};
+const STATUS = {
+  active:  {ko:'구독 중', color:'var(--good)'},
+  trialing:{ko:'체험 중', color:'var(--s1)'},
+  expired: {ko:'만료',   color:'var(--crit)'},
+};
+const REVIEW_CTX = {
+  first_talk:'첫 통화 후', first_watch:'첫 Watch 장면 후', subscription_survey:'구독 가격 설문',
+};
+const PURPOSE_KO = {
+  turn:'대화 턴 (통화)', transcribe:'턴 전사', 'daily-call-script':'데일리 콜 대본', shadow:'섀도잉',
+  summary:'통화 요약', 'scenario-curriculum':'시나리오 장면 생성', topics:'토픽 추천', enrichment:'드릴 보강',
+  weekly:'주간 리포트', generic:'기타', opener:'오프너', 'freetalk-openers':'프리톡 오프너',
+  accent_previews:'악센트 미리듣기', accent_save:'악센트 저장', voice_clone:'보이스 클론', parse:'상대 프로필 파싱',
+};
+
+function visibleUsers(){
+  const dev = document.getElementById('devToggle').checked;
+  return DATA.users.map((u,i)=>({...u, idx:i})).filter(u=>dev || !u.dev);
+}
+
+/* ---------- streak (대화한 날 기준) ---------- */
+const TODAY = DATA.days.length-1;
+const talkDays = {};       // userIdx -> {dayIdx: turns}
+for(const [u,d,rows,t] of DATA.cells){ if(t>0) (talkDays[u]??={})[d]=t; }
+
+function streakOf(idx){
+  const m = talkDays[idx]||{};
+  const ds = Object.keys(m).map(Number).sort((a,b)=>a-b);
+  const signup = DATA.days.indexOf(DATA.users[idx].signedUp);
+  const span = TODAY - signup + 1;
+  if(!ds.length) return {runs:[], longest:0, current:0, gaps:[], span, signup, talked:0, sinceLast:span};
+  const runs=[]; let s=ds[0], p=ds[0], turns=m[ds[0]];
+  for(const d of ds.slice(1)){
+    if(d===p+1){ p=d; turns+=m[d]; continue; }
+    runs.push({from:s,to:p,len:p-s+1,turns}); s=p=d; turns=m[d];
+  }
+  runs.push({from:s,to:p,len:p-s+1,turns});
+  const longest = Math.max(...runs.map(r=>r.len));
+  const last = ds[ds.length-1];
+  const current = last>=TODAY-1 ? runs[runs.length-1].len : 0;
+  const gaps = runs.slice(1).map((r,i)=> r.from - runs[i].to - 1);
+  return {runs, longest, current, gaps, span, signup, talked:ds.length, sinceLast:TODAY-last};
+}
+
+function render(){
+  const users = visibleUsers();
+  const vis = new Set(users.map(u=>u.idx));
+  renderTiles(users, vis);
+  renderCards(users);
+  renderDaily(vis);
+  renderTable(users);
+  renderLanes(users);
+  renderGaps(users);
+  renderRetention(users);
+  renderHeatmap(users);
+  renderSessions(vis);
+  renderErrors();
+}
+
+/* ---------- 유저 카드 ---------- */
+function renderCards(users){
+  const order=[...users].sort((a,b)=>(b.lastActive||'').localeCompare(a.lastActive||''));
+  const html = order.map(u=>{
+    const st=STATUS[u.subStatus], s=streakOf(u.idx);
+    const meta=[];
+    if(u.channel) meta.push(`<span class="chip">${u.channel}에서 유입</span>`);
+    if(u.device) meta.push(`<span class="chip">${u.device}</span>`);
+    if(u.location) meta.push(`<span class="chip">${esc(u.location)}</span>`);
+    if(u.plan) meta.push(`<span class="chip"><span class="dot" style="background:${st?st.color:'var(--muted)'}"></span>${PLAN_KO[u.plan]||u.plan} · ${st?st.ko:u.subStatus}</span>`);
+    const mail = u.realEmail
+      ? `<div class="mail">${esc(u.realEmail)} <span class="relay">· 앱 로그인은 ${esc(u.email||'')}</span></div>`
+      : `<div class="mail">${esc(u.email||'이메일 없음')} <span class="relay">· 웨이트리스트 매핑 없음</span></div>`;
+    // intro는 대개 occupation으로 시작해요 — 겹치면 occupation 줄은 생략
+    const dup = u.occupation && u.intro && u.intro.trim().startsWith(u.occupation.trim().slice(0,40));
+    const occ = u.occupation && !dup ? `<div class="bio open">${esc(u.occupation)}</div>` : '';
+    const long = u.intro && u.intro.length>150;
+    const bio = u.intro
+      ? `<div><div class="bio${long?'':' open'}">${esc(u.intro)}</div>${long?'<button class="more" type="button">더보기</button>':''}</div>`
+      : '';
+    const revs = (u.reviews||[]).map(r=>{
+      const stars = r.rating ? `<span class="stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span> ` : '';
+      return `<div class="quote">${stars}${esc(r.body)}<span class="ctx">${REVIEW_CTX[r.context]||r.context} · ${fmtD(r.d)}</span></div>`;
+    }).join('');
+    return `<div class="pcard">
+      <div class="top"><span class="nm">${esc(nameOf(u))}</span>${u.dev?'<span class="devchip">DEV</span>':''}</div>
+      ${mail}
+      <div class="meta">${meta.join('')}</div>
+      ${occ}${bio}${revs}
+      <div class="foot">
+        <span>대화 <b>${u.activeDays}일</b></span>
+        <span>최장 연속 <b>${s.longest}일</b></span>
+        <span>${s.current?`현재 <b>${s.current}일째</b>`:`<b>${s.sinceLast}일째</b> 조용`}</span>
+        <span>턴 <b>${num(u.turns)}</b></span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('cards').innerHTML=html;
+  document.querySelectorAll('.pcard .more').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const bio=btn.previousElementSibling;
+      const open=bio.classList.toggle('open');
+      btn.textContent = open ? '접기' : '더보기';
+    });
+  });
+}
+
+/* ---------- streak 레인 ---------- */
+function renderLanes(users){
+  const rows=[...users].map(u=>({u, s:streakOf(u.idx)})).sort((a,b)=> b.s.longest-a.s.longest || b.s.talked-a.s.talked);
+  const maxSpan=Math.max(...rows.map(r=>r.s.span), 7);
+  const NAME=118, STAT=132, PAD=8;
+  const cw=Math.min(26, Math.max(6, (980-NAME-STAT-PAD*2)/maxSpan));
+  const plotW=maxSpan*cw, W=NAME+plotW+STAT+PAD*2, LH=24, top=18;
+  const H=top+rows.length*LH+6;
+  let svg=`<svg width="${W}" height="${H}" role="img" aria-label="유저별 연속 사용 차트">`;
+  for(let d=0; d<=maxSpan; d+=7){
+    const x=NAME+PAD+d*cw;
+    svg+=`<line x1="${x}" y1="${top-6}" x2="${x}" y2="${H-6}" class="gridline"/>`;
+    svg+=`<text x="${x+3}" y="${top-9}" class="axis">${d===0?'가입일':d+'일'}</text>`;
+  }
+  rows.forEach((r,i)=>{
+    const y=top+i*LH, u=r.u, s=r.s;
+    svg+=`<text x="${NAME-6}" y="${y+13}" text-anchor="end" class="lane-name">${esc(nameOf(u).slice(0,12))}</text>`;
+    svg+=`<rect x="${NAME+PAD}" y="${y+3}" width="${(s.span*cw).toFixed(1)}" height="14" rx="3" fill="var(--chip)"/>`;
+    for(const run of s.runs){
+      const x=NAME+PAD+(run.from-s.signup)*cw, w=Math.max(2.5, run.len*cw-1.5);
+      const tip=`<b>${esc(nameOf(u))}</b><br>가입 후 ${run.from-s.signup}일차부터 · ${run.len}일 연속<br>${fmtDate(DATA.days[run.from])} – ${fmtDate(DATA.days[run.to])} · 턴 ${num(run.turns)}`;
+      svg+=`<rect x="${x.toFixed(1)}" y="${y+3}" width="${w.toFixed(1)}" height="14" rx="3" fill="var(--s1)" data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+    }
+    const statX=NAME+PAD*2+plotW;
+    const tail = s.current ? `현재 ${s.current}일째` : `${s.sinceLast}일째 조용`;
+    svg+=`<text x="${statX}" y="${y+13}" class="lane-stat">최장 <tspan style="fill:var(--ink);font-weight:600">${s.longest}일</tspan> · ${tail}</text>`;
+  });
+  svg+='</svg>';
+  const best=Math.max(...rows.filter(r=>!r.u.dev).map(r=>r.s.longest), 0);
+  svg+=`<div class="legend"><span class="cell" style="background:var(--s1)"></span> 연속으로 대화한 구간 · 가로축은 가입 후 경과일`
+     + (best?` · 실사용자 최장 ${best}일 (Core 자격 30일)`:'')+`</div>`;
+  document.getElementById('lanes').innerHTML=svg;
+}
+
+/* ---------- 복귀 간격 ---------- */
+function renderGaps(users){
+  const all=[]; users.forEach(u=>{ streakOf(u.idx).gaps.forEach(g=>all.push(g)); });
+  const buckets=[{k:'1–2일',t:g=>g<=2},{k:'3–5일',t:g=>g<=5},{k:'6–9일',t:g=>g<=9},{k:'10일 이상',t:()=>true}];
+  const counts=buckets.map(()=>0);
+  for(const g of all){ for(let i=0;i<buckets.length;i++){ if(buckets[i].t(g)){counts[i]++;break;} } }
+  const max=Math.max(1,...counts);
+  let html=buckets.map((b,i)=>
+    `<div class="row"><div class="lbl">${b.k}</div><div class="track"><div class="fill" style="width:${counts[i]/max*100}%"></div></div><div class="val">${counts[i]}회</div></div>`).join('');
+  const avg = all.length ? (all.reduce((a,b)=>a+b,0)/all.length).toFixed(1) : null;
+  html+=`<div class="legend">${all.length?`복귀 ${all.length}회 · 평균 ${avg}일 만에 돌아왔어요`:'복귀 기록이 아직 없어요'}</div>`;
+  document.getElementById('gapChart').innerHTML=html;
+}
+
+/* ---------- 주차별 잔존 ---------- */
+function renderRetention(users){
+  const weeks=[0,1,2,3];
+  const out=weeks.map(w=>{
+    let elig=0, act=0;
+    for(const u of users){
+      const s=streakOf(u.idx), a=s.signup+w*7, b=s.signup+w*7+6;
+      if(b>TODAY) continue;
+      elig++;
+      if(Object.keys(talkDays[u.idx]||{}).some(d=>d>=a&&d<=b)) act++;
+    }
+    return {w, elig, act};
+  }).filter(r=>r.elig>0);
+  const maxE=Math.max(1,...out.map(r=>r.elig));
+  let html=out.map(r=>
+    `<div class="row"><div class="lbl">${r.w===0?'가입 첫 주':r.w+'주차'}</div>
+     <div class="track">
+       <div class="fill" style="width:${r.elig/maxE*100}%;background:var(--chip);border-radius:0 4px 4px 0"></div>
+       <div class="fill" style="width:${r.act/maxE*100}%"></div>
+     </div><div class="val">${r.act}/${r.elig}명</div></div>`).join('');
+  const tooNew=users.length-(out.length?out[out.length-1].elig:0);
+  html+=`<div class="legend">진한 막대가 그 주에 대화한 사람${tooNew>0?` · ${tooNew}명은 아직 관측 기간이 짧아 마지막 주에서 빠졌어요`:''}</div>`;
+  document.getElementById('retention').innerHTML=html;
+}
+
+/* ---------- 유입 경로 ---------- */
+function renderChannels(){
+  const cs=DATA.waitlist.channels, max=Math.max(...cs.map(c=>c.n));
+  document.getElementById('channels').innerHTML = cs.map(c=>
+    `<div class="row"><div class="lbl">${c.name}</div><div class="track"><div class="fill" style="width:${c.n/max*100}%"></div></div>
+     <div class="val">${c.n}명 · 베타 희망 ${c.beta}</div></div>`).join('')
+    + `<div class="legend">웨이트리스트 ${DATA.waitlist.total}명 · 베타 희망 ${DATA.waitlist.wantsBeta}명 · 앱 가입 매핑 ${DATA.waitlist.converted}명</div>`;
+}
+
+/* ---------- tiles ---------- */
+function renderTiles(users, vis){
+  const today = DATA.days.length-1;
+  const activeDay = {};
+  for(const [u,d] of DATA.cells.map(c=>[c[0],c[1]])){ if(vis.has(u)) (activeDay[u]??=new Set()).add(d); }
+  const wau = users.filter(u=> (activeDay[u.idx]||new Set()).size && Math.max(...activeDay[u.idx])>=today-6).length;
+  const turns = DATA.cells.filter(c=>vis.has(c[0])).reduce((a,c)=>a+c[3],0);
+  const talk  = DATA.cells.filter(c=>vis.has(c[0])).reduce((a,c)=>a+c[4],0);
+  const scenes= users.reduce((a,u)=>a+u.scenes,0);
+  const subs  = users.filter(u=>u.subStatus==='active').length;
+  const trial = users.filter(u=>u.subStatus==='trialing').length;
+  const expired = users.filter(u=>u.subStatus==='expired').length;
+  const tiles = [
+    {k:'가입 계정', v:num(users.length), d:document.getElementById('devToggle').checked?'개발·테스트 포함':'실사용자만'},
+    {k:'최근 7일 활성', v:num(wau), d:'원장 기록 기준'},
+    {k:'구독', v:num(subs+trial), d:`구독 중 ${subs} · 체험 ${trial} · 만료 ${expired}`},
+    {k:'누적 대화 턴', v:num(turns), d:'6/10 이후 전체'},
+    {k:'누적 통화', v:fmtMin(talk), d:'8/10부터 측정'},
+    {k:'Watch 장면', v:num(scenes), d:'8/10부터 측정'},
+  ];
+  document.getElementById('tiles').innerHTML = tiles.map(t=>
+    `<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div><div class="d">${t.d}</div></div>`).join('');
+}
+
+/* ---------- daily small multiples ---------- */
+function renderDaily(vis){
+  const n = DATA.days.length;
+  const actives = Array(n).fill(0), turns = Array(n).fill(0), talk = Array(n).fill(0);
+  const seen = Array.from({length:n},()=>new Set());
+  for(const [u,d,rows,t,secs] of DATA.cells){ if(!vis.has(u)) continue; seen[d].add(u); turns[d]+=t; talk[d]+=secs; }
+  for(let i=0;i<n;i++) actives[i]=seen[i].size;
+
+  const W=980, LEFT=34, RIGHT=8, plotW=W-LEFT-RIGHT, bw=plotW/n;
+  const panels = [
+    {label:'활성 유저', color:'var(--s1)', data:actives, fmt:v=>`${v}명`, h:64},
+    {label:'대화 턴',  color:'var(--s1)', data:turns,   fmt:v=>`${num(v)}턴`, h:84},
+    {label:'통화 시간', color:'var(--s2)', data:talk,    fmt:v=>fmtMin(v), h:84, note:'8/10부터'},
+  ];
+  const months=[]; DATA.days.forEach((d,i)=>{ if(d.endsWith('-01')) months.push([i,d]); });
+
+  let html='';
+  for(const p of panels){
+    const max = Math.max(1,...p.data);
+    const H=p.h, top=6, bh=H-top-14;
+    let svg=`<div class="panel"><div class="panel-label"><span class="swatch" style="background:${p.color}"></span>${p.label}`+
+      (p.note?` <span style="font-weight:400;color:var(--muted)">· ${p.note}</span>`:'')+
+      `<span style="font-weight:400;color:var(--muted);margin-left:auto">최대 ${p.fmt(max)}</span></div>`;
+    svg+=`<svg width="${W}" height="${H}" role="img" aria-label="${p.label} 일별 차트">`;
+    svg+=`<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
+    for(const [i,d] of months){
+      const x=LEFT+i*bw;
+      svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${top+bh}" class="gridline"/>`;
+      svg+=`<text x="${x+3}" y="${H-2}" class="axis">${+d.split('-')[1]}월</text>`;
+    }
+    svg+=`<text x="${LEFT}" y="${H-2}" class="axis">6/9</text>`;
+    for(let i=0;i<n;i++){
+      const v=p.data[i]; if(!v) continue;
+      const h=Math.max(2, v/max*bh);
+      svg+=`<rect x="${(LEFT+i*bw+0.5).toFixed(1)}" y="${(top+bh-h).toFixed(1)}" width="${Math.max(1.5,bw-1.2).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="${p.color}" data-tip="<b>${fmtDate(DATA.days[i])}</b><br>${p.label} ${p.fmt(v)}"/>`;
+    }
+    svg+='</svg></div>';
+    html+=svg;
+  }
+  document.getElementById('dailyCard').innerHTML=html;
+}
+
+/* ---------- user table ---------- */
+function renderTable(users){
+  const rows=[...users].sort((a,b)=> (b.lastActive||'').localeCompare(a.lastActive||''));
+  let html=`<thead><tr><th>유저</th><th>가입</th><th>플랜</th><th class="num">활동일</th><th class="num">최장 연속</th><th class="num">현재 연속</th><th>마지막 활동</th><th class="num">대화 턴</th><th class="num">통화</th><th class="num">세션</th><th class="num">장면</th><th class="num">리뷰</th></tr></thead><tbody>`;
+  for(const u of rows){
+    const st=STATUS[u.subStatus], s=streakOf(u.idx);
+    const plan = u.plan ? `<span class="chip"><span class="dot" style="background:${st?st.color:'var(--muted)'}"></span>${PLAN_KO[u.plan]||u.plan} · ${st?st.ko:u.subStatus}</span>` : '<span class="chip">플랜 없음</span>';
+    const langs=(u.langs||[]).map(l=>LANG_KO[l]||l).join(' · ');
+    html+=`<tr>
+      <td title="${esc(u.realEmail||u.email||'이메일 없음')}"><span class="uname">${esc(nameOf(u))}</span>${u.dev?'<span class="devchip">DEV</span>':''}
+        <div class="usub">${langs||''}${u.clone?(langs?' · ':'')+'클론 완료':''}</div></td>
+      <td style="white-space:nowrap">${fmtD(u.signedUp)}</td>
+      <td>${plan}</td>
+      <td class="num">${u.activeDays}</td>
+      <td class="num">${s.longest||'—'}</td>
+      <td class="num">${s.current||'—'}</td>
+      <td style="white-space:nowrap">${u.lastActive?fmtDate(u.lastActive):'—'}</td>
+      <td class="num">${num(u.turns)}</td>
+      <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
+      <td class="num">${u.talkSessions||'—'}</td>
+      <td class="num">${u.scenes||'—'}</td>
+      <td class="num">${u.reviewCount||'—'}</td>
+    </tr>`;
+  }
+  document.getElementById('userTable').innerHTML=html+'</tbody>';
+}
+
+/* ---------- heatmap ---------- */
+function renderHeatmap(users){
+  const n=DATA.days.length, cs=10, gap=1.5;
+  const byUser={};
+  for(const [u,d,rows,t,secs] of DATA.cells) (byUser[u]??={})[d]=[rows,t,secs];
+  const ramp=v=> v>=100?'var(--seq700)': v>=30?'var(--seq550)': v>=10?'var(--seq400)': v>=3?'var(--seq250)':'var(--seq100)';
+  const rows=[...users].sort((a,b)=> b.activeDays-a.activeDays);
+  const width=n*(cs+gap);
+  let html='';
+  // month ruler
+  let ruler=`<div class="hm-row"><div class="hm-name"></div><svg width="${width}" height="16">`;
+  DATA.days.forEach((d,i)=>{ if(d.endsWith('-01')) ruler+=`<text x="${i*(cs+gap)}" y="12" class="axis">${+d.split('-')[1]}월</text>`; });
+  ruler+=`<text x="0" y="12" class="axis">6/9</text></svg></div>`;
+  html+=ruler;
+  for(const u of rows){
+    let svg=`<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">${esc(nameOf(u))}</div><svg width="${width}" height="${cs}">`;
+    const m=byUser[u.idx]||{};
+    for(let i=0;i<n;i++){
+      const c=m[i];
+      const fill=c?ramp(c[0]):'var(--chip)';
+      const tip=c?`<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])} · 기록 ${c[0]}건<br>턴 ${c[1]}${c[2]?` · 통화 ${fmtMin(c[2])}`:''}`:null;
+      svg+=`<rect x="${i*(cs+gap)}" y="0" width="${cs}" height="${cs}" rx="2.5" fill="${fill}"${tip?` data-tip="${tip.replace(/"/g,'&quot;')}"`:''}/>`;
+    }
+    svg+='</svg></div>';
+    html+=svg;
+  }
+  html+=`<div class="legend">적음 <span class="cell" style="background:var(--seq100)"></span><span class="cell" style="background:var(--seq250)"></span><span class="cell" style="background:var(--seq400)"></span><span class="cell" style="background:var(--seq550)"></span><span class="cell" style="background:var(--seq700)"></span> 많음</div>`;
+  const el=document.getElementById('heatmap');
+  el.innerHTML=html;
+  el.scrollLeft=el.scrollWidth; // 좁은 화면에서는 최신 날짜부터 보이게
+}
+
+/* ---------- session histogram ---------- */
+function renderSessions(vis){
+  const buckets=[{k:'1분 미만',max:60},{k:'1–3분',max:180},{k:'3–5분',max:300},{k:'5–10분',max:600},{k:'10분 이상',max:Infinity}];
+  const counts=buckets.map(()=>0);
+  let total=0;
+  for(const [u,d,secs] of DATA.sessions){ if(!vis.has(u)) continue; total++;
+    for(let i=0;i<buckets.length;i++){ if(secs<buckets[i].max){counts[i]++;break;} } }
+  const max=Math.max(1,...counts);
+  let html=`<div class="bars">`;
+  buckets.forEach((b,i)=>{
+    html+=`<div class="row"><div class="lbl">${b.k}</div><div class="track"><div class="fill" style="width:${counts[i]/max*100}%;background:var(--s1)"></div></div><div class="val">${counts[i]}</div></div>`;
+  });
+  html+=`</div><div class="legend">세션 ${total}개 · 통화 원장 30초 틱 기준</div>`;
+  document.getElementById('sessHist').innerHTML=html;
+}
+
+/* ---------- errors ---------- */
+function renderErrors(){
+  const n=DATA.days.length, W=440, H=90, LEFT=26, top=6, bh=H-top-14, bw=(W-LEFT-6)/n;
+  const arr=Array(n).fill(0);
+  for(const [d,e] of DATA.errorsDaily) arr[d]=e;
+  const max=Math.max(1,...arr);
+  const totalErr=arr.reduce((a,b)=>a+b,0);
+  let svg=`<div class="panel-label"><span class="swatch" style="background:var(--crit)"></span>턴 오류 <span style="font-weight:400;color:var(--muted);margin-left:auto">누적 ${totalErr}건 · 최대 ${max}건/일</span></div>`;
+  svg+=`<svg width="${W}" height="${H}" role="img" aria-label="일별 턴 오류">`;
+  svg+=`<line x1="${LEFT}" y1="${top+bh}" x2="${W-6}" y2="${top+bh}" class="baseline"/>`;
+  DATA.days.forEach((d,i)=>{ if(d.endsWith('-01')){ const x=LEFT+i*bw;
+    svg+=`<line x1="${x}" y1="${top}" x2="${x}" y2="${top+bh}" class="gridline"/><text x="${x+3}" y="${H-2}" class="axis">${+d.split('-')[1]}월</text>`; }});
+  for(let i=0;i<n;i++){ if(!arr[i]) continue;
+    const h=Math.max(2, arr[i]/max*bh);
+    svg+=`<rect x="${(LEFT+i*bw).toFixed(1)}" y="${(top+bh-h).toFixed(1)}" width="${Math.max(1.5,bw-0.8).toFixed(1)}" height="${h.toFixed(1)}" rx="1.5" fill="var(--crit)" data-tip="<b>${fmtDate(DATA.days[i])}</b><br>턴 오류 ${arr[i]}건"/>`; }
+  svg+='</svg>';
+  svg+=`<div class="legend">전 계정 합산 — 개발 계정 토글의 영향을 받지 않아요.</div>`;
+  document.getElementById('errChart').innerHTML=svg;
+}
+
+/* ---------- feature usage (static) ---------- */
+function renderFeatures(){
+  const fs=[...DATA.features].sort((a,b)=>b.total-a.total).slice(0,12);
+  const max=Math.max(...fs.map(f=>f.total));
+  document.getElementById('features').innerHTML = fs.map(f=>
+    `<div class="row"><div class="lbl">${PURPOSE_KO[f.purpose]||f.purpose}</div>
+     <div class="track"><div class="fill" style="width:${f.total/max*100}%"></div></div>
+     <div class="val">${num(f.total)}회 · ${f.users}명</div></div>`).join('');
+}
+
+/* ---------- wire up ---------- */
+document.getElementById('asof').textContent = `${fmtDate(DATA.asOf)} 기준 · 프로덕션 DB에서 직접 집계`;
+document.getElementById('devToggle').addEventListener('change', render);
+document.addEventListener('mousemove', ev=>{
+  const t=ev.target.closest('[data-tip]');
+  if(t) showTip(t.getAttribute('data-tip'), ev); else hideTip();
+});
+renderFeatures();
+renderChannels();
+render();
+</script>
