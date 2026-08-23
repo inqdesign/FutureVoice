@@ -1,0 +1,1736 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>[IBM PLEX SANS KR] nawana: 유창한 나와, 언어를 학습한다</title>
+<meta name="description" content="가장 개인화된 언어 학습. 유창해진 미래의 내 목소리와 매일 통화하고, 통화가 끝나면 나만의 교재로 학습하세요. iOS용 앱." />
+<meta property="og:title" content="nawana: 유창한 나와, 언어를 학습한다" />
+<meta property="og:description" content="60초 녹음이면 유창해진 미래의 내 목소리가 생깁니다. 매일 통화하고, 나만의 교재로 학습하세요." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://nawana.app/ko.html" />
+<link rel="canonical" href="https://nawana.app/ko.html" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Crect width='1024' height='1024' rx='224' fill='%23FFFFFF'/%3E%3Cg fill='%23141310'%3E%3Crect x='290' y='237' width='410' height='100'/%3E%3Crect x='186' y='337' width='104' height='349'/%3E%3Crect x='700' y='337' width='104' height='349'/%3E%3Crect x='290' y='686' width='410' height='100'/%3E%3Crect x='806' y='686' width='95' height='100'/%3E%3C/g%3E%3C/svg%3E" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#0B0A09" />
+<link rel="alternate" hreflang="en" href="https://nawana.app/" />
+<link rel="alternate" hreflang="ko" href="https://nawana.app/ko.html" />
+<style>
+/* ═══════════════════════════════════════════════════════════
+   nawana — pixel editorial, light.
+   The app's identity on paper: Geist Pixel display type, mono
+   labels, a hairline column grid, and ONE color — the mosaic
+   blue of the Futureself surface. Everything else is ink.
+   ═══════════════════════════════════════════════════════════ */
+@font-face {
+  font-family: "Geist Pixel";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(GeistPixel.ttf) format("truetype");
+}
+/* the wordmark's own face — the logo is Pixelify Sans, everything else
+   pixel-flavored stays Geist Pixel */
+@font-face {
+  font-family: "Pixelify Sans";
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: url(PixelifySans.woff2) format("woff2");
+}
+
+:root {
+  --paper:  #FCFBF8;              /* plain sections */
+  --paper2: #F1F0EA;              /* alt sections — warm gray */
+  --ink:    #141310;
+  --dim:    #57544D;
+  --faint:  #918E85;
+  --line:   rgba(20,19,16,0.16);
+  --lns:    rgba(20,19,16,0.07);
+  --blue:   #0A5CF5;              /* the mosaic's hot cell — the only color */
+  --blue-ink: #0847BE;
+
+  --sans:  "Helvetica Neue", Helvetica, -apple-system, "Apple SD Gothic Neo", Arial, sans-serif;
+  --mono:  ui-monospace, "SF Mono", Menlo, "Roboto Mono", monospace;
+  --pixel: "Geist Pixel", "Helvetica Neue", -apple-system, "Apple SD Gothic Neo", sans-serif;
+
+  --pad: 40px;    /* outer gutter — the grid lines live here */
+  --cell: 30px;   /* content inset from its column line */
+}
+@media (max-width: 700px) { :root { --pad: 20px; --cell: 16px; } }
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+/* The UA's `[hidden] { display: none }` loses to any rule that sets display —
+   `.btn` is inline-flex, so the Stripe checkout button rendered beside the App
+   Store one on a page with web billing switched off. */
+[hidden] { display: none !important; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); line-height: 1.66; word-break: keep-all; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+::selection { background: var(--blue); color: #fff; }
+a { color: inherit; }
+.mono { font-family: var(--mono); }
+
+/* section worlds: every section carries the hairline column grid */
+.sec { position: relative; }
+.sec::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: var(--pad); right: var(--pad);
+  pointer-events: none; z-index: 0;
+  background:
+    linear-gradient(var(--gl), var(--gl)) no-repeat 0 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 25% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 50% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 75% 0 / 1px 100%,
+    linear-gradient(var(--gl), var(--gl)) no-repeat 100% 0 / 1px 100%;
+}
+.plain { --gl: var(--lns);  background: var(--paper);  --surf: #F0EFE9; --surf2: rgba(20,19,16,0.08); }
+.alt   { --gl: rgba(20,19,16,0.055); background: var(--paper2); --surf: #FFFFFF; --surf2: rgba(20,19,16,0.07); }
+.inner { position: relative; z-index: 1; padding-left: var(--pad); padding-right: var(--pad); }
+
+/* glyphs: the app mark, a pixel cell, an action arrow */
+.mark, .dot, .arrow { display: inline-block; flex: none; vertical-align: -0.1em; }
+.mark rect, .dot rect { fill: currentColor; }
+/* <use> clones live in shadow DOM where rect selectors can't reach —
+   fill set on the svg itself INHERITS into them, so the mark follows
+   the nav's light ink on the dark chrome. */
+.mark, .dot { fill: currentColor; }
+
+/* ── type: pixel display, mono labels, sans body ──────────── */
+h1 { font-family: var(--sans); font-weight: 800; font-size: clamp(38px, 5.6vw, 78px); letter-spacing: -0.035em; line-height: 1.12; }
+h2 { font-family: var(--sans); font-weight: 800; font-size: clamp(26px, 3.4vw, 46px); letter-spacing: -0.03em; line-height: 1.22; }
+.kicker {
+  font-family: var(--mono); font-size: 12.5px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px; color: var(--dim);
+}
+.kicker .dot { width: 0.62em; height: 0.62em; color: var(--blue); vertical-align: 0; }
+.kicker .mono { color: var(--blue); }
+
+/* ── buttons: sharp editorial blocks ──────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: 24px;
+  font-family: var(--sans); font-size: 15px; font-weight: 500;
+  padding: 15px 22px; text-decoration: none; cursor: pointer;
+  border: 0; border-radius: 0; transition: background 0.16s, color 0.16s, box-shadow 0.16s;
+}
+.btn .arrow { width: 1.15em; height: 1.15em; vertical-align: -0.24em; }
+.btn-white, .btn-black { background: var(--ink); color: var(--paper); }
+.btn-white:hover, .btn-black:hover { background: var(--blue); color: #fff; }
+.btn-dim { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+.btn-dim:hover { box-shadow: inset 0 0 0 1px var(--ink); }
+
+/* ── reveal ───────────────────────────────────────────────── */
+.js .rv { opacity: 0; transform: translateY(20px); transition: opacity 0.65s ease, transform 0.65s cubic-bezier(0.2,0.7,0.2,1); transition-delay: var(--d, 0s); }
+.rv.in { opacity: 1; transform: none; }
+
+/* ── nav ──────────────────────────────────────────────────── */
+nav.sec {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  background: transparent; border-bottom: 1px solid transparent;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+nav.sec::before { display: none; }
+nav.sec.nav-solid {
+  background: rgba(11,10,9,0.94);
+  border-bottom-color: rgba(245,242,235,0.12);
+  backdrop-filter: saturate(160%) blur(16px); -webkit-backdrop-filter: saturate(160%) blur(16px);
+}
+.nav-in { display: flex; align-items: center; height: 64px; }
+.logo { display: flex; align-items: center; gap: 9px; font-family: "Pixelify Sans", var(--pixel); font-size: 20px; font-weight: 400; text-decoration: none; }
+/* "nawana" has no ascender and no descender, so its ink sits 0.1em BELOW the
+   line box centre that align-items:center squares the mark against — optically
+   the mark floats. The nudge puts the mark's own centre on the x-height's. */
+.logo .mark { width: 19px; height: 19px; transform: translateY(0.1em); }
+.logo sup { font-size: 8px; color: var(--faint); }
+.navlinks { margin-left: auto; display: flex; align-items: center; gap: 26px; font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.navlinks a { text-decoration: none; }
+.navlinks a:hover { color: var(--ink); }
+.navlinks .btn { font-family: var(--sans); font-size: 14px; letter-spacing: 0; text-transform: none; padding: 11px 18px; }
+/* mobile: links fold into the burger menu; the store badge stays */
+.nav-burger { display: none; background: none; border: 0; cursor: pointer; padding: 10px 0 10px 6px; color: #F5F2EB; }
+.nav-burger svg { width: 22px; height: 22px; display: block; }
+.nav-menu { display: none; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column;
+  background: rgba(11,10,9,0.97); border-bottom: 1px solid rgba(245,242,235,0.12); padding: 8px 0 14px; }
+.nav-menu a { display: block; padding: 14px var(--pad); font-family: var(--mono); font-size: 13px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: #A9A49C; text-decoration: none; }
+.nav-menu a:hover, .nav-menu a:active { color: #F5F2EB; }
+@media (max-width: 860px) {
+  .navlinks a:not(.btn-store) { display: none; }
+  .nav-burger { display: block; }
+  nav.sec.nav-open .nav-menu { display: flex; }
+}
+/* on mobile the header yields while scrolling down, returns on scroll-up */
+nav.sec { transition: transform 0.3s ease; }
+nav.sec.nav-hidden { transform: translateY(-100%); }
+/* the nav sits on the night — dark chrome */
+nav.sec { --ink: #F5F2EB; --dim: #A9A49C; --faint: #8A857C; --line: rgba(245,242,235,0.14); color: var(--ink); }
+nav.sec .logo { color: #F5F2EB; }
+.navlinks .btn { background: #F5F2EB; color: #12110E; }
+.navlinks .btn:hover { background: #2F6FFF; color: #fff; }
+/* ── the App Store button: Apple's OFFICIAL badge look —
+   black, thin light outline, white  + "App Store에서 / 다운로드" ── */
+.btn-store { display: inline-flex; align-items: center; gap: 11px; text-decoration: none; cursor: pointer;
+  background: #000; color: #fff; border-radius: 13px; padding: 10px 22px 11px 17px;
+  box-shadow: inset 0 0 0 1px #A6A6A6; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif;
+  transition: transform 0.15s ease, opacity 0.15s ease; }
+.btn-store:hover { transform: scale(1.03); }
+.btn-store svg { width: 26px; height: 26px; flex: none; }
+.btn-store .tx { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.16; }
+.btn-store .tx small { font-size: 12px; font-weight: 400; letter-spacing: 0.01em; }
+.btn-store .tx b { font-size: 19.5px; font-weight: 600; letter-spacing: -0.01em; }
+.navlinks .btn-store { padding: 6px 14px 7px 11px; gap: 8px; border-radius: 10px; font-family: -apple-system, "Helvetica Neue", "Apple SD Gothic Neo", sans-serif; text-transform: none; letter-spacing: 0; }
+.navlinks .btn-store svg { width: 18px; height: 18px; }
+.navlinks .btn-store .tx b { font-size: 14px; }
+.navlinks .btn-store .tx small { display: none; }
+
+/* ── the device: a real iPhone drawn in CSS, showing REAL app screens.
+   Screens carry their own light iOS variables so they read identically
+   on the night hero and the paper sections. ── */
+.iphone { --dr: 55px; position: relative; width: 316px; border-radius: var(--dr); background: #010101; padding: 9px; flex: none;
+  box-shadow: 0 0 0 1.5px #3A3A3C, 0 0 0 3.5px #0E0E10, 0 60px 110px -35px rgba(0,0,0,0.6); }
+.iphone .di { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90px; height: 26px; border-radius: 14px; background: #000; z-index: 5; }
+/* the screen keeps the capture's EXACT aspect (1206×2622) — no crop, no stretch */
+.iphone .screen { position: relative; width: 100%; aspect-ratio: 1206 / 2622; border-radius: calc(var(--dr, 55px) - 9px); overflow: hidden;
+  background: #FFFFFF; color: #101013; display: flex; flex-direction: column;
+  --ink: #101013; --dim: #55555A; --faint: #8E8E93; --line: rgba(0,0,0,0.16); --lns: rgba(0,0,0,0.08);
+  --surf: #EFEFF4; --surf2: rgba(0,0,0,0.06); }
+.sbar { display: flex; justify-content: space-between; align-items: center; padding: 17px 27px 4px; font-size: 13.5px; font-weight: 600; }
+.sbar .sic { display: flex; gap: 5px; align-items: center; }
+.sbar .sic svg { height: 11px; width: auto; display: block; }
+.app-top { display: flex; align-items: baseline; justify-content: space-between; padding: 10px 18px 4px; }
+.app-top .t { font-size: 19px; font-weight: 700; letter-spacing: -0.02em; }
+.app-top .who2 { display: block; font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin-bottom: 2px; }
+.app-top .tm { font-family: var(--mono); font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.app-body { flex: 1; display: flex; flex-direction: column; padding: 6px 14px 10px; overflow: hidden; min-height: 0; }
+.tabbar { display: flex; border-top: 0.5px solid rgba(0,0,0,0.14); padding: 7px 6px 22px; background: #F9F9FB; }
+.tabbar .ti { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; color: #8E8E93; }
+.tabbar .ti svg { width: 21px; height: 21px; }
+.tabbar .ti.on { color: #0A5CF5; }
+.call-bottom { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 0 22px; }
+.call-bottom .fs-pill { width: 168px; height: 56px; }
+.call-bottom .end { width: 46px; height: 46px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.call-bottom .end svg { width: 20px; height: 20px; transform: rotate(135deg); }
+/* app-scale overrides inside the screen */
+.iphone .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.iphone .dl { gap: 10px; margin-top: auto; }
+.iphone .dl-bub { font-size: 13.5px; padding: 9px 12px; border-radius: 15px; }
+.iphone .dl-call .dl-bub { font-size: 14px; }
+.iphone .dl-name { font-size: 10px; }
+.iphone .f-sug { font-size: 11.5px; padding: 7px 10px; border-radius: 11px; background: rgba(10,92,245,0.08); color: #0847BE; }
+.iphone .f-sug svg { width: 11px; height: 11px; }
+.iphone .dl-acc a { font-size: 10.5px; }
+.iphone .dl-acc svg { width: 10px; height: 10px; }
+.iphone .sc-head .title { font-size: 17px; }
+.iphone .sc-head .who { font-size: 10.5px; }
+.iphone .wc-bar .b { height: 42px; font-size: 13.5px; border-radius: 100px; }
+.iphone .sh-head .l, .iphone .sh-head .r { font-size: 10.5px; }
+.iphone .kara { font-size: 16.5px; margin-top: 8px; }
+.iphone .scrub { padding: 12px; border-radius: 18px; margin-top: 14px; }
+.iphone .track { height: 40px; }
+.iphone .tl-labels { font-size: 10px; margin-top: 9px; }
+.iphone .tl-ctl { gap: 12px; margin-top: 11px; }
+.iphone .tl-ctl > svg { width: 33px; height: 33px; }
+.iphone .tl-ctl .sp { font-size: 12px; padding: 6px 10px; }
+.iphone .tl-ctl .mic { width: 46px; height: 46px; }
+.iphone .tl-ctl .mic svg { width: 18px; height: 18px; }
+.iphone .kv { max-width: none; width: 100%; }
+@media (max-width: 700px) { .iphone { width: 282px; --dr: 50px; } }
+
+/* ── scrollytelling: the phone peeks from the hero's bottom edge, pins
+   at the viewport centre, and its SCREEN walks the core flow while a
+   big caption changes beside it. Height = 1 hero + 5 beats. ── */
+.scrolly { position: relative; height: 620vh; }
+.s-hero { position: absolute; top: 0; left: 0; right: 0; height: 100vh; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 104px var(--pad) 0; pointer-events: none; }
+.s-hero h1 { margin-top: 24px; }
+.s-hero .n-sub { margin-top: 20px; }
+.s-hero .n-ctas { margin-top: 28px; }
+.s-hero .n-note { margin-top: 20px; }
+.s-hero a { pointer-events: auto; }
+.s-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.s-phone { position: relative; z-index: 2; will-change: transform; transform-origin: 50% 0; }
+/* desktop: size the phone from the viewport HEIGHT so tall screens get a
+   properly big device (caps at 400px; ~85vh tall on a laptop) */
+@media (min-width: 861px) { .s-phone { width: min(400px, 40vh); --dr: min(68px, 7vh); } }
+.s-caps { position: absolute; inset: 0; z-index: 1; }
+.s-cap { position: absolute; top: 50%; left: var(--pad); right: 66%; transform: translateY(calc(-50% + 14px));
+  opacity: 0; transition: opacity 0.45s ease, transform 0.45s ease; padding-left: var(--cell); text-align: left; }
+.s-cap.on { opacity: 1; transform: translateY(-50%); }
+.s-cap .ix { font-family: var(--pixel); font-size: 14px; letter-spacing: 0.12em; color: #7CA5FF; }
+.s-cap h3 { margin-top: 14px; font-weight: 800; font-size: clamp(30px, 3.4vw, 52px); letter-spacing: -0.03em; line-height: 1.16; }
+.s-cap p { margin-top: 14px; font-size: 17px; color: var(--dim); max-width: 20em; }
+.s-num { position: absolute; top: 50%; right: var(--pad); transform: translateY(-50%); z-index: 0;
+  font-family: var(--pixel); font-size: clamp(70px, 9vw, 150px); color: rgba(124,165,255,0.2);
+  opacity: 0; transition: opacity 0.45s ease; }
+.s-num.on { opacity: 1; }
+.s-screens { position: relative; flex: 1; min-height: 0; display: flex; }
+.s-scr { position: absolute; inset: 0; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.4s ease; }
+.s-scr.on { opacity: 1; }
+@media (max-width: 860px) {
+  .s-cap { left: var(--pad); right: var(--pad); top: 6vh; bottom: auto; text-align: center; transform: translateY(10px); padding-left: 0; }
+  .s-cap.on { transform: none; }
+  .s-cap p { margin-left: auto; margin-right: auto; }
+  .s-pin { align-items: flex-end; padding-bottom: 3vh; }
+  .s-phone { width: min(272px, 64vw); }
+  .s-num { display: none; }
+}
+/* screens: Talk home */
+.home-ring { position: relative; width: 156px; aspect-ratio: 1; border-radius: 50%; overflow: hidden; margin: 14px auto 0; box-shadow: inset 0 0 0 0.5px var(--lns); }
+.home-ring canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hr-mic { position: absolute; inset: 0; display: grid; place-items: center; }
+.hr-mic i { width: 46px; height: 46px; border-radius: 50%; background: #0A5CF5; color: #fff; display: grid; place-items: center; }
+.hr-mic svg { width: 19px; height: 19px; }
+.home-lb { text-align: center; font-size: 14px; font-weight: 600; margin-top: 10px; }
+.home-sub { text-align: center; font-size: 11px; color: var(--faint); margin-top: 2px; }
+.home-row { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; padding: 12px 14px; border-radius: 14px; background: var(--surf); font-size: 12.5px; }
+.home-row b { font-weight: 600; }
+.home-row span { color: var(--faint); font-size: 11px; }
+/* screens: call ended */
+.endwrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.endwrap .eb2 { width: 62px; height: 62px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; }
+.endwrap .eb2 svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.endwrap .et { font-size: 15px; font-weight: 700; }
+.endwrap .es { font-size: 12px; color: var(--faint); display: flex; align-items: center; gap: 6px; }
+.endwrap .es i { width: 4px; height: 4px; border-radius: 50%; background: #0A5CF5; animation: blink 1.2s ease-in-out infinite; }
+.endwrap .es i:nth-child(2) { animation-delay: 0.2s; }
+.endwrap .es i:nth-child(3) { animation-delay: 0.4s; }
+/* screens: the book */
+.bk-cover { margin: 10px 4px 2px; border-radius: 14px; background: #101013; color: #F5F2EB; padding: 16px 16px 14px; }
+.bk-cover .k { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.12em; color: #7CA5FF; text-transform: uppercase; }
+.bk-cover .t2 { margin-top: 6px; font-size: 19px; font-weight: 800; letter-spacing: -0.02em; }
+.bk-cover .m { margin-top: 12px; font-family: var(--mono); font-size: 9.5px; color: rgba(245,242,235,0.6); }
+.bk-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 14px; margin-top: 8px; border-radius: 12px; background: var(--surf); font-size: 12.5px; }
+.bk-row b { font-weight: 600; }
+.bk-row span { color: var(--faint); font-family: var(--mono); font-size: 11px; }
+/* screens: study */
+.p-score { display: flex; align-items: flex-end; justify-content: space-between; margin: 10px 4px 0; padding: 13px 14px; border-radius: 14px; background: var(--surf); }
+.p-score .n { font-family: var(--pixel); font-size: 30px; color: #0A5CF5; line-height: 1; }
+.p-score .l2 { font-family: var(--mono); font-size: 9px; letter-spacing: 0.1em; color: var(--faint); text-transform: uppercase; }
+.p-bars { display: flex; gap: 4px; align-items: flex-end; height: 26px; width: 76px; }
+.p-bars i { flex: 1; border-radius: 2px; background: #0A5CF5; }
+.p-drill { margin: 8px 4px 0; padding: 12px 14px; border-radius: 14px; background: var(--surf); }
+.p-drill .q { font-size: 13px; font-weight: 600; line-height: 1.35; }
+.p-drill .a { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #0A5CF5; }
+.p-drill .a svg { width: 12px; height: 12px; }
+.p-chiprow { display: flex; gap: 6px; margin: 8px 4px 0; flex-wrap: wrap; }
+.p-chip { font-size: 11px; padding: 6px 10px; border-radius: 100px; background: var(--surf); color: var(--ink); }
+.p-chip.b { background: rgba(10,92,245,0.1); color: #0847BE; }
+
+/* ── night: the page opens as an incoming call from the future self.
+   One glowing thread runs from the ring to the hang-up; the page turns
+   to paper the moment the textbook is born. ── */
+.night {
+  background: #0B0A09; color: #F5F2EB;
+  --ink: #F5F2EB; --dim: #A9A49C; --faint: #716D65;
+  --line: rgba(245,242,235,0.16); --lns: rgba(245,242,235,0.07);
+  --gl: rgba(245,242,235,0.045); --surf: #1C1A17; --surf2: rgba(245,242,235,0.1);
+}
+.n-glow { position: absolute; left: 50%; top: 560px; width: 1000px; height: 1000px; transform: translate(-50%,-50%); pointer-events: none; background: radial-gradient(closest-side, rgba(47,111,255,0.17), transparent 70%); }
+.n-hero { position: relative; z-index: 1; padding: 92px var(--pad) 0; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.n-kicker { font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: #7CA5FF; display: flex; gap: 10px; align-items: center; }
+.n-kicker i { width: 7px; height: 7px; border-radius: 50%; background: #2F6FFF; animation: blink 1.6s ease-in-out infinite; }
+.night h1 { margin-top: 32px; font-size: clamp(46px, 7vw, 110px); }
+.n-sub { margin-top: 28px; max-width: 30em; font-size: 19px; line-height: 1.6; color: #C9C4BA; }
+/* the ringing orb — double-ring cadence, like a phone */
+.n-orbwrap { position: relative; margin-top: 66px; width: min(62vw, 330px); aspect-ratio: 1; }
+.n-orb { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; box-shadow: 0 50px 130px -30px rgba(47,111,255,0.5), inset 0 0 0 0.5px var(--line); animation: dring 2.6s ease-in-out infinite; }
+.n-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.halo { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(124,165,255,0.5); opacity: 0; animation: haloout 2.6s ease-out infinite; pointer-events: none; }
+.halo.h2 { animation-delay: 0.3s; }
+@keyframes dring { 0%, 20%, 100% { transform: scale(1); } 5%, 15% { transform: scale(1.03); } 10% { transform: scale(1); } }
+@keyframes haloout { 0% { transform: scale(1); opacity: 0.55; } 60% { transform: scale(1.5); opacity: 0; } 100% { transform: scale(1.5); opacity: 0; } }
+.n-caller { margin-top: 32px; font-size: 16px; color: var(--ink); font-weight: 600; }
+.n-caller span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 11.5px; font-weight: 400; letter-spacing: 0.12em; color: var(--faint); text-transform: uppercase; }
+.n-ctas { margin-top: 38px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.night .btn-white, .night .btn-black { background: #F5F2EB; color: #12110E; }
+.night .btn-white:hover, .night .btn-black:hover { background: #2F6FFF; color: #fff; }
+.n-note { display: block; margin-top: 26px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; color: var(--faint); }
+.n-note b { font-weight: 500; color: var(--dim); }
+/* the call thread */
+.n-story { position: relative; z-index: 1; margin-top: 100px; padding: 0 var(--pad); display: flex; flex-direction: column; align-items: center; }
+.n-story::before { content: ""; position: absolute; left: 50%; top: -70px; bottom: 120px; width: 1px; background: linear-gradient(rgba(47,111,255,0), rgba(47,111,255,0.55) 10%, rgba(47,111,255,0.55) 90%, rgba(47,111,255,0)); }
+.n-beat { position: relative; display: flex; flex-direction: column; align-items: center; padding: 52px 0; }
+.n-time { font-family: var(--pixel); font-size: 15px; letter-spacing: 0.1em; color: #7CA5FF; background: #0B0A09; padding: 7px 13px; box-shadow: inset 0 0 0 1px rgba(124,165,255,0.35); }
+.n-dl { margin-top: 36px; width: min(560px, 100%); display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.n-dl .dl-bub { font-size: 17px; padding: 13px 17px; border-radius: 20px; }
+.n-dl .f-sug { font-size: 14.5px; padding: 10px 14px; background: rgba(93,140,255,0.16); color: #A9C4FF; }
+.n-cap { margin-top: 34px; font-size: 15.5px; color: var(--dim); text-align: center; }
+.n-cap b { color: var(--ink); font-weight: 600; }
+.n-endrow { margin-top: 36px; display: flex; align-items: center; gap: 18px; font-family: var(--pixel); font-size: 16px; color: var(--dim); }
+.n-endrow .eb { width: 58px; height: 58px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 10px 30px -8px rgba(224,72,60,0.6); }
+.n-endrow .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+/* the book is born on the seam — half night, half day */
+.n-bookbeat { padding-bottom: 0; }
+.n-bookbeat h2 { margin-top: 26px; max-width: 15em; text-align: center; }
+.n-book { position: relative; z-index: 2; margin-top: 56px; margin-bottom: -100px; }
+.n-book .bcov { position: relative; width: 302px; border-radius: 8px 18px 18px 8px; background: #FCFBF8; color: #141310; padding: 36px 30px 30px 42px; text-align: left; box-shadow: 0 60px 120px -30px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(20,19,16,0.1); }
+.n-book .bcov::before { content: ""; position: absolute; left: 17px; top: 0; bottom: 0; width: 1px; background: rgba(20,19,16,0.16); }
+.n-book .bk { font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #0A5CF5; }
+.n-book .bt { margin-top: 12px; font-family: var(--pixel); font-size: 30px; line-height: 1.12; }
+.n-book .bm { margin-top: 36px; font-family: var(--mono); font-size: 11.5px; color: rgba(20,19,16,0.55); }
+/* dawn: paper again — you study what the night produced */
+.dawn { padding-top: 170px; padding-bottom: 30px; }
+.dawn-in { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dawn .sub { margin-top: 16px; color: var(--dim); font-size: 16.5px; }
+.dawn .f-study { margin-top: 46px; grid-template-columns: repeat(2, 214px); gap: 12px; }
+@media (max-width: 700px) { .dawn .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  .n-hero { padding-top: 64px; }
+  .n-story { margin-top: 72px; }
+  .n-book { margin-bottom: -84px; }
+  .dawn { padding-top: 140px; }
+}
+
+/* ── flow: the one loop, right under the hero — call → book → study.
+   Each step SHOWS the app (iOS-shaped artifacts, like .kv), text only frames. ── */
+.flow { padding-top: 96px; padding-bottom: 110px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.flow .kicker { justify-content: center; }
+.flow-steps { margin-top: 58px; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.fstep { display: flex; flex-direction: column; align-items: center; }
+.fstep h3 { font-family: var(--sans); font-weight: 800; font-size: clamp(24px, 3.2vw, 40px); letter-spacing: -0.03em; line-height: 1.18; }
+.fstep p { margin-top: 10px; font-size: 16px; color: var(--dim); }
+.flink { width: 1px; height: 52px; margin: 26px 0; background: var(--line); position: relative; }
+.flink::after { content: ""; position: absolute; left: 50%; bottom: -3px; width: 8px; height: 8px; background: var(--blue); transform: translateX(-50%); }
+.fart { margin-top: 28px; }
+.f-call { display: flex; align-items: center; gap: 16px; padding: 13px 18px 13px 13px; border-radius: 26px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.f-call .fs-pill { width: 116px; height: 44px; border-radius: 18px; }
+.f-call .tag { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--dim); display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.f-call .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; animation: blink 1.6s ease-in-out infinite; }
+.f-dl { width: 340px; max-width: 86vw; text-align: left; }
+.f-sug { margin-top: 7px; display: inline-flex; align-items: center; gap: 7px; text-align: left; font-size: 13px; font-weight: 600; color: var(--blue-ink); background: rgba(10,92,245,0.09); padding: 9px 13px; border-radius: 14px; line-height: 1.35; }
+.f-sug svg { width: 13px; height: 13px; flex: none; color: var(--blue); }
+.f-end { display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.f-end .eb { width: 56px; height: 56px; border-radius: 50%; background: #E0483C; color: #fff; display: grid; place-items: center; box-shadow: 0 6px 16px -6px rgba(224,72,60,0.55); }
+.f-end .eb svg { width: 26px; height: 26px; transform: rotate(135deg); }
+.f-book { position: relative; }
+.f-book .back { position: absolute; inset: 0; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--lns); }
+.f-book .back.b1 { transform: translate(7px, 7px); }
+.f-book .back.b2 { transform: translate(14px, 14px); opacity: 0.7; }
+.f-book .cover { position: relative; width: 252px; border-radius: 6px 14px 14px 6px; background: var(--surf); box-shadow: inset 0 0 0 1px var(--line); padding: 26px 24px 22px 32px; text-align: left; }
+.f-book .cover::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.f-book .bk { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); }
+.f-book .bt { margin-top: 10px; font-size: 25px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.f-book .bm { margin-top: 30px; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.f-study { display: grid; grid-template-columns: repeat(2, 186px); gap: 10px; }
+.f-card { border-radius: 18px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); padding: 14px 16px 15px; text-align: left; }
+.f-card.wide { grid-column: 1 / -1; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.f-card .l { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.f-card .v { margin-top: 7px; font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); line-height: 1.35; }
+.f-card .s { margin-top: 5px; font-size: 12px; color: var(--dim); display: flex; align-items: center; gap: 5px; }
+.f-card .s svg { width: 12px; height: 12px; color: var(--blue); }
+.f-card .cefr { display: inline-block; margin-left: 6px; font-family: var(--mono); font-size: 10px; font-weight: 400; padding: 2.5px 6px; background: rgba(10,92,245,0.1); color: var(--blue-ink); border-radius: 6px; vertical-align: 2px; }
+.f-score { margin-top: 8px; font-family: var(--pixel); font-size: 46px; line-height: 1; color: var(--blue); }
+.f-bars { display: flex; gap: 6px; align-items: flex-end; height: 40px; width: 120px; padding-bottom: 4px; }
+.f-bars i { flex: 1; border-radius: 3px; background: var(--blue); }
+@media (max-width: 700px) {
+  .flow { padding-top: 72px; padding-bottom: 84px; }
+  .flink { height: 40px; margin: 18px 0; }
+  .f-study { grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; max-width: 384px; }
+}
+
+/* ── call strip: a live line ruled across the page ────────── */
+.callstrip {
+  margin-top: 88px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 22px; padding: 18px 0;
+  position: relative; z-index: 1;
+}
+.callstrip .tag { flex: 1; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; color: var(--dim); display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.callstrip .tag.mono { justify-content: flex-end; font-variant-numeric: tabular-nums; }
+.callstrip .tag i { width: 7px; height: 7px; border-radius: 50%; background: #E0483C; flex: none; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+/* ── manifesto: the core claims, huge and high-contrast ────── */
+/* One claim at a time: the section pins and each line takes its own
+   stretch of scroll, so nothing stacks and the eye has one thing to
+   read. Height = one viewport per line. */
+.manif { padding: 0; }
+.m-track { position: relative; height: calc(var(--n, 3) * 100vh); }
+.m-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
+.m-pin > .inner { width: 100%; }
+.m-stack { position: relative; height: 46vh; }
+.js .m-stack .m-line { position: absolute; left: 0; right: 0; top: 50%; margin: 0 auto;
+  opacity: 0; transform: translateY(calc(-50% + 22px));
+  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.7,0.2,1); }
+.js .m-stack .m-line.live { opacity: 1; transform: translateY(-50%); }
+/* reduced motion (and no-JS): the three claims simply stack and sit still */
+.m-track.m-static { height: auto; }
+.m-track.m-static .m-pin { position: static; height: auto; padding: 120px 0 100px; }
+.m-track.m-static .m-stack { height: auto; }
+.m-track.m-static .m-line { position: relative; top: auto; opacity: 1; transform: none; margin: 0 auto 110px; }
+.m-kick { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 46px;
+  font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); }
+.m-kick .dot { width: 0.62em; height: 0.62em; color: var(--blue); }
+.m-line { margin: 0 auto 120px; max-width: 15em; text-align: center;
+  font-size: clamp(32px, 4.6vw, 68px); font-weight: 800;
+  letter-spacing: -0.035em; line-height: 1.18; color: var(--faint); }
+.m-line b { color: var(--ink); font-weight: 800; }
+.m-line:last-child { margin-bottom: 100px; }
+@media (max-width: 700px) { .m-stack { height: 52vh; } }
+
+/* ── why: lead + idea cells on the grid ───────────────────── */
+.why { padding-top: 110px; }
+.why .lead { margin-top: 44px; font-size: clamp(23px, 2.4vw, 32px); line-height: 1.42; letter-spacing: -0.015em; max-width: 24em; }
+.ideas {
+  margin-top: 100px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.idea { padding: 50px var(--cell) 92px; }
+.idea .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.idea h4 { margin-top: 42px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.idea p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .ideas { grid-template-columns: 1fr; } .idea { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── marquee: the loop, in pixels ─────────────────────────── */
+.marquee { border-top: 1px solid var(--line); margin-top: 0; padding: 52px 0; overflow: hidden; white-space: nowrap; position: relative; z-index: 1; }
+.marquee .row { display: inline-flex; align-items: center; gap: 58px; font-family: var(--pixel); font-size: clamp(44px, 5.2vw, 76px); color: var(--ink); animation: slide 40s linear infinite; padding-right: 58px; }
+.marquee .dot { width: 0.26em; height: 0.26em; color: var(--blue); vertical-align: 0.06em; }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ── stages: copy + live app artifact, ruled apart ────────── */
+.stage {
+  border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: 1fr 1fr; min-height: 620px;
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.stage-copy { padding: 88px var(--cell) 100px; display: flex; flex-direction: column; }
+.stage.flip .stage-copy { order: 2; }
+.stage-copy h2 { margin-top: 46px; max-width: 10em; font-size: clamp(28px, 3.8vw, 52px); }
+.stage-copy .one { margin-top: 24px; font-size: 19px; color: var(--dim); max-width: 26em; line-height: 1.6; }
+.stage-copy .one strong { color: var(--ink); font-weight: 700; }
+.hows { margin-top: auto; padding-top: 52px; list-style: none; }
+.hows li { border-top: 1px solid var(--lns); padding: 16px 0; font-size: 16px; color: var(--dim); display: flex; gap: 13px; line-height: 1.55; }
+.hows li b { color: var(--ink); font-weight: 700; }
+.hows li .dot { width: 9px; height: 9px; margin-top: 7px; color: var(--blue); }
+.stage-show { padding: 88px var(--cell) 100px; display: flex; align-items: center; justify-content: center; }
+@media (max-width: 960px) {
+  .stage, .stage.flip { grid-template-columns: 1fr; min-height: 0; }
+  .stage-copy, .stage.flip .stage-copy { order: 0; padding-bottom: 36px; }
+  .stage-show { padding-top: 0; }
+}
+
+/* ── spec sheet: an index, ruled row by row ───────────────── */
+.specs { padding-top: 130px; }
+.specs .head { margin-top: 44px; max-width: 14em; }
+.spec-table { margin-top: 84px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.srow { display: grid; grid-template-columns: 1fr 1fr 2fr; padding: 24px var(--pad); border-bottom: 1px solid var(--lns); align-items: baseline; transition: background 0.15s; }
+.srow:hover { background: rgba(10,92,245,0.04); }
+.srow .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); padding-left: var(--cell); }
+.srow .nm { font-size: 19px; font-weight: 600; letter-spacing: -0.015em; padding-left: var(--cell); }
+.srow .ds { font-size: 15px; color: var(--dim); line-height: 1.55; padding: 0 var(--cell); }
+@media (max-width: 860px) { .srow { grid-template-columns: 1fr 3fr; } .srow .ds { grid-column: 2; } }
+
+/* ── trust cells ──────────────────────────────────────────── */
+.trust-sec { padding-top: 130px; }
+.trust-sec h2 { margin-top: 44px; }
+.trust {
+  margin-top: 84px; border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  padding: 0 var(--pad); position: relative; z-index: 1;
+}
+.tcell { padding: 50px var(--cell) 92px; }
+.tcell .ix { font-family: var(--mono); font-size: 13px; color: var(--blue); }
+.tcell h4 { margin-top: 40px; font-size: 20px; font-weight: 600; letter-spacing: -0.015em; }
+.tcell p { margin-top: 13px; font-size: 15.5px; color: var(--dim); line-height: 1.6; }
+@media (max-width: 860px) { .trust { grid-template-columns: 1fr; } .tcell { border-bottom: 1px solid var(--lns); padding: 40px var(--cell) 48px; } }
+
+/* ── pricing ──────────────────────────────────────────────── */
+.pricing-sec { padding-top: 130px; }
+.pr-sub { margin-top: 18px; font-size: 17px; color: var(--dim); }
+.cycle-toggle { margin-top: 40px; display: inline-flex; box-shadow: inset 0 0 0 1px var(--line); }
+.cycle-toggle .ct { border: 0; cursor: pointer; background: transparent; color: var(--dim); font-family: var(--mono); font-size: 12.5px; letter-spacing: 0.08em; padding: 12px 24px; }
+.cycle-toggle .ct.on { background: var(--ink); color: var(--paper); }
+.plans { margin-top: 64px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; padding: 0 var(--pad); position: relative; z-index: 1; }
+.plan { padding: 50px var(--cell) 66px; display: flex; flex-direction: column; align-items: flex-start; }
+.plan .p-name { font-family: var(--mono); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.plan.featured { box-shadow: inset 0 0 0 1.5px var(--blue); }
+.plan .p-badge { margin-left: 10px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; background: var(--blue); color: #fff; padding: 3px 8px; }
+.plan .p-price { margin-top: 30px; font-family: var(--pixel); font-size: clamp(34px, 3.4vw, 48px); letter-spacing: -0.01em; }
+.plan .p-price span { font-family: var(--mono); font-size: 14px; color: var(--faint); letter-spacing: 0; }
+.plan .p-credits { margin-top: 8px; font-size: 15px; color: var(--ink); }
+.plan .p-note { margin-top: 14px; font-size: 14.5px; color: var(--dim); max-width: 22em; }
+/* The same two labelled rows, in the same order, on both cards — the shape the
+   app's own plan picker uses, so the site and the paywall compare alike. A
+   prose sentence per plan cannot be compared across a gutter. */
+.p-specs { margin-top: 26px; width: 100%; max-width: 20em; border-top: 1px solid var(--lns); }
+.p-specs > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-bottom: 1px solid var(--lns); }
+.p-specs dt { font-size: 14.5px; color: var(--dim); }
+.p-specs dd { margin: 0; font-family: var(--mono); font-size: 15px; letter-spacing: 0.02em; }
+/* The per-day equivalent, under the monthly figure it converts. A size cue for
+   a number nobody has an instinct for — never a limit; the pool has none. */
+.p-specs .p-sub { border-bottom: 0; padding: 0 0 11px; margin-top: -9px; }
+.p-specs .p-sub dd { font-size: 12.5px; color: var(--faint); }
+.plan .p-buy { margin-top: 38px; }
+.plan .p-buy[disabled] { opacity: 0.5; cursor: default; }
+.p-fine { margin-top: 40px; font-size: 13.5px; color: var(--faint); max-width: 46em; padding-bottom: 60px; line-height: 1.6; }
+.p-error { margin-top: 16px; font-size: 14px; color: #B4372C; display: none; }
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 100; background: var(--ink); color: var(--paper); padding: 15px 22px; font-size: 14.5px; max-width: 90vw; }
+@media (max-width: 700px) { .plans { grid-template-columns: 1fr; } .plan { border-bottom: 1px solid var(--lns); } }
+
+/* ── faq: hairline accordion on the grid ──────────────────── */
+.faq-sec { padding-top: 130px; }
+.faq-sec h2 { margin-top: 44px; }
+.faq { margin-top: 64px; border-top: 1px solid var(--line); position: relative; z-index: 1; }
+.faq details { border-bottom: 1px solid var(--lns); }
+.faq summary { display: flex; align-items: baseline; gap: 18px; padding: 22px var(--pad); cursor: pointer; list-style: none; font-size: 17.5px; font-weight: 600; letter-spacing: -0.01em; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary .ix { font-family: var(--mono); font-size: 12.5px; color: var(--blue); flex: none; padding-left: var(--cell); }
+.faq summary::after { content: "+"; margin-left: auto; font-family: var(--mono); font-size: 17px; color: var(--faint); }
+.faq details[open] summary::after { content: "\2212"; color: var(--ink); }
+.faq .a { margin: 0; padding: 0 var(--pad) 26px; font-size: 15.5px; color: var(--dim); line-height: 1.68; }
+.faq .a span { display: block; max-width: 40em; padding-left: calc(var(--cell) + 31px); }
+@media (max-width: 700px) { .faq .a span { padding-left: var(--cell); } }
+
+/* ── final demo: the beta hero, brought home — the halftone flower
+   behind, the Futureself surface as a PLAY button, live captions. ── */
+.final-demo { position: relative; background: #121110; overflow: hidden; }
+.final-demo .flower-gl { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.fd-in { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 150px var(--pad) 110px; }
+.fd-sub { margin-top: 18px; color: #A9A49C; font-size: 17px; }
+.fd-demo { margin-top: 64px; display: flex; flex-direction: column; align-items: center; }
+.fd-orb { position: relative; width: 172px; height: 172px; border-radius: 50%; overflow: hidden; border: 0; padding: 0; cursor: pointer; background: transparent;
+  box-shadow: 0 40px 110px -30px rgba(47,111,255,0.45), inset 0 0 0 0.5px rgba(245,242,235,0.18); }
+.fd-orb canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fd-ico { position: absolute; inset: 0; display: grid; place-items: center; z-index: 2; color: #14130F; }
+.fd-ico svg { width: 40px; height: 40px; transition: transform 0.15s; }
+.fd-orb:hover .fd-ico svg { transform: scale(1.08); }
+.fd-ico .ico-pause { display: none; }
+.fd-orb.playing .ico-play { display: none; }
+.fd-orb.playing .ico-pause { display: block; }
+.fd-hint { margin-top: 20px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #8A857C; }
+.fd-cap { margin-top: 26px; min-height: 3.4em; width: min(620px, 86vw); white-space: pre-line;
+  font-family: var(--pixel); font-weight: 400; letter-spacing: 0.01em;
+  font-size: clamp(16px, 1.9vw, 20px); line-height: 1.5; color: #F5F2EB; }
+.fd-ctas { margin-top: 46px; }
+footer.night { background: #121110; }
+@media (max-width: 700px) { .fd-in { padding: 100px var(--pad) 80px; } .fd-orb { width: 148px; height: 148px; } }
+
+/* ── final + footer ───────────────────────────────────────── */
+.final { padding-top: 140px; }
+.final h2 { max-width: 13em; }
+.final .sub { margin-top: 24px; color: var(--dim); font-size: 17.5px; }
+.final .hero-ctas { margin-top: 40px; justify-content: flex-start; }
+.final .callstrip { margin-top: 100px; }
+footer { font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; color: var(--faint); }
+.foot-in { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 26px var(--pad) 34px; position: relative; z-index: 1; }
+.foot-in .links { margin-left: auto; display: flex; gap: 24px; }
+footer a { color: var(--dim); text-decoration: none; }
+footer a:hover { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .js .rv { opacity: 1; transform: none; }
+  .marquee .row { animation: none; }
+}
+
+/* ═══════ live app key-UI — the app's face, drawn in place ═══════ */
+/* These stay iOS-shaped on purpose: rounded, system-blue, alive.  */
+:root { --ac: #0A5CF5; }
+.kv { width: 100%; max-width: 380px; margin: 0 auto; font-family: var(--sans); }
+.kv-talk { min-height: 380px; display: flex; flex-direction: column; justify-content: flex-end; gap: 22px; }
+.dl { display: flex; flex-direction: column; gap: 12px; }
+.dl-turn { display: flex; }
+.dl-turn.you { justify-content: flex-end; }
+.dl-col { display: flex; flex-direction: column; max-width: 84%; }
+.dl-turn.you .dl-col { align-items: flex-end; }
+.dl-name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--faint); margin: 0 4px 5px; }
+.dl-bub { font-size: 15.5px; line-height: 1.36; letter-spacing: -0.01em; padding: 11px 14px; border-radius: 18px; background: var(--surf); color: var(--ink); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.dl-turn.you .dl-bub { background: var(--ac); color: #fff; box-shadow: none; }
+.dl-bub.cur { box-shadow: 0 0 0 2px rgba(10,92,245,0.35); }
+.dl-call .dl-bub { font-size: 17px; }
+.dl-acc { display: flex; gap: 16px; margin: 7px 4px 0; }
+.dl-turn.you .dl-acc { justify-content: flex-end; }
+.dl-acc a { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; color: var(--ac); }
+.dl-acc svg { width: 12px; height: 12px; }
+.fs-pill { position: relative; width: 176px; height: 62px; border-radius: 26px; overflow: hidden; align-self: center; box-shadow: inset 0 0 0 0.5px var(--line); }
+.fs-pill.wide { flex: none; }
+.fs-pill canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.fs-ic { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink); }
+.fs-ic svg { width: 22px; height: 22px; }
+.sc-head { margin-bottom: 10px; }
+.sc-head .who { font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; color: var(--faint); }
+.sc-head .title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-top: 3px; color: var(--ink); }
+.wc-bar { display: flex; gap: 10px; margin-top: 18px; }
+.wc-bar .b { flex: 1; display: flex; align-items: center; justify-content: center; gap: 7px; height: 48px; border-radius: 100px; font-size: 15.5px; font-weight: 600; }
+.wc-bar .b svg { width: 16px; height: 16px; }
+.wc-bar .restart { background: var(--surf2); color: var(--ac); }
+.wc-bar .play { background: var(--ac); color: #fff; }
+.sh-head { display: flex; justify-content: space-between; align-items: baseline; }
+.sh-head .l { font-family: var(--mono); font-size: 12px; color: var(--faint); }
+.sh-head .r { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+.kara { font-size: 23px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.5; margin-top: 10px; }
+.kara .k { color: var(--faint); padding: 1px 3px; border-radius: 6px; }
+.kara .k.sel { background: rgba(10,92,245,0.13); }
+.kara .k.done { color: var(--ink); }
+.kara .k.now { color: var(--ac); }
+.scrub { margin-top: 20px; padding: 16px; border-radius: 24px; background: var(--surf); box-shadow: inset 0 0 0 0.5px var(--lns); }
+.track { position: relative; height: 52px; border-radius: 10px; background: var(--surf2); }
+.track .tick { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 1.5px; height: 16px; background: var(--faint); opacity: 0.55; }
+.track .band { position: absolute; top: 0; bottom: 0; background: rgba(10,92,245,0.16); border-radius: 10px; }
+.track .h { position: absolute; top: 0; bottom: 0; width: 14px; border-radius: 5px; background: var(--ac); transform: translateX(-50%); display: grid; place-items: center; }
+.track .h::after { content: ""; width: 2px; height: 16px; border-radius: 2px; background: rgba(255,255,255,0.9); }
+.track .ph { position: absolute; top: -4px; bottom: -4px; width: 2.5px; border-radius: 2px; background: var(--ink); }
+.tl-labels { display: flex; justify-content: space-between; margin-top: 12px; font-family: var(--mono); font-size: 11.5px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.tl-labels .loop { color: var(--ac); }
+.tl-ctl { display: flex; align-items: center; gap: 18px; margin-top: 14px; position: relative; }
+.tl-ctl > svg { width: 42px; height: 42px; color: var(--ac); }
+.tl-ctl .sp { margin-left: auto; font-size: 14px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; padding: 8px 12px; border-radius: 100px; background: var(--surf2); }
+.tl-ctl .mic { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); width: 56px; height: 56px; border-radius: 50%; background: var(--ac); display: grid; place-items: center; box-shadow: 0 6px 18px -6px rgba(8,71,190,0.6); }
+.tl-ctl .mic svg { width: 22px; height: 22px; color: #fff; }
+.kv-ppl { position: relative; height: 420px; }
+.kv-ppl .you { position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.kv-ppl .you .disc { width: 94px; height: 94px; border-radius: 50%; overflow: hidden; position: relative; box-shadow: inset 0 0 0 0.5px var(--line); }
+.kv-ppl .you .disc canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.kv-ppl .you .nm { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.p-bub { position: absolute; transform: translate(-50%,-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; animation: kvbob 5s ease-in-out infinite; }
+.p-bub .ava { border-radius: 50%; display: grid; place-items: center; font-weight: 700; background: rgba(10,92,245,0.1); color: var(--ac); box-shadow: inset 0 0 0 1px rgba(10,92,245,0.28); }
+.p-bub .nm { font-size: 12px; font-weight: 600; color: var(--ink); }
+.p-bub .rl { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+@keyframes kvbob { 0%,100% { transform: translate(-50%,-50%); } 50% { transform: translate(-50%,-57%); } }
+.kv-cloud { position: relative; height: 420px; }
+.cw { position: absolute; transform: translate(-50%,-50%); font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); }
+.cw.used { color: var(--faint); font-weight: 500; }
+.cw .badge { position: absolute; left: -6px; top: -8px; }
+.cw .badge svg { width: 12px; height: 12px; }
+.cw .book { color: var(--ac); }
+.cw .check { color: #1E9E5A; }
+@media (prefers-reduced-motion: reduce) { .p-bub { animation: none; } }
+
+/* ── manifesto reading: the claim lights word by word as you scroll,
+   the same karaoke idea the shadowing screen uses. Scroll-linked, so
+   it reads at whatever pace the reader moves. ── */
+/* ONE light tone for the whole line — premise and not-yet-lit words are
+   the same colour, so the only contrast on the page is what the scroll
+   has lit. A second, subtler light tone read as a mistake. */
+.m-line b .w { color: var(--faint); transition: color 0.42s ease; }
+.m-line b .w.on { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .m-line b .w { color: var(--ink); } }
+
+/* PREVIEW IBM Plex Sans KR: not a pixel face — a technical, engineered Hangul */
+h1, h2, .s-cap h3, .m-line, .m-line b, .fstep h3 {
+  font-family: "Geist Pixel", "IBM Plex Sans KR", var(--sans); font-weight: 600; letter-spacing: -0.02em; }
+</style>
+<!-- PostHog web analytics -->
+<script>
+  !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+  // Never track local dev (file://, localhost) or opted-out browsers (nawana.app/?ph=off).
+  var _opt=(location.protocol==='file:')||/^(localhost|127\.|0\.0\.0\.0|\[?::1)/.test(location.hostname);
+  try{var _q=new URLSearchParams(location.search);if(_q.get('ph')==='off'){localStorage.setItem('ph_optout','1');}if(_q.get('ph')==='on'){localStorage.removeItem('ph_optout');}if(localStorage.getItem('ph_optout')==='1'){_opt=true;}}catch(e){}
+  if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@500;600;700&display=swap" rel="stylesheet"></head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="arrowr">
+      <path d="M3.5 12h15M12.5 6l6 6-6 6" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/>
+    </g>
+    <g id="pixeldot"><rect x="8" y="8" width="8" height="8"/></g>
+    <g id="applelogo"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></g>
+    <g id="appmark">
+      <rect x="290" y="237" width="410" height="100"/>
+      <rect x="186" y="337" width="104" height="349"/>
+      <rect x="700" y="337" width="104" height="349"/>
+      <rect x="290" y="686" width="410" height="100"/>
+      <rect x="806" y="686" width="95" height="100"/>
+    </g>
+  </defs>
+</svg>
+
+<nav class="sec plain">
+  <div class="inner nav-in">
+    <a class="logo" href="#"><svg class="mark" viewBox="0 0 1024 1024"><use href="#appmark"/></svg>nawana<sup>™</sup></a>
+    <div class="navlinks">
+      <a href="#talk">Talk</a>
+      <a href="#watch">Watch</a>
+      <a href="#practice">Practice</a>
+      <a href="#pricing" id="nav-pricing" hidden>가격</a>
+      <a href="index.next.html">English</a>
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>App Store</b></span></a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </div>
+  </div>
+  <div class="nav-menu" id="nav-menu">
+    <a href="#talk">Talk</a>
+    <a href="#watch">Watch</a>
+    <a href="#practice">Practice</a>
+    <a href="#pricing" id="nav-pricing-m" hidden>가격</a>
+    <a href="index.next.html">English</a>
+  </div>
+</nav>
+
+<!-- ═════════ NIGHT — an incoming call from the future self.
+     The whole top of the page is one scene: the ring, the talk, the
+     hang-up — and the textbook is born on the seam into daylight. ═════════ -->
+<header class="sec night" id="story">
+  <div class="n-glow" aria-hidden="true"></div>
+  <div class="scrolly" id="scrolly">
+    <div class="s-hero">
+      <div class="n-kicker rv"><i></i>가장 개인화된 언어 학습</div>
+      <h1 class="rv" style="--d:0.06s">유창한 나와,<br />언어를 학습한다.</h1>
+      <p class="n-sub rv" style="--d:0.12s">내가 원할 때, 원하는 주제로 대화하고,<br />나만의 교재로 학습한다.</p>
+      <div class="n-ctas rv" style="--d:0.18s">
+        <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>다운로드</b></span></a>
+      </div>
+      <span class="n-note rv" style="--d:0.24s"><b>iOS 17 이상</b> · 7일 무료</span>
+    </div>
+    <div class="s-pin">
+      <div class="s-caps">
+        <div class="s-cap"><div class="ix">01 / 05</div><h3>내 관심사에서<br />대화를 시작한다</h3><p>전화 걸듯, 탭 한 번.</p></div>
+        <div class="s-cap"><div class="ix">02 / 05</div><h3>미래의 유창한<br />나와 말한다</h3><p>더듬거려도 괜찮다. 매 턴, 고쳐서 돌아온다.</p></div>
+        <div class="s-cap"><div class="ix">03 / 05</div><h3>나만의 교재로<br />학습한다</h3><p>방금 내가 말한 표현·단어·문법 그대로.</p></div>
+        <div class="s-cap"><div class="ix">04 / 05</div><h3>말할수록<br />쌓인다</h3><p>단어도, 표현도, 문장도. 자동으로.</p></div>
+        <div class="s-cap"><div class="ix">05 / 05</div><h3>레벨은 의견이 아니라<br />측정이다</h3><p>실제로 말한 것들로만.</p></div>
+        <span class="s-num">01</span><span class="s-num">02</span><span class="s-num">03</span><span class="s-num">04</span><span class="s-num">05</span>
+      </div>
+      <div class="iphone s-phone" id="s-phone">
+        <div class="screen">
+          <div class="s-screens">
+            <!-- 01 · Talk home — real capture -->
+            <div class="s-scr on"><img class="shot" src="shots/ko-home.png" alt="" /></div>
+            <!-- 02 · in-call — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/ko-call.png" alt="" /></div>
+            <!-- 03 · after the call: the talk is a scored book — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/ko-practice.png" alt="" /></div>
+            <!-- 04 · word cloud — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/ko-words.png" alt="" /></div>
+            <!-- 05 · measured level — real capture -->
+            <div class="s-scr"><img class="shot" src="shots/ko-progress.png" alt="" /></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ═════════ WHY ═════════ -->
+<section class="sec plain">
+  <div class="m-track">
+    <div class="m-pin">
+      <div class="inner manif">
+        <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>하나 · 목소리</div>
+        <div class="m-stack">
+          <p class="m-line">원어민을 아무리 따라 해도,<br /><b>남의 목소리는<br />내 것이 되지 않는다.</b></p>
+          <p class="m-line">어차피 실전에서 말할 목소리는<br /><b>내 목소리다.</b></p>
+          <p class="m-line">그래서, 닿을 수 있는 목표.<br /><b>원어민처럼이 아니라<br />미래의 유창한 나.</b></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ MANIFESTO 2 — expression ═════════ -->
+<section class="sec alt">
+  <div class="m-track">
+    <div class="m-pin">
+      <div class="inner manif">
+        <div class="m-kick rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>둘 · 훈련</div>
+        <div class="m-stack">
+          <p class="m-line">말이 안 나오는 이유는,<br /><b>머릿속 생각을 꺼내는 훈련이<br />안 되어 있어서다.</b></p>
+          <p class="m-line">외운 문장이 아니라,<br /><b>내 생각을 나만의 언어로.<br />그게 시작이다.</b></p>
+          <p class="m-line">말하고, 문법과 표현을 고침받고.<br /><b>내가 실전에서 말한 것이<br />나만의 교재가 된다.</b></p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="marquee" aria-hidden="true">
+    <div class="row">
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Talk</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Shadow</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Watch</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+      <span>Review</span><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 01 TALK ═════════ -->
+<section class="sec alt" id="talk">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">01</span>Talk · 출력</div>
+      <h2 class="rv" style="--d:0.06s">머릿속 생각을,<br />편하게 내뱉는다.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>낯선 목소리가 아니라, 내 목소리니까.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>틀려도 눈치 볼 상대가 없다.</b> 긴장 없이 말문이 트인다.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>관심사 뉴스, 내 상황, 자유 주제.</b> 원할 때 언제든.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>매 턴, 유창한 버전이 돌아온다.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: 통화 화면 — replace shots/ko-call.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-call.png" alt="" /></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 02 WATCH ═════════ -->
+<section class="sec plain" id="watch">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">02</span>Watch · 입력</div>
+      <h2 class="rv" style="--d:0.06s">영어가 필요한 순간은,<br />누구나 다르다.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>곧 다가올 내 상황을 설정하고, 미리 겪어본다.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>시험, 면접, 스피치, 여행, 스몰토크.</b> 한 줄로 적으면 대화가 통째로 열린다.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>내 대사는 유창한 내 목소리로.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>갖고 싶은 문장은 탭 한 번,</b> 그 자리에서 샤도잉.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: Watch 시나리오 북 — replace shots/ko-book.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-book.png" alt="" /></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ 03 PRACTICE ═════════ -->
+<section class="sec alt" id="practice">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><span class="mono">03</span>Practice · 각인</div>
+      <h2 class="rv" style="--d:0.06s">자동으로 나올 때까지,<br />샤도잉.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>따라 할 목소리는 나 자신이다.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>싱크 샤도잉.</b> 단어마다 결과가 보인다.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>걸리는 구간만 0.5배속 반복.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>잊을 때쯤 돌아오는 간격 반복,</b> 입으로 답한다.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: 샤도잉 화면 — replace shots/ko-shadow.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-shadow.png" alt="" /></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ PEOPLE ═════════ -->
+<section class="sec plain" id="people">
+  <div class="stage flip">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>People · 페르소나</div>
+      <h2 class="rv" style="--d:0.06s">내 삶의 사람들이,<br />연습의 등장인물로.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>연습은 늘 내 사람들과, 내 상황으로.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>바리스타, 팀장, 주치의.</b> 말로 소개하면 페르소나가 된다.</span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>중심엔 유창해진 나.</b></span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: Watch 탭 People + 시나리오 — replace shots/ko-people.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-people.png" alt="" /></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ WORDS ═════════ -->
+<section class="sec alt" id="words">
+  <div class="stage">
+    <div class="stage-copy">
+      <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>Words · 어휘</div>
+      <h2 class="rv" style="--d:0.06s">말한 단어가 모여,<br />내 단어 세계로.</h2>
+      <p class="one rv" style="--d:0.12s"><strong>살아 있는 내 어휘 지도.</strong></p>
+      <ul class="hows rv" style="--d:0.18s">
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>레벨이 크기로 보인다.</b></span></li>
+        <li><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg><span><b>탭 한 번에 뜻과 예문.</b> 북마크는 공부 중, 체크는 아는 단어.</span></li>
+      </ul>
+    </div>
+    <div class="stage-show">
+      <!-- SHOT SLOT: 단어 구름 — replace shots/ko-words.png -->
+      <div class="iphone rv" style="--d:0.1s"><div class="screen"><img class="shot" src="shots/ko-words.png" alt="" /></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════ SPEC SHEET ═════════ -->
+<section class="sec plain">
+  <div class="inner specs">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>이 안에 다 있습니다</div>
+    <h2 class="head rv" style="--d:0.08s">앱의 전부를,<br />한눈에.</h2>
+  </div>
+  <div class="spec-table rv" style="--d:0.12s">
+    <div class="srow"><span class="ix">01</span><span class="nm">60초 보이스 클론</span><span class="ds">설정할 때 짧은 녹음 한 번이면, 유창해진 미래의 내 목소리가 만들어집니다.</span></div>
+    <div class="srow"><span class="ix">02</span><span class="nm">매 턴, 유창한 버전</span><span class="ds">대화 도중, 방금 한 말이 유창한 내가 말하는 방식으로 돌아옵니다.</span></div>
+    <div class="srow"><span class="ix">03</span><span class="nm">싱크 샤도잉</span><span class="ds">유창한 내 문장을 따라 말하면, 단어마다의 결과와 목표 대비 속도가 나옵니다.</span></div>
+    <div class="srow"><span class="ix">04</span><span class="nm">내 삶의 사람들</span><span class="ds">말로 소개하면, 진짜 그 사람처럼 대화하는 페르소나가 됩니다.</span></div>
+    <div class="srow"><span class="ix">05</span><span class="nm">미리 보는 대화</span><span class="ds">유창한 내가 그 상황을 어떻게 푸는지 지켜보고, 갖고 싶은 표현은 그 자리에서 샤도잉하세요.</span></div>
+    <div class="srow"><span class="ix">06</span><span class="nm">말하기 복습</span><span class="ds">버벅인 문장이 잊어버릴 때쯤 드릴로 돌아옵니다. 객관식이 아니라, 입으로 답합니다.</span></div>
+    <div class="srow"><span class="ix">07</span><span class="nm">5축 스코어카드</span><span class="ds">어휘·문법·표현력·유창성·발음. AI가 지어내지 않고 코드가 계산합니다.</span></div>
+    <div class="srow"><span class="ix">08</span><span class="nm">단어는 자동으로 체크</span><span class="ds">약 8,000개의 CEFR 등급별 코어 단어가 깔려 있고, 내가 쓴 단어는 자동으로 체크됩니다.</span></div>
+    <div class="srow"><span class="ix">09</span><span class="nm">CEFR 레벨 실측</span><span class="ds">실제로 쓴 단어의 등급으로 레벨을 추정합니다. B1에서 B2는 의견이 아니라 측정입니다.</span></div>
+    <div class="srow"><span class="ix">10</span><span class="nm">정직한 주간 리포트</span><span class="ds">실제 발화가 15분 넘게 쌓여야 열립니다. 소음을 보여주느니 침묵을 택합니다. 쓸수록 나에게 맞춰집니다.</span></div>
+  </div>
+</section>
+
+<!-- ═════════ PRICING ═════════
+     Visible at launch. The section used to be hidden behind BILLING.enabled —
+     the flag that turns on Stripe web checkout — so a page selling an iOS app
+     showed no price at all until a payment integration nobody needs at launch
+     was configured. Prices now always render; only the BUY BUTTON is gated:
+     App Store today, Stripe checkout the day BILLING.enabled flips. -->
+<section class="sec plain pricing-wrap" id="pricing">
+  <div class="inner pricing-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>가격</div>
+    <h2 class="rv" style="--d:0.08s">내 상황에 맞는<br />구독을 고르세요.</h2>
+    <p class="pr-sub rv" style="--d:0.11s">어느 쪽이든 7일 무료로 시작합니다.</p>
+    <div class="cycle-toggle rv" style="--d:0.14s">
+      <button class="ct on" data-cycle="monthly" type="button">월간</button>
+      <button class="ct" data-cycle="annual" type="button">연간</button>
+    </div>
+  </div>
+  <div class="plans rv" style="--d:0.2s">
+    <div class="plan">
+      <div><span class="p-name">라이트</span></div>
+      <div class="p-price" data-price="light">—</div>
+      <p class="p-note">취미로 꾸준히, 루틴부터.</p>
+      <dl class="p-specs">
+        <div><dt>통화</dt><dd data-talk="light">—</dd></div>
+        <div class="p-sub"><dt></dt><dd>하루 5분꼴</dd></div>
+        <div><dt>상황연습</dt><dd data-scenes="light">—</dd></div>
+        <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
+        <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="light" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+    <div class="plan featured">
+      <div><span class="p-name">플러스</span><span class="p-badge">인기</span></div>
+      <div class="p-price" data-price="plus">—</div>
+      <p class="p-note">원하는 만큼, 제한 없이.</p>
+      <dl class="p-specs">
+        <div><dt>통화</dt><dd>제한 없음</dd></div>
+        <div><dt>상황연습</dt><dd data-scenes="plus">—</dd></div>
+        <div><dt>개인화된 복습교재</dt><dd>무제한</dd></div>
+        <div><dt>섀도잉·단어학습·대화 재생·드릴 복습</dt><dd>무제한</dd></div>
+      </dl>
+      <a class="btn btn-black p-buy" href="#" data-appstore data-store-cta>App Store에서 시작 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></a>
+      <button class="btn btn-black p-buy" data-tier="plus" type="button" hidden>구독하기 <svg class="arrow" viewBox="0 0 24 24"><use href="#arrowr"/></svg></button>
+    </div>
+  </div>
+  <div class="inner">
+    <p class="p-error" id="pricing-error"></p>
+    <p class="p-fine">플러스는 통화 시간에 제한이 없습니다. 말하는 데는 실제로 힘이 들어가니, 아껴 쓸 이유를 따로 만들지 않았습니다. 상황연습은 탭 한 번이면 재생되는 쪽이라 편수로 셉니다 — 두 몫은 서로 별개고, 상황연습을 봐도 통화 시간은 줄지 않습니다. 7일 무료 체험이고 언제든 해지할 수 있습니다.</p>
+  </div>
+</section>
+
+<!-- ═════════ TRUST ═════════ -->
+<section class="sec alt">
+  <div class="inner trust-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>내 목소리의 주인은 나</div>
+    <h2 class="rv" style="--d:0.08s">보이스 클론은<br />조심스럽게 다룹니다.</h2>
+  </div>
+  <div class="trust">
+    <div class="tcell rv"><div class="ix">A</div><h4>녹음은 단 한 번</h4><p>설정할 때 60초가 전부입니다. 내가 시작한 대화 밖에서는 절대 녹음하지 않습니다.</p></div>
+    <div class="tcell rv" style="--d:0.08s"><div class="ix">B</div><h4>클론의 결정권은 나에게</h4><p>언제든 다시 녹음하거나 삭제할 수 있습니다. 교체하면 이전 클론은 영구 삭제됩니다.</p></div>
+    <div class="tcell rv" style="--d:0.16s"><div class="ix">C</div><h4>연습 기록은 내 기기에</h4><p>대화, 드릴, 진행 상황은 서버가 아니라 내 iPhone에 저장됩니다.</p></div>
+  </div>
+</section>
+
+<!-- ═════════ FAQ ═════════ -->
+<section class="sec plain" id="faq">
+  <div class="inner faq-sec">
+    <div class="kicker rv"><svg class="dot" viewBox="0 0 24 24"><use href="#pixeldot"/></svg>자주 묻는 질문</div>
+    <h2 class="rv" style="--d:0.08s">궁금한 것들.</h2>
+  </div>
+  <div class="faq rv" style="--d:0.12s">
+    <details>
+      <summary><span class="ix">01</span>내 목소리는 어떻게 만들어지나요?</summary>
+      <p class="a"><span>설정할 때 60초 녹음 한 번이면 끝이에요. 그 뒤로는 어떤 녹음도 필요 없고, 유창해진 내 목소리가 대화·상황연습·섀도잉을 전부 말해요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">02</span>무료로 써볼 수 있나요?</summary>
+      <p class="a"><span>네, 7일 무료 체험이 있어요. 보이스 클론과 첫 인사는 체험 전에도 무료고, 언제든 해지할 수 있어요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">03</span>구독하면 뭘 얻나요?</summary>
+      <p class="a"><span>라이트는 한 달 150분의 통화 시간을 사는 거예요. 플러스는 통화에 제한이 없어요. 상황연습은 별도 몫이라 봐도 통화 시간이 줄지 않아요. 복습·다시 듣기·상황 만들기는 언제나 무료예요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">04</span>완전 초보도 할 수 있나요?</summary>
+      <p class="a"><span>솔직히, 완전 처음이라면 어려워요. 더듬거리면서라도 문장을 만들 수 있는 단계부터가 잘 맞아요. 거기서부터는 매 턴 유창한 버전이 돌아오고, 대화 난이도가 내 레벨에 맞춰지면서 말하는 양이 늘어나요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">05</span>실력이 느는 걸 어떻게 확인하나요?</summary>
+      <p class="a"><span>실제로 말한 단어와 문장으로 CEFR 레벨(A1~C2)을 측정해요. 의견이 아니라 실측이라, 느는 게 숫자로 보여요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">06</span>내 목소리와 데이터는 안전한가요?</summary>
+      <p class="a"><span>내가 시작한 대화 밖에서는 절대 녹음하지 않아요. 클론은 언제든 다시 만들거나 삭제할 수 있고, 대화·드릴·진행 기록은 서버가 아니라 내 아이폰에 저장돼요.</span></p>
+    </details>
+    <details>
+      <summary><span class="ix">07</span>어떤 언어를 배울 수 있나요?</summary>
+      <p class="a"><span>영어, 한국어, 독일어를 지원해요. 한국어와 독일어는 아직 베타예요. 언어를 추가해도 요금은 그대로예요.</span></p>
+    </details>
+  </div>
+</section>
+
+<!-- ═════════ FINAL — the beta hero, brought home ═════════ -->
+<section class="sec night final-demo">
+  <canvas class="flower-gl" id="flower-gl" aria-hidden="true"></canvas>
+  <div class="fd-in">
+    <h2 class="rv">미래의 유창한 나,<br />오늘 시작한다.</h2>
+    <div class="fd-demo rv" style="--d:0.14s">
+      <button class="fd-orb" id="d-play" type="button" aria-label="미래의 내 목소리 미리 듣기">
+        <canvas class="fself" id="d-face" data-shape="circle" aria-hidden="true"></canvas>
+        <span class="fd-ico" aria-hidden="true">
+          <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z"/></svg>
+        </span>
+      </button>
+      <div class="fd-hint">미래의 내 목소리 미리 듣기</div>
+      <div class="fd-cap" id="d-cap" aria-live="polite"></div>
+    </div>
+    <div class="fd-ctas rv" style="--d:0.2s">
+      <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>다운로드</b></span></a>
+    </div>
+  </div>
+  <audio id="d-audio" src="beta.mp3" preload="none"></audio>
+</section>
+
+<footer class="sec night">
+  <div class="foot-in">
+    <span>© 2026 Dear RoRo · Munich</span>
+    <div class="links">
+      <a href="privacy.html">Privacy</a>
+      <a href="privacy-ko.html">개인정보 처리방침</a>
+      <a href="support-ko.html">고객 지원</a>
+      <a href="mailto:hello.dearroroapp@gmail.com">문의하기</a>
+      <a href="#" data-appstore>App Store</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.documentElement.classList.add("js");
+
+// ── App Store link — the ONE value to fill at launch ──
+var APP_STORE_URL = "#"; // e.g. "https://apps.apple.com/app/id0000000000"
+document.querySelectorAll("[data-appstore]").forEach(function (a) {
+  a.href = APP_STORE_URL;
+  if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
+});
+
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ── mobile nav: burger menu + header that yields on scroll-down ──
+(function () {
+  var nav = document.querySelector("nav.sec");
+  if (!nav) return;
+  var burger = document.getElementById("nav-burger");
+  var menu = document.getElementById("nav-menu");
+  if (burger && menu) {
+    burger.addEventListener("click", function () { nav.classList.toggle("nav-open"); });
+    menu.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { nav.classList.remove("nav-open"); });
+    });
+  }
+  var mq = window.matchMedia("(max-width: 860px)");
+  var lastY = window.pageYOffset;
+  var night = document.querySelector("header.night");
+  function solidCheck(y) {
+    var edge = night ? night.offsetTop + night.offsetHeight - 70 : 400;
+    nav.classList.toggle("nav-solid", y > edge);
+  }
+  solidCheck(window.pageYOffset);
+  window.addEventListener("scroll", function () {
+    var y = window.pageYOffset;
+    solidCheck(y);
+    if (!mq.matches || nav.classList.contains("nav-open")) { nav.classList.remove("nav-hidden"); lastY = y; return; }
+    if (y > lastY + 8 && y > 80) nav.classList.add("nav-hidden");
+    else if (y < lastY - 8) nav.classList.remove("nav-hidden");
+    lastY = y;
+  }, { passive: true });
+})();
+
+// ── scroll reveal ──
+var io = new IntersectionObserver(function (entries) {
+  entries.forEach(function (e) {
+    if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+  });
+}, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+document.querySelectorAll(".rv").forEach(function (el) { io.observe(el); });
+
+// ── Futureself: the app's call surface, ported from FutureVoice/Shaders/
+// Futureself.metal. A quantized 5-row pixel mosaic snapped to a 5-step
+// palette, each cell breathing on its own slow phase — idle mode (mode 0,
+// level 0), light palette (theme "blue"). Keep the palette and the cell
+// math in sync with the shader; this is the product's face.
+(function () {
+  // kPalette[0 /* blue */][1 /* light */] — base → hottest.
+  var RAMP = ["#F6F8FF", "#E6EBF7", "#B8D4FF", "#73ADFF", "#0A5CF5"];
+  var TAU = Math.PI * 2;
+
+  function fract(x) { return x - Math.floor(x); }
+  // hash21 from the shader, component for component.
+  function hash21(px, py) {
+    var x = fract(px * 123.34), y = fract(py * 456.21);
+    var d = x * (x + 45.32) + y * (y + 45.32);
+    x = fract(x + d); y = fract(y + d);
+    return fract(x * y);
+  }
+
+  // Cell size is PINNED (12.8pt in the app, whatever the surface size), so a
+  // bigger surface gets MORE cells, never bigger ones — the mosaic stays
+  // icon-scaled on the home circle and the in-call pill alike.
+  var CELL_CSS = 12.8;
+
+  function paint(cv, ctx, t, dpr) {
+    var w = cv.width, h = cv.height;
+    if (!w || !h) return;
+    var cellPt = CELL_CSS * dpr;
+    var cols = Math.ceil(w / cellPt), rows = Math.ceil(h / cellPt);
+    var seed = +(cv.dataset.seed || 0);
+    // Speaking: the surface rides playback energy, blooming outward from the
+    // centre. This is the fluent self actually talking — the product's face.
+    // A surface with data-drive set is scene-driven (the hero call demo):
+    // it smooths toward that level instead of idling on the sine.
+    var level;
+    if (cv.dataset.drive !== undefined) {
+      var target = +cv.dataset.drive;
+      cv._d = cv._d === undefined ? target : cv._d + (target - cv._d) * 0.07;
+      level = 0.1 + 0.62 * cv._d + 0.08 * cv._d * Math.sin(t * 2.6 + seed);
+    } else {
+      level = 0.26 + 0.22 * Math.abs(Math.sin(t * 0.85 + seed))
+            + 0.07 * Math.sin(t * 2.3 + seed * 2.0);
+    }
+    var drive = Math.max(0, Math.min(1, level)) * 1.15;
+
+    ctx.fillStyle = RAMP[0];                  // base fills the hairline gaps
+    ctx.fillRect(0, 0, w, h);
+    for (var cy = 0; cy < rows; cy++) {
+      for (var cx = 0; cx < cols; cx++) {
+        var r1 = hash21(cx + 0.13, cy + 0.13);
+        var r2 = hash21(cx + 7.77, cy + 7.77);
+        var r3 = hash21(cx + 23.19, cy + 23.19);
+        var ux = (cx + 0.5) * cellPt / w;
+        // ambient breathing — every cell on its own slow phase
+        var v = 0.16 + 0.14 * Math.sin(t * (0.35 + 0.55 * r2) + r3 * TAU);
+        // ignition order: random, biased centre-out while speaking
+        var bias = Math.abs(ux - 0.5) * 2;
+        var order = Math.max(0, Math.min(1, r1 + (bias - r1) * 0.45));
+        var ig = smoothstep(order, order + 0.22, drive);
+        v += ig * (0.55 + 0.30 * r2);
+        v += ig * 0.08 * Math.sin(t * (2 + 3 * r1) + r2 * TAU);
+
+        var step = Math.floor(v * 4 + (r3 - 0.5) * 0.9 + 0.5);
+        step = step < 0 ? 0 : step > 4 ? 4 : step;
+        ctx.fillStyle = RAMP[step];
+        ctx.fillRect(cx * cellPt + 0.7, cy * cellPt + 0.7, cellPt - 1.4, cellPt - 1.4);
+      }
+    }
+    // inner shadow: light from above, so the surface reads recessed not flat
+    var g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgba(10,40,90,0.16)");
+    g.addColorStop(0.5, "rgba(10,40,90,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+  }
+
+  function smoothstep(a, b, x) {
+    var u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return u * u * (3 - 2 * u);
+  }
+
+  var surfaces = [].slice.call(document.querySelectorAll("canvas.fself"));
+  if (!surfaces.length) return;
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize() {
+    surfaces.forEach(function (cv) {
+      var r = cv.getBoundingClientRect();
+      var w = Math.max(1, Math.round(r.width * dpr));
+      var h = Math.max(1, Math.round(r.height * dpr));
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    });
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  var ctxs = surfaces.map(function (cv) { return cv.getContext("2d"); });
+  surfaces.forEach(function (cv, i) { cv.dataset.seed = (i * 2.7).toFixed(2); });
+  function frame(ms) {
+    var t = (ms || 0) / 1000;
+    for (var i = 0; i < surfaces.length; i++) paint(surfaces[i], ctxs[i], t, dpr);
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  frame(reduce ? 4200 : 0);
+})();
+
+// ── scrollytelling: the phone peeks from the hero, pins at the centre,
+// and its screen walks the core flow (home → call → hang-up → book →
+// study) while the caption beside it changes. Scrubbing is scroll-tied;
+// ?step=N forces a beat for debugging.
+(function () {
+  var wrap = document.getElementById("scrolly");
+  if (!wrap) return;
+  var phone = document.getElementById("s-phone");
+  var caps = [].slice.call(wrap.querySelectorAll(".s-cap"));
+  var nums = [].slice.call(wrap.querySelectorAll(".s-num"));
+  var scrs = [].slice.call(wrap.querySelectorAll(".s-scr"));
+  var pill = document.getElementById("s-callpill");
+  var note = wrap.querySelector(".n-note");
+  var applied = 0; // translateY currently on the phone, in px
+  var STEPS = 6; // 1 hero + 5 beats
+  var dbg = null;
+  try { var q = new URLSearchParams(location.search).get("step"); if (q !== null) dbg = +q; } catch (e) {}
+  function update() {
+    var vh = window.innerHeight || 1;
+    var r = wrap.getBoundingClientRect();
+    var total = r.height - vh;
+    var p = total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 0;
+    var f = dbg !== null ? dbg : p * STEPS;
+    // At f=0 the phone's top edge sits just under the hero text; it rises
+    // to its resting spot over the first beat. Measured from the phone's
+    // ACTUAL laid-out position (rect minus the transform we applied), so
+    // it holds on any layout — centre on desktop, bottom-anchored on
+    // mobile — instead of assuming a centred pin.
+    var naturalTop = phone.getBoundingClientRect().top - applied;
+    var noteBottom = note ? note.getBoundingClientRect().bottom : vh * 0.5;
+    var rise = Math.max(0, noteBottom + 26 - naturalTop);
+    applied = Math.max(0, 1 - f) * rise;
+    // scale-up entrance: a step smaller in the hero, full size once pinned
+    // (origin is the phone's top edge, so the rise anchor stays exact)
+    var scale = 0.84 + 0.16 * Math.min(1, Math.max(0, f));
+    phone.style.transform = "translateY(" + applied.toFixed(1) + "px) scale(" + scale.toFixed(3) + ")";
+    var idx = Math.min(5, Math.max(1, Math.floor(f)));
+    scrs.forEach(function (el, i) { el.classList.toggle("on", i + 1 === idx); });
+    caps.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    nums.forEach(function (el, i) { el.classList.toggle("on", f >= 1 && i + 1 === idx); });
+    if (pill) pill.dataset.drive = idx === 2 ? 0.9 : 0.15;
+  }
+  window.addEventListener("scroll", update, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+  // re-measure once the reveal transitions have settled
+  setTimeout(update, 1000);
+  setTimeout(update, 2200);
+})();
+
+
+</script>
+<script>
+var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+// ── key visual: DeskCoach's latest halftone-flower shader ──
+// Verbatim from DeskCoach/site/index.html: ASCII glyph-atlas halftone
+// (density ramp " .,:;=+*#@"), variable-petal polar flower with a top-right
+// light source + soft aura, wind sway, stem, grain. Reduced to ONE flower,
+// and the flower TYPE changed (petal count N). Dark palette forced (this
+// hero is always dark).
+(function () {
+  var FS = 'precision highp float;uniform vec2 r;uniform float t;uniform float s;uniform sampler2D gx;uniform float gn;uniform vec3 pc;uniform vec3 ic;uniform float gr;uniform vec2 uMouse;' +
+    'float h(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}' +
+    'float n(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);' +
+    'return mix(mix(h(i),h(i+vec2(1,0)),f.x),mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x),f.y);}' +
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*n(p);p*=2.1;a*=.5;}return v;}' +
+    'float flower(vec2 p,vec2 c,float R,float q,float N){' +
+    'vec2 d=p-c;float ang=atan(d.y,d.x)+.07*sin(t*.55+q);float rad=length(d);' +
+    'float w=fbm(vec2(ang*2.3+q*3.,rad*5.)+q);' +
+    // fuller, larger petals (lower exponent = wider lobes)
+    'float lobe=pow(abs(cos(N*.5*ang+q)),.40);' +
+    'float pet=R*(.55+.45*lobe)*(.55+.9*w);' +
+    'float g=smoothstep(pet,pet*.20,rad);' +
+    // per-petal form: a lit centerline ridge fading to shadow at the petal
+    // edges and tip — so each petal shows light-catching and shaded parts
+    'float ridge=abs(cos(N*.5*ang+q));' +
+    'float rr=clamp(rad/max(pet,1e-4),0.,1.);' +
+    'float form=.40+.60*ridge*mix(1.,.55,rr);' +
+    // sun from the top-right: petals facing it brighten, the rest fall away
+    'vec2 u=d/max(rad,1e-4);' +
+    'float sun=.55+.55*dot(u,vec2(.55,.83));' +
+    'g*=clamp(form*sun,0.,1.);' +
+    // soft outer aura (light bleeding past the silhouette)
+    'g=max(g,.14*smoothstep(pet*1.6,pet*.9,rad));' +
+    'return g;}' +
+    'float stem(vec2 p,vec2 c,float q){' +
+    'if(p.y>c.y)return 0.;float dy=c.y-p.y;' +
+    'float x=c.x+.05*sin(dy*4.+q)+dy*dy*.14*sin(t*.5+q);' +
+    'return .30*smoothstep(.006,.002,abs(p.x-x));}' +
+    'void main(){' +
+    'float cell=max(10.,r.y/85.);' +
+    'vec2 id=floor(gl_FragCoord.xy/cell)+.5;vec2 cc=id*cell;' +
+    'vec2 cuv=cc/r;float asp=r.x/r.y;vec2 p=vec2(cuv.x*asp,cuv.y);' +
+    'float L=.05;' +
+    // one flower + its stem — flower TYPE changed to N=8 petals (was 6), bigger
+    // flower center follows the mouse a little (parallax)
+    'vec2 f1=vec2(asp*.70+.02*sin(t*.5+s),.55)+uMouse*vec2(.08,.06);' +
+    'L=max(L,flower(p,f1,.32,s,8.));L=max(L,stem(p,f1,s));' +
+    'float lvl=sqrt(clamp(L,0.,1.));' +
+    'float gi=floor(lvl*(gn-1.)+.5);' +
+    'vec2 iuv=fract(gl_FragCoord.xy/cell);' +
+    'float k=texture2D(gx,vec2((gi+iuv.x)/gn,iuv.y)).r;' +
+    'vec3 paper=pc;vec3 ink=ic;' +
+    'float str=mix(.20,1.,smoothstep(.05,.32,L));' +
+    'vec3 col=mix(paper,ink,k*str);' +
+    'col+=(h(gl_FragCoord.xy)-.5)*gr;' +
+    'gl_FragColor=vec4(col,1.);}';
+  var VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+
+  var cv = document.getElementById("flower-gl");
+  if (!cv) return;
+  var gl = cv.getContext('webgl', { antialias: false, alpha: false });
+  if (!gl) return;
+  function sh(ty, src) { var x = gl.createShader(ty); gl.shaderSource(x, src); gl.compileShader(x); return x; }
+  var pr = gl.createProgram();
+  gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS));
+  gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(pr); gl.useProgram(pr);
+  var b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  var lp = gl.getAttribLocation(pr, 'p');
+  gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 2, gl.FLOAT, false, 0, 0);
+  // glyph atlas: a density ramp built from LETTERS — Korean jamo + Latin,
+  // ordered light→heavy by ink coverage so brightness still maps to a mark.
+  // Index 0 is a space (deepest shadow); the tail is the fullest glyphs.
+  var CH = ' .......ㄱㅏrㄴcㅗtㅓoㄷaㄹeㅋxㅂsㅍwㅁmㅇㅎ', N = CH.length, G = 64;
+  var ac = document.createElement('canvas'); ac.width = N * G; ac.height = G;
+  var cx2 = ac.getContext('2d');
+  cx2.fillStyle = '#000'; cx2.fillRect(0, 0, ac.width, ac.height);
+  cx2.fillStyle = '#fff'; cx2.font = '700 ' + (G * .74) + 'px "Apple SD Gothic Neo","SF Mono",Menlo,monospace';
+  cx2.textAlign = 'center'; cx2.textBaseline = 'middle';
+  CH.split('').forEach(function (ch, i) { cx2.fillText(ch, i * G + G / 2, G / 2 + 2); });
+  var tex = gl.createTexture(); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, ac);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.uniform1i(gl.getUniformLocation(pr, 'gx'), 0);
+  gl.uniform1f(gl.getUniformLocation(pr, 'gn'), N);
+  var uR = gl.getUniformLocation(pr, 'r'), uT = gl.getUniformLocation(pr, 't'), uS = gl.getUniformLocation(pr, 's');
+  var uPC = gl.getUniformLocation(pr, 'pc'), uIC = gl.getUniformLocation(pr, 'ic'), uGR = gl.getUniformLocation(pr, 'gr');
+  var uM = gl.getUniformLocation(pr, 'uMouse');
+  // the flower drifts toward the cursor; smoothed so it eases rather than snaps
+  var tmx = 0, tmy = 0, mx = 0, my = 0;
+  window.addEventListener('pointermove', function (e) {
+    tmx = (e.clientX / window.innerWidth - 0.5) * 2;
+    tmy = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+  var t0 = 0;
+  (function frame(ms) {
+    if (!t0) t0 = ms || 0;
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    var w = Math.max(2, cv.clientWidth * dpr) | 0, hh = Math.max(2, cv.clientHeight * dpr) | 0;
+    if (cv.width !== w || cv.height !== hh) { cv.width = w; cv.height = hh; gl.viewport(0, 0, w, hh); }
+    // dark palette (this hero is always dark) — paper ≈ hero bg, ink = subtle
+    gl.uniform3f(uPC, .071, .067, .063); gl.uniform3f(uIC, .58, .55, .5); gl.uniform1f(uGR, .022);
+    mx += (tmx - mx) * 0.045; my += (tmy - my) * 0.045;
+    gl.uniform2f(uM, reduce ? 0 : mx, reduce ? 0 : my);
+    gl.uniform2f(uR, w, hh);
+    gl.uniform1f(uT, reduce ? 4.0 : ((ms || 0) - t0) / 1000);
+    gl.uniform1f(uS, 0.0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (!reduce) requestAnimationFrame(frame);
+  })(0);
+})();
+</script>
+<script>
+// ── final demo: the beta voice, playable in place. The page's own 2D
+// Futureself painter is the play surface — the analyser drives data-drive.
+(function () {
+  var audio = document.getElementById('d-audio');
+  var pb = document.getElementById('d-play');
+  var face = document.getElementById('d-face');
+  var cap = document.getElementById('d-cap');
+  if (!audio || !pb) return;
+  var cues = [], capLoaded = false;
+  function tc(x){ x=x.trim().split(':'); var s=parseFloat(x.pop().replace(',','.'))||0; var m=parseInt(x.pop()||'0',10)||0; var h=parseInt(x.pop()||'0',10)||0; return h*3600+m*60+s; }
+  function parseVTT(text){
+    var out=[], blocks=text.replace(/\r/g,'').split('\n\n');
+    for(var i=0;i<blocks.length;i++){ var ls=blocks[i].split('\n'), ti=-1;
+      for(var j=0;j<ls.length;j++){ if(ls[j].indexOf('-->')>-1){ ti=j; break; } }
+      if(ti<0) continue; var mm=ls[ti].split('-->');
+      var tx=ls.slice(ti+1).join('\n').trim(); if(tx) out.push({s:tc(mm[0]),e:tc(mm[1]),t:tx}); }
+    return out; }
+  function loadCaptions(){ if(capLoaded) return; capLoaded=true;
+    fetch('beta-ko.vtt').then(function(r){ return r.ok?r.text():''; })
+      .then(function(x){ cues=x?parseVTT(x):[]; }).catch(function(){ cues=[]; }); }
+  var actx=null, analyser=null, data=null, pumping=false;
+  // file:// taints MediaElementSource and the browser mutes it — only route
+  // through WebAudio on http(s); locally the audio plays directly and the
+  // surface breathes on a synthesized level instead.
+  var canAnalyse = location.protocol === 'http:' || location.protocol === 'https:';
+  function initAudio(){ if(!canAnalyse) return; try{
+      actx=new (window.AudioContext||window.webkitAudioContext)();
+      var srcNode=actx.createMediaElementSource(audio);
+      analyser=actx.createAnalyser(); analyser.fftSize=256;
+      srcNode.connect(analyser); analyser.connect(actx.destination);
+      data=new Uint8Array(analyser.fftSize);
+    }catch(e){ analyser=null; } }
+  function pump(){
+    if(audio.paused){ pumping=false; if(face) delete face.dataset.drive; return; }
+    var level;
+    if(analyser){ analyser.getByteTimeDomainData(data);
+      var sum=0; for(var i=0;i<data.length;i++){ var v=(data[i]-128)/128; sum+=v*v; }
+      level=Math.min(1, Math.sqrt(sum/data.length)*3.4); }
+    else { var ct=audio.currentTime;
+      level=0.45+0.3*Math.abs(Math.sin(ct*2.1))+0.15*Math.sin(ct*5.3); }
+    if(face) face.dataset.drive=(0.12+level*0.88).toFixed(3);
+    requestAnimationFrame(pump); }
+  pb.addEventListener('click', function(){
+    if(!actx) initAudio();
+    if(actx && actx.state==='suspended') actx.resume();
+    loadCaptions();
+    if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); } });
+  audio.addEventListener('play', function(){ pb.classList.add('playing'); if(!pumping){ pumping=true; pump(); } });
+  audio.addEventListener('pause', function(){ pb.classList.remove('playing'); });
+  audio.addEventListener('ended', function(){ pb.classList.remove('playing'); if(cap) cap.textContent=''; });
+  audio.addEventListener('error', function(){ if(cap) cap.textContent='오디오를 불러오지 못했어요.'; });
+  audio.addEventListener('timeupdate', function(){
+    if(!cap) return;
+    if(!cues.length){ cap.textContent=''; return; }
+    var ct=audio.currentTime, cur='';
+    for(var i=0;i<cues.length;i++){ if(ct>=cues[i].s && ct<cues[i].e){ cur=cues[i].t; break; } }
+    if(cap.textContent!==cur) cap.textContent=cur; });
+  // PostHog: the same beta_audio_* funnel as the live beta page
+  var started=false, marks={};
+  function track(ev, extra){ try{ if(!window.posthog) return;
+      var props={ lang:'ko', t:Math.round(audio.currentTime||0), duration:Math.round(audio.duration||0) };
+      if(extra) for(var k in extra) props[k]=extra[k];
+      posthog.capture(ev, props); }catch(e){} }
+  audio.addEventListener('play', function(){ track('beta_audio_play',{resumed:started}); started=true; });
+  audio.addEventListener('pause', function(){ if(!audio.ended && audio.currentTime>0) track('beta_audio_pause'); });
+  audio.addEventListener('ended', function(){ track('beta_audio_complete'); });
+  audio.addEventListener('timeupdate', function(){ if(!audio.duration) return;
+    var p=audio.currentTime/audio.duration*100;
+    [25,50,75].forEach(function(m){ if(!marks[m]&&p>=m){ marks[m]=1; track('beta_audio_progress',{percent:m}); } }); });
+})();
+
+</script>
+<script>
+// ── manifesto stage: the section pins and hands each claim its own
+// stretch of scroll. One line is live at a time, and its words turn to
+// ink across that stretch — the sentence completes at reading pace,
+// then the next one takes the stage. Colour + a small fade only; the
+// track's height is what actually paces it.
+(function () {
+  var tracks = [].slice.call(document.querySelectorAll(".m-track"));
+  if (!tracks.length) return;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var stages = tracks.map(function (track) {
+    var lines = [].slice.call(track.querySelectorAll(".m-line")).map(function (line) {
+      var b = line.querySelector("b"), words = [];
+      if (b) {
+        var kids = [].slice.call(b.childNodes);
+        b.textContent = "";
+        kids.forEach(function (node) {
+          if (node.nodeType === 3) {
+            node.nodeValue.split(/(\s+)/).forEach(function (chunk) {
+              if (!chunk) return;
+              if (/^\s+$/.test(chunk)) { b.appendChild(document.createTextNode(chunk)); return; }
+              var w = document.createElement("span");
+              w.className = "w"; w.textContent = chunk;
+              b.appendChild(w); words.push(w);
+            });
+          } else { b.appendChild(node); }
+        });
+      }
+      return { line: line, words: words };
+    });
+    track.style.setProperty("--n", lines.length);
+    return { track: track, lines: lines };
+  });
+  if (reduce) { tracks.forEach(function (t) { t.classList.add("m-static"); }); return; }
+  var ticking = false;
+  function paint() {
+    ticking = false;
+    var vh = window.innerHeight || 1;
+    stages.forEach(function (st) {
+      var r = st.track.getBoundingClientRect();
+      var span = r.height - vh;
+      var p = span > 0 ? Math.max(0, Math.min(1, -r.top / span)) : 0;
+      var n = st.lines.length;
+      var seg = p * n;
+      var idx = Math.max(0, Math.min(n - 1, Math.floor(seg)));
+      // words finish before the segment does, so the completed line has a
+      // beat to be read whole before the next one arrives
+      var t = Math.max(0, Math.min(1, (seg - idx) / 0.62));
+      st.lines.forEach(function (it, i) {
+        it.line.classList.toggle("live", i === idx);
+        var lit = i < idx ? it.words.length
+                : i > idx ? 0
+                : Math.round(t * it.words.length);
+        for (var k = 0; k < it.words.length; k++) {
+          it.words[k].classList.toggle("on", k < lit);
+        }
+      });
+    });
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(paint); }
+  }, { passive: true });
+  window.addEventListener("resize", paint);
+  paint();
+})();
+</script>
+<script type="module">
+// ── Web billing (Stripe Checkout via Supabase Edge Functions) ──
+// Stays fully hidden until configured. To go live: fill supabaseUrl/anonKey,
+// set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
+// (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
+const BILLING = {
+  // Flip to true once Stripe Products/Prices exist and
+  // subscription_plans.stripe_price_id is filled (see web/README.md).
+  enabled: false,
+  supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
+  supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
+}
+// Locked launch prices — keep in sync with docs/launch-billing.md.
+//
+// KRW here, because at launch this button goes to the App Store and Apple
+// charges Korean buyers in won; the EUR figures are on the English page. When
+// BILLING.enabled flips, Stripe charges one currency everywhere — revisit
+// this table then rather than showing a won price that Stripe will not honour.
+//
+// Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
+// Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
+// `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
+// figures do not change with the cycle — only the price does.
+const PLANS = {
+  light: {
+    talk: "150분/월", scenes: "60개/월",
+    monthly: { id: "light_monthly", price: "₩15,000",  per: "/ 월" },
+    annual:  { id: "light_annual",  price: "₩110,000", per: "/ 년" },
+  },
+  plus: {
+    talk: null, scenes: "120개/월",
+    monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
+    annual:  { id: "plus_annual",   price: "₩209,000", per: "/ 년" },
+  },
+}
+const TIERS = ["light", "plus"]
+
+// Prices render ALWAYS — they are the section, and they need no backend.
+;(function renderPricing() {
+  let cycle = "monthly"
+  function paint() {
+    for (const tier of TIERS) {
+      const t = PLANS[tier], p = t[cycle]
+      document.querySelector(`[data-price="${tier}"]`).innerHTML =
+        p.price + ' <span>' + p.per + "</span>"
+      // 플러스는 통화 행이 "제한 없음"으로 하드코딩돼 있어 `data-talk="plus"`
+      // 요소가 없어요. 가드 없이 쓰면 여기서 throw 나면서 이 모듈의 나머지가
+      // 통째로 죽어요 — 아래 상황연습 행, 월간/연간 토글, 네비 링크까지.
+      const talkEl = document.querySelector(`[data-talk="${tier}"]`)
+      if (talkEl) talkEl.textContent = t.talk
+      document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
+    }
+  }
+  paint()
+  document.querySelectorAll(".cycle-toggle .ct").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      cycle = btn.dataset.cycle
+      document.querySelectorAll(".cycle-toggle .ct").forEach((b) =>
+        b.classList.toggle("on", b === btn))
+      paint()
+      window.__cycle = cycle
+    })
+  })
+  window.__cycle = cycle
+})()
+
+const params = new URLSearchParams(location.search)
+if (params.get("checkout") === "success") {
+  const toast = document.createElement("div")
+  toast.className = "toast"
+  toast.textContent = "결제가 완료됐습니다. 앱을 열고 같은 Apple 계정으로 로그인하면 구독이 이미 적용되어 있습니다."
+  document.body.appendChild(toast)
+  setTimeout(() => toast.remove(), 9000)
+}
+
+// The nav link points at a section that is always there now.
+const navPricing = document.getElementById("nav-pricing")
+if (navPricing) navPricing.hidden = false
+
+if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
+  // Web checkout is live: swap the App Store CTA for the Stripe one. Until
+  // this runs, the cards sell the iOS app, which is the only thing on sale.
+  document.querySelectorAll("[data-store-cta]").forEach((a) => { a.hidden = true })
+  document.querySelectorAll(".p-buy[data-tier]").forEach((b) => { b.hidden = false })
+
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm")
+  const sb = createClient(BILLING.supabaseUrl, BILLING.supabaseAnonKey)
+  const errEl = document.getElementById("pricing-error")
+
+  function baseUrl() { return location.origin + location.pathname }
+
+  function showError(msg) {
+    errEl.textContent = msg
+    errEl.style.display = "block"
+  }
+
+  async function checkout(session, planId) {
+    const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/stripe-checkout", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer " + session.access_token,
+        apikey: BILLING.supabaseAnonKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ plan_id: planId, return_url: baseUrl() }),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok || !data.url) throw new Error(data.error || "checkout failed")
+    location.href = data.url
+  }
+
+  async function buy(planId, button) {
+    errEl.style.display = "none"
+    button.disabled = true
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        // Same Apple identity as the app → same Supabase user, no email matching.
+        await sb.auth.signInWithOAuth({
+          provider: "apple",
+          options: { redirectTo: baseUrl() + "?plan=" + planId },
+        })
+        return
+      }
+      await checkout(session, planId)
+    } catch (e) {
+      showError("결제를 시작하는 중 문제가 발생했습니다. 다시 시도해 주세요.")
+      console.error(e)
+    } finally {
+      button.disabled = false
+    }
+  }
+
+  // The cycle lives on the renderer above (window.__cycle), so the toggle and
+  // the checkout can never disagree about which SKU is on screen.
+  document.querySelectorAll(".p-buy[data-tier]").forEach((btn) => {
+    btn.addEventListener("click", () => buy(PLANS[btn.dataset.tier][window.__cycle].id, btn))
+  })
+
+  // Returning from the Apple sign-in redirect with ?plan= → continue to checkout.
+  const pendingPlan = params.get("plan")
+  if (pendingPlan) {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      history.replaceState(null, "", baseUrl())
+      checkout(session, pendingPlan).catch((e) => { showError("결제를 시작하는 중 문제가 발생했습니다. 다시 시도해 주세요."); console.error(e) })
+    }
+  }
+}
+</script>
+</body>
+</html>
