@@ -1052,8 +1052,8 @@ struct ConversationView: View {
         if phoneCallActive {
             switch phase {
             case .listening: return explain("Listening · pause to send · tap to stop")
-            case .thinking:  return "Thinking… · tap to stop"
-            case .speaking:  return "Speaking… · tap to stop"
+            case .thinking:  return explain("Thinking… · tap to stop")
+            case .speaking:  return explain("Speaking… · tap to stop")
             case .idle:      return explain("On call · tap to stop")
             }
         }

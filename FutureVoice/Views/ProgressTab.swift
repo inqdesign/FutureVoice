@@ -687,10 +687,14 @@ struct ProgressTab: View {
                  : "Next assessment after \(minsRem) more min of new talk.")
                 .font(.subheadline).foregroundStyle(.secondary)
         case .ready:
-            HStack(spacing: 10) {
-                ProgressView().controlSize(.small)
-                Text("Analyzing your week…")
-                    .font(.subheadline).foregroundStyle(.secondary)
+            if appState.weeklyReportFailed && !appState.weeklyReportGenerating {
+                assessmentFailedRow
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView().controlSize(.small)
+                    Text("Analyzing your week…")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
             }
         }
     }
@@ -1089,12 +1093,17 @@ struct ProgressTab: View {
                         ? "Enough new conversation"
                         : "\(max(1, Int((secondsRemaining / 60).rounded(.up)))) more min of new talk")
             case .ready:
-                // reload() already kicked off generation — this shows only in
-                // the brief gap before `weeklyReportGenerating` flips true.
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Ready — assessing your level now…")
-                        .font(.callout).foregroundStyle(.secondary)
+                if appState.weeklyReportFailed {
+                    assessmentFailedRow
+                } else {
+                    // reload() already kicked off generation — this shows only
+                    // in the brief gap before `weeklyReportGenerating` flips
+                    // true.
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Ready — assessing your level now…")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -1139,15 +1148,34 @@ struct ProgressTab: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             case .ready:
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Ready — re-assessing your level now…")
-                        .font(.callout).foregroundStyle(.secondary)
+                if appState.weeklyReportFailed {
+                    assessmentFailedRow
+                } else {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Ready — re-assessing your level now…")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
                 }
             case .lockedFirst:
                 // Can't happen once a level exists; nothing to show.
                 EmptyView()
             }
+        }
+    }
+
+    /// The assessment is due but the last attempt threw. Drawn INSTEAD of the
+    /// `.ready` spinner: the unlock state stays `.ready` after a failure, so
+    /// without this the panel claims a read is running when nothing is, and
+    /// flips back to the spinner on every automatic retry.
+    private var assessmentFailedRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(explain("Couldn't finish the assessment — it'll try again shortly."),
+                  systemImage: "exclamationmark.triangle")
+                .font(.callout).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Try now") { appState.retryWeeklyReport() }
+                .font(.callout)
         }
     }
 
@@ -1191,14 +1219,14 @@ struct ProgressTab: View {
                 } header: {
                     Text(latestAssessment?.levelRationale == nil
                          ? "The estimated level" : "Why this level")
-                } footer: {
-                    // Accountability: the exact measured evidence the judge
-                    // received, verbatim — a surprising verdict can be checked.
-                    if let ev = latestAssessment?.levelEvidence, !ev.isEmpty {
-                        Text("Evidence the assessment received:\n" + ev)
-                            .font(.caption2.monospaced())
-                    }
                 }
+                // `latestAssessment.levelEvidence` is deliberately NOT drawn
+                // here. It is the prompt block handed to the judge — English
+                // snake_case field names and band tables written FOR a model —
+                // so on a Korean phone it read as leftover debug output, and
+                // the "What's measured" section below already states every one
+                // of those numbers in the learner's own language. It stays on
+                // the report so a surprising verdict is still reproducible.
                 Section {
                     assessedRow(name: "Vocabulary",
                                 level: vocabLevel.map { $0.rawValue.uppercased() },

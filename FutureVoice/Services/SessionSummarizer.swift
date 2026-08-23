@@ -351,7 +351,7 @@ enum SessionSummarizer {
         }
         // Kick off async weekly-report generation if unlock conditions are
         // met. Fires-and-forgets — UI doesn't block on Gemini.
-        appState.maybeGenerateWeeklyReport()
+        appState.maybeGenerateWeeklyReport(retryNow: true)
         // Fresh cards just landed in the queue — (re)schedule the due
         // reminder. This is the one contextual moment where asking for
         // notification permission makes sense.

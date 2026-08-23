@@ -301,6 +301,26 @@ final class AppState: ObservableObject {
     /// to show a "Analyzing your week…" spinner instead of an empty state.
     @Published var weeklyReportGenerating: Bool = false
 
+    /// The last assessment attempt threw, and the cooldown below has not
+    /// expired. Published because every `.ready` surface would otherwise draw
+    /// a spinner over nothing running — the unlock state stays `.ready` after
+    /// a failure (no report was written), so "assessing your level now…" would
+    /// sit there forever.
+    @Published private(set) var weeklyReportFailed: Bool = false
+
+    /// Nothing may auto-retry the assessment before this instant.
+    ///
+    /// A failed attempt leaves `unlockState` at `.ready`, and the Progress tab
+    /// reloads on every `weeklyReportGenerating` edge — so a throwing Gemini
+    /// call spun an unbounded loop: reload → generate → fail → reload →
+    /// generate, one round trip apart, flipping the panel between "ready" and
+    /// "assessing" and billing a call each time. The cooldown is what bounds
+    /// it. Explicit new evidence (a talk that just ended, an excluded turn)
+    /// still retries immediately via `retryNow:` — that is a fresh reason to
+    /// try, not the same attempt spinning.
+    private var weeklyReportRetryAfter: Date?
+    private static let weeklyReportRetryCooldown: TimeInterval = 15 * 60
+
     /// What the user's clone is called — on ElevenLabs and in Me → Voice.
     /// Empty means "never named it": `voiceDisplayName` then derives one from
     /// the persona, so two users' clones are still tellable apart. Renaming
@@ -469,7 +489,12 @@ final class AppState: ObservableObject {
     /// Called from ConversationView after `endSession` finishes saving the
     /// session. Checks unlock state and, if ready, fires the engine in the
     /// background — UI never blocks on the Gemini call.
-    func maybeGenerateWeeklyReport() {
+    /// - Parameter retryNow: ignore the post-failure cooldown. Only for
+    ///   callers holding evidence that did not exist at the failed attempt —
+    ///   a talk that just ended, or an assessment voided by an excluded turn.
+    ///   Never pass it from a view refresh.
+    func maybeGenerateWeeklyReport(retryNow: Bool = false) {
+        if retryNow { weeklyReportRetryAfter = nil }
         // Archived talks are out of the evidence pool — same rule as the
         // Progress tab's score stats.
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil && $0.archivedAt == nil }
@@ -477,9 +502,16 @@ final class AppState: ObservableObject {
         guard case .ready = WeeklyReportEngine.unlockState(
             endedSessions: sessions,
             lastReport: last
-        ) else { return }
+        ) else {
+            // Not due any more — whatever failed before is moot.
+            weeklyReportRetryAfter = nil
+            weeklyReportFailed = false
+            return
+        }
         guard !weeklyReportGenerating else { return }
+        if let notBefore = weeklyReportRetryAfter, Date() < notBefore { return }
         weeklyReportGenerating = true
+        weeklyReportFailed = false
 
         Task {
             defer { Task { @MainActor in self.weeklyReportGenerating = false } }
@@ -509,11 +541,24 @@ final class AppState: ObservableObject {
                         }
                     }
                 }
+                await MainActor.run {
+                    self.weeklyReportRetryAfter = nil
+                    self.weeklyReportFailed = false
+                }
             } catch {
                 print("weekly report generation failed:", error)
+                await MainActor.run {
+                    self.weeklyReportRetryAfter =
+                        Date().addingTimeInterval(Self.weeklyReportRetryCooldown)
+                    self.weeklyReportFailed = true
+                }
             }
         }
     }
+
+    /// The learner asked for the failed assessment to run again, from the
+    /// Progress tab. Clears the cooldown so the attempt happens now.
+    func retryWeeklyReport() { maybeGenerateWeeklyReport(retryNow: true) }
 
     /// Archive / unarchive a talk. Archived talks keep their book (openable
     /// from the Practice shelf's Archived list) but stop counting as score
@@ -561,7 +606,7 @@ final class AppState: ObservableObject {
         // With the voided report gone, the unlock conditions are met by the
         // same window that produced it — this regenerates immediately, now
         // with the excluded turns filtered out.
-        maybeGenerateWeeklyReport()
+        maybeGenerateWeeklyReport(retryNow: true)
     }
 
     /// Watches Supabase auth state. When a session appears (either restored
