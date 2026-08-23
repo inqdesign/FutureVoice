@@ -146,18 +146,18 @@ struct WelcomeView: View {
     // MARK: - Key visuals — the real components, alive
 
     /// Each slide is a LIVE composition of the actual app UI (WelcomeHeroes):
-    /// the call transcript in real `DialogueLine`s, the home's own talk ring,
-    /// the book on the REAL `BookmarkedPage` with its ribbons being tapped,
-    /// the shadow line sweeping over `ShadowTimelinePlayer`'s scrubber, and
-    /// the Progress estimate panel. No screenshots.
+    /// the real `Futureself` surface taking a turn, the home's Discover
+    /// section, the book on the REAL `BookmarkedPage` with its ribbons being
+    /// tapped, the shadow line sweeping over `ShadowTimelinePlayer`'s
+    /// scrubber, and the Progress estimate panel. No screenshots.
     @ViewBuilder
     private func mock(_ i: Int) -> some View {
         switch i {
-        case 0:  CallHero()     // the fluent self answers, in your voice
-        case 1:  HomeHero()     // any topic, whenever you want
-        case 2:  BookHero()      // the talk, bound into your own textbook
-        case 3:  ShadowHero()    // said back in your own voice, until it sticks
-        default: LevelHero()     // measured, not guessed
+        case 0:  FutureselfHero()  // who is on the other end, and in whose voice
+        case 1:  HomeHero()        // and what there is to talk about
+        case 2:  BookHero()        // the talk, bound into your own textbook
+        case 3:  ShadowHero()      // said back in your voice, until it sticks
+        default: LevelHero()       // measured, not guessed
         }
     }
 

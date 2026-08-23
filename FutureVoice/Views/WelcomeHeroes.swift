@@ -691,155 +691,112 @@ struct VocabHero: View {
 // chrome literals around it follow the learner's UI language.
 // ═══════════════════════════════════════════════════════════════════════════
 
-// MARK: - 1. The call
+// MARK: - 1. The fluent self
 
-/// The live call, mirrored from `ConversationView`: the title bar (topic,
-/// level, elapsed), the transcript in real `DialogueLine`s at call scale, and
-/// the `sparkles` correction card that lands under the learner's line — with
-/// the voice, never before it, which is the rule the real screen keeps.
-/// The exchange rotates so it reads as any conversation, not one clip.
-struct CallHero: View {
-    private struct Exchange {
-        let topic: String
-        let level: String
-        let elapsed: String
-        /// Always three lines: fluent self, learner, fluent self.
-        let lines: [(speaker: DialogueSpeaker, text: String)]
-        /// The fix offered on the learner's line.
-        let fix: String
-    }
-
-    private static let exchanges: [Exchange] = [
-        Exchange(topic: "Job interview", level: "B1", elapsed: "7 min",
-                 lines: [(.other, "So — how did the interview go yesterday?"),
-                         (.user,  "It went really good. I was preparing a lot."),
-                         (.other, "Nice. What did they ask you first?")],
-                 fix: "It went really well. I'd prepared a lot."),
-
-        Exchange(topic: "Four-day work week", level: "B1", elapsed: "3 min",
-                 lines: [(.other, "Would you actually want a four-day week?"),
-                         (.user,  "Yes, but I worry about the work who stays."),
-                         (.other, "Fair — so the same load in fewer days?")],
-                 fix: "Yes, but I worry about the work that's left over."),
-
-        Exchange(topic: "Free talk", level: "B1", elapsed: "12 min",
-                 lines: [(.other, "So — anything on your mind?"),
-                         (.user,  "I think about to move to another city."),
-                         (.other, "Oh? What's pulling you somewhere else?")],
-                 fix: "I'm thinking about moving to another city."),
+/// Slide one has one job: say what this IS. So the protagonist is the
+/// `Futureself` surface itself — the same living shader the call button and
+/// the home ring wear — taking a turn, with one line of what it says beside
+/// it. It used to be the call transcript, and a stack of bubbles reads as a
+/// message log: the collection became the subject and the idea never landed.
+///
+/// The line is the app's own first-call introduction (`FreeTalkOpeners`),
+/// because nothing states the concept better than the thing saying it out
+/// loud in the learner's own voice.
+struct FutureselfHero: View {
+    /// The opening of `FreeTalkOpeners.introOpeners["en"]`, split where the
+    /// real call breathes. Material, so it stays in the target language.
+    private static let lines = [
+        "Hi. I'm the future you — the one who speaks English fluently.",
+        "I can't wait for all the talks ahead of us.",
+        "So — what are you up to these days?",
     ]
 
-    @State private var take = 0
-    @State private var shown = 0
-    @State private var showFix = false
-
-    private var e: Exchange { Self.exchanges[take] }
+    @State private var mode: Futureself.Mode = .idle
+    @State private var level: Float = 0
+    @State private var line = 0
+    @State private var showing = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            callBar
-            feed
+        // Spacers on BOTH sides of the orb: pinned to the bottom, the state
+        // hint sat inside the frame's bottom fade and read as half-erased.
+        VStack(spacing: 18) {
+            bubble
+            Spacer(minLength: 0)
+            orb
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .task { await run() }
     }
 
-    /// The call's title bar: close, the topic with its level and elapsed
-    /// time, and End — `ConversationView`'s header, verbatim.
-    private var callBar: some View {
-        HStack {
-            circleButton("xmark", tint: .primary)
-            Spacer(minLength: 8)
-            VStack(spacing: 2) {
-                Text(e.topic)
-                    .font(.headline)
-                    .lineLimit(1)
-                HStack(spacing: 4) {
-                    Text(e.level)
-                    Image(systemName: "chevron.right").font(.caption2)
-                    Text("·")
-                    Image(systemName: "clock").font(.caption2)
-                    Text(e.elapsed)
-                }
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
-            Spacer(minLength: 8)
-            Text("End")
-                .font(.body.weight(.medium))
-                .foregroundStyle(.red)
-                .frame(width: 44, height: 44)
-        }
+    /// The line STAYS once it has been said — a transcript doesn't erase
+    /// itself between turns, and a bubble that vanishes left a hole above the
+    /// orb for half of every loop.
+    private var bubble: some View {
+        DialogueLine(speaker: .other, name: "Future self") {
+            Text(Self.lines[line])
+        } accessory: { EmptyView() }
+            .id(line)
+            .transition(.opacity)
+            .opacity(showing ? 1 : 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func circleButton(_ symbol: String, tint: Color) -> some View {
-        Image(systemName: symbol)
-            .font(.body.weight(.semibold))
-            .foregroundStyle(tint)
-            .frame(width: 44, height: 44)
-            .background(Circle().fill(Color(.secondarySystemBackground)))
-    }
-
-    private var feed: some View {
-        VStack(spacing: 14) {
-            ForEach(Array(e.lines.enumerated()), id: \.offset) { i, line in
-                if i < shown {
-                    DialogueLine(speaker: line.speaker,
-                                 name: line.speaker.isUser ? "You" : "Future self",
-                                 scale: .call) {
-                        Text(line.text)
-                    } accessory: {
-                        if line.speaker.isUser && showFix { correction }
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                }
-            }
-        }
-    }
-
-    /// `SuggestionChip`, mirrored — the corrected line with the changed words
-    /// lit, under the `sparkles` mark.
-    private var correction: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "sparkles")
-                .foregroundStyle(.tint)
+    /// The home's talk ring, minus the goal arc — this slide is about who is
+    /// on the other end, not about today's minutes.
+    private var orb: some View {
+        VStack(spacing: 12) {
+            Futureself(mode: mode, level: level)
+                .frame(width: 196, height: 196)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.5), lineWidth: 0.5))
+            // No animation on the label — `ConversationView`'s bottom bar
+            // does the same. The mode change is animated, and letting the
+            // hint ride that animation crossfades two different words on top
+            // of each other.
+            Text(hint)
                 .font(.footnote)
-                .padding(.top, 2)
-            Text(highlightedCorrection(e.fix, original: e.lines[1].text, baseFont: .subheadline))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+                .foregroundStyle(.secondary)
+                .frame(height: 18)
+                .animation(nil, value: mode)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
-        .transition(.opacity)
     }
 
-    /// The turn's rhythm: it asks, you answer, the correction arrives with the
-    /// next reply, then the call moves on to a different topic.
+    private var hint: LocalizedStringKey {
+        switch mode {
+        case .idle:      return "Tap to talk"
+        case .listening: return "Listening…"
+        case .thinking:  return "Thinking…"
+        case .speaking:  return "Speaking…"
+        }
+    }
+
+    /// One turn of a call: it speaks, you answer, it thinks, it speaks again.
     private func run() async {
         while !Task.isCancelled {
-            for n in 1...2 {
-                withAnimation(.spring(duration: 0.45)) { shown = n }
-                await pause(n == 1 ? 1.7 : 1.1)
+            for i in Self.lines.indices {
+                set(.speaking, 0.7)
+                withAnimation(.easeOut(duration: 0.35)) { line = i; showing = true }
+                await pause(2.8)
+                if Task.isCancelled { return }
+                guard i < Self.lines.count - 1 else { break }
+                // You answer, it thinks — the line it just said stays up.
+                set(.listening, 0.85)
+                await pause(1.6)
+                set(.thinking, 0)
+                await pause(0.8)
                 if Task.isCancelled { return }
             }
-            withAnimation(.easeOut(duration: 0.35)) { showFix = true }
-            await pause(0.5)
-            withAnimation(.spring(duration: 0.45)) { shown = 3 }
-            await pause(2.9)
+            set(.idle, 0)
+            await pause(1.4)
             if Task.isCancelled { return }
-            withAnimation(.easeInOut(duration: 0.3)) { shown = 0; showFix = false }
-            await pause(0.4)
-            take = (take + 1) % Self.exchanges.count
+            withAnimation(.easeIn(duration: 0.3)) { showing = false }
+            await pause(0.5)
         }
+    }
+
+    private func set(_ m: Futureself.Mode, _ l: Float) {
+        withAnimation(.spring(duration: 0.45)) { mode = m; level = l }
     }
 
     private func pause(_ s: Double) async {
@@ -847,12 +804,15 @@ struct CallHero: View {
     }
 }
 
-// MARK: - 2. The Talk home
+// MARK: - 2. What there is to talk about
 
-/// `ConversationHome`, mirrored: the pixel greeting, the talk ring with the
-/// day's goal under "Let's talk", and the Discover section below it — whose
-/// chips flip between News and Scenarios on their own, because "any topic,
-/// whenever you want" is a claim only the switching makes.
+/// `ConversationHome`'s Discover section, mirrored — the News / Scenarios
+/// chips and the cards under them, flipping between the two on their own.
+///
+/// The greeting and the talk ring were here first and had to go: this slide
+/// answers "what would I even say?", and a ring saying "3 of 10 min today"
+/// answers a question nobody has yet. The ring is slide one's business, and
+/// it has it now.
 struct HomeHero: View {
     private struct Row {
         let icon: String
@@ -864,11 +824,13 @@ struct HomeHero: View {
         Row(icon: "cpu", title: "Did you hear about OpenAI's model hacking a company?", caption: "AI / Tech"),
         Row(icon: "chart.line.uptrend.xyaxis", title: "Germany weighs a four-day work week", caption: "Business"),
         Row(icon: "airplane", title: "The slow-travel comeback", caption: "Travel"),
+        Row(icon: "figure.run", title: "Why everyone suddenly runs a half marathon", caption: "Sports"),
     ]
     private static let scenarios = [
         Row(icon: "cup.and.saucer", title: "Ordering at a busy café", caption: "with Sofia"),
         Row(icon: "person.badge.clock", title: "Asking your boss for Friday off", caption: "with Mina"),
         Row(icon: "stethoscope", title: "Describing a cough that won't go", caption: "with Dr. Park"),
+        Row(icon: "house", title: "The kitchen tap has been dripping all week", caption: "with Alex"),
     ]
 
     @State private var onScenarios = false
@@ -876,63 +838,31 @@ struct HomeHero: View {
     private var rows: [Row] { onScenarios ? Self.scenarios : Self.news }
 
     var body: some View {
-        VStack(spacing: 12) {
-            Text("What's on your mind?")
-                .geistPixel(24)
-                .multilineTextAlignment(.center)
-            talkRing
-            discover
+        VStack(alignment: .leading, spacing: 12) {
+            header
+            VStack(spacing: 10) {
+                ForEach(rows, id: \.title) { listCard($0) }
+            }
+            .padding(.horizontal, 20)
             Spacer(minLength: 0)
         }
+        // Clear of the frame's top fade — sitting in it, the selected chip
+        // looked like it had a gradient fill.
+        .padding(.top, 14)
         .task { await run() }
     }
 
-    /// The home's protagonist: the goal arc, the living surface, and the two
-    /// lines inside it. Scaled from the real 280pt ring to fit the hero.
-    private var talkRing: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.primary.opacity(0.015), lineWidth: 11)
-            Circle()
-                .trim(from: 0, to: 0.3)
-                .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 11, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-            Futureself(mode: .idle, level: 0, virtualHeight: 64)
-                .frame(width: 146, height: 146)
-                .clipShape(Circle())
-                .overlay(Circle().fill(Color(.systemBackground).opacity(0.35)))
-                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
-            VStack(spacing: 5) {
-                Text("Let's talk").geistPixel(18)
-                // Same interpolation the home builds its goal line from, so
-                // the carousel picks up the translation the real screen has.
-                Text("\(3) of \(10) min today")
-                    .font(.caption.weight(.medium))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
+    private var header: some View {
+        HStack(spacing: 8) {
+            chip("News", on: !onScenarios)
+            chip("Scenarios", on: onScenarios)
+            Spacer()
+            Image(systemName: "slider.horizontal.3")
+            Image(systemName: "arrow.clockwise")
         }
-        .frame(width: 158, height: 158)
-    }
-
-    private var discover: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                chip("News", on: !onScenarios)
-                chip("Scenarios", on: onScenarios)
-                Spacer()
-                Image(systemName: "slider.horizontal.3")
-                Image(systemName: "arrow.clockwise")
-            }
-            .font(.subheadline)
-            .foregroundStyle(.tint)
-            .padding(.horizontal, 20)
-
-            VStack(spacing: 10) {
-                ForEach(rows.prefix(2), id: \.title) { listCard($0) }
-            }
-            .padding(.horizontal, 20)
-        }
+        .font(.subheadline)
+        .foregroundStyle(.tint)
+        .padding(.horizontal, 20)
     }
 
     private func chip(_ title: LocalizedStringKey, on: Bool) -> some View {
@@ -1051,7 +981,9 @@ struct BookHero: View {
     @ViewBuilder
     private var page: some View {
         switch chapter {
-        case .intro:       cover
+        case .intro:
+            cover
+            report
         case .words:       chapterPage("Words") { wordRows }
         case .expressions: chapterPage("Expressions") { expressionRows }
         case .lines:       chapterPage("Shadow") { shadowRows }
@@ -1115,6 +1047,79 @@ struct BookHero: View {
             }
         }
         .padding(20)
+    }
+
+    /// The cover is the cover AND the report — `ConversationDetailView`'s
+    /// intro page runs Score then Coach's note under the buttons, and without
+    /// them the page ended in white space directly under Continue/Replay,
+    /// which said the talk produced two buttons and nothing else.
+    @ViewBuilder
+    private var report: some View {
+        Divider().padding(.leading, 20)
+        groupHeaderWide("Score", icon: "chart.bar")
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Overall").font(.subheadline.weight(.semibold))
+                Spacer()
+                Text("\(Self.scorecard.overall)")
+                    .font(.title3.weight(.bold)).monospacedDigit()
+                    .foregroundStyle(Self.color(Self.scorecard.overall))
+            }
+            Text(explain("Graded against your B1 setting — how this talk went, not what your level is."))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            ScorecardView(scorecard: Self.scorecard)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 2)
+        .padding(.bottom, 8)
+
+        Divider().padding(.leading, 20).padding(.top, 8)
+        groupHeaderWide("Coach's note", icon: "text.bubble")
+        Text(explain("You carried the whole story yourself and only stalled on tenses when it moved back in time. Next talk, try setting the scene in the past first."))
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 20)
+            .padding(.top, 2)
+            .padding(.bottom, 8)
+    }
+
+    /// `ConversationDetailView.groupLabel` — 20pt gutter, unlike the study
+    /// chapters' 16.
+    private func groupHeaderWide(_ title: LocalizedStringKey, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 4)
+    }
+
+    /// Sample analysis. Notes are COACHING, so they go through `explain` and
+    /// come back in the learner's language; a computed property because a
+    /// stored static would resolve its strings once per process, before
+    /// setup's first question can change that language.
+    private static var scorecard: SessionScorecard {
+        SessionScorecard(
+            vocabulary: AxisScore(score: 78, note: explain("You reached for \"straightforward\" and \"follow-up\" unprompted.")),
+            grammar: AxisScore(score: 69, note: explain("Past tense slipped twice once the story moved back in time.")),
+            expressiveness: AxisScore(score: 74, note: explain("Nice hedging — \"honestly\", \"to be fair\".")),
+            fluency: AxisScore(score: 81, note: explain("Steady pace, and you recovered from pauses without stopping.")),
+            pronunciation: nil,
+            topLine: explain("A confident talk — you kept the story going and only the tenses tripped you."),
+            cefrLevel: "b1")
+    }
+
+    private static func color(_ score: Int) -> Color {
+        switch score {
+        case ..<50: return .red
+        case ..<70: return .orange
+        case ..<85: return .blue
+        default:    return .green
+        }
     }
 
     private var wordRows: some View {
