@@ -450,9 +450,14 @@ struct ConversationHome: View {
             // as the dot setting off rather than a new shape appearing. Drawn
             // as a degenerate trim so it sits ON the stroke path — no manual
             // offset to drift if the ring is ever resized.
+            //
+            // MUTED accent, not full: the arc that replaces it starts at 0.15
+            // opacity on this exact spot (the gradient's tail stop), so a
+            // solid dot visibly DIMS the moment the first minute lands — the
+            // marker has to be no heavier than what takes its place.
             Circle()
                 .trim(from: 0, to: 0.0001)
-                .stroke(Color.accentColor,
+                .stroke(Color.accentColor.opacity(0.4),
                         style: StrokeStyle(lineWidth: 14, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(goalProgress0to1 > 0.005 ? 0 : 1)
