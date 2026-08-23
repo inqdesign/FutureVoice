@@ -89,8 +89,8 @@ Notes:
 
 ## Before launch
 
-- [ ] Replace `APP_STORE_URL` in the inline `<script>` at the bottom of BOTH pages with the App Store link (`https://apps.apple.com/app/id<APP_ID>`). All CTAs (`[data-appstore]`) pick it up automatically — **including the two pricing-card buttons**, so an unfilled value leaves the price section pointing at `#`. It is the only value left to fill.
-- [ ] Re-check the pricing figures against `subscription_plans` (Light 150 min / 60 scenes; Plus has NO talk cap since `20260821120000` — its card says "No limit" and only its 600 scenes are a number) and the prices against `docs/launch-billing.md`.
+- [x] `APP_STORE_URL` is filled in BOTH `.next` pages (`https://apps.apple.com/app/id6792794655` — Apple ID of `com.roro.futurevoice`). All CTAs (`[data-appstore]`, 7 per page) pick it up automatically, **including the two pricing-card buttons**, and get `target=_blank` once it is not `#`.
+- [ ] Re-check the pricing figures against `subscription_plans` (Light 150 min / 60 scenes; Plus has NO talk cap since `20260821120000` — its card says "No limit" and only its scene count is a number, **120 since `20260823140000`**) and the prices against `docs/launch-billing.md`.
 - [ ] Add an `og:image` (1200x630) and reference it in the meta tags.
 - [x] Privacy policy page + footer link (`privacy.html` / `privacy-ko.html`).
 

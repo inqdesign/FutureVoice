@@ -73,11 +73,11 @@ and say something else (see the warning below).
 | Product id (permanent) | Display name EN | 표시 이름 KO | Pool per billing period |
 |---|---|---|---|
 | `…daily_monthly` / `…daily_annual` | Light | 라이트 | 150 min talk · 60 Watch scenes |
-| `…unlimited_monthly` / `…unlimited_annual` | Plus | 플러스 | **Talk: no limit** · 600 Watch scenes |
+| `…unlimited_monthly` / `…unlimited_annual` | Plus | 플러스 | **Talk: no limit** · 120 Watch scenes |
 
 Descriptions (match the paywall's own lines — one situation, then the size):
 - **Light** — Keep it up as a habit. 150 minutes of talk and 60 Watch scenes each billing period.
-- **Plus** — Talk as much as you want, whenever you want. No limit on talk time; 600 Watch scenes each billing period.
+- **Plus** — Talk as much as you want, whenever you want. No limit on talk time; 120 Watch scenes each billing period.
 
 > **Never write "Unlimited" in the display NAME.** The ids read `unlimited_*`
 > only because they were registered before the rename and an Apple product id
@@ -86,8 +86,14 @@ Descriptions (match the paywall's own lines — one situation, then the size):
 >
 > Plus's talk time genuinely has no cap since `20260821120000`, so the
 > description may say so — but it must ALSO name the Watch count, which is a
-> real limit. A description that says "unlimited" full stop, with a 600-scene
+> real limit. A description that says "unlimited" full stop, with a 120-scene
 > cap unmentioned, is the misleading-subscription rejection.
+>
+> **The count was 600 until 2026-08-23** (`20260823140000_plus_scene_count`) —
+> 20 a day, unspendable, and $114/mo of upstream cost against $17 net. If any
+> of this was already entered in App Store Connect, edit it there too: the
+> app's paywall reads `monthly_scenes` live and already shows 120, so a stale
+> store description promises more than the app delivers.
 > `fastlane/metadata/review_information/notes.txt` explains the mismatch to the
 > reviewer — keep that paragraph.
 

@@ -55,7 +55,7 @@ Everything else is free, defended by invisible daily caps.**
 
 | **5. Watch leaves the talk meter** | Talk seconds meter against `daily_seconds` ALONE. Watch scenes meter by **count** against a new `subscription_plans.daily_scenes` (**Daily 2/day**, **Unlimited 20/day** fair-use), claimed once per scene via `begin_scene_play(user, scene_key)` — one key across every line of a scene, so a ten-line scene costs one count and a scene under way is never cut off. Cap-out returns 402 `scene_cap_reached` (never a paywall). Cached scenes never reach the server, so replays cost nothing, as promised. Backward compatible: a client that sends no `scene_key` stays on the `scene_seconds` pool and keeps today's economics exactly — only a registered scene moves to `scene_counted`, which the daily-seconds cap ignores. Migration `20260814100000_watch_scenes_by_count`. | **Shipped 2026-08-14 (server) / app in this build** |
 
-| **6. Monthly pools, and Daily/Unlimited → Light/Plus** | Allowances become **pools per billing period**, like a mobile data plan: **Light 150 min + 60 scenes**, **Plus 1800 min + 600 scenes**. No daily ceiling of any kind — spend the month in one call if you like. `daily_seconds` / `daily_scenes` survive as the DESCRIPTIVE "5 minutes a day" figure only; `monthly_seconds` / `monthly_scenes` are what `consume_metered_seconds` and `begin_scene_play` enforce, both counted from `billing_period_start()`. The trial is pro-rated 7/30 (≈35 min, 14 scenes) so a week's sample can't spend a month. Tier names and internal plan ids move to `light_*` / `plus_*`; the **Apple product ids do NOT** (`20260820220000`) — four subscriptions were already registered in ASC under the old names, and an Apple product id is permanent per app. Migration `20260820180000_monthly_pools_light_and_plus`. | **Shipped 2026-08-20** |
+| **6. Monthly pools, and Daily/Unlimited → Light/Plus** | Allowances become **pools per billing period**, like a mobile data plan: **Light 150 min + 60 scenes**, **Plus 1800 min + 600 scenes** (Plus's talk ceiling was removed on 2026-08-21 and its scene pool cut to **120** on 2026-08-23 — see below). No daily ceiling of any kind — spend the month in one call if you like. `daily_seconds` / `daily_scenes` survive as the DESCRIPTIVE "5 minutes a day" figure only; `monthly_seconds` / `monthly_scenes` are what `consume_metered_seconds` and `begin_scene_play` enforce, both counted from `billing_period_start()`. The trial is pro-rated 7/30 (≈35 min, 14 scenes) so a week's sample can't spend a month. Tier names and internal plan ids move to `light_*` / `plus_*`; the **Apple product ids do NOT** (`20260820220000`) — four subscriptions were already registered in ASC under the old names, and an Apple product id is permanent per app. Migration `20260820180000_monthly_pools_light_and_plus`. | **Shipped 2026-08-20** |
 
 Four designs were shipped and replaced in one day getting here; the discarded
 ones are worth knowing so they don't come back.
@@ -92,7 +92,7 @@ whenever.
 Why the names: "Daily" named a unit that no longer exists, and "Unlimited"
 named something that was never true — that tier has always had a fair-use
 ceiling, and under the pricing principle we don't sell a promise the meter
-doesn't keep (its 1800 min / 600 scenes are now printed on the card). The SIZE
+doesn't keep (its scene count is printed on the card). The SIZE
 isn't in the name because the numbers are still being tuned and an Apple
 product id is permanent once it has sold. Not Light/**Heavy** because
 `PaywallView` has always held that the label must not grade the BUYER.
@@ -138,6 +138,86 @@ left open. `TalkMeter.isBillable` + `ConversationView.someoneIsTalkingHere()`
 (close-mic voiced audio, three witnesses, café-tested 2026-08-18) are what make
 the effort argument true. Weaken them and this becomes an open tab, and the
 margin arithmetic below stops holding.
+
+## Plus: Watch scenes 600 → 120 (2026-08-23, `20260823140000_plus_scene_count`)
+
+**600 was 20 scenes a day.** It came from the 2026-08-20 monthly-pool
+migration as "the same 30× of the old fair-use day" — arithmetic carried
+forward from a daily cap, never a number anyone asked the cost of.
+
+### Measured unit cost
+
+From `usage_cost_component` over 2026-08-14..23 (15 registered scene plays,
+140 talk minutes), at the seeded ElevenLabs Creator rate of $0.00022/credit:
+
+| Unit | Measured | Upstream cost |
+|------|----------|---------------|
+| One Watch scene | 1,157 chars · 82 s audio · 868 credits | **$0.190** |
+| One talk minute (turn TTS) | 365 chars, all turbo | **$0.040** |
+| One talk minute (all non-scene TTS: daily call, drills, shadow, library) | — | $0.058 |
+| Gemini | ~2.3 turns/min at $0.0012 + $0.0001 transcribe | ~$0.003/min |
+
+**So one scene costs 4.7 talk minutes.** Not 6.4, which is what
+`cost_per_scene` reports and what the earlier note recorded: the view's
+back-fill dates every `purpose = 'scene'` character to the fidelity model, but
+exactly HALF of a scene's characters are the COUNTERPART, whose preset voice
+has always run on turbo (`WatchView`: `isOwnVoice ? fidelityModelId :
+"eleven_turbo_v2_5"`). Measured split: 8,610 chars on the clone, 8,739 on
+presets. The back-fill only touches rows written before `model_id` began being
+recorded (2026-08-23) — but that is every row the 6.4 figure came from. **Fix
+the view before quoting scene cost again.**
+
+### Why 600 could not stand
+
+Plus net revenue is **$16.99/mo** ($19.99 × 85% US) and **$10.20/mo** on the
+annual ($143.99 × 85% ÷ 12). 600 scenes is **$114.24** of upstream cost —
+6.7× the monthly net, 11.2× the annual, before a single minute of the talk
+that `20260821120000` uncapped.
+
+The scene pool was quietly the larger of the two things Plus sells: 600 × 4.7
+= **2,820 talk-minutes of cost**, against the 1,800-minute talk pool the
+previous migration deleted for being "an hour every day, which almost no
+account approaches". The same sentence was true of 20 scenes a day, and there
+it was still being called a cost bound. A cap nobody can reach earns from
+under-use, which the pricing principle at the top of this file forbids.
+
+### Why 120
+
+Light's 60 doubled, and Plus is Light's price doubled — one rule, printable on
+the card. Four a day is ~5.5 min of scene audio plus the study around it: a
+number an intense learner can genuinely spend in full. Plus's differentiator is
+already uncapped talking, so the scene count does not have to carry the tier
+ladder and is sized to what it costs.
+
+### What 120 does NOT fix
+
+120 × $0.190 = **$22.80 against $16.99 net**. Scenes alone are still 1.3× the
+monthly net and 2.2× the annual. **Cutting the count fixed the order of
+magnitude, not the sign.** The rest has to come off the unit cost or out of the
+price:
+
+| Lever | Saving | Where |
+|-------|--------|-------|
+| ElevenLabs Creator → Scale ($330/2M cr) | −25% | ops only, no code |
+| Scene length 82 s → 55 s | −33% | `ScenarioCurriculumEngine` prompt |
+| The clone half of a scene on turbo | −33% | quality call — but note `fidelityModelId`'s own rule is "only where `PhraseAudioStore` caches the result", and `SceneWatchView(freshTake:)` writes new text every run, so nothing caches and the 2× repeats forever. Currently in violation of that rule. |
+
+All three together put a scene at **$0.066**, where 120 costs $7.90 and leaves
+$9.09 of the monthly net for uncapped talk (~227 min). Not bundled into the
+migration: three separate decisions with three separate risks, and the count
+needed no code change at all.
+
+**Light is not fixed either, and was not touched.** Its 60 scenes cost $11.42
+against $8.49 net, and its 150 talk minutes cost $8.66 — either half alone is
+most of the plan's revenue. Fixing Plus only moves the loss-making account down
+a tier. Re-derive Light against the same table before launch.
+
+### Blast radius
+
+None beyond the number. `PaywallView` reads `monthly_scenes` off the catalog
+([PaywallView.swift](../FutureVoice/Views/PaywallView.swift) `pools(_:)`), so the
+card follows with no app release; `begin_scene_play` enforces it unchanged.
+`subscription_transactions` is empty — no purchased allowance shrinks.
 
 **Margin exposure:** unbounded per subscriber in principle. Bounded in practice
 by how much a person will talk, and by the server's chars-per-minute floor on
@@ -292,6 +372,14 @@ Still worth watching in Supabase / Telegram:
 ---
 
 ## 4. Unit economics (floor, not a panic button)
+
+> **STALE — do not read a verdict off this section.** The table below still
+> names `pro` / `premium` (tiers that no longer exist), prices in €, assumes
+> ~71% Apple net (it is 85% US / 77.3% KR), predates the minutes model, the 2×
+> fidelity model on scenes, and every measured figure. The live unit economics
+> are in "Plus: Watch scenes 600 → 120" above; the EL capacity table here is
+> still roughly right and is the reason it survives.
+
 
 | EL plan | $/mo | ~internal cr/mo capacity | Notes |
 |---------|------|--------------------------|--------|

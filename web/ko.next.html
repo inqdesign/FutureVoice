@@ -1119,7 +1119,7 @@ footer a:hover { color: var(--ink); }
 document.documentElement.classList.add("js");
 
 // ── App Store link — the ONE value to fill at launch ──
-var APP_STORE_URL = "#"; // e.g. "https://apps.apple.com/app/id0000000000"
+var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
 document.querySelectorAll("[data-appstore]").forEach(function (a) {
   a.href = APP_STORE_URL;
   if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
@@ -1601,6 +1601,13 @@ const BILLING = {
 // Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
 // `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
 // figures do not change with the cycle — only the price does.
+//
+// Plus's scene pool went 600 → 120 on 2026-08-23
+// (`20260823140000_plus_scene_count`): 600 was 20 a day, a number nobody could
+// spend and $114/mo of upstream cost against $17 of net revenue. These two
+// figures are the ONE thing on this page that must match the database — the
+// app's paywall reads `monthly_scenes` live, so a stale number here is a
+// promise the app then breaks.
 const PLANS = {
   light: {
     talk: "150분/월", scenes: "60개/월",
@@ -1608,7 +1615,10 @@ const PLANS = {
     annual:  { id: "light_annual",  price: "₩110,000", per: "/ 년" },
   },
   plus: {
-    talk: "1,800분/월", scenes: "600개/월",
+    // 플러스의 `talk`은 렌더링되지 않아요 — 통화 행은 "제한 없음"으로 고정
+    // (`20260821120000_plus_talk_unlimited`). `monthly_seconds`의 서술용
+    // 값으로만 남겨두고, 화면에는 절대 찍지 마세요.
+    talk: null, scenes: "120개/월",
     monthly: { id: "plus_monthly",  price: "₩29,000",  per: "/ 월" },
     annual:  { id: "plus_annual",   price: "₩209,000", per: "/ 년" },
   },
@@ -1623,7 +1633,12 @@ const TIERS = ["light", "plus"]
       const t = PLANS[tier], p = t[cycle]
       document.querySelector(`[data-price="${tier}"]`).innerHTML =
         p.price + ' <span>' + p.per + "</span>"
-      document.querySelector(`[data-talk="${tier}"]`).textContent = t.talk
+      // Plus has no talk figure to print (its row is hardcoded "no limit"),
+      // so the hook is absent by design — an unguarded write threw here and
+      // killed the rest of this module: the cycle toggle, the nav link, and
+      // the scenes row below it.
+      const talkEl = document.querySelector(`[data-talk="${tier}"]`)
+      if (talkEl) talkEl.textContent = t.talk
       document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
     }
   }

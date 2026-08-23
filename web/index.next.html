@@ -1131,7 +1131,7 @@ h2 { font-size: clamp(24px, 3vw, 44px); }
 document.documentElement.classList.add("js");
 
 // ── App Store link — the ONE value to fill at launch ──
-var APP_STORE_URL = "#"; // e.g. "https://apps.apple.com/app/id0000000000"
+var APP_STORE_URL = "https://apps.apple.com/app/id6792794655";
 document.querySelectorAll("[data-appstore]").forEach(function (a) {
   a.href = APP_STORE_URL;
   if (APP_STORE_URL !== "#") { a.target = "_blank"; a.rel = "noopener"; }
@@ -1613,6 +1613,13 @@ const BILLING = {
 // Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
 // `monthly_scenes`; annual buys the same monthly pool, twelve times, so the
 // figures do not change with the cycle — only the price does.
+//
+// Plus's scene pool went 600 → 120 on 2026-08-23
+// (`20260823140000_plus_scene_count`): 600 was 20 a day, a number nobody could
+// spend and $114/mo of upstream cost against $17 of net revenue. These two
+// figures are the ONE thing on this page that must match the database — the
+// app's paywall reads `monthly_scenes` live, so a stale number here is a
+// promise the app then breaks.
 const PLANS = {
   light: {
     talk: "150 min / mo", scenes: "60 / mo",
@@ -1620,7 +1627,10 @@ const PLANS = {
     annual:  { id: "light_annual",  price: "$79.99", per: "/ yr" },
   },
   plus: {
-    talk: "1,800 min / mo", scenes: "600 / mo",
+    // `talk` is NOT rendered for Plus — its row is hardcoded "Unlimited"
+    // (server-side since `20260821120000_plus_talk_unlimited`). Kept only as
+    // the descriptive `monthly_seconds` figure; do not print it.
+    talk: null, scenes: "120 / mo",
     monthly: { id: "plus_monthly",  price: "$19.99",  per: "/ mo" },
     annual:  { id: "plus_annual",   price: "$143.99", per: "/ yr" },
   },
@@ -1635,7 +1645,12 @@ const TIERS = ["light", "plus"]
       const t = PLANS[tier], p = t[cycle]
       document.querySelector(`[data-price="${tier}"]`).innerHTML =
         p.price + ' <span>' + p.per + "</span>"
-      document.querySelector(`[data-talk="${tier}"]`).textContent = t.talk
+      // Plus has no talk figure to print (its row is hardcoded "no limit"),
+      // so the hook is absent by design — an unguarded write threw here and
+      // killed the rest of this module: the cycle toggle, the nav link, and
+      // the scenes row below it.
+      const talkEl = document.querySelector(`[data-talk="${tier}"]`)
+      if (talkEl) talkEl.textContent = t.talk
       document.querySelector(`[data-scenes="${tier}"]`).textContent = t.scenes
     }
   }

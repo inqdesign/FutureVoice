@@ -1,0 +1,75 @@
+-- Plus: 600 Watch scenes a period → 120.
+--
+-- 600 was 20 scenes a DAY. It was set on 2026-08-20 as "the same 30x of the
+-- old fair-use day" — arithmetic carried forward from a daily cap, never a
+-- number anybody asked what it cost.
+--
+-- ## What it costs, measured
+--
+-- From `usage_cost_component` over 2026-08-14..23 (15 registered scene plays,
+-- 140 talk minutes), at the seeded ElevenLabs Creator rate of $0.00022/credit:
+--
+--   a scene   = 1,157 chars / 82 s of audio / 868 credits = $0.190
+--   a talk min=   365 chars, all turbo                    = $0.040
+--
+-- so ONE SCENE COSTS 4.7 TALK MINUTES. (Not 6.4, which is what
+-- `usage_cost_component` reports: its back-fill dates all `purpose = 'scene'`
+-- characters to the fidelity model, and exactly half of a scene's characters
+-- are the COUNTERPART, whose preset voice has always run on turbo — see
+-- WatchView's `isOwnVoice ? fidelityModelId : "eleven_turbo_v2_5"`. The
+-- back-fill only touches rows written before `model_id` started being
+-- recorded on 2026-08-23, but that is every row the figure was derived from.)
+--
+-- Against Plus's net revenue — $19.99 x 85% US = $16.99/mo, and $143.99/yr
+-- x 85% ÷ 12 = $10.20/mo — 600 scenes is $114.24 of upstream cost, 6.7x the
+-- monthly net and 11.2x the annual, BEFORE a single minute of the talk that
+-- `20260821120000` uncapped.
+--
+-- ## Why this number
+--
+-- The scene pool was the larger of the two things Plus sells and nobody had
+-- noticed: 600 x 4.7 = 2,820 talk-minutes of cost, against the 1,800-minute
+-- talk pool that `20260821120000` deleted for being "an hour every day, which
+-- almost no account approaches". The same sentence was true of 20 scenes a
+-- day, and there it was still being called a cost bound.
+--
+-- 120 is Light's 60 doubled, and Plus is Light's price doubled — one rule,
+-- printable on the card. Four scenes a day is ~5.5 minutes of scene audio
+-- plus the study around it: a number an intense learner can actually spend in
+-- full, which is what the pricing principle at the top of
+-- docs/launch-billing.md requires of a cap. 20/day was not that, and a cap
+-- nobody can reach is a cap that earns from under-use.
+--
+-- Plus's differentiator is already uncapped talking. The scene count does not
+-- have to carry the tier ladder, so it is sized to what it costs.
+--
+-- ## What this does NOT fix
+--
+-- 120 x $0.190 = $22.80 against $16.99 net: scenes alone are still 1.3x the
+-- monthly net, and 2.2x the annual. Cutting the count fixes the order of
+-- magnitude, not the sign. The remaining gap has to come off the UNIT cost or
+-- out of the price:
+--
+--   * ElevenLabs Creator → Scale                       -25%  (ops, no code)
+--   * scene length 82 s → 55 s                         -33%  (prompt)
+--   * the clone half of a scene on turbo               -33%  (quality call;
+--       note `fidelityModelId`'s own rule is "only where PhraseAudioStore
+--       caches the result", and `SceneWatchView(freshTake:)` writes new text
+--       every run, so nothing caches and the 2x repeats forever)
+--
+-- Deliberately not bundled here: they are separate decisions with separate
+-- risks, and this one needed no code change at all.
+--
+-- ## Blast radius
+--
+-- None beyond the number. `PaywallView` reads `monthly_scenes` off the
+-- catalog, so the card follows with no app release; `begin_scene_play`
+-- enforces it unchanged. Zero paid transactions exist (`subscription_transactions`
+-- is empty), so nobody's purchased allowance shrinks.
+
+update public.subscription_plans
+   set monthly_scenes = 120,
+       -- Descriptive only, and the plan cards derive the "N a day" line from
+       -- it — the 20260820180000 comment asks for the two to be kept in step.
+       daily_scenes   = 4
+ where tier = 'plus';

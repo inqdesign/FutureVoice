@@ -57,7 +57,7 @@ struct AccountStatus {
     /// work). Watch is unaffected; `monthlyScenesCap` is always set on a plan.
     var monthlyCapSeconds: Int?
     /// Watch scenes started this period, and the pool's size
-    /// (`monthly_scenes`: 60 on Light, 600 on Plus). Nil cap = no
+    /// (`monthly_scenes`: 60 on Light, 120 on Plus). Nil cap = no
     /// entitlement, so scenes are still priced in seconds out of the balance
     /// and no count applies.
     var scenesUsedPeriod: Int = 0

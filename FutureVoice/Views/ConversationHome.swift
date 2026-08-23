@@ -749,7 +749,7 @@ struct ConversationHome: View {
                 ? AccountStatus(email: nil, secondsBalance: 0,
                                 planId: "plus_monthly", subscriptionStatus: "active",
                                 secondsUsedPeriod: 3300, monthlyCapSeconds: 108_000,
-                                scenesUsedPeriod: 12, monthlyScenesCap: 600,
+                                scenesUsedPeriod: 12, monthlyScenesCap: 120,
                                 fullTankSeconds: 108_000)
                 : AccountStatus(email: nil, secondsBalance: 2000,
                                 planId: nil, subscriptionStatus: "inactive")
