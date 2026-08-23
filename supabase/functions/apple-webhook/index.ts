@@ -133,6 +133,34 @@ Deno.serve(async (req) => {
       throw new Error(`user_subscriptions upsert: ${subErr.message}`)
     }
 
+    // Revenue, as Apple actually charged it. `price` (milliunits of
+    // `currency`) is the only honest figure available: it already accounts for
+    // the storefront's price tier, the local currency and any intro offer,
+    // none of which a hardcoded plan price knows about. It was being decoded
+    // and thrown away until 2026-08-23, which left margin uncomputable.
+    //
+    // Upserted on transaction_id so Apple's retries are idempotent, and its
+    // failure is logged rather than thrown: this is measurement, and it must
+    // not be able to fail an entitlement that was already written.
+    const { error: txErr } = await db.from("subscription_transactions").upsert({
+      transaction_id:          tx.transactionId ?? `${tx.originalTransactionId}:${tx.purchaseDate}`,
+      original_transaction_id: tx.originalTransactionId ?? null,
+      user_id:                 userId,
+      plan_id:                 plan.id,
+      apple_product_id:        tx.productId ?? null,
+      price_milliunits:        typeof tx.price === "number" ? tx.price : null,
+      currency:                tx.currency ?? null,
+      purchase_date:           tx.purchaseDate ? iso(tx.purchaseDate) : null,
+      expires_date:            tx.expiresDate ? iso(tx.expiresDate) : null,
+      is_trial:                isTrial,
+      is_upgrade:              payload.subtype === "UPGRADE",
+      revocation_date:         tx.revocationDate ? iso(tx.revocationDate) : null,
+      notification_type:       payload.notificationType ?? null,
+      subtype:                 payload.subtype ?? null,
+      environment,
+    }, { onConflict: "transaction_id" })
+    if (txErr) console.error("subscription_transactions upsert", txErr.message)
+
     // Minutes-native model: the subscription row upserted above IS the
     // entitlement — an entitled status buys the plan's per-day allowance
     // (subscription_plans.daily_seconds), checked live by

@@ -1253,8 +1253,10 @@ struct ConversationView: View {
 
     /// Fire the reply request for a turn the VAD hasn't confirmed yet, keyed
     /// to nothing on disk — `requestReply` adopts it only if the committed
-    /// turn still says the same words. Gemini calls are free (rate-capped),
-    /// so a discarded speculation costs the learner nothing.
+    /// turn still says the same words. A discarded speculation costs the
+    /// LEARNER nothing (Gemini calls are free, rate-capped) but it is not
+    /// free to us: the tokens were spent. The `turn-spec:` key prefix is what
+    /// the edge function counts them by, so keep it.
     private func fireSpeculativeReply(snapshot: String) {
         guard activeVoiceId != nil,
               !snapshot.trimmingCharacters(in: .whitespaces).isEmpty else { return }

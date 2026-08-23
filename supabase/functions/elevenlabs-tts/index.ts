@@ -199,7 +199,12 @@ Deno.serve(async (req) => {
   const chargeArgs = {
     supabase, userId: user.id, chars: body.text.length,
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { chars: body.text.length, voice_id: body.voice_id, purpose: body.purpose ?? null },
+    // `model_id` is the one field that turns characters into money: the
+    // fidelity model bills ~2x per character upstream, so a char count
+    // without it cannot be costed. It records the model we ACTUALLY used —
+    // after the fidelity downgrade above — never what the client asked for.
+    metadata: { chars: body.text.length, voice_id: body.voice_id,
+                purpose: body.purpose ?? null, model_id: requestedModel },
   }
   // Watch: claim one of today's scenes BEFORE synthesizing anything. Doing
   // it first means the cap is hit on the line that would have started a

@@ -50,7 +50,12 @@ Deno.serve(async (req) => {
     p_seconds: seconds,
     p_source_fn: SOURCE_FN,
     p_idempotency_key: idemKey,
-    p_metadata: { session_id: body.session_id ?? null },
+    // `seconds` is repeated into the metadata deliberately. On the ENTITLED
+    // path consume_metered_seconds writes it itself, but a free/legacy-balance
+    // account falls through to charge_credits, which records the spend only as
+    // `delta` — so cost-per-minute had no denominator for exactly the accounts
+    // that have one. Cheap, and it makes every talk_time row self-describing.
+    p_metadata: { session_id: body.session_id ?? null, seconds },
     // The Core is one club per target language and this tick is the only
     // place the server hears which language was spoken. Absent on older
     // builds — those seconds bill normally and count toward no club, which

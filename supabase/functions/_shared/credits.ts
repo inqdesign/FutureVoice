@@ -541,3 +541,78 @@ export function billingClient(): SupabaseClient {
   if (!cachedBillingClient) cachedBillingClient = serviceRoleClient()
   return cachedBillingClient
 }
+
+/**
+ * Fill in the cost drivers that are only known AFTER the upstream call — token
+ * counts, above all. The ledger row was written before the provider was
+ * invoked (that ordering is what makes a charge survive a crash mid-call), so
+ * these are MERGED into the row it already has, keyed by its idempotency key.
+ *
+ * Never awaited on the request path: nobody is waiting for this, and a slow
+ * write must not become latency on a turn the learner is listening to. Use
+ * `background()` below.
+ */
+export async function recordProviderUsage(opts: {
+  idempotencyKey: string
+  usage: Record<string, unknown>
+}): Promise<void> {
+  const { idempotencyKey, usage } = opts
+  if (!idempotencyKey || Object.keys(usage).length === 0) return
+  const { error } = await billingClient().rpc("record_provider_usage", {
+    p_idempotency_key: idempotencyKey,
+    p_usage: usage,
+  })
+  // Measurement must never break the thing it measures. A lost row is a hole
+  // in a dashboard; a thrown error here would be a failed conversation turn.
+  if (error) console.error("record_provider_usage failed", error.message)
+}
+
+/**
+ * Run work after the response has been handed back, keeping the isolate alive
+ * for it. Without `waitUntil` the runtime is free to tear us down the moment
+ * the response is returned, which silently drops exactly the post-call
+ * accounting this file exists to do.
+ */
+export function background(work: Promise<unknown>): void {
+  const rt = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime
+  if (rt?.waitUntil) rt.waitUntil(work.catch((e) => console.error("background task failed", e)))
+  else void work.catch((e) => console.error("background task failed", e))
+}
+
+/**
+ * Pull the cost drivers out of a Gemini `usageMetadata` block, flattened to
+ * the keys `usage_cost_component` reads. Audio is separated from text input
+ * because it is priced differently and, on the per-turn transcribe call, is
+ * most of the input: speech runs ~32 tokens per second.
+ */
+export function geminiUsageFields(
+  usageMetadata: Record<string, unknown> | undefined | null,
+): Record<string, number> | null {
+  if (!usageMetadata) return null
+  const num = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : 0)
+
+  const details = Array.isArray(usageMetadata.promptTokensDetails)
+    ? usageMetadata.promptTokensDetails as Array<{ modality?: string; tokenCount?: number }>
+    : []
+  const audio = details
+    .filter((d) => d?.modality === "AUDIO")
+    .reduce((sum, d) => sum + num(d.tokenCount), 0)
+
+  const cached = num(usageMetadata.cachedContentTokenCount)
+  const prompt = num(usageMetadata.promptTokenCount)
+  // promptTokenCount is the TOTAL input — audio and cached tokens included.
+  // Billing them again under their own (different) rate would double-count, so
+  // the plain-input figure is what's left after both are taken out.
+  const textInput = Math.max(0, prompt - audio - cached)
+
+  const fields: Record<string, number> = {
+    prompt_tokens: textInput,
+    output_tokens: num(usageMetadata.candidatesTokenCount),
+    total_tokens: num(usageMetadata.totalTokenCount),
+  }
+  const thoughts = num(usageMetadata.thoughtsTokenCount)
+  if (thoughts > 0) fields.thought_tokens = thoughts
+  if (audio > 0) fields.audio_input_tokens = audio
+  if (cached > 0) fields.cached_input_tokens = cached
+  return fields
+}

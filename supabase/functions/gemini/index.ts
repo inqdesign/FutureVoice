@@ -19,6 +19,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
 import { recordFreeUsage, enforceRequestRate, rateLimitedResponse,
+         recordProviderUsage, background, geminiUsageFields,
          type ChargeableAction } from "../_shared/credits.ts"
 
 const SOURCE_FN = "gemini"
@@ -84,7 +85,17 @@ Deno.serve(async (req) => {
   if (!ALLOWED_MODELS.has(model)) return errorResponse(400, "unsupported model")
   const purpose = body.purpose
   const stream = body.stream === true
-  const { model: _m, purpose: _p, stream: _s, ...geminiBody } = body
+  // Was this turn's reply fired ahead of the VAD confirming the turn? Such a
+  // request is discarded whenever the committed text disagrees with the
+  // partial it was built from — but it cost Gemini tokens either way, so it
+  // is counted separately rather than assumed free (see `speculative_waste`).
+  //
+  // Inferred from the idempotency key's prefix, which ConversationView
+  // already sets ("turn-spec:" vs "turn:"), so every build in the field is
+  // measured without shipping a new one. An explicit body flag wins if a
+  // later client sends one.
+  const speculative = body.spec === true || idemKey.startsWith("turn-spec:")
+  const { model: _m, purpose: _p, stream: _s, spec: _sp, ...geminiBody } = body
 
   // Ledger action keys stay split for the historically-priced purposes so
   // spend dashboards keep their series; everything else lands on "gemini".
@@ -100,7 +111,7 @@ Deno.serve(async (req) => {
     supabase, userId: user.id, action, purpose: purposeKey,
     dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
     sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { model, purpose: purpose ?? null },
+    metadata: { model, purpose: purpose ?? null, spec: speculative },
   })
   if (!rec.ok) {
     if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
@@ -130,7 +141,13 @@ Deno.serve(async (req) => {
   // but talks to an older deploy sees no header and buffers the plain JSON
   // body instead of waiting for events that will never come.
   if (stream && upstream.body) {
-    return new Response(upstream.body, {
+    // Tee rather than transform: the client's copy is untouched, byte for
+    // byte, so metering can never change what the app receives or when it
+    // receives it. The second branch is drained in the background — an
+    // unconsumed tee applies backpressure and would stall the first.
+    const [toClient, toMeter] = upstream.body.tee()
+    background(meterStream(toMeter, idemKey, model))
+    return new Response(toClient, {
       status: 200,
       headers: {
         "Content-Type": "text/event-stream",
@@ -142,6 +159,10 @@ Deno.serve(async (req) => {
   }
 
   const text = await upstream.text()
+  try {
+    const usage = geminiUsageFields(JSON.parse(text)?.usageMetadata)
+    if (usage) background(recordProviderUsage({ idempotencyKey: idemKey, usage }))
+  } catch { /* unparseable body is the client's problem, not the meter's */ }
   return new Response(text, {
     status: 200,
     headers: {
@@ -150,3 +171,49 @@ Deno.serve(async (req) => {
     },
   })
 })
+
+/**
+ * Drain a teed SSE stream and record the call's token usage.
+ *
+ * Gemini reports `usageMetadata` on chunks as the response grows, and the
+ * figures are CUMULATIVE — so the last one seen is the whole call. Reading
+ * every chunk and keeping the last is what makes this correct whether the
+ * model burst-writes in one event or trickles across fifty.
+ */
+async function meterStream(
+  body: ReadableStream<Uint8Array>,
+  idempotencyKey: string,
+  model: string,
+): Promise<void> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ""
+  let last: Record<string, unknown> | null = null
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      // Keep the trailing partial line in the buffer — an event split across
+      // two network chunks is the normal case, not the exception.
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue
+        const payload = line.slice(5).trim()
+        if (!payload || payload === "[DONE]") continue
+        try {
+          const um = JSON.parse(payload)?.usageMetadata
+          if (um) last = um
+        } catch { /* partial or non-JSON event */ }
+      }
+    }
+  } catch (e) {
+    console.error("meterStream read failed", e)
+  } finally {
+    try { reader.releaseLock() } catch { /* already released */ }
+  }
+  const usage = geminiUsageFields(last)
+  if (usage) await recordProviderUsage({ idempotencyKey, usage })
+  else console.warn("gemini stream carried no usageMetadata", model)
+}
