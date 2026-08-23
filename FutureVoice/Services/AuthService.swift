@@ -224,9 +224,10 @@ final class AuthService: NSObject, ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !code.isEmpty else { return }
         do {
-            let balance = try await ReferralService.redeem(code: code)
+            let result = try await ReferralService.redeem(code: code)
             UserDefaults.standard.removeObject(forKey: key)
-            redeemedInviteBalance = balance
+            redeemedInviteBalance = result.balance
+            redeemedCompPlanId = result.compPlanId
         } catch ReferralService.RedeemError.unknown {
             // Could be a network blip — keep the code for a future attempt.
         } catch {
@@ -238,6 +239,11 @@ final class AuthService: NSObject, ObservableObject {
     /// Set once when a Welcome invite code redeems successfully — the new
     /// balance, so the app can confirm "invite applied" after onboarding.
     @Published var redeemedInviteBalance: Int?
+
+    /// Non-nil when the code was a COMP code: it handed over a subscription
+    /// instead of minutes, so the confirmation has to name the plan rather
+    /// than a bonus that was never granted.
+    @Published var redeemedCompPlanId: String?
 
     /// Signs THIS install out. Scope is `.local` on purpose.
     ///

@@ -891,7 +891,12 @@ struct VoiceCloneOnboardingView: View {
             // once, here, on the last screen before the first call: the grant
             // itself is a number on a settings page they have no reason to
             // open, so without this line the invite simply never happened.
-            if auth.redeemedInviteBalance != nil {
+            if let plan = auth.redeemedCompPlanId {
+                Label(explain("\(AccountStatus.tierName(plan)) applied · 1 month"),
+                      systemImage: "gift.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+            } else if auth.redeemedInviteBalance != nil {
                 Label(explain("Invite applied · \(ReferralService.bonusMinutes) min of talk time"),
                       systemImage: "gift.fill")
                     .font(.footnote)

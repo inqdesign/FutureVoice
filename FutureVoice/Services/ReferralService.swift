@@ -73,12 +73,13 @@ enum ReferralService {
     }
 
     enum RedeemError: LocalizedError {
-        case invalid, alreadyRedeemed, selfReferral, unknown
+        case invalid, alreadyRedeemed, selfReferral, alreadySubscribed, unknown
         var errorDescription: String? {
             switch self {
             case .invalid:         return explain("That invite code isn't valid.")
             case .alreadyRedeemed: return explain("You've already used a code.")
             case .selfReferral:    return explain("You can't use your own code.")
+            case .alreadySubscribed: return explain("You're already subscribed.")
             case .unknown:         return explain("Couldn't redeem that code. Try again.")
             }
         }
@@ -88,25 +89,37 @@ enum ReferralService {
         let balance: Int
         let invitee_bonus: Int
         let inviter_rewarded: Bool
+        let comp_plan: String?
     }
 
-    /// Redeem a friend's code. Returns the new credit balance. Throws a
-    /// `RedeemError` mapped from the server-side guard that fired.
+    /// What a code turned out to be. Nearly always an invite bonus — but the
+    /// same field also takes a COMP code, which hands over a subscription and
+    /// grants no minutes at all (`comp_codes`, 20260823100000). The
+    /// confirmation therefore can't be written from `bonusMinutes` alone.
+    struct Redeemed {
+        let balance: Int
+        let compPlanId: String?
+        var isComp: Bool { compPlanId != nil }
+    }
+
+    /// Redeem a friend's code, or a comp code. Throws a `RedeemError` mapped
+    /// from the server-side guard that fired.
     @discardableResult
-    static func redeem(code: String) async throws -> Int {
+    static func redeem(code: String) async throws -> Redeemed {
         let clean = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         do {
             let result: RedeemResult = try await SupabaseProvider.shared
                 .rpc("redeem_referral", params: ["p_code": clean])
                 .execute()
                 .value
-            return result.balance
+            return Redeemed(balance: result.balance, compPlanId: result.comp_plan)
         } catch let error as RedeemError {
             throw error
         } catch {
             let msg = String(describing: error)
             if msg.contains("ALREADY_REDEEMED") { throw RedeemError.alreadyRedeemed }
             if msg.contains("SELF_REFERRAL")    { throw RedeemError.selfReferral }
+            if msg.contains("ALREADY_SUBSCRIBED") { throw RedeemError.alreadySubscribed }
             if msg.contains("INVALID_CODE")     { throw RedeemError.invalid }
             throw RedeemError.unknown
         }

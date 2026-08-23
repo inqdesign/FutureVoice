@@ -142,8 +142,10 @@ struct InviteView: View {
         redeemMessage = nil
         defer { redeeming = false }
         do {
-            _ = try await ReferralService.redeem(code: codeInput)
-            redeemMessage = explain("Redeemed — \(bonusMinutes) minutes added.")
+            let result = try await ReferralService.redeem(code: codeInput)
+            redeemMessage = result.isComp
+                ? explain("Redeemed — \(AccountStatus.tierName(result.compPlanId)) is on your account.")
+                : explain("Redeemed — \(bonusMinutes) minutes added.")
             codeInput = ""
             await reload()
         } catch let err as ReferralService.RedeemError {
