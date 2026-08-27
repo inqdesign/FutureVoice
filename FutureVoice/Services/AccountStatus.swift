@@ -240,21 +240,30 @@ struct AccountStatus {
     /// denominator: Plus is no longer sold as unlimited, so hiding its size
     /// would be the same concealment the rename was made to end.
     var talkTimeLabel: String {
-        if unlimited { return explain("\(minutesRemaining) min left") }
         // Plus does not count DOWN. Its pool is a fair-use line the account
         // will almost never approach, so "1,745 of 1,800 min left" is a
         // monthly receipt for time NOT used — it reads as money wasted and
         // is the one number most likely to end the subscription. The same
         // seconds, told forward, read as something done. (This is the other
         // half of dropping the avatar ring on Plus.)
+        //
+        // Plan branches outrank the admin `unlimited` flag (2026-08-26). With
+        // the flag first, an admin account on Plus printed `minutesRemaining`
+        // — and since `talk_allowance` reports no cap on Plus, that is the
+        // one-time balance ÷ 60, not talk time at all: "0 min left" with a
+        // month of real talk seconds sitting unshown in `secondsUsedPeriod`.
         if isPlusPlan { return explain("\(minutesUsedPeriod) min talked this month") }
-        if isEntitled {
-            let plan = explain("\(minutesRemaining) of \(tankMinutes) min left this month")
+        // Light reads the same direction as Plus — minutes TALKED, over the
+        // pool — so the two tiers' rows say the same kind of thing and a
+        // learner switching between them isn't handed a reversed number.
+        if isEntitled, monthlyCapSeconds != nil {
+            let plan = explain("\(minutesUsedPeriod) of \(tankMinutes) min talked this month")
             // Invite minutes are spent first, so they are not part of the
             // month's fraction and must not be folded into it — they are
             // named separately or the two numbers stop adding up.
             return hasBonusMinutes ? plan + explain(" + \(bonusMinutes) invite min") : plan
         }
+        if unlimited { return explain("\(minutesRemaining) min left") }
         if hasLegacyPool {
             // A one-time pool with nothing to refill toward, so no
             // denominator. Says nothing about where it came from — beta

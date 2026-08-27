@@ -938,6 +938,17 @@
         }
       }
     },
+    "%lld min talked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld분 통화"
+          }
+        }
+      }
+    },
     "%lld min talked this month" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1131,6 +1142,7 @@
       }
     },
     "%lld of %lld min left this month" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1167,6 +1179,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 %2$lld분 중 %1$lld분 남음"
+          }
+        }
+      }
+    },
+    "%lld of %lld min talked" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld min talked"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld분 중 %1$lld분 통화"
+          }
+        }
+      }
+    },
+    "%lld of %lld min talked this month" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld of %2$lld min talked this month"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 달 %2$lld분 중 %1$lld분 통화"
           }
         }
       }

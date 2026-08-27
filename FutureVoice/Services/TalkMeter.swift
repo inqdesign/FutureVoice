@@ -138,11 +138,21 @@ final class TalkMeter: ObservableObject {
             // home ring counts too (TalkTimeLog). Deriving the ring from
             // session spans instead made it disagree with the receipt.
             TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
-            // Subscriber: what's left of today's allowance. Free user: the
+            // Subscriber: what's left of the allowance. Free user: the
             // seconds balance. Both already in seconds.
-            let secondsLeft = res.daily_cap.map { max(0, $0 - res.seconds_today) }
-                ?? max(0, res.balance)
-            minutesRemaining = secondsLeft / 60
+            //
+            // A plan with NO ceiling (Plus) comes back with no cap AND
+            // nothing charged — the seconds were covered by the plan, not
+            // taken from the balance. There is nothing to count down, so
+            // the figure stays nil; falling through to `balance` here showed
+            // the leftover free pool as "0 min left" mid-call on Plus.
+            if res.daily_cap == nil, res.charged == 0 {
+                minutesRemaining = nil
+            } else {
+                let secondsLeft = res.daily_cap.map { max(0, $0 - res.seconds_today) }
+                    ?? max(0, res.balance)
+                minutesRemaining = secondsLeft / 60
+            }
         } catch let FunctionsError.httpError(code, data) where code == 402 {
             stop()
             minutesRemaining = 0

@@ -101,14 +101,27 @@ struct PlanPageView: View {
     /// pool actually is; a one-time balance has no denominator to show, and an
     /// account with neither has nothing to count at all.
     private var talkAllowanceValue: String {
-        if account.unlimited { return explain("\(account.minutesRemaining) min") }
         // Plus is told forward — what was SPENT, never what is left. See
         // `AccountStatus.talkTimeLabel` for why a remainder is the wrong
         // number to hand an account that isn't rationing.
-        if account.isPlusPlan { return explain("\(account.minutesUsedPeriod) min") }
-        if account.isEntitled {
-            return explain("\(account.minutesRemaining) / \(account.tankMinutes) min")
+        //
+        // The plan branches come BEFORE the admin flag on purpose. The flag
+        // used to win, and on a Plus account it printed `minutesRemaining`,
+        // which with no cap is the one-time free balance ÷ 60 — a number
+        // that has nothing to do with talking and read "0 min" once that
+        // balance was gone, while the month's real talk seconds were being
+        // received and never shown. The admin account exists to watch real
+        // burn; it must see what its plan sees.
+        if account.isPlusPlan { return explain("\(account.minutesUsedPeriod) min talked") }
+        // Light: what was talked OUT OF what the plan gives — "12 of 150 min
+        // talked". It used to print the remainder over the pool, which under
+        // a row titled "Talk time" read as the amount talked and was the
+        // opposite number. Same direction as the Home ring, which fills as
+        // minutes are spent.
+        if account.isEntitled, account.monthlyCapSeconds != nil {
+            return explain("\(account.minutesUsedPeriod) of \(account.tankMinutes) min talked")
         }
+        if account.unlimited { return explain("\(account.minutesRemaining) min") }
         if account.hasLegacyPool { return explain("\(account.minutesRemaining) min") }
         return explain("None")
     }
