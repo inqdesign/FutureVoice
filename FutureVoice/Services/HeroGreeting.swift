@@ -17,6 +17,15 @@ import Foundation
 /// Everything here is CHROME → target language (see CLAUDE.md "Two
 /// languages"), so every line goes through `chrome()`.
 ///
+/// **The speaker is the future self, and the Korean is 반말 on purpose** (2026-08-28).
+/// Every other string in the app is 해요체; these 26 are the one voice that is
+/// the learner's own, and a call from yourself that addresses you formally
+/// reads as a stranger. The ko lines are also not translations of the English
+/// keys — they are what a Korean actually says at that hour (밥·잠·고생:
+/// "점심은 먹었어?", "오늘도 고생했어."), because "what's on your mind" has no
+/// spoken Korean equivalent. The English key is an ID; don't re-align the
+/// meanings, and don't "fix" the register.
+///
 /// **The line must never change while the learner is looking at it.** The hero
 /// re-renders on every scroll frame, and a greeting that swaps mid-scroll (or
 /// a frame after launch) reads as a bug. So the rotation index is derived,

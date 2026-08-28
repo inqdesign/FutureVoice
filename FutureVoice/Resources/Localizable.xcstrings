@@ -3154,7 +3154,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 좋은 일 있었어요?"
+            "value" : "오늘 뭐 좋은 일 없었어?"
           }
         }
       }
@@ -3948,7 +3948,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 바빠요?"
+            "value" : "오늘 바빠?"
           }
         }
       }
@@ -5718,7 +5718,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "잘 잤어요?"
+            "value" : "잘 잤어?"
           }
         }
       }
@@ -7857,7 +7857,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "목표 달성! 어땠어요?"
+            "value" : "다 했네. 오늘은 말 좀 잘 나왔어?"
           }
         }
       }
@@ -7940,7 +7940,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "다시 와줘서 반가워요."
+            "value" : "잘 지냈어?"
           }
         }
       }
@@ -8444,7 +8444,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 어떻게 됐어요?"
+            "value" : "오늘도 고생했어."
           }
         }
       }
@@ -8460,7 +8460,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 하루 어때 보여요?"
+            "value" : "오늘 기분은 어때?"
           }
         }
       }
@@ -8674,7 +8674,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 어땠어요?"
+            "value" : "오늘 어땠어?"
           }
         }
       }
@@ -8690,7 +8690,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 하루 어땠어요?"
+            "value" : "오늘 하루 어땠어?"
           }
         }
       }
@@ -8807,7 +8807,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 어떻게 지내요?"
+            "value" : "오늘 별일 없지?"
           }
         }
       }
@@ -8842,7 +8842,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아까 전화했었어요."
+            "value" : "아까 전화했었는데."
           }
         }
       }
@@ -8860,7 +8860,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "메시지 남겨뒀어요."
+            "value" : "메시지 남겨 뒀어."
           }
         }
       }
@@ -9478,7 +9478,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오랜만이에요."
+            "value" : "오랜만이야."
           }
         }
       }
@@ -10358,7 +10358,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오랜만이네요. 어디까지 했죠?"
+            "value" : "오랜만이네. 어디까지 했더라?"
           }
         }
       }
@@ -14147,7 +14147,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "첫 대화, 시작해볼까요?"
+            "value" : "처음이지? 편하게 해."
           }
         }
       }
@@ -16106,7 +16106,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "가볍게 시작해볼까요?"
+            "value" : "가볍게 시작해 볼까?"
           }
         }
       }
@@ -16787,7 +16787,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직 안 자요?"
+            "value" : "아직 안 자?"
           }
         }
       }
@@ -18904,7 +18904,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내일 생각 중이에요?"
+            "value" : "내일은 뭐 해?"
           }
         }
       }
@@ -19262,7 +19262,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 몫은 끝. 한 번 더?"
+            "value" : "오늘은 이만하면 됐어. 더 할래?"
           }
         }
       }
@@ -20534,7 +20534,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 뭐 했어요?"
+            "value" : "오늘 뭐 했어?"
           }
         }
       }
@@ -20834,7 +20834,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 오후, 무슨 생각 하고 있어요?"
+            "value" : "점심은 먹었어?"
           }
         }
       }
@@ -20850,7 +20850,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 저녁, 무슨 생각 하고 있어요?"
+            "value" : "저녁 먹었어?"
           }
         }
       }
@@ -20866,7 +20866,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 아침, 무슨 생각 하고 있어요?"
+            "value" : "아침은 먹었어?"
           }
         }
       }
@@ -20882,7 +20882,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 밤, 무슨 생각 하고 있어요?"
+            "value" : "자기 전에 잠깐 얘기하자."
           }
         }
       }
@@ -20909,7 +20909,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 계획 있어요?"
+            "value" : "오늘 뭐 해?"
           }
         }
       }
@@ -21908,7 +21908,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "오늘 목표 달성했어요."
+            "value" : "오늘 목표 다 채웠네."
           }
         }
       }
