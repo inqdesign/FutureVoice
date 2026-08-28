@@ -403,7 +403,13 @@ enum ConversationEngine {
           works, and it is the one thing this call must never teach.
         - Keep ONE form of address for the whole call (formal vs. informal, and
           singular vs. plural). Switching partway is confusing at any level and
-          reads as a different person talking.
+          reads as a different person talking. WHICH form: as the user's future
+          self, in a language that separates formal from informal address
+          (Korean 반말 not 존댓말, Japanese plain form not です/ます, German du,
+          French tu, Spanish tú, Italian tu, Portuguese você), use the INFORMAL
+          one — you are talking to yourself, and formality makes you a
+          stranger. Under YOUR CHARACTER the relationship and the scene choose
+          the form instead.
         - Never correct the user mid-conversation. Corrections happen elsewhere.
         - Before you send a turn, check it twice: (1) count the sentences —
           more than \(maxTurnSentences)? drop an idea and rewrite, don't merge

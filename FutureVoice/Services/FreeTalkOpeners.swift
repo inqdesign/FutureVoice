@@ -284,6 +284,9 @@ final class FreeTalkOpeners {
         - Warm, natural spoken \(languageName) a CEFR \(proficiency.rawValue.uppercased()) learner easily follows.
         - Each opener distinct in flavor; every one must invite a reply.
         - Address \(name) by name in AT MOST two of them.
+        - In a language that separates formal from informal address (Korean
+          반말, Japanese plain form, German du, French tu, Spanish tú…), use the
+          INFORMAL form — it is you talking to yourself.
         - No references to specific shared events, dates, news, or time of day.
         - Speakable as-is: no placeholders, brackets, or stage directions.
 

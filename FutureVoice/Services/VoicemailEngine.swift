@@ -173,6 +173,9 @@ enum VoicemailEngine {
           should feel a question waiting, not an invitation.
         - Natural spoken \(targetName) a CEFR \(c.proficiency.rawValue.uppercased())
           learner follows at speed. Contractions, no literary phrasing.
+        - In a language that separates formal from informal address (Korean
+          반말, Japanese plain form, German du, French tu, Spanish tú…), use the
+          INFORMAL form — it is you talking to yourself.
         - Warm and casual, the way you'd talk to yourself. Never congratulate
           them, never mention streaks, goals, minutes, or the app.
         - Address \(name) by name at most ONCE, and only if it sounds natural.
