@@ -1,7 +1,33 @@
 # Android Version Plan
 
 > Native Kotlin + Jetpack Compose client sharing the Supabase backend with iOS.
-> Status: PLAN. Written 2026-07-29. iOS is the reference implementation.
+> Written 2026-07-29. iOS is the reference implementation.
+>
+> **Status (2026-08-26): Phase A + B done, Phase C in progress.** `android/`
+> builds and runs on the emulator: sign-in → `voice_clones` restore → Gemini
+> SSE turn → cloned-voice streaming TTS → VAD turn-taking, and since 2026-08-26
+> the call is METERED (`TalkMeter.kt` ↔ `talk-tick`, idle seconds free, both
+> 402 walls told apart). Still missing from the slice: session end → summary,
+> local persistence, the idle auto-pause, real-mic STT validation, and Apple
+> web OAuth (a Services ID + secret the app can't set up for itself — until
+> then debug builds sign in with a test email). `ConversationEngine.kt` is a
+> 2026-08-04 port and has drifted from Swift since; the fix is the Phase D
+> brain-lift, not a re-port.
+>
+> **Scope (2026-08-26): Android is a standalone launch for Android users with
+> full iOS parity — see `android-launch-roadmap.md`.** The "restore, never
+> re-clone" and "Apple-only sign-in" lines below describe the order of the
+> first spike (a voice already on the server was the cheapest way to prove
+> the loop), NOT the product. An Android user clones on Android, signs in
+> with Google, and pays on Play.
+>
+> **Emulator caveat (2026-08-26):** the Pixel_9 AVD's virtual mic delivers
+> loud, transcribable noise regardless of the host input volume (level pins at
+> 1.0, `SpeechRecognizer` keeps producing partials, no turn ever endpoints —
+> the café case, permanently). So on the emulator every listening second is
+> "someone talking" and BILLS; that is the meter being right about a wrong
+> room, not a bug. Silence/idle behaviour and real-mic STT can only be
+> verified on a device.
 
 ## Strategy in one line
 

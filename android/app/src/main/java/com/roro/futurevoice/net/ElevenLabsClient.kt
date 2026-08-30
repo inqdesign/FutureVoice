@@ -75,7 +75,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
             if (response.code !in 200..299) {
-                if (response.code == 402) throw EdgeError.InsufficientCredits
+                if (response.code == 402) throw EdgeError.wall(String(bytes))
                 throw EdgeError.Http(response.code, String(bytes).take(512))
             }
             bytes
@@ -113,7 +113,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             if (resp.code !in 200..299) {
                 val snippet = runCatching { resp.body.source().readByteString(512L) }
                     .getOrNull()?.utf8().orEmpty()
-                if (resp.code == 402) throw EdgeError.InsufficientCredits
+                if (resp.code == 402) throw EdgeError.wall(snippet)
                 throw EdgeError.Http(resp.code, snippet)
             }
 

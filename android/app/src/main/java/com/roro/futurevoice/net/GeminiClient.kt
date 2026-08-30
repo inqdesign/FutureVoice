@@ -199,7 +199,7 @@ class GeminiClient(private val auth: AuthRepository) {
             if (resp.code !in 200..299) {
                 val snippet = runCatching { resp.body.source().readByteString(512L) }
                     .getOrNull()?.utf8().orEmpty()
-                if (resp.code == 402) throw EdgeError.InsufficientCredits
+                if (resp.code == 402) throw EdgeError.wall(snippet)
                 throw EdgeError.Http(resp.code, snippet)
             }
 
@@ -330,7 +330,7 @@ class GeminiClient(private val auth: AuthRepository) {
 
     private fun validate(status: Int, body: ByteArray) {
         if (status in 200..299) return
-        if (status == 402) throw EdgeError.InsufficientCredits
+        if (status == 402) throw EdgeError.wall(String(body))
         throw EdgeError.Http(status, String(body).take(512))
     }
 }

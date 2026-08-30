@@ -34,7 +34,7 @@ Level curve: `rms` of the mic buffer converted to dBFS and mapped to 0…1
 | Constant | Value | Meaning |
 |---|---|---|
 | `baseVoicedThreshold` | `0.35` | Absolute "this is speech" floor. |
-| `noiseMargin` | `0.12` (≈ 6 dB) | How far above the measured noise floor a frame must sit to count as speech. |
+| `noiseMargin` | `0.22` (≈ 11 dB) | How far above the measured noise floor a frame must sit to count as speech. Was 0.12 (≈ 6 dB) until 2026-08-18: in a café, 6 dB over a decaying minimum is a bar other people's voices clear, so the room read as the learner and the turn never ended. Leans on physics — mouth at 20 cm vs. the next table, 15–20 dB. Quiet rooms unaffected: the absolute floor is the higher bar there. |
 | `noiseRisePerSecond` | `0.03` (≈ 1.5 dB/s) | Decaying-minimum noise estimate ("minimum statistics") rise rate. |
 | effective threshold | `max(baseVoicedThreshold, noiseFloor + noiseMargin)` | |
 | `minPause` | `0.35 s` | Silence run that counts as one pause/hesitation. |
@@ -173,3 +173,33 @@ Token style comes from the language, not the caller:
 
 Nothing outside this table may hardcode a language. Adding one = one entry
 (+ optional bundled resources).
+
+## 8. Which seconds are billed (the talk meter)
+
+The `talk-tick` cadence is in `edge-api.md`; this is the rule for which
+seconds COUNT. iOS `ConversationView.isBillableMoment` / Android
+`TalkViewModel.isBillableMoment`, polled once a second by the meter.
+
+A second is billable when ANY of:
+
+1. the turn is in `thinking` or `speaking` (a reply is being generated or
+   synthesized), or
+2. fluent-self audio is audible (the PCM stream or a buffered player is
+   playing), or
+3. **someone is talking here** — ALL three witnesses, none optional:
+   - a voiced frame within the last **6 s** (`voiceGraceSeconds`; must cover
+     the longest end-of-turn wait, `vadLong` 5 s + STT settle),
+   - the recognizer produced a partial within the last **6 s**, and
+   - ≥ **1.5 s** of voiced audio in the current segment
+     (`minVoicedSecondsPerTurn`).
+
+Otherwise the second is neither billed nor counted toward the day. Energy
+alone is not a witness: in a café the mic is "voiced" forever and the
+recognizer keeps making words of strangers, so a call nobody was speaking into
+ran — and billed — for minutes (iOS, 2026-08-18). The voiced-seconds floor is
+what keeps a room's clatter from clearing the bar.
+
+This predicate is also what makes an UNCAPPED talk plan safe to sell: the
+ceiling there is the learner's effort, and effort is only a limiter while the
+meter charges for speech. Weaken any witness and that plan becomes an open tab.
+

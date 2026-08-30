@@ -16,7 +16,7 @@
 
 | Status | Meaning | Client behavior |
 |---|---|---|
-| `402` | Out of credits (`insufficientCreditsResponse`) | Surface the paywall/credit copy — never a raw error. iOS: `GeminiError.insufficientCredits` / `ElevenLabsError.insufficientCredits`. |
+| `402` | A wall. The body's `error` field says WHICH — read it in ONE place per client (iOS `ElevenLabsError.wall(body:)`, Android `EdgeError.wall(body)`): `insufficient_credits` = a FREE account's pool is spent → paywall; `daily_cap_reached` = a SUBSCRIBER's allowance is spent → "this call is saved, it refills with your plan", **never a paywall** (they already paid). Both stop the call gracefully; neither is an error. |
 | `4xx/5xx` | Upstream or auth failure | Body's first 512 bytes are the only diagnostic a beta tester can screenshot — keep them in the error. |
 
 ### Idempotency key shapes used by iOS (mirror them)
@@ -195,6 +195,57 @@ is OUR capacity problem — show a human message, not the upstream JSON.
 
 ## `POST /elevenlabs-voice-delete` — `{ "voice_id": "..." }`
 ## `POST /elevenlabs-voice-rename` — `{ "voice_id": "...", "name": "..." }` (free, no credits)
+
+---
+
+## `POST /talk-tick`
+
+The in-call timer IS the price (minutes-native billing, 2026-08-11). Gemini
+turns are free and turn TTS is free under a chars-per-minute floor tied to the
+seconds pooled here — so a client that doesn't tick is a client that talks for
+free, and one that under-reports gains nothing (the floor catches it).
+
+### Request
+
+```jsonc
+{
+  "seconds": 30,             // integer 1…600
+  "session_id": "<uuid>",    // the call; metadata only
+  "language": "en"           // what was SPOKEN — optional, see below
+}
+```
+
+`X-Idempotency-Key: tick:<session_id>:<label>` — one key per tick (`pre`,
+`0`, `1`, …) so a retried request can't double-bill.
+
+`language` is what the CORE (one club per target language) counts toward;
+billing ignores it. Omit it only if the client genuinely can't say what was
+spoken — those seconds bill normally and count toward no club.
+
+### Cadence (must match across platforms — `behavior.md` §8)
+
+- A **1-second preflight tick at call start**, before the greeting is
+  synthesized, so a spent allowance surfaces before anything is spoken.
+- Then one **30-second tick per 30 s of BILLABLE time**, not wall-clock.
+  Polled once a second; a poll contributes at most 2 s (a suspended app
+  resumes with a huge clock gap and must not bill it all at once).
+
+### Response
+
+```jsonc
+{ "balance": 3200, "charged": 30, "seconds_today": 90, "daily_cap": 9000 }
+```
+
+Seconds left = `daily_cap - seconds_today` when `daily_cap` is present
+(subscriber), else `balance` (free account). Show whole minutes only — a
+month-long balance must never read as a running meter. On a plan with no talk
+ceiling nothing counts down; don't print a number.
+
+### Failure policy (asymmetric on purpose)
+
+- `402` → the call ENDS gracefully, with the wall named per the common table.
+- Anything else (network blip, 5xx) → **skip the tick and keep talking**. A
+  call must never drop over billing plumbing.
 
 ---
 

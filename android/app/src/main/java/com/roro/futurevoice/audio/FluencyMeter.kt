@@ -23,8 +23,19 @@ class FluencyMeter {
     /** Absolute "this is speech" floor on the 0…1 curve (iOS: −32.5 dBFS). */
     private val baseVoicedThreshold = 0.35f
 
-    /** How far above the measured noise floor a frame must sit (≈ 6 dB). */
-    private val noiseMargin = 0.12f
+    /**
+     * How far above the measured noise floor a frame must sit to count as
+     * speech. 0.22 on the 0…1 curve ≈ 11 dB (`behavior.md` §2).
+     *
+     * Raised from 0.12 (≈ 6 dB) on iOS on 2026-08-18 after a café test where
+     * the turn never ended: 6 dB over a decaying MINIMUM is a bar other
+     * people's voices clear easily, so the room read as the learner. The
+     * learner's mouth is ~20 cm from the mic and the next table metres away —
+     * 15–20 dB — so 11 dB sits between the two. Quiet rooms are untouched by
+     * construction: there the absolute 0.35 floor is the higher bar and
+     * decides alone.
+     */
+    private val noiseMargin = 0.22f
 
     /** Decaying-minimum noise estimate rise rate (≈ 1.5 dB/s). */
     private val noiseRisePerSecond = 0.03f

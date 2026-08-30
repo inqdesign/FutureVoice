@@ -1,6 +1,8 @@
 package com.roro.futurevoice.talk
 
 import android.content.Context
+import android.util.Log
+import com.roro.futurevoice.BuildConfig
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.roro.futurevoice.audio.LiveTranscriber
@@ -32,12 +34,23 @@ data class TalkConfig(
 
 enum class TalkPhase { IDLE, CONNECTING, LISTENING, THINKING, SPEAKING, ENDED }
 
+/**
+ * Which wall ended the call. A FREE account's spent pool leads to the
+ * paywall; a SUBSCRIBER's spent allowance never does — they already paid,
+ * the pool refills on its own. Neither is an error, so neither lands in
+ * [TalkUiState.error].
+ */
+enum class TalkWall { OUT_OF_MINUTES, ALLOWANCE_SPENT }
+
 data class TalkUiState(
     val phase: TalkPhase = TalkPhase.IDLE,
     val turns: List<Turn> = emptyList(),
     val partial: String = "",
     val level: Float = 0f,
     val error: String? = null,
+    val wall: TalkWall? = null,
+    /** Null until the first tick lands, and null throughout on a plan that doesn't count down. */
+    val minutesRemaining: Int? = null,
     val lastTiming: Map<String, String> = emptyMap(),
 )
 
@@ -53,6 +66,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val gemini = GeminiClient(auth)
     private val eleven = ElevenLabsClient(auth)
     private val live = LiveTranscriber(context)
+    private val meter = TalkMeter(auth, viewModelScope)
     private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE)
     private val mp3 = Mp3Player(appContext.cacheDir)
 
@@ -60,6 +74,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     val state: StateFlow<TalkUiState> = _state.asStateFlow()
 
     private var config: TalkConfig? = null
+    private var sessionId: String = ""
     private var systemPrompt: String = ""
     private var endpointJob: Job? = null
     private var callJob: Job? = null
@@ -69,6 +84,12 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var turnStartedAt: Long = 0L
     private var turnEndedSpeakingAt: Long = 0L
     private var turnTiming = mutableMapOf<String, String>()
+
+    init {
+        viewModelScope.launch {
+            meter.minutesRemaining.collect { m -> _state.update { it.copy(minutesRemaining = m) } }
+        }
+    }
 
     // MARK: - Lifecycle
 
@@ -84,6 +105,15 @@ class TalkViewModel(context: Context) : ViewModel() {
         ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
 
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
+        sessionId = UUID.randomUUID().toString()
+
+        // Metering starts with the call, not with the first turn. Silence isn't
+        // billed — see `isBillableMoment`; set before start(), the ticker polls
+        // it from its first second.
+        meter.isBillable = { isBillableMoment() }
+        meter.onWallHit = { wall -> hitWall(wall) }
+        meter.start(sessionId = sessionId, language = config.targetLanguage)
+
         callJob = viewModelScope.launch {
             try {
                 openConversation()
@@ -94,6 +124,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     fun end() {
+        meter.stop()
         endpointJob?.cancel(); endpointJob = null
         callJob?.cancel(); callJob = null
         runCatching { live.stop() }
@@ -251,7 +282,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 system = systemPrompt,
                 messages = messages,
                 serializer = ConversationTurnPayload.serializer(),
-                purpose = null,
+                purpose = "turn",
                 idempotencyKey = idempotencyKey,
                 earlyField = "reply",
                 onEarlyField = { reply ->
@@ -272,6 +303,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 system = systemPrompt,
                 messages = messages,
                 serializer = ConversationTurnPayload.serializer(),
+                purpose = "turn",
                 idempotencyKey = idempotencyKey,
             )
         }
@@ -354,15 +386,78 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun fail(e: Exception) {
+        // A 402 from a turn is the same wall the meter reports, and it is not
+        // an error — route it to the same place.
+        if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached) {
+            hitWall(e); return
+        }
+        meter.stop()
         endpointJob?.cancel()
         runCatching { live.stop() }
         pcm.stop()
         _state.update { it.copy(phase = TalkPhase.ENDED, error = humanMessage(e)) }
     }
 
+    // MARK: - Metering
+
+    /**
+     * Is this second part of the conversation? The fluent self thinking or
+     * speaking counts; otherwise only a learner demonstrably talking into the
+     * mic does. Silence — a phone put down, a room's babble — bills nothing.
+     */
+    private fun isBillableMoment(): Boolean {
+        val phase = _state.value.phase
+        val billable = phase == TalkPhase.THINKING || phase == TalkPhase.SPEAKING ||
+            pcm.isPlaying || mp3.isPlaying || someoneIsTalkingHere()
+        if (BuildConfig.DEBUG) {
+            val now = System.currentTimeMillis()
+            Log.d(TAG, "billable=$billable phase=$phase pcm=${pcm.isPlaying} mp3=${mp3.isPlaying} " +
+                "voicedAgo=${live.lastVoicedAtMs?.let { now - it }} heardAgo=${lastTranscriptChangeAt?.let { now - it }} " +
+                "voicedSec=${"%.1f".format(live.fluencyStats().speakingSeconds)} level=${"%.2f".format(live.level)}")
+        }
+        return billable
+    }
+
+    /**
+     * Three witnesses, all required: recent voiced energy, the recognizer
+     * still making words of it, and enough voiced time this turn to be a
+     * person rather than a clatter. Energy alone is permanently true in a
+     * café, which is why one witness isn't enough (iOS, 2026-08-18).
+     */
+    private fun someoneIsTalkingHere(): Boolean {
+        val now = System.currentTimeMillis()
+        val graceMs = TalkMeter.VOICE_GRACE_SECONDS * 1000
+        val voiced = live.lastVoicedAtMs ?: return false
+        if (now - voiced >= graceMs) return false
+        val heard = lastTranscriptChangeAt ?: return false
+        if (now - heard >= graceMs) return false
+        return live.fluencyStats().speakingSeconds >= MIN_VOICED_SECONDS_PER_TURN
+    }
+
+    /**
+     * The server said the talking is over. The call ends gracefully: the
+     * transcript stays, nothing is billed past this point, and the screen says
+     * WHICH wall it was so a subscriber is never shown a paywall.
+     */
+    private fun hitWall(wall: EdgeError) {
+        meter.stop()
+        endpointJob?.cancel()
+        runCatching { live.stop() }
+        pcm.stop()
+        mp3.stop()
+        val kind = if (wall is EdgeError.DailyCapReached) TalkWall.ALLOWANCE_SPENT
+                   else TalkWall.OUT_OF_MINUTES
+        _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", wall = kind) }
+    }
+
     private fun humanMessage(e: Exception): String = when (e) {
-        is EdgeError.InsufficientCredits -> e.message ?: "Out of credits"
         is EdgeError.Http -> "Server error ${e.status}"
         else -> e.message ?: e::class.java.simpleName
+    }
+
+    companion object {
+        private const val TAG = "TalkViewModel"
+        /** Voiced seconds this turn before a segment counts as a person talking. */
+        private const val MIN_VOICED_SECONDS_PER_TURN = 1.5
     }
 }

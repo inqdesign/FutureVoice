@@ -16,6 +16,10 @@ class Mp3Player(private val cacheDir: File) {
 
     private var player: MediaPlayer? = null
 
+    /** Audible right now — one of the meter's "this second is a call" witnesses. */
+    val isPlaying: Boolean
+        get() = player?.let { runCatching { it.isPlaying }.getOrDefault(false) } ?: false
+
     suspend fun play(mp3: ByteArray) {
         val file = withContext(Dispatchers.IO) {
             File.createTempFile("tts-", ".mp3", cacheDir).apply { writeBytes(mp3) }

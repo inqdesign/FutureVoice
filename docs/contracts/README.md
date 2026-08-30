@@ -26,10 +26,10 @@ Three documents, one per kind of contract:
    Leitner intervals — a client that picks its own values is a different
    product, not a port.
 
-## Known parity gaps (Android, as of 2026-08-02)
+## Known parity gaps (Android, as of 2026-08-26)
 
 | Gap | Why | Exit |
 |---|---|---|
 | No inline user audio on the turn call | Android's `SpeechRecognizer` holds the mic exclusively, so raw PCM can't be tapped in parallel. iOS attaches the user's WAV so Gemini can hear past ASR errors. | Either a Whisper-style server STT leg (then Android captures with `AudioRecord` and never uses `SpeechRecognizer`), or on-device recognition with an audio-passthrough API. Until then the turn's `transcript` field comes back `null`, exactly as the prompt specifies for the no-audio case. |
-| Sign-in is Apple-only | The Supabase user identity must match iOS or the voice clone can't be restored — that's the whole magic moment. On Android that means Apple's **web** OAuth flow via Supabase. | Add Google as a second provider only once identity linking is decided (see `edge-api.md` §Auth). |
-| Billing | iOS grants credits via StoreKit 2. | Play Billing → same credit grant path. Not in the Talk slice. |
+| Sign-in is Apple-only (debug builds: email) | The first spike reused a clone already on the server, so it only needed the iPhone identity. | Android users are Android users: anonymous session → **Google** link as the primary provider, Apple **web** OAuth for iPhone switchers (`android-launch-roadmap.md` §1.2). |
+| Purchase | iOS sells subscriptions via StoreKit 2 (`apple-webhook`). Android meters talk time (`talk-tick`, 2026-08-26) but cannot yet BUY: an Android-only account meets the hard paywall on its first talk. | Play Billing → a `google-webhook` sibling of `apple-webhook` writing the same `user_subscriptions` row. Decide the two-store policy (one user subscribed on both) before Play launch. |

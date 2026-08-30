@@ -46,9 +46,27 @@ sealed class EdgeError(message: String) : Exception(message) {
     class Http(val status: Int, val body: String) : EdgeError("HTTP $status: $body")
     class JsonNotFound(val raw: String) : EdgeError("No JSON found in reply: ${raw.take(200)}")
 
-    /** 402 — surface the credit copy, never a raw error. */
+    /** 402 `insufficient_credits` — a FREE account's pool is spent → paywall. */
     object InsufficientCredits :
-        EdgeError("You're out of credits. Check your plan under Me → Account.")
+        EdgeError("Your talk time is used up. Check your plan under Me → Account.")
+
+    /**
+     * 402 `daily_cap_reached` — a SUBSCRIBER's allowance is spent. Never a
+     * paywall: they already paid, the pool refills on its own.
+     */
+    object DailyCapReached :
+        EdgeError("Your talk time for this period is used up. This call is saved.")
+
+    companion object {
+        /**
+         * The ONE place a 402 body is read. iOS learned this the hard way
+         * (`ElevenLabsError.wall(body:)`): the streamed and buffered paths each
+         * parsed the body separately, and the one that forgot told a paying
+         * subscriber they were out of credits.
+         */
+        fun wall(body: String): EdgeError =
+            if (body.contains("daily_cap_reached")) DailyCapReached else InsufficientCredits
+    }
 
     /** `finishReason == MAX_TOKENS` AND the payload failed to parse. */
     object Truncated : EdgeError("Reply hit the token ceiling before it finished")

@@ -34,6 +34,7 @@ import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.TalkConfig
 import com.roro.futurevoice.talk.TalkPhase
 import com.roro.futurevoice.talk.TalkViewModel
+import com.roro.futurevoice.talk.TalkWall
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
 
@@ -79,7 +80,16 @@ fun TalkScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(phaseLabel(state.phase)) },
+                title = {
+                    // Minutes left ride on the title, whole minutes only — a
+                    // month-long balance must never read as a running meter.
+                    val minutes = state.minutesRemaining
+                    Text(
+                        if (minutes != null && state.phase != TalkPhase.ENDED)
+                            "${phaseLabel(state.phase)} · $minutes min left"
+                        else phaseLabel(state.phase)
+                    )
+                },
                 actions = {
                     Button(onClick = { vm.end(); onExit() }) { Text("End") }
                 },
@@ -108,6 +118,21 @@ fun TalkScreen(
                     fontStyle = FontStyle.Italic,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
+            // A spent allowance is not an error — it gets its own line, in
+            // the body colour, and a subscriber never reads the word "credits".
+            state.wall?.let { wall ->
+                Text(
+                    when (wall) {
+                        TalkWall.OUT_OF_MINUTES ->
+                            "Your talk time is used up. This call is saved — subscribe to keep talking."
+                        TalkWall.ALLOWANCE_SPENT ->
+                            "Your talk time for this period is used up. This call is saved — it refills with your plan."
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(16.dp),
                 )
             }
 
