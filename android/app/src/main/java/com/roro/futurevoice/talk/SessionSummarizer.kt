@@ -8,6 +8,7 @@ import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.SessionSummaryClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -129,17 +130,22 @@ object SessionSummarizer {
         // Stable key: a retry re-runs the SAME logical request for free as
         // long as the transcript hasn't grown (iOS: "summary:<id>:<turns>").
         val key = "summary:${session.id}:${turns.size}"
-        val text = try {
-            client.summarize(body, key) { partial ->
+        // The model occasionally writes a shape we can't read — most often a
+        // native-language note carrying unescaped ASCII quotes (「"going"」).
+        // The learner did nothing wrong: ask ONCE more before making the end
+        // of a talk look like a failure. Free — the ledger dedupes on the key.
+        // (iOS: the `isMalformedModelOutput` retry in SessionSummarizer.)
+        fun parse(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
+        val payload = try {
+            parse(client.summarize(body, key) { partial ->
                 progress = progress.absorb(partial); onProgress?.invoke(progress)
-            }
-        } catch (e: EdgeError.JsonNotFound) {
-            // The model wrote a shape we couldn't read — ask once more; the
-            // ledger dedupes on the key so it costs nothing.
-            client.summarize(body, key)
+            })
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "summary payload unreadable (${e.message?.take(80)}) — retrying once")
+            parse(client.summarize(body, key))
         }
-
-        val payload = Json.parseToJsonElement(text).jsonObject
         var computed = toDomain(payload)
 
         // Verbatim guards — the same normalization CarryoverDetector uses.
