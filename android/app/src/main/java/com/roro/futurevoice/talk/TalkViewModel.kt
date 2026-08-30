@@ -11,10 +11,14 @@ import com.roro.futurevoice.audio.PcmStreamPlayer
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.GeminiClient
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,12 +85,14 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val meter = TalkMeter(auth, viewModelScope)
     private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE)
     private val mp3 = Mp3Player(appContext.cacheDir)
+    private val sessions = SessionStore(appContext)
 
     private val _state = MutableStateFlow(TalkUiState())
     val state: StateFlow<TalkUiState> = _state.asStateFlow()
 
     private var config: TalkConfig? = null
     private var sessionId: String = ""
+    private var startedAt: Long = 0L
     private var systemPrompt: String = ""
     private var endpointJob: Job? = null
     private var callJob: Job? = null
@@ -125,7 +131,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
 
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
-        sessionId = UUID.randomUUID().toString()
+        sessionId = StoreJson.newId()
+        startedAt = System.currentTimeMillis()
 
         // Metering starts with the call, not with the first turn. Silence isn't
         // billed — see `isBillableMoment`; set before start(), the ticker polls
@@ -146,6 +153,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     fun end() {
+        if (_state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE) return
         meter.stop()
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
@@ -154,6 +162,34 @@ class TalkViewModel(context: Context) : ViewModel() {
         pcm.stop()
         mp3.stop()
         _state.update { it.copy(phase = TalkPhase.ENDED, partial = "") }
+        persist()
+    }
+
+    /**
+     * Every way a call stops lands here once: End, a wall, a failure. Saved
+     * as long as anything was said (iOS: `guard !turns.isEmpty`) — the
+     * summary comes later and is written onto the same row.
+     */
+    private fun persist() {
+        val cfg = config ?: return
+        val turns = _state.value.turns
+        if (turns.isEmpty()) return
+        // Uppercased like every other id: iOS encodes a Swift UUID uppercase,
+        // and a backup crossing platforms should not differ by case alone.
+        val userId = auth.userId?.uppercase() ?: return
+        val session = Session(
+            id = sessionId,
+            userId = userId,
+            targetLanguage = cfg.targetLanguage,
+            topic = cfg.topic.takeIf { it.isNotBlank() },
+            startedAt = startedAt,
+            endedAt = System.currentTimeMillis(),
+            turns = turns,
+            origin = if (cfg.topic.isBlank()) SessionOrigin.FREE else SessionOrigin.NEWS,
+        )
+        // Saved from the app scope on purpose: the ViewModel may be cleared
+        // (screen left) before a viewModelScope job gets to run.
+        CoroutineScope(Dispatchers.Main).launch { runCatching { sessions.save(session) } }
     }
 
     /** The one tap: put the call down, or pick it back up. */
@@ -491,6 +527,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         runCatching { live.stop() }
         pcm.stop()
         _state.update { it.copy(phase = TalkPhase.ENDED, error = humanMessage(e)) }
+        persist()
     }
 
     // MARK: - Metering
@@ -545,6 +582,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         val kind = if (wall is EdgeError.DailyCapReached) TalkWall.ALLOWANCE_SPENT
                    else TalkWall.OUT_OF_MINUTES
         _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", wall = kind) }
+        persist()
     }
 
     private fun humanMessage(e: Exception): String = when (e) {

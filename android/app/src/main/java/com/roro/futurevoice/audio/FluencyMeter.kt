@@ -1,5 +1,7 @@
 package com.roro.futurevoice.audio
 
+import kotlinx.serialization.Serializable
+
 import kotlin.math.max
 import kotlin.math.min
 
@@ -127,6 +129,7 @@ class FluencyMeter {
     }
 }
 
+@Serializable
 data class FluencyStats(
     val speakingSeconds: Double,
     val totalSeconds: Double,

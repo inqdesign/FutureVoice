@@ -28,8 +28,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.roro.futurevoice.R
+import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.TurnRole
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun RootScreen(app: AppViewModel = viewModel()) {
@@ -168,10 +179,42 @@ private fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start free talk") }
 
+            RecentTalks(language = state.targetLanguage)
+
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
             }
+        }
+    }
+}
+
+/**
+ * The talks already on this phone — proof the loop persists. Reloads every
+ * time Home comes back into composition (i.e. after every call).
+ */
+@Composable
+private fun RecentTalks(language: String) {
+    val context = LocalContext.current
+    val store = remember { SessionStore(context) }
+    var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
+    LaunchedEffect(language) { talks = store.load(language) }
+    if (talks.isEmpty()) return
+    HorizontalDivider()
+    Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium)
+    val formatter = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT) }
+    talks.take(10).forEach { s ->
+        Column {
+            Text(
+                s.displayTitle ?: stringResource(R.string.conversation),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
+                    " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
