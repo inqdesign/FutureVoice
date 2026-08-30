@@ -35,7 +35,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.SessionSummarizer
 import com.roro.futurevoice.talk.TurnRole
 import java.time.Instant
 import java.time.ZoneId
@@ -179,7 +182,7 @@ private fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start free talk") }
 
-            RecentTalks(language = state.targetLanguage)
+            RecentTalks(language = state.targetLanguage, nativeLanguage = state.nativeLanguage, level = state.level)
 
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
@@ -194,11 +197,13 @@ private fun HomeScreen(
  * time Home comes back into composition (i.e. after every call).
  */
 @Composable
-private fun RecentTalks(language: String) {
+private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLevel) {
     val context = LocalContext.current
-    val store = remember { SessionStore(context) }
+    val store = remember { SessionStore.shared(context) }
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
-    LaunchedEffect(language) { talks = store.load(language) }
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    val inFlight by SessionSummarizer.inFlight.collectAsStateWithLifecycle()
+    LaunchedEffect(language, revision) { talks = store.load(language) }
     if (talks.isEmpty()) return
     HorizontalDivider()
     Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium)
@@ -211,10 +216,24 @@ private fun RecentTalks(language: String) {
             )
             Text(
                 formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
-                    " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }),
+                    " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }) +
+                    (s.summary?.scorecard?.let { " · ${it.overall}" } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            s.summary?.scorecard?.topLine?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
+            // The rescue path (iOS: ConversationDetailView): a talk saved
+            // before its analysis finished isn't half a book, it's no book —
+            // so it can always be run again from here.
+            if (SessionSummarizer.needsSummary(s)) {
+                val working = s.id in inFlight
+                TextButton(
+                    enabled = !working,
+                    onClick = { SessionSummarizer.summarizeInBackground(context, s, nativeLanguage, level) },
+                ) { Text(stringResource(if (working) R.string.working else R.string.generate_review_material)) }
+            }
         }
     }
 }

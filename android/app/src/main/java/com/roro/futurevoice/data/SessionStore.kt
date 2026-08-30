@@ -16,7 +16,23 @@ import java.io.File
  * updates the cache and rewrites the file atomically (temp + rename), so a
  * crash mid-write leaves the previous file intact.
  */
-class SessionStore(context: Context) {
+class SessionStore private constructor(context: Context) {
+
+    companion object {
+        @Volatile private var instance: SessionStore? = null
+
+        /**
+         * ONE store per process, like iOS's `SessionStore.shared`. Two
+         * instances mean two caches, and a screen reading its own copy never
+         * sees what a background job wrote through the other.
+         */
+        fun shared(context: Context): SessionStore =
+            instance ?: synchronized(this) {
+                instance ?: SessionStore(context.applicationContext).also { instance = it }
+            }
+
+        private const val FILE_NAME = "sessions.json"
+    }
 
     private val appContext = context.applicationContext
     private val mutex = Mutex()
@@ -68,7 +84,4 @@ class SessionStore(context: Context) {
         }
     }
 
-    private companion object {
-        const val FILE_NAME = "sessions.json"
-    }
 }

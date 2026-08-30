@@ -249,6 +249,55 @@ ceiling nothing counts down; don't print a number.
 
 ---
 
+## `POST /session-summary`
+
+The post-talk analysis with its PROMPT HELD SERVER-SIDE — brain-lift #1
+(`android-launch-roadmap.md` §1.13). The text is `ConversationEngine.
+summarySystemPrompt` + `CoachingLanguage.contract`, extracted from the Swift
+source by script (never retyped) into `supabase/functions/session-summary/
+index.ts`. iOS still builds the same prompt client-side and calls `/gemini`;
+switching iOS to this function is a separate, owner-approved step. Android has
+no prompt of its own and calls this. When the Swift prompt changes, re-extract.
+
+### Request
+
+```jsonc
+{
+  "target_language": "en",
+  "native_language": "ko",
+  "profile": { "proficiencyLevel": "b1", "targetLanguage": "en", "recurringMistakes": [], "weakVocabAreas": [], "strongPatterns": [], "totalSessions": 3, "totalSpeakingSeconds": 420 },
+  "known_about_user": ["Lives in Seoul"],   // UserPersona.knownFacts — never echoed back
+  "expression_budget": 6,                    // min(14, max(6, fluentTurns))
+  "transcript": "[FLUENT_SELF] …\n[USER] …",  // ConversationEngine.formatTranscript
+  "metrics": { "user_turn_count": 3, … },   // ScorecardMetrics.promptJSON — client-computed, deterministic
+  "stream": true
+}
+```
+
+`X-Idempotency-Key: summary:<session id>:<turn count>` — a retry after a
+malformed response re-runs the same logical request for free.
+
+### Response
+
+Gemini's own body (`candidates[0].content.parts[].text` is the JSON), SSE with
+the `X-Gemini-Stream: sse` handshake when `stream` — so a client parses it
+with the same code as `/gemini`. The JSON's KEY ORDER is load-bearing (the
+wrap-up board reads which section is done from which key has appeared):
+`title, phrases_used, new_patterns_detected, suggested_drills, expressions_used,
+expressions_offered, weak_vocab_areas, grammar_errors, overall_note,
+scorecard, about_user`. Free; purpose "summary" cap (60/day), hourly backstop 120.
+
+### What the CLIENT still owns after the call (`behavior.md`)
+
+The verbatim guards — `expressions_used` must appear in the learner's own
+turns, `expressions_offered` in the fluent self's and NOT the learner's,
+`grammar_errors.quote` in the learner's turns and not equal to its correction
+once normalized — and everything derived: vocab ingest, drill minting,
+carry-over detection, profile absorb, `about_user` → persona notes. Both
+clients run the same normalization (`CarryoverDetector.normalized`).
+
+---
+
 ## Auth
 
 - **iOS**: Sign in with Apple → `signInWithIdToken` (native token, no browser

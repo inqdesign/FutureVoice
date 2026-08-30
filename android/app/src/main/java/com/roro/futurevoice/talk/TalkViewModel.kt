@@ -12,6 +12,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StoreJson
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.net.EdgeError
@@ -85,7 +86,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val meter = TalkMeter(auth, viewModelScope)
     private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE)
     private val mp3 = Mp3Player(appContext.cacheDir)
-    private val sessions = SessionStore(appContext)
+    private val sessions = SessionStore.shared(appContext)
 
     private val _state = MutableStateFlow(TalkUiState())
     val state: StateFlow<TalkUiState> = _state.asStateFlow()
@@ -188,8 +189,13 @@ class TalkViewModel(context: Context) : ViewModel() {
             origin = if (cfg.topic.isBlank()) SessionOrigin.FREE else SessionOrigin.NEWS,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
-        // (screen left) before a viewModelScope job gets to run.
-        CoroutineScope(Dispatchers.Main).launch { runCatching { sessions.save(session) } }
+        // (screen left) before a viewModelScope job gets to run. The summary
+        // follows on the same scope and writes onto the same row.
+        CoroutineScope(Dispatchers.Main).launch {
+            runCatching { sessions.save(session) }
+            StoreEvents.bump()
+            SessionSummarizer.summarizeInBackground(appContext, session, cfg.nativeLanguage, cfg.level)
+        }
     }
 
     /** The one tap: put the call down, or pick it back up. */

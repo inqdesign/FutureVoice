@@ -10,8 +10,12 @@
 > 402 walls told apart). Since 2026-08-30 a call also **puts itself down**
 > after 30 s of nothing (`TalkPhase.PAUSED`, `behavior.md` §9 — same predicate
 > the meter bills on) and can be paused/resumed by hand, and the Talk screen
-> reads every string from the generated catalog (see "Strings" below). Still
-> missing from the slice: session end → summary, local persistence, real-mic
+> reads every string from the generated catalog (see "Strings" below). Since
+> 2026-08-31 a talk is PERSISTED (`SessionStore.kt`, iOS's on-disk contract)
+> and SUMMARIZED through the new `session-summary` Edge Function (prompt
+> server-side; see `edge-api.md`) — verbatim guards and title→topic ported,
+> vocab/drill/carry-over/profile ingestion still to port with vectors. Still
+> missing from the slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).
 > `ConversationEngine.kt` is a 2026-08-04 port and has drifted from Swift
