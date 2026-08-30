@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The app speaks the language the learner picked, never merely the phone's
+     (CLAUDE.md "UI text has ONE language"). Declaring the set lets Android's
+     per-app language setting (API 33+) and AppCompat's setApplicationLocales
+     drive every string through the same resource fallback. Keep in step with
+     scripts/android/gen-strings.py's languages. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="ko" />
+</locale-config>

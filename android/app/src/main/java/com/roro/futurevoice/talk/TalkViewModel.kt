@@ -14,6 +14,7 @@ import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.GeminiClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,7 +33,12 @@ data class TalkConfig(
     val persona: UserPersona? = null,
 )
 
-enum class TalkPhase { IDLE, CONNECTING, LISTENING, THINKING, SPEAKING, ENDED }
+/**
+ * [PAUSED] is the call put DOWN, not away: the mic is closed and nothing
+ * bills, but the transcript stays and [TalkViewModel.resume] picks the same
+ * session up. Only [ENDED] has consequences (a summary, a book).
+ */
+enum class TalkPhase { IDLE, CONNECTING, LISTENING, THINKING, SPEAKING, PAUSED, ENDED }
 
 /**
  * Which wall ended the call. A FREE account's spent pool leads to the
@@ -51,6 +57,12 @@ data class TalkUiState(
     val wall: TalkWall? = null,
     /** Null until the first tick lands, and null throughout on a plan that doesn't count down. */
     val minutesRemaining: Int? = null,
+    /**
+     * True when the idle watchdog was what paused the call — the only
+     * difference it makes is the hint, so a learner coming back to a quiet
+     * screen reads "paused" instead of wondering what broke.
+     */
+    val pausedForIdle: Boolean = false,
     val lastTiming: Map<String, String> = emptyMap(),
 )
 
@@ -78,6 +90,14 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var systemPrompt: String = ""
     private var endpointJob: Job? = null
     private var callJob: Job? = null
+    private var idleWatchJob: Job? = null
+
+    /**
+     * The last moment anything real happened. Deliberately OUTSIDE the watch
+     * job: the job is re-armed every time the mic opens, and a clock living
+     * inside it would be reset by every restart. Only real activity moves it.
+     */
+    private var lastActivityAt: Long = 0L
 
     private var lastTranscriptChangeAt: Long? = null
     private var didPreconnectThisTurn = false
@@ -113,6 +133,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         meter.isBillable = { isBillableMoment() }
         meter.onWallHit = { wall -> hitWall(wall) }
         meter.start(sessionId = sessionId, language = config.targetLanguage)
+        lastActivityAt = System.currentTimeMillis()   // the call starts occupied
+        startIdleWatch()
 
         callJob = viewModelScope.launch {
             try {
@@ -125,12 +147,76 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     fun end() {
         meter.stop()
+        cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
         callJob?.cancel(); callJob = null
         runCatching { live.stop() }
         pcm.stop()
         mp3.stop()
         _state.update { it.copy(phase = TalkPhase.ENDED, partial = "") }
+    }
+
+    /** The one tap: put the call down, or pick it back up. */
+    fun togglePause() {
+        when (_state.value.phase) {
+            TalkPhase.PAUSED -> resume()
+            TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> pauseCall(forIdle = false)
+            else -> Unit
+        }
+    }
+
+    /**
+     * Put the call DOWN — not away. The mic closes and the meter goes quiet,
+     * but the transcript stays and [resume] picks the same session up where
+     * it stopped. Nothing is saved or summarized here; only [end] does that.
+     * Every "stop" lands here: the tap and the idle watchdog.
+     */
+    private fun pauseCall(forIdle: Boolean) {
+        cancelIdleWatch()
+        endpointJob?.cancel(); endpointJob = null
+        // Whatever the partial held is discarded, as on iOS — a half-sentence
+        // from before a pause is not something to answer later.
+        runCatching { live.stop() }
+        pcm.stop()
+        mp3.stop()
+        _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f, pausedForIdle = forIdle) }
+    }
+
+    fun resume() {
+        if (_state.value.phase != TalkPhase.PAUSED) return
+        lastActivityAt = System.currentTimeMillis()   // a tap is someone being here
+        _state.update { it.copy(phase = TalkPhase.LISTENING, pausedForIdle = false) }
+        beginListening()
+        startIdleWatch()
+    }
+
+    // MARK: - Nobody's there
+
+    /**
+     * Watch for a call with nobody in it. Not a billing rule — idle seconds
+     * already cost nothing. This is about the open mic: a call the learner
+     * walked away from keeps listening, and the first voice it hears — a TV,
+     * someone else in the room — would be billed AND answered as the learner.
+     * The predicate is the one the meter bills on, so the call pauses on
+     * exactly the silence it charges nothing for (`behavior.md` §8).
+     */
+    private fun startIdleWatch() {
+        cancelIdleWatch()
+        idleWatchJob = viewModelScope.launch {
+            while (true) {
+                delay(IDLE_WATCH_TICK_SECONDS * 1000L)
+                val phase = _state.value.phase
+                if (phase == TalkPhase.ENDED || phase == TalkPhase.PAUSED) return@launch
+                if (isBillableMoment()) { lastActivityAt = System.currentTimeMillis(); continue }
+                if (System.currentTimeMillis() - lastActivityAt < IDLE_PAUSE_SECONDS * 1000L) continue
+                pauseCall(forIdle = true)
+                return@launch
+            }
+        }
+    }
+
+    private fun cancelIdleWatch() {
+        idleWatchJob?.cancel(); idleWatchJob = null
     }
 
     override fun onCleared() {
@@ -164,6 +250,8 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private fun beginListening() {
         val cfg = config ?: return
+        val phase = _state.value.phase
+        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return
         didPreconnectThisTurn = false
         lastTranscriptChangeAt = null
         turnStartedAt = System.currentTimeMillis()
@@ -223,13 +311,14 @@ class TalkViewModel(context: Context) : ViewModel() {
                 "noise" to "%.2f".format(live.ambientNoiseLevel),
             )
             turnEndedSpeakingAt = now
-            sendTurn()
+            // Hand the turn to its own job: the monitor is done, and a pause
+            // cancelling it must not take the in-flight reply down with it.
+            callJob = viewModelScope.launch { sendTurn() }
             return
         }
     }
 
     private suspend fun sendTurn() {
-        endpointJob?.cancel()
         _state.update { it.copy(phase = TalkPhase.THINKING) }
 
         val finalizeStart = System.currentTimeMillis()
@@ -298,6 +387,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             )
         } catch (e: EdgeError.InsufficientCredits) {
             throw e
+        } catch (e: EdgeError.DailyCapReached) {
+            throw e
         } catch (e: Exception) {
             gemini.sendJson(
                 system = systemPrompt,
@@ -321,6 +412,8 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private suspend fun speak(text: String) {
         val cfg = config ?: return
+        val phase = _state.value.phase
+        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return
         _state.update { it.copy(phase = TalkPhase.SPEAKING) }
         val firstChunkAt = longArrayOf(0L)
         val startedAt = System.currentTimeMillis()
@@ -386,12 +479,14 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     private fun fail(e: Exception) {
+        if (e is CancellationException) return   // end() cancelling a job is not a failure
         // A 402 from a turn is the same wall the meter reports, and it is not
         // an error — route it to the same place.
         if (e is EdgeError.InsufficientCredits || e is EdgeError.DailyCapReached) {
             hitWall(e); return
         }
         meter.stop()
+        cancelIdleWatch()
         endpointJob?.cancel()
         runCatching { live.stop() }
         pcm.stop()
@@ -407,6 +502,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private fun isBillableMoment(): Boolean {
         val phase = _state.value.phase
+        if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return false
         val billable = phase == TalkPhase.THINKING || phase == TalkPhase.SPEAKING ||
             pcm.isPlaying || mp3.isPlaying || someoneIsTalkingHere()
         if (BuildConfig.DEBUG) {
@@ -441,6 +537,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private fun hitWall(wall: EdgeError) {
         meter.stop()
+        cancelIdleWatch()
         endpointJob?.cancel()
         runCatching { live.stop() }
         pcm.stop()
@@ -459,5 +556,19 @@ class TalkViewModel(context: Context) : ViewModel() {
         private const val TAG = "TalkViewModel"
         /** Voiced seconds this turn before a segment counts as a person talking. */
         private const val MIN_VOICED_SECONDS_PER_TURN = 1.5
+
+        /**
+         * How long a call may hear nothing at all before it puts itself down.
+         * 30 s of nothing — no close-mic voice, no reply in flight, no line
+         * being spoken — is already a long silence in a conversation (iOS
+         * started at three minutes, then one; both were a long time to sit
+         * with an open mic). The floor is the learner who thinks a long while
+         * and then speaks: the recovery is one tap on a screen that never
+         * lost the conversation.
+         */
+        private const val IDLE_PAUSE_SECONDS = 30
+
+        /** Coarse on purpose — the pause lands within a tick of the bar. */
+        private const val IDLE_WATCH_TICK_SECONDS = 5
     }
 }

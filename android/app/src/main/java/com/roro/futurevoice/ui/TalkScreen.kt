@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -20,16 +22,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.roro.futurevoice.R
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.TalkConfig
 import com.roro.futurevoice.talk.TalkPhase
@@ -42,6 +45,9 @@ import com.roro.futurevoice.talk.TurnRole
  * Phone-call mode, not a chat app: one dialogue surface, a status line, and an
  * End button. Speaker separation lives in [DialogueLine] alone — restyling the
  * conversation must stay a single-composable change.
+ *
+ * Every string here is `R.string.<slug of the iOS key>` from the generated
+ * catalog (`scripts/android/gen-strings.py`); nothing is authored twice.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,6 +83,10 @@ fun TalkScreen(
         if (state.turns.isNotEmpty()) listState.animateScrollToItem(state.turns.lastIndex)
     }
 
+    val paused = state.phase == TalkPhase.PAUSED
+    val onCall = state.phase == TalkPhase.LISTENING ||
+        state.phase == TalkPhase.THINKING || state.phase == TalkPhase.SPEAKING
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -84,14 +94,15 @@ fun TalkScreen(
                     // Minutes left ride on the title, whole minutes only — a
                     // month-long balance must never read as a running meter.
                     val minutes = state.minutesRemaining
+                    val label = phaseLabel(state.phase)
                     Text(
                         if (minutes != null && state.phase != TalkPhase.ENDED)
-                            "${phaseLabel(state.phase)} · $minutes min left"
-                        else phaseLabel(state.phase)
+                            "$label · ${stringResource(R.string.lld_min_left, minutes)}"
+                        else label
                     )
                 },
                 actions = {
-                    Button(onClick = { vm.end(); onExit() }) { Text("End") }
+                    Button(onClick = { vm.end(); onExit() }) { Text(stringResource(R.string.end)) }
                 },
             )
         }
@@ -105,7 +116,13 @@ fun TalkScreen(
 
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    // A paused call is picked back up by tapping the
+                    // conversation itself — the screen never lost it.
+                    .clickable(enabled = paused) { vm.resume() }
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(state.turns, key = { it.id }) { turn -> DialogueLine(turn) }
@@ -121,16 +138,33 @@ fun TalkScreen(
                 )
             }
 
+            // A call that put itself down says so. Without this the screen
+            // looks identical to one the learner stopped on purpose, and the
+            // only clue that 30 s passed is that nothing is happening.
+            if (paused) {
+                Text(
+                    stringResource(
+                        if (state.pausedForIdle) R.string.call_paused_tap_to_pick_it_back_up
+                        else R.string.paused_tap_to_pick_it_back_up
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
             // A spent allowance is not an error — it gets its own line, in
             // the body colour, and a subscriber never reads the word "credits".
             state.wall?.let { wall ->
                 Text(
-                    when (wall) {
-                        TalkWall.OUT_OF_MINUTES ->
-                            "Your talk time is used up. This call is saved — subscribe to keep talking."
-                        TalkWall.ALLOWANCE_SPENT ->
-                            "Your talk time for this period is used up. This call is saved — it refills with your plan."
-                    },
+                    stringResource(
+                        when (wall) {
+                            TalkWall.OUT_OF_MINUTES ->
+                                R.string.your_talk_time_is_used_up_this_call_is_saved_you_can_pick_it_46ade7
+                            TalkWall.ALLOWANCE_SPENT ->
+                                R.string.this_month_s_talk_time_is_used_up
+                        }
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
@@ -143,6 +177,20 @@ fun TalkScreen(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(16.dp),
                 )
+            }
+
+            // The one in-call control besides End: put the call down, pick it
+            // up. Pausing has no consequences (no summary, no book), which is
+            // why it needs no confirmation.
+            if (onCall || paused) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    OutlinedButton(onClick = { vm.togglePause() }) {
+                        Text(stringResource(if (paused) R.string.resume else R.string.pause))
+                    }
+                }
             }
         }
     }
@@ -161,7 +209,7 @@ fun DialogueLine(turn: Turn) {
         horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
     ) {
         Text(
-            if (isUser) "You" else "Fluent self",
+            stringResource(if (isUser) R.string.you else R.string.future_self_1384d5),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -181,11 +229,15 @@ fun DialogueLine(turn: Turn) {
     }
 }
 
-private fun phaseLabel(phase: TalkPhase): String = when (phase) {
-    TalkPhase.IDLE -> "Talk"
-    TalkPhase.CONNECTING -> "Connecting…"
-    TalkPhase.LISTENING -> "Listening"
-    TalkPhase.THINKING -> "…"
-    TalkPhase.SPEAKING -> "Speaking"
-    TalkPhase.ENDED -> "Ended"
-}
+@Composable
+private fun phaseLabel(phase: TalkPhase): String = stringResource(
+    when (phase) {
+        TalkPhase.IDLE -> R.string.talk
+        TalkPhase.CONNECTING -> R.string.connecting
+        TalkPhase.LISTENING -> R.string.listening
+        TalkPhase.THINKING -> R.string.thinking
+        TalkPhase.SPEAKING -> R.string.speaking
+        TalkPhase.PAUSED -> R.string.paused
+        TalkPhase.ENDED -> R.string.ended
+    }
+)

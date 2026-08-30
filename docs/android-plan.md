@@ -3,16 +3,19 @@
 > Native Kotlin + Jetpack Compose client sharing the Supabase backend with iOS.
 > Written 2026-07-29. iOS is the reference implementation.
 >
-> **Status (2026-08-26): Phase A + B done, Phase C in progress.** `android/`
+> **Status (2026-08-30): Phase A + B done, Phase C in progress.** `android/`
 > builds and runs on the emulator: sign-in → `voice_clones` restore → Gemini
 > SSE turn → cloned-voice streaming TTS → VAD turn-taking, and since 2026-08-26
 > the call is METERED (`TalkMeter.kt` ↔ `talk-tick`, idle seconds free, both
-> 402 walls told apart). Still missing from the slice: session end → summary,
-> local persistence, the idle auto-pause, real-mic STT validation, and Apple
-> web OAuth (a Services ID + secret the app can't set up for itself — until
-> then debug builds sign in with a test email). `ConversationEngine.kt` is a
-> 2026-08-04 port and has drifted from Swift since; the fix is the Phase D
-> brain-lift, not a re-port.
+> 402 walls told apart). Since 2026-08-30 a call also **puts itself down**
+> after 30 s of nothing (`TalkPhase.PAUSED`, `behavior.md` §9 — same predicate
+> the meter bills on) and can be paused/resumed by hand, and the Talk screen
+> reads every string from the generated catalog (see "Strings" below). Still
+> missing from the slice: session end → summary, local persistence, real-mic
+> STT validation, and Apple web OAuth (a Services ID + secret the app can't
+> set up for itself — until then debug builds sign in with a test email).
+> `ConversationEngine.kt` is a 2026-08-04 port and has drifted from Swift
+> since; the fix is the Phase D brain-lift, not a re-port.
 >
 > **Scope (2026-08-26): Android is a standalone launch for Android users with
 > full iOS parity — see `android-launch-roadmap.md`.** The "restore, never
@@ -28,6 +31,28 @@
 > "someone talking" and BILLS; that is the meter being right about a wrong
 > room, not a bug. Silence/idle behaviour and real-mic STT can only be
 > verified on a device.
+
+## Strings: one catalog, generated resources
+
+`FutureVoice/Resources/Localizable.xcstrings` is the ONLY place a UI string is
+authored (roadmap §0.4). `scripts/android/gen-strings.py` turns it into
+`android/app/src/main/res/values/strings_catalog.xml` (en, the source
+language) and `values-ko/strings_catalog.xml`; both are committed and
+`--check` fails when they lag the catalog. A key becomes
+`R.string.<slug of the English text>` — `"Free talk"` → `R.string.free_talk`
+— so a Kotlin call site can be read off the iOS one. Two keys that slug alike
+(`Accent` / `Accent: %@`, `Future self` / `Future Self`) BOTH get a hash
+suffix and a comment carrying the key, so a name never silently changes
+meaning when a sibling appears. Format specifiers are rewritten (`%@` → `%s`,
+`%lld` → `%d`) and made positional when there are several. Skipped on
+purpose: `shouldTranslate: false`, `extractionState: "stale"`, blank keys.
+
+A string Android needs that iOS doesn't (`Connecting…`, `Ended`, `Resume`)
+is added to the CATALOG as `extractionState: "manual"` with its Korean written
+— never to a `strings.xml`. `res/xml/locales_config.xml` declares en + ko so
+the per-app language setting resolves through the same fallback; the app's
+own language switch (`UILanguage` = the learner's pick, not the phone's) is
+M0 work and will drive `AppCompatDelegate.setApplicationLocales`.
 
 ## Strategy in one line
 

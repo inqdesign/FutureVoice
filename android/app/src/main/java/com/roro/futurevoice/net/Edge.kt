@@ -1,7 +1,13 @@
 package com.roro.futurevoice.net
 
+import com.roro.futurevoice.data.AuthRepository
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.Route
 import java.util.concurrent.TimeUnit
 
 /**
@@ -30,7 +36,21 @@ object Edge {
         // budget — the per-read timeout above is the real guard.
         .callTimeout(0, TimeUnit.MILLISECONDS)
         .retryOnConnectionFailure(true)
+        // A 401 means the bearer token the SDK handed us is already retired
+        // on the server (slept-through refresh, clock jump). Refresh the
+        // session and retry ONCE with the new token; a second 401 stands.
+        .authenticator(SessionAuthenticator)
         .build()
+
+    private object SessionAuthenticator : Authenticator {
+        override fun authenticate(route: Route?, response: Response): Request? {
+            if (response.priorResponse != null) return null   // already retried once
+            val fresh = runBlocking { AuthRepository().refreshAfterUnauthorized() } ?: return null
+            return response.request.newBuilder()
+                .header("Authorization", "Bearer $fresh")
+                .build()
+        }
+    }
 
     /** First `{` … last `}`. Same tolerant extraction iOS uses. */
     fun extractJson(text: String): String? {

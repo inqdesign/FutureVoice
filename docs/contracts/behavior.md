@@ -203,3 +203,30 @@ This predicate is also what makes an UNCAPPED talk plan safe to sell: the
 ceiling there is the learner's effort, and effort is only a limiter while the
 meter charges for speech. Weaken any witness and that plan becomes an open tab.
 
+## 9. A call with nobody in it puts itself down
+
+Not a billing rule — idle seconds already cost nothing (§8). This is about the
+open mic: a call the learner walked away from keeps listening, and the first
+voice it hears — a TV, someone else in the room — would be billed AND answered
+as if it were the learner.
+
+| Constant | Value | Meaning |
+|---|---|---|
+| `idlePauseSeconds` | `30` | Nothing billable for this long → the call PAUSES. |
+| `idleWatchTickSeconds` | `5` | Poll cadence; the pause lands within a tick of the bar. |
+
+- The watchdog asks the SAME predicate the meter bills on (§8), so the call
+  pauses on exactly the silence it charges nothing for. Any billable second
+  moves `lastActivityAt`; only real activity does — the clock lives outside
+  the watch task so a mic restart can't reset it.
+- **Pause ≠ end.** The mic closes, the partial is discarded, playback stops,
+  the transcript stays; one tap resumes the same session. Nothing is saved,
+  summarized or metered by a pause. Only End has consequences.
+- The UI says WHICH pause it was — "Call paused — tap to pick it back up" for
+  the watchdog, "Paused — tap to pick it back up" for a manual one — because
+  a quiet screen with no hint reads as broken.
+- A reply already in flight when the call is paused keeps its TEXT and drops
+  its AUDIO; the mic does not reopen behind it.
+
+iOS: `ConversationView.startIdleWatch` / `pauseCall`. Android:
+`TalkViewModel.startIdleWatch` / `pauseCall`, `TalkPhase.PAUSED`.

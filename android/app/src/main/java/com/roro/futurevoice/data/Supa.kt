@@ -75,10 +75,43 @@ class AuthRepository {
         Supa.client.auth.signOut()
     }
 
-    /** Bearer token for every Edge Function call. */
-    suspend fun accessToken(): String =
-        Supa.client.auth.currentAccessTokenOrNull()
+    /**
+     * Bearer token for every Edge Function call.
+     *
+     * Refreshes FIRST when the token is within [refreshSkewMs] of expiry. The
+     * SDK's own auto-refresh is a timer armed from the clock at load time; a
+     * phone that slept through it, or an emulator whose clock jumped, wakes
+     * with a token the server has already retired — every call then 401s
+     * until something forces a refresh. `Edge.client`'s authenticator is the
+     * second line: a 401 that still gets through refreshes and retries once.
+     */
+    suspend fun accessToken(): String {
+        val session = Supa.client.auth.currentSessionOrNull()
             ?: throw AuthError("No Supabase session — sign in first.")
+        val expiresInMs = session.expiresAt.toEpochMilliseconds() - System.currentTimeMillis()
+        if (expiresInMs < refreshSkewMs) {
+            runCatching { Supa.client.auth.refreshCurrentSession() }
+        }
+        return Supa.client.auth.currentAccessTokenOrNull()
+            ?: throw AuthError("No Supabase session — sign in first.")
+    }
+
+    /**
+     * Forced refresh after a server-side 401. Returns the NEW token, or null
+     * if the session can't be refreshed (signed out, refresh token revoked) —
+     * in which case the 401 stands and the UI shows it.
+     */
+    suspend fun refreshAfterUnauthorized(): String? {
+        val before = Supa.client.auth.currentAccessTokenOrNull()
+        runCatching { Supa.client.auth.refreshCurrentSession() }
+        val after = Supa.client.auth.currentAccessTokenOrNull()
+        return after?.takeIf { it != before }
+    }
+
+    private companion object {
+        /** Refresh when less than this is left — one minute covers clock skew and a slow request. */
+        const val refreshSkewMs = 60_000L
+    }
 
     /** Cheap token refresh, used by the pre-connect warm-up. */
     suspend fun warmToken() {
