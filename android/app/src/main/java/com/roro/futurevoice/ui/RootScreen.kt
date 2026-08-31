@@ -56,6 +56,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ChildCare
@@ -92,6 +93,12 @@ import com.roro.futurevoice.data.SituationTree
 import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.roro.futurevoice.data.Counterpart
+import com.roro.futurevoice.data.CounterpartStore
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.text.style.TextOverflow
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
@@ -967,10 +974,41 @@ private fun WatchBody(
     var prefill by remember { mutableStateOf("") }
     /** Which category is drilled open, if any. */
     var branch by remember { mutableStateOf<SituationTree.Branch?>(null) }
-    LaunchedEffect(language, revision) { scenarios = store.load(language) }
+    /** The person a composed scene is scoped to, if any. */
+    var withPerson by remember { mutableStateOf<Counterpart?>(null) }
+    var people by remember { mutableStateOf<List<Counterpart>>(emptyList()) }
+    var managingPeople by remember { mutableStateOf(false) }
+    LaunchedEffect(language, revision) {
+        scenarios = store.load(language)
+        // Own people only. A stranger met in Find people has `remoteId` set
+        // and lives in that sheet's "People you've met" — putting them here
+        // would crowd out the people the learner actually knows.
+        people = CounterpartStore.shared(context).load().filter { it.remoteId == null }
+    }
     val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // The people you actually talk to. Tapping one scopes the composer to
+        // them, so the scene is grounded in a real relationship rather than a
+        // generic "the other person".
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(people, key = { it.id }) { person ->
+                PersonBubble(
+                    name = person.name,
+                    onClick = { withPerson = person; composing = true },
+                )
+            }
+            // Always last: the way in when the row is empty, and the way to
+            // edit when it isn't.
+            item {
+                PersonBubble(
+                    name = stringResource(R.string.people),
+                    isAction = true,
+                    onClick = { managingPeople = true },
+                )
+            }
+        }
+
         DiscoverRow(
             title = stringResource(R.string.make_your_own_situation),
             icon = Icons.Filled.Add,
@@ -1029,13 +1067,51 @@ private fun WatchBody(
         )
     }
 
+    if (managingPeople) {
+        PeopleSheet(onDismiss = { managingPeople = false })
+    }
+
     if (composing) {
         ScenarioComposer(
             targetLanguage = language,
             existingCategories = scenarios.mapNotNull { it.category }.distinct(),
             prefill = prefill,
-            onDismiss = { composing = false; prefill = "" },
+            person = withPerson,
+            onDismiss = { composing = false; prefill = ""; withPerson = null },
         )
+    }
+}
+
+/**
+ * One face in the stories row. There is no photo of these people and there
+ * should not be — the app never asks for one — so the bubble is an initial on
+ * the book accent, which is enough to pick a name out of five.
+ */
+@Composable
+private fun PersonBubble(name: String, isAction: Boolean = false, onClick: () -> Unit) {
+    Column(
+        Modifier.width(72.dp).clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            Modifier.size(56.dp).background(
+                if (isAction) MaterialTheme.colorScheme.surfaceVariant
+                else Books.scenarios.copy(alpha = 0.18f),
+                CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (isAction) {
+                Icon(Icons.Filled.Add, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text(name.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Books.scenarios)
+            }
+        }
+        Text(name, style = MaterialTheme.typography.labelSmall,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -1094,6 +1170,8 @@ private fun ScenarioComposer(
     existingCategories: List<String>,
     /** A "Likely situations" leaf, dropped in ready to edit — never locked. */
     prefill: String = "",
+    /** Who the scene is with, when the composer was opened from a face. */
+    person: Counterpart? = null,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -1107,7 +1185,9 @@ private fun ScenarioComposer(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.make_your_own_situation),
+            Text(
+                if (person != null) stringResource(R.string.a_scene_with_lls, person.name)
+                else stringResource(R.string.make_your_own_situation),
                 style = MaterialTheme.typography.titleLarge)
             Text(stringResource(R.string.the_real_thing_coming_up_an_interview_a_call_a_visit_describ_a97c73),
                 style = MaterialTheme.typography.bodyMedium,
@@ -1135,6 +1215,14 @@ private fun ScenarioComposer(
                             category = result?.category?.takeIf { it.isNotBlank() },
                             categoryIcon = result?.icon,
                             summary = result?.summary?.takeIf { it.isNotBlank() },
+                            // Scoping to a person is what makes the scene
+                            // theirs: the role names them, and the id links
+                            // the scenario back so the book can say who it
+                            // was with. An EMPTY role is what lets a scene
+                            // infer its own counterpart, so it must stay
+                            // empty when nobody was picked.
+                            role = person?.let { "${'$'}{it.name} — ${'$'}{it.relationship}" }.orEmpty(),
+                            counterpartId = person?.id,
                         ), targetLanguage)
                         StoreEvents.bump()
                         committing = false; onDismiss()

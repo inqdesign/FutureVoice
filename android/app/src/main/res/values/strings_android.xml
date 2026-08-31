@@ -21,4 +21,9 @@
     <string name="future_self">Future self</string>
     <string name="print_or_save_as_pdf">Print or save as PDF</string>
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">Tap a category — the composer suggests specific scenarios you can watch.</string>
+    <string name="add_someone_you_actually_talk_to">Add someone you actually talk to — a friend, a colleague, your landlord. Scenes with them are grounded in what you two are really like.</string>
+    <string name="add_a_person">Add a person</string>
+    <string name="who_are_they_to_you">Who are they to you?</string>
+    <string name="shared_context">Shared context</string>
+    <string name="a_scene_with_lls">A scene with %1$s</string>
 </resources>

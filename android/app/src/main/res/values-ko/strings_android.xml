@@ -21,4 +21,9 @@
     <string name="future_self">미래의 나</string>
     <string name="print_or_save_as_pdf">인쇄하거나 PDF로 저장</string>
     <string name="tap_a_category_the_composer_suggests_specific_scenarios">분류를 누르면 볼 수 있는 구체적인 상황을 제안해요.</string>
+    <string name="add_someone_you_actually_talk_to">실제로 대화하는 사람을 더해요 — 친구, 동료, 집주인. 그 사람과의 장면은 두 사람의 실제 관계 위에서 만들어져요.</string>
+    <string name="add_a_person">사람 추가</string>
+    <string name="who_are_they_to_you">나에게 어떤 사람인가요?</string>
+    <string name="shared_context">같이 아는 것</string>
+    <string name="a_scene_with_lls">%1$s와의 장면</string>
 </resources>
