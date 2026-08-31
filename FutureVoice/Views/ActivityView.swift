@@ -88,7 +88,7 @@ struct ActivityView: View {
         for day in cardStore.recordedDays() {
             let key = cal.startOfDay(for: day)
             guard cellPhotos[key] == nil else { out[key] = cellPhotos[key]; continue }
-            out[key] = cardStore.photo(for: day)?.cellThumb(side: 76)
+            out[key] = cardStore.photo(for: day)?.cellThumb(side: 92)
         }
         cellPhotos = out
     }
@@ -286,6 +286,7 @@ struct ActivityView: View {
             let mins = minutesByDay[day] ?? 0
             let strong = active && heatOpacity(mins) >= 0.6
             let isSelected = selectedDay == day
+            let hasPhoto = cellPhotos[day] != nil
             Text("\(cal.component(.day, from: date))")
                 .font(.callout)
                 // Future days are dimmed and inert — they can't be selected.
@@ -293,14 +294,16 @@ struct ActivityView: View {
                                  : (strong || cellPhotos[day] != nil ? AnyShapeStyle(.white)
                                     : (isSelected || isToday ? AnyShapeStyle(Color.accentColor)
                                        : AnyShapeStyle(.primary))))
-                .frame(maxWidth: .infinity, minHeight: 38)
+                .frame(maxWidth: .infinity, minHeight: 46)
                 .background(
                     ZStack {
                         if let photo = cellPhotos[day] {
+                            // A photo day gets the whole cell — the picture
+                            // is the point, and 38 pt made it a smudge.
                             Image(uiImage: photo).resizable().scaledToFill()
-                                .frame(width: 38, height: 38)
+                                .frame(width: 46, height: 46)
                                 .clipShape(Circle())
-                                .overlay(Circle().fill(.black.opacity(0.25)))
+                                .overlay(Circle().fill(.black.opacity(0.22)))
                         } else if active {
                             Circle().fill(Color.accentColor.opacity(heatOpacity(mins)))
                         } else if isToday {
@@ -312,12 +315,12 @@ struct ActivityView: View {
                             Circle().strokeBorder(Color.accentColor, lineWidth: 2.5)
                         }
                     }
-                    .frame(width: 38, height: 38)
+                    .frame(width: hasPhoto ? 46 : 38, height: hasPhoto ? 46 : 38)
                 )
                 .contentShape(Circle())
                 .onTapGesture { if !future { selectedDay = day } }
         } else {
-            Color.clear.frame(maxWidth: .infinity, minHeight: 38)
+            Color.clear.frame(maxWidth: .infinity, minHeight: 46)
         }
     }
 
