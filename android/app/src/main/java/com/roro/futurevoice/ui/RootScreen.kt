@@ -80,6 +80,7 @@ fun RootScreen() {
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
+    var detailSessionId by remember { mutableStateOf<String?>(null) }
     var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 
@@ -126,6 +127,12 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { editProfile = false },
             onFinish = { app.savePersona(it); editProfile = false },
+        )
+
+        detailSessionId != null -> TalkDetailScreen(
+            sessionId = detailSessionId!!,
+            language = state.targetLanguage,
+            onBack = { detailSessionId = null },
         )
 
         showDeck -> DrillDeckScreen(
@@ -193,6 +200,7 @@ fun RootScreen() {
             },
             onOpenMe = { showMe = true },
             onOpenDeck = { showDeck = true },
+            onOpenTalk = { detailSessionId = it },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
         )
@@ -277,6 +285,7 @@ private fun HomeScreen(
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     onOpenMe: () -> Unit,
     onOpenDeck: () -> Unit = {},
+    onOpenTalk: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
@@ -347,7 +356,8 @@ private fun HomeScreen(
                 onTalk = { topic -> launch(topic.title, topic.facts.orEmpty()) },
             )
 
-            RecentTalks(language = state.targetLanguage, nativeLanguage = state.nativeLanguage, level = state.level)
+            RecentTalks(language = state.targetLanguage, nativeLanguage = state.nativeLanguage,
+                level = state.level, onOpen = onOpenTalk)
 
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
@@ -367,7 +377,8 @@ private fun HomeScreen(
  * time Home comes back into composition (i.e. after every call).
  */
 @Composable
-private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLevel) {
+private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLevel,
+                        onOpen: (String) -> Unit = {}) {
     val context = LocalContext.current
     val store = remember { SessionStore.shared(context) }
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -380,7 +391,7 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
     Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium)
     val formatter = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT) }
     talks.take(10).forEach { s ->
-        Column {
+        Column(Modifier.fillMaxWidth().clickable { onOpen(s.id) }) {
             Text(
                 s.displayTitle ?: stringResource(R.string.conversation),
                 style = MaterialTheme.typography.bodyLarge,
