@@ -81,6 +81,7 @@ fun RootScreen() {
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
+    var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 
@@ -127,6 +128,15 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { editProfile = false },
             onFinish = { app.savePersona(it); editProfile = false },
+        )
+
+        watchScenarioId != null -> WatchSceneScreen(
+            scenarioId = watchScenarioId!!,
+            voiceId = state.voiceId ?: "",
+            persona = state.persona,
+            targetLanguage = state.targetLanguage,
+            proficiency = state.level.code,
+            onBack = { watchScenarioId = null },
         )
 
         detailSessionId != null -> TalkDetailScreen(
@@ -201,6 +211,7 @@ fun RootScreen() {
             onOpenMe = { showMe = true },
             onOpenDeck = { showDeck = true },
             onOpenTalk = { detailSessionId = it },
+            onWatch = { watchScenarioId = it },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
         )
@@ -286,6 +297,7 @@ private fun HomeScreen(
     onOpenMe: () -> Unit,
     onOpenDeck: () -> Unit = {},
     onOpenTalk: (String) -> Unit = {},
+    onWatch: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
@@ -347,6 +359,7 @@ private fun HomeScreen(
                 targetLanguage = state.targetLanguage,
                 enabled = state.voiceId != null,
                 onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+                onWatch = onWatch,
             )
 
             NewsSection(
@@ -595,6 +608,7 @@ private fun ScenariosSection(
     targetLanguage: String,
     enabled: Boolean,
     onTalk: (Scenario) -> Unit,
+    onWatch: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -627,10 +641,17 @@ private fun ScenariosSection(
                     }
                     .padding(vertical = 8.dp),
             ) {
-                Text(sc.cardTitle, style = MaterialTheme.typography.bodyLarge)
-                sc.category?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(sc.cardTitle, style = MaterialTheme.typography.bodyLarge)
+                        sc.category?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    TextButton(onClick = { onWatch(sc.id) }) {
+                        Text(stringResource(R.string.watch))
+                    }
                 }
             }
         }

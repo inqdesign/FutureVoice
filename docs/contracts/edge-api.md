@@ -310,6 +310,20 @@ under the daily cap. Suggestion/path actions extend this same function later.
 
 ---
 
+## `POST /scenario-curriculum`
+
+Brain-lift #3: the Watch scene + its study content, prompt (and `sceneScale`)
+extracted from `ScenarioCurriculumEngine.swift`; iOS unswitched. Body:
+`{ scenario: { environment, role?, notes?, is_topic? }, cast_identity?,
+persona?, proficiency?, target_language?, weak_vocab_areas?,
+recurring_mistakes?, avoid_titles?, stream? }`. Schema order is load-bearing
+(`turns` FIRST — playback starts while the study tail is written). Client
+idempotency key: `curriculum-v2:<scenario id>[:<run>]`. Playback then calls
+`/elevenlabs-tts` per line with purpose "scene" + ONE `scene_key` — one
+count per scene.
+
+---
+
 ## Auth
 
 - **iOS**: Sign in with Apple → `signInWithIdToken` (native token, no browser

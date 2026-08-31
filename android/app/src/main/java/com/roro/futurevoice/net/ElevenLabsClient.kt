@@ -58,6 +58,8 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         val with_timestamps: Boolean = false,
         val stream: Boolean? = null,
         val purpose: String? = null,
+        /** One key per SCENE — the server claims the scene count once on it. */
+        val scene_key: String? = null,
     )
 
     /** Buffered synthesis → MP3 bytes. */
@@ -67,10 +69,12 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         modelId: String = CONVERSATION_MODEL_ID,
         idempotencyKey: String? = null,
         purpose: String? = null,
+        sceneKey: String? = null,
     ): ByteArray = withContext(Dispatchers.IO) {
         val request = buildRequest(
             voiceId, text, modelId, withTimestamps = false, stream = false,
             purpose = purpose, idempotencyKey = idempotencyKey, accept = "audio/mpeg",
+            sceneKey = sceneKey,
         )
         Edge.client.newCall(request).execute().use { response ->
             val bytes = response.body.bytes()
@@ -162,7 +166,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
         purpose: String?,
         idempotencyKey: String?,
         accept: String?,
-    ): Request {
+        sceneKey: String? = null,): Request {
         val body = TtsBody(
             voice_id = voiceId,
             text = text,
@@ -170,6 +174,7 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             with_timestamps = withTimestamps,
             stream = if (stream) true else null,
             purpose = purpose,
+            scene_key = sceneKey,
         )
         val builder = Request.Builder()
             .url(Config.functionUrl("elevenlabs-tts"))

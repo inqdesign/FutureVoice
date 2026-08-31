@@ -42,7 +42,14 @@
 > `origin=scenario`. The review loop is
 > visible end to end: a drill DECK (Got it graduates — iOS rule), and a
 > talk DETAIL page (score · corrections · offered expressions · grammar ·
-> transcript). Still missing from the
+> transcript). WATCH's core is live
+> (2026-09-01): the NEW `scenario-curriculum` Edge Function (prompt +
+> sceneScale extracted from Swift) writes the scene, lines play one by one —
+> the learner's side in their OWN clone on the fidelity model, the
+> counterpart on a preset — under ONE `scene_key` (one count per scene), and
+> the take absorbs into the book (scene replaces, study items accumulate).
+> A dormant Play Billing client wakes when `google_product_id`s exist.
+> Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).

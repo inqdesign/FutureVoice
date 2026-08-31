@@ -364,8 +364,7 @@ data class Scenario(
     val lastUsedAt: Long? = null,
     val counterpartId: String? = null,
     val voicePresetId: String? = null,
-    /** Opaque passthrough — Android doesn't render the curriculum yet. */
-    val curriculum: kotlinx.serialization.json.JsonElement? = null,
+    val curriculum: ScenarioCurriculum? = null,
     @Serializable(with = IsoDateMillisSerializer::class)
     val archivedAt: Long? = null,
     val openers: List<String>? = null,
@@ -386,4 +385,71 @@ data class Scenario(
             role.trim().takeIf { it.isNotEmpty() }?.let { add("role=$it") }
             notes.trim().takeIf { it.isNotEmpty() }?.let { add("notes=$it") }
         }.joinToString(" | ")
+}
+
+@Serializable
+data class DialogueEngineTurn(
+    val id: String = StoreJson.newId(),
+    val speaker: String,   // "user" | "counterpart"
+    val text: String,
+)
+
+/**
+ * The scenario's course content — `ScenarioCurriculum` in Models.swift, same
+ * shape on disk. The scene (dialogue) is what plays; words/expressions/shadow
+ * lines are what the book asks to master.
+ */
+@Serializable
+data class ScenarioCurriculum(
+    val words: List<Item> = emptyList(),
+    val expressions: List<Item> = emptyList(),
+    val shadowLines: List<Item> = emptyList(),
+    val dialogueTitle: String? = null,
+    val dialogue: List<DialogueEngineTurn>? = null,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val generatedAt: Long = System.currentTimeMillis(),
+) {
+    @Serializable
+    data class Item(
+        val id: String = StoreJson.newId(),
+        val text: String,
+        val note: String = "",
+        val example: String? = null,
+        @Serializable(with = IsoDateMillisSerializer::class)
+        val masteredAt: Long? = null,
+    )
+
+    /** Fold a fresh take in: scene replaces, study items accumulate (iOS `absorb`). */
+    fun absorb(fresh: ScenarioCurriculum): ScenarioCurriculum {
+        fun merged(old: List<Item>, new: List<Item>): List<Item> {
+            val seen = old.map { it.text.lowercase() }.toMutableSet()
+            return old + new.filter { seen.add(it.text.lowercase()) }
+        }
+        return copy(
+            words = merged(words, fresh.words),
+            expressions = merged(expressions, fresh.expressions),
+            shadowLines = merged(shadowLines, fresh.shadowLines),
+            dialogueTitle = fresh.dialogueTitle,
+            dialogue = fresh.dialogue,
+            generatedAt = fresh.generatedAt,
+        )
+    }
+}
+
+/** The four preset scene voices (`VoicePreset.catalog` + `StockPerson`). */
+data class StockPerson(val voiceId: String, val name: String, val identity: String) {
+    companion object {
+        val catalog = listOf(
+            StockPerson("NDTYOmYEjbDIVCKB35i3", "Paige",
+                "Paige — American, twenties; bright and upbeat, quick to encourage, keeps the conversation moving"),
+            StockPerson("UgBBYS2sOqTuMpoF3BR0", "Mark",
+                "Mark — American, thirties; easygoing and direct, with a dry sense of humor"),
+            StockPerson("FF59babHL8N8gfTgtBMT", "Emma",
+                "Emma — British, twenties; warm and chatty, asks friendly follow-up questions"),
+            StockPerson("L0Dsvb3SLTyegXwtm47J", "James",
+                "James — British, forties; calm and courteous, unhurried, gently witty"),
+        )
+        fun by(voiceId: String?): StockPerson =
+            catalog.firstOrNull { it.voiceId == voiceId } ?: catalog[0]
+    }
 }

@@ -442,6 +442,12 @@ verify_jwt = true
 import_map = "./functions/topic-engine/deno.json"
 entrypoint = "./functions/topic-engine/index.ts"
 
+[functions.scenario-curriculum]
+enabled = true
+verify_jwt = true
+import_map = "./functions/scenario-curriculum/deno.json"
+entrypoint = "./functions/scenario-curriculum/index.ts"
+
 [functions.google-webhook]
 enabled = true
 # Pub/Sub cannot send a Supabase JWT; auth is the shared secret in the URL.

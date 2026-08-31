@@ -1439,6 +1439,7 @@
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"Writing the backup file. This is the slow part — keep the app open."</string>
     <string name="writing_the_dialogue">"Writing the dialogue…"</string>
+    <string name="writing_the_scene">"Writing the scene…"</string>
     <string name="writing_this_scenario_s_scene">"Writing this scenario's scene…"</string>
     <string name="writing_this_scene">"Writing this scene…"</string>
     <!-- 'year' -->

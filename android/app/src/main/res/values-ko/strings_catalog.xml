@@ -1439,6 +1439,7 @@
     <!-- 'Writing the backup file. This is the slow part — keep the app open.' -->
     <string name="writing_the_backup_file_this_is_the_slow_part_keep_the_app_o_5ceb52">"백업 파일을 쓰는 중이에요. 여기가 제일 오래 걸리니 앱을 켜 둔 채로 기다려 주세요."</string>
     <string name="writing_the_dialogue">"대화를 쓰는 중…"</string>
+    <string name="writing_the_scene">"장면을 쓰는 중…"</string>
     <string name="writing_this_scenario_s_scene">"이 상황연습을 쓰는 중…"</string>
     <string name="writing_this_scene">"상황연습을 쓰는 중…"</string>
     <!-- 'year' -->
