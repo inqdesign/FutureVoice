@@ -1338,6 +1338,7 @@
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same."</string>
     <string name="watch_scenes">"Watch scenes"</string>
+    <string name="watch_the_scene_first">"Watch the scene first."</string>
     <!-- "Watch your fluent self handle what's coming — from your own life or this week's news." -->
     <string name="watch_your_fluent_self_handle_what_s_coming_from_your_own_li_d96eec">"Watch your fluent self handle what's coming — from your own life or this week's news."</string>
     <string name="watching">"Watching"</string>

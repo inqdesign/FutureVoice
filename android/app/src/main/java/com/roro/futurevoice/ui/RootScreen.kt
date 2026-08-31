@@ -83,6 +83,8 @@ fun RootScreen() {
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
+    var showPractice by remember { mutableStateOf(false) }
+    var bookScenarioId by remember { mutableStateOf<String?>(null) }
     val callAnswered by com.roro.futurevoice.data.DailyCallInbox.answered.collectAsStateWithLifecycle()
     LaunchedEffect(callAnswered) {
         // Answering the daily call IS starting the talk — no second tap, and
@@ -165,9 +167,25 @@ fun RootScreen() {
             onShadow = { shadowLine = it },
         )
 
+        bookScenarioId != null -> ScenarioBookScreen(
+            scenarioId = bookScenarioId!!,
+            language = state.targetLanguage,
+            onWatch = { watchScenarioId = it },
+            onShadow = { shadowLine = it },
+            onBack = { bookScenarioId = null },
+        )
+
         showDeck -> DrillDeckScreen(
             language = state.targetLanguage,
             onBack = { showDeck = false },
+        )
+
+        showPractice -> PracticeScreen(
+            language = state.targetLanguage,
+            onOpenDeck = { showDeck = true },
+            onOpenScenarioBook = { bookScenarioId = it },
+            onOpenTalk = { detailSessionId = it },
+            onBack = { showPractice = false },
         )
 
         showMe -> MeScreen(
@@ -229,6 +247,7 @@ fun RootScreen() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; inCall = true
             },
             onOpenMe = { showMe = true },
+            onOpenPractice = { showPractice = true },
             onOpenDeck = { showDeck = true },
             onOpenTalk = { detailSessionId = it },
             onWatch = { watchScenarioId = it },
@@ -315,6 +334,7 @@ private fun HomeScreen(
     state: AppState,
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     onOpenMe: () -> Unit,
+    onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
@@ -339,7 +359,10 @@ private fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Talk") },
-                actions = { TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) } },
+                actions = {
+                    TextButton(onClick = onOpenPractice) { Text(stringResource(R.string.practice)) }
+                    TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
+                },
             )
         }
     ) { padding ->

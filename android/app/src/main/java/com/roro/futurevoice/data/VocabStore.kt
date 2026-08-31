@@ -57,6 +57,21 @@ class VocabStore private constructor(context: Context) {
         readList(file(language, "vocab_studying_expressions.json"))
     }
 
+    /** Word mastered = a record exists (used in a talk, or self-marked known). */
+    suspend fun isKnownWord(lemma: String, language: String): Boolean = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json")).containsKey(lemma.lowercase())
+    }
+
+    /**
+     * Expression mastered = real evidence only: a use in a talk (count > 0)
+     * or an explicit "I know it" — a bookmark row alone must not tick a book
+     * (iOS `hasUsedExpression`).
+     */
+    suspend fun hasUsedExpression(phrase: String, language: String): Boolean = mutex.withLock {
+        val r = readRecords(file(language, "vocab_expressions.json"))[exprKey(phrase)]
+        r != null && (r.state == "known" || r.count > 0)
+    }
+
     // ── Session ingestion (`VocabStore.ingest`) ──
 
     /**

@@ -59,6 +59,10 @@
 > bundled two-tone warble, Answer opens the talk directly — Android draws
 > the real incoming-call surface iOS cannot). Voicemail scripts, callbacks
 > and outcome history ride in with the VoicemailEngine brain-lift.
+> PRACTICE has its
+> home: the due queue, the scenario books (deterministic mastery — words
+> against the vocab pool, expressions on real evidence, exactly the iOS
+> rule) and the talk books, each opening its page.
 > Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't

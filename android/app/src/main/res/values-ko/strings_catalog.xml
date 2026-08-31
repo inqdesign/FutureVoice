@@ -841,7 +841,7 @@
     <string name="plus">"플러스"</string>
     <string name="podcasts">"팟캐스트"</string>
     <string name="policy">"처리방침"</string>
-    <string name="practice">"복습"</string>
+    <string name="practice">"연습"</string>
     <string name="practice_data">"연습 데이터"</string>
     <string name="practice_language">"연습 언어: %s"</string>
     <string name="practicing_your_rhythm">"말의 리듬을 연습하는 중…"</string>
@@ -1338,6 +1338,7 @@
     <!-- 'Watch has its own pool, separate from your talk minutes. A scene costs one whichever way it runs — a long one and a short one cost the same.' -->
     <string name="watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d">"상황연습은 통화 시간과 별개인 자기 몫이 있어요. 길든 짧든 한 편은 한 개로 세요."</string>
     <string name="watch_scenes">"상황연습"</string>
+    <string name="watch_the_scene_first">"장면을 먼저 보세요."</string>
     <!-- "Watch your fluent self handle what's coming — from your own life or this week's news." -->
     <string name="watch_your_fluent_self_handle_what_s_coming_from_your_own_li_d96eec">"곧 겪을 일을 유창해진 내가 어떻게 넘기는지 봐요. 내 일상에서 가져와도 되고, 이번 주 뉴스에서 가져와도 돼요."</string>
     <string name="watching">"보는 중"</string>
