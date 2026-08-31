@@ -3,6 +3,7 @@ package com.roro.futurevoice.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.BookHero
+import com.roro.futurevoice.ui.brand.FutureselfHero
+import com.roro.futurevoice.ui.brand.HomeHero
+import com.roro.futurevoice.ui.brand.LevelHero
+import com.roro.futurevoice.ui.brand.ShadowHero
 import kotlinx.coroutines.delay
 
 /**
@@ -57,13 +63,24 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
             pager.animateScrollToPage((pager.currentPage + 1) % slides.size)
         }
     }
-    Column(Modifier.fillMaxSize().padding(24.dp)) {
+    Column(Modifier.fillMaxSize().systemBarsPadding().padding(24.dp)) {
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
             Column(
                 Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // The hero is built from the REAL components — the pitch is
+                // seen working, not described (`WelcomeHeroes.swift`).
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    when (page) {
+                        0 -> FutureselfHero()
+                        1 -> HomeHero()
+                        2 -> BookHero()
+                        3 -> ShadowHero()
+                        else -> LevelHero()
+                    }
+                }
                 Text(stringResource(slides[page].title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center)
