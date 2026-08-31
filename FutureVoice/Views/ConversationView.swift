@@ -638,19 +638,12 @@ struct ConversationView: View {
                     guard !isTornDown else { return }
                     cancelSilenceTimer()
                     if RealtimeMode.isEnabled {
-                        // Live dictation from the gateway — without this the
-                        // learner's words only appear when the turn commits,
-                        // a second and a half after they stop talking.
-                        if !realtime.partial.isEmpty {
-                            PartialTurnView(text: realtime.partial)
-                                .id("partial-listening")
-                                .transition(.opacity)
-                        } else if realtime.state == .thinkingReply {
-                            ThinkingIndicator()
-                                .id("partial-thinking")
-                                .transition(.opacity)
-                        }
-                    } else if phase == .listening { stopListeningDiscardingChunks() }
+                        // The gateway owns the mic on this path; hanging up is
+                        // what stops it.
+                        realtime.hangUp()
+                    } else if phase == .listening {
+                        stopListeningDiscardingChunks()
+                    }
                     if phase == .listening || phase == .thinking { phase = .idle }
                     if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
@@ -777,6 +770,21 @@ struct ConversationView: View {
             .onReceive(NotificationCenter.default.publisher(
                 for: AVAudioSession.interruptionNotification)) { note in
                 handleAudioInterruption(note)
+            }
+            // `phase` is what the rest of this screen reads: the mic hint,
+            // the End button's enabled state, the thinking indicator. On the
+            // realtime path nothing was setting it, so it stayed `.thinking`
+            // for the whole call — and End is `.disabled(phase != .idle)`,
+            // which meant a learner could not finish a talk at all, and no
+            // summary, drills or book were ever produced (2026-09-01).
+            .onChange(of: realtime.state) { _, state in
+                guard RealtimeMode.isEnabled, phoneCallActive else { return }
+                switch state {
+                case .listening, .hearing: phase = .listening
+                case .thinkingReply:       phase = .thinking
+                case .speaking:            phase = .speaking
+                case .idle, .connecting, .failed: phase = .idle
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 // Coming back to a call that should be listening but isn't.
@@ -912,7 +920,21 @@ struct ConversationView: View {
                             .id(turn.id)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
-                    if phase == .listening {
+                    if RealtimeMode.isEnabled {
+                        // Live dictation from the gateway. Without it the
+                        // learner's own words appear only when the turn
+                        // commits — a second after they stop talking, which
+                        // reads as the app not listening (2026-09-01).
+                        if !realtime.partial.isEmpty {
+                            PartialTurnView(text: realtime.partial)
+                                .id("partial-listening")
+                                .transition(.opacity)
+                        } else if realtime.state == .thinkingReply {
+                            ThinkingIndicator()
+                                .id("partial-thinking")
+                                .transition(.opacity)
+                        }
+                    } else if phase == .listening {
                         // Separate id from ThinkingIndicator + explicit opacity
                         // transition so SwiftUI doesn't morph one view's text
                         // into another. The previous shared id caused the
@@ -1043,6 +1065,13 @@ struct ConversationView: View {
             guard phase == .speaking else { return }
             voiceLevel = new
         }
+        // The gateway's own meter drives the pill: `live` and `player` are
+        // both idle on this path, so without this the grid sat dead while the
+        // learner talked (2026-09-01).
+        .onChange(of: realtime.level) { _, new in
+            guard RealtimeMode.isEnabled else { return }
+            voiceLevel = new
+        }
         .onChange(of: phase) { _, _ in voiceLevel = 0 }
     }
 
@@ -1090,7 +1119,12 @@ struct ConversationView: View {
             switch phase {
             case .listening: return explain("Listening · pause to send · tap to stop")
             case .thinking:  return explain("Thinking… · tap to stop")
-            case .speaking:  return explain("Speaking… · tap to stop")
+            case .speaking:
+                // On the realtime path the learner CAN cut in, and the
+                // hint is the only place that says so.
+                return RealtimeMode.isEnabled
+                    ? explain("Speaking… · talk over it · tap to stop")
+                    : explain("Speaking… · tap to stop")
             case .idle:      return explain("On call · tap to stop")
             }
         }
