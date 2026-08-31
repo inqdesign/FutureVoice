@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.ui.brand.BookCard
+import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -67,35 +69,42 @@ fun PracticeBody(
             Text(stringResource(R.string.scenarios), style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp))
             scenarios.forEach { sc ->
-                Column(Modifier.fillMaxWidth().clickable { onOpenScenarioBook(sc.id) }
-                    .padding(vertical = 6.dp)) {
-                    Text(sc.cardTitle, style = MaterialTheme.typography.bodyLarge)
-                    val cur = sc.curriculum
-                    Text(
-                        if (cur == null) stringResource(R.string.watch_the_scene_first)
-                        else stringResource(R.string.lld_of_lld_mastered,
-                            cur.words.count { it.masteredAt != null } +
-                                cur.expressions.count { it.masteredAt != null },
-                            cur.words.size + cur.expressions.size + cur.shadowLines.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                val cur = sc.curriculum
+                val total = cur?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
+                val done = cur?.let {
+                    it.words.count { w -> w.masteredAt != null } +
+                        it.expressions.count { e -> e.masteredAt != null }
+                } ?: 0
+                BookCard(
+                    title = sc.cardTitle,
+                    origin = sc.category,
+                    accent = Books.scenarios,
+                    detail = if (cur == null) stringResource(R.string.watch_the_scene_first)
+                    else stringResource(R.string.lld_of_lld_mastered, done, total),
+                    progress = if (total == 0) null else done / total.toFloat(),
+                    onClick = { onOpenScenarioBook(sc.id) },
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
             }
         }
         if (talks.isNotEmpty()) {
             Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp))
             talks.forEach { t ->
-                Column(Modifier.fillMaxWidth().clickable { onOpenTalk(t.id) }
-                    .padding(vertical = 6.dp)) {
-                    Text(t.displayTitle ?: stringResource(R.string.conversation),
-                        style = MaterialTheme.typography.bodyLarge)
-                    t.summary?.scorecard?.let {
-                        Text("${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+                BookCard(
+                    title = t.displayTitle ?: stringResource(R.string.conversation),
+                    origin = when (t.origin?.name?.lowercase()) {
+                        "news" -> stringResource(R.string.news)
+                        "scenario" -> stringResource(R.string.scenarios)
+                        else -> stringResource(R.string.free_talk)
+                    },
+                    accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
+                    detail = t.summary?.scorecard?.let {
+                        "${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}"
+                    },
+                    onClick = { onOpenTalk(t.id) },
+                    modifier = Modifier.padding(vertical = 4.dp),
+                )
             }
         }
     }

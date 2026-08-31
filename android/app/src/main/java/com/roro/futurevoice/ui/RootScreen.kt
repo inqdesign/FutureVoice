@@ -54,6 +54,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.style.TextAlign
+import com.roro.futurevoice.ui.brand.BookCard
+import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DisplayFace
 import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
@@ -543,29 +545,33 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
     Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium)
     val formatter = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT) }
     talks.take(10).forEach { s ->
-        Column(Modifier.fillMaxWidth().clickable { onOpen(s.id) }) {
-            Text(
-                s.displayTitle ?: stringResource(R.string.conversation),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
+        Column {
+            BookCard(
+                title = s.displayTitle ?: stringResource(R.string.conversation),
+                origin = when (s.origin?.name?.lowercase()) {
+                    "news" -> stringResource(R.string.news)
+                    "scenario" -> stringResource(R.string.scenarios)
+                    else -> stringResource(R.string.free_talk)
+                },
+                accent = if (s.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
+                detail = formatter.format(Instant.ofEpochMilli(s.rank).atZone(ZoneId.systemDefault())) +
                     " · " + stringResource(R.string.lld_turns, s.turns.count { it.role == TurnRole.USER }) +
                     (s.summary?.scorecard?.let { " · ${it.overall}" } ?: ""),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                onClick = { onOpen(s.id) },
+                trailing = s.summary?.scorecard?.overall?.let { score ->
+                    @Composable {
+                        Text("$score", style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                },
+                modifier = Modifier.padding(vertical = 4.dp),
             )
-            s.summary?.scorecard?.topLine?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall)
-            }
             // The rescue path (iOS: ConversationDetailView): a talk saved
             // before its analysis finished isn't half a book, it's no book —
             // so it can always be run again from here.
             if (SessionSummarizer.needsSummary(s)) {
                 val working = s.id in inFlight
                 if (working) {
-                    // The rescue path draws the SAME board as the live
-                    // wrap-up (`ConversationDetailView` does on iOS).
                     SummaryBoard(progressBySession[s.id] ?: SessionSummarizer.Progress())
                 } else {
                     TextButton(

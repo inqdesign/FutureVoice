@@ -47,8 +47,6 @@
     <string name="add_a_language">"언어 추가"</string>
     <string name="add_category">"카테고리 추가"</string>
     <string name="add_interests">"관심사 추가"</string>
-    <!-- 'Add someone from your real life — their cloned voice can act out any scenario you build.' -->
-    <string name="add_someone_from_your_real_life_their_cloned_voice_can_act_o_125b03">"실제로 아는 사람을 추가해 보세요. 그 사람 목소리로 어떤 상황이든 연기해 줘요."</string>
     <string name="add_your_own_comma_separated">"직접 추가 (쉼표로 구분)"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"고급 — 유창하고 정확하게 표현해요"</string>
     <string name="age_confirmed">"나이 확인함"</string>
@@ -358,6 +356,7 @@
     <string name="free">"무료"</string>
     <string name="free_minutes">"무료 시간"</string>
     <string name="free_notes_quirks_recent_events_anything_that_helps">"자유 메모 — 습관, 최근 일, 도움이 될 것 무엇이든"</string>
+    <string name="free_talk">"자유 대화"</string>
     <string name="friends_joined">"가입한 친구"</string>
     <string name="from_scenarios">"상황에서"</string>
     <string name="from_talks">"대화에서"</string>
@@ -817,7 +816,6 @@
     <string name="pdf">"PDF"</string>
     <string name="people">"사람"</string>
     <string name="people_ahead_of_you">"내 앞에 있는 사람"</string>
-    <string name="people_today">"오늘의 사람들"</string>
     <!-- "People we invented to practice with — each one in the middle of something they'll want to talk about." -->
     <string name="people_we_invented_to_practice_with_each_one_in_the_middle_o_8d542b">"연습용으로 만든 사람들이에요 — 모두 지금 무언가의 한가운데에 있어서, 하고 싶은 이야기가 있어요."</string>
     <string name="people_you_ve_met">"만난 사람들"</string>

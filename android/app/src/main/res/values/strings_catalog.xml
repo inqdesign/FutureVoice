@@ -12,6 +12,8 @@
     <string name="a_confident_talk_you_kept_the_story_going_and_only_the_tense_44673a">"A confident talk — you kept the story going and only the tenses tripped you."</string>
     <!-- 'A day counts once every goal here is met — and only FINISHED work counts: “Got it” on a sentence, “I know” on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn’t done. Set a goal to 0 to leave it out.' -->
     <string name="a_day_counts_once_every_goal_here_is_met_and_only_finished_w_970192">"A day counts once every goal here is met — and only FINISHED work counts: “Got it” on a sentence, “I know” on a word or phrase, a recorded shadow take. Sending something to 10 minutes or tomorrow is progress, but it isn’t done. Set a goal to 0 to leave it out."</string>
+    <!-- "A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time." -->
+    <string name="a_faster_call_path_being_tried_out_it_keeps_no_transcript_ma_b95c8e">"A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time."</string>
     <!-- 'A friend joined with your code' -->
     <string name="a_friend_joined_with_your_code_975008">"A friend joined with your code"</string>
     <!-- 'A friend joined with your code.' -->
@@ -47,8 +49,6 @@
     <string name="add_a_language">"Add a language"</string>
     <string name="add_category">"Add category"</string>
     <string name="add_interests">"Add interests"</string>
-    <!-- 'Add someone from your real life — their cloned voice can act out any scenario you build.' -->
-    <string name="add_someone_from_your_real_life_their_cloned_voice_can_act_o_125b03">"Add someone from your real life — their cloned voice can act out any scenario you build."</string>
     <string name="add_your_own_comma_separated">"Add your own (comma-separated)"</string>
     <string name="advanced_i_express_myself_fluently_and_precisely">"Advanced — I express myself fluently and precisely"</string>
     <string name="age_confirmed">"Age confirmed"</string>
@@ -358,6 +358,7 @@
     <string name="free">"Free"</string>
     <string name="free_minutes">"Free minutes"</string>
     <string name="free_notes_quirks_recent_events_anything_that_helps">"Free notes — quirks, recent events, anything that helps"</string>
+    <string name="free_talk">"Free talk"</string>
     <string name="friends_joined">"Friends joined"</string>
     <string name="from_scenarios">"From scenarios"</string>
     <string name="from_talks">"From talks"</string>
@@ -468,6 +469,7 @@
     <!-- 'Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went.' -->
     <string name="instead_of_a_reminder_your_fluent_self_phones_you_once_a_day_30a288">"Instead of a reminder, your fluent self phones you once a day with a question to answer out loud. They remember how the last call went."</string>
     <string name="interests">"Interests"</string>
+    <string name="interrupt_it_while_it_talks_nothing_is_saved">"Interrupt it while it talks — nothing is saved"</string>
     <string name="introduction">"Introduction"</string>
     <string name="invite_applied_lld_min_of_talk_time">"Invite applied · %d min of talk time"</string>
     <string name="invite_code">"Invite code"</string>
@@ -654,6 +656,7 @@
     <string name="meet_your_fluent_self">"Meet your fluent self"</string>
     <string name="met_on_nawana">"Met on nawana"</string>
     <string name="mic_check">"Mic check"</string>
+    <string name="mic_lld_kb">"mic %d KB"</string>
     <string name="mic_on_bluetooth">"Mic on Bluetooth"</string>
     <string name="microphone_access_denied_enable_it_in_settings">"Microphone access denied. Enable it in Settings."</string>
     <string name="microphone_access_needed">"Microphone access needed"</string>
@@ -817,7 +820,6 @@
     <string name="pdf">"PDF"</string>
     <string name="people">"People"</string>
     <string name="people_ahead_of_you">"People ahead of you"</string>
-    <string name="people_today">"People today"</string>
     <!-- "People we invented to practice with — each one in the middle of something they'll want to talk about." -->
     <string name="people_we_invented_to_practice_with_each_one_in_the_middle_o_8d542b">"People we invented to practice with — each one in the middle of something they'll want to talk about."</string>
     <string name="people_you_ve_met">"People you've met"</string>
@@ -891,6 +893,8 @@
     <string name="real_conversations_your_voice">"Real conversations, your voice"</string>
     <!-- 'Real places make your conversations concrete — no small talk about nowhere.' -->
     <string name="real_places_make_your_conversations_concrete_no_small_talk_a_d2fe54">"Real places make your conversations concrete — no small talk about nowhere."</string>
+    <string name="realtime_beta">"Realtime (beta)"</string>
+    <string name="realtime_call_spike">"Realtime call (spike)"</string>
     <string name="rebuild">"Rebuild"</string>
     <string name="rebuild_the_clone_from_your_last_recording">"Rebuild the clone from your last recording"</string>
     <string name="rebuild_your_voice">"Rebuild your voice?"</string>
@@ -1079,7 +1083,9 @@
     <string name="speaking_tap_to_stop">"Speaking… · tap to stop"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"Specific enough — %s it, or tap a breadcrumb to explore more."</string>
+    <string name="speech_voice_lld_ms">"speech → voice: %d ms"</string>
     <string name="speed">"Speed"</string>
+    <string name="speed_test">"Speed test"</string>
     <string name="spend_it_however_you_like_there_s_no_daily_limit">"Spend it however you like — there's no daily limit."</string>
     <string name="sports">"sports"</string>
     <string name="square">"Square"</string>
