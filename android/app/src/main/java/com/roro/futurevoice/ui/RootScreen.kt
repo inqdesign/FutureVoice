@@ -54,6 +54,29 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
+import androidx.compose.material.icons.filled.ChildCare
+import androidx.compose.material.icons.filled.DirectionsRun
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.background
+import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.DiscoverRow
+import com.roro.futurevoice.ui.brand.SegmentChip
 import com.roro.futurevoice.ui.brand.BookCard
 import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DisplayFace
@@ -345,6 +368,43 @@ private fun SignInScreen(
     }
 }
 
+private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?)
+
+/**
+ * "Make it yours" — the sign-up AFTER the clone: keep a voice already in the
+ * learner's ears. No skip: a session is not an account, and data on one dies
+ * with the install.
+ */
+@Composable
+private fun AccountScreen(
+    googleAvailable: Boolean,
+    onGoogleSignIn: (android.content.Context) -> Unit,
+    onAppleSignIn: () -> Unit,
+) {
+    val context = LocalContext.current
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.make_it_yours), style = MaterialTheme.typography.headlineSmall)
+        Text(
+            stringResource(R.string.your_voice_is_ready_sign_in_to_keep_it),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+        if (googleAvailable) {
+            Button(onClick = { onGoogleSignIn(context) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Continue with Google")
+            }
+        }
+        Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
+            Text("Continue with Apple")
+        }
+    }
+}
+
 /** The four verbs, in the order the product does them. */
 private enum class HomeTab(val label: Int) {
     TALK(R.string.talk), WATCH(R.string.watch),
@@ -386,7 +446,21 @@ private fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(tab.label)) },
+                // No title on Talk: the hero's time-of-day question IS the
+                // greeting, and a title above it doubled it (iOS). The bar
+                // carries just the chips — language · streak · account.
+                title = {
+                    if (tab == HomeTab.TALK) StreakChip(language = state.targetLanguage)
+                    else Text(stringResource(tab.label))
+                },
+                navigationIcon = {
+                    if (tab == HomeTab.TALK) {
+                        TextButton(onClick = onOpenMe) {
+                            Text(LanguageCatalog.endonym(state.targetLanguage),
+                                style = MaterialTheme.typography.labelLarge)
+                        }
+                    }
+                },
                 actions = {
                     if (tab == HomeTab.TALK) {
                         TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
@@ -418,9 +492,10 @@ private fun HomeScreen(
         },
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
             when (tab) {
                 HomeTab.TALK -> {
@@ -430,11 +505,14 @@ private fun HomeScreen(
                         onTap = { launch("", emptyList()) },
                     )
                     ReviewRow(language = state.targetLanguage, onOpen = onOpenDeck)
-                    NewsSection(
-                        interests = state.persona?.interests.orEmpty(),
-                        targetLanguage = state.targetLanguage,
+                    // One Discover section, two chips — what to talk about
+                    // today: the day's stories, or a situation you built.
+                    DiscoverSection(
+                        state = state,
                         enabled = state.voiceId != null,
-                        onTalk = { topic -> launch(topic.title, topic.facts.orEmpty()) },
+                        onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
+                        onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+                        onWatch = onWatch,
                     )
                     RecentTalks(language = state.targetLanguage,
                         nativeLanguage = state.nativeLanguage, level = state.level,
@@ -451,11 +529,11 @@ private fun HomeScreen(
 
                 // Watch: simulate the situation BEFORE it happens. Scenarios
                 // are reusable templates — a tap writes a fresh take.
-                HomeTab.WATCH -> ScenariosSection(
-                    targetLanguage = state.targetLanguage,
+                HomeTab.WATCH -> WatchBody(
+                    language = state.targetLanguage,
                     enabled = state.voiceId != null,
-                    onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                     onWatch = onWatch,
+                    onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                 )
 
                 HomeTab.PRACTICE -> PracticeBody(
@@ -608,52 +686,55 @@ private fun TodayRow() {
 }
 
 /**
- * In the news — the platform pool for the learner's interests
- * (`NewsTopicSection`). Cache-first; the server keeps cooking pending
- * categories and each poll paints what landed. A tap talks ABOUT the story:
- * the title becomes the topic, the grounded facts seed the prompt.
+ * Discover — what to talk about today, in two chips (`DiscoverSection`):
+ * the day's stories from the platform pool, or a situation the learner
+ * built. One full-width card list on the 20pt grid; a horizontal rail read
+ * as posters and this reads as a list.
  */
 @Composable
-private fun NewsSection(
-    interests: List<String>,
-    targetLanguage: String,
+private fun DiscoverSection(
+    state: AppState,
     enabled: Boolean,
-    onTalk: (SuggestedTopic) -> Unit,
+    onPickNews: (SuggestedTopic) -> Unit,
+    onPickScenario: (Scenario) -> Unit,
+    onWatch: (String) -> Unit,
 ) {
-    if (interests.isEmpty()) return
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var newsTab by remember { mutableStateOf(true) }
+    val interests = state.persona?.interests.orEmpty()
+    val language = state.targetLanguage
     val store = remember { NewsTopicStore.shared(context) }
+    val scenarioStore = remember { ScenarioStore.shared(context) }
     var topics by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
+    var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
+    var composing by remember { mutableStateOf(false) }
 
     fun displaySelection(pool: List<SuggestedTopic>): List<SuggestedTopic> {
-        val seen = store.seenTitles(interests, targetLanguage).toSet()
+        val seen = store.seenTitles(interests, language).toSet()
         val current = topics.map { it.title }.toSet()
-        val unseen = pool.filter { it.title !in seen }
-        val offscreen = pool.filter { it.title in seen && it.title !in current }
-        val onscreen = pool.filter { it.title in seen && it.title in current }
-        return (unseen + offscreen + onscreen).take(NewsClient.MAX_SHOWN)
+        return (pool.filter { it.title !in seen } +
+            pool.filter { it.title in seen && it.title !in current } +
+            pool.filter { it.title in seen && it.title in current }).take(NewsClient.MAX_SHOWN)
     }
 
     suspend fun fetchNews(refresh: Boolean) {
         loading = true
         try {
             val client = NewsClient(AuthRepository())
-            var pool = client.fetch(interests, targetLanguage, refresh)
+            var pool = client.fetch(interests, language, refresh)
             if (pool.topics.isNotEmpty()) {
-                store.save(pool.topics, interests, targetLanguage)
-                topics = displaySelection(pool.topics)
+                store.save(pool.topics, interests, language); topics = displaySelection(pool.topics)
             }
             var polls = 0
             var target = if (pool.growing) pool.topics.size + 1 else 0
             while (polls < NewsClient.MAX_POLLS && (!pool.isComplete || pool.topics.size < target)) {
-                delay(NewsClient.POLL_INTERVAL_MS)
-                polls += 1
-                pool = client.fetch(interests, targetLanguage)
+                delay(NewsClient.POLL_INTERVAL_MS); polls += 1
+                pool = client.fetch(interests, language)
                 if (pool.topics.isNotEmpty()) {
-                    store.save(pool.topics, interests, targetLanguage)
-                    topics = displaySelection(pool.topics)
+                    store.save(pool.topics, interests, language); topics = displaySelection(pool.topics)
                 }
                 if (pool.topics.size >= target) target = 0
             }
@@ -662,185 +743,134 @@ private fun NewsSection(
         } finally { loading = false }
     }
 
-    LaunchedEffect(interests, targetLanguage) {
-        val cached = store.valid(interests, targetLanguage)
-        if (cached != null) topics = displaySelection(cached) else fetchNews(refresh = false)
+    LaunchedEffect(interests, language) {
+        // Stories come from the shared platform pool (a cheap read), so
+        // auto-load on open; the local cache skips even the network hop
+        // within the same day.
+        if (interests.isNotEmpty()) {
+            val cached = store.valid(interests, language)
+            if (cached != null) topics = displaySelection(cached) else fetchNews(false)
+        }
     }
+    LaunchedEffect(language, revision) { scenarios = scenarioStore.load(language) }
 
-    Column {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.news), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f))
-            TextButton(onClick = {
-                scope.launch {
-                    // Rotating the unseen pool is free — only ask the server
-                    // once the local pool is exhausted (iOS refresh rule).
-                    val cached = store.valid(interests, targetLanguage)
-                    if (cached != null && cached.size > topics.size) {
-                        store.markSeen(topics.map { it.title }, interests, targetLanguage)
-                        val rotated = displaySelection(cached)
-                        if (rotated.map { it.title } != topics.map { it.title }) {
-                            topics = rotated; return@launch
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SegmentChip(stringResource(R.string.news), newsTab) { newsTab = true }
+            SegmentChip(stringResource(R.string.scenarios), !newsTab) { newsTab = false }
+            Spacer(Modifier.weight(1f))
+            if (newsTab) {
+                if (loading) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else if (topics.isNotEmpty()) {
+                    IconButton(onClick = {
+                        scope.launch {
+                            // Rotating the unseen pool is free — only ask the
+                            // server once the local pool is exhausted.
+                            val cached = store.valid(interests, language)
+                            if (cached != null && cached.size > topics.size) {
+                                store.markSeen(topics.map { it.title }, interests, language)
+                                val rotated = displaySelection(cached)
+                                if (rotated.map { it.title } != topics.map { it.title }) {
+                                    topics = rotated; return@launch
+                                }
+                            }
+                            store.markSeen(topics.map { it.title }, interests, language)
+                            fetchNews(true)
                         }
-                    }
-                    store.markSeen(topics.map { it.title }, interests, targetLanguage)
-                    fetchNews(refresh = true)
+                    }) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
                 }
-            }) { Text(stringResource(R.string.refresh)) }
-        }
-        if (loading && topics.isEmpty()) {
-            LinearProgressIndicator(Modifier.fillMaxWidth())
-        }
-        topics.forEach { topic ->
-            Column(
-                Modifier.fillMaxWidth()
-                    .clickable(enabled = enabled) { onTalk(topic) }
-                    .padding(vertical = 8.dp),
-            ) {
-                Text(topic.title, style = MaterialTheme.typography.bodyLarge)
-                Text(topic.blurb, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                IconButton(onClick = { composing = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.make_your_own_situation))
+                }
             }
         }
-    }
-}
 
-/**
- * "Make it yours" — the sign-up AFTER the clone (`VoiceCloneOnboardingView`
- * .account): keep a voice already in the learner's ears. No skip: a session
- * is not an account, and data on one dies with the install.
- */
-@Composable
-private fun AccountScreen(
-    googleAvailable: Boolean,
-    onGoogleSignIn: (android.content.Context) -> Unit,
-    onAppleSignIn: () -> Unit,
-) {
-    val context = LocalContext.current
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.make_it_yours), style = MaterialTheme.typography.headlineSmall)
-        Text(
-            stringResource(R.string.your_voice_is_ready_sign_in_to_keep_it),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(vertical = 12.dp),
-        )
-        if (googleAvailable) {
-            Button(onClick = { onGoogleSignIn(context) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Continue with Google")
+        if (newsTab) {
+            topics.forEach { topic ->
+                DiscoverRow(
+                    title = topic.title,
+                    caption = topic.category,
+                    icon = categoryIcon(topic.category),
+                    accent = Books.topics,
+                    onClick = if (enabled) ({ onPickNews(topic) }) else null,
+                )
             }
-        }
-        Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
-            Text("Continue with Apple")
-        }
-    }
-}
-
-private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?)
-
-/**
- * Your scenarios — saved situations as reusable templates, plus the
- * composer ("Make your own situation" — describe the real upcoming thing).
- * v1 is the free-text half of `ScenarioComposerSheet`: categorize is a
- * nicety and never blocks a commit.
- */
-@Composable
-private fun ScenariosSection(
-    targetLanguage: String,
-    enabled: Boolean,
-    onTalk: (Scenario) -> Unit,
-    onWatch: (String) -> Unit = {},
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val store = remember { ScenarioStore.shared(context) }
-    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
-    var composing by remember { mutableStateOf(false) }
-    var draft by remember { mutableStateOf("") }
-    var committing by remember { mutableStateOf(false) }
-    LaunchedEffect(targetLanguage, revision) { scenarios = store.load(targetLanguage) }
-
-    Column {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.your_scenarios), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.weight(1f))
-            TextButton(onClick = { composing = true }) { Text("+") }
-        }
-        if (scenarios.isEmpty()) {
-            Text(stringResource(R.string.make_your_own_situation),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.clickable { composing = true }.padding(vertical = 6.dp))
-        }
-        scenarios.filter { it.archivedAt == null && it.isMeeting != true }.take(5).forEach { sc ->
-            Column(
-                Modifier.fillMaxWidth()
-                    .clickable(enabled = enabled) {
-                        scope.launch { store.touch(sc.id, targetLanguage); StoreEvents.bump() }
-                        onTalk(sc)
-                    }
-                    .padding(vertical = 8.dp),
-            ) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(sc.cardTitle, style = MaterialTheme.typography.bodyLarge)
-                        sc.category?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            scenarios.filter { it.archivedAt == null && it.isMeeting != true }.forEach { sc ->
+                DiscoverRow(
+                    title = sc.cardTitle,
+                    caption = sc.category,
+                    icon = Icons.Filled.Place,
+                    accent = Books.scenarios,
+                    onClick = if (enabled) ({
+                        scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
+                        onPickScenario(sc)
+                    }) else null,
+                    trailing = {
+                        TextButton(onClick = { onWatch(sc.id) }) {
+                            Text(stringResource(R.string.watch))
                         }
-                    }
-                    TextButton(onClick = { onWatch(sc.id) }) {
-                        Text(stringResource(R.string.watch))
-                    }
-                }
+                    },
+                )
+            }
+            if (scenarios.none { it.archivedAt == null && it.isMeeting != true }) {
+                DiscoverRow(
+                    title = stringResource(R.string.make_your_own_situation),
+                    icon = Icons.Filled.Add,
+                    accent = Books.scenarios,
+                    onClick = { composing = true },
+                )
             }
         }
     }
 
     if (composing) {
-        AlertDialog(
-            onDismissRequest = { if (!committing) composing = false },
-            title = { Text(stringResource(R.string.make_your_own_situation)) },
-            text = {
-                OutlinedTextField(value = draft, onValueChange = { draft = it },
-                    minLines = 3, modifier = Modifier.fillMaxWidth())
-            },
-            confirmButton = {
-                TextButton(enabled = draft.isNotBlank() && !committing, onClick = {
-                    committing = true
-                    val text = draft.trim()
-                    scope.launch {
-                        // Categorize is a nicety — a failure just leaves the
-                        // free text as the scenario (iOS rule).
-                        val result = runCatching {
-                            TopicClient(AuthRepository()).categorize(
-                                text = text,
-                                existing = scenarios.mapNotNull { it.category }.distinct(),
-                                iconOptions = TopicClient.ICON_PALETTE,
-                                targetLanguage = targetLanguage)
-                        }.getOrNull()
-                        store.save(Scenario(
-                            environment = text,
-                            category = result?.category?.takeIf { it.isNotBlank() },
-                            categoryIcon = result?.icon,
-                            summary = result?.summary?.takeIf { it.isNotBlank() },
-                        ), targetLanguage)
-                        StoreEvents.bump()
-                        committing = false; composing = false; draft = ""
-                    }
-                }) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
-            },
-            dismissButton = {
-                TextButton(enabled = !committing, onClick = { composing = false }) {
-                    Text(stringResource(R.string.back_b52b36))
-                }
-            },
+        ScenarioComposer(
+            targetLanguage = language,
+            existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+            onDismiss = { composing = false },
         )
+    }
+}
+
+/**
+ * Best-effort glyph for a free-form interest category — the fallback is the
+ * newspaper, because every story is at least news.
+ */
+private fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector.ImageVector {
+    val c = category?.lowercase() ?: return Icons.Filled.Article
+    return when {
+        c.contains("ai") || c.contains("tech") -> Icons.Filled.Memory
+        c.contains("cook") || c.contains("food") -> Icons.Filled.Restaurant
+        c.contains("sport") || c.contains("fitness") -> Icons.Filled.DirectionsRun
+        c.contains("music") -> Icons.Filled.MusicNote
+        c.contains("travel") -> Icons.Filled.Flight
+        c.contains("science") -> Icons.Filled.Science
+        c.contains("business") || c.contains("finance") -> Icons.Filled.TrendingUp
+        c.contains("film") || c.contains("movie") || c.contains("tv") -> Icons.Filled.Movie
+        c.contains("game") -> Icons.Filled.SportsEsports
+        c.contains("health") -> Icons.Filled.FavoriteBorder
+        c.contains("parent") -> Icons.Filled.ChildCare
+        else -> Icons.Filled.Article
+    }
+}
+
+/** Days in a row with metered talk — the one Today stat that lives up here. */
+@Composable
+private fun StreakChip(language: String) {
+    val context = LocalContext.current
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var days by remember { mutableStateOf(0) }
+    LaunchedEffect(revision) { days = TalkTimeLog.streakDays(context) }
+    if (days <= 0) return
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Icon(Icons.Filled.LocalFireDepartment, contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+        Text("$days", style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -861,4 +891,115 @@ private fun ReviewRow(language: String, onOpen: () -> Unit) {
         Text("$due", style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.primary)
     }
+}
+
+/**
+ * Watch — simulate a specific situation BEFORE it happens. "Make your own
+ * situation" is the DEFAULT entry (describe the real upcoming thing; no
+ * person needed), with the learner's saved scenarios under it. A saved
+ * scenario is a reusable TEMPLATE: watching writes a FRESH take every time.
+ */
+@Composable
+private fun WatchBody(
+    language: String,
+    enabled: Boolean,
+    onWatch: (String) -> Unit,
+    onTalk: (Scenario) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    val store = remember { ScenarioStore.shared(context) }
+    var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    var composing by remember { mutableStateOf(false) }
+    LaunchedEffect(language, revision) { scenarios = store.load(language) }
+    val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        DiscoverRow(
+            title = stringResource(R.string.make_your_own_situation),
+            icon = Icons.Filled.Add,
+            accent = Books.scenarios,
+            onClick = { composing = true },
+        )
+        if (live.isNotEmpty()) {
+            Text(stringResource(R.string.your_scenarios),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp))
+            live.forEach { sc ->
+                DiscoverRow(
+                    title = sc.cardTitle,
+                    caption = sc.category,
+                    icon = Icons.Filled.Place,
+                    accent = Books.scenarios,
+                    onClick = if (enabled) ({ onWatch(sc.id) }) else null,
+                    trailing = {
+                        TextButton(onClick = {
+                            scope.launch { store.touch(sc.id, language); StoreEvents.bump() }
+                            onTalk(sc)
+                        }) { Text(stringResource(R.string.talk)) }
+                    },
+                )
+            }
+        }
+    }
+    if (composing) {
+        ScenarioComposer(
+            targetLanguage = language,
+            existingCategories = scenarios.mapNotNull { it.category }.distinct(),
+            onDismiss = { composing = false },
+        )
+    }
+}
+
+/**
+ * "Make your own situation" — describe the real upcoming thing in your own
+ * words. Categorizing is a nicety and never blocks a commit (iOS rule): a
+ * failure just leaves the free text as the scenario.
+ */
+@Composable
+private fun ScenarioComposer(
+    targetLanguage: String,
+    existingCategories: List<String>,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var draft by remember { mutableStateOf("") }
+    var committing by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = { if (!committing) onDismiss() },
+        title = { Text(stringResource(R.string.make_your_own_situation)) },
+        text = {
+            OutlinedTextField(value = draft, onValueChange = { draft = it },
+                minLines = 3, modifier = Modifier.fillMaxWidth())
+        },
+        confirmButton = {
+            TextButton(enabled = draft.isNotBlank() && !committing, onClick = {
+                committing = true
+                val text = draft.trim()
+                scope.launch {
+                    val result = runCatching {
+                        TopicClient(AuthRepository()).categorize(
+                            text = text, existing = existingCategories,
+                            iconOptions = TopicClient.ICON_PALETTE,
+                            targetLanguage = targetLanguage)
+                    }.getOrNull()
+                    ScenarioStore.shared(context).save(Scenario(
+                        environment = text,
+                        category = result?.category?.takeIf { it.isNotBlank() },
+                        categoryIcon = result?.icon,
+                        summary = result?.summary?.takeIf { it.isNotBlank() },
+                    ), targetLanguage)
+                    StoreEvents.bump()
+                    committing = false; onDismiss()
+                }
+            }) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
+        },
+        dismissButton = {
+            TextButton(enabled = !committing, onClick = onDismiss) {
+                Text(stringResource(R.string.back_b52b36))
+            }
+        },
+    )
 }

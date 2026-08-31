@@ -35,6 +35,26 @@ object TalkTimeLog {
         }
     }
 
+    /**
+     * Consecutive days with metered talk, anchored to TODAY when today
+     * already has some and to yesterday otherwise — a streak is alive until
+     * its day is over, and without that every learner reads 0 each morning.
+     */
+    fun streakDays(context: Context, now: Long = System.currentTimeMillis()): Int {
+        val map = load(context)
+        fun met(dayMillis: Long): Boolean {
+            val prefix = dayKey(dayMillis)
+            return map.entries.any { (k, v) ->
+                v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
+            }
+        }
+        var cursor = if (met(now)) now else now - 86_400_000L
+        if (!met(cursor)) return 0
+        var count = 0
+        while (met(cursor)) { count += 1; cursor -= 86_400_000L }
+        return count
+    }
+
     private fun dayKey(now: Long): String =
         SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(now))
 
