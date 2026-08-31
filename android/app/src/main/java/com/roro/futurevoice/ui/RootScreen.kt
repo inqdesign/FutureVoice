@@ -89,6 +89,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.NewsTopicStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.net.NewsClient
 import com.roro.futurevoice.net.TopicClient
@@ -127,6 +128,7 @@ fun RootScreen() {
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
+    var studyDeckKind by remember { mutableStateOf<StudyScheduleStore.Kind?>(null) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
@@ -230,6 +232,14 @@ fun RootScreen() {
             onBack = { showDeck = false },
         )
 
+        studyDeckKind != null -> StudyDeckHost(
+            kind = studyDeckKind!!,
+            language = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            level = state.level,
+            onBack = { studyDeckKind = null },
+        )
+
         showPeople -> FindPeopleScreen(
             language = state.targetLanguage,
             onTalk = { p ->
@@ -310,6 +320,8 @@ fun RootScreen() {
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
             onOpenDeck = { showDeck = true },
+            onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
+            onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
             onOpenTalk = { detailSessionId = it },
             onWatch = { watchScenarioId = it },
             onClonePreview = { clonePreview = true },
@@ -444,6 +456,8 @@ private fun HomeScreen(
     onOpenMe: () -> Unit,
     onOpenPractice: () -> Unit = {},
     onOpenDeck: () -> Unit = {},
+    onOpenWords: () -> Unit = {},
+    onOpenExpressions: () -> Unit = {},
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
@@ -563,8 +577,11 @@ private fun HomeScreen(
                 )
 
                 HomeTab.PRACTICE -> PracticeBody(
+                    level = state.level,
                     language = state.targetLanguage,
                     onOpenDeck = onOpenDeck,
+                    onOpenWords = onOpenWords,
+                    onOpenExpressions = onOpenExpressions,
                     onOpenScenarioBook = onOpenBook,
                     onOpenTalk = onOpenTalk,
                 )

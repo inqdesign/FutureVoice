@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review_reminders">복습 알림</string>
+    <string name="back_for_review">다시 볼 시간이에요</string>
+    <string name="ten_min">10분</string>
+    <string name="three_days">3일</string>
+    <string name="nothing_waiting_here">여기서 기다리는 건 없어요</string>
+    <string name="nothing_marked_known_in_this_session">이번에 안다고 표시한 건 없어요</string>
+    <string name="within_the_hour">한 시간 안에</string>
+    <string name="in_lld_hours">%1$d시간 뒤</string>
+    <string name="in_lld_days">%1$d일 뒤</string>
+    <string name="words">단어</string>
+    <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first">아직 공부할 게 없어요 — 먼저 대화하거나 장면을 보면 거기서 나온 단어가 여기로 와요.</string>
+    <string name="expressions_from_your_calls_will_collect_here">통화에서 나온 표현이 — 내 것도, 유창한 나의 것도 — 여기 모여요.</string>
+</resources>

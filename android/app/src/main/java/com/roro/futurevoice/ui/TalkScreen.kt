@@ -89,7 +89,10 @@ fun TalkScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     // System back = hang up and leave, same as End — never kill the activity
     // with a call still holding the mic.
-    androidx.activity.compose.BackHandler { vm.end(); onExit() }
+    androidx.activity.compose.BackHandler {
+        if (state.phase == TalkPhase.ENDED) onExit()
+        else { vm.end(); if (vm.state.value.endedSessionId == null) onExit() }
+    }
     val listState = rememberLazyListState()
 
     LaunchedEffect(voiceId) {
@@ -134,7 +137,20 @@ fun TalkScreen(
                     )
                 },
                 actions = {
-                    Button(onClick = { vm.end(); onExit() }) { Text(stringResource(R.string.end)) }
+                    // End the call and STAY: the wrap-up is the most valuable
+                    // minute the app spends, and leaving here skipped it
+                    // entirely. Done is what leaves.
+                    if (state.phase == TalkPhase.ENDED) {
+                        Button(onClick = onExit) { Text(stringResource(R.string.done)) }
+                    } else {
+                        Button(onClick = {
+                            vm.end()
+                            // A call nobody spoke in has nothing to wrap up —
+                            // `end` skips the save, so there is no board to
+                            // hold anyone here. (Set synchronously.)
+                            if (vm.state.value.endedSessionId == null) onExit()
+                        }) { Text(stringResource(R.string.end)) }
+                    }
                 },
             )
         }

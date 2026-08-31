@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review_reminders">Review reminders</string>
+    <string name="back_for_review">Back for review</string>
+    <string name="ten_min">10 min</string>
+    <string name="three_days">3 days</string>
+    <string name="nothing_waiting_here">Nothing waiting here</string>
+    <string name="nothing_marked_known_in_this_session">Nothing marked known in this session</string>
+    <string name="within_the_hour">Within the hour</string>
+    <string name="in_lld_hours">In %1$d hours</string>
+    <string name="in_lld_days">In %1$d days</string>
+    <string name="words">Words</string>
+    <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first">Nothing to study yet — have a talk or watch a scene first; the words it surfaces get dealt here.</string>
+    <string name="expressions_from_your_calls_will_collect_here">Expressions from your calls — yours and your fluent self\'s — will collect here.</string>
+</resources>

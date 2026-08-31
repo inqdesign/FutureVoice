@@ -51,6 +51,20 @@ object CoreVocabulary {
     fun set(language: String): Set<String> = pool(language).set
     fun level(word: String, language: String): CefrLevel? = pool(language).levelByWord[word.lowercase()]
     fun levelRank(level: CefrLevel): Int = CefrLevel.entries.indexOf(level)
+
+    /**
+     * Every core word at or above [level], easiest first — the top-up a daily
+     * word deck falls back on so the hand is never short, even on day one.
+     * Ordered inside a band too (alphabetically), so the same day deals the
+     * same hand however the map happened to iterate.
+     */
+    fun wordsAtOrAbove(level: CefrLevel, language: String): List<String> {
+        val min = levelRank(level)
+        return pool(language).levelByWord.entries
+            .filter { levelRank(it.value) >= min }
+            .sortedWith(compareBy({ levelRank(it.value) }, { it.key }))
+            .map { it.key }
+    }
 }
 
 /**

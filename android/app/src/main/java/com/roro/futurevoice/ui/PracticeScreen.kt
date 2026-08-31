@@ -21,6 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
+import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.ui.brand.BookCard
 import com.roro.futurevoice.ui.brand.Books
@@ -43,17 +44,27 @@ import com.roro.futurevoice.talk.Session
 @Composable
 fun PracticeBody(
     language: String,
+    level: com.roro.futurevoice.data.CefrLevel,
     onOpenDeck: () -> Unit,
+    onOpenWords: () -> Unit,
+    onOpenExpressions: () -> Unit,
     onOpenScenarioBook: (String) -> Unit,
     onOpenTalk: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var due by remember { mutableStateOf(0) }
+    var wordsDue by remember { mutableStateOf(0) }
+    var expressionsDue by remember { mutableStateOf(0) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     LaunchedEffect(language, revision) {
         due = DrillStore.shared(context).dueCount(language)
+        // The two library decks say how big TODAY's hand is, not how much is
+        // in the notebook: the number has to be the number the deck deals or
+        // the row promises work the deck won't hand over.
+        wordsDue = DailyStudyPick.words(context, DAILY_HAND, language, level).size
+        expressionsDue = DailyStudyPick.expressions(context, DAILY_HAND, language).size
         scenarios = ScenarioStore.shared(context).load(language)
             .filter { it.archivedAt == null && it.isMeeting != true }
         talks = SessionStore.shared(context).load(language).filter { it.summary != null }
@@ -69,6 +80,12 @@ fun PracticeBody(
                     color = MaterialTheme.colorScheme.primary)
             }
         }
+        // The Library decks — words and expressions, dealt from the notebook,
+        // the books and the last talks. Always present, because "nothing due"
+        // is an answer the learner is entitled to see.
+        StudyRow(stringResource(R.string.words), wordsDue, onOpenWords)
+        StudyRow(stringResource(R.string.expressions), expressionsDue, onOpenExpressions)
+
         if (scenarios.isNotEmpty()) {
             Text(stringResource(R.string.scenarios), style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp))
@@ -111,6 +128,26 @@ fun PracticeBody(
                 )
             }
         }
+    }
+}
+
+/** How many cards a daily deck deals. Mirrors iOS's per-day goal default. */
+private const val DAILY_HAND = 10
+
+/**
+ * One library deck's row: what it is, and how many cards are waiting today.
+ * A zero is shown as a dash rather than hidden — a row that vanishes when
+ * it's empty teaches the learner to stop looking for it.
+ */
+@Composable
+private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onOpen() }.padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(if (count == 0) "—" else "$count",
+            style = MaterialTheme.typography.titleMedium,
+            color = if (count == 0) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.primary)
     }
 }
 

@@ -61,6 +61,13 @@
             android:name=".data.DailyCallReceiver"
             android:exported="false" />
 
+        <!-- A word coming back. Separate from the daily call's receiver on
+             purpose: the call is the habit anchor and rings; this only ever
+             posts a quiet notification. -->
+        <receiver
+            android:name=".data.ReviewDueReceiver"
+            android:exported="false" />
+
         <!-- Two widgets, one per section — the app writes their snapshots,
              the widgets only read them. -->
         <receiver

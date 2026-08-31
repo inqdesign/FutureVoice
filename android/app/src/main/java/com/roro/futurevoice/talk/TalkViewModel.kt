@@ -200,13 +200,15 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     /**
      * Every way a call stops lands here once: End, a wall, a failure. Saved
-     * as long as anything was said (iOS: `guard !turns.isEmpty`) — the
-     * summary comes later and is written onto the same row.
+     * only if the LEARNER actually said something (iOS gates its save on
+     * `turns.contains { $0.role == .user }`) — an opener nobody answered is
+     * not a talk, and saving one would mint an empty book and a summary with
+     * nothing to read.
      */
     private fun persist() {
         val cfg = config ?: return
         val turns = _state.value.turns
-        if (turns.isEmpty()) return
+        if (turns.none { it.role == TurnRole.USER }) return
         // Uppercased like every other id: iOS encodes a Swift UUID uppercase,
         // and a backup crossing platforms should not differ by case alone.
         val userId = auth.userId?.uppercase() ?: return
