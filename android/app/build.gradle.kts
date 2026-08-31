@@ -82,6 +82,9 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
 
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.serialization.json)
+
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.auth)
     implementation(libs.supabase.postgrest)

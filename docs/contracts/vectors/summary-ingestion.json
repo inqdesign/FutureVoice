@@ -1,0 +1,403 @@
+{
+  "carryover_content_word_guard" : {
+    "item" : "I'm in a sweet mood today",
+    "matched" : false,
+    "turn" : "I'm in a really good mood today because everything worked"
+  },
+  "carryover_detect" : {
+    "cards" : [
+      {
+        "createdAt" : "2026-08-20T09:00:00Z",
+        "id" : 101,
+        "sourceSessionIdx" : 900,
+        "target" : "I went to the bank yesterday"
+      },
+      {
+        "createdAt" : "2026-08-20T09:00:00Z",
+        "id" : 102,
+        "sourceSessionIdx" : 900,
+        "target" : "I'm in a sweet mood today"
+      },
+      {
+        "createdAt" : "2026-08-30T09:00:00Z",
+        "id" : 103,
+        "sourceSessionIdx" : 901,
+        "target" : "It slipped my mind"
+      },
+      {
+        "createdAt" : "2026-08-25T09:00:00Z",
+        "id" : 104,
+        "sourceSessionIdx" : 902,
+        "target" : "at the end of the day"
+      }
+    ],
+    "curriculum" : [
+      "sort out the card"
+    ],
+    "now" : "2026-08-31T12:00:00Z",
+    "result" : [
+      {
+        "item" : "I went to the bank yesterday",
+        "quote" : "So yesterday morning I went to the bank yesterday to sort out the card",
+        "source" : "drillCard",
+        "sourceIdx" : 101,
+        "turnIdx" : 2
+      },
+      {
+        "item" : "at the end of the day",
+        "quote" : "honestly at the end of the day it worked out and I'd rather just stay in tonight, honestly",
+        "source" : "drillCard",
+        "sourceIdx" : 104,
+        "turnIdx" : 4
+      },
+      {
+        "item" : "because everything worked",
+        "quote" : "I'm in a really good mood today because everything worked",
+        "source" : "studyingExpression",
+        "sourceIdx" : null,
+        "turnIdx" : 3
+      }
+    ],
+    "sessionIdx" : 901,
+    "sessionStartedAt" : "2026-08-31T11:00:00Z",
+    "studyingExpressions" : [
+      "because everything worked"
+    ],
+    "turns" : [
+      {
+        "idx" : 1,
+        "role" : "fluentSelf",
+        "suggestion" : null,
+        "text" : "Hey, how was the errand?"
+      },
+      {
+        "idx" : 2,
+        "role" : "user",
+        "suggestion" : "I'd rather just stay in tonight",
+        "text" : "So yesterday morning I went to the bank yesterday to sort out the card"
+      },
+      {
+        "idx" : 3,
+        "role" : "user",
+        "suggestion" : null,
+        "text" : "I'm in a really good mood today because everything worked"
+      },
+      {
+        "idx" : 4,
+        "role" : "user",
+        "suggestion" : null,
+        "text" : "honestly at the end of the day it worked out and I'd rather just stay in tonight, honestly"
+      },
+      {
+        "idx" : 5,
+        "role" : "user",
+        "suggestion" : null,
+        "text" : "it slipped my mind completely"
+      }
+    ]
+  },
+  "carryover_normalized" : [
+    {
+      "result" : "im in a good mood today",
+      "text" : "I'm in a GOOD mood — today!"
+    },
+    {
+      "result" : "dont worry its fine",
+      "text" : "  Don't   worry,  it's fine.  "
+    }
+  ],
+  "core_sentence" : [
+    {
+      "result" : "I went to the bank yesterday.",
+      "source" : "I go to bank yesterday",
+      "target" : "I went to the bank yesterday. Then I met my friend for lunch and we talked about the trip we are planning for the autumn holidays together. It was fun."
+    },
+    {
+      "result" : "Did you finish the report? I stayed up late to get it done and sent it before the morning meeting started because the deadline was moved up.",
+      "source" : "you finish report?",
+      "target" : "Did you finish the report? I stayed up late to get it done and sent it before the morning meeting started because the deadline was moved up."
+    },
+    {
+      "result" : "One short sentence.",
+      "source" : "whatever",
+      "target" : "One short sentence."
+    }
+  ],
+  "drill_ingest" : {
+    "cards" : [
+      {
+        "box" : 0,
+        "reason" : "Suggested for you to practice.",
+        "source" : "",
+        "target" : "Could you give me a hand with this?",
+        "turnIdx" : null
+      },
+      {
+        "box" : 0,
+        "reason" : "past tense",
+        "source" : "I come back home",
+        "target" : "I came back home",
+        "turnIdx" : 11
+      },
+      {
+        "box" : 0,
+        "reason" : "past tense",
+        "source" : "I go to bank yesterday and it was closed so I come back home",
+        "target" : "I went to the bank yesterday",
+        "turnIdx" : 11
+      },
+      {
+        "box" : 0,
+        "reason" : "third-person s",
+        "source" : "It's depend on weather",
+        "target" : "It depends on the weather",
+        "turnIdx" : 12
+      }
+    ],
+    "mintedCount" : 4,
+    "summary" : {
+      "drills" : [
+        "Could you give me a hand with this?",
+        "using articles correctly"
+      ],
+      "patterns" : [
+        {
+          "context" : "past tense",
+          "correction" : "I came back home",
+          "mistake" : "I come back home"
+        }
+      ],
+      "phrases" : [
+        {
+          "alt" : "It depends on the weather",
+          "reason" : "third-person s",
+          "userSaid" : "It's depend on weather"
+        },
+        {
+          "alt" : "I went to the bank, yesterday!",
+          "reason" : "dup of suggestion",
+          "userSaid" : "I go to bank yesterday"
+        }
+      ]
+    },
+    "turns" : [
+      {
+        "idx" : 11,
+        "reason" : "past tense",
+        "suggestion" : "I went to the bank yesterday",
+        "text" : "I go to bank yesterday and it was closed so I come back home"
+      },
+      {
+        "idx" : 12,
+        "reason" : null,
+        "suggestion" : null,
+        "text" : "It's depend on weather"
+      }
+    ]
+  },
+  "is_creditable" : [
+    {
+      "phrase" : "thanks a lot",
+      "result" : true
+    },
+    {
+      "phrase" : "it slipped my mind",
+      "result" : true
+    },
+    {
+      "phrase" : "how are you",
+      "result" : false
+    },
+    {
+      "phrase" : "push back",
+      "result" : false
+    },
+    {
+      "phrase" : "end up staying home",
+      "result" : true
+    }
+  ],
+  "is_drillable" : [
+    {
+      "phrase" : "using articles correctly",
+      "result" : false
+    },
+    {
+      "phrase" : "I went to the bank yesterday",
+      "result" : true
+    },
+    {
+      "phrase" : "subject-verb agreement",
+      "result" : false
+    },
+    {
+      "phrase" : "Remember to use the past tense",
+      "result" : false
+    },
+    {
+      "phrase" : "It depends on the weather",
+      "result" : true
+    },
+    {
+      "phrase" : "using 'a', 'the', 'in', 'on'",
+      "result" : false
+    },
+    {
+      "phrase" : "Try to use more vocabulary",
+      "result" : false
+    },
+    {
+      "phrase" : "I'd rather stay in tonight",
+      "result" : true
+    },
+    {
+      "phrase" : "",
+      "result" : false
+    },
+    {
+      "phrase" : "  ",
+      "result" : false
+    }
+  ],
+  "profile_absorb" : {
+    "after" : {
+      "lastSessionAt" : "2026-08-31T12:00:00Z",
+      "recurring" : [
+        {
+          "context" : "past",
+          "correction" : "I went yesterday",
+          "frequency" : 3,
+          "lastSeenAt" : "2026-08-01T00:00:00Z",
+          "mistake" : "I go yesterday"
+        },
+        {
+          "context" : "tense again",
+          "correction" : "I went yesterday (fixed)",
+          "frequency" : 2,
+          "lastSeenAt" : "2026-08-31T12:00:00Z",
+          "mistake" : "i go YESTERDAY "
+        },
+        {
+          "context" : "3rd person",
+          "correction" : "It depends",
+          "frequency" : 1,
+          "lastSeenAt" : "2026-08-31T12:00:00Z",
+          "mistake" : "It's depend"
+        }
+      ],
+      "totalSessions" : 5,
+      "totalSpeakingSeconds" : 724,
+      "weak" : [
+        "startup vocabulary",
+        "airport phrases",
+        "Cooking Verbs",
+        "phone-call phrases"
+      ]
+    },
+    "before" : {
+      "recurring" : [
+        {
+          "context" : "past",
+          "correction" : "I went yesterday",
+          "frequency" : 3,
+          "lastSeenAt" : "2026-08-01T00:00:00Z",
+          "mistake" : "I go yesterday"
+        }
+      ],
+      "totalSessions" : 4,
+      "totalSpeakingSeconds" : 600,
+      "weak" : [
+        "cooking verbs",
+        "phone-call phrases"
+      ]
+    },
+    "incoming" : {
+      "now" : "2026-08-31T12:00:00Z",
+      "patterns" : [
+        {
+          "context" : "tense again",
+          "correction" : "I went yesterday (fixed)",
+          "frequency" : 2,
+          "mistake" : "i go YESTERDAY "
+        },
+        {
+          "context" : "3rd person",
+          "correction" : "It depends",
+          "frequency" : 1,
+          "mistake" : "It's depend"
+        }
+      ],
+      "speakingSeconds" : 123.59999999999999,
+      "weak" : [
+        "Cooking Verbs",
+        "airport phrases",
+        " ",
+        "startup vocabulary"
+      ]
+    }
+  },
+  "relevant_fragment" : [
+    {
+      "result" : "Well I think, you know, we went to the market early because my sister said the bread sells out, and then we had coffee at the small place near the station and t…",
+      "source" : "Well I think, you know, we went to the market early because my sister said the bread sells out, and then we had coffee at the small place near the station and talked about her new job for a long time which was nice",
+      "target" : "We went to the market early because the bread sells out"
+    },
+    {
+      "result" : "short one",
+      "source" : "short one",
+      "target" : "anything"
+    },
+    {
+      "result" : "no separators here just words no separators here just words no separators here just words no separators here just words no separators here just words no separat…",
+      "source" : "no separators here just words no separators here just words no separators here just words no separators here just words no separators here just words no separators here just words no separators here just words no separators here just words ",
+      "target" : "totally unrelated phrase"
+    }
+  ],
+  "scorecard_metrics" : {
+    "promptJSON" : "{\"articulation_rate_wpm\":120,\"avg_words_per_turn\":\"14.0\",\"distinct_words_by_cefr_level\":{},\"pause_ratio\":\"0.18\",\"pauses_per_minute\":\"12.9\",\"self_correction_hits\":2,\"suggestion_count\":1,\"suggestion_rate\":\"0.50\",\"total_user_speaking_seconds\":17,\"type_token_ratio\":\"0.86\",\"unique_word_count\":24,\"user_turn_count\":2,\"user_word_count\":28,\"words_per_minute\":99}",
+    "turns" : [
+      {
+        "durationMs" : 10000,
+        "excluded" : false,
+        "fluency" : {
+          "pauseCount" : 2,
+          "pauseSeconds" : 2,
+          "speakingSeconds" : 8,
+          "totalSeconds" : 10
+        },
+        "hasSuggestion" : false,
+        "role" : "user",
+        "text" : "It go well. I commute almost one hour today, so I am little tired."
+      },
+      {
+        "durationMs" : 0,
+        "excluded" : false,
+        "fluency" : null,
+        "hasSuggestion" : false,
+        "role" : "fluentSelf",
+        "text" : "An hour each way? That adds up."
+      },
+      {
+        "durationMs" : 7000,
+        "excluded" : false,
+        "fluency" : {
+          "pauseCount" : 1,
+          "pauseSeconds" : 1,
+          "speakingSeconds" : 6,
+          "totalSeconds" : 7
+        },
+        "hasSuggestion" : true,
+        "role" : "user",
+        "text" : "I usually read a news or, um, listen podcast. I mean I sleep sometimes."
+      },
+      {
+        "durationMs" : 0,
+        "excluded" : true,
+        "fluency" : null,
+        "hasSuggestion" : false,
+        "role" : "user",
+        "text" : "this one is excluded"
+      }
+    ]
+  }
+}

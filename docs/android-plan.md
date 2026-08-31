@@ -13,8 +13,13 @@
 > reads every string from the generated catalog (see "Strings" below). Since
 > 2026-08-31 a talk is PERSISTED (`SessionStore.kt`, iOS's on-disk contract)
 > and SUMMARIZED through the new `session-summary` Edge Function (prompt
-> server-side; see `edge-api.md`) — verbatim guards and title→topic ported,
-> vocab/drill/carry-over/profile ingestion still to port with vectors. Still
+> server-side; see `edge-api.md`) — verbatim guards and title→topic ported.
+> Since 2026-08-31 the LOOP CLOSES: vocab/drill/carry-over/profile ingestion
+> are ported and verified against golden vectors PRODUCED BY THE SWIFT
+> IMPLEMENTATION (`scripts/android/gen-vectors.sh` →
+> `docs/contracts/vectors/summary-ingestion.json`, 9 JVM tests). Known gap:
+> Android has no lemmatizer yet — `VocabLemmas` returns surface tokens, so
+> vocab counts lag iOS and `distinct_words_by_cefr_level` stays empty. Still
 > missing from the slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).

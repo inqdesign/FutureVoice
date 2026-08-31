@@ -221,3 +221,93 @@ data class LearnerPattern(
     @Serializable(with = IsoDateMillisSerializer::class)
     val lastSeenAt: Long = System.currentTimeMillis(),
 )
+
+// MARK: - Drill cards & learner profile (`Models.swift` parity)
+
+@Serializable
+data class DrillCard(
+    val id: String = StoreJson.newId(),
+    val sourcePhrase: String,
+    val targetPhrase: String,
+    val reason: String,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val createdAt: Long,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val lastReviewedAt: Long? = null,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val nextReviewAt: Long,
+    val box: Int,
+    val timesSeen: Int = 0,
+    val timesCorrect: Int = 0,
+    val sourceSessionId: String? = null,
+    val sourceTurnId: String? = null,
+    /**
+     * iOS's `DrillCardEnrichment`, carried OPAQUELY: Android doesn't render
+     * it yet, but a rewrite of the file must not drop what iOS wrote.
+     */
+    val enrichment: kotlinx.serialization.json.JsonElement? = null,
+)
+
+@Serializable
+data class LearnerProfile(
+    val id: String = StoreJson.newId(),
+    val userId: String,
+    val targetLanguage: String,
+    /** iOS `CEFRLevel` rawValue — "a1"…"c2". */
+    var proficiencyLevel: String = "b1",
+    var recurringMistakes: List<LearnerPattern> = emptyList(),
+    var weakVocabAreas: List<String> = emptyList(),
+    var strongPatterns: List<String> = emptyList(),
+    var totalSessions: Int = 0,
+    var totalSpeakingSeconds: Int = 0,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    var lastSessionAt: Long? = null,
+    var summaryEmbedding: List<Float>? = null,
+) {
+    /**
+     * `LearnerProfile.absorb` — fold one finished session in. New patterns
+     * merge on normalized mistake+correction (bumping frequency, keeping the
+     * freshest phrasing), re-ranked by frequency then recency, capped at
+     * [MAX_RECURRING]; weak areas merge newest-first case-insensitively,
+     * capped at [MAX_WEAK_AREAS].
+     */
+    fun absorb(summary: SessionSummary, speakingSeconds: Double, now: Long = System.currentTimeMillis()) {
+        fun norm(s: String) = s.lowercase().trim()
+        fun key(p: LearnerPattern) = norm(p.mistake) + "→" + norm(p.correction)
+        val mistakes = recurringMistakes.toMutableList()
+        for (incoming in summary.newPatternsDetected) {
+            val idx = mistakes.indexOfFirst { key(it) == key(incoming) }
+            if (idx >= 0) {
+                val old = mistakes[idx]
+                mistakes[idx] = old.copy(
+                    frequency = old.frequency + incoming.frequency,
+                    lastSeenAt = now,
+                    correction = incoming.correction,
+                    context = incoming.context.ifEmpty { old.context },
+                )
+            } else {
+                mistakes.add(incoming.copy(lastSeenAt = now))
+            }
+        }
+        mistakes.sortWith(compareByDescending<LearnerPattern> { it.frequency }.thenByDescending { it.lastSeenAt })
+        recurringMistakes = mistakes.take(MAX_RECURRING)
+
+        val weak = weakVocabAreas.toMutableList()
+        for (area in summary.weakVocabAreas) {
+            val trimmed = area.trim()
+            if (trimmed.isEmpty()) continue
+            weak.removeAll { it.lowercase() == trimmed.lowercase() }
+            weak.add(0, trimmed)
+        }
+        weakVocabAreas = weak.take(MAX_WEAK_AREAS)
+
+        totalSessions += 1
+        totalSpeakingSeconds += Math.round(speakingSeconds).toInt()
+        lastSessionAt = now
+    }
+
+    companion object {
+        const val MAX_RECURRING = 10
+        const val MAX_WEAK_AREAS = 5
+    }
+}

@@ -4,8 +4,13 @@ import android.content.Context
 import android.util.Log
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
+import com.roro.futurevoice.data.DrillIngest
+import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.data.ProfileStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.data.StoreJson
+import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.SessionSummaryClient
 import kotlinx.coroutines.CancellationException
@@ -106,22 +111,15 @@ object SessionSummarizer {
         val metrics = ScorecardMetrics.compute(turns)
         var progress = Progress()
 
-        // The learner profile is not persisted on Android yet — send the
-        // shape the prompt expects with what is known (the level), so the
-        // model's "profile" reads the same fields it reads on iOS.
-        val profile = buildJsonObject {
-            put("targetLanguage", session.targetLanguage)
-            put("proficiencyLevel", level.code)
-            put("recurringMistakes", JsonArray(emptyList()))
-            put("weakVocabAreas", JsonArray(emptyList()))
-            put("strongPatterns", JsonArray(emptyList()))
-            put("totalSessions", 0)
-            put("totalSpeakingSeconds", 0)
-        }
+        // The REAL learner profile (what past sessions taught) — read before
+        // the call, absorbed after it, exactly iOS's order.
+        val profileStore = ProfileStore.shared(context)
+        val profile = profileStore.load(session.targetLanguage, level.code)
         val body = SessionSummaryClient.RequestBody(
             target_language = session.targetLanguage,
             native_language = nativeLanguage,
-            profile = profile,
+            profile = Json.parseToJsonElement(
+                StoreJson.json.encodeToString(LearnerProfile.serializer(), profile)).jsonObject,
             known_about_user = emptyList(),
             expression_budget = expressionBudget(turns.count { it.role == TurnRole.FLUENT_SELF }),
             transcript = formatTranscript(turns),
@@ -175,6 +173,34 @@ object SessionSummarizer {
             grammarIssues = grammar,
         )
 
+        // ── The loop closes (`SessionSummarizer.swift`, in stages) ──
+        val language = session.targetLanguage
+        val vocab = VocabStore.shared(context)
+        val drills = DrillStore.shared(context)
+
+        // Words into the long-term pool; merge with the previous summary's
+        // list so a resumed talk can't erase "words you used first".
+        val freshWords = vocab.ingest(session.id, userTexts, language)
+        val priorWords = session.summary?.newWordsUsed.orEmpty()
+        // Expressions: seed pre-tracking sessions, then count this batch.
+        vocab.notePriorExpressions(session.id, priorUsed, language)
+        vocab.ingestExpressions(session.id, verifiedUsed, language)
+
+        // Carryovers run against the cards as they stood BEFORE this
+        // session's own corrections are ingested below.
+        val carryovers = CarryoverDetector.detect(
+            turns = turns,
+            cards = drills.load(language),
+            studyingExpressions = vocab.studyingExpressions(language),
+            studyingWords = vocab.studying(language),
+            sessionId = session.id, sessionStartedAt = session.startedAt,
+            language = language,
+        )
+        computed = computed.copy(
+            newWordsUsed = priorWords + freshWords.filter { it !in priorWords },
+            carryovers = carryovers,
+        )
+
         // A free talk takes the generated title so lists don't fill with "Conversation".
         val generatedTitle = payload["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
         val existingTopic = session.topic?.trim().orEmpty()
@@ -182,6 +208,23 @@ object SessionSummarizer {
 
         val saved = session.copy(topic = resolvedTopic, summary = computed)
         SessionStore.shared(context).save(saved)
+
+        // Cards: clear this session's untouched ones (a re-analysis must not
+        // reset Leitner progress), mint, then credit live production.
+        drills.clearUnreviewedCards(session.id, language)
+        val minted = DrillIngest.mint(drills.load(language), computed, turns, session.id,
+            System.currentTimeMillis())
+        drills.upsertMany(minted, language)
+        drills.markUsedInConversation(
+            carryovers.filter { it.source == Carryover.Source.DRILL_CARD }.mapNotNull { it.sourceId },
+            language)
+
+        // Grow the long-term profile — the next conversation's prompt reads it.
+        val speakingSeconds = turns.filter { it.role == TurnRole.USER }
+            .sumOf { it.durationMs / 1000.0 }
+        profile.absorb(computed, speakingSeconds)
+        profileStore.save(profile)
+
         StoreEvents.bump()
         progress = progress.copy(finished = true); onProgress?.invoke(progress)
         return saved
