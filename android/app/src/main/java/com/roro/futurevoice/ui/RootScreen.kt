@@ -76,6 +76,7 @@ fun RootScreen() {
     var callTopic by remember { mutableStateOf("") }
     var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
     var callScenarioId by remember { mutableStateOf<String?>(null) }
+    var callOpener by remember { mutableStateOf("") }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
@@ -93,6 +94,10 @@ fun RootScreen() {
             showMe = false; showDeck = false; detailSessionId = null
             watchScenarioId = null; shadowLine = null; clonePreview = false
             callTopic = ""; callFacts = emptyList(); callScenarioId = null
+            // The pre-written voicemail IS the call's first line; consumed
+            // so a plain free talk later doesn't replay it.
+            callOpener = com.roro.futurevoice.data.DailyCallStore.script(context).orEmpty()
+            com.roro.futurevoice.data.DailyCallStore.setScript(context, null)
             inCall = true
         }
     }
@@ -238,7 +243,9 @@ fun RootScreen() {
                 topic = callTopic,
                 newsFacts = callFacts,
                 scenarioId = callScenarioId,
-                onExit = { inCall = false; callTopic = ""; callFacts = emptyList(); callScenarioId = null },
+                initialOpener = callOpener,
+                onExit = { inCall = false; callTopic = ""; callFacts = emptyList()
+                    callScenarioId = null; callOpener = "" },
             )
 
         else -> HomeScreen(

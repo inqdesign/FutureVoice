@@ -36,6 +36,14 @@ object DailyCallStore {
     fun hour(c: Context) = c.getSharedPreferences(PREFS, 0).getInt(HOUR, 8)
     fun minute(c: Context) = c.getSharedPreferences(PREFS, 0).getInt(MINUTE, 0)
 
+    private const val SCRIPT = "futurevoice.dailyCall.script"
+
+    /** Tomorrow's opening words, written at session end; cleared on answer. */
+    fun script(c: Context): String? = c.getSharedPreferences(PREFS, 0).getString(SCRIPT, null)
+    fun setScript(c: Context, script: String?) {
+        c.getSharedPreferences(PREFS, 0).edit().putString(SCRIPT, script).apply()
+    }
+
     fun set(c: Context, enabled: Boolean, hour: Int, minute: Int) {
         c.getSharedPreferences(PREFS, 0).edit()
             .putBoolean(ENABLED, enabled).putInt(HOUR, hour).putInt(MINUTE, minute).apply()

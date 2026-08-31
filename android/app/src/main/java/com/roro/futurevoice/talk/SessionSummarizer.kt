@@ -5,7 +5,9 @@ import android.util.Log
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.DrillIngest
+import com.roro.futurevoice.data.DailyCallStore
 import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.data.PersonaStore
 import com.roro.futurevoice.data.ProfileStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -255,6 +257,25 @@ object SessionSummarizer {
             .sumOf { it.durationMs / 1000.0 }
         profile.absorb(computed, speakingSeconds)
         profileStore.save(profile)
+
+        // Write tomorrow's call NOW, off the talk that just ended (iOS rule:
+        // never in the morning — the app may not be running then). Best
+        // effort; a failed script just means a generic opener.
+        if (DailyCallStore.isEnabled(context)) {
+            runCatching {
+                val script = com.roro.futurevoice.net.VoicemailClient(AuthRepository()).writeScript(
+                    targetLanguage = language,
+                    nativeLanguage = nativeLanguage,
+                    proficiency = level.code,
+                    personaName = PersonaStore.shared(context).load()?.displayName,
+                    lastTopic = resolvedTopic,
+                    lastPhrases = (computed.expressionsOffered + computed.expressionsUsed).take(4),
+                    daysSinceLastTalk = 0,
+                    dueCount = drills.dueCount(language),
+                )
+                if (script.isNotBlank()) DailyCallStore.setScript(context, script)
+            }
+        }
 
         StoreEvents.bump()
         report { it.copy(finished = true) }

@@ -448,6 +448,12 @@ verify_jwt = true
 import_map = "./functions/scenario-curriculum/deno.json"
 entrypoint = "./functions/scenario-curriculum/index.ts"
 
+[functions.voicemail-script]
+enabled = true
+verify_jwt = true
+import_map = "./functions/voicemail-script/deno.json"
+entrypoint = "./functions/voicemail-script/index.ts"
+
 [functions.google-webhook]
 enabled = true
 # Pub/Sub cannot send a Supabase JWT; auth is the shared secret in the URL.

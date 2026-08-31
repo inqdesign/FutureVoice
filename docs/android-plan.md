@@ -63,6 +63,11 @@
 > home: the due queue, the scenario books (deterministic mastery — words
 > against the vocab pool, expressions on real evidence, exactly the iOS
 > rule) and the talk books, each opening its page.
+> The daily call has its
+> MEMORY: `voicemail-script` (brain-lift, prompt extracted from
+> VoicemailEngine) writes tomorrow's opening words at session end —
+> grounded in the last talk, informal, ending in a question — and Answer
+> opens the call ON that line (`TalkConfig.initialOpener`).
 > Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't

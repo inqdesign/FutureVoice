@@ -66,6 +66,7 @@ fun TalkScreen(
     topic: String = "",
     newsFacts: List<String> = emptyList(),
     scenarioId: String? = null,
+    initialOpener: String = "",
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -91,6 +92,7 @@ fun TalkScreen(
                 topic = topic,
                 newsFacts = newsFacts,
                 scenarioId = scenarioId,
+                initialOpener = initialOpener,
             )
         )
     }

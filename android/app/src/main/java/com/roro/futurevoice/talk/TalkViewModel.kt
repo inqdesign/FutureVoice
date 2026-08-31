@@ -41,6 +41,12 @@ data class TalkConfig(
     val newsFacts: List<String> = emptyList(),
     /** Set when launched from a saved scenario — the session's provenance. */
     val scenarioId: String? = null,
+    /**
+     * The call's first spoken line, already written (the daily call's
+     * voicemail). Skips the opener request entirely — the caller had
+     * something to say, that's why they called.
+     */
+    val initialOpener: String = "",
 )
 
 /**
@@ -300,6 +306,12 @@ class TalkViewModel(context: Context) : ViewModel() {
      */
     private suspend fun openConversation() {
         val cfg = config ?: return
+        if (cfg.initialOpener.isNotBlank()) {
+            appendFluentSelf(cfg.initialOpener)
+            speak(cfg.initialOpener)
+            beginListening()
+            return
+        }
         val opener = requestTurn(
             messages = listOf(
                 GeminiClient.Message(
