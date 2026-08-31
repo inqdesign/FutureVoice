@@ -46,6 +46,9 @@ import com.roro.futurevoice.talk.TalkViewModel
 import com.roro.futurevoice.talk.TalkWall
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
+import com.roro.futurevoice.ui.brand.DialogueLine
+import com.roro.futurevoice.ui.brand.DialogueScale
+import com.roro.futurevoice.ui.brand.DialogueSpeaker
 
 /**
  * Phone-call mode, not a chat app: one dialogue surface, a status line, and an
@@ -144,7 +147,7 @@ fun TalkScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.turns, key = { it.id }) { turn -> DialogueLine(turn) }
+                items(state.turns, key = { it.id }) { turn -> DialogueLine(turn, scale = DialogueScale.CALL) }
             }
 
             if (state.partial.isNotBlank()) {
@@ -255,6 +258,32 @@ fun DialogueLine(turn: Turn) {
             }
         }
     }
+}
+
+/**
+ * A conversation TURN as a dialogue line. The chrome lives in
+ * `brand/DialogueLine.kt`; this only maps a Turn onto it and hangs the
+ * suggestion chip underneath as this surface's accessory.
+ */
+@Composable
+fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
+                 scale: DialogueScale = DialogueScale.STANDARD) {
+    val isUser = turn.role == TurnRole.USER
+    DialogueLine(
+        speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
+        name = stringResource(if (isUser) R.string.you else R.string.future_self_1384d5),
+        scale = scale,
+        isCurrent = isCurrent,
+        accessory = {
+            turn.suggestion?.let { suggestion ->
+                Text(
+                    "→ ${suggestion.alternative}  ·  ${suggestion.reason}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+    ) { Text(turn.transcript) }
 }
 
 @Composable

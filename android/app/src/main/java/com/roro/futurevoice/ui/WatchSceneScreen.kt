@@ -156,7 +156,9 @@ fun WatchSceneScreen(
                     color = MaterialTheme.colorScheme.error)
             }
             LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(shown.size, key = { shown[it].id }) { i -> DialogueLine(shown[i]) }
+                items(shown.size, key = { shown[it].id }) { i ->
+                    DialogueLine(shown[i], isCurrent = i == playingIndex)
+                }
             }
             LaunchedEffect(shown.size) {
                 if (shown.isNotEmpty()) listState.animateScrollToItem(shown.lastIndex)
