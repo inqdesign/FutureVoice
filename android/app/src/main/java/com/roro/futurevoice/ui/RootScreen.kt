@@ -42,6 +42,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.text.style.TextAlign
+import com.roro.futurevoice.ui.brand.FutureselfMode
+import com.roro.futurevoice.ui.brand.FutureselfTheme
+import com.roro.futurevoice.ui.brand.HeroGreeting
+import com.roro.futurevoice.ui.brand.TalkRing
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.NewsTopicStore
 import com.roro.futurevoice.data.SessionStore
@@ -84,7 +100,6 @@ fun RootScreen() {
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
-    var showPractice by remember { mutableStateOf(false) }
     var bookScenarioId by remember { mutableStateOf<String?>(null) }
     val callAnswered by com.roro.futurevoice.data.DailyCallInbox.answered.collectAsStateWithLifecycle()
     LaunchedEffect(callAnswered) {
@@ -185,14 +200,6 @@ fun RootScreen() {
             onBack = { showDeck = false },
         )
 
-        showPractice -> PracticeScreen(
-            language = state.targetLanguage,
-            onOpenDeck = { showDeck = true },
-            onOpenScenarioBook = { bookScenarioId = it },
-            onOpenTalk = { detailSessionId = it },
-            onBack = { showPractice = false },
-        )
-
         showMe -> MeScreen(
             email = state.email,
             persona = state.persona,
@@ -254,7 +261,7 @@ fun RootScreen() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; inCall = true
             },
             onOpenMe = { showMe = true },
-            onOpenPractice = { showPractice = true },
+            onOpenBook = { bookScenarioId = it },
             onOpenDeck = { showDeck = true },
             onOpenTalk = { detailSessionId = it },
             onWatch = { watchScenarioId = it },
@@ -335,6 +342,16 @@ private fun SignInScreen(
     }
 }
 
+/** The four verbs, in the order the product does them. */
+private enum class HomeTab(val label: Int) {
+    TALK(R.string.talk), WATCH(R.string.watch),
+    PRACTICE(R.string.practice), PROGRESS(R.string.progress)
+}
+
+/**
+ * The app shell — `RootTabView`: Talk · Watch · Practice · Progress,
+ * do → create → review → measure. Me opens from the Talk header, as on iOS.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeScreen(
@@ -345,15 +362,16 @@ private fun HomeScreen(
     onOpenDeck: () -> Unit = {},
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
+    onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
-    var micGranted by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    var tab by remember { mutableStateOf(HomeTab.TALK) }
     var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        micGranted = granted
         if (granted) pendingLaunch?.let { onStartCall(it.topic, it.facts, it.scenarioId) }
         pendingLaunch = null
     }
@@ -365,73 +383,141 @@ private fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Talk") },
+                title = { Text(stringResource(tab.label)) },
                 actions = {
-                    TextButton(onClick = onOpenPractice) { Text(stringResource(R.string.practice)) }
-                    TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
+                    if (tab == HomeTab.TALK) {
+                        TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
+                    }
                 },
             )
-        }
+        },
+        bottomBar = {
+            NavigationBar {
+                HomeTab.entries.forEach { t ->
+                    NavigationBarItem(
+                        selected = tab == t,
+                        onClick = { tab = t },
+                        icon = {
+                            Icon(
+                                when (t) {
+                                    HomeTab.TALK -> Icons.Filled.Phone
+                                    HomeTab.WATCH -> Icons.Filled.PlayArrow
+                                    HomeTab.PRACTICE -> Icons.Filled.School
+                                    HomeTab.PROGRESS -> Icons.Filled.BarChart
+                                },
+                                contentDescription = null,
+                            )
+                        },
+                        label = { Text(stringResource(t.label)) },
+                    )
+                }
+            }
+        },
     ) { padding ->
         Column(
-            Modifier.padding(padding).padding(24.dp).fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
+            Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(state.email.orEmpty(), style = MaterialTheme.typography.bodyMedium)
-            HorizontalDivider()
-            TodayRow()
-            when {
-                state.restoringVoice -> Text("Restoring your voice…")
-                state.voiceId != null -> Text(
-                    "Your voice is ready.",
-                    style = MaterialTheme.typography.bodyLarge,
+            when (tab) {
+                HomeTab.TALK -> {
+                    TalkHero(
+                        state = state,
+                        enabled = state.voiceId != null,
+                        onTap = { launch("", emptyList()) },
+                    )
+                    ReviewRow(language = state.targetLanguage, onOpen = onOpenDeck)
+                    NewsSection(
+                        interests = state.persona?.interests.orEmpty(),
+                        targetLanguage = state.targetLanguage,
+                        enabled = state.voiceId != null,
+                        onTalk = { topic -> launch(topic.title, topic.facts.orEmpty()) },
+                    )
+                    RecentTalks(language = state.targetLanguage,
+                        nativeLanguage = state.nativeLanguage, level = state.level,
+                        onOpen = onOpenTalk)
+                    state.error?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error)
+                    }
+                    if (BuildConfig.DEBUG) {
+                        TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
+                        TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
+                    }
+                }
+
+                // Watch: simulate the situation BEFORE it happens. Scenarios
+                // are reusable templates — a tap writes a fresh take.
+                HomeTab.WATCH -> ScenariosSection(
+                    targetLanguage = state.targetLanguage,
+                    enabled = state.voiceId != null,
+                    onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+                    onWatch = onWatch,
                 )
 
-                else -> Text(
-                    "No voice clone on this account yet. Record one on iPhone " +
-                        "first — Android restores it, it never re-clones.",
-                    style = MaterialTheme.typography.bodyMedium,
+                HomeTab.PRACTICE -> PracticeBody(
+                    language = state.targetLanguage,
+                    onOpenDeck = onOpenDeck,
+                    onOpenScenarioBook = onOpenBook,
+                    onOpenTalk = onOpenTalk,
                 )
+
+                HomeTab.PROGRESS -> ProgressBody(language = state.targetLanguage)
             }
-            Button(
-                onClick = { launch("", emptyList()) },
-                enabled = state.voiceId != null,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("Start free talk") }
-
-            ReviewRow(
-                language = state.targetLanguage,
-                onOpen = onOpenDeck,
-            )
-
-            ScenariosSection(
-                targetLanguage = state.targetLanguage,
-                enabled = state.voiceId != null,
-                onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
-                onWatch = onWatch,
-            )
-
-            NewsSection(
-                interests = state.persona?.interests.orEmpty(),
-                targetLanguage = state.targetLanguage,
-                enabled = state.voiceId != null,
-                onTalk = { topic -> launch(topic.title, topic.facts.orEmpty()) },
-            )
-
-            RecentTalks(language = state.targetLanguage, nativeLanguage = state.nativeLanguage,
-                level = state.level, onOpen = onOpenTalk)
-
-            state.error?.let {
-                Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error)
-            }
-
-            if (BuildConfig.DEBUG) {
-                TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
-                TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
-            }
+            Spacer(Modifier.height(16.dp))
         }
+    }
+}
+
+/**
+ * The Talk hero: the day's goal ring around the Futureself surface, under
+ * the line that opens the app. The ring IS the call button — one tap, like
+ * placing a call.
+ */
+@Composable
+private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit) {
+    val context = LocalContext.current
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var seconds by remember { mutableStateOf(0) }
+    var sessionCount by remember { mutableStateOf(0) }
+    val goalMinutes = remember {
+        context.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
+    }
+    LaunchedEffect(revision) {
+        seconds = TalkTimeLog.secondsToday(context)
+        sessionCount = SessionStore.shared(context).load(state.targetLanguage).size
+    }
+    val theme = remember { FutureselfTheme.stored(context) }
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp),
+    ) {
+        Text(
+            HeroGreeting.text(HeroGreeting.Input(
+                sessionCount = sessionCount,
+                todaySpokenSeconds = seconds,
+                dailyGoalMinutes = goalMinutes,
+            )),
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
+        )
+        TalkRing(
+            progress = seconds / 60f / goalMinutes.coerceAtLeast(1),
+            mode = FutureselfMode.IDLE,
+            level = 0f,
+            theme = theme,
+            accent = theme.tint(),
+            modifier = Modifier.then(
+                if (enabled) Modifier.clickable(indication = null,
+                    interactionSource = remember { MutableInteractionSource() }) { onTap() }
+                else Modifier),
+        )
+        Text(
+            stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
