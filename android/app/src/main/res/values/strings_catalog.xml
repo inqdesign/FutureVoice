@@ -147,7 +147,6 @@
     <string name="cancel_any_time_before_then_in_the_app_store">"Cancel any time before then in the App Store"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."</string>
-    <string name="cards">"Cards"</string>
     <string name="cards_done_now_say_it_out_loud">"Cards done — now say it out loud"</string>
     <string name="category_name_e_g_landlord_gym">"Category name (e.g. Landlord, Gym)"</string>
     <string name="change_my_level">"Change my level"</string>
@@ -294,7 +293,6 @@
     <string name="every_assessment_adds_a_point_the_line_is_your_level_over_ti_35d362">"Every assessment adds a point — the line is your level over time."</string>
     <!-- "Every card in today's hand is sorted. Come back tomorrow — or keep going from the library below." -->
     <string name="every_card_in_today_s_hand_is_sorted_come_back_tomorrow_or_k_110a2a">"Every card in today's hand is sorted. Come back tomorrow — or keep going from the library below."</string>
-    <string name="every_day_you_talk_becomes_a_card_here">"Every day you talk becomes a card here."</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"Every measured skill already reads at %s or above — keep talking and the pooled read will catch up."</string>
     <!-- 'Every sentence from your talks is at the top of the ladder. New ones arrive when you finish a conversation.' -->
@@ -1086,6 +1084,7 @@
     <string name="start_a_talk">"Start a talk"</string>
     <string name="start_my_free_lld_day_trial">"Start my free %d-day trial"</string>
     <string name="start_over">"Start over"</string>
+    <string name="start_recording">"Start recording"</string>
     <string name="start_talking">"Start talking"</string>
     <string name="start_your_streak">"Start your streak"</string>
     <string name="starting_level">"Starting level"</string>

@@ -19,8 +19,15 @@
 > IMPLEMENTATION (`scripts/android/gen-vectors.sh` →
 > `docs/contracts/vectors/summary-ingestion.json`, 9 JVM tests). Known gap:
 > Android has no lemmatizer yet — `VocabLemmas` returns surface tokens, so
-> vocab counts lag iOS and `distinct_words_by_cefr_level` stays empty. Still
-> missing from the slice: real-mic
+> vocab counts lag iOS and `distinct_words_by_cefr_level` stays empty. Since 2026-08-31 (evening) onboarding has begun:
+> the 4-question SETUP flow and the VOICE-CLONE act (consent → 60–90 s
+> scripted read with a fixed record bar → measured quality review →
+> SNR-driven denoise decision → multipart clone → greeting) are built and
+> verified on the emulator up to REVIEW — the upload itself is untested on
+> purpose (a real clone spends an ElevenLabs slot and would replace the dev
+> account's voice; first real-device run covers it). The clone script is
+> EXTRACTED from `VoiceCloneScript.swift` by `scripts/android/
+> gen-clone-script.py`, never retyped. Still missing from the slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).
 > `ConversationEngine.kt` is a 2026-08-04 port and has drifted from Swift

@@ -55,6 +55,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                                 resolvingSession = false,
                                 signedIn = true,
                                 email = auth.email,
+                                // Set HERE, not first inside the restore —
+                                // a frame of voiceId == null with no restore
+                                // running would flash the clone flow.
+                                restoringVoice = true,
                             )
                         }
                         restoreVoiceClone()
@@ -102,6 +106,11 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     fun dismissError() = _state.update { it.copy(error = null) }
+
+    /** A clone just landed on this device — the server row already exists. */
+    fun onVoiceCloned(voiceId: String) {
+        _state.update { it.copy(voiceId = voiceId) }
+    }
 
     /**
      * First-run setup answers. Persisted locally (the same keys the stores

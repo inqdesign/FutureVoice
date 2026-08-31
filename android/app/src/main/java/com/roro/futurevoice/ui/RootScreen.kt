@@ -55,8 +55,16 @@ fun RootScreen() {
     })
     val state by app.state.collectAsStateWithLifecycle()
     var inCall by remember { mutableStateOf(false) }
+    var clonePreview by remember { mutableStateOf(false) }
 
     when {
+        // DEBUG-only preview of the clone flow (iOS: `-onboardingPreview`):
+        // the dev account already has a voice, so the real gate never shows.
+        clonePreview -> CloneFlowScreen(
+            targetLanguage = state.targetLanguage,
+            onCloned = { clonePreview = false },
+        )
+
         state.resolvingSession -> Loading()
         !state.signedIn -> SignInScreen(
             state,
@@ -73,6 +81,15 @@ fun RootScreen() {
             onBackToWelcome = app::signOut,
             onFinish = app::completeSetup,
         )
+        // No voice on the account: an Android user starts HERE — they clone
+        // on Android (roadmap §1.2), they are not sent to an iPhone. Mic
+        // permission is asked by the flow's record button via HomeScreen's
+        // launcher pattern; the screen itself only records after it.
+        !state.restoringVoice && state.voiceId == null -> CloneFlowScreen(
+            targetLanguage = state.targetLanguage,
+            onCloned = app::onVoiceCloned,
+        )
+
         inCall && state.voiceId != null ->
             TalkScreen(
                 voiceId = state.voiceId!!,
@@ -86,6 +103,7 @@ fun RootScreen() {
             state = state,
             onStartCall = { inCall = true },
             onSignOut = app::signOut,
+            onClonePreview = { clonePreview = true },
         )
     }
 }
@@ -156,6 +174,7 @@ private fun HomeScreen(
     state: AppState,
     onStartCall: () -> Unit,
     onSignOut: () -> Unit,
+    onClonePreview: () -> Unit = {},
 ) {
     var micGranted by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(
@@ -203,6 +222,10 @@ private fun HomeScreen(
             state.error?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
+            }
+
+            if (BuildConfig.DEBUG) {
+                TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
             }
         }
     }

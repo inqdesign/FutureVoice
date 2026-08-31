@@ -147,7 +147,6 @@
     <string name="cancel_any_time_before_then_in_the_app_store">"그전까지 App Store에서 언제든 해지할 수 있어요"</string>
     <!-- "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." -->
     <string name="captured_from_what_you_say_what_your_fluent_self_says_back_a_21aa65">"내가 한 말, 유창해진 내가 되돌려준 말, 그리고 본 상황연습이 알려준 표현을 모아둬요. 익숙해진 건 아는 표현으로 표시해 두세요."</string>
-    <string name="cards">"카드"</string>
     <string name="cards_done_now_say_it_out_loud">"카드 끝 — 이제 소리 내어 말해 보세요"</string>
     <string name="category_name_e_g_landlord_gym">"카테고리 이름 (예: 집주인, 헬스장)"</string>
     <string name="change_my_level">"레벨 변경"</string>
@@ -294,7 +293,6 @@
     <string name="every_assessment_adds_a_point_the_line_is_your_level_over_ti_35d362">"평가 한 번이 점 하나가 돼요 — 이 선이 레벨의 변화예요."</string>
     <!-- "Every card in today's hand is sorted. Come back tomorrow — or keep going from the library below." -->
     <string name="every_card_in_today_s_hand_is_sorted_come_back_tomorrow_or_k_110a2a">"오늘 몫의 카드를 전부 분류했어요. 내일 다시 만나요 — 더 하고 싶으면 아래 라이브러리에서 이어서 할 수 있어요."</string>
-    <string name="every_day_you_talk_becomes_a_card_here">"통화한 날은 여기에 카드로 남아요."</string>
     <!-- 'Every measured skill already reads at %@ or above — keep talking and the pooled read will catch up.' -->
     <string name="every_measured_skill_already_reads_at_or_above_keep_talking_24170a">"측정된 항목은 모두 %s 이상이에요. 계속 말하면 종합 평가도 따라와요."</string>
     <!-- 'Every sentence from your talks is at the top of the ladder. New ones arrive when you finish a conversation.' -->
@@ -1086,6 +1084,7 @@
     <string name="start_a_talk">"통화 시작하기"</string>
     <string name="start_my_free_lld_day_trial">"%d일 무료 체험 시작"</string>
     <string name="start_over">"처음부터"</string>
+    <string name="start_recording">"녹음 시작"</string>
     <string name="start_talking">"대화 시작"</string>
     <string name="start_your_streak">"연속 기록을 시작하세요"</string>
     <string name="starting_level">"시작 레벨"</string>
