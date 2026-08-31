@@ -38,6 +38,8 @@ fun DiscoverRow(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     caption: String? = null,
+    /** A second quiet line — the people rows carry facets AND interests. */
+    caption2: String? = null,
     accent: Color = MaterialTheme.colorScheme.primary,
     onClick: (() -> Unit)? = null,
     trailing: @Composable (() -> Unit)? = null,
@@ -60,6 +62,11 @@ fun DiscoverRow(
             Text(title, style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             caption?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            caption2?.takeIf { it.isNotBlank() }?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis)

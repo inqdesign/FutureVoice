@@ -76,6 +76,8 @@ fun TalkScreen(
     newsFacts: List<String> = emptyList(),
     scenarioId: String? = null,
     initialOpener: String = "",
+    cast: com.roro.futurevoice.talk.ConversationEngine.Cast? = null,
+    castVoiceId: String? = null,
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -102,6 +104,8 @@ fun TalkScreen(
                 newsFacts = newsFacts,
                 scenarioId = scenarioId,
                 initialOpener = initialOpener,
+                cast = cast,
+                castVoiceId = castVoiceId,
             )
         )
     }

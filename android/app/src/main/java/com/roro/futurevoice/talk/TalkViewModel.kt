@@ -47,6 +47,14 @@ data class TalkConfig(
      * something to say, that's why they called.
      */
     val initialOpener: String = "",
+    /**
+     * A Find-people stranger this call is WITH. Two things change and
+     * nothing else: the prompt casts the model AS them, and the voice is
+     * their PRESET — never the clone. The person on the other end is a
+     * stranger, not the fluent self.
+     */
+    val cast: ConversationEngine.Cast? = null,
+    val castVoiceId: String? = null,
 )
 
 /**
@@ -166,6 +174,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     topic = config.topic,
                     persona = config.persona,
                     newsFacts = config.newsFacts,
+                    cast = config.cast,
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
@@ -488,6 +497,10 @@ class TalkViewModel(context: Context) : ViewModel() {
         return payload
     }
 
+    /** A cast stranger speaks in their PRESET voice — never the clone. */
+    private val activeVoiceId: String
+        get() = config?.let { it.castVoiceId ?: it.voiceId }.orEmpty()
+
     private suspend fun speak(text: String) {
         val cfg = config ?: return
         val phase = _state.value.phase
@@ -498,7 +511,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         try {
             pcm.start()
             val result = eleven.synthesizeStreaming(
-                voiceId = cfg.voiceId,
+                voiceId = activeVoiceId,
                 text = text,
                 // Turbo, never flash: same price, better speaker similarity, and
                 // this is the surface where the clone is heard most.

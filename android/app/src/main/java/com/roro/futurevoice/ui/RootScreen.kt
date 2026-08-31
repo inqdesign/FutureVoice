@@ -120,6 +120,9 @@ fun RootScreen() {
     var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
     var callScenarioId by remember { mutableStateOf<String?>(null) }
     var callOpener by remember { mutableStateOf("") }
+    var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
+    var callCastVoice by remember { mutableStateOf<String?>(null) }
+    var showPeople by remember { mutableStateOf(false) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
@@ -227,6 +230,20 @@ fun RootScreen() {
             onBack = { showDeck = false },
         )
 
+        showPeople -> FindPeopleScreen(
+            language = state.targetLanguage,
+            onTalk = { p ->
+                callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
+                    name = p.display_name, intro = p.intro, location = p.location,
+                    occupation = p.occupation, interests = p.interests,
+                    conversationStyle = p.conversation_style)
+                callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
+                callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                showPeople = false; inCall = true
+            },
+            onBack = { showPeople = false },
+        )
+
         showMe -> MeScreen(
             email = state.email,
             persona = state.persona,
@@ -278,8 +295,10 @@ fun RootScreen() {
                 newsFacts = callFacts,
                 scenarioId = callScenarioId,
                 initialOpener = callOpener,
+                cast = callCast,
+                castVoiceId = callCastVoice,
                 onExit = { inCall = false; callTopic = ""; callFacts = emptyList()
-                    callScenarioId = null; callOpener = "" },
+                    callScenarioId = null; callOpener = ""; callCast = null; callCastVoice = null },
             )
 
         else -> HomeScreen(
@@ -289,6 +308,7 @@ fun RootScreen() {
             },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
+            onOpenPeople = { showPeople = true },
             onOpenDeck = { showDeck = true },
             onOpenTalk = { detailSessionId = it },
             onWatch = { watchScenarioId = it },
@@ -426,6 +446,7 @@ private fun HomeScreen(
     onOpenDeck: () -> Unit = {},
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
+    onOpenPeople: () -> Unit = {},
     onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
@@ -463,6 +484,10 @@ private fun HomeScreen(
                     }
                 },
                 actions = {
+                    // The people page opens from the WATCH header, as on iOS.
+                    if (tab == HomeTab.WATCH) {
+                        TextButton(onClick = onOpenPeople) { Text(stringResource(R.string.people)) }
+                    }
                     if (tab == HomeTab.TALK) {
                         TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
                     }
