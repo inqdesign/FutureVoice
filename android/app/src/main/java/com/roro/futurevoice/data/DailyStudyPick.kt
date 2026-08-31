@@ -130,20 +130,11 @@ object DailyStudyPick {
         }
 
         if (out.size < goal) {
-            // Heard-in-a-call before said-it: the summary's `expressionsOffered`
-            // are phrases the FLUENT SELF used and the learner didn't.
-            val sessions = SessionStore.shared(context).load(language)
-                .sortedByDescending { it.startedAt }
-            for (s in sessions) {
-                for (p in s.summary?.expressionsOffered.orEmpty()) {
-                    if (!vocab.isKnownExpression(p, language)) add(p)
-                }
-            }
-        }
-
-        if (out.size < goal) {
-            for (e in vocab.expressionEntries(language)) {
-                if (!vocab.isKnownExpression(e.text, language)) add(e.text)
+            // One merge, shared with the Library — heard-in-a-call comes
+            // before said-it in the catalog's own order, because a deck
+            // exists to teach what you can't say yet.
+            for (item in ExpressionCatalog.all(context, language)) {
+                if (!item.known) add(item.text)
             }
         }
 

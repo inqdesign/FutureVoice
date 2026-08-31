@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.roro.futurevoice.data.AppUsageLog
 import com.roro.futurevoice.data.DailyCallInbox
+import com.roro.futurevoice.data.DeepLinkInbox
 import com.roro.futurevoice.data.Supa
 import com.roro.futurevoice.ui.FutureVoiceTheme
 import com.roro.futurevoice.ui.RootScreen
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
         // first delivery can arrive on the original intent.
         Supa.client.handleDeeplinks(intent)
         DailyCallInbox.deliver(intent)
+        DeepLinkInbox.deliver(intent)
         setContent {
             FutureVoiceTheme {
                 Surface(Modifier.fillMaxSize()) { RootScreen() }
@@ -45,5 +47,6 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         Supa.client.handleDeeplinks(intent)
         DailyCallInbox.deliver(intent)
+        DeepLinkInbox.deliver(intent)
     }
 }

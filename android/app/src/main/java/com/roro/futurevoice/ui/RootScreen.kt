@@ -99,6 +99,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextOverflow
+import com.roro.futurevoice.data.DeepLinkInbox
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
@@ -140,6 +141,21 @@ fun RootScreen() {
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
     var showActivity by remember { mutableStateOf(false) }
+    var library by remember { mutableStateOf<LibraryKind?>(null) }
+    // A widget tap or a review reminder arrives before anything is drawn, so
+    // the Activity parks it and this reads it when there is a screen to open.
+    /** A tab the deep link asked for; the home shell owns which tab is up. */
+    var requestedTab by remember { mutableStateOf<HomeTab?>(null) }
+    val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
+    LaunchedEffect(deepLink) {
+        when (DeepLinkInbox.consume()) {
+            DeepLinkInbox.Destination.VOCABULARY -> library = LibraryKind.WORDS
+            DeepLinkInbox.Destination.EXPRESSIONS -> library = LibraryKind.EXPRESSIONS
+            DeepLinkInbox.Destination.REVIEW -> showDeck = true
+            DeepLinkInbox.Destination.PRACTICE -> requestedTab = HomeTab.PRACTICE
+            null -> Unit
+        }
+    }
     var studyDeckKind by remember { mutableStateOf<StudyScheduleStore.Kind?>(null) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
@@ -237,6 +253,12 @@ fun RootScreen() {
             onWatch = { watchScenarioId = it },
             onShadow = { shadowLine = it },
             onBack = { bookScenarioId = null },
+        )
+
+        library != null -> LibraryScreen(
+            kind = library!!,
+            language = state.targetLanguage,
+            onBack = { library = null },
         )
 
         showActivity -> ActivityScreen(
@@ -338,6 +360,8 @@ fun RootScreen() {
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
             onOpenActivity = { showActivity = true },
+            requestedTab = requestedTab,
+            onTabRequestHandled = { requestedTab = null },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
@@ -481,12 +505,18 @@ private fun HomeScreen(
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    /** Set by a deep link; cleared by the shell once it has switched. */
+    requestedTab: HomeTab? = null,
+    onTabRequestHandled: () -> Unit = {},
     onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var tab by remember { mutableStateOf(HomeTab.TALK) }
+    LaunchedEffect(requestedTab) {
+        requestedTab?.let { tab = it; onTabRequestHandled() }
+    }
     var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()

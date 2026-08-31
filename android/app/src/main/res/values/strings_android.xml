@@ -28,4 +28,5 @@
     <string name="a_scene_with_lls">A scene with %1$s</string>
     <string name="lld_day_streak">%1$d-day streak</string>
     <string name="lld_talks">%1$d talks</string>
+    <string name="show_known">Show known</string>
 </resources>
