@@ -30,7 +30,13 @@
 > gen-clone-script.py`, never retyped. The Talk home now carries the day
 > (metered `TalkTimeLog` vs the setup goal) and **In the news** (platform
 > pool, cache-first + pending-poll, story tap → topic + grounded facts into
-> the prompt). Still missing from the slice: real-mic
+> the prompt). Since 2026-09-01 onboarding is
+> ACCOUNT-FREE in the iOS order: "Get started" opens an anonymous session
+> (verified `is_anonymous: true` on a fresh AVD), the clone happens on it,
+> and the sign-up asks to KEEP the voice (`AccountScreen`; Google/Apple
+> buttons gated on the owner's provider setup). Me screen, Google sign-in
+> code-ahead (`GOOGLE_WEB_CLIENT_ID` gate) are in. Still missing from the
+> slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).
 > `ConversationEngine.kt` is a 2026-08-04 port and has drifted from Swift

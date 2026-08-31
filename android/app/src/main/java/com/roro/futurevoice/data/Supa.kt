@@ -53,6 +53,23 @@ class AuthRepository {
     val email: String?
         get() = Supa.client.auth.currentUserOrNull()?.email
 
+    /**
+     * The voice is heard BEFORE the sign-up (iOS, 2026-08-18): what the
+     * server needs to clone is a SESSION, not an account. "Get started"
+     * opens an anonymous one; the account step comes AFTER the clone, asking
+     * to KEEP a voice already in the learner's ears. Unclaimed clones are
+     * collected nightly server-side.
+     */
+    suspend fun startAnonymousSession() {
+        Supa.client.auth.signInAnonymously()
+    }
+
+    /** A session is not an account — every gate must ask THIS, never `session != null`. */
+    val isAnonymous: Boolean
+        get() = Supa.client.auth.currentUserOrNull()?.let { user ->
+            user.identities.isNullOrEmpty()
+        } ?: false
+
     suspend fun signInWithApple() {
         Supa.client.auth.signInWith(Apple)
     }

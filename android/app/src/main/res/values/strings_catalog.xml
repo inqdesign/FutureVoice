@@ -746,6 +746,8 @@
     <string name="not_happy_with_a_take_you_can_re_record">"Not happy with a take? You can re-record."</string>
     <string name="not_me_record_again">"Not me — record again"</string>
     <string name="not_now">"Not now"</string>
+    <!-- 'Not their real voice — an AI speaks their words in a voice you pick.' -->
+    <string name="not_their_real_voice_an_ai_speaks_their_words_in_a_voice_you_e838ec">"Not their real voice — an AI speaks their words in a voice you pick."</string>
     <string name="not_today">"Not today"</string>
     <string name="not_used_yet">"not used yet"</string>
     <!-- 'Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.' -->
@@ -1098,6 +1100,7 @@
     <string name="stop_preview">"Stop preview"</string>
     <string name="stop_review">"Stop &amp; review"</string>
     <string name="stop_your_recording">"Stop your recording"</string>
+    <string name="strangers">"Strangers"</string>
     <string name="streak">"Streak"</string>
     <string name="streaming_shows">"Streaming / shows"</string>
     <string name="studied">"Studied %s"</string>
@@ -1554,8 +1557,8 @@
     <string name="your_name">"Your name"</string>
     <string name="your_native_language">"Your native language?"</string>
     <string name="your_own">"Your own"</string>
-    <!-- "Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them." -->
-    <string name="your_own_people_plus_anyone_you_bookmarked_in_find_people_ta_34523e">"Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them."</string>
+    <!-- "Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them." -->
+    <string name="your_own_people_plus_anyone_you_bookmarked_from_the_people_p_341fd4">"Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them."</string>
     <string name="your_own_review_book">"Your own review book"</string>
     <string name="your_own_voice_already_fluent">"Your own voice, already fluent"</string>
     <!-- 'Your pace is %lld words/min — talk more often and a little longer; longer turns build flow.' -->
@@ -1591,6 +1594,7 @@
     <string name="your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918">"Your turns average %d words — add detail: how things felt, not just what happened."</string>
     <string name="your_voice_in_safe_hands">"Your voice, in safe hands"</string>
     <string name="your_voice_is_handled_with_care">"Your voice is handled with care."</string>
+    <string name="your_voice_is_ready_sign_in_to_keep_it">"Your voice is ready — sign in to keep it."</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
     <string name="your_voice_model_counts_as_biometric_data_so_there_are_rules_298305">"Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone."</string>
     <!-- "Your voice model is biometric data. It's used only to speak your practice lines back in your own voice — never sold, never shared, never used to train anyone else's model." -->

@@ -18,6 +18,8 @@ import kotlinx.coroutines.launch
 data class AppState(
     val resolvingSession: Boolean = true,
     val signedIn: Boolean = false,
+    /** Session without an account — data dies with the install until linked. */
+    val isAnonymous: Boolean = false,
     /** First-run answers taken (native/target/level/goal). Gate for SetupFlow. */
     val setupComplete: Boolean = false,
     /** Null iff persona onboarding never completed — routes to the intake. */
@@ -63,6 +65,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                                 resolvingSession = false,
                                 signedIn = true,
                                 email = auth.email,
+                                isAnonymous = auth.isAnonymous,
                                 // Set HERE, not first inside the restore —
                                 // a frame of voiceId == null with no restore
                                 // running would flash the clone flow.
@@ -98,6 +101,16 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     val isGoogleConfigured: Boolean get() = auth.isGoogleConfigured
+
+    /** "Get started": onboard account-free; sign-up comes after the clone. */
+    fun startAnonymous() {
+        _state.update { it.copy(busy = true, error = null) }
+        viewModelScope.launch {
+            runCatching { auth.startAnonymousSession() }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+            _state.update { it.copy(busy = false) }
+        }
+    }
 
     /** Needs an ACTIVITY context — Credential Manager shows UI from it. */
     fun signInWithGoogle(activityContext: android.content.Context) {

@@ -90,7 +90,12 @@ fun RootScreen() {
         // The pitch before the ask — the five beats a first-time user must
         // agree with before an account means anything. Returning users
         // (stored session) never see it.
-        !state.signedIn && !welcomeDone -> WelcomeScreen(onGetStarted = { welcomeDone = true })
+        !state.signedIn && !welcomeDone -> WelcomeScreen(onGetStarted = {
+            welcomeDone = true
+            // Account-free entry (iOS order): the server needs a session, not
+            // an account — the sign-up asks to KEEP the voice, after Meet.
+            app.startAnonymous()
+        })
         !state.signedIn -> SignInScreen(
             state,
             googleAvailable = app.isGoogleConfigured,
@@ -136,6 +141,16 @@ fun RootScreen() {
             onBackToSetup = { app.reopenSetup() },
             onFinish = app::savePersona,
         )
+
+        // The crash/kill guard (iOS `resumeUnclaimedVoice`): an anonymous
+        // session with a voice must not reach the tabs — its data dies with
+        // the install. The flow reopens on the account step.
+        state.signedIn && state.isAnonymous && state.voiceId != null && !state.restoringVoice ->
+            AccountScreen(
+                googleAvailable = app.isGoogleConfigured,
+                onGoogleSignIn = app::signInWithGoogle,
+                onAppleSignIn = app::signIn,
+            )
 
         // No voice on the account: an Android user starts HERE — they clone
         // on Android (roadmap §1.2), they are not sent to an iPhone. Mic
@@ -489,6 +504,41 @@ private fun NewsSection(
                 Text(topic.blurb, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+    }
+}
+
+/**
+ * "Make it yours" — the sign-up AFTER the clone (`VoiceCloneOnboardingView`
+ * .account): keep a voice already in the learner's ears. No skip: a session
+ * is not an account, and data on one dies with the install.
+ */
+@Composable
+private fun AccountScreen(
+    googleAvailable: Boolean,
+    onGoogleSignIn: (android.content.Context) -> Unit,
+    onAppleSignIn: () -> Unit,
+) {
+    val context = LocalContext.current
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(stringResource(R.string.make_it_yours), style = MaterialTheme.typography.headlineSmall)
+        Text(
+            stringResource(R.string.your_voice_is_ready_sign_in_to_keep_it),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(vertical = 12.dp),
+        )
+        if (googleAvailable) {
+            Button(onClick = { onGoogleSignIn(context) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Continue with Google")
+            }
+        }
+        Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
+            Text("Continue with Apple")
         }
     }
 }
