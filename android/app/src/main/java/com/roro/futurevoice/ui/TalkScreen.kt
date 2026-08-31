@@ -46,7 +46,13 @@ import com.roro.futurevoice.talk.TalkViewModel
 import com.roro.futurevoice.talk.TalkWall
 import com.roro.futurevoice.talk.Turn
 import com.roro.futurevoice.talk.TurnRole
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.roro.futurevoice.ui.brand.DialogueLine
+import com.roro.futurevoice.ui.brand.Futureself
+import com.roro.futurevoice.ui.brand.FutureselfMode
+import com.roro.futurevoice.ui.brand.FutureselfTheme
 import com.roro.futurevoice.ui.brand.DialogueScale
 import com.roro.futurevoice.ui.brand.DialogueSpeaker
 
@@ -130,10 +136,24 @@ fun TalkScreen(
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            // Subtle only — a level bar, not a bouncing waveform.
-            LinearProgressIndicator(
-                progress = { state.level.coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth(),
+            // The call's own surface: Futureself, in the pill the whole app
+            // is built around. It ignites bottom-up with the learner's voice
+            // while listening, sweeps while thinking, blooms centre-out while
+            // the fluent self speaks — the ONE place the level is shown.
+            Futureself(
+                mode = when (state.phase) {
+                    TalkPhase.LISTENING -> FutureselfMode.LISTENING
+                    TalkPhase.THINKING, TalkPhase.CONNECTING -> FutureselfMode.THINKING
+                    TalkPhase.SPEAKING -> FutureselfMode.SPEAKING
+                    else -> FutureselfMode.IDLE
+                },
+                level = state.level.coerceIn(0f, 1f),
+                theme = remember { FutureselfTheme.stored(context) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .height(64.dp)
+                    .clip(RoundedCornerShape(32.dp)),
             )
 
             LazyColumn(
