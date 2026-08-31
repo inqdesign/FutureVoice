@@ -435,6 +435,13 @@ enabled = true
 verify_jwt = true
 import_map = "./functions/session-summary/deno.json"
 entrypoint = "./functions/session-summary/index.ts"
+
+[functions.google-webhook]
+enabled = true
+# Pub/Sub cannot send a Supabase JWT; auth is the shared secret in the URL.
+verify_jwt = false
+import_map = "./functions/google-webhook/deno.json"
+entrypoint = "./functions/google-webhook/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/gemini/*.html" ]
