@@ -56,8 +56,12 @@ fun RootScreen() {
     val state by app.state.collectAsStateWithLifecycle()
     var inCall by remember { mutableStateOf(false) }
     var clonePreview by remember { mutableStateOf(false) }
+    var welcomeDone by remember { mutableStateOf(false) }
+    var welcomePreview by remember { mutableStateOf(false) }
 
     when {
+        welcomePreview -> WelcomeScreen(onGetStarted = { welcomePreview = false })
+
         // DEBUG-only preview of the clone flow (iOS: `-onboardingPreview`):
         // the dev account already has a voice, so the real gate never shows.
         clonePreview -> CloneFlowScreen(
@@ -66,6 +70,10 @@ fun RootScreen() {
         )
 
         state.resolvingSession -> Loading()
+        // The pitch before the ask — the five beats a first-time user must
+        // agree with before an account means anything. Returning users
+        // (stored session) never see it.
+        !state.signedIn && !welcomeDone -> WelcomeScreen(onGetStarted = { welcomeDone = true })
         !state.signedIn -> SignInScreen(
             state,
             onSignIn = app::signIn,
@@ -115,6 +123,7 @@ fun RootScreen() {
             onStartCall = { inCall = true },
             onSignOut = app::signOut,
             onClonePreview = { clonePreview = true },
+            onWelcomePreview = { welcomePreview = true },
         )
     }
 }
@@ -186,6 +195,7 @@ private fun HomeScreen(
     onStartCall: () -> Unit,
     onSignOut: () -> Unit,
     onClonePreview: () -> Unit = {},
+    onWelcomePreview: () -> Unit = {},
 ) {
     var micGranted by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(
@@ -237,6 +247,7 @@ private fun HomeScreen(
 
             if (BuildConfig.DEBUG) {
                 TextButton(onClick = onClonePreview) { Text("Clone flow (debug)") }
+                TextButton(onClick = onWelcomePreview) { Text("Welcome (debug)") }
             }
         }
     }
