@@ -443,24 +443,10 @@ struct ConversationHome: View {
             // little comet instead of a smeared translucent pill. (Zero
             // progress also needs the hide below: a near-empty trim under
             // the angular gradient renders as a half-cut dot at 12.)
-            // At zero the arc hides entirely (see below), which left the ring
-            // showing nothing at all — a 1.5% track is sensed, not seen. One
-            // round-cap dot at 12 marks the start line instead: same width,
-            // same spot the arc's head departs from, so the first minute reads
-            // as the dot setting off rather than a new shape appearing. Drawn
-            // as a degenerate trim so it sits ON the stroke path — no manual
-            // offset to drift if the ring is ever resized.
             //
-            // MUTED accent, not full: the arc that replaces it starts at 0.15
-            // opacity on this exact spot (the gradient's tail stop), so a
-            // solid dot visibly DIMS the moment the first minute lands — the
-            // marker has to be no heavier than what takes its place.
-            Circle()
-                .trim(from: 0, to: 0.0001)
-                .stroke(Color.accentColor.opacity(0.4),
-                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .opacity(goalProgress0to1 > 0.005 ? 0 : 1)
+            // At zero the ring is just its faint track. A start-line dot at
+            // 12 marked the start for a while and was removed (2026-08-31): on
+            // the home screen it read as a stray mark, not a marker.
             let fadeEnd = min(0.5, 0.25 / max(goalProgress0to1, 0.001))
             Circle()
                 .trim(from: 0, to: goalProgress0to1)
