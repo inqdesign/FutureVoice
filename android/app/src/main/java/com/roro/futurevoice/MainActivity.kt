@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import com.roro.futurevoice.data.AppUsageLog
 import com.roro.futurevoice.data.DailyCallInbox
 import com.roro.futurevoice.data.Supa
 import com.roro.futurevoice.ui.FutureVoiceTheme
@@ -28,6 +29,16 @@ class MainActivity : ComponentActivity() {
                 Surface(Modifier.fillMaxSize()) { RootScreen() }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        AppUsageLog.begin()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        AppUsageLog.end(this)
     }
 
     override fun onNewIntent(intent: Intent) {

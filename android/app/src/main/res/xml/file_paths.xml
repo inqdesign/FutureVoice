@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Only the share staging directory is exposed, and only for the card the
+     learner just asked to send. -->
+<paths>
+    <cache-path name="share" path="share/" />
+</paths>

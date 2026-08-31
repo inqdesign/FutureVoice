@@ -27,7 +27,11 @@ import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
+import androidx.compose.material3.TextButton
+import com.roro.futurevoice.data.AppUsageLog
 import com.roro.futurevoice.data.TalkTimeLog
+import com.roro.futurevoice.talk.TurnRole
+import com.roro.futurevoice.ui.brand.DayCardData
 import com.roro.futurevoice.talk.Scenario
 import com.roro.futurevoice.talk.Session
 
@@ -121,6 +125,7 @@ fun ProgressBody(language: String) {
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var todaySeconds by remember { mutableStateOf(0) }
+    var showCard by remember { mutableStateOf(false) }
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
         todaySeconds = TalkTimeLog.secondsToday(context)
@@ -146,9 +151,42 @@ fun ProgressBody(language: String) {
                 Stat(stringResource(R.string.overall), "${scored.map { it.overall }.average().toInt()}")
             }
         }
+        val today = remember(talks, todaySeconds, revision) {
+            val startOfDay = java.util.Calendar.getInstance().apply {
+                set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            val todays = talks.filter { (it.endedAt ?: it.startedAt) >= startOfDay }
+            DayCardData(
+                date = System.currentTimeMillis(),
+                talkMinutes = todaySeconds / 60,
+                // Never less than the talk figure: a call in a pocket is
+                // metered but not foregrounded.
+                studyMinutes = maxOf(AppUsageLog.secondsOn(context, System.currentTimeMillis()) / 60,
+                    todaySeconds / 60),
+                streakDays = TalkTimeLog.streakDays(context),
+                talks = todays.size,
+                topics = todays.sortedByDescending { s ->
+                    s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
+                }.mapNotNull { it.displayTitle }.distinct().take(4),
+            )
+        }
+        if (today.hasActivity) {
+            TextButton(onClick = { showCard = true }) {
+                Text(stringResource(R.string.share_card))
+            }
+        }
+        if (showCard) DayCardSheet(today) { showCard = false }
     }
 }
 
+/**
+ * The day's share card lives with the ACTIVITY and only there — the day
+ * summary already says what the day was, and the card is that summary as a
+ * picture. A post-talk button was tried on iOS and removed the same week:
+ * the wrap-up flow is the book's, and a share offer inside it read as an
+ * interruption.
+ */
 @Composable
 private fun Stat(label: String, value: String) {
     Column {
