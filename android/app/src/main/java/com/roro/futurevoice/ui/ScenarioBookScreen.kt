@@ -35,8 +35,16 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.size
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.roro.futurevoice.R
+import androidx.compose.material.icons.filled.Abc
+import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import com.roro.futurevoice.ui.brand.BookmarkTab
+import com.roro.futurevoice.ui.brand.BookmarkedPage
+import com.roro.futurevoice.ui.brand.DialogueLine
+import com.roro.futurevoice.ui.brand.DialogueSpeaker
+import com.roro.futurevoice.R
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.VocabStore
@@ -65,6 +73,7 @@ fun ScenarioBookScreen(
     var scenario by remember { mutableStateOf<Scenario?>(null) }
     var wordMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
     var exprMastered by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var chapter by remember { mutableStateOf(Chapter.SCENE) }
     LaunchedEffect(scenarioId, revision) {
         val sc = ScenarioStore.shared(context).load(language).firstOrNull { it.id == scenarioId }
         scenario = sc
@@ -93,54 +102,72 @@ fun ScenarioBookScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        if (cur == null) {
+            Text(stringResource(R.string.watch_the_scene_first),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(padding).padding(20.dp))
+            return@Scaffold
+        }
+        // Ribbon bookmarks, not a table of contents: chapters are named by
+        // what you DO in them, and the page swaps in place.
+        val tabs = listOf(
+            BookmarkTab(Chapter.SCENE, Icons.Filled.PlayArrow,
+                stringResource(R.string.watch), count = cur.dialogue?.size),
+            BookmarkTab(Chapter.WORDS, Icons.Filled.Abc,
+                stringResource(R.string.words_d26d55),
+                done = wordMastered.size, total = cur.words.size),
+            BookmarkTab(Chapter.EXPRESSIONS, Icons.Filled.FormatQuote,
+                stringResource(R.string.expressions),
+                done = exprMastered.size, total = cur.expressions.size),
+            BookmarkTab(Chapter.SHADOW, Icons.Filled.Mic,
+                stringResource(R.string.shadowing), count = cur.shadowLines.size),
+        )
+        BookmarkedPage(
+            tabs = tabs, selection = chapter, onSelect = { chapter = it },
+            modifier = Modifier.padding(padding).background(AppSurfaces.ground)
+                .padding(start = 0.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
         ) {
-            if (cur == null) {
-                item {
-                    Text(stringResource(R.string.watch_the_scene_first),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                return@LazyColumn
-            }
-            val mastered = wordMastered.size + exprMastered.size
-            val total = cur.words.size + cur.expressions.size + cur.shadowLines.size
-            item {
-                Column {
-                    Text(stringResource(R.string.lld_of_lld_mastered, mastered, total),
-                        style = MaterialTheme.typography.titleMedium)
-                    LinearProgressIndicator(
-                        progress = { if (total == 0) 0f else mastered / total.toFloat() },
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
-                }
-            }
-            cur.dialogueTitle?.let { item { SectionTitle(it) } }
-            item { SectionTitle(stringResource(R.string.words_d26d55)) }
-            items(cur.words.size) { i ->
-                ItemRow(cur.words[i], cur.words[i].id in wordMastered)
-            }
-            item { SectionTitle(stringResource(R.string.expressions)) }
-            items(cur.expressions.size) { i ->
-                ItemRow(cur.expressions[i], cur.expressions[i].id in exprMastered)
-            }
-            item { SectionTitle(stringResource(R.string.shadowing)) }
-            items(cur.shadowLines.size) { i ->
-                val line = cur.shadowLines[i]
-                Row(Modifier.fillMaxWidth().clickable { onShadow(line.text) }
-                    .padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Outlined.Circle, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(18.dp))
-                    Text(line.text, style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.padding(start = 10.dp))
+            Column(Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                when (chapter) {
+                    Chapter.SCENE -> {
+                        cur.dialogueTitle?.let { SectionTitle(it) }
+                        cur.dialogue.orEmpty().forEach { turn ->
+                            DialogueLine(
+                                speaker = if (turn.speaker == "user") DialogueSpeaker.USER
+                                else DialogueSpeaker.OTHER,
+                                name = if (turn.speaker == "user")
+                                    stringResource(R.string.you)
+                                else stringResource(R.string.future_self_1384d5),
+                            ) { Text(turn.text) }
+                        }
+                    }
+                    Chapter.WORDS -> cur.words.forEach {
+                        ItemRow(it, it.id in wordMastered)
+                    }
+                    Chapter.EXPRESSIONS -> cur.expressions.forEach {
+                        ItemRow(it, it.id in exprMastered)
+                    }
+                    Chapter.SHADOW -> cur.shadowLines.forEach { line ->
+                        Row(Modifier.fillMaxWidth().clickable { onShadow(line.text) }
+                            .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Outlined.Circle, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.outlineVariant,
+                                modifier = Modifier.size(18.dp))
+                            Text(line.text, style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(start = 10.dp))
+                        }
+                    }
                 }
             }
         }
     }
 }
+
+/** The book's chapters — named by what you DO in them. */
+private enum class Chapter { SCENE, WORDS, EXPRESSIONS, SHADOW }
 
 @Composable
 private fun SectionTitle(t: String) {
