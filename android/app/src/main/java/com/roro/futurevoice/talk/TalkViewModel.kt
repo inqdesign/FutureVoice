@@ -11,6 +11,7 @@ import com.roro.futurevoice.audio.PcmStreamPlayer
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.ProfileStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StoreJson
@@ -123,14 +124,6 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun start(config: TalkConfig) {
         if (_state.value.phase != TalkPhase.IDLE && _state.value.phase != TalkPhase.ENDED) return
         this.config = config
-        this.systemPrompt = ConversationEngine.conversationSystemPrompt(
-            targetLanguage = config.targetLanguage,
-            nativeLanguage = config.nativeLanguage,
-            level = config.level,
-            topic = config.topic,
-            persona = config.persona,
-        ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
-
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
@@ -146,6 +139,23 @@ class TalkViewModel(context: Context) : ViewModel() {
 
         callJob = viewModelScope.launch {
             try {
+                // What past sessions taught rides into this one — the same
+                // recurring patterns and weak areas iOS injects
+                // (ConversationView.conversationSystemPrompt). Built here, not
+                // in the caller: the profile read is a disk hop.
+                val profile = ProfileStore.shared(appContext)
+                    .load(config.targetLanguage, config.level.code)
+                systemPrompt = ConversationEngine.conversationSystemPrompt(
+                    targetLanguage = config.targetLanguage,
+                    nativeLanguage = config.nativeLanguage,
+                    level = config.level,
+                    topPatterns = profile.recurringMistakes,
+                    weakVocabAreas = profile.weakVocabAreas,
+                    topic = config.topic,
+                    persona = config.persona,
+                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
+                if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
+                    " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
             } catch (e: Exception) {
                 fail(e)
