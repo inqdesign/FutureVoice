@@ -4274,22 +4274,6 @@
         }
       }
     },
-    "Cards" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Karten"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카드"
-          }
-        }
-      }
-    },
     "Cards done — now say it out loud" : {
       "localizations" : {
         "de" : {
@@ -6543,16 +6527,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 몫의 카드를 전부 분류했어요. 내일 다시 만나요 — 더 하고 싶으면 아래 라이브러리에서 이어서 할 수 있어요."
-          }
-        }
-      }
-    },
-    "Every day you talk becomes a card here." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "통화한 날은 여기에 카드로 남아요."
           }
         }
       }

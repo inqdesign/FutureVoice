@@ -270,11 +270,12 @@ interruption. `-capture daycard` renders it on a sample day.
   Futureself circle beside it was also tried and dropped. No Core seal: the
   badge's audience is a stranger in Find people, and a card leaving the app
   is a different audience nobody has decided on.
-- **The collection is the Activity page's third view — Cards — and a day
-  that was lived IS a card.** No separate gallery, no "saved" state: the grid
-  (`ActivityView.cardsGrid`, 4:5 thumbnails, three across, newest first, a
-  section per month) is the same set of days the calendar shades, drawn as
-  pictures. Tapping opens the same `DayCardSheet(day:)`.
+- **The collection lives INSIDE the calendar, not beside it.** A separate
+  Cards view was built and folded back the same week: a second grid of the
+  same days was a parallel calendar. Instead, a day with a photo wears it in
+  its calendar cell (`cellPhotos`, tiny pre-cropped thumbs — the month reads
+  as the places you studied), and selecting a day puts that day's card at the
+  top of its summary (`cardPreviewRow`, tap → the same `DayCardSheet`).
 - **A card is FROZEN when it is made, and every past day is settled on
   foreground** (`DayCardStore.freeze` / `freezePastDays`, JSON beside the
   photo). The logs a card is drawn from are pruned at 45 days and the streak

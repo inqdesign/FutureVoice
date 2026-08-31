@@ -231,9 +231,7 @@ enum DebugCapture {
                     SessionStore.shared.save(s)
                 }
             }
-            return AnyView(NavigationStack {
-                ActivityView(initialMode: name == "activity-cards" ? .cards : nil).environmentObject(appState)
-            })
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "daycard":
             // Today's share card with a sample day — no camera in the
             // simulator, so this is the ink fallback.
