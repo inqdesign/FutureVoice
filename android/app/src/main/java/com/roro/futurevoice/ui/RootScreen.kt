@@ -88,6 +88,10 @@ import com.roro.futurevoice.ui.brand.TalkRing
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.NewsTopicStore
 import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.data.SituationTree
+import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
@@ -960,6 +964,9 @@ private fun WatchBody(
     val store = remember { ScenarioStore.shared(context) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     var composing by remember { mutableStateOf(false) }
+    var prefill by remember { mutableStateOf("") }
+    /** Which category is drilled open, if any. */
+    var branch by remember { mutableStateOf<SituationTree.Branch?>(null) }
     LaunchedEffect(language, revision) { scenarios = store.load(language) }
     val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
 
@@ -990,13 +997,88 @@ private fun WatchBody(
                 )
             }
         }
+
+        // Deliberately LIGHTER than the scenario rows above: these are
+        // starting points that open the composer, not saved content that
+        // plays. Chips keep the two tap behaviours visually distinct.
+        Text(stringResource(R.string.likely_situations),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 12.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SituationTree.roots.forEach { root ->
+                AssistChip(
+                    onClick = { branch = root },
+                    label = { Text(root.label) },
+                )
+            }
+        }
+        Text(stringResource(R.string.tap_a_category_the_composer_suggests_specific_scenarios),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
+
+    branch?.let { root ->
+        SituationDrillDown(
+            root = root,
+            onPick = { situation ->
+                branch = null
+                prefill = situation
+                composing = true
+            },
+            onDismiss = { branch = null },
+        )
+    }
+
     if (composing) {
         ScenarioComposer(
             targetLanguage = language,
             existingCategories = scenarios.mapNotNull { it.category }.distinct(),
-            onDismiss = { composing = false },
+            prefill = prefill,
+            onDismiss = { composing = false; prefill = "" },
         )
+    }
+}
+
+/**
+ * The chain, one level at a time: a category's sub-areas, then the specific
+ * things that go wrong in them. The leaf's text lands in the composer, where
+ * it is always editable — a prefill is a head start, never a script.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SituationDrillDown(
+    root: SituationTree.Branch,
+    onPick: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var open by remember { mutableStateOf<SituationTree.Branch?>(null) }
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(open?.label ?: root.label, style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp))
+            (open?.children ?: root.children).forEach { child ->
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable {
+                            val situation = child.situation
+                            if (situation != null) onPick(situation) else open = child
+                        }
+                        .padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(child.label, style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f))
+                    if (child.situation == null) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -1010,11 +1092,13 @@ private fun WatchBody(
 private fun ScenarioComposer(
     targetLanguage: String,
     existingCategories: List<String>,
+    /** A "Likely situations" leaf, dropped in ready to edit — never locked. */
+    prefill: String = "",
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf("") }
+    var draft by remember { mutableStateOf(prefill) }
     var committing by remember { mutableStateOf(false) }
     // A SHEET, not a dialog: non-primary content lives in sheets (iOS UI
     // rules), and a dialog over a full-width composer reads as an alert.
