@@ -171,7 +171,9 @@ fun TalkScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(state.turns, key = { it.id }) { turn -> DialogueLine(turn, scale = DialogueScale.CALL) }
+                items(state.turns, key = { it.id }) { turn ->
+                    DialogueLine(turn, scale = DialogueScale.CALL, otherName = cast?.name)
+                }
             }
 
             if (state.partial.isNotBlank()) {
@@ -291,11 +293,15 @@ fun DialogueLine(turn: Turn) {
  */
 @Composable
 fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
-                 scale: DialogueScale = DialogueScale.STANDARD) {
+                 scale: DialogueScale = DialogueScale.STANDARD,
+                 otherName: String? = null) {
     val isUser = turn.role == TurnRole.USER
     DialogueLine(
         speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
-        name = stringResource(if (isUser) R.string.you else R.string.future_self_1384d5),
+        // The other side is the fluent self — unless the call was cast as a
+        // person, in which case it is THEM.
+        name = if (isUser) stringResource(R.string.you)
+        else otherName ?: stringResource(R.string.future_self_1384d5),
         scale = scale,
         isCurrent = isCurrent,
         accessory = {
