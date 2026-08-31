@@ -88,7 +88,7 @@ struct ActivityView: View {
         for day in cardStore.recordedDays() {
             let key = cal.startOfDay(for: day)
             guard cellPhotos[key] == nil else { out[key] = cellPhotos[key]; continue }
-            out[key] = cardStore.photo(for: day)?.cellThumb(side: 92)
+            out[key] = cardStore.photo(for: day)?.cellThumb(side: 132)
         }
         cellPhotos = out
     }
@@ -276,6 +276,11 @@ struct ActivityView: View {
 
     // MARK: - Cells
 
+    /// One day as a TILE, not a dot. The month is laid out as a photo wall
+    /// — square rounded cells the full column wide — because the cards'
+    /// photos live in it: a circle showed a photo as a smudge, a tile shows
+    /// the place. Days without a photo keep the same tile in heat blue (or
+    /// a faint fill for empty ones), so the wall reads as one surface.
     @ViewBuilder
     private func dayCell(_ date: Date?) -> some View {
         if let date {
@@ -286,41 +291,36 @@ struct ActivityView: View {
             let mins = minutesByDay[day] ?? 0
             let strong = active && heatOpacity(mins) >= 0.6
             let isSelected = selectedDay == day
-            let hasPhoto = cellPhotos[day] != nil
-            Text("\(cal.component(.day, from: date))")
-                .font(.callout)
-                // Future days are dimmed and inert — they can't be selected.
-                .foregroundStyle(future ? AnyShapeStyle(.tertiary)
-                                 : (strong || cellPhotos[day] != nil ? AnyShapeStyle(.white)
-                                    : (isSelected || isToday ? AnyShapeStyle(Color.accentColor)
-                                       : AnyShapeStyle(.primary))))
-                .frame(maxWidth: .infinity, minHeight: 46)
-                .background(
-                    ZStack {
-                        if let photo = cellPhotos[day] {
-                            // A photo day gets the whole cell — the picture
-                            // is the point, and 38 pt made it a smudge.
-                            Image(uiImage: photo).resizable().scaledToFill()
-                                .frame(width: 46, height: 46)
-                                .clipShape(Circle())
-                                .overlay(Circle().fill(.black.opacity(0.22)))
-                        } else if active {
-                            Circle().fill(Color.accentColor.opacity(heatOpacity(mins)))
-                        } else if isToday {
-                            Circle().strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 1.5)
-                        }
-                        // Selection stays in the blue family — a solid accent
-                        // ring, not the old black/white one.
-                        if isSelected {
-                            Circle().strokeBorder(Color.accentColor, lineWidth: 2.5)
-                        }
+            let photo = cellPhotos[day]
+            RoundedRectangle(cornerRadius: 9)
+                .fill(active ? AnyShapeStyle(Color.accentColor.opacity(heatOpacity(mins)))
+                             : AnyShapeStyle(Color(.systemFill).opacity(future ? 0.3 : 0.55)))
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let photo {
+                        Image(uiImage: photo).resizable().scaledToFill()
                     }
-                    .frame(width: hasPhoto ? 46 : 38, height: hasPhoto ? 46 : 38)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+                .overlay(alignment: .topLeading) {
+                    Text("\(cal.component(.day, from: date))")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(future ? AnyShapeStyle(.tertiary)
+                                         : (photo != nil || strong ? AnyShapeStyle(.white)
+                                            : AnyShapeStyle(.secondary)))
+                        .shadow(color: photo != nil ? .black.opacity(0.6) : .clear, radius: 2)
+                        .padding(4)
+                }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9)
+                        .strokeBorder(isSelected ? Color.accentColor
+                                      : (isToday ? Color.accentColor.opacity(0.45) : .clear),
+                                      lineWidth: isSelected ? 2.5 : 1.5)
                 )
-                .contentShape(Circle())
+                .contentShape(Rectangle())
                 .onTapGesture { if !future { selectedDay = day } }
         } else {
-            Color.clear.frame(maxWidth: .infinity, minHeight: 46)
+            Color.clear.aspectRatio(1, contentMode: .fit)
         }
     }
 

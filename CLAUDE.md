@@ -272,9 +272,11 @@ interruption. `-capture daycard` renders it on a sample day.
   is a different audience nobody has decided on.
 - **The collection lives INSIDE the calendar, not beside it.** A separate
   Cards view was built and folded back the same week: a second grid of the
-  same days was a parallel calendar. Instead, a day with a photo wears it in
-  its calendar cell (`cellPhotos`, tiny pre-cropped thumbs — the month reads
-  as the places you studied), and selecting a day puts that day's card at the
+  same days was a parallel calendar. Instead, the month calendar is a
+  PHOTO WALL — every day is a full-width rounded square tile (`dayCell`), a
+  photo day shows its photo, an active day its heat blue, an empty day a
+  faint fill — so the month reads as the places you studied (circles showed
+  a photo as a smudge), and selecting a day puts that day's card at the
   top of its summary (`cardPreviewRow`, tap → the same `DayCardSheet`).
 - **A card is FROZEN when it is made, and every past day is settled on
   foreground** (`DayCardStore.freeze` / `freezePastDays`, JSON beside the
