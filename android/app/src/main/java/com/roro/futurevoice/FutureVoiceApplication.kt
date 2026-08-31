@@ -11,6 +11,7 @@ class FutureVoiceApplication : Application() {
         InstallSalt.init(this)
         CoreVocabulary.init(this)
         BillingService.shared(this).refresh()
+        com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(this)
         // Shadow scoring digit spell-out: the built-in English speller (the
         // launch target). ICU's RuleBasedNumberFormat is absent from the
         // public SDK jar; other languages keep digits un-spelled for now —

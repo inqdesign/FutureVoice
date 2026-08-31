@@ -50,5 +50,29 @@
         <receiver
             android:name=".data.DailyCallReceiver"
             android:exported="false" />
+
+        <!-- Two widgets, one per section — the app writes their snapshots,
+             the widgets only read them. -->
+        <receiver
+            android:name=".widget.WordsWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_words_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.ExpressionsWidgetReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_expressions_info" />
+        </receiver>
     </application>
 </manifest>

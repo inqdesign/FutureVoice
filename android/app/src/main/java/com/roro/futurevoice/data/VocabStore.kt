@@ -179,5 +179,8 @@ class VocabStore private constructor(context: Context) {
         val tmp = File(target.parentFile, target.name + ".tmp")
         tmp.writeText(text)
         if (!tmp.renameTo(target)) { target.delete(); tmp.renameTo(target) }
+        // Every write funnels through here — keep the home-screen widgets'
+        // snapshots in sync (iOS: StudyWidgetRefresher.schedule()).
+        com.roro.futurevoice.widget.StudyWidgetRefresher.schedule(appContext)
     }
 }

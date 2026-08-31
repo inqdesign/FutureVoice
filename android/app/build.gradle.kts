@@ -88,6 +88,8 @@ dependencies {
     implementation(libs.androidx.credentials.play)
     implementation(libs.googleid)
     implementation(libs.billing)
+    implementation(libs.glance.appwidget)
+    implementation(libs.glance.material3)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.serialization.json)
