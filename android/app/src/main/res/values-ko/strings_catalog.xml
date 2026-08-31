@@ -752,6 +752,7 @@
     <string name="not_used_yet">"아직 안 썼어요"</string>
     <!-- 'Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.' -->
     <string name="not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf">"말한 내용과 다른가요? 해당 항목을 왼쪽으로 밀어 '잘못 들림'으로 표시해 주세요. 그 턴은 채점에서 빠지고 문법 점수를 다시 계산해요."</string>
+    <string name="not_yet">"아직"</string>
     <string name="note">"메모"</string>
     <string name="nothing_due_right_now">"지금 복습할 게 없어요"</string>
     <string name="nothing_finished_yet">"아직 끝낸 게 없어요"</string>

@@ -49,6 +49,7 @@ import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.net.NewsClient
 import com.roro.futurevoice.net.TopicClient
+import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.talk.Scenario
 import androidx.compose.material3.AlertDialog
@@ -78,6 +79,7 @@ fun RootScreen() {
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
+    var showDeck by remember { mutableStateOf(false) }
     var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 
@@ -124,6 +126,11 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { editProfile = false },
             onFinish = { app.savePersona(it); editProfile = false },
+        )
+
+        showDeck -> DrillDeckScreen(
+            language = state.targetLanguage,
+            onBack = { showDeck = false },
         )
 
         showMe -> MeScreen(
@@ -185,6 +192,7 @@ fun RootScreen() {
                 callTopic = topic; callFacts = facts; callScenarioId = scenarioId; inCall = true
             },
             onOpenMe = { showMe = true },
+            onOpenDeck = { showDeck = true },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
         )
@@ -268,6 +276,7 @@ private fun HomeScreen(
     state: AppState,
     onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     onOpenMe: () -> Unit,
+    onOpenDeck: () -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
@@ -319,6 +328,11 @@ private fun HomeScreen(
                 enabled = state.voiceId != null,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start free talk") }
+
+            ReviewRow(
+                language = state.targetLanguage,
+                onOpen = onOpenDeck,
+            )
 
             ScenariosSection(
                 targetLanguage = state.targetLanguage,
@@ -650,5 +664,24 @@ private fun ScenariosSection(
                 }
             },
         )
+    }
+}
+
+/** Review cards · N due — the SRS queue's front door. Hidden while empty. */
+@Composable
+private fun ReviewRow(language: String, onOpen: () -> Unit) {
+    val context = LocalContext.current
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var due by remember { mutableStateOf(0) }
+    LaunchedEffect(language, revision) { due = DrillStore.shared(context).dueCount(language) }
+    if (due == 0) return
+    Row(
+        Modifier.fillMaxWidth().clickable { onOpen() }.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(stringResource(R.string.review_cards), style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.weight(1f))
+        Text("$due", style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.primary)
     }
 }

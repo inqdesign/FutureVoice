@@ -202,6 +202,33 @@ class DrillStore private constructor(context: Context) {
         }
     }
 
+    /** Cards due now, newest first (fresh corrections feel more relevant). */
+    suspend fun due(language: String = LanguageScope.active(appContext),
+                    now: Long = System.currentTimeMillis()): List<DrillCard> =
+        load(language).filter { it.nextReviewAt <= now }.sortedByDescending { it.createdAt }
+
+    /**
+     * "Got it" GRADUATES the card to the top rung rather than climbing one —
+     * five separate Got-its before a card left the pile made the filter look
+     * broken (iOS, `DrillStore.markKnown`).
+     */
+    suspend fun markKnown(card: DrillCard, language: String = LanguageScope.active(appContext),
+                          now: Long = System.currentTimeMillis()) {
+        upsertMany(listOf(card.copy(
+            timesSeen = card.timesSeen + 1, timesCorrect = card.timesCorrect + 1,
+            lastReviewedAt = now, box = DrillIngest.MAX_BOX,
+            nextReviewAt = now + DrillIngest.intervalMs(DrillIngest.MAX_BOX))), language)
+    }
+
+    /** Demote one box and reschedule soon. */
+    suspend fun markIncorrect(card: DrillCard, language: String = LanguageScope.active(appContext),
+                              now: Long = System.currentTimeMillis()) {
+        val box = maxOf(card.box - 1, 0)
+        upsertMany(listOf(card.copy(
+            timesSeen = card.timesSeen + 1, lastReviewedAt = now, box = box,
+            nextReviewAt = now + DrillIngest.intervalMs(box))), language)
+    }
+
     suspend fun dueCount(language: String = LanguageScope.active(appContext),
                          now: Long = System.currentTimeMillis()): Int =
         load(language).count { it.nextReviewAt <= now }

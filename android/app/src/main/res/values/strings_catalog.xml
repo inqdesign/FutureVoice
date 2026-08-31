@@ -752,6 +752,7 @@
     <string name="not_used_yet">"not used yet"</string>
     <!-- 'Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated.' -->
     <string name="not_what_you_said_swipe_a_slip_left_and_mark_it_misheard_the_c3f9cf">"Not what you said? Swipe a slip left and mark it Misheard — the turn is excluded from scoring and the grammar score is recalculated."</string>
+    <string name="not_yet">"Not yet"</string>
     <string name="note">"Note"</string>
     <string name="nothing_due_right_now">"Nothing due right now"</string>
     <string name="nothing_finished_yet">"Nothing finished yet"</string>
