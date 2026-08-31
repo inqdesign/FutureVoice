@@ -248,9 +248,12 @@ interruption. `-capture daycard` renders it on a sample day.
   view, `Talk`/`Study`/`Streak`/`Talks`/`Reviews`/`Shadow` marked
   `shouldTranslate: false`). The numbers row is talk and study minutes
   always, then the streak as of that day (`PracticeStats.streakDays(asOf:)`),
-  talks, drill reviews and shadow takes — whatever is non-zero, up to four. Topics are each finished conversation's
-  `displayTitle` (a free talk's is the title the summary wrote), de-duplicated,
-  at most four. Talk minutes are `TalkTimeLog` — the ring's number, metered.
+  talks, drill reviews and shadow takes — whatever is non-zero, up to four. The headline is ONE topic —
+  the day's main talk (`displayTitle` of the session the learner spoke
+  longest in); a stack of titles was shipped and pulled after one real day,
+  because news-talk titles are sentences and four of them buried the photo.
+  The other talks are the TALKS number; the full list stays in the frozen
+  snapshot. Talk minutes are `TalkTimeLog` — the ring's number, metered.
   Study minutes are `AppUsageLog`, foreground seconds per local day written at
   the edges of a stint in `FutureVoiceApp`, never less than the talk figure
   (a call in a pocket is metered but not foregrounded). Nothing is computed

@@ -238,7 +238,7 @@ enum DebugCapture {
             let sample = DayCardData(
                 date: Date(), talkMinutes: 12, studyMinutes: 25,
                 streakDays: 7, talks: 3, reviews: 18, shadowTakes: 4,
-                topics: ["Job interview", "Weekend plans", "What surprised you most"])
+                topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"])
             return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
         case "plan":
             // Me → Plan & talk time, for the same Light subscriber the usage

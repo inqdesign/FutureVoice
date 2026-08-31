@@ -19,9 +19,17 @@ struct DayCardData: Codable, Equatable {
     /// Shadow takes that day (`PracticeLog`).
     var shadowTakes: Int
     /// What today's talks were about — each finished conversation's
-    /// `displayTitle`, in order, de-duplicated.
+    /// `displayTitle`, de-duplicated, the day's MAIN talk first (the one the
+    /// learner spoke longest in). The card prints only the first: on a real
+    /// day the titles are sentences (news talks especially), and a stack of
+    /// them buried the photo in text — the rest of the day is the TALKS
+    /// number. Kept as a list so frozen snapshots still hold the record.
     var topics: [String]
     static let maxTopics = 4
+
+    private static func spokenMs(_ s: Session) -> Int {
+        s.turns.filter { $0.role == .user }.reduce(0) { $0 + $1.durationMs }
+    }
 
     /// Anything on it at all — an empty day has no card.
     var hasActivity: Bool { talkMinutes > 0 || talks > 0 || studyMinutes > 0 }
@@ -60,8 +68,12 @@ struct DayCardData: Codable, Equatable {
             .filter { $0.mode == .conversation }
             .filter { s in s.endedAt.map { calendar.isDate($0, inSameDayAs: day) } ?? false }
             .sorted { $0.startedAt < $1.startedAt }
+        // Main talk first: the one the learner spoke longest in.
+        let bySpoken = sessions.sorted {
+            spokenMs($0) > spokenMs($1)
+        }
         var seen = Set<String>()
-        let topics = sessions.map(\.displayTitle)
+        let topics = bySpoken.map(\.displayTitle)
             .filter { seen.insert($0.lowercased()).inserted }
         let talk = TalkTimeLog.seconds(on: day)
         let study = max(AppUsageLog.seconds(on: day), talk)
@@ -112,16 +124,6 @@ struct DayCardView: View {
     private var isFeed: Bool { format == .feed }
     private var margin: CGFloat { isFeed ? 24 : 21 }
 
-    /// One topic gets the headline size; a list shares the space.
-    private var topicSize: CGFloat {
-        let base: CGFloat = isFeed ? 35 : 29
-        switch data.topics.count {
-        case 0, 1: return base
-        case 2: return base * 0.74
-        default: return base * 0.58
-        }
-    }
-
     var body: some View {
         let size = format.size
         ZStack(alignment: .topLeading) {
@@ -143,16 +145,12 @@ struct DayCardView: View {
                 startPoint: .top, endPoint: .bottom)
 
             VStack(alignment: .leading, spacing: isFeed ? 15 : 11) {
-                if !data.topics.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ForEach(Array(data.topics.enumerated()), id: \.offset) { _, topic in
-                            Text(topic)
-                                .geistPixel(topicSize)
-                                .lineLimit(2)
-                                .minimumScaleFactor(0.7)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+                if let topic = data.topics.first {
+                    Text(topic)
+                        .geistPixel(isFeed ? 35 : 29)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.6)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 statsRow
                 footer
