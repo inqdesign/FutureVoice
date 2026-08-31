@@ -82,6 +82,7 @@ fun RootScreen() {
     var showDeck by remember { mutableStateOf(false) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
+    var shadowLine by remember { mutableStateOf<String?>(null) }
     var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 
@@ -130,6 +131,13 @@ fun RootScreen() {
             onFinish = { app.savePersona(it); editProfile = false },
         )
 
+        shadowLine != null -> ShadowScreen(
+            line = shadowLine!!,
+            voiceId = state.voiceId ?: "",
+            targetLanguage = state.targetLanguage,
+            onBack = { shadowLine = null },
+        )
+
         watchScenarioId != null -> WatchSceneScreen(
             scenarioId = watchScenarioId!!,
             voiceId = state.voiceId ?: "",
@@ -143,6 +151,7 @@ fun RootScreen() {
             sessionId = detailSessionId!!,
             language = state.targetLanguage,
             onBack = { detailSessionId = null },
+            onShadow = { shadowLine = it },
         )
 
         showDeck -> DrillDeckScreen(

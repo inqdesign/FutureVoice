@@ -24,3 +24,7 @@ enum VocabStore {
 func explain(_ s: String) -> String { s }
 func chrome(_ s: String) -> String { s }
 enum PublicPersonaService { enum Group: String { case character, person } }
+
+// ShadowEngine.matchWords references this; the vector'd `analyze` path never
+// calls it, so a stub only needs to exist.
+enum LocalAlignment { static func normalized(_ s: String) -> String { s } }

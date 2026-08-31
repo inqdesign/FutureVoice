@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -42,7 +43,8 @@ import com.roro.futurevoice.talk.TurnRole
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TalkDetailScreen(sessionId: String, language: String, onBack: () -> Unit) {
+fun TalkDetailScreen(sessionId: String, language: String, onBack: () -> Unit,
+                     onShadow: (String) -> Unit = {}) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -134,7 +136,15 @@ fun TalkDetailScreen(sessionId: String, language: String, onBack: () -> Unit) {
             }
             item { HorizontalDivider() }
             item { SectionHeader(stringResource(R.string.transcript)) }
-            items(s.turns.size) { i -> DialogueLine(s.turns[i]) }
+            items(s.turns.size) { i ->
+                val turn = s.turns[i]
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxWidth().then(
+                        if (turn.role == TurnRole.FLUENT_SELF)
+                            Modifier.clickable { onShadow(turn.transcript) }
+                        else Modifier)
+                ) { DialogueLine(turn) }
+            }
         }
     }
 }

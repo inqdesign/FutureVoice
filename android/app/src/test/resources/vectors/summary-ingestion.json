@@ -399,5 +399,130 @@
         "text" : "this one is excluded"
       }
     ]
-  }
+  },
+  "shadow_analyze" : [
+    {
+      "language" : "en",
+      "learner" : "I would rather just stay in tonight honestly",
+      "learnerTokens" : 8,
+      "matches" : 8,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "I'd rather just stay in tonight, honestly",
+      "targetTokens" : 8
+    },
+    {
+      "language" : "en",
+      "learner" : "could you give a hand with these",
+      "learnerTokens" : 7,
+      "matches" : 6,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "del",
+        "match",
+        "match",
+        "match",
+        "sub"
+      ],
+      "score" : 87,
+      "target" : "Could you give me a hand with this?",
+      "targetTokens" : 8
+    },
+    {
+      "language" : "en",
+      "learner" : "the check in opens at twenty one tomorrow",
+      "learnerTokens" : 8,
+      "matches" : 8,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "The check-in opens at 21 tomorrow",
+      "targetTokens" : 8
+    },
+    {
+      "language" : "en",
+      "learner" : "I want to go home",
+      "learnerTokens" : 5,
+      "matches" : 5,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 100,
+      "target" : "I wanna go home",
+      "targetTokens" : 5
+    },
+    {
+      "language" : "en",
+      "learner" : "it slipped completely",
+      "learnerTokens" : 3,
+      "matches" : 3,
+      "ops" : [
+        "match",
+        "match",
+        "del",
+        "del",
+        "match"
+      ],
+      "score" : 77,
+      "target" : "It slipped my mind completely",
+      "targetTokens" : 5
+    },
+    {
+      "language" : "en",
+      "learner" : "",
+      "learnerTokens" : 0,
+      "matches" : 0,
+      "ops" : [
+        "del",
+        "del",
+        "del",
+        "del"
+      ],
+      "score" : 0,
+      "target" : "Nice to meet you",
+      "targetTokens" : 4
+    },
+    {
+      "language" : "ko",
+      "learner" : "오늘 날씨 좋네요",
+      "learnerTokens" : 7,
+      "matches" : 7,
+      "ops" : [
+        "match",
+        "match",
+        "match",
+        "match",
+        "del",
+        "match",
+        "match",
+        "match"
+      ],
+      "score" : 94,
+      "target" : "오늘 날씨가 좋네요",
+      "targetTokens" : 8
+    }
+  ]
 }

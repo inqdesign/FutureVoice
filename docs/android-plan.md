@@ -49,6 +49,11 @@
 > counterpart on a preset — under ONE `scene_key` (one count per scene), and
 > the take absorbs into the book (scene replaces, study items accumulate).
 > A dormant Play Billing client wakes when `google_product_id`s exist.
+> SHADOWING's deterministic
+> half is ported (`ShadowScore` — expandForDiff/tokenize/align/curve,
+> 7 golden-vector cases incl. contractions, digit spell-out, Korean
+> syllables) with a line screen off the talk page: listen (cached TTS) →
+> say it → score + diff-colored words. Karaoke timing + coach bullets later.
 > Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't

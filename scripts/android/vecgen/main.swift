@@ -180,6 +180,24 @@ out["profile_absorb"] = [
               "totalSpeakingSeconds": profile.totalSpeakingSeconds, "lastSessionAt": iso.string(from: profile.lastSessionAt!)],
 ]
 
+// ── 6. shadow scoring ────────────────────────────────────────────────────
+let shadowCases: [[String: String]] = [
+    ["target": "I'd rather just stay in tonight, honestly", "learner": "I would rather just stay in tonight honestly", "language": "en"],
+    ["target": "Could you give me a hand with this?", "learner": "could you give a hand with these", "language": "en"],
+    ["target": "The check-in opens at 21 tomorrow", "learner": "the check in opens at twenty one tomorrow", "language": "en"],
+    ["target": "I wanna go home", "learner": "I want to go home", "language": "en"],
+    ["target": "It slipped my mind completely", "learner": "it slipped completely", "language": "en"],
+    ["target": "Nice to meet you", "learner": "", "language": "en"],
+    ["target": "오늘 날씨가 좋네요", "learner": "오늘 날씨 좋네요", "language": "ko"],
+]
+out["shadow_analyze"] = shadowCases.map { c -> [String: Any] in
+    let a = ShadowEngine.analyze(target: c["target"]!, learner: c["learner"]!, language: c["language"]!)
+    return ["target": c["target"]!, "learner": c["learner"]!, "language": c["language"]!,
+            "score": a.score, "targetTokens": a.targetTokenCount,
+            "learnerTokens": a.learnerTokenCount, "matches": a.matchCount,
+            "ops": a.steps.map { $0.op.rawValue }]
+}
+
 let json = try JSONSerialization.data(withJSONObject: out, options: [.prettyPrinted, .sortedKeys])
 let dest = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "vectors.json"
 try json.write(to: URL(fileURLWithPath: dest))

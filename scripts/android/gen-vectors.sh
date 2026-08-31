@@ -14,7 +14,9 @@ swiftc -O -o "$BIN" \
   FutureVoice/Models/Models.swift \
   FutureVoice/Services/CarryoverDetector.swift \
   FutureVoice/Services/DrillStore.swift \
-  FutureVoice/Services/ScorecardMetrics.swift
+  FutureVoice/Services/ScorecardMetrics.swift \
+  FutureVoice/Services/ShadowEngine.swift \
+  FutureVoice/Services/LanguageCatalog.swift
 "$BIN" "$OUT"
 cp "$OUT" android/app/src/test/resources/vectors/summary-ingestion.json
 echo "vectors regenerated → $OUT (+ android test resources)"
