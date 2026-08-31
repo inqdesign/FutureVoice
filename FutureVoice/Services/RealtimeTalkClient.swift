@@ -92,6 +92,32 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
 
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
+
+    /// What the mic tap needs, readable from the AUDIO THREAD without hopping
+    /// to the main actor — the hop is exactly what made the first version
+    /// read recycled buffers. Written on the main actor at start/stop, read
+    /// on the audio thread per buffer, so every access takes the lock.
+    private final class MicUplink: @unchecked Sendable {
+        private let lock = NSLock()
+        private var converter: AVAudioConverter?
+        private var format: AVAudioFormat?
+        private var socket: URLSessionWebSocketTask?
+
+        func set(converter: AVAudioConverter?, format: AVAudioFormat?,
+                 socket: URLSessionWebSocketTask?) {
+            lock.lock(); defer { lock.unlock() }
+            self.converter = converter
+            self.format = format
+            self.socket = socket
+        }
+
+        func current() -> (AVAudioConverter, AVAudioFormat, URLSessionWebSocketTask)? {
+            lock.lock(); defer { lock.unlock() }
+            guard let converter, let format, let socket else { return nil }
+            return (converter, format, socket)
+        }
+    }
+    private let mic = MicUplink()
     private var converter: AVAudioConverter?
     private var uplinkFormat: AVAudioFormat?
     private var playbackFormat: AVAudioFormat?
@@ -219,12 +245,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         converter = AVAudioConverter(from: inputFormat, to: uplink)
 
         engine.attach(player)
-        // Connect with the engine's own output format so the graph agrees
-        // with the route that just settled; reply buffers at 22.05 kHz are
-        // resampled by the mixer.
-        let mixFormat = engine.mainMixerNode.outputFormat(forBus: 0)
-        playbackFormat = mixFormat
-        engine.connect(player, to: engine.mainMixerNode, format: nil)
+        // The player is connected with the REPLY's format, not the mixer's.
+        // `scheduleBuffer` requires the buffer's format to match the one the
+        // node was connected with, and it enforces that with an ObjC
+        // exception that no Swift `try` can catch — connecting with `nil`
+        // (i.e. the mixer's 48 kHz) and then scheduling 22.05 kHz audio
+        // aborted the app on the first spoken word (crash 2026-08-31).
+        // `audio_start` announces the real rate before any audio arrives, so
+        // `ensurePlaybackFormat` re-connects if it ever differs.
+        connectPlayer(rate: replySampleRate)
 
         input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { [weak self] buffer, _ in
             self?.handleMicBuffer(buffer)
@@ -234,6 +263,30 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         try engine.start()
         player.play()
         engineRunning = true
+        // The tap is live from here — hand the audio thread what it needs.
+        mic.set(converter: converter, format: uplinkFormat, socket: socket)
+    }
+
+    /// Connect (or re-connect) the player node at `rate`. The engine resamples
+    /// into the mixer, so any rate is playable — what matters is that the
+    /// connection format and the scheduled buffers agree.
+    private func connectPlayer(rate: Double) {
+        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
+                                         sampleRate: rate, channels: 1,
+                                         interleaved: false) else { return }
+        engine.connect(player, to: engine.mainMixerNode, format: format)
+        playbackFormat = format
+    }
+
+    /// The gateway announced the reply's sample rate. Re-wire only when it
+    /// actually changed, and never mid-line: this runs on `audio_start`,
+    /// before the first chunk of that reply.
+    private func ensurePlaybackFormat(rate: Double) {
+        guard engineRunning, playbackFormat?.sampleRate != rate else { return }
+        player.stop()
+        pendingBuffers = 0
+        connectPlayer(rate: rate)
+        player.play()
     }
 
     private func stopAudio() {
@@ -243,6 +296,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         player.stop()
         engine.stop()
         engine.detach(player)
+        mic.set(converter: nil, format: nil, socket: nil)
         converter = nil
         pendingBuffers = 0
         try? AVAudioSession.sharedInstance()
@@ -250,44 +304,43 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
 
     /// Convert one mic buffer to 16 kHz s16le and put it on the wire.
-    /// Runs on the audio thread — no main-actor work, no allocation beyond
-    /// the conversion buffer.
+    ///
+    /// Everything that touches `buffer` happens HERE, synchronously, on the
+    /// audio thread: a tap's buffer is only valid for the duration of the
+    /// callback, and the engine reuses its storage the moment it returns.
+    /// The first version hopped to the main actor and read it there, which
+    /// reads recycled audio. `URLSessionWebSocketTask.send` is thread-safe,
+    /// so the wire write stays here too; only the meter — a single Float —
+    /// crosses over.
     private nonisolated func handleMicBuffer(_ buffer: AVAudioPCMBuffer) {
-        Task { @MainActor [weak self] in
-            guard let self, let converter = self.converter,
-                  let uplink = self.uplinkFormat, self.socket != nil else { return }
-            let ratio = uplink.sampleRate / buffer.format.sampleRate
-            let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 1024
-            guard let out = AVAudioPCMBuffer(pcmFormat: uplink, frameCapacity: capacity) else { return }
-            var consumed = false
-            var error: NSError?
-            converter.convert(to: out, error: &error) { _, status in
-                if consumed { status.pointee = .noDataNow; return nil }
-                consumed = true
-                status.pointee = .haveData
-                return buffer
-            }
-            guard error == nil, out.frameLength > 0,
-                  let channel = out.int16ChannelData else { return }
-            let byteCount = Int(out.frameLength) * MemoryLayout<Int16>.size
-            let data = Data(bytes: channel[0], count: byteCount)
-            self.updateLevel(from: channel[0], frames: Int(out.frameLength))
-            self.socket?.send(.data(data)) { _ in }
+        guard let (converter, uplink, socket) = mic.current() else { return }
+        let ratio = uplink.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 1024
+        guard let out = AVAudioPCMBuffer(pcmFormat: uplink, frameCapacity: capacity) else { return }
+        var consumed = false
+        var error: NSError?
+        converter.convert(to: out, error: &error) { _, status in
+            if consumed { status.pointee = .noDataNow; return nil }
+            consumed = true
+            status.pointee = .haveData
+            return buffer
         }
-    }
+        guard error == nil, out.frameLength > 0,
+              let channel = out.int16ChannelData else { return }
+        let frames = Int(out.frameLength)
+        socket.send(.data(Data(bytes: channel[0], count: frames * MemoryLayout<Int16>.size))) { _ in }
 
-    /// Mic RMS → the same 0…1 curve the rest of the app's meters use, so the
-    /// pill behaves the way it does everywhere else.
-    private func updateLevel(from samples: UnsafeMutablePointer<Int16>, frames: Int) {
-        guard frames > 0, state != .speaking else { return }
         var sum: Double = 0
         for i in 0..<frames {
-            let v = Double(samples[i]) / 32768.0
+            let v = Double(channel[0][i]) / 32768.0
             sum += v * v
         }
-        let rms = (sum / Double(frames)).squareRoot()
-        let db = 20 * log10(max(rms, 0.00001))
-        level = Float(max(0, min(1, (db + 50) / 45)))
+        let db = 20 * log10(max((sum / Double(frames)).squareRoot(), 0.00001))
+        let norm = Float(max(0, min(1, (db + 50) / 45)))
+        Task { @MainActor [weak self] in
+            guard let self, self.state != .speaking else { return }
+            self.level = norm
+        }
     }
 
     // MARK: - Socket
@@ -296,6 +349,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                             language: String, system: String) throws {
         let task = session.webSocketTask(with: Self.gatewayURL)
         socket = task
+        mic.set(converter: converter, format: uplinkFormat, socket: task)
         task.resume()
         receiveNext()
         sendControl([
@@ -356,6 +410,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             state = .listening
         case "audio_start":
             replySampleRate = json["sampleRate"] as? Double ?? 22050
+            ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the
             // learner watches the reply arrive rather than waiting for it.
             lines.append(Line(isUser: false, text: ""))
@@ -410,9 +465,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             lastLatencyMs = Int(Date().timeIntervalSince(committed) * 1000)
             turnCommittedAt = nil
         }
-        guard let format = AVAudioFormat(commonFormat: .pcmFormatFloat32,
-                                         sampleRate: replySampleRate,
-                                         channels: 1, interleaved: false) else { return }
+        // Schedule in EXACTLY the format the node is connected with. A
+        // mismatch is an uncatchable ObjC exception, so a chunk that arrives
+        // before `audio_start` re-wired the graph is dropped, not risked.
+        guard let format = playbackFormat, format.sampleRate == replySampleRate else { return }
         let frames = data.count / MemoryLayout<Int16>.size
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format,
                                             frameCapacity: AVAudioFrameCount(frames)),
