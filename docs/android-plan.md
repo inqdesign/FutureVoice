@@ -54,6 +54,11 @@
 > 7 golden-vector cases incl. contractions, digit spell-out, Korean
 > syllables) with a line screen off the talk page: listen (cached TTS) →
 > say it → score + diff-colored words. Karaoke timing + coach bullets later.
+> The DAILY CALL v1 rings
+> (exact alarm → CATEGORY_CALL full-screen notification with the SAME
+> bundled two-tone warble, Answer opens the talk directly — Android draws
+> the real incoming-call surface iOS cannot). Voicemail scripts, callbacks
+> and outcome history ride in with the VoicemailEngine brain-lift.
 > Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't

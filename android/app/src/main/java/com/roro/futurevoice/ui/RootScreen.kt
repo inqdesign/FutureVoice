@@ -83,6 +83,17 @@ fun RootScreen() {
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
+    val callAnswered by com.roro.futurevoice.data.DailyCallInbox.answered.collectAsStateWithLifecycle()
+    LaunchedEffect(callAnswered) {
+        // Answering the daily call IS starting the talk — no second tap, and
+        // no overlay (Me, a deck, a book) may stand in front of it.
+        if (callAnswered > 0 && state.voiceId != null) {
+            showMe = false; showDeck = false; detailSessionId = null
+            watchScenarioId = null; shadowLine = null; clonePreview = false
+            callTopic = ""; callFacts = emptyList(); callScenarioId = null
+            inCall = true
+        }
+    }
     var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 

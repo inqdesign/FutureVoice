@@ -60,6 +60,14 @@ fun MeScreen(
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     var confirmingSignOut by remember { mutableStateOf(false) }
+    var callEnabled by remember {
+        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.isEnabled(context))
+    }
+    var callHour by remember {
+        mutableStateOf(com.roro.futurevoice.data.DailyCallStore.hour(context))
+    }
+    val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     var goal by remember {
         mutableStateOf(context.getSharedPreferences("futurevoice", 0)
             .getInt("futurevoice.dailyGoalMinutes", 10))
@@ -126,6 +134,30 @@ fun MeScreen(
             }
             HorizontalDivider()
 
+            // ── Daily call — the habit anchor. Answering opens the talk. ──
+            Column {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.daily_call),
+                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Switch(checked = callEnabled, onCheckedChange = { on ->
+                        callEnabled = on
+                        com.roro.futurevoice.data.DailyCallStore.set(context, on, callHour, 0)
+                        if (on) notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                    })
+                }
+                if (callEnabled) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(7, 8, 9, 12, 19, 21).forEach { h ->
+                            FilterChip(selected = callHour == h, onClick = {
+                                callHour = h
+                                com.roro.futurevoice.data.DailyCallStore.set(context, true, h, 0)
+                            }, label = { Text("%02d:00".format(h)) })
+                        }
+                    }
+                }
+            }
+            HorizontalDivider()
+
             // ── Learning language (display; enrollment work comes later) ──
             Column {
                 Text(stringResource(R.string.learn_which_language), style = MaterialTheme.typography.titleMedium)
@@ -141,6 +173,11 @@ fun MeScreen(
             // ── Account ──
             Text(email.orEmpty(), style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (com.roro.futurevoice.BuildConfig.DEBUG) {
+                TextButton(onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) }) {
+                    Text("Ring now (debug)")
+                }
+            }
             TextButton(onClick = { confirmingSignOut = true }) {
                 Text(stringResource(R.string.sign_out_dc1649), color = MaterialTheme.colorScheme.error)
             }
