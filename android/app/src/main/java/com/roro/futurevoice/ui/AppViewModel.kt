@@ -6,6 +6,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.PersonaStore
 import com.roro.futurevoice.data.VoiceCloneRepository
 import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,9 @@ data class AppState(
     val signedIn: Boolean = false,
     /** First-run answers taken (native/target/level/goal). Gate for SetupFlow. */
     val setupComplete: Boolean = false,
+    /** Null iff persona onboarding never completed — routes to the intake. */
+    val persona: com.roro.futurevoice.talk.UserPersona? = null,
+    val personaResolved: Boolean = false,
     val email: String? = null,
     val busy: Boolean = false,
     val restoringVoice: Boolean = false,
@@ -46,6 +50,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     val state: StateFlow<AppState> = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            val persona = PersonaStore.shared(appContext).load()
+            _state.update { it.copy(persona = persona, personaResolved = true) }
+        }
         viewModelScope.launch {
             auth.sessionStatus.collect { status ->
                 when (status) {
@@ -106,6 +114,17 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     }
 
     fun dismissError() = _state.update { it.copy(error = null) }
+
+    /** Cross-stage Back from the persona cards: reopen the quick-answer setup. */
+    fun reopenSetup() {
+        prefs.edit().putBoolean(SETUP_COMPLETE_KEY, false).apply()
+        _state.update { it.copy(setupComplete = false) }
+    }
+
+    fun savePersona(persona: com.roro.futurevoice.talk.UserPersona) {
+        _state.update { it.copy(persona = persona) }
+        viewModelScope.launch { PersonaStore.shared(appContext).save(persona) }
+    }
 
     /** A clone just landed on this device — the server row already exists. */
     fun onVoiceCloned(voiceId: String) {

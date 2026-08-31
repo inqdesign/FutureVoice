@@ -195,7 +195,13 @@ data class ConversationTurnPayload(
     }
 }
 
-/** Minimal persona block for the system prompt. */
+/**
+ * The user's persona — `UserPersona` in Models.swift, same on-disk shape
+ * (`persona.json`; `situations` keeps its legacy `englishSituations` key).
+ * The top half is the user writing about themselves; `learnedNotes` is the
+ * fluent self remembering what it was told in calls. One file, one profile.
+ */
+@Serializable
 data class UserPersona(
     val displayName: String = "",
     val city: String = "",
@@ -204,12 +210,30 @@ data class UserPersona(
     val occupation: String = "",
     val household: String = "",
     val interests: List<String> = emptyList(),
+    @SerialName("englishSituations")
     val situations: List<String> = emptyList(),
     val freeNotes: String = "",
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val updatedAt: Long = System.currentTimeMillis(),
+    val learnedNotes: List<PersonaNote> = emptyList(),
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val metAt: Long? = null,
 ) {
     val isMinimallyComplete: Boolean
-        get() = displayName.isNotBlank() || city.isNotBlank() || occupation.isNotBlank()
+        get() = displayName.isNotBlank() && city.isNotBlank() &&
+            (occupation.isNotBlank() || household.isNotBlank() ||
+                interests.isNotEmpty() || situations.isNotEmpty())
 }
+
+/** One thing the fluent self learned about the user during a talk. NATIVE language. */
+@Serializable
+data class PersonaNote(
+    val id: String = StoreJson.newId(),
+    val text: String,
+    val sessionId: String? = null,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val learnedAt: Long = System.currentTimeMillis(),
+)
 
 @Serializable
 data class LearnerPattern(

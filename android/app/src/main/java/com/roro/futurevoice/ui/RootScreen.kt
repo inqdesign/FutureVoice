@@ -81,6 +81,16 @@ fun RootScreen() {
             onBackToWelcome = app::signOut,
             onFinish = app::completeSetup,
         )
+        // Light taps before the heavy ask (iOS order): persona cards build
+        // the investment and the first call's context BEFORE the recording.
+        state.personaResolved && state.persona == null -> PersonaIntakeScreen(
+            initial = com.roro.futurevoice.talk.UserPersona(),
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onBackToSetup = { app.reopenSetup() },
+            onFinish = app::savePersona,
+        )
+
         // No voice on the account: an Android user starts HERE — they clone
         // on Android (roadmap §1.2), they are not sent to an iPhone. Mic
         // permission is asked by the flow's record button via HomeScreen's
@@ -96,6 +106,7 @@ fun RootScreen() {
                 targetLanguage = state.targetLanguage,
                 nativeLanguage = state.nativeLanguage,
                 level = state.level,
+                persona = state.persona,
                 onExit = { inCall = false },
             )
 
