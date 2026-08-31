@@ -12,4 +12,6 @@
     <string name="words">단어</string>
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first">아직 공부할 게 없어요 — 먼저 대화하거나 장면을 보면 거기서 나온 단어가 여기로 와요.</string>
     <string name="expressions_from_your_calls_will_collect_here">통화에서 나온 표현이 — 내 것도, 유창한 나의 것도 — 여기 모여요.</string>
+    <string name="the_dashed_line_is_your_daily_goal">점선이 하루 목표예요.</string>
+    <string name="notebook">단어장</string>
 </resources>

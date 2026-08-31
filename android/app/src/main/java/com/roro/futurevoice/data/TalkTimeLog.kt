@@ -36,6 +36,23 @@ object TalkTimeLog {
     }
 
     /**
+     * Seconds per day for the last [days] days, oldest first — the effort
+     * strip. Reads the same rows the ring does, so the strip's last bar and
+     * today's number can never disagree.
+     */
+    fun recentSeconds(context: Context, days: Int,
+                      now: Long = System.currentTimeMillis()): List<Pair<Long, Int>> {
+        val map = load(context)
+        return (days - 1 downTo 0).map { back ->
+            val at = now - back * 86_400_000L
+            val prefix = dayKey(at)
+            at to map.entries.sumOf { (k, v) ->
+                if (k == prefix || k.startsWith(prefix + SEPARATOR)) v else 0
+            }
+        }
+    }
+
+    /**
      * Consecutive days with metered talk, anchored to TODAY when today
      * already has some and to yesterday otherwise — a streak is alive until
      * its day is over, and without that every learner reads 0 each morning.

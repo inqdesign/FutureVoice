@@ -12,4 +12,6 @@
     <string name="words">Words</string>
     <string name="nothing_to_study_yet_have_a_talk_or_watch_a_scene_first">Nothing to study yet — have a talk or watch a scene first; the words it surfaces get dealt here.</string>
     <string name="expressions_from_your_calls_will_collect_here">Expressions from your calls — yours and your fluent self\'s — will collect here.</string>
+    <string name="the_dashed_line_is_your_daily_goal">The dashed line is your daily goal.</string>
+    <string name="notebook">Notebook</string>
 </resources>

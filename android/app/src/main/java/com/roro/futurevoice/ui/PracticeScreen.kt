@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,8 +24,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.data.PracticeLog
 import com.roro.futurevoice.ui.brand.BookCard
 import com.roro.futurevoice.ui.brand.Books
+import com.roro.futurevoice.ui.brand.EffortCharts
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -131,6 +134,13 @@ fun PracticeBody(
     }
 }
 
+/** Two weeks: long enough to show a habit, short enough to read at a glance. */
+private const val EFFORT_DAYS = 14
+
+/** Day-of-month, the only part of a date a fourteen-bar strip has room for. */
+private fun dayLabel(at: Long): String =
+    java.text.SimpleDateFormat("d", java.util.Locale.US).format(java.util.Date(at))
+
 /** How many cards a daily deck deals. Mirrors iOS's per-day goal default. */
 private const val DAILY_HAND = 10
 
@@ -157,15 +167,19 @@ private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
  * The per-skill pages and the 14-day rep bars arrive with the Progress pass.
  */
 @Composable
-fun ProgressBody(language: String) {
+fun ProgressBody(language: String, goalMinutes: Int = 10) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var todaySeconds by remember { mutableStateOf(0) }
     var showCard by remember { mutableStateOf(false) }
+    var minutesByDay by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
+    var effortByDay by remember { mutableStateOf<List<Pair<String, PracticeLog.Day>>>(emptyList()) }
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
         todaySeconds = TalkTimeLog.secondsToday(context)
+        minutesByDay = TalkTimeLog.recentSeconds(context, EFFORT_DAYS)
+        effortByDay = PracticeLog.recent(context, EFFORT_DAYS)
     }
     val scored = talks.mapNotNull { it.summary?.scorecard }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -208,6 +222,49 @@ fun ProgressBody(language: String) {
                 }.mapNotNull { it.displayTitle }.distinct().take(4),
             )
         }
+        // What the last two weeks actually were. Both strips are drawn only
+        // when there is something in them: an empty chart is a reproach, and
+        // a new learner has done nothing wrong.
+        if (minutesByDay.any { it.second > 0 }) {
+            Text(stringResource(R.string.talk_time), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp))
+            EffortCharts.Bars(
+                days = minutesByDay.map { (at, secs) ->
+                    EffortCharts.DayBar(dayLabel(at),
+                        listOf(MaterialTheme.colorScheme.primary to secs / 60f))
+                },
+                goal = goalMinutes.toFloat(),
+            )
+            Text(stringResource(R.string.the_dashed_line_is_your_daily_goal),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        if (effortByDay.any { it.second.total > 0 }) {
+            val shadow = Color(0xFF34C759)
+            val sentences = Color(0xFFFF9500)
+            val notebook = Color(0xFF007AFF)
+            Text(stringResource(R.string.activity), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp))
+            // Stacked by KIND, not just totals — a strip that is always one
+            // colour is the "I only ever do the comfortable thing" signal,
+            // and that is the whole reason to draw it by kind.
+            EffortCharts.Bars(
+                days = effortByDay.map { (key, d) ->
+                    EffortCharts.DayBar(key.takeLast(2), listOf(
+                        shadow to d.shadowReps.toFloat(),
+                        sentences to d.drillReps.toFloat(),
+                        notebook to (d.wordReps + d.expressionReps).toFloat(),
+                    ))
+                },
+            )
+            EffortCharts.Legend(listOf(
+                stringResource(R.string.shadowing) to shadow,
+                stringResource(R.string.sentences) to sentences,
+                stringResource(R.string.notebook) to notebook,
+            ))
+        }
+
         if (today.hasActivity) {
             TextButton(onClick = { showCard = true }) {
                 Text(stringResource(R.string.share_card))

@@ -586,7 +586,12 @@ private fun HomeScreen(
                     onOpenTalk = onOpenTalk,
                 )
 
-                HomeTab.PROGRESS -> ProgressBody(language = state.targetLanguage)
+                HomeTab.PROGRESS -> ProgressBody(
+                    language = state.targetLanguage,
+                    goalMinutes = LocalContext.current
+                        .getSharedPreferences("futurevoice", 0)
+                        .getInt("futurevoice.dailyGoalMinutes", 10),
+                )
             }
             Spacer(Modifier.height(16.dp))
         }
