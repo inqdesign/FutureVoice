@@ -8,6 +8,8 @@ activityCompose = "1.12.4"
 composeBom = "2026.06.01"
 okhttp = "5.4.0"
 junit = "4.13.2"
+credentials = "1.5.0"
+googleid = "1.1.1"
 serialization = "1.11.0"
 supabase = "3.7.0"
 ktor = "3.5.2"
@@ -32,6 +34,9 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
+androidx-credentials-play = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
+googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
 
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }

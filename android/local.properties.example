@@ -9,3 +9,7 @@ sdk.dir=/Users/<you>/Library/Android/sdk
 
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
+
+# Google sign-in (roadmap §4.2): the WEB OAuth client id from the owner's
+# Google Cloud project. Leave empty until it exists; the button hides itself.
+GOOGLE_WEB_CLIENT_ID=

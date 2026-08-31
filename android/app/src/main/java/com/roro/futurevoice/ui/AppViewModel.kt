@@ -97,6 +97,18 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         }
     }
 
+    val isGoogleConfigured: Boolean get() = auth.isGoogleConfigured
+
+    /** Needs an ACTIVITY context — Credential Manager shows UI from it. */
+    fun signInWithGoogle(activityContext: android.content.Context) {
+        _state.update { it.copy(busy = true, error = null) }
+        viewModelScope.launch {
+            runCatching { auth.signInWithGoogle(activityContext) }
+                .onFailure { e -> _state.update { it.copy(error = e.message) } }
+            _state.update { it.copy(busy = false) }
+        }
+    }
+
     fun signOut() {
         viewModelScope.launch {
             runCatching { auth.signOut() }

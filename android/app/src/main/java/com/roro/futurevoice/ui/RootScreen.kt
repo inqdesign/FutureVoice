@@ -93,6 +93,8 @@ fun RootScreen() {
         !state.signedIn && !welcomeDone -> WelcomeScreen(onGetStarted = { welcomeDone = true })
         !state.signedIn -> SignInScreen(
             state,
+            googleAvailable = app.isGoogleConfigured,
+            onGoogleSignIn = app::signInWithGoogle,
             onSignIn = app::signIn,
             onDevSignIn = app::devSignIn,
         )
@@ -176,9 +178,12 @@ private fun Loading() {
 @Composable
 private fun SignInScreen(
     state: AppState,
+    googleAvailable: Boolean = false,
+    onGoogleSignIn: (android.content.Context) -> Unit = {},
     onSignIn: () -> Unit,
     onDevSignIn: (String, String) -> Unit,
 ) {
+    val activityContext = LocalContext.current
     var devEmail by remember { mutableStateOf("") }
     var devPassword by remember { mutableStateOf("") }
     Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -192,6 +197,14 @@ private fun SignInScreen(
                     "voice comes with you.",
                 style = MaterialTheme.typography.bodyMedium,
             )
+            // Google first — the PRIMARY provider on Android; Apple stays for
+            // iPhone switchers (their clone follows the account).
+            if (googleAvailable) {
+                Button(onClick = { onGoogleSignIn(activityContext) }, enabled = !state.busy,
+                    modifier = Modifier.fillMaxWidth()) {
+                    Text(if (state.busy) "Opening…" else "Continue with Google")
+                }
+            }
             Button(onClick = onSignIn, enabled = !state.busy) {
                 Text(if (state.busy) "Opening…" else "Continue with Apple")
             }

@@ -58,6 +58,34 @@ class AuthRepository {
     }
 
     /**
+     * Google, the PRIMARY provider on Android (roadmap §1.2): Credential
+     * Manager hands us a Google ID token minted against the WEB client id,
+     * and Supabase verifies it natively — no browser round trip. Available
+     * only once the owner's OAuth clients exist (`GOOGLE_WEB_CLIENT_ID` in
+     * local.properties); [isGoogleConfigured] gates the button.
+     */
+    val isGoogleConfigured: Boolean
+        get() = com.roro.futurevoice.BuildConfig.GOOGLE_WEB_CLIENT_ID.isNotBlank()
+
+    suspend fun signInWithGoogle(context: android.content.Context) {
+        val option = com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+            .setServerClientId(com.roro.futurevoice.BuildConfig.GOOGLE_WEB_CLIENT_ID)
+            .setFilterByAuthorizedAccounts(false)
+            .build()
+        val request = androidx.credentials.GetCredentialRequest.Builder()
+            .addCredentialOption(option)
+            .build()
+        val result = androidx.credentials.CredentialManager.create(context)
+            .getCredential(context, request)
+        val credential = com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+            .createFrom(result.credential.data)
+        Supa.client.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.IDToken) {
+            idToken = credential.idToken
+            provider = io.github.jan.supabase.auth.providers.Google
+        }
+    }
+
+    /**
      * DEBUG BUILDS ONLY (enforced at the call site — the UI for this exists
      * only behind `BuildConfig.DEBUG`). Email+password sign-in for the
      * dedicated test account, so the emulator can run the Talk loop while
