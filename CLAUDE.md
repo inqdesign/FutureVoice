@@ -227,6 +227,76 @@ talk is spent meeting them, and what it hears is written down.
   just asked those three questions out loud, and a form re-asking them reads as
   the app not having listened.
 
+## The day card — today's share card (2026-08-28)
+
+A running app hands you a card the moment the run is saved: a map over a
+photo, then the numbers. Here the card is the DAY's, not a talk's
+(`DayCardView` / `DayCardSheet`): a first cut was a per-talk book cover with
+a picked expression, and it was retired the same day — a talk is too small a
+unit to share, and a picker made a moment into a form. Offered on the book
+page the moment a talk's book is made (post-talk only — the wait is already
+there, and "take a photo of where you are" fills it), and from the **Activity
+page's day summary, for ANY day** — that summary already says what the day
+was, and the card is the summary as a picture (`DayCardData.make(day:)`,
+photo stored per day). Never a wall: one tap past it and the page is the same
+page. `-capture daycard` renders it on a sample day.
+
+- **Topics, a row of numbers, the date, the URL — and it is in ENGLISH
+  whatever the app language.** The card is for a feed, not for the learner;
+  it has to read the same to everyone it reaches, so it is the one surface
+  where chrome does not follow the learner's choice (locale pinned on the
+  view, `Talk`/`Study`/`Streak`/`Talks`/`Reviews`/`Shadow` marked
+  `shouldTranslate: false`). The numbers row is talk and study minutes
+  always, then the streak as of that day (`PracticeStats.streakDays(asOf:)`),
+  talks, drill reviews and shadow takes — whatever is non-zero, up to four. Topics are each finished conversation's
+  `displayTitle` (a free talk's is the title the summary wrote), de-duplicated,
+  at most four. Talk minutes are `TalkTimeLog` — the ring's number, metered.
+  Study minutes are `AppUsageLog`, foreground seconds per local day written at
+  the edges of a stint in `FutureVoiceApp`, never less than the talk figure
+  (a call in a pocket is metered but not foregrounded). Nothing is computed
+  for the card alone.
+- **The call pill is the card's brand badge, in the learner's theme.** A
+  first cut laid the Futureself mosaic on a time axis as the day's "map" (lit
+  where the fluent self spoke); it was retired the same day because nobody
+  could tell what it meant. A full-size pill beside the numbers followed and
+  was shrunk the same day: it now sits in the footer as an 88×32 capsule of
+  `FutureselfPixels` (6.4 pt cell, five rows, hairline rim, low drive + steep
+  colour falloff so most cells stay dark) with the DATE inside — no mark, no
+  wordmark; the name is the footer's `nawana.app` under the tagline "Learn a language
+  from your fluent self." and nothing else — the thing the learner talked to, wearing the name —
+  in `futureselfTheme`, read from defaults because an `ImageRenderer` has no
+  environment; dark palette, since the card's ground is ink whatever the
+  phone's mode. A
+  Futureself circle beside it was also tried and dropped. No Core seal: the
+  badge's audience is a stranger in Find people, and a card leaving the app
+  is a different audience nobody has decided on.
+- **The collection is the Activity page's third view — Cards — and a day
+  that was lived IS a card.** No separate gallery, no "saved" state: the grid
+  (`ActivityView.cardsGrid`, 4:5 thumbnails, three across, newest first, a
+  section per month) is the same set of days the calendar shades, drawn as
+  pictures. Tapping opens the same `DayCardSheet(day:)`.
+- **A card is FROZEN when it is made, and every past day is settled on
+  foreground** (`DayCardStore.freeze` / `freezePastDays`, JSON beside the
+  photo). The logs a card is drawn from are pruned at 45 days and the streak
+  rule can change; a card read live months later would lose its minutes or
+  change its streak, and a card is what that day WAS. `DayCardData.resolve`
+  prefers the snapshot and falls back to the logs for a day that has none
+  (only ever within the 45-day window). Today is never frozen by the sweep —
+  it is still being lived — only by its own photo or share.
+- **The photo is the place, and that is as precise as it gets.** No location
+  permission, ever — the learner photographs where they are (`CameraPicker`,
+  the one UIKit wrap, because `PhotosPicker` has no camera and "take it now"
+  is the point), and `DayCardStore` (one JPEG per local day) re-encodes on
+  save, which drops EXIF/GPS. Opening the sheet stores nothing; only a picked
+  photo does.
+- It is an exported PICTURE, not chrome, so it wears the brand (ink, paper,
+  the mosaic's blue, Geist Pixel with the Galmuri cascade) rather than
+  system colours; `DayCardView.render` pins locale and Dynamic Type because
+  an `ImageRenderer` has no ancestor to inherit them from. Feed 4:5 (1080×1350,
+  Instagram's tall frame, which Threads takes as is — a 9:16 story was the
+  first cut and read as a poster, not a card) and square (1080×1080) are the
+  same view at two sizes.
+
 ## The learning loop (keep it closed)
 
 ```

@@ -42,6 +42,8 @@ struct ConversationDetailView: View {
     @State private var drillCount = 0
     @State private var showingContinue = false
     @State private var showingTranscript = false
+    /// Today's share card (`DayCardSheet`), offered right after a talk.
+    @State private var showingDayCard = false
     @State private var wordSheet: WordRef?
     /// An expression from this talk, opened as its card. Words in this book
     /// have always been tappable; expressions were static text with a
@@ -155,6 +157,9 @@ struct ConversationDetailView: View {
         .sheet(isPresented: $showingPaywall) {
             PaywallView()
         }
+        .sheet(isPresented: $showingDayCard) {
+            DayCardSheet(day: Date())
+        }
         .confirmationDialog("Delete this talk?", isPresented: $showingDeleteConfirm,
                             titleVisibility: .visible) {
             Button("Delete talk", role: .destructive) {
@@ -224,6 +229,7 @@ struct ConversationDetailView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
+                dayCardRow
                 HStack(spacing: 10) {
                     // Post-talk the bottom bar owns "start a new conversation";
                     // stacking a Continue full-screen cover over the just-torn-
@@ -252,6 +258,23 @@ struct ConversationDetailView: View {
                 .controlSize(.large)
             }
             .padding(20)
+    }
+
+    /// Today's card, offered the moment the book is made — the way a running
+    /// app hands you its card when the run is saved: the wait was already
+    /// there, and the day's numbers were just counted. Post-talk only; the
+    /// Activity page has it any time. Never a wall: one tap past it and the
+    /// page is the same page.
+    @ViewBuilder
+    private var dayCardRow: some View {
+        if postTalk != nil {
+            Button { showingDayCard = true } label: {
+                Label("Today's card", systemImage: "camera")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+        }
     }
 
     /// The talk is here but its review material never got made — the analysis

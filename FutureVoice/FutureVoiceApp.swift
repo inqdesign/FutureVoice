@@ -80,6 +80,10 @@ struct FutureVoiceApp: App {
                 // flag that gate turns on.
         }
         .onChange(of: scenePhase) { _, phase in
+            // Study time for the day card: the edges of a foreground stint.
+            if phase == .active { AppUsageLog.becameActive() } else { AppUsageLog.resigned() }
+            // Yesterday's card is settled before anyone looks at it.
+            if phase == .active { DayCardStore.shared.freezePastDays() }
             // Drill grading may have moved due dates — leave with an accurate
             // reminder. Background path never prompts for permission.
             if phase == .background {

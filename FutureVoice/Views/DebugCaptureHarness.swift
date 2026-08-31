@@ -215,6 +215,33 @@ enum DebugCapture {
             return AnyView(NavigationStack {
                 UsageDetailView(account: Self.sampleLightAccount, previewUsage: .sample)
             })
+        case "activity", "activity-cards":
+            // The activity calendar with today selected — the day summary
+            // carries the share-card button. "-cards" opens the card grid,
+            // seeded with a week of talks so the collection has rows.
+            once("activity") {
+                SessionStore.shared.save(Self.talkDetailSession)
+                for (back, title) in [(1, "Weekend plans"), (2, "Moving apartments"), (4, "The interview follow-up"),
+                                      (6, "Coffee with Sarah"), (9, "Explaining my job")] {
+                    var s = Self.talkDetailSession
+                    let ended = Calendar.current.date(byAdding: .day, value: -back, to: Date())!
+                    s = Session(id: UUID(), userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
+                                topic: title, startedAt: ended.addingTimeInterval(-600), endedAt: ended,
+                                turns: s.turns, summary: s.summary)
+                    SessionStore.shared.save(s)
+                }
+            }
+            return AnyView(NavigationStack {
+                ActivityView(initialMode: name == "activity-cards" ? .cards : nil).environmentObject(appState)
+            })
+        case "daycard":
+            // Today's share card with a sample day — no camera in the
+            // simulator, so this is the ink fallback.
+            let sample = DayCardData(
+                date: Date(), talkMinutes: 12, studyMinutes: 25,
+                streakDays: 7, talks: 3, reviews: 18, shadowTakes: 4,
+                topics: ["Job interview", "Weekend plans", "What surprised you most"])
+            return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
         case "plan":
             // Me → Plan & talk time, for the same Light subscriber the usage
             // receipt uses — the two pages quote each other's numbers, so they

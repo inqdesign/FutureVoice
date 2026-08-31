@@ -303,6 +303,13 @@ enum PracticeStats {
     /// the server pools UTC, so around midnight the two can be a day apart
     /// before they agree again. Local is right for a habit; the alternative
     /// is a streak that turns over at 9am.
+    /// The streak as it stood at the end of `day` — the day card's number for
+    /// any day the Activity page can select, computed by the same rule as
+    /// the chip on Home.
+    static func streakDays(asOf day: Date, calendar: Calendar = .current) -> Int {
+        computeStreak(now: day, calendar: calendar)
+    }
+
     private static func computeStreak(now: Date, calendar: Calendar) -> Int {
         let language = CoreClubService.activeLanguage()
         let bar = CoreClubService.dailyBarSeconds()

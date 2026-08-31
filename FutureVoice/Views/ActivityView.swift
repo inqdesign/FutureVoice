@@ -20,12 +20,30 @@ struct ActivityView: View {
     @State private var totalSpeakingSeconds = 0.0
     @State private var drillCards: [DrillCard] = []
     @State private var selectedDay: Date?
+    /// The selected day's share card (`DayCardSheet`) — the day summary is
+    /// its home outside a talk: the summary already says what the day was,
+    /// the card is that summary as a picture.
+    @State private var cardDay: CardDay?
+    private struct CardDay: Identifiable { let date: Date; var id: Date { date } }
 
     enum ViewMode: String, CaseIterable, Identifiable {
-        case month, year
+        case month, year, cards
         var id: String { rawValue }
-        var label: String { rawValue.capitalized }
+        var label: String {
+            switch self {
+            case .month: return chrome("Month")
+            case .year: return chrome("Year")
+            case .cards: return chrome("Cards")
+            }
+        }
     }
+
+    /// Which view to open on — the capture harness lands on the card grid.
+    var initialMode: ViewMode? = nil
+    /// Rendered card thumbnails, by day. Drawn lazily as cells appear and
+    /// kept for the page's life; a card is cheap to draw but not free.
+    @State private var thumbs: [Date: UIImage] = [:]
+    @ObservedObject private var cardStore = DayCardStore.shared
 
     private let cal = Calendar.current
 
@@ -40,11 +58,13 @@ struct ActivityView: View {
                 switch viewMode {
                 case .month: monthCard
                 case .year:  yearCard
+                case .cards: cardsGrid
                 }
                 // Always rendered when a day is selected — never toggled off,
                 // so switching days doesn't pop the card in and out and jump
-                // the scroll position.
-                if let day = selectedDay {
+                // the scroll position. The card grid is its own record of
+                // days, so it stands alone.
+                if viewMode != .cards, let day = selectedDay {
                     dayDetailCard(day)
                 }
             }
@@ -54,9 +74,77 @@ struct ActivityView: View {
         }
         .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Activity")
+        .sheet(item: $cardDay) { DayCardSheet(day: $0.date) }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .onAppear(perform: load)
+        .onAppear {
+            if let initialMode { viewMode = initialMode }
+            load()
+        }
+        .onChange(of: cardStore.version) { _, _ in thumbs = [:] }
+    }
+
+    // MARK: - Cards (the collection)
+
+    /// Every day with something on it, as its card — the same days the
+    /// calendar shades, seen as pictures instead of dots. Newest first, one
+    /// month per section, three across like a feed. A day with a photo shows
+    /// it; a day without shows the ink card. There is no "saved" state to
+    /// browse: a day that was lived IS a card (`DayCardData.resolve`).
+    private var cardDays: [Date] {
+        let recorded = cardStore.recordedDays().map { cal.startOfDay(for: $0) }
+        return Array(Set(recorded).union(activeDays)).sorted(by: >)
+    }
+
+    private var cardsGrid: some View {
+        let days = cardDays
+        let months = Dictionary(grouping: days) { cal.date(from: cal.dateComponents([.year, .month], from: $0)) ?? $0 }
+        return VStack(alignment: .leading, spacing: 18) {
+            if days.isEmpty {
+                Text(explain("Every day you talk becomes a card here."))
+                    .font(.subheadline).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(16)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
+            }
+            ForEach(months.keys.sorted(by: >), id: \.self) { month in
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(month.formatted(.dateTime.year().month(.wide)))
+                        .font(.headline)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                        ForEach(months[month] ?? [], id: \.self) { day in
+                            Button { cardDay = CardDay(date: day) } label: {
+                                cardThumb(day)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(day.formatted(date: .long, time: .omitted))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func cardThumb(_ day: Date) -> some View {
+        ZStack {
+            if let image = thumbs[day] {
+                Image(uiImage: image).resizable().scaledToFit()
+            } else {
+                Color(.secondarySystemGroupedBackground)
+            }
+        }
+        .aspectRatio(4 / 5, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        // Keyed on the store's version too: the foreground sweep that
+        // settles past days bumps it (and empties the cache) moments after
+        // the first cells drew, so a day-only id left them blank.
+        .task(id: "\(day.timeIntervalSinceReferenceDate)-\(cardStore.version)") {
+            guard thumbs[day] == nil else { return }
+            let data = DayCardData.resolve(day: day)
+            thumbs[day] = DayCardView(data: data, photo: cardStore.photo(for: day), format: .feed)
+                .render(scale: 1)
+        }
     }
 
     // MARK: - Stats (compact single row)
@@ -314,8 +402,21 @@ struct ActivityView: View {
                            }.count)
 
         return VStack(alignment: .leading, spacing: 12) {
-            Text(day.formatted(date: .complete, time: .omitted))
-                .font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text(day.formatted(date: .complete, time: .omitted))
+                    .font(.headline)
+                Spacer()
+                // The day's share card — only for a day that has something
+                // on it; an empty day has nothing to put on a card.
+                if mins > 0 || talks > 0 {
+                    Button { cardDay = CardDay(date: day) } label: {
+                        Label("Share card", systemImage: "square.and.arrow.up")
+                            .font(.subheadline.weight(.medium))
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
             if mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 {
                 Text(explain("No practice this day."))
                     .font(.subheadline).foregroundStyle(.secondary)
@@ -389,6 +490,7 @@ struct ActivityView: View {
         switch viewMode {
         case .month: return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .month)
         case .year:  return !cal.isDate(displayedMonth, equalTo: Date(), toGranularity: .year)
+        case .cards: return false
         }
     }
 

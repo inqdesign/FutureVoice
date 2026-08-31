@@ -37,6 +37,8 @@
 	<true/>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>nawana schedules your daily call as an alarm so your fluent self can reach you at the time you picked, even when your phone is silenced.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>nawana takes a photo of where you studied, for today's card.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
