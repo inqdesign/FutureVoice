@@ -205,6 +205,12 @@ export class CallSession implements DurableObject {
     this.started = true
     this.armIdleHangUp()
     this.emit({ type: "ready" })
+    // The fluent self speaks first, exactly as a phone call does. Sent
+    // through the normal reply path so the client needs no special case,
+    // and recorded in history so the model knows what it just said.
+    if (msg.opener && msg.opener.trim().length > 0) {
+      this.speakOpener(msg.opener.trim())
+    }
 
     this.statsTimer = setInterval(() => {
       this.emit({
@@ -213,6 +219,22 @@ export class CallSession implements DurableObject {
         turns: this.turnCount,
       })
     }, 15000) as unknown as number
+  }
+
+  /** Speak a line the app chose, with no model call at all. */
+  private speakOpener(text: string): void {
+    this.turnCount += 1
+    const context = `t${this.turnCount}`
+    this.activeContext = context
+    this.emit({
+      type: "audio_start",
+      context,
+      sampleRate: this.eleven?.sampleRate ?? 22050,
+    })
+    this.routeDelta(context, text)
+    this.history.push({ role: "model", text })
+    this.eleven?.flush(context)
+    this.emit({ type: "reply", context, text })
   }
 
   /** Fire a reply generation against a SETTLED interim, before the turn is

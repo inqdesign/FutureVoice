@@ -29,6 +29,13 @@ export interface StartMessage {
   system: string
   /** Optional prior turns to resume a conversation ("user"/"model" + text). */
   history?: { role: "user" | "model"; text: string }[]
+  /** The first line, spoken by the fluent self before the learner says
+   *  anything. A call starts with the other side talking, and the app has
+   *  its own rules for what that line is (canned pools, scenario openers,
+   *  the daily call's voicemail). It is spoken HERE rather than by the
+   *  app because the app would need a second audio engine to do it, and
+   *  two engines fighting over one session is how the call goes silent. */
+  opener?: string
 }
 
 /** Polite hang-up; the gateway closes upstream sessions and then the socket. */

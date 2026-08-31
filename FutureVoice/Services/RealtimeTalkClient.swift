@@ -43,6 +43,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case listening
         /// The learner is audibly mid-utterance (interim transcript moving).
         case hearing
+        /// Their turn is committed and the reply is being written — the
+        /// only silence in the call, and the one the thinking indicator
+        /// belongs to.
+        case thinkingReply
         /// The fluent self is speaking.
         case speaking
         case failed(String)
@@ -70,6 +74,36 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     @Published private(set) var micBytesSent = 0
     /// 0…1 level for the mic pill, from whichever side is currently audible.
     @Published private(set) var level: Float = 0
+
+    // MARK: Turn hand-off
+    //
+    // The call screen owns the session, the transcript and everything the
+    // learning loop is built on; this client only produces turns for it.
+    // Audio comes with them because Practice needs it: the learner's own take
+    // for listen-back, the fluent self's line for replay and shadowing.
+
+    /// A committed learner turn: text, their own audio, duration in ms.
+    var onUserTurn: ((String, URL?, Int) -> Void)?
+    /// The fluent self has STARTED a line — its bubble belongs on screen
+    /// now, empty, because the voice is about to be heard. Carries the
+    /// context id so later events find the same bubble.
+    var onReplyBegan: ((String) -> Void)?
+    /// More of that line was written; the bubble grows as it is spoken.
+    var onReplyDelta: ((String, String) -> Void)?
+    /// The line is over (finished or talked over): its audio and duration.
+    var onReplyFinished: ((String, String, URL?, Int) -> Void)?
+
+    /// Mic PCM since the last committed turn, 16 kHz mono s16le. Capped so a
+    /// learner who never stops talking cannot grow this without bound.
+    private var userPCM = Data()
+    private static let maxUserPCMBytes = 3 * 60 * 16_000 * 2
+    /// Reply PCM for the line currently playing, at `replySampleRate`.
+    private var replyPCM = Data()
+    /// Text of the line playing, so the turn is handed over complete when its
+    /// audio ends.
+    private var replyText = ""
+    /// The reply context on screen right now, shared by began/delta/finished.
+    private var replyContext: String?
 
     /// Where the gateway lives. Overridable at runtime so a device on the same
     /// Wi-Fi can be pointed at `wrangler dev` (Me → Realtime call → long-press
@@ -160,6 +194,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// same way the TTS edge function does. Retrying on a preset keeps the
     /// spike testable instead of dead-ending on a deepfake guard doing its job.
     func connect(voiceId: String, language: String, system: String,
+                 opener: String? = nil,
+                 history: [(role: String, text: String)] = [],
                  fallbackVoiceId: String? = nil) async {
         // A failed call is re-enterable (the view's Try again); a live one is
         // not — reconnecting under it would leave two sockets and two mics.
@@ -170,7 +206,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         isTornDown = false
         state = .connecting
         pendingRetry = fallbackVoiceId.map {
-            Retry(voiceId: $0, language: language, system: system)
+            Retry(voiceId: $0, language: language, system: system,
+                  opener: opener, history: history)
         }
         do {
             // ASK FOR THE MIC FIRST. Without permission iOS does not fail
@@ -191,7 +228,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             try startAudio()
             Self.step("connect: audio up")
             try openSocket(token: token, voiceId: voiceId,
-                           language: language, system: system)
+                           language: language, system: system,
+                           opener: opener, history: history)
             Self.step("connect: socket opened")
             startMicWatchdog()
         } catch {
@@ -242,7 +280,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
     }
 
-    private struct Retry { let voiceId: String; let language: String; let system: String }
+    private struct Retry {
+        let voiceId: String; let language: String; let system: String
+        let opener: String?; let history: [(role: String, text: String)]
+    }
     private var pendingRetry: Retry?
 
     /// The JWT the gateway verifies once, at session start — same source the
@@ -528,29 +569,41 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let db = 20 * log10(max((sum / Double(frames)).squareRoot(), 0.00001))
         let norm = Float(max(0, min(1, (db + 50) / 45)))
         let bytes = frames * MemoryLayout<Int16>.size
+        let copy = Data(bytes: channel[0], count: bytes)
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.micBytesSent += bytes
             if self.state != .speaking { self.level = norm }
+            // Keep the learner's own take for listen-back in Practice. The
+            // bytes are already leaving the phone; keeping a copy costs one
+            // append. Capped, because a monologue must not grow this forever.
+            if self.userPCM.count < Self.maxUserPCMBytes { self.userPCM.append(copy) }
         }
     }
 
     // MARK: - Socket
 
     private func openSocket(token: String, voiceId: String,
-                            language: String, system: String) throws {
+                            language: String, system: String,
+                            opener: String?,
+                            history: [(role: String, text: String)]) throws {
         let task = session.webSocketTask(with: Self.gatewayURL)
         socket = task
         mic.set(converter: converter, format: uplinkFormat, socket: task)
         task.resume()
         receiveNext()
-        sendControl([
+        var payload: [String: Any] = [
             "type": "start",
             "token": token,
             "voiceId": voiceId,
             "language": language,
             "system": system,
-        ])
+        ]
+        if let opener, !opener.isEmpty { payload["opener"] = opener }
+        if !history.isEmpty {
+            payload["history"] = history.map { ["role": $0.role, "text": $0.text] }
+        }
+        sendControl(payload)
     }
 
     private func sendControl(_ payload: [String: Any]) {
@@ -602,13 +655,32 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case "user_turn":
             let said = json["text"] as? String ?? ""
             Self.step("heard: \(said)")
+            if !said.isEmpty {
+                let pcm = userPCM
+                userPCM = Data()
+                let url = Self.saveWAV(pcm: pcm, sampleRate: 16000)
+                let ms = Int(Double(pcm.count / 2) / 16000 * 1000)
+                onUserTurn?(said, url, ms)
+            } else {
+                userPCM = Data()
+            }
             partial = ""
             turnCommittedAt = Date()
             if !said.isEmpty { lines.append(Line(isUser: true, text: said)) }
-            state = .listening
+            state = said.isEmpty ? .listening : .thinkingReply
         case "audio_start":
             Self.step("reply audio starting")
             streamLevel = AudioLoudness.StreamingLevelEstimator()
+            replyPCM = Data()
+            replyText = ""
+            // The bubble goes up WITH the voice, not after it. Waiting for
+            // `audio_end` put the fluent self's text on screen only once
+            // the line had finished playing — heard first, read seconds
+            // later (reported 2026-09-01).
+            if let context = json["context"] as? String {
+                replyContext = context
+                onReplyBegan?(context)
+            }
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the
@@ -620,13 +692,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if let idx = lines.lastIndex(where: { !$0.isUser }) {
                 lines[idx].text += delta
             }
+            replyText += delta
+            if let context = replyContext { onReplyDelta?(context, delta) }
         case "reply":
-            if let full = json["text"] as? String,
-               let idx = lines.lastIndex(where: { !$0.isUser }) {
-                lines[idx].text = full
+            if let full = json["text"] as? String {
+                replyText = full
+                if let idx = lines.lastIndex(where: { !$0.isUser }) {
+                    lines[idx].text = full
+                }
+                // The authoritative text, in case deltas were coalesced.
+                if let context = replyContext { onReplyDelta?(context, "\u{0}" + full) }
             }
         case "audio_end":
             if state == .speaking { state = .listening }
+            handOverReply()
         case "interrupted":
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
@@ -635,6 +714,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             pendingBuffers = 0
             player.play()
             state = .hearing
+            handOverReply()
         case "stats":
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
         case "rotating":
@@ -648,7 +728,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 teardown()
                 state = .idle
                 Task { await connect(voiceId: retry.voiceId, language: retry.language,
-                                     system: retry.system) }
+                                     system: retry.system, opener: retry.opener,
+                                     history: retry.history) }
                 return
             }
             state = .failed(message)
@@ -663,6 +744,34 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Same law as `AudioPlayer.updateStreamGain`: measure the speech RMS,
     /// aim at the app's loudness target, jump straight to it inside the first
     /// syllable and ramp gently after that so nothing pumps mid-sentence.
+    /// Hand the finished (or interrupted) fluent-self line to the call
+    /// screen, with the audio that was actually heard. Idempotent: a line is
+    /// handed over once, whether it ended on its own or was talked over.
+    private func handOverReply() {
+        guard let context = replyContext else { return }
+        let pcm = replyPCM
+        let text = replyText
+        replyPCM = Data()
+        replyText = ""
+        replyContext = nil
+        guard !text.isEmpty else { return }
+        let url = Self.saveWAV(pcm: pcm, sampleRate: replySampleRate)
+        let ms = Int(Double(pcm.count / 2) / replySampleRate * 1000)
+        onReplyFinished?(context, text, url, ms)
+    }
+
+    /// PCM → a WAV file in the caches directory. The caller moves it into the
+    /// stores that own it (`TurnAudioStore`, `PhraseAudioStore`); anything
+    /// left behind is a cache file the system may reclaim, which is the right
+    /// fate for audio nobody kept.
+    private static func saveWAV(pcm: Data, sampleRate: Double) -> URL? {
+        guard !pcm.isEmpty else { return nil }
+        let wav = AudioLoudness.wavData(fromPCM16: pcm, sampleRate: Int(sampleRate))
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("rt-\(UUID().uuidString).wav")
+        do { try wav.write(to: url); return url } catch { return nil }
+    }
+
     private func updateStreamGain(samples: UnsafePointer<Float>, count: Int) {
         streamLevel.accumulate(samples, count: count)
         guard let speech = streamLevel.speechRMS else { return }
@@ -704,6 +813,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 out[i] = max(-0.985, min(0.985, out[i] * streamGain))
             }
         }
+        replyPCM.append(data)
         pendingBuffers += 1
         player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -749,6 +859,18 @@ extension RealtimeTalkClient {
     nonisolated(unsafe) static var sawFirstBuffer = false
     nonisolated(unsafe) private static var lastTraceAt: TimeInterval = 0
     private static let traceLock = NSLock()
+}
+
+/// Whether Talk runs on the realtime gateway instead of the per-turn HTTP
+/// pipeline. Off by default: the gateway is measurably faster and can be
+/// talked over, but it is new, and the old path is the one five months of
+/// learners have used. The toggle lives in Me → Speed test.
+enum RealtimeMode {
+    static let key = "futurevoice.realtimeTalk"
+    static var isEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: key) }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
 }
 
 enum RealtimeError: LocalizedError {

@@ -68,8 +68,9 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     #endif
-    /// Owner-gated, not DEBUG-gated — see the "Speed test" section below.
-    @State private var showingRealtimeTalk = false
+    /// Mirrors `RealtimeMode.isEnabled` so the toggle redraws; the flag
+    /// itself lives in defaults because the call screen reads it directly.
+    @State private var realtimeTalk = RealtimeMode.isEnabled
 
     var body: some View {
         NavigationStack {
@@ -215,30 +216,24 @@ struct MeTab: View {
                     Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
                 }
 
-                // The realtime gateway spike (`gateway/`): one WebSocket per
-                // call, server-side turn-taking and barge-in. Measured
-                // 2.1–3.0 s speech→voice against the shipping pipeline's
-                // ~6.5 s.
-                //
-                // Open to every beta tester on purpose (2026-08-31): it was
-                // gated on the owner's email, which an Apple private-relay
-                // sign-in never matches — so the one person who needed it
-                // couldn't see it. It is NOT metered (the gateway bills
-                // nothing) and keeps no record, both of which the footer says
-                // out loud; the metering hole is the first thing Phase 2
-                // closes, and until then the exposure is a beta-sized bill.
+                // Talk on the realtime gateway (`gateway/`) instead of the
+                // per-turn HTTP pipeline: measured 2–3 s speech→voice against
+                // ~4.5 s, and it can be talked over mid-sentence. Off by
+                // default — the old path is the one every learner has used so
+                // far, and it stays one toggle away.
                 Section {
-                    Button {
-                        showingRealtimeTalk = true
-                    } label: {
+                    Toggle(isOn: Binding(
+                        get: { realtimeTalk },
+                        set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
+                    )) {
                         row(icon: "waveform.circle",
-                            title: explain("Realtime call (spike)"),
-                            subtitle: explain("Interrupt it while it talks — nothing is saved"))
+                            title: explain("Faster calls"),
+                            subtitle: explain("Answers in about two seconds — and you can talk over it"))
                     }
                 } header: {
                     Text("Speed test")
                 } footer: {
-                    Text(explain("A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time."))
+                    Text(explain("A new way of running the call. Everything else is the same: your talks, review material and talk time all work as usual."))
                 }
 
                 #if DEBUG
@@ -284,9 +279,6 @@ struct MeTab: View {
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
-            }
-            .fullScreenCover(isPresented: $showingRealtimeTalk) {
-                RealtimeTalkView().environmentObject(appState)
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)

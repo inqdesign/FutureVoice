@@ -10,6 +10,16 @@ import UIKit
 struct ConversationView: View {
     @EnvironmentObject private var appState: AppState
     @StateObject private var live = LiveTranscriber()
+    /// The realtime transport (`gateway/`). When `RealtimeMode.isEnabled`, the
+    /// per-turn HTTP machine below — VAD tiers, speculative replies, chunked
+    /// ASR, deferred turn work — is bypassed entirely and turns arrive from
+    /// the gateway instead. EVERYTHING downstream of `turns` is unchanged:
+    /// the summary, drills, books, goal chips, the meter and the day card all
+    /// read the same array they always have.
+    @StateObject private var realtime = RealtimeTalkClient()
+    /// Gateway reply context → the turn showing it, so a line's text and
+    /// its audio land on the SAME bubble.
+    @State private var realtimeReplyTurns: [String: UUID] = [:]
     @StateObject private var player = AudioPlayer()
 
     @State private var topic = ""
@@ -533,6 +543,17 @@ struct ConversationView: View {
     /// The learner half of that is `someoneIsTalkingHere`, which is where the
     /// café problem lives — see below.
     private func isBillableMoment() -> Bool {
+        if RealtimeMode.isEnabled {
+            // Same rule, read off the gateway's state instead of the local
+            // VAD: the fluent self speaking, a reply being written, or the
+            // learner audibly mid-utterance. An open screen in a quiet room
+            // still bills nothing.
+            switch realtime.state {
+            case .speaking, .hearing, .thinkingReply: return true
+            case .listening:                          return realtime.level > 0.25
+            default:                                  return false
+            }
+        }
         if phase == .thinking || phase == .speaking { return true }
         if player.isPlaying { return true }
         return someoneIsTalkingHere()
@@ -616,7 +637,20 @@ struct ConversationView: View {
                 meter.onWallHit = {
                     guard !isTornDown else { return }
                     cancelSilenceTimer()
-                    if phase == .listening { stopListeningDiscardingChunks() }
+                    if RealtimeMode.isEnabled {
+                        // Live dictation from the gateway — without this the
+                        // learner's words only appear when the turn commits,
+                        // a second and a half after they stop talking.
+                        if !realtime.partial.isEmpty {
+                            PartialTurnView(text: realtime.partial)
+                                .id("partial-listening")
+                                .transition(.opacity)
+                        } else if realtime.state == .thinkingReply {
+                            ThinkingIndicator()
+                                .id("partial-thinking")
+                                .transition(.opacity)
+                        }
+                    } else if phase == .listening { stopListeningDiscardingChunks() }
                     if phase == .listening || phase == .thinking { phase = .idle }
                     if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
@@ -936,6 +970,8 @@ struct ConversationView: View {
             .onChange(of: turns.count) { _, _ in scroll(proxy) }
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
+            .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
+            .onChange(of: turns.last?.transcript) { _, _ in scroll(proxy) }
         }
     }
 
@@ -1011,6 +1047,14 @@ struct ConversationView: View {
     }
 
     private var glowMode: Futureself.Mode {
+        if RealtimeMode.isEnabled {
+            switch realtime.state {
+            case .speaking:                 return .speaking
+            case .hearing, .listening:      return .listening
+            case .connecting, .thinkingReply: return .thinking
+            default:                        return .idle
+            }
+        }
         switch phase {
         case .idle:      return .idle
         case .listening: return .listening
@@ -1080,6 +1124,12 @@ struct ConversationView: View {
         HapticEngine.phoneCallStarted()
         CallNowPlaying.update(title: callDisplayTitle, isPlaying: true)
         lastActivityAt = Date()   // a tap is someone being here
+        if RealtimeMode.isEnabled {
+            // Picking a paused call back up: reconnect with the transcript so
+            // far as context, and no opener — the fluent self already spoke.
+            await startRealtimeCall(opener: nil)
+            return
+        }
         await startRecording()
     }
 
@@ -1095,6 +1145,15 @@ struct ConversationView: View {
         phoneCallActive = false
         cancelSilenceTimer()
         cancelIdleWatch()
+        if RealtimeMode.isEnabled {
+            // The gateway holds the mic and the sockets; putting the call
+            // down has to reach it, or the room keeps streaming.
+            realtime.hangUp()
+            phase = .idle
+            CallNowPlaying.update(title: callDisplayTitle, isPlaying: false)
+            HapticEngine.phoneCallEnded()
+            return
+        }
         if phase == .listening {
             stopListeningDiscardingChunks()
         }
@@ -1702,6 +1761,15 @@ struct ConversationView: View {
             }
             // The screen may have closed while the opener was being fetched.
             guard !isTornDown else { return }
+            if RealtimeMode.isEnabled {
+                // The gateway speaks the opener and owns the audio from here:
+                // one engine for both directions, which is what makes talking
+                // over the fluent self possible. `audioSessionReady` is
+                // deliberately NOT awaited — the client configures the session
+                // itself, and a second configuration would fight it.
+                await startRealtimeCall(opener: opener)
+                return
+            }
             // Session must be armed before playback OR the mic fallback below.
             await audioSessionReady.value
             // Speak the opener in the active voice — a call starts with the
@@ -1738,6 +1806,124 @@ struct ConversationView: View {
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
+        }
+    }
+
+    // MARK: - Realtime path (gateway)
+
+    /// Open the call on the realtime gateway and wire its turns into `turns`.
+    ///
+    /// This is the whole integration: everything the learning loop needs
+    /// already hangs off `turns`, `sessionId` and `endSession`, so the only
+    /// job here is to produce the same turns from a different transport —
+    /// with their audio, so Practice keeps listen-back, replay and shadowing.
+    private func startRealtimeCall(opener: String?) async {
+        guard let voiceId = activeVoiceId else {
+            error = explain("Your voice isn't ready yet.")
+            return
+        }
+        realtime.onUserTurn = { text, url, ms in
+            guard !isTornDown else { return }
+            var turn = Turn(id: UUID(), role: .user, audioURL: nil,
+                            transcript: text, durationMs: ms, timestamp: Date(),
+                            suggestion: nil)
+            // `TurnAudioStore` owns the file from here; the client wrote it to
+            // a temp path precisely so this move is the only copy.
+            if let url, let data = try? Data(contentsOf: url) {
+                turn.audioURL = TurnAudioStore.shared.save(data, turnId: turn.id)
+                try? FileManager.default.removeItem(at: url)
+            }
+            turns.append(turn)
+            didSaveCurrentSession = false
+            creditGoalChips(turnId: turn.id)
+            requestRealtimeSuggestion(for: turn.id, said: text)
+        }
+        // The bubble appears WITH the voice and fills as the line is written —
+        // the same "you read what you are hearing" the HTTP path gets from
+        // split speech. Audio is attached at the end, to the same turn.
+        realtime.onReplyBegan = { context in
+            guard !isTornDown else { return }
+            let turn = Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                            transcript: "", durationMs: 0, timestamp: Date(),
+                            suggestion: nil)
+            realtimeReplyTurns[context] = turn.id
+            turns.append(turn)
+            didSaveCurrentSession = false
+        }
+        realtime.onReplyDelta = { context, delta in
+            guard let id = realtimeReplyTurns[context],
+                  let idx = turns.firstIndex(where: { $0.id == id }) else { return }
+            // A delta prefixed with NUL is the authoritative full text, sent
+            // when the reply closes — deltas can be coalesced upstream.
+            if delta.hasPrefix("\u{0}") {
+                turns[idx].transcript = String(delta.dropFirst())
+            } else {
+                turns[idx].transcript += delta
+            }
+        }
+        realtime.onReplyFinished = { context, text, url, ms in
+            guard !isTornDown else { return }
+            guard let id = realtimeReplyTurns.removeValue(forKey: context),
+                  let idx = turns.firstIndex(where: { $0.id == id }) else { return }
+            turns[idx].transcript = text
+            turns[idx].durationMs = ms
+            if let url, let data = try? Data(contentsOf: url) {
+                turns[idx].audioURL = TurnAudioStore.shared.save(data, turnId: id)
+                // Cached by (text, voice) like every other spoken line, so a
+                // repeat of the same sentence is free and shadowing finds it.
+                PhraseAudioStore.shared.save(data, text: text, voiceId: voiceId, timings: [])
+                try? FileManager.default.removeItem(at: url)
+            }
+            didSaveCurrentSession = false
+        }
+        await realtime.connect(
+            voiceId: voiceId,
+            language: appState.targetLanguage,
+            system: systemPrompt() + Self.realtimeStyleRules,
+            opener: opener,
+            // A resumed talk carries its history so the fluent self knows what
+            // was already said.
+            history: turns.map { (role: $0.role == .user ? "user" : "model",
+                                  text: $0.transcript) })
+        if case .failed(let message) = realtime.state {
+            error = message
+            phase = .idle
+        }
+    }
+
+    /// The gateway speaks prose, not the `{reply, suggestion}` JSON the HTTP
+    /// turn returns — so the schema instruction is replaced by the two rules
+    /// that actually matter out loud.
+    private static let realtimeStyleRules = """
+
+        This is a LIVE phone call. Speak in one to three short sentences, \
+        never write JSON, never add labels or stage directions — just say \
+        your line.
+        """
+
+    /// The correction card, on its own clock.
+    ///
+    /// On the HTTP path the suggestion rides the same call as the reply; here
+    /// the reply is prose and the correction is a separate, later request. It
+    /// must stay that way: the voice is already playing by the time this
+    /// fires, so nothing the learner hears ever waits on coaching.
+    private func requestRealtimeSuggestion(for turnId: UUID, said: String) {
+        guard said.split(separator: " ").count >= 3 else { return }
+        let target = appState.targetLanguage
+        let native = appState.nativeLanguage
+        Task { @MainActor in
+            let payload: ConversationTurnPayload? = try? await GeminiClient.background.sendJSON(
+                system: ConversationEngine.correctionOnlyPrompt(
+                    targetLanguage: target, nativeLanguage: native,
+                    level: appState.proficiency),
+                messages: [GeminiClient.Message(role: .user, content: said)],
+                maxTokens: 512,
+                purpose: "turn",
+                idempotencyKey: "rt-suggest:\(turnId.uuidString)")
+            guard !isTornDown, let payload,
+                  let suggestion = payload.turnSuggestion(for: said),
+                  let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
+            turns[idx].suggestion = suggestion
         }
     }
 
@@ -2936,6 +3122,9 @@ struct ConversationView: View {
             stopListeningDiscardingChunks()
         }
         if phase == .speaking { player.stop() }
+        // Close the live call before the transcript is frozen for the summary:
+        // a turn still arriving mid-wrap-up would land after the draft save.
+        realtime.hangUp()
         phase = .thinking
         withAnimation(.easeInOut(duration: 0.2)) { isEnding = true }
         defer { withAnimation(.easeInOut(duration: 0.2)) { isEnding = false } }
@@ -3081,6 +3270,7 @@ struct ConversationView: View {
         // has been hung up.
         transcribeTask?.cancel()
         transcribeTask = nil
+        realtime.hangUp()
         turnAudioEncode?.task.cancel()
         splitSpeech = nil
         _ = live.stop()

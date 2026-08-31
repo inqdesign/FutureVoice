@@ -845,6 +845,60 @@ enum ConversationEngine {
         """
     }
 
+    /// The correction, asked for ON ITS OWN.
+    ///
+    /// The realtime path (`gateway/`) gets its reply as plain speech from a
+    /// server that is already talking by the time this runs, so the coaching
+    /// half of `turnOutputInstruction` needs a home of its own. It is the SAME
+    /// contract — the ASR guards especially, which exist because a learner
+    /// must never be told they made a mistake the transcriber made — minus
+    /// everything about the spoken reply, which this call does not produce.
+    ///
+    /// `reply` stays in the schema and is ignored: `ConversationTurnPayload`
+    /// decodes it, and a model asked for one field of a two-field shape it has
+    /// seen throughout the app returns better-formed JSON than one asked for a
+    /// shape that exists nowhere else.
+    static func correctionOnlyPrompt(targetLanguage: String,
+                                     nativeLanguage: String,
+                                     level: CEFRLevel) -> String {
+        let targetName = LanguageCatalog.englishName(targetLanguage)
+        let nativeName = LanguageCatalog.englishName(nativeLanguage)
+        return """
+        You are a \(targetName) coach reading ONE line a \(level.rawValue) learner just
+        SPOKE on a live phone call. You are not in the conversation and you do
+        not answer them — you only decide whether that line needs a correction.
+
+        Return STRICT JSON only — no prose, no code fences:
+        { "reply": "", "suggestion": { "alternative": "...", "reason": "..." } }
+
+        - "reply" is always the empty string. Nothing here is spoken.
+        - "suggestion": null unless the line has a grammar slip or wording a
+          fluent speaker wouldn't choose. Don't invent a change for a line that
+          was already fine.
+        - THE LINE IS A GUESS — it came from speech recognition, not a keyboard.
+        - ASR DROP GUARD: recognition clips short function words, above all a
+          sentence-initial subject pronoun ("I", "he", "we"). Never correct
+          "can do it" → "I can do it".
+        - ASR DIGIT GUARD: dictation writes spoken numbers as digits and often
+          picks the wrong system. Never build a suggestion on a digit, a
+          spelling, punctuation or capitalization — none come from a mouth.
+        - ASR CONTRACTION GUARD: dictation EXPANDS contractions, so "I'm
+          building" arrives as "I am building" every time. A suggestion whose
+          only change is contracting what you received is correcting the
+          transcriber, not the learner. If that is the only change you would
+          make, the line was fine: return null.
+        - Judge it as SPEECH, never as writing. Contractions, casual register
+          and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
+          speakers talk, not slips.
+        - "alternative": a CONCRETE full utterance they could say out loud,
+          rewriting ONE sentence only — the single most teachable slip — in
+          their own register. Target ≤ 15 words; a learner drills this later.
+        - "reason": ≤ 12 words in \(nativeName), quoting the \(targetName) words
+          that changed untranslated. Those quotes are the only foreign text;
+          every other word is \(nativeName).
+        """
+    }
+
     /// True when a "suggestion" changes nothing the learner actually SAID —
     /// only how the transcriber wrote it down.
     ///
