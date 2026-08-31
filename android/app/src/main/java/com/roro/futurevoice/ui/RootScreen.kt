@@ -54,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.text.style.TextAlign
+import com.roro.futurevoice.ui.brand.DisplayFace
 import com.roro.futurevoice.ui.brand.FutureselfMode
 import com.roro.futurevoice.ui.brand.FutureselfTheme
 import com.roro.futurevoice.ui.brand.HeroGreeting
@@ -493,13 +494,15 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        val line = HeroGreeting.text(HeroGreeting.Input(
+            sessionCount = sessionCount,
+            todaySpokenSeconds = seconds,
+            dailyGoalMinutes = goalMinutes,
+        ))
         Text(
-            HeroGreeting.text(HeroGreeting.Input(
-                sessionCount = sessionCount,
-                todaySpokenSeconds = seconds,
-                dailyGoalMinutes = goalMinutes,
-            )),
-            style = MaterialTheme.typography.headlineSmall,
+            line,
+            // The display face — the brand's voice, not the reading font.
+            style = DisplayFace.style(line, MaterialTheme.typography.headlineSmall),
             textAlign = TextAlign.Center,
         )
         TalkRing(

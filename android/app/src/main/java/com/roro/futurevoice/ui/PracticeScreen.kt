@@ -120,8 +120,10 @@ fun ProgressBody(language: String) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         scored.firstOrNull()?.let { card ->
             Column {
-                Text(card.cefrLevel?.uppercase().orEmpty(),
-                    style = MaterialTheme.typography.displaySmall,
+                val level = card.cefrLevel?.uppercase().orEmpty()
+                Text(level,
+                    style = com.roro.futurevoice.ui.brand.DisplayFace
+                        .style(level, MaterialTheme.typography.displaySmall),
                     color = MaterialTheme.colorScheme.primary)
                 Text(stringResource(R.string.a_level_measured_not_guessed),
                     style = MaterialTheme.typography.bodySmall,

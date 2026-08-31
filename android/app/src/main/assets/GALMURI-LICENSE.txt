@@ -1,0 +1,7 @@
+Galmuri (갈무리) — https://galmuri.quiple.dev
+Copyright (c) Quiple. Licensed under the SIL Open Font License, Version 1.1.
+Full text: https://github.com/quiple/galmuri/blob/main/OFL.md
+
+Bundled here as Galmuri14.ttf, subset to KS X 1001 basic syllables plus every
+Hangul character the app's own strings use (see .galmuri-subset.txt). Anything
+outside that set falls through the cascade to the system font.
