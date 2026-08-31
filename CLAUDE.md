@@ -233,13 +233,13 @@ A running app hands you a card the moment the run is saved: a map over a
 photo, then the numbers. Here the card is the DAY's, not a talk's
 (`DayCardView` / `DayCardSheet`): a first cut was a per-talk book cover with
 a picked expression, and it was retired the same day — a talk is too small a
-unit to share, and a picker made a moment into a form. Offered on the book
-page the moment a talk's book is made (post-talk only — the wait is already
-there, and "take a photo of where you are" fills it), and from the **Activity
-page's day summary, for ANY day** — that summary already says what the day
-was, and the card is the summary as a picture (`DayCardData.make(day:)`,
-photo stored per day). Never a wall: one tap past it and the page is the same
-page. `-capture daycard` renders it on a sample day.
+unit to share, and a picker made a moment into a form. Its home is the
+**Activity page and only there** — the day summary's Share-card button and
+the Cards view; that summary already says what the day was, and the card is
+the summary as a picture (`DayCardData.make(day:)`, photo stored per day).
+A post-talk button on the book page was tried and removed the same week: the
+wrap-up flow is the book's, and a share offer inside it read as an
+interruption. `-capture daycard` renders it on a sample day.
 
 - **Topics, a row of numbers, the date, the URL — and it is in ENGLISH
   whatever the app language.** The card is for a feed, not for the learner;
