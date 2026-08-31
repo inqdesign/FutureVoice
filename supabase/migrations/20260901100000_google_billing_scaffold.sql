@@ -17,3 +17,13 @@ alter table public.subscription_plans
 -- (the two-store policy, decided before Play launch).
 alter table public.user_subscriptions
   add column if not exists google_purchase_token text;
+
+-- The source check predates Google (apple/stripe, comp added 2026-08-23) —
+-- without widening it every google-webhook upsert dies on the constraint.
+-- Mirror the existing values; look up the CURRENT constraint before editing
+-- this list again.
+alter table public.user_subscriptions
+  drop constraint if exists user_subscriptions_source_check;
+alter table public.user_subscriptions
+  add constraint user_subscriptions_source_check
+  check (source in ('apple', 'stripe', 'comp', 'google'));
