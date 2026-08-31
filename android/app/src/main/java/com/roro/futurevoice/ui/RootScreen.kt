@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -957,6 +958,7 @@ private fun WatchBody(
  * words. Categorizing is a nicety and never blocks a commit (iOS rule): a
  * failure just leaves the free text as the scenario.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScenarioComposer(
     targetLanguage: String,
@@ -967,39 +969,47 @@ private fun ScenarioComposer(
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf("") }
     var committing by remember { mutableStateOf(false) }
-    AlertDialog(
-        onDismissRequest = { if (!committing) onDismiss() },
-        title = { Text(stringResource(R.string.make_your_own_situation)) },
-        text = {
+    // A SHEET, not a dialog: non-primary content lives in sheets (iOS UI
+    // rules), and a dialog over a full-width composer reads as an alert.
+    ModalBottomSheet(onDismissRequest = { if (!committing) onDismiss() }) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(stringResource(R.string.make_your_own_situation),
+                style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.the_real_thing_coming_up_an_interview_a_call_a_visit_describ_a97c73),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedTextField(value = draft, onValueChange = { draft = it },
                 minLines = 3, modifier = Modifier.fillMaxWidth())
-        },
-        confirmButton = {
-            TextButton(enabled = draft.isNotBlank() && !committing, onClick = {
-                committing = true
-                val text = draft.trim()
-                scope.launch {
-                    val result = runCatching {
-                        TopicClient(AuthRepository()).categorize(
-                            text = text, existing = existingCategories,
-                            iconOptions = TopicClient.ICON_PALETTE,
-                            targetLanguage = targetLanguage)
-                    }.getOrNull()
-                    ScenarioStore.shared(context).save(Scenario(
-                        environment = text,
-                        category = result?.category?.takeIf { it.isNotBlank() },
-                        categoryIcon = result?.icon,
-                        summary = result?.summary?.takeIf { it.isNotBlank() },
-                    ), targetLanguage)
-                    StoreEvents.bump()
-                    committing = false; onDismiss()
-                }
-            }) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
-        },
-        dismissButton = {
-            TextButton(enabled = !committing, onClick = onDismiss) {
-                Text(stringResource(R.string.back_b52b36))
-            }
-        },
-    )
+            Button(
+                enabled = draft.isNotBlank() && !committing,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    committing = true
+                    val text = draft.trim()
+                    scope.launch {
+                        // Categorizing is a nicety and never blocks a commit
+                        // (iOS rule): a failure leaves the free text as the
+                        // scenario, with no breadcrumb.
+                        val result = runCatching {
+                            TopicClient(AuthRepository()).categorize(
+                                text = text, existing = existingCategories,
+                                iconOptions = TopicClient.ICON_PALETTE,
+                                targetLanguage = targetLanguage)
+                        }.getOrNull()
+                        ScenarioStore.shared(context).save(Scenario(
+                            environment = text,
+                            category = result?.category?.takeIf { it.isNotBlank() },
+                            categoryIcon = result?.icon,
+                            summary = result?.summary?.takeIf { it.isNotBlank() },
+                        ), targetLanguage)
+                        StoreEvents.bump()
+                        committing = false; onDismiss()
+                    }
+                },
+            ) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
+        }
+    }
 }

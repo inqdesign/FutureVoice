@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.data.DrillStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.DrillCard
@@ -80,7 +82,7 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().padding(16.dp),
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             if (deck.isEmpty() || index >= deck.size) {

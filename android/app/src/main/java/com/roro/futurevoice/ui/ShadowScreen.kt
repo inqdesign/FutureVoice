@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.rememberCoroutineScope
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.audio.LiveTranscriber
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.core.InstallSalt
@@ -94,7 +96,7 @@ fun ShadowScreen(
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().padding(16.dp),
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // The target line, colored by the last attempt's diff.

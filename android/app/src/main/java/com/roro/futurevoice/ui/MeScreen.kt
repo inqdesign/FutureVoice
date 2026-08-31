@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.talk.UserPersona
 
@@ -86,7 +88,7 @@ fun MeScreen(
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // ── Profile ──

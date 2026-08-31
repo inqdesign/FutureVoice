@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -30,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.talk.UserPersona
 
@@ -89,7 +91,7 @@ fun PersonaIntakeScreen(
         },
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             LinearProgressIndicator(progress = { (step + 1) / 4f }, modifier = Modifier.fillMaxWidth())

@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 
@@ -88,7 +90,7 @@ fun SetupFlowScreen(
             }
         },
     ) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 16.dp)) {
+        Column(Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(horizontal = 16.dp)) {
             LinearProgressIndicator(
                 progress = { (step + 1) / 4f },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
