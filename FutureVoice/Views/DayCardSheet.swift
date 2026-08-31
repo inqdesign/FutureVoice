@@ -116,7 +116,9 @@ struct DayCardSheet: View {
         return DayCardView(data: data, photo: photo, format: format)
             .scaleEffect(scale, anchor: .topLeading)
             .frame(width: format.size.width * scale, height: format.size.height * scale)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
+            // Same corner as the grouped sections below it — a 6 pt corner
+            // beside iOS 26's large container radius read as a mismatch.
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
     }
 
