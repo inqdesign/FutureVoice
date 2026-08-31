@@ -72,6 +72,8 @@ fun RootScreen() {
     var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
+    var showMe by remember { mutableStateOf(false) }
+    var editProfile by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
 
     when {
@@ -104,6 +106,25 @@ fun RootScreen() {
             onBackToWelcome = app::signOut,
             onFinish = app::completeSetup,
         )
+        editProfile -> PersonaIntakeScreen(
+            initial = state.persona ?: com.roro.futurevoice.talk.UserPersona(),
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onBackToSetup = { editProfile = false },
+            onFinish = { app.savePersona(it); editProfile = false },
+        )
+
+        showMe -> MeScreen(
+            email = state.email,
+            persona = state.persona,
+            targetLanguage = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            onSavePersona = app::savePersona,
+            onEditProfile = { editProfile = true },
+            onSignOut = { showMe = false; app.signOut() },
+            onBack = { showMe = false },
+        )
+
         // Light taps before the heavy ask (iOS order): persona cards build
         // the investment and the first call's context BEFORE the recording.
         state.personaResolved && state.persona == null -> PersonaIntakeScreen(
@@ -138,7 +159,7 @@ fun RootScreen() {
         else -> HomeScreen(
             state = state,
             onStartCall = { topic, facts -> callTopic = topic; callFacts = facts; inCall = true },
-            onSignOut = app::signOut,
+            onOpenMe = { showMe = true },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
         )
@@ -210,7 +231,7 @@ private fun SignInScreen(
 private fun HomeScreen(
     state: AppState,
     onStartCall: (topic: String, newsFacts: List<String>) -> Unit,
-    onSignOut: () -> Unit,
+    onOpenMe: () -> Unit,
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
@@ -232,7 +253,7 @@ private fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Talk") },
-                actions = { TextButton(onClick = onSignOut) { Text("Sign out") } },
+                actions = { TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) } },
             )
         }
     ) { padding ->

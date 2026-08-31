@@ -51,6 +51,7 @@ fun PersonaIntakeScreen(
     onFinish: (UserPersona) -> Unit,
 ) {
     var step by remember { mutableIntStateOf(0) }
+    androidx.activity.compose.BackHandler { if (step > 0) step -= 1 else onBackToSetup() }
     var name by remember { mutableStateOf(initial.displayName) }
     var city by remember { mutableStateOf(initial.city) }
     var country by remember { mutableStateOf(initial.country) }

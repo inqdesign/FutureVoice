@@ -74,6 +74,9 @@ fun TalkScreen(
         }
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    // System back = hang up and leave, same as End — never kill the activity
+    // with a call still holding the mic.
+    androidx.activity.compose.BackHandler { vm.end(); onExit() }
     val listState = rememberLazyListState()
 
     LaunchedEffect(voiceId) {
