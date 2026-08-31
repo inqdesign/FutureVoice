@@ -48,15 +48,6 @@ final class AuthService: NSObject, ObservableObject {
     /// A session with a real account behind it.
     var isSignedIn: Bool { session != nil && !isAnonymous }
 
-    /// This install is signed in as the app's own developer.
-    ///
-    /// Exists for ONE thing: a surface that spends money without metering must
-    /// not be reachable by beta testers, but must be reachable on a TestFlight
-    /// build — otherwise the only way to try it on a real phone is a cable and
-    /// a debug build. `#if DEBUG` can't express that, and a hidden gesture is
-    /// worse (anyone can find it). Never use this to vary product behaviour.
-    var isOwner: Bool { session?.user.email?.lowercased() == "eunggyu.lee@gmail.com" }
-
     /// Open the pre-signup session. No-op once any session exists.
     func startAnonymousSession() async throws {
         guard session == nil else { return }

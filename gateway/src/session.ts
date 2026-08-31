@@ -66,6 +66,18 @@ export class CallSession implements DurableObject {
   /** Interim must sit unchanged this long before a speculation fires. */
   private static readonly specSettleMs = 350
 
+  /// A call with nobody in it hangs itself up.
+  ///
+  /// The app's own Talk screen has had this since 2026-08-18 (30 s, then a
+  /// pause) for one reason: a call left open keeps the mic hot, and every
+  /// second of that streams audio upstream whether anyone is speaking or not.
+  /// This path bills nothing today, which makes the open mic MORE dangerous,
+  /// not less — a phone in a pocket on this screen would stream until the
+  /// battery died. Longer than the app's 30 s because there is no "tap to
+  /// resume" here: the session simply ends.
+  private static readonly idleHangUpMs = 3 * 60 * 1000
+  private idleTimer: number | null = null
+
   constructor(private state: DurableObjectState, private env: Env) {}
 
   async fetch(request: Request): Promise<Response> {
@@ -165,6 +177,7 @@ export class CallSession implements DurableObject {
       {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
+          this.armIdleHangUp()
           this.emit({ type: "user_partial", text })
           // The learner is audibly speaking. If the fluent self is mid-reply,
           // that's a barge-in: cut the voice and the generation NOW — the
@@ -190,6 +203,7 @@ export class CallSession implements DurableObject {
     // mid-turn — open the socket now, while the learner is still greeting.
     this.eleven.warm()
     this.started = true
+    this.armIdleHangUp()
     this.emit({ type: "ready" })
 
     this.statsTimer = setInterval(() => {
@@ -351,6 +365,16 @@ export class CallSession implements DurableObject {
     // history (the learner interrupted precisely because it wasn't landing).
   }
 
+  /** Restart the nobody-is-here clock. Speech is the only thing that counts:
+   *  mic bytes keep arriving from an empty room forever. */
+  private armIdleHangUp(): void {
+    if (this.idleTimer !== null) clearTimeout(this.idleTimer)
+    this.idleTimer = setTimeout(() => {
+      this.emit({ type: "error", code: "idle", message: "Call ended — no one was talking." })
+      this.teardown()
+    }, CallSession.idleHangUpMs) as unknown as number
+  }
+
   private emit(msg: ServerMessage): void {
     if (this.client) send(this.client, msg)
   }
@@ -364,6 +388,7 @@ export class CallSession implements DurableObject {
     if (this.ended) return
     this.ended = true
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
+    if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     this.dropSpec()
     this.activeReplyAbort?.abort()
     this.transcriber?.close()

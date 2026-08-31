@@ -218,24 +218,27 @@ struct MeTab: View {
                 // The realtime gateway spike (`gateway/`): one WebSocket per
                 // call, server-side turn-taking and barge-in. Measured
                 // 2.1–3.0 s speech→voice against the shipping pipeline's
-                // ~6.5 s — but it writes no session, no drills and no meter,
-                // and the gateway does not bill, so it is OWNER-ONLY rather
-                // than DEBUG-only: testable from TestFlight on a real phone,
-                // invisible (and unspendable) to every beta tester.
-                if auth.isOwner {
-                    Section {
-                        Button {
-                            showingRealtimeTalk = true
-                        } label: {
-                            row(icon: "waveform.circle",
-                                title: explain("Realtime call (spike)"),
-                                subtitle: explain("Interrupt it while it talks — nothing is saved"))
-                        }
-                    } header: {
-                        Text("Speed test")
-                    } footer: {
-                        Text(explain("A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time."))
+                // ~6.5 s.
+                //
+                // Open to every beta tester on purpose (2026-08-31): it was
+                // gated on the owner's email, which an Apple private-relay
+                // sign-in never matches — so the one person who needed it
+                // couldn't see it. It is NOT metered (the gateway bills
+                // nothing) and keeps no record, both of which the footer says
+                // out loud; the metering hole is the first thing Phase 2
+                // closes, and until then the exposure is a beta-sized bill.
+                Section {
+                    Button {
+                        showingRealtimeTalk = true
+                    } label: {
+                        row(icon: "waveform.circle",
+                            title: explain("Realtime call (spike)"),
+                            subtitle: explain("Interrupt it while it talks — nothing is saved"))
                     }
+                } header: {
+                    Text("Speed test")
+                } footer: {
+                    Text(explain("A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time."))
                 }
 
                 #if DEBUG
