@@ -27,6 +27,15 @@ a language school. Rows come from the Supabase table `public_personas`, read ano
 - A row is either **curated** (`owner_user_id` null — seeded by migration, deliberately diverse in job/place/register) or a **real user's** self-introduction. Same pool, same shape; the pool self-mixes as users join.
 - The user's own row is auto-published from their onboarding `UserPersona` at app start (`PublicPersonaService.autoSyncMyPersona`) so existing users appear without doing anything. Editing or taking it down by hand in Me → Find people sets `manualIntroKey`, after which auto-sync never touches that row again — an explicit choice always wins. Your own row is filtered out of your own pool.
 - A remote persona materializes as a normal `Counterpart` with `remoteId` set (`asCounterpart`). `remoteId != nil` is what keeps strangers OUT of the Watch stories row and the People sheet — they live in the Find sheet's "People you've met" instead, so the row never crowds out people you actually know.
+- **The pool section is named "Strangers" and shows EVERYONE unmet**
+  (2026-08-31, was "People today", six a day on a daily seed): that they're
+  strangers is the point — talking to strangers is what the language is for —
+  and the rotation hid most of the pool to manufacture a return visit.
+- **A stranger's VOICE is the learner's pick** (2026-08-31): the card carries
+  a Voice row (`VoicePresetPickerView`) and the choice is saved onto the
+  Counterpart (`voicePresetId`), which wins forever because `asCounterpart`
+  returns the saved row over the pool's. Still never a clone — the footer
+  says so out loud.
 - **Talk** starts a normal `ConversationView` call with `initialCounterpart:`. Two things change and nothing else: `ConversationEngine`'s `YOUR CHARACTER` block casts the model AS that person (it outranks ROLE/SCENE inference and the future-self framing, and carries the same context-not-instructions + language guard as the Watch engines), and `activeVoiceId` uses the persona's **preset** voice. Their voice is never a clone — the person on the other end is a stranger, not the fluent self.
 - The talk saves as an ordinary `Session` with `counterpartId`, so its review material, transcript and Practice book all come from the existing machinery for free. The person's card lists every talk you've had with them.
 - Bookmarks are local only (`UserDefaults`). Nothing a learner does here reaches the persona's author: no notification, no shared record.

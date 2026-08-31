@@ -61,8 +61,13 @@ struct FindPeopleSheet: View {
         groupPool.filter { bookmarks.contains($0.id) && !metIds.contains($0.id) }
     }
 
-    private var todaysPeople: [PublicPersonaService.PublicPersona] {
-        PublicPersonaService.todaysPeople(from: groupPool, excluding: metIds.union(bookmarks))
+    /// Everyone in the pool the learner hasn't met or bookmarked — the WHOLE
+    /// list, in the pool's own order. A daily six-person rotation lived here
+    /// for a while and was removed (2026-08-31): it hid most of the pool to
+    /// manufacture a reason to come back, and the pool is the reason.
+    private var strangers: [PublicPersonaService.PublicPersona] {
+        let keep = metIds.union(bookmarks)
+        return groupPool.filter { !keep.contains($0.id) }
     }
 
     private var searchResults: [PublicPersonaService.PublicPersona] {
@@ -204,12 +209,14 @@ struct FindPeopleSheet: View {
                 Text(explain("No one here yet for this language — check back soon."))
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
-                ForEach(todaysPeople) { p in
+                ForEach(strangers) { p in
                     personRow(p)
                 }
             }
         } header: {
-            Text("People today")
+            // STRANGERS, by name (2026-08-31): that they're strangers is the
+            // point — talking to strangers is what the language is for.
+            Text("Strangers")
         }
     }
 
@@ -386,6 +393,24 @@ struct FindPersonCard: View {
 
     /// Raised in place of Talk/Watch when the account can't pay for them.
     @State private var showingPaywall = false
+    /// The voice this stranger speaks in — the learner's pick, never the
+    /// stranger's real voice (there isn't one to have). Starts on the preset
+    /// their row carries; changing it saves the person, so the pick sticks
+    /// (`asCounterpart` returns the saved row over the pool's).
+    @State private var voicePresetId: String = ""
+
+    /// The person with the learner's voice pick applied — every action
+    /// (Talk, Watch, compose, save) goes through this, so a voice changed a
+    /// second ago is the voice that speaks.
+    private var effectivePerson: Counterpart {
+        var c = person
+        if !voicePresetId.isEmpty { c.voicePresetId = voicePresetId }
+        return c
+    }
+
+    private var currentVoiceName: String {
+        VoicePreset.catalog.first(where: { $0.id == effectivePerson.voicePresetId })?.displayName ?? ""
+    }
 
     private var pastTalks: [Session] {
         SessionStore.shared.load()
@@ -427,10 +452,25 @@ struct FindPersonCard: View {
                 }
             }
 
+            Section {
+                NavigationLink {
+                    VoicePresetPickerView(selection: $voicePresetId)
+                        .environmentObject(appState)
+                } label: {
+                    HStack {
+                        Label("Voice", systemImage: "waveform")
+                        Spacer()
+                        Text(currentVoiceName).foregroundStyle(.secondary)
+                    }
+                }
+            } footer: {
+                Text(explain("Not their real voice — an AI speaks their words in a voice you pick."))
+            }
+
             if let onCompose {
                 Section {
                     Button {
-                        onCompose(person)
+                        onCompose(effectivePerson)
                     } label: {
                         Label("Make a situation", systemImage: "square.and.pencil")
                     }
@@ -457,6 +497,11 @@ struct FindPersonCard: View {
             }
         }
         .listStyle(.insetGrouped)
+        .onAppear { voicePresetId = person.voicePresetId }
+        .onChange(of: voicePresetId) { _, picked in
+            guard picked != person.voicePresetId else { return }
+            appState.saveCounterpart(effectivePerson)
+        }
         .navigationTitle("")
         .toolbar {
             if let rid = person.remoteId {
@@ -509,8 +554,8 @@ struct FindPersonCard: View {
     /// met". Idempotent: the local id is derived from the remote one, and the
     /// store dedupes on `remoteId`, so re-tapping can't file a twin.
     private func savedPerson() -> Counterpart {
-        if appState.counterparts.contains(where: { $0.id == person.id }) { return person }
-        appState.saveCounterpart(person)
-        return person
+        if appState.counterparts.contains(where: { $0.id == person.id }) { return effectivePerson }
+        appState.saveCounterpart(effectivePerson)
+        return effectivePerson
     }
 }

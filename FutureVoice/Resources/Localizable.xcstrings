@@ -62,6 +62,26 @@
         }
       }
     },
+    "Not their real voice — an AI speaks their words in a voice you pick." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진짜 목소리가 아니에요. 내가 고른 목소리로 AI가 이 사람의 말을 읽어요."
+          }
+        }
+      }
+    },
+    "Strangers" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "낯선 사람"
+          }
+        }
+      }
+    },
     "Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them." : {
       "localizations" : {
         "ko" : {

@@ -71,17 +71,6 @@ enum PublicPersonaService {
         return rows
     }
 
-    /// "People today" — a deterministic daily shuffle so the sheet shows the
-    /// same faces all day but different ones tomorrow. Seeded by day number,
-    /// not Date.now-per-call, so re-opening the sheet doesn't reshuffle.
-    static func todaysPeople(from pool: [PublicPersona], count: Int = 6,
-                             excluding met: Set<String>, day: Int? = nil) -> [PublicPersona] {
-        let dayNumber = day ?? Int(Date().timeIntervalSince1970 / 86_400)
-        var generator = SeededGenerator(seed: UInt64(dayNumber))
-        let fresh = pool.filter { !met.contains($0.id) }
-        return (fresh.isEmpty ? pool : fresh).shuffled(using: &generator).prefix(count).map { $0 }
-    }
-
     /// Local substring search over name, intro, interests, occupation.
     static func search(_ query: String, in pool: [PublicPersona]) -> [PublicPersona] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
