@@ -152,3 +152,33 @@ object ShadowScore {
         }
     }
 }
+
+/** One word's span in the played line — what karaoke highlights. */
+data class WordTiming(val word: String, val startMs: Int, val endMs: Int)
+
+/**
+ * Karaoke timings WITHOUT a second synthesis: spans are estimated from the
+ * audio's own duration, split proportionally to how much text each word
+ * carries (`ShadowDrillView.estimatedTimings`). Cached audio therefore
+ * karaokes for free — the rule is cache first, timings from free
+ * alignment/estimation, never a duplicate paid synthesis.
+ */
+object WordTimings {
+    fun estimate(text: String, durationMs: Int): List<WordTiming> {
+        val words = text.split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (words.isEmpty() || durationMs <= 0) return emptyList()
+        val totalChars = words.sumOf { maxOf(it.length, 1) }
+        val msPerChar = durationMs.toDouble() / totalChars
+        var cursor = 0.0
+        return words.map { w ->
+            val start = cursor
+            cursor += msPerChar * maxOf(w.length, 1)
+            // Small trailing gap so adjacent highlights read as distinct words.
+            WordTiming(w, start.toInt(), maxOf(start.toInt() + 1, cursor.toInt() - 20))
+        }
+    }
+
+    /** Which word index is being spoken at [positionMs], or -1. */
+    fun indexAt(timings: List<WordTiming>, positionMs: Int): Int =
+        timings.indexOfFirst { positionMs in it.startMs..it.endMs }
+}

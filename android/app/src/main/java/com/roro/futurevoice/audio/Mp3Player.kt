@@ -16,6 +16,14 @@ class Mp3Player(private val cacheDir: File) {
 
     private var player: MediaPlayer? = null
 
+    /** Playback head, ms — what karaoke follows. 0 when nothing is playing. */
+    val positionMs: Int
+        get() = player?.let { runCatching { it.currentPosition }.getOrDefault(0) } ?: 0
+
+    /** Total length of what is playing, ms. 0 until prepared. */
+    val durationMs: Int
+        get() = player?.let { runCatching { it.duration }.getOrDefault(0) } ?: 0
+
     /** Audible right now — one of the meter's "this second is a call" witnesses. */
     val isPlaying: Boolean
         get() = player?.let { runCatching { it.isPlaying }.getOrDefault(false) } ?: false

@@ -41,7 +41,13 @@ import com.roro.futurevoice.core.InstallSalt
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.net.ElevenLabsClient
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.text.font.FontWeight
 import com.roro.futurevoice.talk.ShadowScore
+import com.roro.futurevoice.talk.WordTiming
+import com.roro.futurevoice.talk.WordTimings
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -68,6 +74,8 @@ fun ShadowScreen(
     var busy by remember { mutableStateOf(false) }
     var attempt by remember { mutableStateOf<ShadowScore.Analysis?>(null) }
     var said by remember { mutableStateOf("") }
+    // Which word the voice is on right now (-1 = not playing).
+    var spoken by remember { mutableIntStateOf(-1) }
 
     fun playLine() {
         busy = true
@@ -77,7 +85,25 @@ fun ShadowScreen(
                     voiceId = voiceId, text = line,
                     idempotencyKey = InstallSalt.ttsKey(line, voiceId, timestamps = false),
                     purpose = "shadow")
+                // Karaoke follows the playback head against timings ESTIMATED
+                // from this audio's own duration — no second synthesis, so a
+                // cached line karaokes for free (the rule: cache first,
+                // timings from free estimation, never a duplicate charge).
+                val follow = launch {
+                    var timings: List<WordTiming> = emptyList()
+                    while (isActive) {
+                        val dur = mp3.durationMs
+                        if (timings.isEmpty() && dur > 0) {
+                            timings = WordTimings.estimate(line, dur)
+                        }
+                        spoken = if (timings.isEmpty()) -1
+                        else WordTimings.indexAt(timings, mp3.positionMs)
+                        delay(40)
+                    }
+                }
                 mp3.play(audio)
+                follow.cancel()
+                spoken = -1
             }
             busy = false
         }
@@ -102,7 +128,17 @@ fun ShadowScreen(
             // The target line, colored by the last attempt's diff.
             val a = attempt
             if (a == null) {
-                Text(line, style = MaterialTheme.typography.titleLarge)
+                val words = line.split(Regex("\\s+")).filter { it.isNotEmpty() }
+                Text(buildAnnotatedString {
+                    words.forEachIndexed { i, w ->
+                        if (i == spoken) {
+                            pushStyle(SpanStyle(color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold))
+                            append(w); pop()
+                        } else append(w)
+                        if (i != words.lastIndex) append(" ")
+                    }
+                }, style = MaterialTheme.typography.titleLarge)
             } else {
                 val ops = ShadowScore.targetOps(a.steps)
                 val words = line.split(Regex("\\s+")).filter { it.isNotEmpty() }
