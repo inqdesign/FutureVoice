@@ -32,6 +32,13 @@ export class ElevenTTS {
   private ws: WebSocket | null = null
   private closed = false
   private connecting: Promise<void> | null = null
+  /** Contexts already opened on this socket. ElevenLabs accepts
+   *  `voice_settings` only in a context's FIRST message and rejects the
+   *  whole turn if a later one repeats it — sending it on every delta
+   *  killed replies outright ("voice_settings field must be provided in
+   *  the first message and then either be not provided or not change",
+   *  device log 2026-09-01). */
+  private openContexts = new Set<string>()
 
   constructor(private config: ElevenTTSConfig,
               private callbacks: ElevenTTSCallbacks) {}
@@ -92,6 +99,7 @@ export class ElevenTTS {
       // Idle timeout between turns is normal — drop the handle and let the
       // next reply reconnect. Only a close mid-close() is final.
       this.ws = null
+      this.openContexts.clear()
     })
     ws.addEventListener("error", () => {
       this.ws = null
@@ -120,15 +128,21 @@ export class ElevenTTS {
     // Voice settings mirror the elevenlabs-tts edge function: style MUST
     // stay 0 for cloned voices (see that function's comment — TestFlight
     // users reported the clone drifting at 0.15).
+    const first = !this.openContexts.has(contextId)
+    if (first) this.openContexts.add(contextId)
     this.ws?.send(JSON.stringify({
       context_id: contextId,
       text,
-      voice_settings: {
-        stability: 0.55,
-        similarity_boost: 0.9,
-        style: 0,
-        use_speaker_boost: true,
-      },
+      ...(first
+        ? {
+            voice_settings: {
+              stability: 0.55,
+              similarity_boost: 0.9,
+              style: 0,
+              use_speaker_boost: true,
+            },
+          }
+        : {}),
     }))
   }
 
@@ -139,6 +153,7 @@ export class ElevenTTS {
 
   /** Barge-in: kill this context's generation; audio stops arriving. */
   closeContext(contextId: string): void {
+    this.openContexts.delete(contextId)
     this.ws?.send(JSON.stringify({ context_id: contextId, close_context: true }))
   }
 

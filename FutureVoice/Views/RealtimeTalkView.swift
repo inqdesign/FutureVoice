@@ -100,6 +100,17 @@ struct RealtimeTalkView: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(ms < 2000 ? .green : .secondary)
             }
+            // Mic diagnostics: a live bar plus the bytes that actually left
+            // the phone. "It doesn't hear me" is two different bugs, and
+            // these two numbers say which one it is without a cable.
+            HStack(spacing: 8) {
+                ProgressView(value: Double(call.level))
+                    .progressViewStyle(.linear)
+                    .frame(width: 90)
+                Text("mic \(call.micBytesSent / 1024) KB")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(call.micBytesSent > 0 ? Color.secondary : Color.red)
+            }
         }
         .padding(.top, 14)
         .padding(.bottom, 20)
