@@ -33,6 +33,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -46,7 +48,11 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
-fun RootScreen(app: AppViewModel = viewModel()) {
+fun RootScreen() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val app: AppViewModel = viewModel(factory = androidx.lifecycle.viewmodel.viewModelFactory {
+        initializer { AppViewModel(context.applicationContext) }
+    })
     val state by app.state.collectAsStateWithLifecycle()
     var inCall by remember { mutableStateOf(false) }
 
@@ -56,6 +62,16 @@ fun RootScreen(app: AppViewModel = viewModel()) {
             state,
             onSignIn = app::signIn,
             onDevSignIn = app::devSignIn,
+        )
+        // First-run answers before anything else — what to teach and how to
+        // calibrate. (iOS order puts Welcome before sign-in; Android's
+        // account-free entry arrives with the Google-auth work.)
+        !state.setupComplete -> SetupFlowScreen(
+            initialNative = state.nativeLanguage,
+            initialTarget = state.targetLanguage,
+            initialLevel = state.level,
+            onBackToWelcome = app::signOut,
+            onFinish = app::completeSetup,
         )
         inCall && state.voiceId != null ->
             TalkScreen(
