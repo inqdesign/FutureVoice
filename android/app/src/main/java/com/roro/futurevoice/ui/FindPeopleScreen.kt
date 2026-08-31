@@ -30,7 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.net.CoreClubClient
 import com.roro.futurevoice.net.PublicPersonaClient
+import com.roro.futurevoice.ui.brand.CoreSeal
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DiscoverRow
@@ -55,6 +57,7 @@ fun FindPeopleScreen(
     var pool by remember { mutableStateOf<List<PublicPersonaClient.PublicPersona>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
+    var badges by remember { mutableStateOf<Map<String, CoreClubClient.Badge>>(emptyMap()) }
     var error by remember { mutableStateOf<String?>(null) }
     val client = remember { PublicPersonaClient(AuthRepository()) }
     LaunchedEffect(language) {
@@ -63,6 +66,10 @@ fun FindPeopleScreen(
             .onSuccess { pool = it }
             .onFailure { error = it.message }
         loading = false
+        // The badge is public but the membership LIST is not — the server
+        // only answers about ids we already name.
+        badges = CoreClubClient(AuthRepository())
+            .badges(pool.mapNotNull { it.owner_user_id }, language)
     }
     val shown = if (query.isBlank()) pool else client.search(query, pool)
 
@@ -112,6 +119,11 @@ fun FindPeopleScreen(
                         icon = Icons.Filled.Person,
                         accent = Books.talks,
                         onClick = { onTalk(p) },
+                        // The seal is a statement about TODAY, so a row the
+                        // server no longer describes must draw nothing.
+                        trailing = if (badges[p.owner_user_id?.lowercase()]?.seated == true) {
+                            @Composable { CoreSeal() }
+                        } else null,
                     )
                 }
             }

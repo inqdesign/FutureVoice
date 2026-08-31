@@ -37,7 +37,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.runtime.LaunchedEffect
+import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.net.CoreClubClient
+import com.roro.futurevoice.ui.brand.CoreSeal
 import com.roro.futurevoice.talk.UserPersona
 
 /**
@@ -62,6 +66,10 @@ fun MeScreen(
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     var confirmingSignOut by remember { mutableStateOf(false) }
+    var coreProgress by remember { mutableStateOf<CoreClubClient.Progress?>(null) }
+    LaunchedEffect(targetLanguage) {
+        coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage)
+    }
     var callEnabled by remember {
         mutableStateOf(com.roro.futurevoice.data.DailyCallStore.isEnabled(context))
     }
@@ -169,6 +177,31 @@ fun MeScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            HorizontalDivider()
+
+            // ── The Core — a standing and a record, and it grants NOTHING.
+            // Numbers only, no grid: the progress IS the number.
+            coreProgress?.let { core ->
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(stringResource(R.string.the_core),
+                            style = MaterialTheme.typography.titleMedium)
+                        if (core.seated) CoreSeal()
+                    }
+                    Text(
+                        if (core.seated) stringResource(R.string.you_re_in)
+                        // A BAR, never a rank: how many days in a row, against
+                        // the entry streak. No grid — the progress is the number.
+                        else "${core.streak} / ${core.entry_streak}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             HorizontalDivider()
 
