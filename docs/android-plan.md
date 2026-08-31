@@ -39,7 +39,10 @@
 > the NEW `topic-engine` Edge Function (brain-lift #3's first slice —
 > categorize, prompt extracted from Swift; iOS untouched): compose free-text
 > → category/summary (never blocks) → saved template → in-scene talk with
-> `origin=scenario`. Still missing from the
+> `origin=scenario`. The review loop is
+> visible end to end: a drill DECK (Got it graduates — iOS rule), and a
+> talk DETAIL page (score · corrections · offered expressions · grammar ·
+> transcript). Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).
