@@ -139,6 +139,7 @@ fun RootScreen() {
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
+    var showActivity by remember { mutableStateOf(false) }
     var studyDeckKind by remember { mutableStateOf<StudyScheduleStore.Kind?>(null) }
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
@@ -238,6 +239,12 @@ fun RootScreen() {
             onBack = { bookScenarioId = null },
         )
 
+        showActivity -> ActivityScreen(
+            language = state.targetLanguage,
+            onOpenTalk = { showActivity = false; detailSessionId = it },
+            onBack = { showActivity = false },
+        )
+
         showDeck -> DrillDeckScreen(
             language = state.targetLanguage,
             onBack = { showDeck = false },
@@ -330,6 +337,7 @@ fun RootScreen() {
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
+            onOpenActivity = { showActivity = true },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
@@ -472,6 +480,7 @@ private fun HomeScreen(
     onOpenTalk: (String) -> Unit = {},
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
+    onOpenActivity: () -> Unit = {},
     onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
@@ -554,6 +563,7 @@ private fun HomeScreen(
                         state = state,
                         enabled = state.voiceId != null,
                         onTap = { launch("", emptyList()) },
+                        onOpenActivity = onOpenActivity,
                     )
                     ReviewRow(language = state.targetLanguage, onOpen = onOpenDeck)
                     // One Discover section, two chips — what to talk about
@@ -615,7 +625,8 @@ private fun HomeScreen(
  * placing a call.
  */
 @Composable
-private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit) {
+private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
+                     onOpenActivity: () -> Unit) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var seconds by remember { mutableStateOf(0) }
@@ -655,11 +666,32 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit) {
                     interactionSource = remember { MutableInteractionSource() }) { onTap() }
                 else Modifier),
         )
-        Text(
-            stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        // The day's status, and the way into the record. A streak and a talk
+        // count are claims about a history, so they have to be openable —
+        // otherwise they are just numbers asking to be trusted.
+        Column(
+            Modifier.clickable(onClick = onOpenActivity).padding(vertical = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            val streak = remember(revision) { TalkTimeLog.streakDays(context) }
+            if (streak > 0 || sessionCount > 0) {
+                Text(
+                    listOfNotNull(
+                        streak.takeIf { it > 0 }
+                            ?.let { stringResource(R.string.lld_day_streak, it) },
+                        sessionCount.takeIf { it > 0 }
+                            ?.let { stringResource(R.string.lld_talks, it) },
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 

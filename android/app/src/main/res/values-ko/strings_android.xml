@@ -26,4 +26,6 @@
     <string name="who_are_they_to_you">나에게 어떤 사람인가요?</string>
     <string name="shared_context">같이 아는 것</string>
     <string name="a_scene_with_lls">%1$s와의 장면</string>
+    <string name="lld_day_streak">%1$d일 연속</string>
+    <string name="lld_talks">대화 %1$d회</string>
 </resources>

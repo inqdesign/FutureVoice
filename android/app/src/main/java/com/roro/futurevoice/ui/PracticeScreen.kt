@@ -163,8 +163,12 @@ private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
 
 /**
  * Progress — measured, never guessed: the CEFR read comes from the talks
- * themselves (the summary's holistic estimate), the minutes from the meter.
- * The per-skill pages and the 14-day rep bars arrive with the Progress pass.
+ * themselves (the summary's holistic estimate), the minutes from the meter,
+ * and the two strips from the logs.
+ *
+ * No share card here. The day card's home is the Activity page and only
+ * there — that page's day summary already says what the day was, and the card
+ * is that summary as a picture.
  */
 @Composable
 fun ProgressBody(language: String, goalMinutes: Int = 10) {
@@ -172,7 +176,6 @@ fun ProgressBody(language: String, goalMinutes: Int = 10) {
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var todaySeconds by remember { mutableStateOf(0) }
-    var showCard by remember { mutableStateOf(false) }
     var minutesByDay by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
     var effortByDay by remember { mutableStateOf<List<Pair<String, PracticeLog.Day>>>(emptyList()) }
     LaunchedEffect(language, revision) {
@@ -202,26 +205,7 @@ fun ProgressBody(language: String, goalMinutes: Int = 10) {
                 Stat(stringResource(R.string.overall), "${scored.map { it.overall }.average().toInt()}")
             }
         }
-        val today = remember(talks, todaySeconds, revision) {
-            val startOfDay = java.util.Calendar.getInstance().apply {
-                set(java.util.Calendar.HOUR_OF_DAY, 0); set(java.util.Calendar.MINUTE, 0)
-                set(java.util.Calendar.SECOND, 0); set(java.util.Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            val todays = talks.filter { (it.endedAt ?: it.startedAt) >= startOfDay }
-            DayCardData(
-                date = System.currentTimeMillis(),
-                talkMinutes = todaySeconds / 60,
-                // Never less than the talk figure: a call in a pocket is
-                // metered but not foregrounded.
-                studyMinutes = maxOf(AppUsageLog.secondsOn(context, System.currentTimeMillis()) / 60,
-                    todaySeconds / 60),
-                streakDays = TalkTimeLog.streakDays(context),
-                talks = todays.size,
-                topics = todays.sortedByDescending { s ->
-                    s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
-                }.mapNotNull { it.displayTitle }.distinct().take(4),
-            )
-        }
+
         // What the last two weeks actually were. Both strips are drawn only
         // when there is something in them: an empty chart is a reproach, and
         // a new learner has done nothing wrong.
@@ -264,13 +248,6 @@ fun ProgressBody(language: String, goalMinutes: Int = 10) {
                 stringResource(R.string.notebook) to notebook,
             ))
         }
-
-        if (today.hasActivity) {
-            TextButton(onClick = { showCard = true }) {
-                Text(stringResource(R.string.share_card))
-            }
-        }
-        if (showCard) DayCardSheet(today) { showCard = false }
     }
 }
 
