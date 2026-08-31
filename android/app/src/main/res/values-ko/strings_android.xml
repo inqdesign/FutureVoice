@@ -14,4 +14,10 @@
     <string name="expressions_from_your_calls_will_collect_here">통화에서 나온 표현이 — 내 것도, 유창한 나의 것도 — 여기 모여요.</string>
     <string name="the_dashed_line_is_your_daily_goal">점선이 하루 목표예요.</string>
     <string name="notebook">단어장</string>
+    <string name="export">내보내기</string>
+    <string name="markdown">마크다운</string>
+    <string name="mastered">마스터</string>
+    <string name="your_fluent_self_used_this_you_didnt">유창한 내가 쓴 표현이에요 — 나는 아직 안 썼고요.</string>
+    <string name="future_self">미래의 나</string>
+    <string name="print_or_save_as_pdf">인쇄하거나 PDF로 저장</string>
 </resources>

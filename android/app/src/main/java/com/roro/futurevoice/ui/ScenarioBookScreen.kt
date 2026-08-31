@@ -45,6 +45,7 @@ import com.roro.futurevoice.ui.brand.BookmarkedPage
 import com.roro.futurevoice.ui.brand.DialogueLine
 import com.roro.futurevoice.ui.brand.DialogueSpeaker
 import com.roro.futurevoice.R
+import com.roro.futurevoice.data.BookDocument
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.VocabStore
@@ -98,6 +99,7 @@ fun ScenarioBookScreen(
                 },
                 actions = {
                     TextButton(onClick = { onWatch(sc.id) }) { Text(stringResource(R.string.watch)) }
+                    BookExportMenu { BookDocument.make(context, sc, counterpartName = null) }
                 },
             )
         }

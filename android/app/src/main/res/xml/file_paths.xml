@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only the share staging directory is exposed, and only for the card the
-     learner just asked to send. -->
+<!-- Only the share staging directories are exposed, and only for the thing
+     the learner just asked to send. -->
 <paths>
     <cache-path name="share" path="share/" />
+    <cache-path name="book-export" path="book-export/" />
 </paths>
