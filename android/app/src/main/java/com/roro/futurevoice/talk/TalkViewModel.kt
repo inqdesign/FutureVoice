@@ -37,6 +37,8 @@ data class TalkConfig(
     val level: CefrLevel = CefrLevel.B1,
     val topic: String = "",
     val persona: UserPersona? = null,
+    /** Pool-grounded facts for a news talk — the model's only ground truth. */
+    val newsFacts: List<String> = emptyList(),
 )
 
 /**
@@ -86,7 +88,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val gemini = GeminiClient(auth)
     private val eleven = ElevenLabsClient(auth)
     private val live = LiveTranscriber(context)
-    private val meter = TalkMeter(auth, viewModelScope)
+    private val meter = TalkMeter(auth, viewModelScope, appContext)
     private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE)
     private val mp3 = Mp3Player(appContext.cacheDir)
     private val sessions = SessionStore.shared(appContext)
@@ -155,6 +157,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     weakVocabAreas = profile.weakVocabAreas,
                     topic = config.topic,
                     persona = config.persona,
+                    newsFacts = config.newsFacts,
                 ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
@@ -198,7 +201,8 @@ class TalkViewModel(context: Context) : ViewModel() {
             startedAt = startedAt,
             endedAt = System.currentTimeMillis(),
             turns = turns,
-            origin = if (cfg.topic.isBlank()) SessionOrigin.FREE else SessionOrigin.NEWS,
+            origin = if (cfg.newsFacts.isNotEmpty()) SessionOrigin.NEWS
+                else if (cfg.topic.isBlank()) SessionOrigin.FREE else null,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary

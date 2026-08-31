@@ -63,6 +63,8 @@ fun TalkScreen(
     nativeLanguage: String,
     level: CefrLevel,
     persona: com.roro.futurevoice.talk.UserPersona? = null,
+    topic: String = "",
+    newsFacts: List<String> = emptyList(),
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -82,6 +84,8 @@ fun TalkScreen(
                 nativeLanguage = nativeLanguage,
                 level = level,
                 persona = persona,
+                topic = topic,
+                newsFacts = newsFacts,
             )
         )
     }

@@ -2,6 +2,7 @@ package com.roro.futurevoice.talk
 
 import com.roro.futurevoice.core.Config
 import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.net.Edge
 import com.roro.futurevoice.net.EdgeError
 import kotlinx.coroutines.CoroutineScope
@@ -51,6 +52,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 class TalkMeter(
     private val auth: AuthRepository,
     private val scope: CoroutineScope,
+    private val appContext: android.content.Context? = null,
 ) {
     /** Polled once a second: is this second part of the conversation? */
     var isBillable: (() -> Boolean)? = null
@@ -153,6 +155,8 @@ class TalkMeter(
         }
 
         outcome.onSuccess { res ->
+            // The ring reads what the meter counted — accepted ticks only.
+            appContext?.let { TalkTimeLog.add(it, seconds, language) }
             // Subscriber: what's left of the allowance. Free account: the
             // seconds balance. Both already in seconds.
             //

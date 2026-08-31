@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,8 +37,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.roro.futurevoice.R
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.rememberCoroutineScope
+import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.NewsTopicStore
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.data.TalkTimeLog
+import com.roro.futurevoice.net.NewsClient
+import com.roro.futurevoice.talk.SuggestedTopic
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.SessionSummarizer
@@ -55,6 +68,8 @@ fun RootScreen() {
     })
     val state by app.state.collectAsStateWithLifecycle()
     var inCall by remember { mutableStateOf(false) }
+    var callTopic by remember { mutableStateOf("") }
+    var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var welcomePreview by remember { mutableStateOf(false) }
@@ -115,12 +130,14 @@ fun RootScreen() {
                 nativeLanguage = state.nativeLanguage,
                 level = state.level,
                 persona = state.persona,
-                onExit = { inCall = false },
+                topic = callTopic,
+                newsFacts = callFacts,
+                onExit = { inCall = false; callTopic = ""; callFacts = emptyList() },
             )
 
         else -> HomeScreen(
             state = state,
-            onStartCall = { inCall = true },
+            onStartCall = { topic, facts -> callTopic = topic; callFacts = facts; inCall = true },
             onSignOut = app::signOut,
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
@@ -192,17 +209,23 @@ private fun SignInScreen(
 @Composable
 private fun HomeScreen(
     state: AppState,
-    onStartCall: () -> Unit,
+    onStartCall: (topic: String, newsFacts: List<String>) -> Unit,
     onSignOut: () -> Unit,
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
     var micGranted by remember { mutableStateOf(false) }
+    var pendingLaunch by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         micGranted = granted
-        if (granted) onStartCall()
+        if (granted) pendingLaunch?.let { onStartCall(it.first, it.second) }
+        pendingLaunch = null
+    }
+    fun launch(topic: String, facts: List<String>) {
+        pendingLaunch = topic to facts
+        permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     Scaffold(
@@ -214,11 +237,13 @@ private fun HomeScreen(
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).padding(24.dp).fillMaxWidth(),
+            Modifier.padding(padding).padding(24.dp).fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(state.email.orEmpty(), style = MaterialTheme.typography.bodyMedium)
             HorizontalDivider()
+            TodayRow()
             when {
                 state.restoringVoice -> Text("Restoring your voice…")
                 state.voiceId != null -> Text(
@@ -233,10 +258,17 @@ private fun HomeScreen(
                 )
             }
             Button(
-                onClick = { permission.launch(Manifest.permission.RECORD_AUDIO) },
+                onClick = { launch("", emptyList()) },
                 enabled = state.voiceId != null,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start free talk") }
+
+            NewsSection(
+                interests = state.persona?.interests.orEmpty(),
+                targetLanguage = state.targetLanguage,
+                enabled = state.voiceId != null,
+                onTalk = { topic -> launch(topic.title, topic.facts.orEmpty()) },
+            )
 
             RecentTalks(language = state.targetLanguage, nativeLanguage = state.nativeLanguage, level = state.level)
 
@@ -300,6 +332,128 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
                         onClick = { SessionSummarizer.summarizeInBackground(context, s, nativeLanguage, level) },
                     ) { Text(stringResource(R.string.generate_review_material)) }
                 }
+            }
+        }
+    }
+}
+
+/** The day's metered talk against the learner's own goal. */
+@Composable
+private fun TodayRow() {
+    val context = LocalContext.current
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    val goalMinutes = remember {
+        context.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
+    }
+    var seconds by remember { mutableStateOf(0) }
+    LaunchedEffect(revision) { seconds = TalkTimeLog.secondsToday(context) }
+    Column {
+        Text(stringResource(R.string.today), style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LinearProgressIndicator(
+            progress = { (seconds / 60f / goalMinutes).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
+    }
+}
+
+/**
+ * In the news — the platform pool for the learner's interests
+ * (`NewsTopicSection`). Cache-first; the server keeps cooking pending
+ * categories and each poll paints what landed. A tap talks ABOUT the story:
+ * the title becomes the topic, the grounded facts seed the prompt.
+ */
+@Composable
+private fun NewsSection(
+    interests: List<String>,
+    targetLanguage: String,
+    enabled: Boolean,
+    onTalk: (SuggestedTopic) -> Unit,
+) {
+    if (interests.isEmpty()) return
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val store = remember { NewsTopicStore.shared(context) }
+    var topics by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
+    var loading by remember { mutableStateOf(false) }
+
+    fun displaySelection(pool: List<SuggestedTopic>): List<SuggestedTopic> {
+        val seen = store.seenTitles(interests, targetLanguage).toSet()
+        val current = topics.map { it.title }.toSet()
+        val unseen = pool.filter { it.title !in seen }
+        val offscreen = pool.filter { it.title in seen && it.title !in current }
+        val onscreen = pool.filter { it.title in seen && it.title in current }
+        return (unseen + offscreen + onscreen).take(NewsClient.MAX_SHOWN)
+    }
+
+    suspend fun fetchNews(refresh: Boolean) {
+        loading = true
+        try {
+            val client = NewsClient(AuthRepository())
+            var pool = client.fetch(interests, targetLanguage, refresh)
+            if (pool.topics.isNotEmpty()) {
+                store.save(pool.topics, interests, targetLanguage)
+                topics = displaySelection(pool.topics)
+            }
+            var polls = 0
+            var target = if (pool.growing) pool.topics.size + 1 else 0
+            while (polls < NewsClient.MAX_POLLS && (!pool.isComplete || pool.topics.size < target)) {
+                delay(NewsClient.POLL_INTERVAL_MS)
+                polls += 1
+                pool = client.fetch(interests, targetLanguage)
+                if (pool.topics.isNotEmpty()) {
+                    store.save(pool.topics, interests, targetLanguage)
+                    topics = displaySelection(pool.topics)
+                }
+                if (pool.topics.size >= target) target = 0
+            }
+        } catch (_: kotlinx.coroutines.CancellationException) {
+        } catch (_: Exception) {
+        } finally { loading = false }
+    }
+
+    LaunchedEffect(interests, targetLanguage) {
+        val cached = store.valid(interests, targetLanguage)
+        if (cached != null) topics = displaySelection(cached) else fetchNews(refresh = false)
+    }
+
+    Column {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.news), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f))
+            TextButton(onClick = {
+                scope.launch {
+                    // Rotating the unseen pool is free — only ask the server
+                    // once the local pool is exhausted (iOS refresh rule).
+                    val cached = store.valid(interests, targetLanguage)
+                    if (cached != null && cached.size > topics.size) {
+                        store.markSeen(topics.map { it.title }, interests, targetLanguage)
+                        val rotated = displaySelection(cached)
+                        if (rotated.map { it.title } != topics.map { it.title }) {
+                            topics = rotated; return@launch
+                        }
+                    }
+                    store.markSeen(topics.map { it.title }, interests, targetLanguage)
+                    fetchNews(refresh = true)
+                }
+            }) { Text(stringResource(R.string.refresh)) }
+        }
+        if (loading && topics.isEmpty()) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+        }
+        topics.forEach { topic ->
+            Column(
+                Modifier.fillMaxWidth()
+                    .clickable(enabled = enabled) { onTalk(topic) }
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(topic.title, style = MaterialTheme.typography.bodyLarge)
+                Text(topic.blurb, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

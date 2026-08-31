@@ -335,3 +335,13 @@ data class LearnerProfile(
         const val MAX_WEAK_AREAS = 5
     }
 }
+
+@Serializable
+data class SuggestedTopic(
+    val id: String = StoreJson.newId(),
+    val title: String,
+    val blurb: String,
+    val category: String? = null,
+    /** Grounded facts collected at pool generation — seeds `newsFacts`. */
+    val facts: List<String>? = null,
+)
