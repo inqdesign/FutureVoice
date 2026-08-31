@@ -48,6 +48,10 @@ import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.net.NewsClient
+import com.roro.futurevoice.net.TopicClient
+import com.roro.futurevoice.data.ScenarioStore
+import com.roro.futurevoice.talk.Scenario
+import androidx.compose.material3.AlertDialog
 import com.roro.futurevoice.talk.SuggestedTopic
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -70,6 +74,7 @@ fun RootScreen() {
     var inCall by remember { mutableStateOf(false) }
     var callTopic by remember { mutableStateOf("") }
     var callFacts by remember { mutableStateOf<List<String>>(emptyList()) }
+    var callScenarioId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
@@ -170,12 +175,15 @@ fun RootScreen() {
                 persona = state.persona,
                 topic = callTopic,
                 newsFacts = callFacts,
-                onExit = { inCall = false; callTopic = ""; callFacts = emptyList() },
+                scenarioId = callScenarioId,
+                onExit = { inCall = false; callTopic = ""; callFacts = emptyList(); callScenarioId = null },
             )
 
         else -> HomeScreen(
             state = state,
-            onStartCall = { topic, facts -> callTopic = topic; callFacts = facts; inCall = true },
+            onStartCall = { topic, facts, scenarioId ->
+                callTopic = topic; callFacts = facts; callScenarioId = scenarioId; inCall = true
+            },
             onOpenMe = { showMe = true },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
@@ -258,22 +266,22 @@ private fun SignInScreen(
 @Composable
 private fun HomeScreen(
     state: AppState,
-    onStartCall: (topic: String, newsFacts: List<String>) -> Unit,
+    onStartCall: (topic: String, newsFacts: List<String>, scenarioId: String?) -> Unit,
     onOpenMe: () -> Unit,
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
     var micGranted by remember { mutableStateOf(false) }
-    var pendingLaunch by remember { mutableStateOf<Pair<String, List<String>>?>(null) }
+    var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         micGranted = granted
-        if (granted) pendingLaunch?.let { onStartCall(it.first, it.second) }
+        if (granted) pendingLaunch?.let { onStartCall(it.topic, it.facts, it.scenarioId) }
         pendingLaunch = null
     }
-    fun launch(topic: String, facts: List<String>) {
-        pendingLaunch = topic to facts
+    fun launch(topic: String, facts: List<String>, scenarioId: String? = null) {
+        pendingLaunch = PendingLaunch(topic, facts, scenarioId)
         permission.launch(Manifest.permission.RECORD_AUDIO)
     }
 
@@ -311,6 +319,12 @@ private fun HomeScreen(
                 enabled = state.voiceId != null,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text("Start free talk") }
+
+            ScenariosSection(
+                targetLanguage = state.targetLanguage,
+                enabled = state.voiceId != null,
+                onTalk = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
+            )
 
             NewsSection(
                 interests = state.persona?.interests.orEmpty(),
@@ -540,5 +554,101 @@ private fun AccountScreen(
         Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
             Text("Continue with Apple")
         }
+    }
+}
+
+private data class PendingLaunch(val topic: String, val facts: List<String>, val scenarioId: String?)
+
+/**
+ * Your scenarios — saved situations as reusable templates, plus the
+ * composer ("Make your own situation" — describe the real upcoming thing).
+ * v1 is the free-text half of `ScenarioComposerSheet`: categorize is a
+ * nicety and never blocks a commit.
+ */
+@Composable
+private fun ScenariosSection(
+    targetLanguage: String,
+    enabled: Boolean,
+    onTalk: (Scenario) -> Unit,
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val store = remember { ScenarioStore.shared(context) }
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    var composing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    var committing by remember { mutableStateOf(false) }
+    LaunchedEffect(targetLanguage, revision) { scenarios = store.load(targetLanguage) }
+
+    Column {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.your_scenarios), style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f))
+            TextButton(onClick = { composing = true }) { Text("+") }
+        }
+        if (scenarios.isEmpty()) {
+            Text(stringResource(R.string.make_your_own_situation),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clickable { composing = true }.padding(vertical = 6.dp))
+        }
+        scenarios.filter { it.archivedAt == null && it.isMeeting != true }.take(5).forEach { sc ->
+            Column(
+                Modifier.fillMaxWidth()
+                    .clickable(enabled = enabled) {
+                        scope.launch { store.touch(sc.id, targetLanguage); StoreEvents.bump() }
+                        onTalk(sc)
+                    }
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(sc.cardTitle, style = MaterialTheme.typography.bodyLarge)
+                sc.category?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+    }
+
+    if (composing) {
+        AlertDialog(
+            onDismissRequest = { if (!committing) composing = false },
+            title = { Text(stringResource(R.string.make_your_own_situation)) },
+            text = {
+                OutlinedTextField(value = draft, onValueChange = { draft = it },
+                    minLines = 3, modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = {
+                TextButton(enabled = draft.isNotBlank() && !committing, onClick = {
+                    committing = true
+                    val text = draft.trim()
+                    scope.launch {
+                        // Categorize is a nicety — a failure just leaves the
+                        // free text as the scenario (iOS rule).
+                        val result = runCatching {
+                            TopicClient(AuthRepository()).categorize(
+                                text = text,
+                                existing = scenarios.mapNotNull { it.category }.distinct(),
+                                iconOptions = TopicClient.ICON_PALETTE,
+                                targetLanguage = targetLanguage)
+                        }.getOrNull()
+                        store.save(Scenario(
+                            environment = text,
+                            category = result?.category?.takeIf { it.isNotBlank() },
+                            categoryIcon = result?.icon,
+                            summary = result?.summary?.takeIf { it.isNotBlank() },
+                        ), targetLanguage)
+                        StoreEvents.bump()
+                        committing = false; composing = false; draft = ""
+                    }
+                }) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
+            },
+            dismissButton = {
+                TextButton(enabled = !committing, onClick = { composing = false }) {
+                    Text(stringResource(R.string.back_b52b36))
+                }
+            },
+        )
     }
 }

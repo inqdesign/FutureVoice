@@ -345,3 +345,45 @@ data class SuggestedTopic(
     /** Grounded facts collected at pool generation — seeds `newsFacts`. */
     val facts: List<String>? = null,
 )
+
+/**
+ * A reusable practice scenario — `Scenario` in Models.swift, same
+ * `scenarios.json` shape (every optional lenient). Android v1 writes the
+ * composer subset (environment/summary/category); the Watch fields ride
+ * along untouched so an iOS-written file survives a round trip.
+ */
+@Serializable
+data class Scenario(
+    val id: String = StoreJson.newId(),
+    val environment: String,
+    val role: String = "",
+    val notes: String = "",
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val createdAt: Long = System.currentTimeMillis(),
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val lastUsedAt: Long? = null,
+    val counterpartId: String? = null,
+    val voicePresetId: String? = null,
+    /** Opaque passthrough — Android doesn't render the curriculum yet. */
+    val curriculum: kotlinx.serialization.json.JsonElement? = null,
+    @Serializable(with = IsoDateMillisSerializer::class)
+    val archivedAt: Long? = null,
+    val openers: List<String>? = null,
+    val openerCursor: Int? = null,
+    val isTopic: Boolean? = null,
+    val category: String? = null,
+    val categoryIcon: String? = null,
+    val summary: String? = null,
+    val isMeeting: Boolean? = null,
+) {
+    val cardTitle: String
+        get() = summary?.trim()?.takeIf { it.isNotEmpty() } ?: environment
+
+    /** `environment=… | role=… | notes=…` — what the conversation prompt parses. */
+    val promptBlurb: String
+        get() = buildList {
+            add("environment=$environment")
+            role.trim().takeIf { it.isNotEmpty() }?.let { add("role=$it") }
+            notes.trim().takeIf { it.isNotEmpty() }?.let { add("notes=$it") }
+        }.joinToString(" | ")
+}

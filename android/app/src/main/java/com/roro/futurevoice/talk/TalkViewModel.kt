@@ -39,6 +39,8 @@ data class TalkConfig(
     val persona: UserPersona? = null,
     /** Pool-grounded facts for a news talk — the model's only ground truth. */
     val newsFacts: List<String> = emptyList(),
+    /** Set when launched from a saved scenario — the session's provenance. */
+    val scenarioId: String? = null,
 )
 
 /**
@@ -201,8 +203,13 @@ class TalkViewModel(context: Context) : ViewModel() {
             startedAt = startedAt,
             endedAt = System.currentTimeMillis(),
             turns = turns,
-            origin = if (cfg.newsFacts.isNotEmpty()) SessionOrigin.NEWS
-                else if (cfg.topic.isBlank()) SessionOrigin.FREE else null,
+            origin = when {
+                cfg.scenarioId != null -> SessionOrigin.SCENARIO
+                cfg.newsFacts.isNotEmpty() -> SessionOrigin.NEWS
+                cfg.topic.isBlank() -> SessionOrigin.FREE
+                else -> null
+            },
+            originScenarioId = cfg.scenarioId,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary

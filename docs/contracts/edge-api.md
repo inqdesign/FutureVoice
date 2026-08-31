@@ -298,6 +298,18 @@ clients run the same normalization (`CarryoverDetector.normalized`).
 
 ---
 
+## `POST /topic-engine`
+
+Brain-lift #3, first slice: scenario CATEGORIZATION with the prompt held
+server-side (extracted from `TopicEngine.categorize`; iOS still builds it
+client-side and calls `/gemini` until switched). Body:
+`{ "action": "categorize", "text", "existing"?: string[], "icon_options"?:
+string[], "target_language"? }`. Returns Gemini's own body whose JSON is
+`{ category, icon, isNew, summary }`. flash-lite, purpose "topics", free
+under the daily cap. Suggestion/path actions extend this same function later.
+
+---
+
 ## Auth
 
 - **iOS**: Sign in with Apple → `signInWithIdToken` (native token, no browser

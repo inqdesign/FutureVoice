@@ -65,6 +65,7 @@ fun TalkScreen(
     persona: com.roro.futurevoice.talk.UserPersona? = null,
     topic: String = "",
     newsFacts: List<String> = emptyList(),
+    scenarioId: String? = null,
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -89,6 +90,7 @@ fun TalkScreen(
                 persona = persona,
                 topic = topic,
                 newsFacts = newsFacts,
+                scenarioId = scenarioId,
             )
         )
     }

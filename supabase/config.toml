@@ -436,6 +436,12 @@ verify_jwt = true
 import_map = "./functions/session-summary/deno.json"
 entrypoint = "./functions/session-summary/index.ts"
 
+[functions.topic-engine]
+enabled = true
+verify_jwt = true
+import_map = "./functions/topic-engine/deno.json"
+entrypoint = "./functions/topic-engine/index.ts"
+
 [functions.google-webhook]
 enabled = true
 # Pub/Sub cannot send a Supabase JWT; auth is the shared secret in the URL.

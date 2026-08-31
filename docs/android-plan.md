@@ -35,7 +35,11 @@
 > (verified `is_anonymous: true` on a fresh AVD), the clone happens on it,
 > and the sign-up asks to KEEP the voice (`AccountScreen`; Google/Apple
 > buttons gated on the owner's provider setup). Me screen, Google sign-in
-> code-ahead (`GOOGLE_WEB_CLIENT_ID` gate) are in. Still missing from the
+> code-ahead (`GOOGLE_WEB_CLIENT_ID` gate) are in. Scenarios v1 are in via
+> the NEW `topic-engine` Edge Function (brain-lift #3's first slice —
+> categorize, prompt extracted from Swift; iOS untouched): compose free-text
+> → category/summary (never blocks) → saved template → in-scene talk with
+> `origin=scenario`. Still missing from the
 > slice: real-mic
 > STT validation, and Apple web OAuth (a Services ID + secret the app can't
 > set up for itself — until then debug builds sign in with a test email).
