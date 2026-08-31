@@ -232,6 +232,13 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "watchtab":
+            // The Watch tab with the merged People entry in its header.
+            return AnyView(WatchTab().environmentObject(appState))
+        case "people":
+            // The ONE people page: own people on top, the shared pool below.
+            return AnyView(FindPeopleSheet(onNew: {}, onTalk: { _ in }, onWatch: { _ in },
+                                           onCompose: { _ in }).environmentObject(appState))
         case "daycard":
             // Today's share card with a sample day — no camera in the
             // simulator, so this is the ink fallback.

@@ -30,7 +30,6 @@ struct WatchTab: View {
         let fresh: Bool
         var id: UUID { scenario.id }
     }
-    @State private var showingPeople = false
     @State private var showingNewVoice = false
     @State private var showingFind = false
     /// A Find-people stranger to start a live call with (fullScreenCover).
@@ -76,10 +75,12 @@ struct WatchTab: View {
             .toolbarTitleDisplayMode(.inlineLarge)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button { showingPeople = true } label: {
+                    // ONE people page: your own people and the shared pool,
+                    // merged — the header button answers "who can I talk to".
+                    Button { showingFind = true } label: {
                         Image(systemName: "person.2")
                     }
-                    .accessibilityLabel("Your people")
+                    .accessibilityLabel("People")
                 }
             }
             .sheet(item: $composer) { cfg in
@@ -102,10 +103,6 @@ struct WatchTab: View {
                     watchScene = WatchTarget(scenario: scenario, fresh: cfg.editing != nil)
                 }
                 .environmentObject(appState)
-            }
-            .sheet(isPresented: $showingPeople) {
-                PeopleSheet(onNew: { showingPeople = false; showingNewVoice = true })
-                    .environmentObject(appState)
             }
             .sheet(isPresented: $showingNewVoice) {
                 CounterpartVoiceIntakeView().environmentObject(appState)
@@ -142,6 +139,7 @@ struct WatchTab: View {
                 // already the situation, so it never asks the user to invent
                 // one first (that's what "Make your own situation" is for).
                 FindPeopleSheet(
+                    onNew: { showingFind = false; showingNewVoice = true },
                     onTalk: { person in
                         showingFind = false
                         callPerson = person
@@ -231,19 +229,10 @@ struct WatchTab: View {
 
     private var peopleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Find is a HEADER action, not a bubble: as a bubble it sat after
-            // every person and scrolled off the row the moment the user had a
-            // few, which hid the only way into the shared pool.
-            HStack(alignment: .firstTextBaseline) {
-                sectionHeader("People")
-                Spacer()
-                Button {
-                    showingFind = true
-                } label: {
-                    Label("Find people", systemImage: "magnifyingglass")
-                        .font(.subheadline)
-                }
-            }
+            // No Find button here any more: the page header's person.2 opens
+            // the ONE people page (your people + the shared pool), so the row
+            // needs no second door beside it.
+            sectionHeader("People")
             // Making a person is pinned to the left, outside the scroller —
             // as the last bubble it slid off the row the moment the user had
             // a few people, exactly like Find people did before it moved up
@@ -263,7 +252,7 @@ struct WatchTab: View {
                 .padding(.trailing, -20)
             }
             .padding(.vertical, 6)
-            Text(explain("Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them."))
+            Text(explain("Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them."))
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

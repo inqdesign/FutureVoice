@@ -62,6 +62,16 @@
         }
       }
     },
+    "Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 만든 사람들과, 사람 페이지에서 북마크한 사람들이에요. 대화만으로는 여기 추가되지 않아요 — 곁에 두려면 북마크하세요."
+          }
+        }
+      }
+    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -70,6 +80,17 @@
     },
     "“%@”" : {
       "shouldTranslate" : false
+    },
+    "Start recording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음 시작"
+          }
+        }
+      }
     },
     "“Well” describes how something went." : {
       "localizations" : {
@@ -23408,22 +23429,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "직접 만들기"
-          }
-        }
-      }
-    },
-    "Your own people, plus anyone you bookmarked in Find people. Talking with someone doesn't add them here — bookmark them to keep them." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deine eigenen Leute plus alle, die du in „Leute finden“ gemerkt hast. Ein Gespräch allein fügt niemanden hier hinzu — merke dir jemanden, um ihn zu behalten."
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내가 만든 사람들과, 사람 찾기에서 북마크한 사람들이에요. 대화만으로는 여기 추가되지 않아요 — 곁에 두려면 북마크하세요."
           }
         }
       }

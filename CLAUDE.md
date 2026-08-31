@@ -18,7 +18,11 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 
 ## Find people (shared persona pool)
 
-Watch's People row is your OWN people. The last bubble, **Find**, opens `FindPeopleSheet` — strangers you can practice with, like meeting someone at a language school. Rows come from the Supabase table `public_personas`, read anonymously, written only by their owner (RLS).
+Watch's People row is your OWN people. The tab header's `person.2` opens the
+ONE people page (`FindPeopleSheet`, titled People, 2026-08-31): your own
+people (create, edit, delete — the old separate `PeopleSheet` is gone) on
+top, and below them strangers you can practice with, like meeting someone at
+a language school. Rows come from the Supabase table `public_personas`, read anonymously, written only by their owner (RLS).
 
 - A row is either **curated** (`owner_user_id` null — seeded by migration, deliberately diverse in job/place/register) or a **real user's** self-introduction. Same pool, same shape; the pool self-mixes as users join.
 - The user's own row is auto-published from their onboarding `UserPersona` at app start (`PublicPersonaService.autoSyncMyPersona`) so existing users appear without doing anything. Editing or taking it down by hand in Me → Find people sets `manualIntroKey`, after which auto-sync never touches that row again — an explicit choice always wins. Your own row is filtered out of your own pool.

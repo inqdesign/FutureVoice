@@ -13,6 +13,9 @@ struct FindPeopleSheet: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
 
+    /// Make a new OWN person (voice intake) — the host closes this sheet
+    /// first, so the flow is one hop, not a sheet on a sheet.
+    let onNew: () -> Void
     /// Start a live call with this (already saved) person.
     let onTalk: (Counterpart) -> Void
     /// Watch a scene of the fluent self and this person just talking.
@@ -66,9 +69,18 @@ struct FindPeopleSheet: View {
         PublicPersonaService.search(searchText, in: groupPool)
     }
 
+    /// Your OWN people — they live on this page too now: one page for
+    /// everyone you can practice with, made or met.
+    private var ownPeople: [Counterpart] {
+        appState.counterparts.filter { $0.remoteId == nil }
+    }
+
     var body: some View {
         NavigationStack {
             List {
+                if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
+                    ownSection
+                }
                 Section {
                     Picker("", selection: $group) {
                         Text("People").tag(PublicPersonaService.Group.user)
@@ -90,7 +102,7 @@ struct FindPeopleSheet: View {
                 }
                 coreLegendSection
             }
-            .navigationTitle("Find people")
+            .navigationTitle("People")
             .toolbarTitleDisplayMode(.inline)
             .searchable(text: $searchText, prompt: Text("Name, interests, place…"))
             .toolbar {
@@ -121,6 +133,38 @@ struct FindPeopleSheet: View {
     }
 
     // MARK: - Sections
+
+    /// The half that used to be its own "Your people" sheet — merged here so
+    /// the header button answers every "who can I talk to" question at once.
+    @ViewBuilder private var ownSection: some View {
+        Section("Your people") {
+            Button(action: onNew) {
+                Label("New person", systemImage: "plus.circle.fill")
+                    .font(.body.weight(.medium))
+            }
+            ForEach(ownPeople) { c in
+                NavigationLink {
+                    CounterpartDetailView(counterpart: c).environmentObject(appState)
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle().fill(Color.accentColor.opacity(0.15)).frame(width: 40, height: 40)
+                            Text(Books.initials(c.name))
+                                .font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(c.name).font(.body)
+                            Text(c.relationship).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .onDelete { idx in
+                let people = ownPeople
+                for i in idx { appState.deleteCounterpart(id: people[i].id) }
+            }
+        }
+    }
 
     @ViewBuilder private var metSection: some View {
         if !metPeople.isEmpty {
