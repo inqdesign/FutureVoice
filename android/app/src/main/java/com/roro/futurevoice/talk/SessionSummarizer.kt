@@ -58,12 +58,33 @@ object SessionSummarizer {
     private val _inFlight = MutableStateFlow<Set<String>>(emptySet())
     val inFlight: StateFlow<Set<String>> = _inFlight
 
+    /**
+     * Live board state per session — what the wrap-up draws. Entries appear
+     * when an analysis starts and stay after it finishes (the board's last
+     * frame), cleared on the next analysis of the same session.
+     */
+    private val _progressBySession = MutableStateFlow<Map<String, Progress>>(emptyMap())
+    val progressBySession: StateFlow<Map<String, Progress>> = _progressBySession
+
+    private fun publish(sessionId: String, p: Progress) {
+        _progressBySession.update { it + (sessionId to p) }
+    }
+
     data class Progress(
         val readBack: Boolean = false,
         val wroteCorrections: Boolean = false,
         val wroteDrills: Boolean = false,
         val wroteExpressions: Boolean = false,
         val wroteGrammar: Boolean = false,
+        // Final counts, once the local pass has verified everything — the
+        // same numbers the summary then shows. null = not done yet; a
+        // finished step with 0 shows its tick alone.
+        val phrases: Int? = null,
+        val words: Int? = null,
+        val offered: Int? = null,
+        val corrections: Int? = null,
+        val carryovers: Int? = null,
+        val cards: Int? = null,
         val finished: Boolean = false,
     ) {
         /** Same key-order reading as `Progress.absorb(partial:)` on iOS. */
@@ -88,10 +109,12 @@ object SessionSummarizer {
         if (session.id in _inFlight.value) return
         val appContext = context.applicationContext
         _inFlight.update { it + session.id }
+        _progressBySession.update { it + (session.id to Progress()) }
         scope.launch {
             try {
-                runCatching { summarize(appContext, session, nativeLanguage, level) }
-                    .onFailure { Log.w(TAG, "summary failed for ${session.id}: ${it.message}") }
+                runCatching {
+                    summarize(appContext, session, nativeLanguage, level) { publish(session.id, it) }
+                }.onFailure { Log.w(TAG, "summary failed for ${session.id}: ${it.message}") }
             } finally {
                 _inFlight.update { it - session.id }
             }
@@ -134,9 +157,12 @@ object SessionSummarizer {
         // of a talk look like a failure. Free — the ledger dedupes on the key.
         // (iOS: the `isMalformedModelOutput` retry in SessionSummarizer.)
         fun parse(text: String): JsonObject = Json.parseToJsonElement(text).jsonObject
+        fun report(edit: (Progress) -> Progress) {
+            progress = edit(progress); onProgress?.invoke(progress)
+        }
         val payload = try {
             parse(client.summarize(body, key) { partial ->
-                progress = progress.absorb(partial); onProgress?.invoke(progress)
+                report { it.absorb(partial) }
             })
         } catch (e: CancellationException) {
             throw e
@@ -145,6 +171,7 @@ object SessionSummarizer {
             parse(client.summarize(body, key))
         }
         var computed = toDomain(payload)
+        report { it.copy(phrases = computed.phrasesUsed.count()) }
 
         // Verbatim guards — the same normalization CarryoverDetector uses.
         val userTexts = turns.filter { it.role == TurnRole.USER }.map { it.transcript }
@@ -181,6 +208,8 @@ object SessionSummarizer {
         // Words into the long-term pool; merge with the previous summary's
         // list so a resumed talk can't erase "words you used first".
         val freshWords = vocab.ingest(session.id, userTexts, language)
+        report { it.copy(words = freshWords.size + verifiedUsed.size, offered = computed.expressionsOffered.size,
+            corrections = computed.grammarIssues.size) }
         val priorWords = session.summary?.newWordsUsed.orEmpty()
         // Expressions: seed pre-tracking sessions, then count this batch.
         vocab.notePriorExpressions(session.id, priorUsed, language)
@@ -200,6 +229,7 @@ object SessionSummarizer {
             newWordsUsed = priorWords + freshWords.filter { it !in priorWords },
             carryovers = carryovers,
         )
+        report { it.copy(carryovers = carryovers.size) }
 
         // A free talk takes the generated title so lists don't fill with "Conversation".
         val generatedTitle = payload["title"]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
@@ -215,6 +245,7 @@ object SessionSummarizer {
         val minted = DrillIngest.mint(drills.load(language), computed, turns, session.id,
             System.currentTimeMillis())
         drills.upsertMany(minted, language)
+        report { it.copy(cards = minted.size) }
         drills.markUsedInConversation(
             carryovers.filter { it.source == Carryover.Source.DRILL_CARD }.mapNotNull { it.sourceId },
             language)
@@ -226,7 +257,7 @@ object SessionSummarizer {
         profileStore.save(profile)
 
         StoreEvents.bump()
-        progress = progress.copy(finished = true); onProgress?.invoke(progress)
+        report { it.copy(finished = true) }
         return saved
     }
 

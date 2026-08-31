@@ -22,17 +22,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.roro.futurevoice.R
+import com.roro.futurevoice.data.SessionStore
+import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.talk.SessionSummarizer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.roro.futurevoice.R
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.talk.TalkConfig
 import com.roro.futurevoice.talk.TalkPhase
@@ -179,6 +185,15 @@ fun TalkScreen(
                 )
             }
 
+            // The wait at the end shows its work (`SummaryProgressView`):
+            // the board while the analysis runs, its last frame + the top
+            // line once the summary is on disk.
+            if (state.phase == TalkPhase.ENDED) {
+                state.endedSessionId?.let { sessionId ->
+                    EndOfTalkWrapUp(sessionId = sessionId, userTurns = state.turns.count { it.role == TurnRole.USER })
+                }
+            }
+
             // The one in-call control besides End: put the call down, pick it
             // up. Pausing has no consequences (no summary, no book), which is
             // why it needs no confirmation.
@@ -241,3 +256,26 @@ private fun phaseLabel(phase: TalkPhase): String = stringResource(
         TalkPhase.ENDED -> R.string.ended
     }
 )
+
+/** Board + result for the talk that just ended, keyed to its session row. */
+@Composable
+private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int) {
+    val context = LocalContext.current
+    val progressMap by SessionSummarizer.progressBySession.collectAsStateWithLifecycle()
+    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    val progress = progressMap[sessionId] ?: return
+    var topLine by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(revision, progress.finished) {
+        if (progress.finished) {
+            topLine = SessionStore.shared(context).load()
+                .firstOrNull { it.id == sessionId }?.summary?.scorecard?.topLine
+        }
+    }
+    Column(Modifier.padding(16.dp)) {
+        SummaryBoard(progress, facts = stringResource(R.string.lld_turns, userTurns))
+        topLine?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 12.dp))
+        }
+    }
+}

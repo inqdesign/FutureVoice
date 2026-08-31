@@ -203,6 +203,7 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     val inFlight by SessionSummarizer.inFlight.collectAsStateWithLifecycle()
+    val progressBySession by SessionSummarizer.progressBySession.collectAsStateWithLifecycle()
     LaunchedEffect(language, revision) { talks = store.load(language) }
     if (talks.isEmpty()) return
     HorizontalDivider()
@@ -229,10 +230,15 @@ private fun RecentTalks(language: String, nativeLanguage: String, level: CefrLev
             // so it can always be run again from here.
             if (SessionSummarizer.needsSummary(s)) {
                 val working = s.id in inFlight
-                TextButton(
-                    enabled = !working,
-                    onClick = { SessionSummarizer.summarizeInBackground(context, s, nativeLanguage, level) },
-                ) { Text(stringResource(if (working) R.string.working else R.string.generate_review_material)) }
+                if (working) {
+                    // The rescue path draws the SAME board as the live
+                    // wrap-up (`ConversationDetailView` does on iOS).
+                    SummaryBoard(progressBySession[s.id] ?: SessionSummarizer.Progress())
+                } else {
+                    TextButton(
+                        onClick = { SessionSummarizer.summarizeInBackground(context, s, nativeLanguage, level) },
+                    ) { Text(stringResource(R.string.generate_review_material)) }
+                }
             }
         }
     }

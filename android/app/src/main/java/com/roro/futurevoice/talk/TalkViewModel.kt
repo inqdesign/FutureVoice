@@ -69,6 +69,8 @@ data class TalkUiState(
      * screen reads "paused" instead of wondering what broke.
      */
     val pausedForIdle: Boolean = false,
+    /** Set when the call ended with something said — the wrap-up's subject. */
+    val endedSessionId: String? = null,
     val lastTiming: Map<String, String> = emptyMap(),
 )
 
@@ -201,6 +203,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary
         // follows on the same scope and writes onto the same row.
+        _state.update { it.copy(endedSessionId = session.id) }
         CoroutineScope(Dispatchers.Main).launch {
             runCatching { sessions.save(session) }
             StoreEvents.bump()
