@@ -87,6 +87,7 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play)
     implementation(libs.googleid)
+    implementation(libs.billing)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.serialization.json)

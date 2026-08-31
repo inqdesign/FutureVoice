@@ -10,6 +10,7 @@ okhttp = "5.4.0"
 junit = "4.13.2"
 credentials = "1.5.0"
 googleid = "1.1.1"
+billing = "7.1.1"
 serialization = "1.11.0"
 supabase = "3.7.0"
 ktor = "3.5.2"
@@ -37,6 +38,7 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 googleid = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleid" }
+billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 
 supabase-bom = { group = "io.github.jan-tennert.supabase", name = "bom", version.ref = "supabase" }
 supabase-auth = { group = "io.github.jan-tennert.supabase", name = "auth-kt" }
