@@ -68,6 +68,8 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     #endif
+    /// Owner-gated, not DEBUG-gated — see the "Speed test" section below.
+    @State private var showingRealtimeTalk = false
 
     var body: some View {
         NavigationStack {
@@ -213,6 +215,29 @@ struct MeTab: View {
                     Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
                 }
 
+                // The realtime gateway spike (`gateway/`): one WebSocket per
+                // call, server-side turn-taking and barge-in. Measured
+                // 2.1–3.0 s speech→voice against the shipping pipeline's
+                // ~6.5 s — but it writes no session, no drills and no meter,
+                // and the gateway does not bill, so it is OWNER-ONLY rather
+                // than DEBUG-only: testable from TestFlight on a real phone,
+                // invisible (and unspendable) to every beta tester.
+                if auth.isOwner {
+                    Section {
+                        Button {
+                            showingRealtimeTalk = true
+                        } label: {
+                            row(icon: "waveform.circle",
+                                title: explain("Realtime call (spike)"),
+                                subtitle: explain("Interrupt it while it talks — nothing is saved"))
+                        }
+                    } header: {
+                        Text("Speed test")
+                    } footer: {
+                        Text(explain("A faster call path being tried out. It keeps no transcript, makes no review material, and doesn't count toward talk time."))
+                    }
+                }
+
                 #if DEBUG
                 Section {
                     Button {
@@ -256,6 +281,9 @@ struct MeTab: View {
             .sheet(isPresented: $showingPersonaEdit) {
                 PersonaOnboardingView(initialPersona: appState.persona)
                     .environmentObject(appState)
+            }
+            .fullScreenCover(isPresented: $showingRealtimeTalk) {
+                RealtimeTalkView().environmentObject(appState)
             }
             .sheet(isPresented: $showingAddLanguage) {
                 AddLanguageSheet().environmentObject(appState)

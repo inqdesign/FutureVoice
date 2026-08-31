@@ -165,7 +165,8 @@ final class GeminiClient {
         idempotencyKey: String?,
         jsonResponse: Bool,
         requestTimeout: TimeInterval?,
-        stream: Bool
+        stream: Bool,
+        fastThinking: Bool = false
     ) async throws -> URLRequest {
         let url = functionsBaseURL.appendingPathComponent("gemini")
 
@@ -217,10 +218,13 @@ final class GeminiClient {
                 // the caller's value is only honored on the 2.5 family.
                 temperature: model.isGen3 ? nil : temperature,
                 maxOutputTokens: maxTokens,
-                // Latency floor for the phone-call loop: thinking OFF on 2.5,
-                // the minimum "low" level on gen-3 (which can't fully disable).
+                // Latency floor for the phone-call loop: thinking OFF on 2.5;
+                // on gen-3 "minimal" for the live turn (`fastThinking` — TTFT
+                // ~1.5s vs ~2.9s on "low", measured 2026-08-31 in
+                // gateway/test/probe-reply-ttft.mjs; still more deliberation
+                // than the 2.5 era's budget-0) and "low" for everything else.
                 thinkingConfig: model.isGen3
-                    ? .init(thinkingLevel: "low")
+                    ? .init(thinkingLevel: fastThinking ? "minimal" : "low")
                     : .init(thinkingBudget: 0),
                 // Force JSON output at the API level — prompt-only JSON drifts
                 // back to prose in long conversations because the model
@@ -340,7 +344,10 @@ final class GeminiClient {
             system: system, messages: messages, model: model, maxTokens: maxTokens,
             temperature: temperature, searchGrounding: false,
             purpose: purpose, idempotencyKey: idempotencyKey,
-            jsonResponse: true, requestTimeout: requestTimeout, stream: true
+            jsonResponse: true, requestTimeout: requestTimeout, stream: true,
+            // This method's one caller is the live conversation turn — the
+            // only Gemini call a person is audibly waiting on.
+            fastThinking: true
         )
 
         // One immediate re-dial on a transient connect failure, matching the

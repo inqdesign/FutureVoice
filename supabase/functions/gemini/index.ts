@@ -72,13 +72,6 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("GEMINI_API_KEY")
   if (!apiKey) return errorResponse(500, "server missing GEMINI_API_KEY")
 
-  // Idempotency-proof hourly backstop, BEFORE any upstream spend. Blocks the
-  // pinned-key faucet that the daily caps below cannot see.
-  const rate = await enforceRequestRate({
-    userId: user.id, sourceFn: SOURCE_FN, limit: HOURLY_REQUEST_LIMIT,
-  })
-  if (!rate.ok) return rateLimitedResponse(cors())
-
   let body: { model?: string; purpose?: string; [k: string]: unknown }
   try { body = await req.json() } catch { return errorResponse(400, "invalid json body") }
   const model = body.model ?? "gemini-2.5-flash"
@@ -107,12 +100,25 @@ Deno.serve(async (req) => {
     "gemini"
 
   const purposeKey = purpose ?? "generic"
-  const rec = await recordFreeUsage({
-    supabase, userId: user.id, action, purpose: purposeKey,
-    dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
-    sourceFn: SOURCE_FN, idempotencyKey: idemKey,
-    metadata: { model, purpose: purpose ?? null, spec: speculative },
-  })
+  // The hourly backstop and the per-purpose daily record are independent DB
+  // round trips, and this function is the live turn's critical path
+  // (`gemini_first_ms` clocks it) — run them CONCURRENTLY, both still before
+  // any upstream spend. A request the limiter refuses now leaves its 0-delta
+  // ledger row behind (it used to be refused before the record was written);
+  // the limiter only fires on abuse, and a counted-but-refused call is
+  // exactly what an abuse ledger should show.
+  const [rate, rec] = await Promise.all([
+    enforceRequestRate({
+      userId: user.id, sourceFn: SOURCE_FN, limit: HOURLY_REQUEST_LIMIT,
+    }),
+    recordFreeUsage({
+      supabase, userId: user.id, action, purpose: purposeKey,
+      dailyCap: DAILY_CAPS[purposeKey] ?? DEFAULT_DAILY_CAP,
+      sourceFn: SOURCE_FN, idempotencyKey: idemKey,
+      metadata: { model, purpose: purpose ?? null, spec: speculative },
+    }),
+  ])
+  if (!rate.ok) return rateLimitedResponse(cors())
   if (!rec.ok) {
     if (rec.reason === "rate_limited") return rateLimitedResponse(cors())
     return errorResponse(500, "usage record failed", rec.detail)

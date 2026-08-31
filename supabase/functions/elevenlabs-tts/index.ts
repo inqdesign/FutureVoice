@@ -124,29 +124,41 @@ Deno.serve(async (req) => {
     return errorResponse(400, "voice_id and text required")
   }
 
-  // Idempotency-proof hourly backstop, before any upstream spend.
-  const rate = await enforceRequestRate({
+  // Idempotency-proof hourly backstop, before any upstream spend. FIRED here,
+  // awaited beside the charge below: the rate bump, the ownership check and
+  // the charge are three independent DB round trips, and this function sits
+  // on the live call's critical path (`tts_first_ms` clocks it per turn) —
+  // run serially they cost up to two extra DB RTTs per spoken line.
+  // `bump_request_rate` increments unconditionally by design, so firing it
+  // early changes nothing about what it counts.
+  const ratePromise = enforceRequestRate({
     userId: user.id, sourceFn: SOURCE_FN, limit: HOURLY_REQUEST_LIMIT,
   })
-  if (!rate.ok) return rateLimitedResponse(cors())
 
   // Voice ownership: a caller may synthesize only with a counterpart preset or
   // their OWN cloned voice. Without this, anyone who learns another user's
   // voice_id can speak arbitrary text in that person's cloned voice — a
   // deepfake primitive against our users' biometric data.
+  //
+  // Kicked off concurrently with the rate bump and the charge; the result is
+  // awaited before anything is spent upstream or returned to the caller.
   const ownerKey = `${user.id}:${body.voice_id}`
-  if (!PRESET_VOICE_IDS.has(body.voice_id) && !verifiedVoiceOwners.has(ownerKey)) {
-    const { data: owned, error: ownErr } = await billingClient()
-      .from("voice_clones")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("elevenlabs_voice_id", body.voice_id)
-      .limit(1)
-      .maybeSingle()
-    if (ownErr) return errorResponse(500, "voice ownership check failed", ownErr.message)
-    if (!owned) return errorResponse(403, "voice_id not permitted")
-    verifiedVoiceOwners.add(ownerKey)
-  }
+  const ownershipPromise: Promise<Response | null> =
+    (PRESET_VOICE_IDS.has(body.voice_id) || verifiedVoiceOwners.has(ownerKey))
+      ? Promise.resolve(null)
+      : (async () => {
+          const { data: owned, error: ownErr } = await billingClient()
+            .from("voice_clones")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("elevenlabs_voice_id", body.voice_id!)
+            .limit(1)
+            .maybeSingle()
+          if (ownErr) return errorResponse(500, "voice ownership check failed", ownErr.message)
+          if (!owned) return errorResponse(403, "voice_id not permitted")
+          verifiedVoiceOwners.add(ownerKey)
+          return null
+        })()
 
   // Model allowlist: the fidelity model costs ~2x upstream at the SAME price to
   // us, so it's reserved for the purposes meant to use it (scenes + once-per-
@@ -206,11 +218,21 @@ Deno.serve(async (req) => {
     metadata: { chars: body.text.length, voice_id: body.voice_id,
                 purpose: body.purpose ?? null, model_id: requestedModel },
   }
-  // Watch: claim one of today's scenes BEFORE synthesizing anything. Doing
-  // it first means the cap is hit on the line that would have started a
-  // third scene, not after we already paid ElevenLabs for it.
-  let scenePool: "scene_seconds" | "scene_counted" = "scene_seconds"
+  const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
+  let ch: Awaited<ReturnType<typeof chargePooledTTS>>
   if (action === "tts_scene" && body.scene_key) {
+    // Watch: claim one of today's scenes BEFORE synthesizing anything. Doing
+    // it first means the cap is hit on the line that would have started a
+    // third scene, not after we already paid ElevenLabs for it.
+    //
+    // The scene path stays SERIAL: a claim has no un-claim, so it must not be
+    // taken by a request that then fails the rate or ownership gate — and a
+    // scene line is not the latency-critical path the parallel branch below
+    // exists for.
+    if (!(await ratePromise).ok) return rateLimitedResponse(cors())
+    const ownershipFailure = await ownershipPromise
+    if (ownershipFailure) return ownershipFailure
+    let scenePool: "scene_seconds" | "scene_counted" = "scene_seconds"
     const claim = await beginScenePlay({
       supabase, userId: user.id, sceneKey: body.scene_key,
     })
@@ -221,18 +243,39 @@ Deno.serve(async (req) => {
     // Only an entitled user's scene was paid for with a count; a free user's
     // scene still owes seconds against their balance.
     if (claim.counted) scenePool = "scene_counted"
+    ch = await chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: scenePool })
+  } else {
+    // Hot path (turn / opener / review): the charge runs CONCURRENTLY with
+    // the rate bump and the ownership check — all three depend only on the
+    // verified user. A charge that landed ahead of a failed gate is refunded
+    // under the same idempotency key, the exact pattern the upstream-error
+    // path below already uses; the gates fail only on abuse, so the refund
+    // path is cold. The legacy scene call (purpose "scene", no scene_key —
+    // an un-updated app) keeps its tts_scene action and seconds pool here,
+    // exactly as before.
+    const chargePromise = isFreeEntry
+      ? Promise.resolve({ ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey })
+      : FREE_PURPOSES.has(body.purpose ?? "")
+      ? chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
+      : action === "tts_scene"
+      ? chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: "scene_seconds" })
+      : TALK_PURPOSES.has(body.purpose ?? "")
+      ? chargeTurnTTSFloored({ ...chargeArgs, action: baseAction })
+      : chargePooledTTS({ ...chargeArgs, action: baseAction })
+    const rate = await ratePromise
+    const ownershipFailure = await ownershipPromise
+    ch = await chargePromise
+    if (!rate.ok || ownershipFailure) {
+      if (ch.ok && ch.charged > 0) {
+        await refund({
+          supabase, userId: user.id, amount: ch.charged,
+          action, sourceFn: SOURCE_FN, originalIdempotencyKey: idemKey,
+          metadata: { reason: "precheck_failed" },
+        })
+      }
+      return ownershipFailure ?? rateLimitedResponse(cors())
+    }
   }
-
-  const baseAction = timestamped ? "tts_timestamps" as const : "tts" as const
-  const ch = isFreeEntry
-    ? { ok: true as const, balanceAfter: -1, charged: 0, idempotencyKey: idemKey }
-    : FREE_PURPOSES.has(body.purpose ?? "")
-    ? await chargeFreePooledTTS({ ...chargeArgs, action: baseAction })
-    : action === "tts_scene"
-    ? await chargePooledTTS({ ...chargeArgs, action: "tts_scene", pool: scenePool })
-    : TALK_PURPOSES.has(body.purpose ?? "")
-    ? await chargeTurnTTSFloored({ ...chargeArgs, action: baseAction })
-    : await chargePooledTTS({ ...chargeArgs, action: baseAction })
   if (!ch.ok) {
     if (ch.reason === "insufficient_credits" || ch.reason === "no_credit_row") {
       return insufficientCreditsResponse(cors())

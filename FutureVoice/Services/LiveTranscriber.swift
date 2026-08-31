@@ -548,11 +548,21 @@ final class LiveTranscriber: ObservableObject {
         quietWatcher?.cancel()
         quietWatcher = nil
         appender.setRequest(nil)
-        engine?.stop()
+        // `pause()` halts the I/O thread in a few ms — the tap stops feeding
+        // the file writers, which is all the `finish()` calls below need. The
+        // full `stop()` additionally tears down the voice-processing unit,
+        // and it was the bulk of the ~200 ms this method spent on the turn's
+        // critical path (`finalize_ms`) — so it runs detached instead. The
+        // next `start()` builds a fresh engine, so the old one winding down
+        // in the background races nothing; it is only kept alive by the task.
+        engine?.pause()
         engine?.inputNode.removeTap(onBus: 0)
         lastRecordingURL = recorder.finish()
         lastChunkRecordingURL = chunkRecorder.finish()
-        engine = nil
+        if let stoppingEngine = engine {
+            engine = nil
+            Task.detached(priority: .userInitiated) { stoppingEngine.stop() }
+        }
         level = 0
 
         // Same rule as `stopAndFinalize`: the live segment is worth a final

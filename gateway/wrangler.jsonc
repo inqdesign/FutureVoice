@@ -1,0 +1,27 @@
+{
+  "name": "futurevoice-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "durable_objects": {
+    "bindings": [
+      { "name": "CALL_SESSION", "class_name": "CallSession" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["CallSession"] }
+  ],
+  // A live call relays audio frames for up to ~30 min; each WebSocket message
+  // is its own invocation for CPU accounting, but messages arriving on the
+  // OUTBOUND sockets (Gemini / ElevenLabs) bill against the open context —
+  // raise the ceiling so a long call can't be cut by the 30 s default.
+  // DISABLED while the account is on Workers Free (custom CPU limits are a
+  // paid-plan feature and the deploy hard-fails on it — 2026-08-31).
+  // RE-ENABLE this line the moment the account moves to Workers Paid;
+  // production calls should not run on the free tier's default CPU budget.
+  // "limits": { "cpu_ms": 300000 },
+  "observability": { "enabled": true }
+  // Secrets (set with `wrangler secret put <NAME>`):
+  //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
+  //   GEMINI_API_KEY, ELEVENLABS_API_KEY
+  // Optional vars: GEMINI_LIVE_MODEL, ELEVEN_OUTPUT_FORMAT, DEV_ALLOW_ANON
+}

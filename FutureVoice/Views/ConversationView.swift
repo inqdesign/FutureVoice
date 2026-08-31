@@ -300,27 +300,20 @@ struct ConversationView: View {
     /// Voiced seconds below which the tail is just the trailing quiet after
     /// the last cut — deleted, not transcribed.
     private static let chunkTailMinVoicedSeconds: Double = 0.3
-    /// The most `stopAndSend` may wait for outstanding chunk transcripts
-    /// before falling back to the on-device text: a bounded wait for the
-    /// RIGHT text, priced against an instant reply to possibly-wrong text.
-    /// `chunk_wait_ms` records what it actually costs per turn.
-    ///
-    /// 1.5 → 0.35 on 2026-08-21, measured on device: the tail chunk's round
-    /// trip runs ~1.3 s PAST the turn's end, so at 1.5 s this wait sat in
-    /// front of the Gemini call on every turn and still came back `late` on
-    /// long utterances — 1.5 s of the ~6.3 s speech-end→voice gap, sometimes
-    /// bought for nothing. At 0.35 s it only harvests chunks that are
-    /// essentially done; anything slower falls back to the on-device guess
-    /// for the REPLY while the transcript still gets corrected (chunk flush
-    /// or whole-turn ASR, both post-voice). This deliberately re-accepts
-    /// replies-from-ASR-guess on most turns: the learner's complaint was the
-    /// wait, and the wait was this.
-    ///
-    /// 0.35 → 0.1 same day: at 0.35 every measured turn still came back
-    /// `late` (chunk_wait_ms 385–393, all of it wasted) because the tail's
-    /// RTT is ~1.3 s past turn end. 0.1 s is a harvest window, not a wait —
-    /// it collects an assembly that is already done and gives up on the rest.
-    private static let chunkAssemblyDeadlineSeconds: Double = 0.1
+    // `stopAndSend` no longer WAITS for outstanding chunk transcripts at all —
+    // it harvests an assembly that is already settled and moves on.
+    //
+    // The wait shrank 1.5 → 0.35 → 0.1 s across 2026-08-21 (each step
+    // measured: the tail chunk's RTT runs ~1.3 s past turn end, so every
+    // window mostly expired unfilled), and prod telemetry through 2026-08-31
+    // closed the argument: ~87% of turns logged `chunk_path=late` with
+    // `chunk_wait_ms` ~125–137 — the 0.1 s deadline plus the 60 ms poll tick,
+    // paid on nearly every turn for nothing. The assemblies that DO land in
+    // time (`chunk_path=full`, 10–15%) were overwhelmingly settled at entry
+    // (`chunk_wait_ms` 0), so a zero-length harvest keeps most of them. A
+    // missed assembly costs only reply-from-on-device-guess — the accepted
+    // trade since the 1.5 s cut — and the transcript is still corrected
+    // post-voice (chunk flush or whole-turn ASR).
 
     /// True silence before the reply is generated SPECULATIVELY, while the
     /// VAD is still deciding whether the turn is over. Measured 2026-08-21:
@@ -1284,6 +1277,10 @@ struct ConversationView: View {
         speculativeReply = nil
         guard ConversationEngine.saysTheSameThing(spec.text, answered) else {
             spec.task.cancel()
+            // The head start was thrown away at adoption. Logged so the miss
+            // rate is measurable: `spec` only says when one was USED, which
+            // made every failure mode invisible in telemetry.
+            turnTiming["spec_miss"] = "1"
             turnTrace("spec/mismatch — discarded")
             return nil
         }
@@ -1305,8 +1302,8 @@ struct ConversationView: View {
     }
 
     /// Encode one cut piece and put its transcription in flight. Fully
-    /// background — nothing awaits it until `adoptChunkTranscript`'s bounded
-    /// wait at turn end.
+    /// background — nothing ever awaits it; `adoptChunkTranscript` harvests
+    /// whatever has settled at turn end.
     private func sendChunk(_ url: URL, state: ChunkASRState) {
         let index = state.nextIndex
         state.nextIndex += 1
@@ -1521,6 +1518,12 @@ struct ConversationView: View {
                     // Without this, a `vad_path=noisy` turn can't be told apart
                     // from one where noise suppression simply never engaged.
                     "voice_proc": live.voiceProcessingActive ? "1" : "0",
+                    // How many speculations this turn FIRED (0–3). With `spec`
+                    // (used) and `spec_miss` (thrown away at adoption), the
+                    // three together say where the ~40% of turns that get no
+                    // head start actually lose it: never fired, churned out by
+                    // trailing partials, or mismatched at adoption.
+                    "spec_fires": String(specFiresThisTurn),
                 ]
                 turnEndedSpeakingAt = Date()
                 HapticEngine.voiceSent()
@@ -1980,25 +1983,22 @@ struct ConversationView: View {
         // painted their corrections before the reply had even been asked for.
         deferredTurnWork = DeferredTurnWork(turnId: turnId)
         if let chunk = chunkState, chunk.nextIndex > 0 {
-            await adoptChunkTranscript(chunk, turnId: turnId, guess: finalText)
+            adoptChunkTranscript(chunk, turnId: turnId, guess: finalText)
         }
         await requestReply(forUserTurn: userTurn.id)
     }
 
-    /// Bounded wait for the in-flight chunk transcripts; when EVERY piece
-    /// resolved, the assembled audio-grounded text replaces the on-device
-    /// guess BEFORE the reply is generated — the whole point of the pipeline.
-    /// Any gap (a failed call, a piece still in flight at the deadline) falls
-    /// back to today's behavior: on-device text now, whole-turn correction
-    /// later.
+    /// Zero-wait harvest of the in-flight chunk transcripts: when EVERY piece
+    /// already resolved by the time the turn ends, the assembled
+    /// audio-grounded text replaces the on-device guess BEFORE the reply is
+    /// generated — the whole point of the pipeline. Anything still in flight
+    /// falls back to today's behavior on the spot: on-device text now,
+    /// whole-turn correction later. (This was a polled 0.1 s deadline that
+    /// telemetry showed costing ~130 ms on ~87% of turns for nothing — see
+    /// the note where `chunkRotateSilenceSeconds` is defined.)
     private func adoptChunkTranscript(_ chunk: ChunkASRState, turnId: UUID,
-                                      guess: String) async {
-        let started = Date()
-        let deadline = started.addingTimeInterval(Self.chunkAssemblyDeadlineSeconds)
-        while !chunk.isSettled, !chunk.hasFailure, Date() < deadline, !isTornDown {
-            try? await Task.sleep(nanoseconds: 60_000_000)
-        }
-        let waitedMs = Int(Date().timeIntervalSince(started) * 1000)
+                                      guess: String) {
+        let waitedMs = 0
         turnTiming["chunks"] = String(chunk.nextIndex)
         turnTiming["chunk_wait_ms"] = String(waitedMs)
         let assembled = chunk.textSoFar()
