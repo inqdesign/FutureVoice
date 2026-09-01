@@ -33,4 +33,45 @@ object LanguageScope {
         File(File(context.filesDir, "lang"), code).apply { mkdirs() }
 
     fun activeDirectory(context: Context): File = directory(context, active(context))
+
+    // MARK: - Enrollment
+
+    /** Same key name as iOS's defaults key. */
+    private const val ENROLLED_KEY = "futurevoice.enrolledLanguages"
+
+    /**
+     * Enrolled target languages, in enrollment order. NEVER empty — an
+     * install that predates this reads as enrolled in whatever it is
+     * currently learning, so the picker can't come up blank on an account
+     * that has been using the app for months.
+     */
+    fun enrolled(context: Context): List<String> {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val stored = prefs.getString(ENROLLED_KEY, null)
+            ?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }
+        return stored?.takeIf { it.isNotEmpty() } ?: listOf(active(context))
+    }
+
+    /** Idempotent: enrolling a language already on the list changes nothing. */
+    fun enroll(context: Context, code: String) {
+        val list = enrolled(context)
+        if (code in list) return
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(ENROLLED_KEY, (list + code).joinToString(",")).apply()
+    }
+
+    /**
+     * The learner's level IN a given language. Per language because it has to
+     * be: someone at C1 in English starting German is not a C1 German
+     * speaker, and one shared level would pitch every scene and every reply
+     * at the wrong band the moment they added a second one.
+     */
+    fun level(context: Context, code: String, fallback: String): String =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString("futurevoice.level.$code", null) ?: fallback
+
+    fun setLevel(context: Context, code: String, level: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString("futurevoice.level.$code", level).apply()
+    }
 }

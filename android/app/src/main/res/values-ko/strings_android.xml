@@ -41,4 +41,7 @@
     <string name="your_future_self_can_call_you">미래의 내가 전화할 수 있어요</string>
     <string name="pick_a_time_answer_and_youre_already_talking">시간을 정해요. 받으면 바로 대화가 시작돼요.</string>
     <string name="call_me">전화해 줘</string>
+    <string name="youre_learning_everything_we_offer">제공하는 언어를 모두 배우고 있어요.</string>
+    <string name="where_are_you_in_lls">%1$s는 어느 정도 하세요?</string>
+    <string name="start_learning">시작하기</string>
 </resources>

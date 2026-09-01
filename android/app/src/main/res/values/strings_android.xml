@@ -41,4 +41,7 @@
     <string name="your_future_self_can_call_you">Your future self can call you</string>
     <string name="pick_a_time_answer_and_youre_already_talking">Pick a time. Answer, and you\'re already talking.</string>
     <string name="call_me">Call me</string>
+    <string name="youre_learning_everything_we_offer">You\'re learning everything we offer.</string>
+    <string name="where_are_you_in_lls">Where are you in %1$s?</string>
+    <string name="start_learning">Start learning</string>
 </resources>

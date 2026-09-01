@@ -37,6 +37,11 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.BillingGate
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -61,6 +66,9 @@ fun MeScreen(
     targetLanguage: String,
     nativeLanguage: String,
     onSavePersona: (UserPersona) -> Unit,
+    enrolledLanguages: List<String>,
+    onSwitchLanguage: (String) -> Unit,
+    onAddLanguage: (String, CefrLevel) -> Unit,
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -82,6 +90,7 @@ fun MeScreen(
     val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     var account by remember { mutableStateOf<AccountStatus?>(null) }
+    var addingLanguage by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         account = AccountStatus.load(AuthRepository()).also { BillingGate.remember(it) }
     }
@@ -207,13 +216,32 @@ fun MeScreen(
             }
             HorizontalDivider()
 
-            // ── Learning language (display; enrollment work comes later) ──
+            // ── Learning language ──
+            // Switching is a chip, not a page: every store already takes the
+            // language as a parameter, so a switch is only a change of which
+            // one they are handed — nothing is copied and nothing is cleared.
             Column {
                 Text(stringResource(R.string.learn_which_language), style = MaterialTheme.typography.titleMedium)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    enrolledLanguages.forEach { code ->
+                        FilterChip(
+                            selected = code == targetLanguage,
+                            onClick = { if (code != targetLanguage) onSwitchLanguage(code) },
+                            label = { Text(LanguageCatalog.endonym(code)) },
+                        )
+                    }
+                    // Never gated on a plan: every server pool is keyed per
+                    // ACCOUNT with no language in it, so a second language
+                    // adds no cost. Someone splitting five minutes across
+                    // three languages is spending their own time.
+                    AssistChip(
+                        onClick = { addingLanguage = true },
+                        label = { Text(stringResource(R.string.add_a_language)) },
+                    )
+                }
                 Text(
-                    "${LanguageCatalog.endonym(targetLanguage)} · " +
-                        LanguageCatalog.ownName(targetLanguage, nativeLanguage),
-                    style = MaterialTheme.typography.bodyMedium,
+                    LanguageCatalog.ownName(targetLanguage, nativeLanguage),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -273,5 +301,90 @@ fun MeScreen(
                 }
             },
         )
+    }
+
+    if (addingLanguage) {
+        AddLanguageSheet(
+            nativeLanguage = nativeLanguage,
+            enrolled = enrolledLanguages,
+            onAdd = { code, level -> addingLanguage = false; onAddLanguage(code, level) },
+            onDismiss = { addingLanguage = false },
+        )
+    }
+}
+
+/**
+ * Pick a target and say roughly where you are IN IT.
+ *
+ * The level is asked here rather than inherited, because it cannot be
+ * inherited: someone at C1 in English starting German is not a C1 German
+ * speaker, and carrying the level across would pitch every reply and every
+ * scene at the wrong band from the first turn.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddLanguageSheet(
+    nativeLanguage: String,
+    enrolled: List<String>,
+    onAdd: (String, CefrLevel) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    // Shippable targets, minus their own native language and anything they
+    // are already learning.
+    val choices = remember(nativeLanguage, enrolled) {
+        LanguageCatalog.selectableTargets.map { it.code }
+            .filter { it != nativeLanguage && it !in enrolled }
+    }
+    var code by remember { mutableStateOf<String?>(null) }
+    var level by remember { mutableStateOf(CefrLevel.A2) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(stringResource(R.string.add_a_language),
+                style = MaterialTheme.typography.titleLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                choices.forEach { c ->
+                    FilterChip(
+                        selected = code == c,
+                        onClick = { code = c },
+                        label = { Text(LanguageCatalog.endonym(c)) },
+                    )
+                }
+            }
+            if (choices.isEmpty()) {
+                Text(stringResource(R.string.youre_learning_everything_we_offer),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            code?.let { picked ->
+                Text(stringResource(R.string.where_are_you_in_lls,
+                    LanguageCatalog.endonym(picked)),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CefrLevel.entries.forEach { l ->
+                        FilterChip(
+                            selected = level == l,
+                            onClick = { level = l },
+                            label = { Text(l.code.uppercase()) },
+                        )
+                    }
+                }
+            }
+
+            Button(
+                onClick = { code?.let { onAdd(it, level) } },
+                enabled = code != null,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) { Text(stringResource(R.string.start_learning)) }
+        }
     }
 }

@@ -6,6 +6,7 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.CefrLevel
 import com.roro.futurevoice.data.LanguageCatalog
 import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.PersonaStore
 import com.roro.futurevoice.data.VoiceCloneRepository
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -31,6 +32,8 @@ data class AppState(
     /** The whole magic moment lives on this being non-null after sign-in. */
     val voiceId: String? = null,
     val targetLanguage: String = "en",
+    /** Every target the learner has enrolled, in enrollment order. */
+    val enrolledLanguages: List<String> = emptyList(),
     val nativeLanguage: String = "ko",
     val level: CefrLevel = CefrLevel.B1,
     val error: String? = null,
@@ -47,7 +50,13 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         setupComplete = prefs.getBoolean(SETUP_COMPLETE_KEY, false),
         targetLanguage = prefs.getString("futurevoice.targetLanguage", null) ?: "en",
         nativeLanguage = prefs.getString(NATIVE_KEY, null) ?: LanguageCatalog.defaultNative(),
-        level = CefrLevel.from(prefs.getString(LEVEL_KEY, null)),
+        // Per-language, falling back to the one-and-only level a pre-
+        // multi-language install stored.
+        level = CefrLevel.from(
+            prefs.getString(
+                "futurevoice.level." + (prefs.getString("futurevoice.targetLanguage", null) ?: "en"),
+                null) ?: prefs.getString(LEVEL_KEY, null)),
+        enrolledLanguages = LanguageScope.enrolled(appContext),
     ))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
@@ -169,10 +178,47 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             .putInt(GOAL_KEY, goalMinutes)
             .apply()
         LanguageScope.setActive(appContext, target)
+        LanguageScope.enroll(appContext, target)
+        LanguageScope.setLevel(appContext, target, level.code)
         _state.update {
             it.copy(setupComplete = true, nativeLanguage = native,
-                targetLanguage = target, level = level)
+                targetLanguage = target, level = level,
+                enrolledLanguages = LanguageScope.enrolled(appContext))
         }
+    }
+
+    /**
+     * Move to another enrolled language. Nothing is copied or cleared: every
+     * store already takes the language as a parameter, so switching is only a
+     * change of which one they are handed.
+     *
+     * The LEVEL moves with it. Someone at C1 in English starting German is
+     * not a C1 German speaker, and carrying one level across would pitch
+     * every reply and every scene at the wrong band from the first turn.
+     */
+    fun switchLanguage(code: String) {
+        LanguageScope.setActive(appContext, code)
+        LanguageScope.enroll(appContext, code)
+        val level = CefrLevel.from(LanguageScope.level(appContext, code, _state.value.level.code))
+        _state.update {
+            it.copy(targetLanguage = code, level = level,
+                enrolledLanguages = LanguageScope.enrolled(appContext))
+        }
+        StoreEvents.bump()
+    }
+
+    /**
+     * Enroll a new target and switch to it.
+     *
+     * Deliberately NOT gated on a plan: every pool the server keeps is per
+     * ACCOUNT with no language in it, so a second language adds no cost.
+     * Someone splitting five minutes across three languages is spending their
+     * own time, and the day's cap is what converts them.
+     */
+    fun addLanguage(code: String, level: CefrLevel) {
+        LanguageScope.enroll(appContext, code)
+        LanguageScope.setLevel(appContext, code, level.code)
+        switchLanguage(code)
     }
 
     /**
