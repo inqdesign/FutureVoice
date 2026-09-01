@@ -163,8 +163,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
 
     // MARK: Audio
 
-    private let engine = AVAudioEngine()
-    private let player = AVAudioPlayerNode()
+    // `var`, not `let`: every `startAudio` builds a FRESH graph. Reusing the
+    // engine across a route change crashed the app — plugging earphones in
+    // mid-call flips the link A2DP→HFP, and `installTap` on the old engine's
+    // half-reconfigured voice-processing unit raises an ObjC exception no
+    // Swift catch can reach (crash 2026-09-01, CreateRecordingTap). This is
+    // the same per-start-fresh-engine rule LiveTranscriber has always lived
+    // by, learned here the same way.
+    private var engine = AVAudioEngine()
+    private var player = AVAudioPlayerNode()
 
     /// What the mic tap needs, readable from the AUDIO THREAD without hopping
     /// to the main actor — the hop is exactly what made the first version
@@ -225,6 +232,25 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Live for the length of the call — see `observeRouteChanges`.
     private var routeObserver: NSObjectProtocol?
     private var isRebuildingAudio = false
+    /// A device event arrived mid-rebuild — run one more pass when done.
+    private var routeRebuildPending = false
+    /// Output port the running engine was built on — the reference that lets
+    /// `.routeConfigurationChange`/`.override` events trigger a rebuild only
+    /// when the route actually moved (see observeRouteChanges).
+    private var builtOutput = ""
+    private var routePollTask: Task<Void, Never>?
+    private var pollRebuildStrikes = 0
+    private var pollMismatchTicks = 0
+    /// Tap buffers since the CURRENT engine build — written on the audio
+    /// thread, read by the per-build tap watchdog. The original mic watchdog
+    /// guards only the call's FIRST build; a REBUILD can also come up with a
+    /// tap that never fires (observed 2026-09-01: poll rebuild onto HFP,
+    /// engine running, tap installed at 24 kHz, zero buffers — the call
+    /// simply froze), and by then `micBytesSent` is already nonzero, so only
+    /// a per-build counter can see it.
+    nonisolated(unsafe) private static var buffersSinceBuild = 0
+    private var buildEpoch = 0
+    private var tapWatchdogStrikes = 0
     private var lastAudioBuildAt = Date.distantPast
     /// Reply PCM is 16-bit LE at whatever rate `audio_start` announced.
     private var replySampleRate: Double = 22050
@@ -386,6 +412,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // closing line (reported 2026-09-01).
         handOverReply()
         isTornDown = true
+        routePollTask?.cancel()
+        routePollTask = nil
         if let routeObserver {
             NotificationCenter.default.removeObserver(routeObserver)
             self.routeObserver = nil
@@ -407,6 +435,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     // MARK: - Audio graph
 
     private func startAudio() throws {
+        // Fresh graph every time — see the `engine` declaration.
+        engine = AVAudioEngine()
+        player = AVAudioPlayerNode()
         let session = AVAudioSession.sharedInstance()
         // Same category/options as a Talk call: whatever the learner is
         // wearing is the mic (`recordOptions` includes HFP), and output is
@@ -476,11 +507,38 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // iOS did not engage HFP on its own here (input stayed the built-in
         // 4-mic array), so it is asked for explicitly — unlike the app's
         // other surfaces, where the no-setPreferredInput rule stands.
-        if AudioSessionRouting.hasExternalOutput(session),
-           let bluetoothMic = session.availableInputs?.first(where: {
-               $0.portType == .bluetoothHFP
-           }) {
-            try? session.setPreferredInput(bluetoothMic)
+        // "Is an earphone CONNECTED" — not "is it on the route this instant".
+        // The two disagree exactly when it matters: our own rebuild releases
+        // the HFP link while it cycles the session, and a Bluetooth profile
+        // switch fires a spurious oldDeviceUnavailable whose rebuild then saw
+        // an earphone-free route and pinned the speaker — with the earphones
+        // still in the learner's ears (observed 2026-09-01). `availableInputs`
+        // lists the paired device regardless of the route's momentary state.
+        var bluetoothMic = session.availableInputs?.first { $0.portType == .bluetoothHFP }
+        if let mic = bluetoothMic {
+            try? session.setPreferredInput(mic)
+            if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
+                // Offered but not engaged: an in-ear reattach lists the HFP
+                // mic in `availableInputs` while the live session refuses to
+                // move onto it (observed 2026-09-01 — input stayed built-in,
+                // output fell to the RECEIVER). The same deactivate/
+                // reactivate cycle that settles the input channel count also
+                // lets the route re-form around the earphone.
+                Self.step("audio: HFP offered but not engaged — cycling session")
+                try? session.setActive(false, options: .notifyOthersOnDeactivation)
+                try session.setActive(true, options: .notifyOthersOnDeactivation)
+                try? session.setPreferredInput(mic)
+            }
+            if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
+                // Still refused. A Receiver call is the one truly broken
+                // outcome (nobody hears anything) — fall back to the loud,
+                // working configuration instead of shipping a half-route:
+                // treat the earphone as absent so the speaker branch below
+                // pins `.defaultToSpeaker`.
+                Self.step("audio: HFP refused — falling back to speaker")
+                bluetoothMic = nil
+                AudioSessionRouting.preferBuiltInMic(session)
+            }
         }
         Self.step("audio: inputs=\(session.availableInputs?.map(\.portType.rawValue) ?? []) "
             + "in=\(session.currentRoute.inputs.first?.portType.rawValue ?? "none")")
@@ -491,8 +549,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // earphones while the reply played into the room (2026-09-01, log:
         // `external out=false defaultToSpeaker=true` with AirPods in). A
         // category change here is safe; the engine doesn't exist yet.
-        if !AudioSessionRouting.hasExternalOutput(session) {
-            var options = AudioSessionRouting.conversationOptions
+        if !AudioSessionRouting.hasExternalOutput(session), bluetoothMic == nil {
+            // `recordOptions`, NOT `conversationOptions`: the latter honours
+            // the phone-mic preference and returns a set WITHOUT
+            // `.allowBluetooth` — and a session that doesn't allow HFP is one
+            // AirPods can't join mid-call at all: in-ear attach fired no
+            // event and never appeared in `availableInputs`, so neither the
+            // observer nor the poll could ever see it (device log
+            // 2026-09-01). Same reason the first setCategory above ignores
+            // the preference on this path.
+            var options = AudioSessionRouting.recordOptions
             options.insert(.defaultToSpeaker)
             try session.setCategory(.playAndRecord, mode: .default, options: options)
         }
@@ -587,13 +653,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         guard engine.isRunning else { throw RealtimeError.audioUnavailable }
         observeRouteChanges()
+        startRoutePoll()
         streamLevel = AudioLoudness.StreamingLevelEstimator()
         routeBoost = pow(10, AudioSessionRouting.playbackBoostDB() / 20)
         userGain = AudioPlayer.talkVoiceVolume
         streamGain = 1
         player.play()
         engineRunning = true
+        builtOutput = session.currentRoute.outputs.first?.portType.rawValue ?? "none"
         lastAudioBuildAt = Date()
+        Self.buffersSinceBuild = 0
+        armTapWatchdog()
         // The tap is live from here — hand the audio thread what it needs.
         mic.set(converter: converter, format: uplinkFormat, socket: socket)
     }
@@ -613,31 +683,200 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             object: nil, queue: .main
         ) { [weak self] note in
             let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
-            // ONLY a device appearing or disappearing. NOT `.override`:
-            // routing output to the speaker IS an override, so listening for
-            // it meant every rebuild triggered the next one — the call spent
-            // itself restarting its own audio and never worked (2026-09-01).
-            // Nothing this class does can produce these two reasons.
-            guard let reason = AVAudioSession.RouteChangeReason(rawValue: raw),
-                  reason == .newDeviceAvailable || reason == .oldDeviceUnavailable
-            else { return }
+            guard let reason = AVAudioSession.RouteChangeReason(rawValue: raw) else { return }
             Task { @MainActor [weak self] in
-                guard let self, !self.isTornDown, self.engineRunning,
-                      !self.isRebuildingAudio,
-                      // A second belt: whatever the reason, an audio stack
-                      // built moments ago is not rebuilt again.
-                      Date().timeIntervalSince(self.lastAudioBuildAt) > 2
-                else { return }
+                guard let self, !self.isTornDown, self.engineRunning else { return }
+                let nowOut = AVAudioSession.sharedInstance().currentRoute.outputs
+                    .first?.portType.rawValue ?? "none"
+                Self.step("route event (\(raw)) out=\(nowOut) built=\(self.builtOutput)")
+                switch reason {
+                case .newDeviceAvailable, .oldDeviceUnavailable:
+                    // A device joined or left — always rebuild (the route may
+                    // not have moved YET; the settle sleep below waits for it).
+                    break
+                case .routeConfigurationChange, .override:
+                    // AirPods that are already paired switch in and out of the
+                    // ear with NO device event at all (observed 2026-09-01:
+                    // in-ear attach fired nothing we listened for, audio
+                    // stayed on the speaker). But our OWN setCategory/override
+                    // calls land here too, which is how listening to
+                    // `.override` once made every rebuild trigger the next.
+                    // The tiebreaker: only a route that no longer matches the
+                    // one the engine was built on may trigger.
+                    guard nowOut != self.builtOutput else { return }
+                default:
+                    return
+                }
+                // NO cooldown for genuine device events. Earphones attach in
+                // stages: the first event's rebuild routinely lands before
+                // the device is on the route (observed: it saw `route=
+                // Speaker`, pinned the speaker, and the arrival event a
+                // second later was swallowed by a 2 s cooldown — earphones
+                // in, audio on the speaker). A rebuild already running just
+                // marks the route dirty and reruns once at the end:
+                // serialized, so no loop, and the LAST event wins.
+                if self.isRebuildingAudio {
+                    self.routeRebuildPending = true
+                    return
+                }
                 self.isRebuildingAudio = true
                 defer { self.isRebuildingAudio = false }
-                Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
-                self.userPCM = Data()
-                self.stopAudio()
-                do { try self.startAudio() } catch {
-                    self.state = .failed("The audio route changed and the call couldn't recover.")
-                }
+                repeat {
+                    self.routeRebuildPending = false
+                    Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
+                    self.stopAudio()
+                    // Let the route SETTLE before building on it: Bluetooth
+                    // joins the route seconds after the notification, and a
+                    // graph built mid-transition was today's crash.
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    guard !self.isTornDown else { return }
+                    do { try self.startAudio() } catch {
+                        // The seconds right after a Bluetooth detach leave the
+                        // session in a transient state where setCategory can
+                        // throw (observed 2026-09-01 — one throw ended a call
+                        // that a second attempt would have saved). One more
+                        // try after a beat before declaring the call lost.
+                        Self.step("route rebuild: startAudio threw (\(error)) — retrying once")
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        guard !self.isTornDown else { return }
+                        do { try self.startAudio() } catch {
+                            self.state = .failed("The audio route changed and the call couldn't recover.")
+                            return
+                        }
+                    }
+                } while self.routeRebuildPending && !self.isTornDown
             }
         }
+    }
+
+    /// Every engine build gets 2 s to produce its first tap buffer, or the
+    /// whole stack is rebuilt — the per-build version of the mic watchdog.
+    /// A build whose tap never fires reports `running=true` and looks
+    /// perfectly healthy in every other signal; only the absence of buffers
+    /// says the call has gone deaf (a poll rebuild onto a fresh HFP link did
+    /// exactly this, 2026-09-01, and froze the call).
+    private func armTapWatchdog() {
+        buildEpoch += 1
+        let epoch = buildEpoch
+        Task { @MainActor [weak self] in
+            // RECURRING, not one-shot: a tap can also produce a few buffers
+            // and then die, and the first version of this watchdog checked
+            // once and stood down forever — the very next freeze sailed past
+            // it (2026-09-01). Progress since the LAST check is the test.
+            var lastCount = 0
+            while true {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled, let self, !self.isTornDown,
+                      self.buildEpoch == epoch, self.engineRunning else { return }
+                let count = Self.buffersSinceBuild
+                if count > lastCount {
+                    lastCount = count
+                    self.tapWatchdogStrikes = 0
+                    continue
+                }
+                guard self.tapWatchdogStrikes < 3 else {
+                    self.state = .failed("The microphone isn't sending any audio. Close and reopen the call.")
+                    return
+                }
+                self.tapWatchdogStrikes += 1
+                Self.step("tap watchdog: no buffers in 2s (strike \(self.tapWatchdogStrikes)) — restarting audio")
+                self.stopAudio()
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                guard !self.isTornDown else { return }
+                do { try self.startAudio() } catch {
+                    self.state = .failed("The microphone stopped after an audio route change.")
+                }
+                return // the restart armed its own watchdog for the new epoch
+            }
+        }
+    }
+
+    /// Backup for the route events iOS DOESN'T send: putting already-paired
+    /// AirPods back in the ear mid-call fires no notification at all while a
+    /// playAndRecord session is active (device log 2026-09-01 — zero route
+    /// events across the whole attempt, audio stayed on the speaker). The
+    /// connected-device list still updates, so poll it: a Bluetooth mic that
+    /// is available while the engine was built without it (or vice versa)
+    /// means the world changed under us and the stack rebuilds exactly as a
+    /// route event would have it do. Safe from ping-pong because
+    /// `availableInputs` tracks in-ear state on AirPods — removal empties it
+    /// (verified in the same log) — and `builtOutput` converges on whatever
+    /// the rebuild actually got.
+    private func startRoutePoll() {
+        guard routePollTask == nil else { return }
+        routePollTask = Task { @MainActor [weak self] in
+            while true {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled, let self, !self.isTornDown else { return }
+                guard self.engineRunning, !self.isRebuildingAudio else { continue }
+                let session = AVAudioSession.sharedInstance()
+                let btAvailable = session.availableInputs?
+                    .contains { $0.portType == .bluetoothHFP } ?? false
+                let builtOnBT = self.builtOutput == AVAudioSession.Port.bluetoothHFP.rawValue
+                guard btAvailable != builtOnBT else {
+                    self.pollRebuildStrikes = 0
+                    self.pollMismatchTicks = 0
+                    continue
+                }
+                // TWO consecutive ticks before acting. A Bluetooth device can
+                // flicker into `availableInputs` for a moment (a case lid, a
+                // passing pairing) — one tick of that tore down a perfectly
+                // working speaker call and rebuilt it into the deaf inCh=4
+                // state (2026-09-01). A real attach stays available; 2 s of
+                // patience costs the transition little and never wrecks a
+                // healthy call for a ghost.
+                self.pollMismatchTicks += 1
+                guard self.pollMismatchTicks >= 2 else { continue }
+                // ONE try, then hold. A rebuild that fails to engage the
+                // earphone leaves this condition true forever — uncapped, the
+                // poll re-rebuilt every 2 s and the call spent itself
+                // restarting (observed 2026-09-01, stuck on the Receiver).
+                // And more than one try buys nothing: across every logged
+                // attach, the in-poll rebuild NEVER engaged a link that was
+                // still forming — what always worked was the
+                // `.newDeviceAvailable` that iOS fires seconds later, once
+                // the HFP link is real (possible at all because the category
+                // keeps `.allowBluetooth` on the speaker path). Each failed
+                // try costs ~2 s of silence mid-call, so the poll is a
+                // safety net for "HFP fully formed but no event came", not a
+                // battering ram.
+                guard self.pollRebuildStrikes < 1 else { continue }
+                self.pollRebuildStrikes += 1
+                Self.step("route poll: bluetooth avail=\(btAvailable) built=\(self.builtOutput) — rebuilding audio")
+                self.isRebuildingAudio = true
+                self.stopAudio()
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                guard !self.isTornDown else { self.isRebuildingAudio = false; return }
+                do { try self.startAudio() } catch {
+                    // Same transient-throw window as the event path — one
+                    // retry before the call is declared lost.
+                    Self.step("route poll: startAudio threw (\(error)) — retrying once")
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    guard !self.isTornDown else { self.isRebuildingAudio = false; return }
+                    do { try self.startAudio() } catch {
+                        self.isRebuildingAudio = false
+                        self.state = .failed("The audio route changed and the call couldn't recover.")
+                        return
+                    }
+                }
+                self.isRebuildingAudio = false
+            }
+        }
+    }
+
+    /// Run one raise-prone AVFAudio call. Returns false (and logs WHICH
+    /// call) instead of letting the NSException kill the process — three
+    /// crashes on 2026-09-01 were this exact class, each from a different
+    /// call site, and guarding them one at a time was losing the war.
+    @discardableResult
+    private static func avGuard(_ label: String, _ block: () -> Void) -> Bool {
+        var raised: NSError?
+        FVCatchException(block, &raised)
+        if let raised {
+            Self.step("avfaudio RAISED in \(label): \(raised.localizedDescription)")
+            return false
+        }
+        return true
     }
 
     /// (Re)install the mic tap against the graph's CURRENT input format,
@@ -654,8 +893,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         converter = AVAudioConverter(from: format, to: uplink)
         mic.set(converter: converter, format: uplink, socket: socket)
-        input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
-            self?.handleMicBuffer(buffer)
+        // `installTap` RAISES (ObjC) when the voice-processing unit is mid-
+        // renegotiation — a route flip, a restart racing the HAL. Raised, it
+        // killed the app twice today; caught, it is just a failed attempt the
+        // watchdog retries or the view surfaces with a Try again.
+        var tapError: NSError?
+        FVCatchException({
+            input.installTap(onBus: 0, bufferSize: 2048, format: format) { [weak self] buffer, _ in
+                self?.handleMicBuffer(buffer)
+            }
+        }, &tapError)
+        if let tapError {
+            Self.step("audio: installTap RAISED — \(tapError.localizedDescription)")
+            throw RealtimeError.audioUnavailable
         }
         Self.step("audio: tap installed at \(format.sampleRate)/\(format.channelCount)")
         return format
@@ -724,6 +974,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
             nativeCopy = ints.withUnsafeBufferPointer { Data(buffer: $0) }
         }
+        Self.buffersSinceBuild += 1
         if !Self.sawFirstBuffer {
             Self.sawFirstBuffer = true
             Self.step("tap: FIRST buffer \(buffer.frameLength)@\(Int(buffer.format.sampleRate))")
@@ -796,6 +1047,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // (reported 2026-09-01). The per-frame verdict already separates
             // their voice from the echo; recording follows it exactly.
             if !muted, let nativeCopy, self.userPCM.count < self.maxUserPCMBytes {
+                // A rebuild used to wipe this buffer outright, and the call's
+                // first utterance overlaps the early watchdog churn often
+                // enough that Replay's first You take came back empty
+                // (reported 2026-09-01). Only a real RATE change forces a
+                // reset — same-rate rebuilds keep every word; mixing rates
+                // would corrupt the WAV, so there the newer take wins.
+                if nativeRate != self.userPCMRate, !self.userPCM.isEmpty {
+                    self.userPCM = Data()
+                }
                 self.userPCM.append(nativeCopy)
                 self.userPCMRate = nativeRate
             }
@@ -941,9 +1201,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
             // player is a voice arguing with them.
-            player.stop()
+            Self.avGuard("interrupt.stop") { self.player.stop() }
             pendingBuffers = 0
-            player.play()
+            // `play()` RAISES if the engine died underneath us (a route blip
+            // mid-line); a failed resume is recovered by the next line's
+            // rebuild, a raise is a crash.
+            Self.avGuard("interrupt.play") { self.player.play() }
             state = .hearing
             handOverReply()
             // A barge-in means the learner IS talking — the gate would only
@@ -1078,11 +1341,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
 
     private func playReplyChunk(_ data: Data) {
-        guard engineRunning, data.count >= 2 else { return }
+        guard data.count >= 2 else { return }
         if let committed = turnCommittedAt {
             lastLatencyMs = Int(Date().timeIntervalSince(committed) * 1000)
             turnCommittedAt = nil
         }
+        // The RECORDING is transport-side and must not depend on the player:
+        // chunks arriving while the engine is down (a route rebuild, the
+        // early watchdog churn) used to vanish from `replyPCM` along with
+        // their playback, which is why Replay's first fluent-self line came
+        // back silent (reported 2026-09-01). Capture first, then play what
+        // the graph can take.
+        replyPCM.append(data)
+        guard engineRunning else { return }
         // Schedule in EXACTLY the format the node is connected with. A
         // mismatch is an uncatchable ObjC exception, so a chunk that arrives
         // before `audio_start` re-wired the graph is dropped, not risked.
@@ -1104,20 +1375,23 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 out[i] = max(-0.985, min(0.985, out[i] * streamGain))
             }
         }
-        replyPCM.append(data)
         pendingBuffers += 1
-        player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.pendingBuffers = max(0, self.pendingBuffers - 1)
-                if self.pendingBuffers == 0, self.state == .speaking {
-                    self.level = 0
-                    // The last scheduled audio has been HEARD — if the server
-                    // already closed the line, it is the learner's turn now.
-                    if self.serverAudioEnded { self.state = .listening }
+        let scheduled = Self.avGuard("scheduleBuffer") {
+            self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.pendingBuffers = max(0, self.pendingBuffers - 1)
+                    if self.pendingBuffers == 0, self.state == .speaking {
+                        self.level = 0
+                        // The last scheduled audio has been HEARD — if the
+                        // server already closed the line, it is the learner's
+                        // turn now.
+                        if self.serverAudioEnded { self.state = .listening }
+                    }
                 }
             }
         }
+        if !scheduled { pendingBuffers = max(0, pendingBuffers - 1) }
         // Rough playback level for the pill while the fluent self speaks.
         if state == .speaking {
             var sum: Float = 0

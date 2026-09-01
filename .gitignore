@@ -71,3 +71,9 @@ scripts/admin/build/
 # Python bytecode (scripts/admin)
 __pycache__/
 *.pyc
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+!.env.example

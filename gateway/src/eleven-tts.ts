@@ -39,6 +39,20 @@ export class ElevenTTS {
    *  the first message and then either be not provided or not change",
    *  device log 2026-09-01). */
   private openContexts = new Set<string>()
+  /** All outgoing messages ride ONE promise chain. `sendText` is async
+   *  (it awaits the connection) while `flush`/`closeContext` used to send
+   *  synchronously — so a flush issued right after a sendText could reach
+   *  ElevenLabs FIRST, creating the context settings-less; the text that
+   *  followed then carried voice_settings into a context that already
+   *  existed and the whole reply died ("voice_settings field must be
+   *  provided in the first message…", device log 2026-09-01). */
+  private queue: Promise<void> = Promise.resolve()
+
+  private enqueue(fn: () => Promise<void> | void): Promise<void> {
+    const run = this.queue.then(fn)
+    this.queue = run.then(() => {}, () => {})
+    return run
+  }
 
   constructor(private config: ElevenTTSConfig,
               private callbacks: ElevenTTSCallbacks) {}
@@ -123,7 +137,8 @@ export class ElevenTTS {
   }
 
   /** Open a context and/or stream reply text into it as the model writes. */
-  async sendText(contextId: string, text: string): Promise<void> {
+  sendText(contextId: string, text: string): Promise<void> {
+    return this.enqueue(async () => {
     await this.ensureConnected()
     // Voice settings mirror the elevenlabs-tts edge function: style MUST
     // stay 0 for cloned voices (see that function's comment — TestFlight
@@ -144,17 +159,22 @@ export class ElevenTTS {
           }
         : {}),
     }))
+    })
   }
 
   /** The reply is fully written — synthesize whatever text remains buffered. */
   flush(contextId: string): void {
-    this.ws?.send(JSON.stringify({ context_id: contextId, flush: true }))
+    void this.enqueue(() => {
+      this.ws?.send(JSON.stringify({ context_id: contextId, flush: true }))
+    })
   }
 
   /** Barge-in: kill this context's generation; audio stops arriving. */
   closeContext(contextId: string): void {
     this.openContexts.delete(contextId)
-    this.ws?.send(JSON.stringify({ context_id: contextId, close_context: true }))
+    void this.enqueue(() => {
+      this.ws?.send(JSON.stringify({ context_id: contextId, close_context: true }))
+    })
   }
 
   close(): void {

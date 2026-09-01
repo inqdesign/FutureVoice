@@ -337,6 +337,7 @@ export class CallSession implements DurableObject {
   /** The transcriber finalized an utterance. It becomes a turn now, or it
    *  waits: a line ending on a hanging word is a breath, not an ending. */
   private handleUtterance(text: string): void {
+    console.log(`utterance: "${text.slice(0, 80)}" pending=${this.pendingUtterance !== null}`)
     // Discard what is almost certainly our own voice: a scrap of a word,
     // arriving while (or just after) we were speaking. A real interjection
     // that short — "yeah", "wait" — arrives with the learner's own volume
@@ -358,6 +359,7 @@ export class CallSession implements DurableObject {
     if (CallSession.endsHanging(merged)) {
       this.pendingUtterance = merged
       this.emit({ type: "user_partial", text: merged })
+      console.log(`holding (ends hanging): "${merged.slice(-30)}"`)
       this.pendingTimer = setTimeout(() => {
         const held = this.pendingUtterance
         this.clearPending()
@@ -377,6 +379,7 @@ export class CallSession implements DurableObject {
 
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
+    console.log(`commit: "${text.slice(0, 80)}"`)
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a

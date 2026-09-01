@@ -1309,6 +1309,16 @@ struct ConversationView: View {
         guard !isTornDown,
               let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+        if RealtimeMode.isEnabled {
+            // A real phone call or Siri took the session. The realtime stack
+            // can't survive that; put the call down cleanly — the transcript
+            // stays, one tap resumes — instead of letting the classic
+            // recovery below wake LiveTranscriber into the realtime engine.
+            if type == .began, phoneCallActive {
+                Task { await pauseCall() }
+            }
+            return
+        }
         switch type {
         case .began:
             cancelSilenceTimer()
@@ -1335,6 +1345,14 @@ struct ConversationView: View {
     /// hang off every foreground: on the normal path the engine is alive (the
     /// call kept running in the background) and this returns immediately.
     private func resumeCallIfStalled(force: Bool = false) async {
+        // The realtime path has NO LiveTranscriber to resuscitate — its mic
+        // lives in RealtimeTalkClient, which has its own watchdog and route
+        // recovery. This guard is what ended a full day of "random" crashes
+        // (2026-09-01): on every scenePhase blip this safety net saw
+        // `live.isEngineRunning == false` (trivially true — it never ran),
+        // "revived" the classic recognizer ON TOP of the realtime engine,
+        // and LiveTranscriber's installTap raised into a SIGABRT.
+        guard !RealtimeMode.isEnabled else { return }
         guard !isTornDown, phoneCallActive else { return }
         // Only the two waiting-for-the-learner phases can be silently dead.
         // Mid-reply, the call is doing something that doesn't need the mic.

@@ -60,7 +60,10 @@ targets:
         PRODUCT_NAME: FutureVoice
         INFOPLIST_FILE: FutureVoice/Resources/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
-        SWIFT_OBJC_BRIDGING_HEADER: ""
+        # The one ObjC file in the app: FVExceptionCatcher, which turns AVFAudio's
+        # raised NSExceptions (uncatchable from Swift, twice a crash on
+        # 2026-09-01) into NSErrors the realtime audio stack can retry on.
+        SWIFT_OBJC_BRIDGING_HEADER: FutureVoice/Support/FutureVoice-Bridging-Header.h
         ENABLE_PREVIEWS: "YES"
       # Debug installs BESIDE the shipped app (its own bundle id → its own
       # data container), so a dev build can never migrate or overwrite the
