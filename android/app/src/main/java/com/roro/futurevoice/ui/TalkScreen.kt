@@ -52,6 +52,7 @@ import com.roro.futurevoice.talk.TurnRole
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.DialogueLine
 import com.roro.futurevoice.ui.brand.Futureself
 import com.roro.futurevoice.ui.brand.FutureselfMode
@@ -134,6 +135,7 @@ fun TalkScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {
                     // Minutes left ride on the title, whole minutes only — a
                     // month-long balance must never read as a running meter.

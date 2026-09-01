@@ -59,6 +59,7 @@ fun AssessmentScreen(language: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(stringResource(R.string.latest_assessment)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

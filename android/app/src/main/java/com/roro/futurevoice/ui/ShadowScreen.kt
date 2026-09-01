@@ -112,6 +112,7 @@ fun ShadowScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(stringResource(R.string.say_it_out_loud)) },
                 navigationIcon = {
                     IconButton(onClick = { mp3.stop(); runCatching { live.stop() }; onBack() }) {

@@ -33,6 +33,7 @@ import com.roro.futurevoice.data.PracticeLog
 import com.roro.futurevoice.data.ReviewQueue
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.VocabStore
+import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.DrillBin
 
 /**
@@ -120,6 +121,7 @@ private fun EmptyDeck(kind: StudyScheduleStore.Kind, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {
                     Text(stringResource(
                         if (kind == StudyScheduleStore.Kind.WORD) R.string.words

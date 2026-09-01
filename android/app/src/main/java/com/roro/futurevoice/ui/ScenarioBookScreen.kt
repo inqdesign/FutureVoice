@@ -91,6 +91,7 @@ fun ScenarioBookScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(sc.cardTitle) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

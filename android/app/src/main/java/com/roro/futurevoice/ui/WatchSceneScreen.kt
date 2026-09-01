@@ -153,6 +153,7 @@ fun WatchSceneScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(title ?: stringResource(R.string.watch)) },
                 navigationIcon = {
                     IconButton(onClick = { mp3.stop(); onBack() }) {

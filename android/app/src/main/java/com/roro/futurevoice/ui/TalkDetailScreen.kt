@@ -101,6 +101,7 @@ fun TalkDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(s.displayTitle ?: stringResource(R.string.conversation)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

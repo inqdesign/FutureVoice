@@ -76,6 +76,7 @@ fun FindPeopleScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(stringResource(R.string.people)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

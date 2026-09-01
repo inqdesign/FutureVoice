@@ -130,6 +130,7 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {
                     Column {
                         Text(stringResource(R.string.review_cards),

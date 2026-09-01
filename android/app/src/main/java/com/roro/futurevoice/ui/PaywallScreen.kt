@@ -91,6 +91,7 @@ fun PaywallScreen(onDismiss: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {

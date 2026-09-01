@@ -102,6 +102,7 @@ fun MeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(stringResource(R.string.me)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -109,6 +109,7 @@ fun LibraryScreen(kind: LibraryKind, language: String, onBack: () -> Unit) {
     Scaffold(
         topBar = {
             androidx.compose.material3.TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {
                     Text(stringResource(
                         if (kind == LibraryKind.WORDS) R.string.words_d26d55

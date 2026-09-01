@@ -106,6 +106,7 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = { Text(stringResource(R.string.activity)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

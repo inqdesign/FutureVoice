@@ -174,6 +174,7 @@ fun StudyDeckScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 title = {
                     Column {
                         Text(title, style = MaterialTheme.typography.titleMedium)

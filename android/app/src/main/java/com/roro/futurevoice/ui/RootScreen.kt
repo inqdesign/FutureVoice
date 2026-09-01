@@ -602,6 +602,7 @@ private fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
+                colors = AppSurfaces.topBarColors(),
                 // No title on Talk: the hero's time-of-day question IS the
                 // greeting, and a title above it doubled it (iOS). The bar
                 // carries just the chips — language · streak · account.
