@@ -105,6 +105,34 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The reply context on screen right now, shared by began/delta/finished.
     private var replyContext: String?
 
+    // MARK: Echo gate
+    //
+    // The fluent self plays out of the SPEAKER while the mic is open, so its
+    // own voice comes back in. iOS voice processing cancels most of it, but
+    // not all — enough survived to be transcribed as the learner's turn and
+    // answered ("did you say box?", reported 2026-09-01). The call was talking
+    // to itself.
+    //
+    // So while a line is playing, the mic is measured against the echo it is
+    // hearing and only audio clearly LOUDER than that goes upstream. The
+    // learner's mouth is centimetres from the mic and the echo is a speaker
+    // bouncing off a room; that gap is what separates them. Everything below
+    // the bar is forwarded as silence rather than dropped, so the
+    // transcriber's stream stays continuous.
+    private var echoFloor: Float = 0
+    private var echoLearnedFrames = 0
+    /// ~0.4 s of playback measured before the gate starts judging: at the top
+    /// of a line the learner has not started talking yet, so whatever the mic
+    /// hears then IS the echo.
+    private static let echoLearnFrames = 4
+    /// How much louder than the echo a voice must be to count as the learner
+    /// speaking. ~5 dB — enough to reject a cancelled speaker, low enough that
+    /// talking over the fluent self still works.
+    private static let echoMargin: Float = 1.8
+    /// The echo does not stop with the audio: the room's tail and the last
+    /// buffers keep arriving. Hold the gate briefly past the end of a line.
+    private var echoHoldUntil = Date.distantPast
+
     /// Where the gateway lives. Overridable at runtime so a device on the same
     /// Wi-Fi can be pointed at `wrangler dev` (Me → Realtime call → long-press
     /// isn't a thing; set `futurevoice.realtimeGatewayURL` in defaults).
@@ -154,6 +182,33 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             lock.lock(); defer { lock.unlock() }
             guard let converter, let format, let socket else { return nil }
             return (converter, format, socket)
+        }
+
+        // --- echo gate, read per mic buffer on the audio thread ---
+        private var gateActive = false
+        private var gateFloor: Float = 0
+        private var gateLearned = 0
+
+        /// Open or close the gate. Called when a line starts and ends playing.
+        func setEchoGate(active: Bool) {
+            lock.lock(); defer { lock.unlock() }
+            if active && !gateActive {
+                gateFloor = 0
+                gateLearned = 0
+            }
+            gateActive = active
+        }
+
+        func echoGate() -> (active: Bool, floor: Float, learnedFrames: Int) {
+            lock.lock(); defer { lock.unlock() }
+            return (gateActive, gateFloor, gateLearned)
+        }
+
+        /// Fold one buffer of pure echo into the floor.
+        func learnEcho(rms: Float) {
+            lock.lock(); defer { lock.unlock() }
+            gateFloor = max(gateFloor, rms)
+            gateLearned += 1
         }
     }
     private let mic = MicUplink()
@@ -559,15 +614,35 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             return
         }
         let frames = Int(out.frameLength)
-        socket.send(.data(Data(bytes: channel[0], count: frames * MemoryLayout<Int16>.size))) { _ in }
-
         var sum: Double = 0
         for i in 0..<frames {
             let v = Double(channel[0][i]) / 32768.0
             sum += v * v
         }
-        let db = 20 * log10(max((sum / Double(frames)).squareRoot(), 0.00001))
+        let rms = Float((sum / Double(frames)).squareRoot())
+        let db = 20 * log10(max(Double(rms), 0.00001))
         let norm = Float(max(0, min(1, (db + 50) / 45)))
+
+        // While the fluent self is audible, decide whether this buffer is the
+        // learner or the speaker coming back. `gateState` is read on the audio
+        // thread, so it lives in the same lock as the uplink.
+        let gate = mic.echoGate()
+        var muted = false
+        if gate.active {
+            if gate.learnedFrames < Self.echoLearnFrames {
+                mic.learnEcho(rms: rms)
+                muted = true
+            } else {
+                muted = rms < gate.floor * Self.echoMargin
+            }
+        }
+        if muted {
+            // Silence, not a gap: the transcriber is streaming and a hole in
+            // the timeline is worse than quiet.
+            socket.send(.data(Data(count: frames * MemoryLayout<Int16>.size))) { _ in }
+        } else {
+            socket.send(.data(Data(bytes: channel[0], count: frames * MemoryLayout<Int16>.size))) { _ in }
+        }
         let bytes = frames * MemoryLayout<Int16>.size
         let copy = Data(bytes: channel[0], count: bytes)
         Task { @MainActor [weak self] in
@@ -681,6 +756,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 replyContext = context
                 onReplyBegan?(context)
             }
+            mic.setEchoGate(active: true)
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the
@@ -706,6 +782,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case "audio_end":
             if state == .speaking { state = .listening }
             handOverReply()
+            closeEchoGateAfterTail()
         case "interrupted":
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
@@ -715,6 +792,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             player.play()
             state = .hearing
             handOverReply()
+            // A barge-in means the learner IS talking — the gate would only
+            // stand in their way now.
+            mic.setEchoGate(active: false)
         case "stats":
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
         case "rotating":
@@ -744,6 +824,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Same law as `AudioPlayer.updateStreamGain`: measure the speech RMS,
     /// aim at the app's loudness target, jump straight to it inside the first
     /// syllable and ramp gently after that so nothing pumps mid-sentence.
+    /// Keep the gate shut for the room's tail. The speaker stops before the
+    /// reverberation does, and the last buffers are still in flight.
+    private func closeEchoGateAfterTail() {
+        echoHoldUntil = Date().addingTimeInterval(0.4)
+        let deadline = echoHoldUntil
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard let self, self.echoHoldUntil <= deadline else { return }
+            self.mic.setEchoGate(active: false)
+        }
+    }
+
     /// Hand the finished (or interrupted) fluent-self line to the call
     /// screen, with the audio that was actually heard. Idempotent: a line is
     /// handed over once, whether it ended on its own or was talked over.

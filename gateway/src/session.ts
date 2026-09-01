@@ -78,6 +78,15 @@ export class CallSession implements DurableObject {
   private static readonly idleHangUpMs = 3 * 60 * 1000
   private idleTimer: number | null = null
 
+  /** When the fluent self last had audio in flight. Belt to the client's
+   *  braces: even with the echo gate, a stray word can survive the speaker
+   *  bouncing back into the mic, and a one-word "turn" landing right after a
+   *  line is far more likely to be the line itself than the learner
+   *  ("did you say box?", reported 2026-09-01). */
+  private lastSpokeAt = 0
+  /** How long after a line an utterance is still suspect. */
+  private static readonly echoSuspicionMs = 1200
+
   constructor(private state: DurableObjectState, private env: Env) {}
 
   async fetch(request: Request): Promise<Response> {
@@ -156,6 +165,7 @@ export class CallSession implements DurableObject {
       },
       {
         onAudio: (contextId, pcm) => {
+          this.lastSpokeAt = Date.now()
           // Only the ACTIVE context reaches the speaker — a context closed by
           // barge-in can still have chunks in flight, and playing them would
           // talk over the learner who just interrupted.
@@ -297,6 +307,16 @@ export class CallSession implements DurableObject {
 
   /** A turn ended (server-side endpoint). Commit it and speak the reply. */
   private handleUtterance(text: string): void {
+    // Discard what is almost certainly our own voice: a scrap of a word,
+    // arriving while (or just after) we were speaking. A real interjection
+    // that short — "yeah", "wait" — arrives with the learner's own volume
+    // behind it and passes the client's gate, so it never gets this far
+    // silently; what lands here is the room.
+    const words = text.trim().split(/\s+/).filter(Boolean)
+    const sinceSpoke = Date.now() - this.lastSpokeAt
+    if (words.length <= 1 && sinceSpoke < CallSession.echoSuspicionMs) {
+      return
+    }
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a
