@@ -216,6 +216,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var uplinkFormat: AVAudioFormat?
     private var playbackFormat: AVAudioFormat?
     private var engineRunning = false
+    /// Live for the length of the call — see `observeRouteChanges`.
+    private var routeObserver: NSObjectProtocol?
     /// Reply PCM is 16-bit LE at whatever rate `audio_start` announced.
     private var replySampleRate: Double = 22050
     /// Loudness, borrowed wholesale from `AudioPlayer`'s streaming path.
@@ -367,6 +369,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
 
     private func teardown() {
         isTornDown = true
+        if let routeObserver {
+            NotificationCenter.default.removeObserver(routeObserver)
+            self.routeObserver = nil
+        }
         socket?.cancel(with: .goingAway, reason: nil)
         socket = nil
         stopAudio()
@@ -399,11 +405,24 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // learner reported. Put in the CATEGORY it is set once, before the
         // engine exists, and nothing afterwards has to touch the route.
         //
-        // Headphones still win: `.defaultToSpeaker` only decides where audio
-        // goes when nothing is plugged in.
+        // ...but ONLY when nothing is plugged in. `.defaultToSpeaker` is
+        // documented to yield to a connected accessory, and the rest of this
+        // app trusts that (`applyOutputRoute` overrides to `.none` when there
+        // is external output). This path cannot afford to find out it was
+        // wrong: it has no way to correct the route later, because every
+        // route change stops the running engine. So the option is added only
+        // when the learner is on the built-in speaker to begin with, and a
+        // connected earphone never meets it at all.
         var options = AudioSessionRouting.conversationOptions
-        options.insert(.defaultToSpeaker)
+        // Read the route BEFORE activating: connected accessories are already
+        // visible, and the category must be final before the engine exists.
         try session.setCategory(.playAndRecord, mode: .default, options: options)
+        if !AudioSessionRouting.hasExternalOutput(session) {
+            options.insert(.defaultToSpeaker)
+            try session.setCategory(.playAndRecord, mode: .default, options: options)
+        }
+        Self.step("audio: external out=\(AudioSessionRouting.hasExternalOutput(session)) "
+            + "defaultToSpeaker=\(options.contains(.defaultToSpeaker))")
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         // Pin the input to MONO before the engine is built.
         //
@@ -511,6 +530,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("audio: engine restarted running=\(engine.isRunning)")
         }
         guard engine.isRunning else { throw RealtimeError.audioUnavailable }
+        observeRouteChanges()
         streamLevel = AudioLoudness.StreamingLevelEstimator()
         routeBoost = pow(10, AudioSessionRouting.playbackBoostDB() / 20)
         userGain = AudioPlayer.talkVoiceVolume
@@ -519,6 +539,35 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         engineRunning = true
         // The tap is live from here — hand the audio thread what it needs.
         mic.set(converter: converter, format: uplinkFormat, socket: socket)
+    }
+
+    /// Rebuild the audio stack when the route changes under the call.
+    ///
+    /// Plugging in earphones mid-call — or pulling them out — reshapes the
+    /// graph iOS handed us: the engine stops, and on this path a stopped
+    /// engine is a call that has gone deaf and mute with nothing on screen
+    /// saying so. The whole stack is torn down and rebuilt because that is
+    /// the only recovery that works here (a live engine cannot be re-tapped,
+    /// and the route cannot be corrected while it runs).
+    private func observeRouteChanges() {
+        guard routeObserver == nil else { return }
+        routeObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.routeChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] note in
+            let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
+            guard let reason = AVAudioSession.RouteChangeReason(rawValue: raw),
+                  reason == .newDeviceAvailable || reason == .oldDeviceUnavailable
+                        || reason == .override else { return }
+            Task { @MainActor [weak self] in
+                guard let self, !self.isTornDown, self.engineRunning else { return }
+                Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
+                self.stopAudio()
+                do { try self.startAudio() } catch {
+                    self.state = .failed("The audio route changed and the call couldn't recover.")
+                }
+            }
+        }
     }
 
     /// (Re)install the mic tap against the graph's CURRENT input format,
@@ -645,14 +694,21 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         let bytes = frames * MemoryLayout<Int16>.size
         let copy = Data(bytes: channel[0], count: bytes)
+        let gateWasActive = gate.active
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.micBytesSent += bytes
             if self.state != .speaking { self.level = norm }
-            // Keep the learner's own take for listen-back in Practice. The
-            // bytes are already leaving the phone; keeping a copy costs one
-            // append. Capped, because a monologue must not grow this forever.
-            if self.userPCM.count < Self.maxUserPCMBytes { self.userPCM.append(copy) }
+            // Keep the learner's own take for listen-back in Practice — but
+            // NOT what the mic hears while the fluent self is talking. That
+            // stretch is the reply playing back into the room plus the wait
+            // before the learner answers, and storing it put a long silence
+            // (with the other voice in it) at the head of every recording
+            // (reported 2026-09-01). `gateActive` is exactly "a line is
+            // playing", so it is the right fence.
+            if !gateWasActive, self.userPCM.count < Self.maxUserPCMBytes {
+                self.userPCM.append(copy)
+            }
         }
     }
 
@@ -733,8 +789,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if !said.isEmpty {
                 let pcm = userPCM
                 userPCM = Data()
-                let url = Self.saveWAV(pcm: pcm, sampleRate: 16000)
-                let ms = Int(Double(pcm.count / 2) / 16000 * 1000)
+                let trimmed = Self.trimSilence(pcm: pcm, sampleRate: 16000)
+                let url = Self.saveWAV(pcm: trimmed, sampleRate: 16000)
+                let ms = Int(Double(trimmed.count / 2) / 16000 * 1000)
                 onUserTurn?(said, url, ms)
             } else {
                 userPCM = Data()
@@ -850,6 +907,48 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let url = Self.saveWAV(pcm: pcm, sampleRate: replySampleRate)
         let ms = Int(Double(pcm.count / 2) / replySampleRate * 1000)
         onReplyFinished?(context, text, url, ms)
+    }
+
+    /// Cut the quiet off both ends of a take.
+    ///
+    /// Even with the gate, a recording starts when the fluent self stops and
+    /// ends when the server decides the turn is over — roughly a second of
+    /// room at each end that the learner did not fill. Listening back to your
+    /// own sentence should start with the sentence.
+    ///
+    /// The threshold is relative to the take's own peak, so it works at any
+    /// distance from the mic; a quarter second of lead-in is kept so nothing
+    /// clips the first consonant.
+    nonisolated static func trimSilence(pcm: Data, sampleRate: Double) -> Data {
+        let samples = pcm.count / MemoryLayout<Int16>.size
+        guard samples > 0 else { return pcm }
+        let window = max(1, Int(sampleRate * 0.02))          // 20 ms
+        let lead = Int(sampleRate * 0.25)
+        var peak: Float = 0
+        var energies: [Float] = []
+        pcm.withUnsafeBytes { raw in
+            let ptr = raw.bindMemory(to: Int16.self)
+            var index = 0
+            while index < samples {
+                let end = min(index + window, samples)
+                var sum: Float = 0
+                for i in index..<end {
+                    let v = abs(Float(Int16(littleEndian: ptr[i])) / 32768.0)
+                    sum += v * v
+                    peak = max(peak, v)
+                }
+                energies.append((sum / Float(end - index)).squareRoot())
+                index = end
+            }
+        }
+        guard peak > 0.01 else { return pcm }   // nothing but room: keep as is
+        let bar = max(peak * 0.08, 0.005)
+        guard let firstLoud = energies.firstIndex(where: { $0 >= bar }),
+              let lastLoud = energies.lastIndex(where: { $0 >= bar }) else { return pcm }
+        let start = max(0, firstLoud * window - lead)
+        let end = min(samples, (lastLoud + 1) * window + lead)
+        guard end > start else { return pcm }
+        return pcm.subdata(in: (start * 2)..<(end * 2))
     }
 
     /// PCM → a WAV file in the caches directory. The caller moves it into the
