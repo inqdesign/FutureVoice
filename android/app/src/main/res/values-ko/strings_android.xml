@@ -38,4 +38,7 @@
     <string name="thats_your_watch_scenes_for_this_period">이번 기간 Watch 장면을 다 봤어요.</string>
     <string name="it_refills_when_the_period_does_meanwhile_review_is_free">기간이 바뀌면 다시 채워져요. 그 사이 복습은 언제나 무료예요.</string>
     <string name="keep_going_today">오늘 더 하기</string>
+    <string name="your_future_self_can_call_you">미래의 내가 전화할 수 있어요</string>
+    <string name="pick_a_time_answer_and_youre_already_talking">시간을 정해요. 받으면 바로 대화가 시작돼요.</string>
+    <string name="call_me">전화해 줘</string>
 </resources>

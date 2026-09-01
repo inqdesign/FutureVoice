@@ -100,6 +100,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextOverflow
 import com.roro.futurevoice.data.DeepLinkInbox
+import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
@@ -184,6 +185,28 @@ fun RootScreen() {
         }
     }
     var editProfile by remember { mutableStateOf(false) }
+    var dailyCallOnboarded by remember {
+        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
+    }
+    var onboardingPaywallSeen by remember {
+        mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.PAYWALL))
+    }
+    // Null while unknown — the step must not flash for an account that turns
+    // out to have nothing to buy, so it waits for the answer rather than
+    // guessing at one.
+    var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(state.voiceId, dailyCallOnboarded) {
+        if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
+            onboardingNeedsPlan = AccountStatus.load(AuthRepository())
+                .also { BillingGate.remember(it) }
+                .needsSubscription
+            // Nothing to sell: mark it seen now, so the check is paid once.
+            if (onboardingNeedsPlan == false) {
+                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
+                onboardingPaywallSeen = true
+            }
+        }
+    }
     var welcomePreview by remember { mutableStateOf(false) }
 
     when {
@@ -347,6 +370,20 @@ fun RootScreen() {
             targetLanguage = state.targetLanguage,
             onCloned = app::onVoiceCloned,
         )
+
+        // The clone's first real job, introduced right after it exists — so
+        // it reads as a promise rather than a permissions request.
+        state.voiceId != null && !dailyCallOnboarded ->
+            DailyCallOnboardingScreen(context) { dailyCallOnboarded = true }
+
+        // The plans, offered ONCE at the end — so the first tap on Talk stops
+        // being where the hard paywall introduces itself. Skipped silently
+        // for anyone who has nothing to buy (already subscribed, or credited).
+        state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == true ->
+            PaywallScreen(onDismiss = {
+                OnboardingFlags.markSeen(context, OnboardingFlags.PAYWALL)
+                onboardingPaywallSeen = true
+            })
 
         inCall && state.voiceId != null ->
             TalkScreen(

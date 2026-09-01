@@ -38,4 +38,7 @@
     <string name="thats_your_watch_scenes_for_this_period">That\'s your Watch scenes for this period.</string>
     <string name="it_refills_when_the_period_does_meanwhile_review_is_free">It refills when the period does. Meanwhile, review is free.</string>
     <string name="keep_going_today">Keep going today</string>
+    <string name="your_future_self_can_call_you">Your future self can call you</string>
+    <string name="pick_a_time_answer_and_youre_already_talking">Pick a time. Answer, and you\'re already talking.</string>
+    <string name="call_me">Call me</string>
 </resources>
