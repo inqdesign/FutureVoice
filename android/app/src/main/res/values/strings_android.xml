@@ -29,4 +29,9 @@
     <string name="lld_day_streak">%1$d-day streak</string>
     <string name="lld_talks">%1$d talks</string>
     <string name="show_known">Show known</string>
+    <string name="lls_min_mo">%1$s min/mo</string>
+    <string name="subscription_legal_google">Payment is charged to your Google Play account at purchase. The subscription renews automatically unless you cancel at least 24 hours before the period ends. Manage or cancel it in Google Play › Payments and subscriptions.</string>
+    <string name="checking">Checking…</string>
+    <string name="see_the_plans">See the plans</string>
+    <string name="google_play_isnt_offering_this_plan_here_yet">Google Play isn\'t offering this plan here yet.</string>
 </resources>

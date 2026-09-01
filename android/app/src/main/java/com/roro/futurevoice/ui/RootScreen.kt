@@ -100,6 +100,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.text.style.TextOverflow
 import com.roro.futurevoice.data.DeepLinkInbox
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.TalkTimeLog
@@ -142,6 +143,12 @@ fun RootScreen() {
     var showDeck by remember { mutableStateOf(false) }
     var showActivity by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
+    val paywalled by BillingGate.showPaywall.collectAsStateWithLifecycle()
+    val gateScope = rememberCoroutineScope()
+    /** Run a metered action, or raise the paywall. See [BillingGate]. */
+    fun gate(action: () -> Unit) {
+        gateScope.launch { BillingGate.start(AuthRepository(), action) }
+    }
     // A widget tap or a review reminder arrives before anything is drawn, so
     // the Activity parks it and this reads it when there is a screen to open.
     /** A tab the deep link asked for; the home shell owns which tab is up. */
@@ -255,6 +262,10 @@ fun RootScreen() {
             onBack = { bookScenarioId = null },
         )
 
+        // Above everything: an account that cannot spend must not be looking
+        // at a call screen behind a sheet.
+        paywalled -> PaywallScreen(onDismiss = { BillingGate.showPaywall.value = false })
+
         library != null -> LibraryScreen(
             kind = library!!,
             language = state.targetLanguage,
@@ -288,8 +299,10 @@ fun RootScreen() {
                     occupation = p.occupation, interests = p.interests,
                     conversationStyle = p.conversation_style)
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
-                callTopic = ""; callFacts = emptyList(); callScenarioId = null
-                showPeople = false; inCall = true
+                gate {
+                    callTopic = ""; callFacts = emptyList(); callScenarioId = null
+                    showPeople = false; inCall = true
+                }
             },
             onBack = { showPeople = false },
         )
@@ -301,6 +314,7 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onSavePersona = app::savePersona,
             onEditProfile = { editProfile = true },
+            onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
             onBack = { showMe = false },
         )
@@ -354,7 +368,13 @@ fun RootScreen() {
         else -> HomeScreen(
             state = state,
             onStartCall = { topic, facts, scenarioId ->
-                callTopic = topic; callFacts = facts; callScenarioId = scenarioId; inCall = true
+                // The paywall is asked here, at the TAP — every metered
+                // launcher (free talk, a news story, a scenario, a widget
+                // deep link) meets in this one callback, so one gate covers
+                // them all. Met only as a 402, it would arrive after the call
+                // screen was already up.
+                gate { callTopic = topic; callFacts = facts
+                    callScenarioId = scenarioId; inCall = true }
             },
             onOpenMe = { showMe = true },
             onOpenBook = { bookScenarioId = it },
@@ -366,7 +386,7 @@ fun RootScreen() {
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
             onOpenTalk = { detailSessionId = it },
-            onWatch = { watchScenarioId = it },
+            onWatch = { id -> gate { watchScenarioId = id } },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
         )

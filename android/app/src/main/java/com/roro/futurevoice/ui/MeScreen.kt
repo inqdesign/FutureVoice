@@ -35,6 +35,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import com.roro.futurevoice.data.AccountStatus
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -60,6 +62,7 @@ fun MeScreen(
     nativeLanguage: String,
     onSavePersona: (UserPersona) -> Unit,
     onEditProfile: () -> Unit,
+    onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -78,6 +81,10 @@ fun MeScreen(
     }
     val notifPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    var account by remember { mutableStateOf<AccountStatus?>(null) }
+    LaunchedEffect(Unit) {
+        account = AccountStatus.load(AuthRepository()).also { BillingGate.remember(it) }
+    }
     var goal by remember {
         mutableStateOf(context.getSharedPreferences("futurevoice", 0)
             .getInt("futurevoice.dailyGoalMinutes", 10))
@@ -126,6 +133,38 @@ fun MeScreen(
                         }
                     }
                 }
+            }
+            // ── Subscribe / Subscription ──
+            // Directly under the profile and on its own: this is the one
+            // control that decides whether the app works at all, and burying
+            // it three rows inside a "Plan & talk time" page made it read as
+            // an accounting detail.
+            Column(Modifier.fillMaxWidth().clickable { onOpenPaywall() }) {
+                Text(
+                    stringResource(
+                        if (account?.isEntitled == true) R.string.subscription
+                        else R.string.subscribe),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                val acct = account
+                Text(
+                    when {
+                        acct == null -> stringResource(R.string.checking)
+                        acct.isEntitled -> {
+                            // What was SPENT, never what is left. A remainder
+                            // is a monthly receipt for time NOT used; it reads
+                            // as money wasted and is the likeliest thing to
+                            // end a subscription.
+                            val spent = acct.secondsUsedPeriod / 60
+                            val tier = if (acct.isPlusPlan) stringResource(R.string.plus)
+                            else stringResource(R.string.light)
+                            "$tier · " + stringResource(R.string.lld_min_talked_this_month, spent)
+                        }
+                        else -> stringResource(R.string.see_the_plans)
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             HorizontalDivider()
 

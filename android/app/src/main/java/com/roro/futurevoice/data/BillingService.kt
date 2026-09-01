@@ -70,8 +70,32 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     private val auth = AuthRepository()
 
     private val _offers = MutableStateFlow<List<Offer>>(emptyList())
-    /** Empty = nothing to sell (no products yet, or Play unreachable). */
+    /** Plans Play has priced. Empty = no products yet, or Play unreachable. */
     val offers: StateFlow<List<Offer>> = _offers
+
+    private val _plans = MutableStateFlow<List<Plan>>(emptyList())
+    /**
+     * The CATALOG, straight from Supabase and independent of Play.
+     *
+     * The paywall renders its sizes from this and attaches a price only where
+     * a Play product matched, because the two can be missing for entirely
+     * different reasons: Play may be unreachable on a device that can still
+     * read the catalog perfectly well. Rendering the cards from `offers`
+     * alone meant that device saw two plans whose only visible rows were the
+     * free ones — an offer that reads as "both are unlimited everything".
+     */
+    val plans: StateFlow<List<Plan>> = _plans
+
+    private val _settled = MutableStateFlow(false)
+    /**
+     * Play has been asked and has answered — with products or without.
+     *
+     * The paywall needs this to stop spinning: "no offers yet" and "still
+     * loading" look identical from the outside, and a spinner that never
+     * resolves says the app is broken when the truth is only that this device
+     * cannot reach Play.
+     */
+    val settled: StateFlow<Boolean> = _settled
 
     private val client: BillingClient = BillingClient.newBuilder(appContext)
         .setListener(this)
@@ -79,6 +103,9 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         .build()
 
     fun refresh() {
+        // The catalog does not need Play at all, and a device that cannot
+        // reach Play must still be able to see what is on offer.
+        scope.launch { _plans.value = fetchPlans().filter { it.is_active } }
         if (client.isReady) { scope.launch { query() }; return }
         client.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(result: BillingResult) {
@@ -86,6 +113,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
                     scope.launch { query() }
                 } else {
                     Log.d(TAG, "billing unavailable: ${result.responseCode}")
+                    _settled.value = true
                 }
             }
             override fun onBillingServiceDisconnected() { /* refresh() reconnects */ }
@@ -93,8 +121,14 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
     }
 
     private suspend fun query() {
-        val plans = fetchPlans().filter { it.is_active && !it.google_product_id.isNullOrBlank() }
-        if (plans.isEmpty()) { Log.d(TAG, "no google products in catalog yet"); return }
+        val catalog = fetchPlans().filter { it.is_active }
+        _plans.value = catalog
+        val plans = catalog.filter { !it.google_product_id.isNullOrBlank() }
+        if (plans.isEmpty()) {
+            Log.d(TAG, "no google products in catalog yet")
+            _settled.value = true
+            return
+        }
         val params = QueryProductDetailsParams.newBuilder()
             .setProductList(plans.map {
                 QueryProductDetailsParams.Product.newBuilder()
@@ -104,6 +138,7 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
             })
             .build()
         client.queryProductDetailsAsync(params) { result, details ->
+            _settled.value = true
             if (result.responseCode != BillingClient.BillingResponseCode.OK) return@queryProductDetailsAsync
             _offers.value = details.mapNotNull { d ->
                 plans.firstOrNull { it.google_product_id == d.productId }?.let { Offer(it, d) }
