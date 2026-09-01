@@ -44,4 +44,12 @@
     <string name="youre_learning_everything_we_offer">You\'re learning everything we offer.</string>
     <string name="where_are_you_in_lls">Where are you in %1$s?</string>
     <string name="start_learning">Start learning</string>
+    <string name="new_expressions">New</string>
+    <string name="to_drill">To drill</string>
+    <string name="to_try">To try</string>
+    <string name="lld_of_lld_min_of_talking">%1$d of %2$d min of talking</string>
+    <string name="next_read_in_lld_days">Next read in %1$d days</string>
+    <string name="lld_more_min_of_talking">%1$d more min of talking</string>
+    <string name="read_my_level">Read my level</string>
+    <string name="new_assessment">New assessment</string>
 </resources>

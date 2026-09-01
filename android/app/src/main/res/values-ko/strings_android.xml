@@ -44,4 +44,12 @@
     <string name="youre_learning_everything_we_offer">제공하는 언어를 모두 배우고 있어요.</string>
     <string name="where_are_you_in_lls">%1$s는 어느 정도 하세요?</string>
     <string name="start_learning">시작하기</string>
+    <string name="new_expressions">새로 쓴 표현</string>
+    <string name="to_drill">연습할 것</string>
+    <string name="to_try">써 볼 것</string>
+    <string name="lld_of_lld_min_of_talking">통화 %2$d분 중 %1$d분</string>
+    <string name="next_read_in_lld_days">다음 평가까지 %1$d일</string>
+    <string name="lld_more_min_of_talking">%1$d분 더 말하면 돼요</string>
+    <string name="read_my_level">내 레벨 읽기</string>
+    <string name="new_assessment">새로 평가하기</string>
 </resources>

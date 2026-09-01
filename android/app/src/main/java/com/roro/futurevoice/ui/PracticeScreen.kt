@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +22,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.roro.futurevoice.data.WeeklyReport
+import com.roro.futurevoice.data.WeeklyReportStore
+import com.roro.futurevoice.net.WeeklyReportEngine
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
@@ -171,24 +180,34 @@ private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
  * is that summary as a picture.
  */
 @Composable
-fun ProgressBody(language: String, goalMinutes: Int = 10) {
+fun ProgressBody(language: String, nativeLanguage: String, goalMinutes: Int = 10) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var todaySeconds by remember { mutableStateOf(0) }
     var minutesByDay by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
     var effortByDay by remember { mutableStateOf<List<Pair<String, PracticeLog.Day>>>(emptyList()) }
+    var report by remember { mutableStateOf<WeeklyReport?>(null) }
+    var unlock by remember { mutableStateOf<WeeklyReportEngine.Unlock?>(null) }
+    var generating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
         todaySeconds = TalkTimeLog.secondsToday(context)
         minutesByDay = TalkTimeLog.recentSeconds(context, EFFORT_DAYS)
         effortByDay = PracticeLog.recent(context, EFFORT_DAYS)
+        report = WeeklyReportStore.shared(context).latest(language)
+        unlock = WeeklyReportEngine.unlockState(talks.filter { it.endedAt != null }, report)
     }
     val scored = talks.mapNotNull { it.summary?.scorecard }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        scored.firstOrNull()?.let { card ->
+        // The pooled read outranks any single talk's: it is judged over the
+        // whole window's speech at once, a far larger sample than one
+        // conversation. A talk's own read is the fallback.
+        val headline = report?.cefrLevel?.uppercase()
+            ?: scored.firstOrNull()?.cefrLevel?.uppercase()
+        headline?.takeIf { it.isNotEmpty() }?.let { level ->
             Column {
-                val level = card.cefrLevel?.uppercase().orEmpty()
                 Text(level,
                     style = com.roro.futurevoice.ui.brand.DisplayFace
                         .style(level, MaterialTheme.typography.displaySmall),
@@ -196,6 +215,13 @@ fun ProgressBody(language: String, goalMinutes: Int = 10) {
                 Text(stringResource(R.string.a_level_measured_not_guessed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Never an unexplainable verdict: the judge's own rationale
+                // names the evidence it decided from.
+                report?.levelRationale?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp))
+                }
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -223,6 +249,27 @@ fun ProgressBody(language: String, goalMinutes: Int = 10) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+
+        AssessmentPanel(
+            report = report,
+            unlock = unlock,
+            working = generating,
+            onGenerate = {
+                generating = true
+                scope.launch {
+                    runCatching {
+                        WeeklyReportEngine.generate(context, talks.filter { it.endedAt != null },
+                            report, language, nativeLanguage)
+                    }.getOrNull()?.let {
+                        WeeklyReportStore.shared(context).save(it, language)
+                        report = it
+                        unlock = WeeklyReportEngine.unlockState(
+                            talks.filter { s -> s.endedAt != null }, it)
+                    }
+                    generating = false
+                }
+            },
+        )
 
         if (effortByDay.any { it.second.total > 0 }) {
             val shadow = Color(0xFF34C759)
@@ -264,5 +311,79 @@ private fun Stat(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.headlineMedium)
         Text(label, style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * The latest assessment, readable at a glance.
+ *
+ * Locked, it shows what it is WAITING for and how far along that is — the
+ * same number the gate opens on, so the bar can't fill at a different rate
+ * than the door opens. Unlocked, it offers the button; generated, it shows
+ * the trend line and the counts.
+ *
+ * The full item lists live on the report's own page: a wall of text at the
+ * bottom of Progress was getting skipped, not read.
+ */
+@Composable
+private fun AssessmentPanel(
+    report: WeeklyReport?,
+    unlock: WeeklyReportEngine.Unlock?,
+    working: Boolean,
+    onGenerate: () -> Unit,
+) {
+    if (unlock == null) return
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(stringResource(R.string.latest_assessment),
+            style = MaterialTheme.typography.titleMedium)
+
+        report?.summary?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth().padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Stat(stringResource(R.string.new_expressions),
+                    "${report.newExpressions.size}")
+                Stat(stringResource(R.string.to_drill), "${report.repeatedMistakes.size}")
+                Stat(stringResource(R.string.to_try), "${report.suggestedExpressions.size}")
+            }
+        }
+
+        when (unlock) {
+            is WeeklyReportEngine.Unlock.First -> {
+                Text(
+                    stringResource(R.string.lld_of_lld_min_of_talking,
+                        (unlock.accumulated / 60).toInt(), (unlock.required / 60).toInt()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                LinearProgressIndicator(
+                    progress = { (unlock.accumulated / unlock.required).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            is WeeklyReportEngine.Unlock.Next -> {
+                Text(
+                    if (unlock.daysRemaining > 0)
+                        stringResource(R.string.next_read_in_lld_days, unlock.daysRemaining)
+                    else stringResource(R.string.lld_more_min_of_talking,
+                        (unlock.secondsRemaining / 60).toInt() + 1),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            WeeklyReportEngine.Unlock.Ready -> {
+                Button(onClick = onGenerate, enabled = !working,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    if (working) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(
+                            if (report == null) R.string.read_my_level
+                            else R.string.new_assessment))
+                    }
+                }
+            }
+        }
     }
 }

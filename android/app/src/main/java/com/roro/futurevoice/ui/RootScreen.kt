@@ -699,6 +699,7 @@ private fun HomeScreen(
 
                 HomeTab.PROGRESS -> ProgressBody(
                     language = state.targetLanguage,
+                    nativeLanguage = state.nativeLanguage,
                     goalMinutes = LocalContext.current
                         .getSharedPreferences("futurevoice", 0)
                         .getInt("futurevoice.dailyGoalMinutes", 10),
