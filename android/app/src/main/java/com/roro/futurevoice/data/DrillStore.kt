@@ -218,6 +218,26 @@ class DrillStore private constructor(context: Context) {
             timesSeen = card.timesSeen + 1, timesCorrect = card.timesCorrect + 1,
             lastReviewedAt = now, box = DrillIngest.MAX_BOX,
             nextReviewAt = now + DrillIngest.intervalMs(DrillIngest.MAX_BOX))), language)
+        PracticeLog.record(appContext, PracticeLog.Kind.DRILL, finished = true)
+    }
+
+    /**
+     * File a card into a chosen bin — the learner picking WHEN it comes back
+     * rather than the box deciding for them. Same four verdicts the word deck
+     * offers, so "Soon" cannot mean two different things depending on which
+     * deck you are in.
+     *
+     * A rep is logged here (the card was handled); it counts as FINISHED only
+     * on the graduating verdict, which goes through [markKnown] instead —
+     * otherwise a day could be ticked complete by postponing ten cards.
+     */
+    suspend fun fileInBin(card: DrillCard, box: Int, delayMs: Long,
+                          language: String = LanguageScope.active(appContext),
+                          now: Long = System.currentTimeMillis()) {
+        upsertMany(listOf(card.copy(
+            timesSeen = card.timesSeen + 1, lastReviewedAt = now, box = box,
+            nextReviewAt = now + delayMs)), language)
+        PracticeLog.record(appContext, PracticeLog.Kind.DRILL)
     }
 
     /** Demote one box and reschedule soon. */
@@ -227,6 +247,7 @@ class DrillStore private constructor(context: Context) {
         upsertMany(listOf(card.copy(
             timesSeen = card.timesSeen + 1, lastReviewedAt = now, box = box,
             nextReviewAt = now + DrillIngest.intervalMs(box))), language)
+        PracticeLog.record(appContext, PracticeLog.Kind.DRILL)
     }
 
     suspend fun dueCount(language: String = LanguageScope.active(appContext),
