@@ -59,6 +59,12 @@ struct ConversationView: View {
     /// learner scrolling away and following would end up switching itself
     /// off the first time anyone spoke.
     @State private var followTail = true
+    /// Bumped whenever a correction card is attached. The card hangs off a
+    /// turn that is already on screen, so the feed's other triggers
+    /// (`turns.count`, the last transcript) never fire — the row simply grew
+    /// taller and pushed everything below it out of view, including the
+    /// fluent self's reply (reported 2026-09-01).
+    @State private var suggestionsShown = 0
     /// Viewport height of the feed, read from a background overlay so it
     /// costs no layout. Paired with the bottom sentinel's offset to answer
     /// "is the end of the transcript on screen".
@@ -993,6 +999,7 @@ struct ConversationView: View {
             .onChange(of: phase)       { _, _ in scroll(proxy) }
             .onChange(of: live.transcript) { _, _ in scroll(proxy) }
             .onChange(of: realtime.partial) { _, _ in scroll(proxy) }
+            .onChange(of: suggestionsShown) { _, _ in scroll(proxy) }
             .onChange(of: turns.last?.transcript) { _, _ in scroll(proxy) }
         }
     }
@@ -1009,6 +1016,18 @@ struct ConversationView: View {
         guard followTail else { return }
         withAnimation(.easeOut(duration: 0.2)) {
             proxy.scrollTo(Self.bottomId, anchor: .bottom)
+        }
+        // A bubble grows AFTER the state that produced it: a correction card
+        // appearing, a reply's text filling in. Scrolling once aims at the
+        // layout as it was, and the content that arrives a frame later ends up
+        // below the fold. A second pass, once it has settled, is what keeps
+        // the newest line on screen.
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 220_000_000)
+            guard followTail, !isTornDown else { return }
+            withAnimation(.easeOut(duration: 0.15)) {
+                proxy.scrollTo(Self.bottomId, anchor: .bottom)
+            }
         }
     }
 
@@ -1958,6 +1977,7 @@ struct ConversationView: View {
                   let suggestion = payload.turnSuggestion(for: said),
                   let idx = turns.firstIndex(where: { $0.id == turnId }) else { return }
             turns[idx].suggestion = suggestion
+            suggestionsShown += 1
         }
     }
 
@@ -2404,6 +2424,7 @@ struct ConversationView: View {
                         turnTrace("suggestion/held for the voice")
                     } else {
                         turns[idx].suggestion = s
+                        suggestionsShown += 1
                     }
                 } else if payload.suggestion != nil {
                     turnTrace("suggestion/dropped — only re-spells what they said")
@@ -2617,6 +2638,7 @@ struct ConversationView: View {
         if let s = work.suggestion,
            let idx = turns.firstIndex(where: { $0.id == work.turnId }) {
             turns[idx].suggestion = s
+            suggestionsShown += 1
         }
         startTranscription(forUserTurn: work.turnId)
     }
