@@ -218,6 +218,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     private var engineRunning = false
     /// Live for the length of the call — see `observeRouteChanges`.
     private var routeObserver: NSObjectProtocol?
+    private var isRebuildingAudio = false
+    private var lastAudioBuildAt = Date.distantPast
     /// Reply PCM is 16-bit LE at whatever rate `audio_start` announced.
     private var replySampleRate: Double = 22050
     /// Loudness, borrowed wholesale from `AudioPlayer`'s streaming path.
@@ -537,6 +539,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         streamGain = 1
         player.play()
         engineRunning = true
+        lastAudioBuildAt = Date()
         // The tap is live from here — hand the audio thread what it needs.
         mic.set(converter: converter, format: uplinkFormat, socket: socket)
     }
@@ -556,11 +559,23 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             object: nil, queue: .main
         ) { [weak self] note in
             let raw = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt ?? 0
+            // ONLY a device appearing or disappearing. NOT `.override`:
+            // routing output to the speaker IS an override, so listening for
+            // it meant every rebuild triggered the next one — the call spent
+            // itself restarting its own audio and never worked (2026-09-01).
+            // Nothing this class does can produce these two reasons.
             guard let reason = AVAudioSession.RouteChangeReason(rawValue: raw),
                   reason == .newDeviceAvailable || reason == .oldDeviceUnavailable
-                        || reason == .override else { return }
+            else { return }
             Task { @MainActor [weak self] in
-                guard let self, !self.isTornDown, self.engineRunning else { return }
+                guard let self, !self.isTornDown, self.engineRunning,
+                      !self.isRebuildingAudio,
+                      // A second belt: whatever the reason, an audio stack
+                      // built moments ago is not rebuilt again.
+                      Date().timeIntervalSince(self.lastAudioBuildAt) > 2
+                else { return }
+                self.isRebuildingAudio = true
+                defer { self.isRebuildingAudio = false }
                 Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
                 self.stopAudio()
                 do { try self.startAudio() } catch {
