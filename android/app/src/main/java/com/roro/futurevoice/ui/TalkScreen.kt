@@ -32,6 +32,11 @@ import androidx.compose.ui.res.stringResource
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.BillingGate
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -137,15 +142,11 @@ fun TalkScreen(
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 title = {
-                    // Minutes left ride on the title, whole minutes only — a
-                    // month-long balance must never read as a running meter.
-                    val minutes = state.minutesRemaining
-                    val label = phaseLabel(state.phase)
-                    Text(
-                        if (minutes != null && state.phase != TalkPhase.ENDED)
-                            "$label · ${stringResource(R.string.lld_min_left, minutes)}"
-                        else label
-                    )
+                    // WHAT the call is, not what it is doing. The phase reads
+                    // under the control at the bottom, where the hand is, and
+                    // a giant "Listening…" as the page title made the screen
+                    // look like a status readout instead of a call.
+                    Text(topic.ifBlank { stringResource(R.string.lets_talk) })
                 },
                 actions = {
                     // End the call and STAY: the wrap-up is the most valuable
@@ -167,26 +168,6 @@ fun TalkScreen(
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
-            // The call's own surface: Futureself, in the pill the whole app
-            // is built around. It ignites bottom-up with the learner's voice
-            // while listening, sweeps while thinking, blooms centre-out while
-            // the fluent self speaks — the ONE place the level is shown.
-            Futureself(
-                mode = when (state.phase) {
-                    TalkPhase.LISTENING -> FutureselfMode.LISTENING
-                    TalkPhase.THINKING, TalkPhase.CONNECTING -> FutureselfMode.THINKING
-                    TalkPhase.SPEAKING -> FutureselfMode.SPEAKING
-                    else -> FutureselfMode.IDLE
-                },
-                level = state.level.coerceIn(0f, 1f),
-                theme = remember { FutureselfTheme.stored(context) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .height(64.dp)
-                    .clip(RoundedCornerShape(32.dp)),
-            )
-
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -208,21 +189,6 @@ fun TalkScreen(
                     state.partial,
                     style = MaterialTheme.typography.bodyMedium,
                     fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            // A call that put itself down says so. Without this the screen
-            // looks identical to one the learner stopped on purpose, and the
-            // only clue that 30 s passed is that nothing is happening.
-            if (paused) {
-                Text(
-                    stringResource(
-                        if (state.pausedForIdle) R.string.call_paused_tap_to_pick_it_back_up
-                        else R.string.paused_tap_to_pick_it_back_up
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -277,17 +243,57 @@ fun TalkScreen(
                 }
             }
 
-            // The one in-call control besides End: put the call down, pick it
-            // up. Pausing has no consequences (no summary, no book), which is
-            // why it needs no confirmation.
+            // The bottom bar. The Futureself pill IS the control — it is
+            // what you tap to put the call down and pick it back up, and
+            // while the call runs the living surface is the state display:
+            // it ignites bottom-up with the learner's voice, sweeps while
+            // thinking, blooms centre-out while the fluent self speaks.
+            // A separate outlined "Pause" button below it made the surface
+            // decoration and the control an afterthought.
             if (onCall || paused) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.Center,
+                HorizontalDivider(Modifier.alpha(0.15f))
+                Column(
+                    Modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    OutlinedButton(onClick = { vm.togglePause() }) {
-                        Text(stringResource(if (paused) R.string.resume else R.string.pause))
+                    Box(
+                        Modifier
+                            .size(width = 156.dp, height = 64.dp)
+                            .clip(CircleShape)
+                            .clickable { vm.togglePause() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Futureself(
+                            mode = when (state.phase) {
+                                TalkPhase.LISTENING -> FutureselfMode.LISTENING
+                                TalkPhase.THINKING, TalkPhase.CONNECTING -> FutureselfMode.THINKING
+                                TalkPhase.SPEAKING -> FutureselfMode.SPEAKING
+                                else -> FutureselfMode.IDLE
+                            },
+                            level = state.level.coerceIn(0f, 1f),
+                            theme = remember { FutureselfTheme.stored(context) },
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                        // The clock lives INSIDE the pill. Whole minutes only,
+                        // and only while there is a figure to show — a
+                        // month-long balance must never read as a running
+                        // meter, so it joins the surface rather than taking a
+                        // line of its own.
+                        state.minutesRemaining?.let { minutes ->
+                            Text(
+                                stringResource(R.string.lld_min_left, minutes),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
                     }
+                    // The phase, quietly, where the hand is.
+                    Text(
+                        phaseHint(state.phase, paused, state.pausedForIdle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }
@@ -403,3 +409,22 @@ private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int) {
     }
 
 }
+/**
+ * What the call is doing, in the learner's words — under the control, not as
+ * the page title. A paused call SAYS it is paused: without that the screen
+ * looks identical to one the learner stopped on purpose, and the only clue
+ * that 30 seconds passed is that nothing is happening.
+ */
+@Composable
+private fun phaseHint(phase: TalkPhase, paused: Boolean, pausedForIdle: Boolean): String =
+    stringResource(
+        when {
+            pausedForIdle -> R.string.call_paused_tap_to_pick_it_back_up
+            paused -> R.string.paused_tap_to_pick_it_back_up
+            phase == TalkPhase.LISTENING -> R.string.listening_pause_to_send_tap_to_stop
+            phase == TalkPhase.THINKING || phase == TalkPhase.CONNECTING ->
+                R.string.thinking_tap_to_stop
+            phase == TalkPhase.SPEAKING -> R.string.speaking_tap_to_stop
+            else -> R.string.on_call_tap_to_stop
+        }
+    )

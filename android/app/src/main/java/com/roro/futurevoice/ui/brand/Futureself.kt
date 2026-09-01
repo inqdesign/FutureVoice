@@ -178,7 +178,13 @@ fun Futureself(
     val shader = remember { if (Build.VERSION.SDK_INT >= 33) runCatching { RuntimeShader(AGSL) }.getOrNull() else null }
 
     Canvas(modifier) {
-        val h = virtualHeight ?: size.height
+        // `virtualHeight` is a DP figure (the call pill is 64dp tall), but the
+        // shader reads `fragCoord` in device PIXELS — so it has to be
+        // converted, or the cell grid comes out `density` times too fine.
+        // On a 2.75x screen that turned the pill's 12.8dp cell into a 4.6dp
+        // one: the surface still looked like a mosaic, just a far grainier
+        // one than the design, and the ring read as flat noise.
+        val h = virtualHeight?.let { it * density } ?: size.height
         val w = size.width * (h / max(size.height, 1f))
         if (shader != null && Build.VERSION.SDK_INT >= 33) {
             shader.setFloatUniform("uSize", w, h)

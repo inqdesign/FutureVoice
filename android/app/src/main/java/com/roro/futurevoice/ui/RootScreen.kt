@@ -37,6 +37,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import com.roro.futurevoice.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -601,30 +607,33 @@ private fun HomeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            // CENTER-aligned: the streak is the one Today stat that lives up
+            // here and it holds the MIDDLE (iOS puts it in `.principal`). A
+            // plain TopAppBar left-aligns its title, which clustered the
+            // streak against the language chip and left the bar lopsided.
+            CenterAlignedTopAppBar(
                 colors = AppSurfaces.topBarColors(),
                 // No title on Talk: the hero's time-of-day question IS the
                 // greeting, and a title above it doubled it (iOS). The bar
-                // carries just the chips — language · streak · account.
+                // carries just the controls — language · streak · account.
                 title = {
-                    if (tab == HomeTab.TALK) StreakChip(language = state.targetLanguage)
+                    if (tab == HomeTab.TALK) StreakChip(
+                        language = state.targetLanguage, onClick = onOpenActivity)
                     else Text(stringResource(tab.label))
                 },
                 navigationIcon = {
                     if (tab == HomeTab.TALK) {
-                        TextButton(onClick = onOpenMe) {
-                            Text(LanguageCatalog.endonym(state.targetLanguage),
-                                style = MaterialTheme.typography.labelLarge)
-                        }
+                        HeaderButton(LanguageCatalog.endonym(state.targetLanguage),
+                            onClick = onOpenMe)
                     }
                 },
                 actions = {
                     // The people page opens from the WATCH header, as on iOS.
                     if (tab == HomeTab.WATCH) {
-                        TextButton(onClick = onOpenPeople) { Text(stringResource(R.string.people)) }
+                        HeaderButton(stringResource(R.string.people), onClick = onOpenPeople)
                     }
                     if (tab == HomeTab.TALK) {
-                        TextButton(onClick = onOpenMe) { Text(stringResource(R.string.me)) }
+                        HeaderButton(stringResource(R.string.me), onClick = onOpenMe)
                     }
                 },
             )
@@ -666,7 +675,6 @@ private fun HomeScreen(
                         onTap = { launch("", emptyList()) },
                         onOpenActivity = onOpenActivity,
                     )
-                    ReviewRow(language = state.targetLanguage, onOpen = onOpenDeck)
                     // One Discover section, two chips — what to talk about
                     // today: the day's stories, or a situation you built.
                     DiscoverSection(
@@ -742,11 +750,35 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         sessionCount = SessionStore.shared(context).load(state.targetLanguage).size
     }
     val theme = remember { FutureselfTheme.stored(context) }
+
+    // The ring's CENTRE sits on the device screen's midline — iOS solves the
+    // hero's height for exactly that rather than guessing at a padding, and
+    // the ring is the thing the eye lands on when the app opens.
+    //
+    // Its centre is `RING_TAIL + ringRadius` above the hero's bottom, so:
+    //   heroTop + heroHeight − (tail + radius) = screenHeight / 2
+    // The hero's own top is MEASURED, never assumed: it moves with the status
+    // bar, the header and whatever the OS puts above them.
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) {
+        LocalConfiguration.current.screenHeightDp.dp.toPx()
+    }
+    var heroTopPx by remember { mutableStateOf(0f) }
+    val heroHeight = with(density) {
+        val offset = (RING_DIAMETER / 2 + RING_TAIL).toPx()
+        maxOf(380.dp.toPx(), screenHeightPx / 2f + offset - heroTopPx).toDp()
+    }
+
     Column(
-        Modifier.fillMaxWidth().padding(top = 8.dp),
+        Modifier
+            .fillMaxWidth()
+            .height(heroHeight)
+            .onGloballyPositioned { heroTopPx = it.boundsInWindow().top }
+            .padding(top = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
+        Spacer(Modifier.weight(1f))
         val line = HeroGreeting.text(HeroGreeting.Input(
             sessionCount = sessionCount,
             todaySpokenSeconds = seconds,
@@ -758,7 +790,9 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             style = DisplayFace.style(line, MaterialTheme.typography.headlineSmall),
             textAlign = TextAlign.Center,
         )
+        Spacer(Modifier.weight(1f))
         TalkRing(
+            diameter = RING_DIAMETER,
             progress = seconds / 60f / goalMinutes.coerceAtLeast(1),
             mode = FutureselfMode.IDLE,
             level = 0f,
@@ -768,35 +802,31 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 if (enabled) Modifier.clickable(indication = null,
                     interactionSource = remember { MutableInteractionSource() }) { onTap() }
                 else Modifier),
-        )
-        // The day's status, and the way into the record. A streak and a talk
-        // count are claims about a history, so they have to be openable —
-        // otherwise they are just numbers asking to be trusted.
-        Column(
-            Modifier.clickable(onClick = onOpenActivity).padding(vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            val streak = remember(revision) { TalkTimeLog.streakDays(context) }
-            if (streak > 0 || sessionCount > 0) {
+            // INSIDE the circle: what the tap does, and the day's one number
+            // under it. Both used to sit as a line beneath the ring, which
+            // left the ring an unlabelled ornament and the number homeless.
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                val label = stringResource(R.string.lets_talk)
+                Text(label, style = DisplayFace.style(label,
+                    MaterialTheme.typography.titleMedium))
                 Text(
-                    listOfNotNull(
-                        streak.takeIf { it > 0 }
-                            ?.let { stringResource(R.string.lld_day_streak, it) },
-                        sessionCount.takeIf { it > 0 }
-                            ?.let { stringResource(R.string.lld_talks, it) },
-                    ).joinToString(" · "),
-                    style = MaterialTheme.typography.labelSmall,
+                    stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
+        // Breathing room under the ring — close enough to invite the scroll,
+        // far enough not to crowd it.
+        Spacer(Modifier.height(RING_TAIL))
     }
 }
+
+/** iOS's `talkRing` frame. The tail below it is what the centring solves for. */
+private val RING_DIAMETER = 280.dp
+private val RING_TAIL = 20.dp
 
 /**
  * The talks already on this phone — proof the loop persists. Reloads every
@@ -1054,37 +1084,50 @@ private fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector
 
 /** Days in a row with metered talk — the one Today stat that lives up here. */
 @Composable
-private fun StreakChip(language: String) {
+private fun StreakChip(language: String, onClick: () -> Unit) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var days by remember { mutableStateOf(0) }
     LaunchedEffect(revision) { days = TalkTimeLog.streakDays(context) }
     if (days <= 0) return
-    Row(verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    // A capsule, and tappable: the streak is a claim about a history, so it
+    // opens the record rather than asking to be taken on trust.
+    Row(
+        Modifier
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Icon(Icons.Filled.LocalFireDepartment, contentDescription = null,
             tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
         Text("$days", style = MaterialTheme.typography.labelLarge)
     }
 }
 
-/** Review cards · N due — the SRS queue's front door. Hidden while empty. */
+/**
+ * A header control that looks like one.
+ *
+ * These were bare `TextButton`s, which in a header read as labels — and a
+ * label that does something is a thing the learner has to discover by
+ * poking. Same quiet capsule the streak wears, so the three read as one row
+ * of controls rather than three unrelated bits of text.
+ */
 @Composable
-private fun ReviewRow(language: String, onOpen: () -> Unit) {
-    val context = LocalContext.current
-    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
-    var due by remember { mutableStateOf(0) }
-    LaunchedEffect(language, revision) { due = DrillStore.shared(context).dueCount(language) }
-    if (due == 0) return
-    Row(
-        Modifier.fillMaxWidth().clickable { onOpen() }.padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(stringResource(R.string.review_cards), style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.weight(1f))
-        Text("$due", style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.primary)
-    }
+private fun HeaderButton(label: String, onClick: () -> Unit) {
+    Text(
+        label,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier
+            .padding(horizontal = 8.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+    )
 }
 
 /**
