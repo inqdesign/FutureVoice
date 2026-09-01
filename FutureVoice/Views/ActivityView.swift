@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Activity — not just WHICH days you practiced but HOW MUCH: every grid cell
-/// is a heat square of minutes actually spoken (darker = more). Month view is
+/// is a heat square of metered talk minutes (darker = more). Month view is
 /// a calendar; Year view is a contribution grid of the whole year. Tapping a
 /// day opens its breakdown (minutes, talks, shadow takes, drill reviews) and
 /// links back to that day's talks. Reached from Home's streak and Progress.
@@ -13,11 +13,12 @@ struct ActivityView: View {
     @State private var viewMode: ViewMode = .month
     @State private var currentStreak = 0
     @State private var longestStreak = 0
-    /// Whole minutes of USER speech per day (start-of-day keyed).
+    /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
+    /// see `talkSeconds(on:)` for what that is and what it isn't.
     @State private var minutesByDay: [Date: Int] = [:]
     /// The day's finished talks, newest first — the tap-through to their books.
     @State private var sessionsByDay: [Date: [Session]] = [:]
-    @State private var totalSpeakingSeconds = 0.0
+    @State private var totalTalkSeconds = 0
     @State private var drillCards: [DrillCard] = []
     @State private var selectedDay: Date?
     /// The selected day's share card (`DayCardSheet`) — the day summary is
@@ -93,8 +94,14 @@ struct ActivityView: View {
         cellPhotos = out
     }
 
-    /// The selected day's card, at the top of its summary — tap for the
-    /// sheet (photo, share). Rendered lazily and cached for the page's life.
+    /// The card's 4:5 feed format at a fixed size, so the day's facts can sit
+    /// beside it instead of under it — the summary used to be a left-hung
+    /// thumbnail with half the row empty.
+    private static let cardThumbWidth: CGFloat = 132
+    private static let cardThumbHeight: CGFloat = cardThumbWidth * 5 / 4
+
+    /// The selected day's card, beside its facts — tap for the sheet (photo,
+    /// share). Rendered lazily and cached for the page's life.
     @ViewBuilder
     private func cardPreviewRow(_ day: Date) -> some View {
         Button { cardDay = CardDay(date: day) } label: {
@@ -105,9 +112,8 @@ struct ActivityView: View {
                     Color(.tertiarySystemFill)
                 }
             }
-            .frame(height: 190)
-            .aspectRatio(4 / 5, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: Self.cardThumbWidth, height: Self.cardThumbHeight)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
         .accessibilityLabel(Text("Share card"))
@@ -122,19 +128,39 @@ struct ActivityView: View {
     // MARK: - Stats (compact single row)
     // MARK: - Stats (compact single row)
 
+    private struct HeadlineStat: Identifiable {
+        let value: String
+        let label: String
+        let icon: String
+        var tint: Color = .accentColor
+        var id: String { label }
+    }
+
+    private var headlineStats: [HeadlineStat] {
+        [HeadlineStat(value: "\(currentStreak)", label: explain("day streak"), icon: "flame.fill",
+                      tint: currentStreak > 0 ? .orange : .secondary),
+         HeadlineStat(value: "\(longestStreak)", label: explain("longest"), icon: "trophy.fill"),
+         HeadlineStat(value: totalTimeString, label: explain("total"), icon: "waveform"),
+         HeadlineStat(value: "\(activeDays.count)", label: explain("days"), icon: "calendar")]
+    }
+
+    /// The four stats share the row by CONTENT, not as four equal columns.
+    /// Equal columns handed "5h 30m" exactly the width of "3", so the one
+    /// stat with something to say sat pressed against its dividers while the
+    /// three single digits wasted theirs. The leftover is spread as equal
+    /// gaps instead — every cell keeps a half-gap either side, so the
+    /// dividers still land midway between them.
     private var statsBar: some View {
         HStack(spacing: 0) {
-            compactStat("\(currentStreak)", "day streak", icon: "flame.fill",
-                        tint: currentStreak > 0 ? .orange : .secondary)
-            statDivider
-            compactStat("\(longestStreak)", "longest", icon: "trophy.fill", tint: .accentColor)
-            statDivider
-            compactStat(totalTimeString, "total", icon: "waveform", tint: .accentColor)
-            statDivider
-            compactStat("\(activeDays.count)", "days", icon: "calendar", tint: .accentColor)
+            ForEach(Array(headlineStats.enumerated()), id: \.element.id) { index, stat in
+                if index > 0 { statDivider }
+                Spacer(minLength: 8)
+                compactStat(stat)
+                Spacer(minLength: 8)
+            }
         }
         .padding(.vertical, 12)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
@@ -142,21 +168,29 @@ struct ActivityView: View {
         Divider().frame(height: 26)
     }
 
-    /// Lifetime user speech, humanized: "47m" → "3h 12m".
+    /// Lifetime talk time, humanized: "47m" → "3h 12m".
     private var totalTimeString: String {
-        let mins = Int(totalSpeakingSeconds / 60)
+        let mins = totalTalkSeconds / 60
         return mins < 60 ? "\(mins)m" : "\(mins / 60)h \(mins % 60)m"
     }
 
-    private func compactStat(_ value: String, _ label: String, icon: String, tint: Color) -> some View {
+    private func compactStat(_ stat: HeadlineStat) -> some View {
         VStack(spacing: 3) {
             HStack(spacing: 4) {
-                Image(systemName: icon).font(.caption2).foregroundStyle(tint)
-                Text(value).font(.subheadline.weight(.bold)).monospacedDigit()
+                Image(systemName: stat.icon).font(.caption2).foregroundStyle(stat.tint)
+                Text(stat.value)
+                    .font(.subheadline.weight(.bold))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    // A years-old total ("153h 20m") must shrink rather than
+                    // shove the row; the minimum gaps above are the floor.
+                    .minimumScaleFactor(0.8)
             }
-            Text(label).font(.caption2).foregroundStyle(.secondary)
+            Text(stat.label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Month view
@@ -178,18 +212,10 @@ struct ActivityView: View {
                 }
             }
 
-            HStack {
-                Text(monthSummary)
-                Spacer()
-                heatLegend
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            if let comparison = periodComparison {
-                Text(comparison)
-                    .font(.caption2).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(periodFooter)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .frame(maxWidth: .infinity)
@@ -211,18 +237,10 @@ struct ActivityView: View {
                 }
             }
 
-            HStack {
-                Text(yearSummary)
-                Spacer()
-                heatLegend
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            if let comparison = periodComparison {
-                Text(comparison)
-                    .font(.caption2).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(periodFooter)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
         .frame(maxWidth: .infinity)
@@ -241,18 +259,6 @@ struct ActivityView: View {
                     yearCell(date)
                 }
             }
-        }
-    }
-
-    private var heatLegend: some View {
-        HStack(spacing: 4) {
-            Text("less")
-            ForEach([0.0, 0.4, 0.65, 0.85, 1.0], id: \.self) { o in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(o == 0 ? Color(.tertiarySystemFill) : Color.accentColor.opacity(o))
-                    .frame(width: 9, height: 9)
-            }
-            Text("more")
         }
     }
 
@@ -382,38 +388,53 @@ struct ActivityView: View {
                                c.lastReviewedAt.map { cal.isDate($0, inSameDayAs: day) } ?? false
                            }.count)
 
-        return VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(day.formatted(date: .complete, time: .omitted))
+        let isEmpty = mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(dayTitle(day))
                     .font(.headline)
-                Spacer()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 8)
                 // The day's share card — only for a day that has something
                 // on it; an empty day has nothing to put on a card.
-                if mins > 0 || talks > 0 {
+                if !isEmpty {
+                    // A bare glyph, no container. The label said what the
+                    // glyph already says, and a bordered capsule drawn around
+                    // one icon has no padding that looks right at either
+                    // control size. The tap target comes from padding instead,
+                    // which keeps the glyph flush with the card's own inset;
+                    // `Label` keeps "Share card" as the accessibility name.
                     Button { cardDay = CardDay(date: day) } label: {
                         Label("Share card", systemImage: "square.and.arrow.up")
-                            .font(.subheadline.weight(.medium))
+                            .labelStyle(.iconOnly)
+                            .font(.title3)
+                            .padding(.leading, 14)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tint)
                 }
             }
-            if mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 {
+            if isEmpty {
                 Text(explain("No practice this day."))
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
-                cardPreviewRow(day)
-                detailRow(icon: "waveform", tint: .accentColor,
-                          text: talks > 0
-                            ? "\(mins) min spoken across \(talks) talk\(talks == 1 ? "" : "s")"
-                            : "\(mins) min spoken")
-                if shadowed > 0 {
-                    detailRow(icon: "waveform.badge.mic", tint: .green,
-                              text: "\(shadowed) shadow take\(shadowed == 1 ? "" : "s")")
-                }
-                if reviewed > 0 {
-                    detailRow(icon: "rectangle.stack", tint: .orange,
-                              text: "\(reviewed) drill review\(reviewed == 1 ? "" : "s")")
+                // The card beside its facts. The card already prints the
+                // day's minutes, so an icon row repeating them under it was
+                // the same number twice — the facts now fill the half of the
+                // row the thumbnail used to leave empty.
+                HStack(alignment: .top, spacing: 16) {
+                    cardPreviewRow(day)
+                    VStack(spacing: 12) {
+                        factRow("Talks", "\(talks)")
+                        factRow("Talk time", explain("\(mins) min"))
+                        if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
+                        if reviewed > 0 { factRow("Drills", "\(reviewed)") }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: Self.cardThumbHeight)
                 }
                 // The day's talks as tappable rows — the record links straight
                 // back to each talk's book for review.
@@ -450,22 +471,62 @@ struct ActivityView: View {
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
     }
 
-    private func detailRow(icon: String, tint: Color, text: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
+    /// One fact beside the card: what it is, then how much of it. Label left,
+    /// value right, so the column reads as a table however many rows the day
+    /// earned.
+    private func factRow(_ label: LocalizedStringKey, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label)
                 .font(.subheadline)
-                .foregroundStyle(tint)
-                .frame(width: 24)
-            Text(text).font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 4)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
         }
+    }
+
+    /// "8월 31일 (월)" / "Mon, Aug 31" — in the LEARNER's language, and
+    /// without the year unless the day is in another one.
+    ///
+    /// ABBREVIATED on both fields. `.formatted(date: .complete)` read the
+    /// device locale rather than the app's, so a Korean app printed an English
+    /// weekday in front of a German date order over two lines; spelling the
+    /// month and weekday out then left "Monday, August 31" pressed against
+    /// the share button. The month is named in the header directly above, so
+    /// the summary only has to say which day of it.
+    private func dayTitle(_ day: Date) -> String {
+        var style = Date.FormatStyle(locale: uiLocale, calendar: cal)
+            .month(.abbreviated).day().weekday(.abbreviated)
+        if cal.component(.year, from: day) != cal.component(.year, from: Date()) {
+            style = style.year()
+        }
+        return day.formatted(style)
     }
 
     // MARK: - Period math
 
     private var periodTitle: String {
         let f = DateFormatter()
+        f.locale = uiLocale
         f.setLocalizedDateFormatFromTemplate(viewMode == .month ? "MMMM yyyy" : "yyyy")
         return f.string(from: displayedMonth)
+    }
+
+    /// Every date symbol on this page resolves in the LEARNER's language, not
+    /// the phone's — `DateFormatter`, `Calendar`'s symbols and `.formatted()`
+    /// all default to the device locale, which is how a Korean app came to
+    /// head its calendar "September 2026" over "M T W T F S S".
+    private var uiLocale: Locale { Locale(identifier: LanguageCatalog.currentNative) }
+
+    /// `cal` with that locale attached — for the symbol arrays only; the
+    /// date maths must keep the user's own calendar and first weekday.
+    private var symbolCalendar: Calendar {
+        var c = cal
+        c.locale = uiLocale
+        return c
     }
 
     private var canGoNext: Bool {
@@ -482,7 +543,7 @@ struct ActivityView: View {
     }
 
     private var weekdaySymbols: [String] {
-        let s = cal.veryShortWeekdaySymbols
+        let s = symbolCalendar.veryShortWeekdaySymbols
         let shift = cal.firstWeekday - 1
         return Array(s[shift...] + s[..<shift])
     }
@@ -513,17 +574,27 @@ struct ActivityView: View {
 
     private func monthShortSymbol(_ month: Date) -> String {
         let idx = cal.component(.month, from: month) - 1
-        let symbols = cal.shortMonthSymbols
+        let symbols = symbolCalendar.shortMonthSymbols
         return symbols.indices.contains(idx) ? symbols[idx] : ""
     }
 
     // MARK: - Summaries
 
+    /// ONE line under the grid: how much of the period was used, then how it
+    /// compares. Three unaligned pieces used to sit here — summary left, heat
+    /// legend right, comparison on its own line below. The legend went with
+    /// them: "darker = more" is read in a second and never needed saying.
+    private var periodFooter: String {
+        let summary = viewMode == .month ? monthSummary : yearSummary
+        guard let comparison = periodComparison else { return summary }
+        return summary + " · " + comparison
+    }
+
     private var monthSummary: String {
         let days = monthCells.compactMap { $0 }.map { cal.startOfDay(for: $0) }
         let active = days.filter { activeDays.contains($0) }.count
         let mins = days.reduce(0) { $0 + (minutesByDay[$1] ?? 0) }
-        return "\(active) active days · \(mins) min"
+        return explain("\(active) active days · \(mins) min")
     }
 
     private var yearSummary: String {
@@ -548,8 +619,10 @@ struct ActivityView: View {
         guard prevMins > 0 else { return nil }
         let delta = periodMinutes(displayedMonth, granularity: unit) - prevMins
         let f = DateFormatter()
+        f.locale = uiLocale
         f.setLocalizedDateFormatFromTemplate(viewMode == .month ? "MMMM" : "yyyy")
-        return "\(delta >= 0 ? "+" : "")\(delta) min vs \(f.string(from: prev))"
+        let signed = (delta >= 0 ? "+" : "") + "\(delta)"
+        return explain("\(signed) min vs \(f.string(from: prev))")
     }
 
     // MARK: - Data
@@ -558,25 +631,20 @@ struct ActivityView: View {
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
 
         var days: Set<Date> = []
-        var minutes: [Date: Int] = [:]
         var byDay: [Date: [Session]] = [:]
-        var secondsByDay: [Date: Double] = [:]
-        var totalSecs = 0.0
         for session in sessions.sorted(by: { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }) {
             let day = cal.startOfDay(for: session.endedAt ?? session.startedAt)
             days.insert(day)
             byDay[day, default: []].append(session)
-            let secs = session.turns.filter { $0.role == .user }
-                .reduce(0.0) { $0 + Double($1.durationMs) / 1000.0 }
-            secondsByDay[day, default: 0] += secs
-            totalSecs += secs
         }
-        for (day, secs) in secondsByDay { minutes[day] = Int(secs / 60) }
+
+        var seconds: [Date: Int] = [:]
+        for day in days { seconds[day] = talkSeconds(on: day) }
 
         activeDays = days
-        minutesByDay = minutes
+        minutesByDay = seconds.mapValues { $0 / 60 }
         sessionsByDay = byDay
-        totalSpeakingSeconds = totalSecs
+        totalTalkSeconds = seconds.values.reduce(0, +)
         drillCards = DrillStore.shared.load()
         // One rule, one implementation. This screen used to count its own
         // "days with any session", which was a third definition of streak
@@ -590,6 +658,23 @@ struct ActivityView: View {
             selectedDay = days.contains(today) ? today : days.max()
         }
         loadCellPhotos()
+    }
+
+    /// The day's talk time, read where every other surface reads it: the
+    /// METER (`TalkTimeLog`), or the day's frozen card once the log has
+    /// pruned that far back.
+    ///
+    /// This screen used to sum the learner's own turn durations, which is a
+    /// different quantity entirely — a call is mostly the fluent self talking
+    /// and the learner thinking — so the day summary read 8 min beside a home
+    /// ring reading 11 for the same afternoon. `PracticeStats.todayTalkSeconds`
+    /// settled that rule for the ring, the widget and the receipt; this was
+    /// the one screen never converted. There is no fallback to the old sum:
+    /// a second definition is what the bug was.
+    private func talkSeconds(on day: Date) -> Int {
+        let metered = TalkTimeLog.seconds(on: day)
+        if metered > 0 { return metered }
+        return (cardStore.snapshot(for: day)?.talkMinutes ?? 0) * 60
     }
 
     /// Days that COUNT toward a streak — over the Core's bar, in the language

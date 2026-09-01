@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UIKit
+import UniformTypeIdentifiers
 
 /// Make a day's card and share it — the running app's "your run is saved,
 /// here's the card", for the day.
@@ -10,8 +11,13 @@ import UIKit
 /// the Activity page's day summary for any day — the summary already says
 /// what the day was, and the card is that summary as a picture. The photo is saved as the day's the moment it's
 /// picked; there is no separate save, so closing the sheet loses nothing.
-/// Sharing renders the card at 3× (1080 wide) to a temporary file the share
-/// sheet copies from.
+/// Today's numbers are read LIVE every time the sheet opens — the day is
+/// still being lived, and an earlier build froze them the first time anyone
+/// looked, so the card sat at whatever the morning had been.
+/// Sharing renders the card at 3× (1080 wide) and hands the share sheet PNG
+/// DATA, not a file URL — Threads/Instagram share extensions accept
+/// `public.png` items but not `file-url`, so a URL item left their composer
+/// with no attachment.
 struct DayCardSheet: View {
     let day: Date
     /// Fixed data for the capture harness; nil reads the day's logs.
@@ -23,7 +29,7 @@ struct DayCardSheet: View {
     @State private var format: DayCardFormat = .feed
     @State private var pick: PhotosPickerItem?
     @State private var showingCamera = false
-    @State private var exported: URL?
+    @State private var exported: SharedCard?
     @State private var thumb: UIImage?
     @State private var photoStamp = 0
 
@@ -134,7 +140,8 @@ struct DayCardSheet: View {
         store.setPhoto(image, for: day)
         photo = store.photo(for: day)
         photoStamp += 1
-        // Taking the photo is making the card — freeze the day with it.
+        // Taking the photo is making the card, so settle the day with it —
+        // a no-op while that day is today, which the store refuses.
         if preview == nil, let data { store.freeze(data) }
     }
 
@@ -149,9 +156,20 @@ struct DayCardSheet: View {
         guard let image = card.render(), let png = image.pngData() else { return }
         thumb = card.render(scale: 1)
         let name = "nawana-\(AppUsageLog.dayKey(data.date))-\(format.rawValue).png"
-        exported = try? BookExportWriter.write(png, name: name)
-        // A card that reached the share sheet is a card that was made.
-        if preview == nil { store.freeze(data) }
+        exported = SharedCard(png: png, filename: name)
+    }
+}
+
+/// The card as the share sheet receives it: PNG data typed `public.png`, with
+/// the filename riding along for "Save to Files". A file URL was tried first
+/// and is why this exists — image-only share extensions ignore it.
+private struct SharedCard: Transferable {
+    let png: Data
+    let filename: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: .png) { $0.png }
+            .suggestedFileName { $0.filename }
     }
 }
 

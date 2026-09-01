@@ -2,15 +2,16 @@ import SwiftUI
 import UIKit
 
 /// A DAY's card on disk: the photo (where the learner studied that day) and,
-/// once the card has been made or the day is over, a FROZEN copy of its
-/// numbers. One JPEG + one JSON per local day under `Documents/day_cards/`.
+/// once the day is over, a FROZEN copy of its numbers. One JPEG + one JSON per
+/// local day under `Documents/day_cards/`.
 ///
 /// The snapshot is the collection's memory. The logs a card is drawn from are
 /// pruned at 45 days and the streak rule can change, so a card read live
 /// months later would lose its minutes or change its streak — and a card is
-/// what that day WAS. `freeze` is called when a photo is taken, when the
-/// card is shared, and for every past day on foreground (`freezePastDays`),
-/// so yesterday's card is settled by the time anyone looks at it.
+/// what that day WAS. `freeze` is called when a photo is taken and for every
+/// past day on foreground (`freezePastDays`), so yesterday's card is settled
+/// by the time anyone looks at it. It refuses TODAY, which is read live until
+/// the day is over.
 ///
 /// The photo is re-encoded through `UIGraphicsImageRenderer` on save, which
 /// drops EXIF — including GPS. A share card must never carry the location it
@@ -37,23 +38,49 @@ final class DayCardStore: ObservableObject {
         return try? JSONDecoder().decode(DayCardData.self, from: data)
     }
 
-    func freeze(_ card: DayCardData) {
+    /// Settle a day's numbers. TODAY is refused: a card is what the day WAS,
+    /// and a snapshot taken at 2pm freezes figures the ring goes on counting
+    /// past — which is how a card came to read 7 min beside a home screen
+    /// reading 11. The snapshot's only job is to outlive the 45-day log
+    /// pruning and a changed streak rule, and neither can reach today.
+    func freeze(_ card: DayCardData, calendar: Calendar = .current) {
+        guard !calendar.isDateInToday(card.date) else { return }
         guard card.hasActivity, let data = try? JSONEncoder().encode(card) else { return }
         try? data.write(to: metaURL(card.date), options: [.atomic])
         version += 1
     }
 
     /// Settle every past day of the last `AppUsageLog` window that has
-    /// activity and no record yet. Idempotent and cheap: the session archive
-    /// is decoded once, and a day with a snapshot is skipped without reading
-    /// it. Today is never frozen here — it is still being lived.
+    /// activity and no settled record yet. Idempotent and cheap: a day
+    /// already settled is skipped on a file attribute, without decoding
+    /// anything. Today is never frozen here — it is still being lived.
     func freezePastDays(now: Date = Date(), calendar: Calendar = .current) {
         for back in 1...45 {
             guard let day = calendar.date(byAdding: .day, value: -back, to: now) else { continue }
-            guard !FileManager.default.fileExists(atPath: metaURL(day).path) else { continue }
+            guard needsSettling(day, calendar: calendar) else { continue }
             let card = DayCardData.make(day: day, calendar: calendar)
-            if card.hasActivity { freeze(card) }
+            guard card.hasActivity else { continue }
+            // Never walk a settled day backwards. A re-settle reads logs that
+            // may since have been pruned, and a record is not improved by
+            // being replaced with a smaller one.
+            if let old = snapshot(for: day), old.talkMinutes > card.talkMinutes { continue }
+            freeze(card, calendar: calendar)
         }
+    }
+
+    /// A day with no record, or one whose record was written while that day
+    /// was still running. Builds before 2026-08-31 froze TODAY the moment the
+    /// card sheet was opened, so those snapshots stopped at whenever the
+    /// learner happened to look; re-settling costs one `make` per affected
+    /// day, once, because the rewrite stamps a modification date past the
+    /// day's end.
+    private func needsSettling(_ day: Date, calendar: Calendar) -> Bool {
+        guard let written = (try? FileManager.default
+            .attributesOfItem(atPath: metaURL(day).path))?[.modificationDate] as? Date
+        else { return true }   // no record yet
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1,
+                                         to: calendar.startOfDay(for: day)) else { return false }
+        return written < dayEnd
     }
 
     /// Every day that has a record — a snapshot or a photo — newest first.

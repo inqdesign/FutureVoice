@@ -269,8 +269,18 @@ interruption. `-capture daycard` renders it on a sample day.
   snapshot. Talk minutes are `TalkTimeLog` — the ring's number, metered.
   Study minutes are `AppUsageLog`, foreground seconds per local day written at
   the edges of a stint in `FutureVoiceApp`, never less than the talk figure
-  (a call in a pocket is metered but not foregrounded). Nothing is computed
-  for the card alone.
+  (a call in a pocket is metered but not foregrounded). Both are FLOORED,
+  like the home ring and the widget. Nothing is computed for the card alone —
+  and nothing else may compute a day's talk time either: summing the
+  learner's own turn durations is a DIFFERENT quantity (a call is mostly the
+  fluent self talking and the learner thinking), which is why
+  `PracticeStats.todayTalkSeconds` settled on the meter. Activity and
+  Progress's effort bars were still on that old sum until 2026-09-01, so the
+  same afternoon read 11 min on the ring, 8 in Activity and 7 on the card;
+  both now read `TalkTimeLog`, and Progress's goal RuleMark finally measures
+  the same thing the goal is judged by. `Session.turns` speech sums survive
+  only where the learner's own speech IS the subject — ranking the day's main
+  talk, the CEFR estimate's ~10-minute gate, and the per-talk fluency stats.
 - **The call pill is the card's brand badge, in the learner's theme.** A
   first cut laid the Futureself mosaic on a time axis as the day's "map" (lit
   where the fluent self spoke); it was retired the same day because nobody
@@ -294,14 +304,23 @@ interruption. `-capture daycard` renders it on a sample day.
   faint fill — so the month reads as the places you studied (circles showed
   a photo as a smudge), and selecting a day puts that day's card at the
   top of its summary (`cardPreviewRow`, tap → the same `DayCardSheet`).
-- **A card is FROZEN when it is made, and every past day is settled on
-  foreground** (`DayCardStore.freeze` / `freezePastDays`, JSON beside the
-  photo). The logs a card is drawn from are pruned at 45 days and the streak
-  rule can change; a card read live months later would lose its minutes or
-  change its streak, and a card is what that day WAS. `DayCardData.resolve`
-  prefers the snapshot and falls back to the logs for a day that has none
-  (only ever within the 45-day window). Today is never frozen by the sweep —
-  it is still being lived — only by its own photo or share.
+- **A card is FROZEN once its day is OVER, never while it is running**
+  (`DayCardStore.freeze` / `freezePastDays`, JSON beside the photo). The logs
+  a card is drawn from are pruned at 45 days and the streak rule can change;
+  a card read live months later would lose its minutes or change its streak,
+  and a card is what that day WAS. `DayCardData.resolve` prefers the snapshot
+  and falls back to the logs for a day that has none (only ever within the
+  45-day window). **TODAY is always read live** — `resolve` ignores any
+  snapshot for it and `freeze` refuses to write one, so the rule cannot be
+  broken from a call site. It was, for three days: the sheet froze the day
+  from `renderForShare`, which runs on every OPEN, so a card looked at in the
+  morning stopped there and read 7 min beside a home ring reading 11. Nothing
+  the snapshot protects against — pruning, a changed streak rule — can reach
+  today, so there was never anything to buy. `freezePastDays` re-settles a
+  past day whose record was written before that day ended (file modification
+  date), which is what repairs the snapshots those three days left behind; it
+  never replaces a record with a SMALLER `talkMinutes`, since a re-settle
+  reads logs that may since have been pruned.
 - **The photo is the place, and that is as precise as it gets.** No location
   permission, ever — the learner photographs where they are (`CameraPicker`,
   the one UIKit wrap, because `PhotosPicker` has no camera and "take it now"

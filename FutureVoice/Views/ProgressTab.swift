@@ -745,7 +745,7 @@ struct ProgressTab: View {
         }
     }
 
-    // MARK: - Study time (minutes actually spoken, per day)
+    // MARK: - Study time (metered talk minutes, per day)
 
     private var studyTimePanel: some View {
         panel {
@@ -1970,14 +1970,17 @@ struct ProgressTab: View {
             let userTurns = daySessions.reduce(0) { acc, s in
                 acc + s.turns.filter { $0.role == .user }.count
             }
-            let speakMs = daySessions.reduce(0) { acc, s in
-                acc + s.turns.filter { $0.role == .user }.reduce(0) { $0 + $1.durationMs }
-            }
+            // METERED talk time, like the home ring and the Activity page.
+            // This summed the learner's own turn durations, which is a
+            // different quantity — and the goal RuleMark below is the ring's
+            // goal, so bars drawn from it fell short of a line the ring said
+            // had been cleared. See `PracticeStats.todayTalkSeconds`.
+            let talkSeconds = TalkTimeLog.seconds(on: d)
             effort.append(DayEffort(day: d,
                                     talkTurns: userTurns,
                                     shadowReps: max(log?.shadowReps ?? 0, shadowed),
                                     drillReps: max(log?.drillReps ?? 0, reviewed),
-                                    talkMinutes: Double(speakMs) / 60000.0))
+                                    talkMinutes: Double(talkSeconds) / 60.0))
         }
         out.dailyEffort = effort
         // "Reps" stays what it always meant — review work (shadow + drill),

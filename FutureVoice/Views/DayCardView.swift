@@ -38,9 +38,18 @@ struct DayCardData: Codable, Equatable {
     /// read live from the logs. Frozen wins because the logs are pruned at
     /// 45 days and the streak rule can change — a card is what that day
     /// was, and must not drift afterwards.
+    ///
+    /// TODAY is the exception and is always read live. It is still being
+    /// lived, so a snapshot of it is a number that stopped moving while the
+    /// ring beside it kept counting — which is how a card came to read 7 min
+    /// next to a home screen reading 11. Builds before 2026-08-31 froze today
+    /// the moment the card sheet was opened, so a stale record may still be on
+    /// disk; this ignores it, and `DayCardStore.freezePastDays` replaces it
+    /// once the day is over.
     @MainActor
     static func resolve(day: Date, calendar: Calendar = .current) -> DayCardData {
-        DayCardStore.shared.snapshot(for: day) ?? make(day: day, calendar: calendar)
+        guard !calendar.isDateInToday(day) else { return make(day: day, calendar: calendar) }
+        return DayCardStore.shared.snapshot(for: day) ?? make(day: day, calendar: calendar)
     }
 
     /// The numbers row: talk and study always, then whatever else the day
@@ -80,8 +89,11 @@ struct DayCardData: Codable, Equatable {
         let log = PracticeLog.shared.day(day)
         return DayCardData(
             date: day,
-            talkMinutes: Int((Double(talk) / 60).rounded()),
-            studyMinutes: Int((Double(study) / 60).rounded()),
+            // FLOORED, like the home ring (`todaySpokenSeconds / 60`) and the
+            // widget. One rule or none: rounding here put the card a minute
+            // ahead of the ring for the same afternoon.
+            talkMinutes: talk / 60,
+            studyMinutes: study / 60,
             streakDays: PracticeStats.streakDays(asOf: day, calendar: calendar),
             talks: sessions.count,
             reviews: log?.drillReps ?? 0,

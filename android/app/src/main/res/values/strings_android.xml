@@ -52,4 +52,7 @@
     <string name="lld_more_min_of_talking">%1$d more min of talking</string>
     <string name="read_my_level">Read my level</string>
     <string name="new_assessment">New assessment</string>
+    <string name="you_said_these_for_the_first_time">You said these for the first time</string>
+    <string name="keeps_coming_back">Keeps coming back</string>
+    <string name="worth_reaching_for">Worth reaching for</string>
 </resources>

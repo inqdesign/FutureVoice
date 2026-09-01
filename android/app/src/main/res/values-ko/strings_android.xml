@@ -52,4 +52,7 @@
     <string name="lld_more_min_of_talking">%1$d분 더 말하면 돼요</string>
     <string name="read_my_level">내 레벨 읽기</string>
     <string name="new_assessment">새로 평가하기</string>
+    <string name="you_said_these_for_the_first_time">처음으로 말한 표현</string>
+    <string name="keeps_coming_back">계속 나오는 것</string>
+    <string name="worth_reaching_for">다음에 써 볼 것</string>
 </resources>

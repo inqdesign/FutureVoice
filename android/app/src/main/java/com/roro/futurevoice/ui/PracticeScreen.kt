@@ -180,7 +180,8 @@ private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
  * is that summary as a picture.
  */
 @Composable
-fun ProgressBody(language: String, nativeLanguage: String, goalMinutes: Int = 10) {
+fun ProgressBody(language: String, nativeLanguage: String,
+                 onOpenAssessment: () -> Unit, goalMinutes: Int = 10) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -252,6 +253,7 @@ fun ProgressBody(language: String, nativeLanguage: String, goalMinutes: Int = 10
 
         AssessmentPanel(
             report = report,
+            onOpen = onOpenAssessment,
             unlock = unlock,
             working = generating,
             onGenerate = {
@@ -328,6 +330,7 @@ private fun Stat(label: String, value: String) {
 @Composable
 private fun AssessmentPanel(
     report: WeeklyReport?,
+    onOpen: () -> Unit,
     unlock: WeeklyReportEngine.Unlock?,
     working: Boolean,
     onGenerate: () -> Unit,
@@ -341,6 +344,10 @@ private fun AssessmentPanel(
             style = MaterialTheme.typography.titleMedium)
 
         report?.summary?.takeIf { it.isNotBlank() }?.let {
+            // The whole digest is the way in — the counts below are lists,
+            // and a number you cannot open is a number you cannot act on.
+            Column(Modifier.fillMaxWidth().clickable { onOpen() },
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(it, style = MaterialTheme.typography.bodyMedium)
             Row(Modifier.fillMaxWidth().padding(top = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -348,6 +355,7 @@ private fun AssessmentPanel(
                     "${report.newExpressions.size}")
                 Stat(stringResource(R.string.to_drill), "${report.repeatedMistakes.size}")
                 Stat(stringResource(R.string.to_try), "${report.suggestedExpressions.size}")
+            }
             }
         }
 

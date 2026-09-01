@@ -221,14 +221,26 @@ enum DebugCapture {
             // seeded with a week of talks so the collection has rows.
             once("activity") {
                 SessionStore.shared.save(Self.talkDetailSession)
-                for (back, title) in [(1, "Weekend plans"), (2, "Moving apartments"), (4, "The interview follow-up"),
-                                      (6, "Coffee with Sarah"), (9, "Explaining my job")] {
+                // Minutes come from the METER, not from the sessions — so a
+                // seed that only writes sessions draws a flat, empty month.
+                // TOP UP rather than add: `once` is in-memory, so a plain add
+                // grew the day on every launch and no two captures matched.
+                @MainActor func meter(_ minutes: Int, on day: Date) {
+                    let want = minutes * 60 - TalkTimeLog.seconds(on: day)
+                    guard want > 0 else { return }
+                    TalkTimeLog.add(seconds: want, language: appState.targetLanguage, now: day)
+                }
+                meter(11, on: Date())
+                for (back, title, mins) in [(1, "Weekend plans", 14), (2, "Moving apartments", 6),
+                                            (4, "The interview follow-up", 22), (6, "Coffee with Sarah", 9),
+                                            (9, "Explaining my job", 4)] {
                     var s = Self.talkDetailSession
                     let ended = Calendar.current.date(byAdding: .day, value: -back, to: Date())!
                     s = Session(id: UUID(), userId: s.userId, targetLanguage: s.targetLanguage, mode: s.mode,
                                 topic: title, startedAt: ended.addingTimeInterval(-600), endedAt: ended,
                                 turns: s.turns, summary: s.summary)
                     SessionStore.shared.save(s)
+                    meter(mins, on: ended)
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })

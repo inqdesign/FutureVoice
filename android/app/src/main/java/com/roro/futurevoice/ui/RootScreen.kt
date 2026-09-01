@@ -143,6 +143,7 @@ fun RootScreen() {
     var showMe by remember { mutableStateOf(false) }
     var showDeck by remember { mutableStateOf(false) }
     var showActivity by remember { mutableStateOf(false) }
+    var showAssessment by remember { mutableStateOf(false) }
     var library by remember { mutableStateOf<LibraryKind?>(null) }
     val paywalled by BillingGate.showPaywall.collectAsStateWithLifecycle()
     val gateScope = rememberCoroutineScope()
@@ -295,6 +296,11 @@ fun RootScreen() {
             onBack = { library = null },
         )
 
+        showAssessment -> AssessmentScreen(
+            language = state.targetLanguage,
+            onBack = { showAssessment = false },
+        )
+
         showActivity -> ActivityScreen(
             language = state.targetLanguage,
             onOpenTalk = { showActivity = false; detailSessionId = it },
@@ -420,6 +426,7 @@ fun RootScreen() {
             onOpenBook = { bookScenarioId = it },
             onOpenPeople = { showPeople = true },
             onOpenActivity = { showActivity = true },
+            onOpenAssessment = { showAssessment = true },
             requestedTab = requestedTab,
             onTabRequestHandled = { requestedTab = null },
             onOpenDeck = { showDeck = true },
@@ -565,6 +572,7 @@ private fun HomeScreen(
     onWatch: (String) -> Unit = {},
     onOpenPeople: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
+    onOpenAssessment: () -> Unit = {},
     /** Set by a deep link; cleared by the shell once it has switched. */
     requestedTab: HomeTab? = null,
     onTabRequestHandled: () -> Unit = {},
@@ -700,6 +708,7 @@ private fun HomeScreen(
                 HomeTab.PROGRESS -> ProgressBody(
                     language = state.targetLanguage,
                     nativeLanguage = state.nativeLanguage,
+                    onOpenAssessment = onOpenAssessment,
                     goalMinutes = LocalContext.current
                         .getSharedPreferences("futurevoice", 0)
                         .getInt("futurevoice.dailyGoalMinutes", 10),
