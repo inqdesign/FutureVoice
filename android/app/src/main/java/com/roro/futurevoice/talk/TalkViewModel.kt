@@ -70,7 +70,7 @@ enum class TalkPhase { IDLE, CONNECTING, LISTENING, THINKING, SPEAKING, PAUSED, 
  * the pool refills on its own. Neither is an error, so neither lands in
  * [TalkUiState.error].
  */
-enum class TalkWall { OUT_OF_MINUTES, ALLOWANCE_SPENT }
+enum class TalkWall { OUT_OF_MINUTES, ALLOWANCE_SPENT, SCENES_SPENT }
 
 data class TalkUiState(
     val phase: TalkPhase = TalkPhase.IDLE,
@@ -636,8 +636,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         runCatching { live.stop() }
         pcm.stop()
         mp3.stop()
-        val kind = if (wall is EdgeError.DailyCapReached) TalkWall.ALLOWANCE_SPENT
-                   else TalkWall.OUT_OF_MINUTES
+        val kind = when (wall) {
+            is EdgeError.DailyCapReached -> TalkWall.ALLOWANCE_SPENT
+            is EdgeError.SceneCapReached -> TalkWall.SCENES_SPENT
+            else -> TalkWall.OUT_OF_MINUTES
+        }
         _state.update { it.copy(phase = TalkPhase.ENDED, partial = "", wall = kind) }
         persist()
     }

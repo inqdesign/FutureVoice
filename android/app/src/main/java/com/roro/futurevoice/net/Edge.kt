@@ -71,11 +71,20 @@ sealed class EdgeError(message: String) : Exception(message) {
         EdgeError("Your talk time is used up. Check your plan under Me → Account.")
 
     /**
-     * 402 `daily_cap_reached` — a SUBSCRIBER's allowance is spent. Never a
-     * paywall: they already paid, the pool refills on its own.
+     * 402 `daily_cap_reached` — a SUBSCRIBER's talk allowance is spent. Never
+     * a paywall: they already paid, and the pool refills on its own.
      */
     object DailyCapReached :
         EdgeError("Your talk time for this period is used up. This call is saved.")
+
+    /**
+     * 402 `scene_cap_reached` — a subscriber's WATCH count is spent. Also
+     * never a paywall, and a separate case because Watch is metered by COUNT
+     * against its own pool: a scene plays itself on a tap, so it can be farmed
+     * in a way talking cannot.
+     */
+    object SceneCapReached :
+        EdgeError("Your Watch scenes for this period are used up.")
 
     companion object {
         /**
@@ -84,8 +93,11 @@ sealed class EdgeError(message: String) : Exception(message) {
          * parsed the body separately, and the one that forgot told a paying
          * subscriber they were out of credits.
          */
-        fun wall(body: String): EdgeError =
-            if (body.contains("daily_cap_reached")) DailyCapReached else InsufficientCredits
+        fun wall(body: String): EdgeError = when {
+            body.contains("daily_cap_reached") -> DailyCapReached
+            body.contains("scene_cap_reached") -> SceneCapReached
+            else -> InsufficientCredits
+        }
     }
 
     /** `finishReason == MAX_TOKENS` AND the payload failed to parse. */

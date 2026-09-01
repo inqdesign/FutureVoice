@@ -34,4 +34,8 @@
     <string name="checking">Checking…</string>
     <string name="see_the_plans">See the plans</string>
     <string name="google_play_isnt_offering_this_plan_here_yet">Google Play isn\'t offering this plan here yet.</string>
+    <string name="thats_your_talk_time_for_this_period">That\'s your talk time for this period.</string>
+    <string name="thats_your_watch_scenes_for_this_period">That\'s your Watch scenes for this period.</string>
+    <string name="it_refills_when_the_period_does_meanwhile_review_is_free">It refills when the period does. Meanwhile, review is free.</string>
+    <string name="keep_going_today">Keep going today</string>
 </resources>

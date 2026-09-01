@@ -29,6 +29,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import com.roro.futurevoice.data.AccountStatus
+import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -92,6 +95,12 @@ fun TalkScreen(
     androidx.activity.compose.BackHandler {
         if (state.phase == TalkPhase.ENDED) onExit()
         else { vm.end(); if (vm.state.value.endedSessionId == null) onExit() }
+    }
+    /** A spent allowance: a sheet, never an error and never a bare paywall. */
+    var spent by remember { mutableStateOf<SpentPool?>(null) }
+    var canUpgrade by remember { mutableStateOf(false) }
+    LaunchedEffect(spent) {
+        if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan
     }
     val listState = rememberLazyListState()
 
@@ -220,6 +229,18 @@ fun TalkScreen(
             // A spent allowance is not an error — it gets its own line, in
             // the body colour, and a subscriber never reads the word "credits".
             state.wall?.let { wall ->
+                // The call is over and saved either way — the line below says
+                // so. What differs is the ANSWER, raised on top of it once.
+                LaunchedEffect(wall) {
+                    when (wall) {
+                        TalkWall.OUT_OF_MINUTES -> {
+                            BillingGate.invalidate()
+                            BillingGate.showPaywall.value = true
+                        }
+                        TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
+                        TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
+                    }
+                }
                 Text(
                     stringResource(
                         when (wall) {
@@ -227,6 +248,8 @@ fun TalkScreen(
                                 R.string.your_talk_time_is_used_up_this_call_is_saved_you_can_pick_it_46ade7
                             TalkWall.ALLOWANCE_SPENT ->
                                 R.string.this_month_s_talk_time_is_used_up
+                            TalkWall.SCENES_SPENT ->
+                                R.string.thats_your_watch_scenes_for_this_period
                         }
                     ),
                     style = MaterialTheme.typography.bodyMedium,
@@ -266,6 +289,16 @@ fun TalkScreen(
                 }
             }
         }
+    }
+
+    spent?.let { pool ->
+        AllowanceSpentSheet(
+            pool = pool,
+            canUpgrade = canUpgrade,
+            onReview = { spent = null; onExit() },
+            onUpgrade = { spent = null; BillingGate.showPaywall.value = true },
+            onDismiss = { spent = null },
+        )
     }
 }
 
@@ -366,4 +399,5 @@ private fun EndOfTalkWrapUp(sessionId: String, userTurns: Int) {
                 modifier = Modifier.padding(top = 12.dp))
         }
     }
+
 }

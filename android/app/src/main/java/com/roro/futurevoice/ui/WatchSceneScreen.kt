@@ -36,6 +36,8 @@ import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.ScenarioStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.net.CurriculumClient
+import com.roro.futurevoice.data.AccountStatus
+import com.roro.futurevoice.data.BillingGate
 import com.roro.futurevoice.net.EdgeError
 import com.roro.futurevoice.net.ElevenLabsClient
 import com.roro.futurevoice.talk.Scenario
@@ -72,6 +74,8 @@ fun WatchSceneScreen(
     var playingIndex by remember { mutableIntStateOf(-1) }
     var generating by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    /** A spent pool: a sheet, never an error line and never a bare paywall. */
+    var spent by remember { mutableStateOf<SpentPool?>(null) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(scenarioId) {
@@ -119,10 +123,23 @@ fun WatchSceneScreen(
                         sceneKey = sceneKey,
                     )
                 }.getOrElse { e ->
-                    if (e is EdgeError.DailyCapReached || e is EdgeError.InsufficientCredits) {
-                        error = e.message; return@LaunchedEffect
+                    when (e) {
+                        // The free pool is genuinely empty — this account has
+                        // nothing to spend, so the paywall IS the answer.
+                        is EdgeError.InsufficientCredits -> {
+                            BillingGate.invalidate()
+                            BillingGate.showPaywall.value = true
+                            return@LaunchedEffect
+                        }
+                        // They already paid; the pool refills on its own.
+                        is EdgeError.SceneCapReached -> {
+                            spent = SpentPool.SCENES; return@LaunchedEffect
+                        }
+                        is EdgeError.DailyCapReached -> {
+                            spent = SpentPool.TALK; return@LaunchedEffect
+                        }
+                        else -> null   // one failed line must not kill the scene
                     }
-                    null   // one failed line must not kill the scene
                 }
                 audio?.let { mp3.play(it) }
             }
@@ -166,5 +183,20 @@ fun WatchSceneScreen(
                 if (shown.isNotEmpty()) listState.animateScrollToItem(shown.lastIndex)
             }
         }
+    }
+
+    spent?.let { pool ->
+        // Whether there is anything left to SELL is resolved client-side: the
+        // 402 body carries no tier, and on Plus the upgrade half must be
+        // absent rather than disabled.
+        var canUpgrade by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan }
+        AllowanceSpentSheet(
+            pool = pool,
+            canUpgrade = canUpgrade,
+            onReview = { spent = null; onBack() },
+            onUpgrade = { spent = null; BillingGate.showPaywall.value = true },
+            onDismiss = { spent = null },
+        )
     }
 }
