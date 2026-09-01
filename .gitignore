@@ -36,6 +36,12 @@ Package.resolved
 # Audio cache (local recordings during dev)
 Recordings/
 *.wav
+# …except the Android ringtone. It is a BUNDLE RESOURCE by necessity: on
+# iOS 26 a sound written at runtime is silently ignored by AlarmKit and
+# UNNotificationSound, and Android's notification channel likewise needs a
+# real `R.raw` entry. `DailyCall.kt` references `R.raw.ringtone` by name, so
+# without this the Android app does not even COMPILE from a fresh clone.
+!android/app/src/main/res/raw/ringtone.wav
 *.m4a
 *.mp3
 !FutureVoice/Resources/**/*.mp3
