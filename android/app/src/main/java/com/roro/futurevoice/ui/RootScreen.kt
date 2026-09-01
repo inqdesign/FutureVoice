@@ -153,15 +153,20 @@ fun RootScreen() {
     }
     // A widget tap or a review reminder arrives before anything is drawn, so
     // the Activity parks it and this reads it when there is a screen to open.
-    /** A tab the deep link asked for; the home shell owns which tab is up. */
-    var requestedTab by remember { mutableStateOf<HomeTab?>(null) }
+    /**
+     * Which tab is up. Owned HERE, not by the home shell: every overlay (a
+     * deck, a book, the Library, Activity) REPLACES the shell in the `when`
+     * below, so a tab remembered inside it dies with the composition — and
+     * coming back from a Practice deck dropped the learner on Talk.
+     */
+    var tab by remember { mutableStateOf(HomeTab.TALK) }
     val deepLink by DeepLinkInbox.pending.collectAsStateWithLifecycle()
     LaunchedEffect(deepLink) {
         when (DeepLinkInbox.consume()) {
             DeepLinkInbox.Destination.VOCABULARY -> library = LibraryKind.WORDS
             DeepLinkInbox.Destination.EXPRESSIONS -> library = LibraryKind.EXPRESSIONS
             DeepLinkInbox.Destination.REVIEW -> showDeck = true
-            DeepLinkInbox.Destination.PRACTICE -> requestedTab = HomeTab.PRACTICE
+            DeepLinkInbox.Destination.PRACTICE -> tab = HomeTab.PRACTICE
             null -> Unit
         }
     }
@@ -427,8 +432,8 @@ fun RootScreen() {
             onOpenPeople = { showPeople = true },
             onOpenActivity = { showActivity = true },
             onOpenAssessment = { showAssessment = true },
-            requestedTab = requestedTab,
-            onTabRequestHandled = { requestedTab = null },
+            tab = tab,
+            onTabChange = { tab = it },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },
@@ -573,18 +578,15 @@ private fun HomeScreen(
     onOpenPeople: () -> Unit = {},
     onOpenActivity: () -> Unit = {},
     onOpenAssessment: () -> Unit = {},
-    /** Set by a deep link; cleared by the shell once it has switched. */
-    requestedTab: HomeTab? = null,
-    onTabRequestHandled: () -> Unit = {},
+    /** Hoisted by the root — see the comment on its declaration there. */
+    tab: HomeTab,
+    onTabChange: (HomeTab) -> Unit,
     onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
 ) {
     val context = LocalContext.current
-    var tab by remember { mutableStateOf(HomeTab.TALK) }
-    LaunchedEffect(requestedTab) {
-        requestedTab?.let { tab = it; onTabRequestHandled() }
-    }
+
     var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -631,7 +633,7 @@ private fun HomeScreen(
                 HomeTab.entries.forEach { t ->
                     NavigationBarItem(
                         selected = tab == t,
-                        onClick = { tab = t },
+                        onClick = { onTabChange(t) },
                         icon = {
                             Icon(
                                 when (t) {
