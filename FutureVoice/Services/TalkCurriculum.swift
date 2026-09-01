@@ -48,39 +48,126 @@ enum TalkCurriculum {
     /// How many fluent-self lines a talk offers for shadowing.
     nonisolated static let maxShadowLines = 4
 
-    /// The fluent-self lines worth shadowing, in conversation order.
+    /// The fluent-self SENTENCES worth shadowing, in conversation order.
     ///
-    /// Was "the last 4 lines of the call", which made the goodbye the study
-    /// material and threw away the middle of every long talk. Each candidate
-    /// (4–28 words: below is a greeting, above is unshadowable) is scored by
-    /// what it can teach — core-list lemmas at or above the learner's level
-    /// count double, other core lemmas once — and ties keep conversation
-    /// order. A talk with nothing scoreable falls back to its last lines so
-    /// the chapter never goes empty.
+    /// The unit is a sentence, not a turn, and that is the whole point.
+    /// Measured over 66 real talks (2026-09-01): the fluent self speaks a
+    /// median of 26 words per turn, so **40% of turns overflow the 4–28 word
+    /// window and were dropped whole** — the substantive middle of the call,
+    /// exactly the part worth repeating. What survived was the short ritual
+    /// lines. 70% of talks had fewer than the four candidates this is asked
+    /// for and 15% had NONE, falling through to "the last thing said", which
+    /// is how a farewell became the study material. Split into sentences the
+    /// same talks offer a median of 10 candidates, only 11% fall short, and
+    /// the median candidate is 9 words — a length a learner can actually say
+    /// back in one breath.
+    ///
+    /// "Worth" means the learner could SAY IT AGAIN somewhere else. Two
+    /// things decide that, in order:
+    ///
+    ///   • a line carrying one of the summary's `expressions_offered` —
+    ///     reusable phrases the fluent self used and the learner didn't,
+    ///     already LLM-picked and verbatim-verified — outranks everything;
+    ///   • then core-list lemmas AT or ABOVE the learner's level. Below-level
+    ///     lemmas used to score a point each, which is exactly how "So nice
+    ///     to talk to you today!" (all A1 words) kept beating the middle of
+    ///     the call.
+    ///
+    /// The call's opener and farewell are excluded by POSITION (first/last
+    /// fluent-self turn) — they're ritual, not material, and no word list
+    /// can see that — unless nothing else scores. A talk with nothing
+    /// scoreable at all falls back to its last substantive lines so the
+    /// chapter never goes empty.
     nonisolated static func shadowPicks(session: Session,
                                         proficiency: CEFRLevel) -> [Turn] {
-        let candidates = session.turns.filter {
-            $0.role == .fluentSelf
-                && (4...28).contains($0.transcript.split(separator: " ").count)
-        }
+        let fluent = session.turns.filter { $0.role == .fluentSelf }
+        let edgeIds = Set([fluent.first?.id, fluent.last?.id].compactMap { $0 })
+        let offered = (session.summary?.expressionsOffered ?? [])
+            .map { CarryoverDetector.normalized($0) }
+            .filter { !$0.isEmpty }
         let minRank = CoreVocabulary.levelRank(proficiency)
-        func teachScore(_ turn: Turn) -> Int {
+        func teachScore(_ text: String) -> Int {
             var total = 0
-            for lemma in VocabStore.lemmas(in: [turn.transcript]) {
+            let line = " " + CarryoverDetector.normalized(text) + " "
+            for phrase in offered where line.contains(" " + phrase + " ") {
+                total += 3
+            }
+            for lemma in VocabStore.lemmas(in: [text]) {
                 guard let level = CoreVocabulary.level(of: lemma) else { continue }
-                total += CoreVocabulary.levelRank(level) >= minRank ? 2 : 1
+                if CoreVocabulary.levelRank(level) >= minRank { total += 1 }
             }
             return total
         }
-        var scored: [(index: Int, turn: Turn, score: Int)] = []
-        for (index, turn) in candidates.enumerated() {
-            let score = teachScore(turn)
-            if score > 0 { scored.append((index, turn, score)) }
+
+        // Candidates are SENTENCES, in conversation order.
+        //
+        // De-duplicated: the fluent self repeats itself across a call ("Oh,
+        // that's really interesting." twice in one talk, seen in real data),
+        // and a chapter that asks the learner to shadow the same line twice
+        // is asking for one line and wasting a slot.
+        var candidates: [(index: Int, turn: Turn, isEdge: Bool)] = []
+        var seen = Set<String>()
+        for turn in fluent {
+            let parts = sentences(in: turn.transcript)
+            for (offset, sentence) in parts.enumerated() {
+                guard (4...28).contains(sentence.split(separator: " ").count) else { continue }
+                guard seen.insert(CarryoverDetector.normalized(sentence)).inserted else { continue }
+                // A turn that IS one sentence keeps its own identity: its
+                // recorded audio still matches the text, and any shadow
+                // attempt already made against it still counts.
+                let piece = parts.count == 1
+                    ? turn
+                    : Turn(id: sentenceLineId(for: turn.id, index: offset),
+                           role: .fluentSelf, audioURL: nil, transcript: sentence,
+                           durationMs: 0, timestamp: turn.timestamp, suggestion: nil)
+                candidates.append((candidates.count, piece, edgeIds.contains(turn.id)))
+            }
         }
-        guard !scored.isEmpty else { return Array(candidates.suffix(maxShadowLines)) }
+
+        var scored = candidates.filter { !$0.isEdge }
+            .map { (index: $0.index, turn: $0.turn, score: teachScore($0.turn.transcript)) }
+            .filter { $0.score > 0 }
+        if scored.isEmpty {
+            scored = candidates.filter(\.isEdge)
+                .map { (index: $0.index, turn: $0.turn, score: teachScore($0.turn.transcript)) }
+                .filter { $0.score > 0 }
+        }
+        guard !scored.isEmpty else {
+            let middle = candidates.filter { !$0.isEdge }.map(\.turn)
+            let pool = middle.isEmpty ? candidates.map(\.turn) : middle
+            return Array(pool.suffix(maxShadowLines))
+        }
         scored.sort { $0.score == $1.score ? $0.index < $1.index : $0.score > $1.score }
-        let picked = scored.prefix(maxShadowLines).sorted { $0.index < $1.index }
-        return picked.map { $0.turn }
+        return scored.prefix(maxShadowLines).sorted { $0.index < $1.index }.map(\.turn)
+    }
+
+    /// Split a spoken turn into the sentences it is made of.
+    ///
+    /// Deliberately naive — terminal punctuation only. The text is
+    /// model-written speech, not prose with abbreviations and decimals, and a
+    /// bad split produces a fragment the 4-word floor above throws away.
+    nonisolated static func sentences(in text: String) -> [String] {
+        var out: [String] = []
+        var current = ""
+        for character in text {
+            current.append(character)
+            guard ".!?".contains(character) else { continue }
+            let piece = current.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !piece.isEmpty { out.append(piece) }
+            current = ""
+        }
+        let tail = current.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !tail.isEmpty { out.append(tail) }
+        return out
+    }
+
+    /// Stable id for one sentence of a turn, so a shadow attempt made today is
+    /// still recognised tomorrow. Derived from the source turn like
+    /// `shadowLineId`, but off a different byte so the two can never collide.
+    nonisolated static func sentenceLineId(for turnId: UUID, index: Int) -> UUID {
+        var bytes = turnId.uuid
+        bytes.15 ^= 0xA0 &+ UInt8(index & 0x0F)
+        return UUID(uuid: bytes)
     }
 
     /// Stable shadow-line id derived from the source turn — the SAME
