@@ -1073,6 +1073,7 @@ struct TalkTranscriptView: View {
                                           nativeLanguage: appState.nativeLanguage,
                                           targetLanguage: appState.targetLanguage,
                                           player: player,
+                                          isCurrent: currentIndex == idx,
                                           tokenKeys: turnTokenKeys[turn.id] ?? [],
                                           highlightedIndices: highlightIndices(for: turn),
                                           onWordTap: { key in
@@ -1290,6 +1291,9 @@ private struct TranscriptRow: View {
     let nativeLanguage: String
     let targetLanguage: String
     @ObservedObject var player: AudioPlayer
+    /// This row is the one the sequential replay is speaking right now —
+    /// drawn as `DialogueLine`'s accent ring, the same cursor Watch uses.
+    var isCurrent: Bool = false
     /// Notebook lookup key per transcript token (parent precomputes — NLTagger
     /// is too slow for row bodies), aligned with `transcript.split(" ")`.
     let tokenKeys: [String]
@@ -1334,7 +1338,8 @@ private struct TranscriptRow: View {
 
     var body: some View {
         DialogueLine(speaker: speaker,
-                     name: turn.role == .user ? "You" : "Future self") {
+                     name: turn.role == .user ? "You" : "Future self",
+                     isCurrent: isCurrent) {
             if turn.role == .fluentSelf {
                 // One Text with normal word spacing — only the few words worth
                 // picking up are highlighted and tappable (as inline links) →

@@ -58,7 +58,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         var text: String
     }
 
-    @Published private(set) var state: State = .idle
+    @Published private(set) var state: State = .idle {
+        didSet { if oldValue != state { Self.step("state \(oldValue) → \(state)") } }
+    }
     /// Live transcript of the utterance in progress (empty between turns).
     @Published private(set) var partial = ""
     @Published private(set) var lines: [Line] = []
@@ -93,10 +95,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The line is over (finished or talked over): its audio and duration.
     var onReplyFinished: ((String, String, URL?, Int) -> Void)?
 
-    /// Mic PCM since the last committed turn, 16 kHz mono s16le. Capped so a
-    /// learner who never stops talking cannot grow this without bound.
+    /// Mic PCM since the last committed turn, at the MIC'S OWN rate — the
+    /// 16 kHz uplink is transport quality, and saving it was why a learner's
+    /// replayed voice sounded so much worse than the old path's native
+    /// capture (reported 2026-09-01). Capped at ~2 min so a monologue cannot
+    /// grow it without bound.
     private var userPCM = Data()
-    private static let maxUserPCMBytes = 3 * 60 * 16_000 * 2
+    private var userPCMRate: Double = 48_000
+    private var maxUserPCMBytes: Int { Int(userPCMRate) * 2 * 60 * 2 }
     /// Reply PCM for the line currently playing, at `replySampleRate`.
     private var replyPCM = Data()
     /// Text of the line playing, so the turn is handed over complete when its
@@ -239,6 +245,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Buffers scheduled but not yet played — non-zero means audio is pending,
     /// which is how playback end is noticed without a completion per chunk.
     private var pendingBuffers = 0
+    /// The server said the line is complete; the moment the local queue
+    /// drains after this is when the learner's turn actually begins.
+    private var serverAudioEnded = false
 
     private var isTornDown = false
 
@@ -370,6 +379,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     }
 
     private func teardown() {
+        // The last line's audio is still sitting in `replyPCM` when the
+        // learner taps End mid-playback (or right after): `audio_end` will
+        // never arrive on a socket about to close, and without this flush
+        // that turn is the one Replay silently skips — always the call's
+        // closing line (reported 2026-09-01).
+        handOverReply()
         isTornDown = true
         if let routeObserver {
             NotificationCenter.default.removeObserver(routeObserver)
@@ -415,16 +430,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // route change stops the running engine. So the option is added only
         // when the learner is on the built-in speaker to begin with, and a
         // connected earphone never meets it at all.
-        var options = AudioSessionRouting.conversationOptions
-        // Read the route BEFORE activating: connected accessories are already
-        // visible, and the category must be final before the engine exists.
-        try session.setCategory(.playAndRecord, mode: .default, options: options)
-        if !AudioSessionRouting.hasExternalOutput(session) {
-            options.insert(.defaultToSpeaker)
-            try session.setCategory(.playAndRecord, mode: .default, options: options)
-        }
-        Self.step("audio: external out=\(AudioSessionRouting.hasExternalOutput(session)) "
-            + "defaultToSpeaker=\(options.contains(.defaultToSpeaker))")
+        // ALWAYS `recordOptions` — the learner's phone-mic preference is
+        // deliberately not honoured on this path. That preference buys
+        // "built-in mic + hi-fi A2DP output", a combination that only exists
+        // when recording and playback take turns; recorded and played AT ONCE
+        // (which is this whole path), iOS drops the A2DP output and the reply
+        // lands on the receiver or the open speaker — with earphones in the
+        // learner's ears (2026-09-01, twice). A full-duplex call with
+        // earphones is HFP or it is inaudible, so it is HFP: mic and output
+        // both on the earphone, like every phone call ever made.
+        try session.setCategory(.playAndRecord, mode: .default,
+                                options: AudioSessionRouting.recordOptions)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         // Pin the input to MONO before the engine is built.
         //
@@ -450,9 +466,38 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             try session.setActive(true, options: .notifyOthersOnDeactivation)
             try? session.setPreferredInputNumberOfChannels(1)
         }
-        if MicPreferenceStore.forcesBuiltInMic {
-            AudioSessionRouting.preferBuiltInMic(session)
+        // With an earphone connected the call must live ENTIRELY on it —
+        // HFP mic and HFP output. Half-measures don't exist here: A2DP is
+        // not honoured as an output while voice processing records, so a
+        // built-in-mic + earphone-output split lands the audio on the
+        // RECEIVER, where nobody hears it (log 2026-09-01: earphones on the
+        // route, `out=Receiver`). Talk avoids this by never recording and
+        // playing at once; a full-duplex call doesn't have that escape.
+        // iOS did not engage HFP on its own here (input stayed the built-in
+        // 4-mic array), so it is asked for explicitly — unlike the app's
+        // other surfaces, where the no-setPreferredInput rule stands.
+        if AudioSessionRouting.hasExternalOutput(session),
+           let bluetoothMic = session.availableInputs?.first(where: {
+               $0.portType == .bluetoothHFP
+           }) {
+            try? session.setPreferredInput(bluetoothMic)
         }
+        Self.step("audio: inputs=\(session.availableInputs?.map(\.portType.rawValue) ?? []) "
+            + "in=\(session.currentRoute.inputs.first?.portType.rawValue ?? "none")")
+
+        // Only NOW is the route real: a Bluetooth earphone joins it at
+        // activation, not before. The first version checked before activating,
+        // saw no external output, forced the speaker — and the learner sat in
+        // earphones while the reply played into the room (2026-09-01, log:
+        // `external out=false defaultToSpeaker=true` with AirPods in). A
+        // category change here is safe; the engine doesn't exist yet.
+        if !AudioSessionRouting.hasExternalOutput(session) {
+            var options = AudioSessionRouting.conversationOptions
+            options.insert(.defaultToSpeaker)
+            try session.setCategory(.playAndRecord, mode: .default, options: options)
+        }
+        Self.step("audio: external out=\(AudioSessionRouting.hasExternalOutput(session)) "
+            + "route=\(session.currentRoute.outputs.first?.portType.rawValue ?? "none")")
 
         let input = engine.inputNode
         // Echo cancellation is not optional on this path — see the type's
@@ -462,6 +507,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         do { try input.setVoiceProcessingEnabled(true) } catch {
             // Some routes refuse it. The call still works; on the speaker it
             // will barge-in on itself, which is why the view warns.
+        }
+        // Keep noise suppression, drop the AGC — LiveTranscriber's hard-won
+        // rule, and it applies here for the same reason it applies there:
+        // the learner LISTENS to this capture in Practice, and AGC riding
+        // the level makes their own voice play back thin and pumping. The
+        // first version left it on ("nothing here is replayed to them"),
+        // which stopped being true the day listen-back was wired.
+        if #available(iOS 17.0, *) {
+            input.isVoiceProcessingAGCEnabled = false
         }
         // AFTER the toggle: VPIO re-negotiates the input format.
         let probeFormat = input.outputFormat(forBus: 0)
@@ -577,6 +631,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 self.isRebuildingAudio = true
                 defer { self.isRebuildingAudio = false }
                 Self.step("route changed (\(reason.rawValue)) — rebuilding audio")
+                self.userPCM = Data()
                 self.stopAudio()
                 do { try self.startAudio() } catch {
                     self.state = .failed("The audio route changed and the call couldn't recover.")
@@ -656,6 +711,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.trace("tap: no uplink yet")
             return
         }
+        // Native-quality copy for listen-back, made BEFORE the 16 kHz
+        // transport conversion. The tap's own buffer is the best this mic
+        // gets; everything downstream of it is for the wire.
+        var nativeCopy: Data? = nil
+        let nativeRate = buffer.format.sampleRate
+        if let floats = buffer.floatChannelData?[0] {
+            let count = Int(buffer.frameLength)
+            var ints = [Int16](repeating: 0, count: count)
+            for i in 0..<count {
+                ints[i] = Int16(max(-32768, min(32767, floats[i] * 32767)))
+            }
+            nativeCopy = ints.withUnsafeBufferPointer { Data(buffer: $0) }
+        }
         if !Self.sawFirstBuffer {
             Self.sawFirstBuffer = true
             Self.step("tap: FIRST buffer \(buffer.frameLength)@\(Int(buffer.format.sampleRate))")
@@ -709,20 +777,27 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         let bytes = frames * MemoryLayout<Int16>.size
         let copy = Data(bytes: channel[0], count: bytes)
-        let gateWasActive = gate.active
         Task { @MainActor [weak self] in
             guard let self else { return }
             self.micBytesSent += bytes
-            if self.state != .speaking { self.level = norm }
-            // Keep the learner's own take for listen-back in Practice — but
-            // NOT what the mic hears while the fluent self is talking. That
-            // stretch is the reply playing back into the room plus the wait
-            // before the learner answers, and storing it put a long silence
-            // (with the other voice in it) at the head of every recording
-            // (reported 2026-09-01). `gateActive` is exactly "a line is
-            // playing", so it is the right fence.
-            if !gateWasActive, self.userPCM.count < Self.maxUserPCMBytes {
-                self.userPCM.append(copy)
+            // The pill follows whoever is actually audible. While a reply
+            // plays it shows the reply — except when the mic frame passed the
+            // echo gate, which means the LEARNER is talking (over it, or in
+            // the tail right after it): their own voice must light the pixels
+            // from its first word, not from the moment the server catches up
+            // (reported 2026-09-01: "no reaction at the start").
+            if !muted || self.state != .speaking { self.level = norm }
+            // Keep the learner's own take for listen-back in Practice —
+            // every frame that went upstream as REAL audio, and none that
+            // went as silence. The first cut fenced on "a line is playing"
+            // instead, which also dropped the learner TALKING OVER that line
+            // and the 0.4 s after it — with a fast speaker, that is the
+            // first words of their answer, and Replay opened mid-sentence
+            // (reported 2026-09-01). The per-frame verdict already separates
+            // their voice from the echo; recording follows it exactly.
+            if !muted, let nativeCopy, self.userPCM.count < self.maxUserPCMBytes {
+                self.userPCM.append(nativeCopy)
+                self.userPCMRate = nativeRate
             }
         }
     }
@@ -804,9 +879,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if !said.isEmpty {
                 let pcm = userPCM
                 userPCM = Data()
-                let trimmed = Self.trimSilence(pcm: pcm, sampleRate: 16000)
-                let url = Self.saveWAV(pcm: trimmed, sampleRate: 16000)
-                let ms = Int(Double(trimmed.count / 2) / 16000 * 1000)
+                let rate = userPCMRate
+                let trimmed = Self.trimSilence(pcm: pcm, sampleRate: rate)
+                let url = Self.saveWAV(pcm: trimmed, sampleRate: rate)
+                let ms = Int(Double(trimmed.count / 2) / rate * 1000)
                 onUserTurn?(said, url, ms)
             } else {
                 userPCM = Data()
@@ -834,6 +910,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // The line is appended empty and filled by the deltas, so the
             // learner watches the reply arrive rather than waiting for it.
             lines.append(Line(isUser: false, text: ""))
+            serverAudioEnded = false
             state = .speaking
         case "reply_delta":
             let delta = json["text"] as? String ?? ""
@@ -852,7 +929,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 if let context = replyContext { onReplyDelta?(context, "\u{0}" + full) }
             }
         case "audio_end":
-            if state == .speaking { state = .listening }
+            // "Sent" is not "heard": chunks are still draining through the
+            // player. The turn flips to listening when the QUEUE empties —
+            // flipping here put the You bubble up while the fluent self was
+            // still mid-sentence, or (with a long buffer) confusingly late.
+            serverAudioEnded = true
+            if pendingBuffers == 0, state == .speaking { state = .listening }
             handOverReply()
             closeEchoGateAfterTail()
         case "interrupted":
@@ -938,7 +1020,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let samples = pcm.count / MemoryLayout<Int16>.size
         guard samples > 0 else { return pcm }
         let window = max(1, Int(sampleRate * 0.02))          // 20 ms
-        let lead = Int(sampleRate * 0.25)
+        let lead = Int(sampleRate * 0.35)
         var peak: Float = 0
         var energies: [Float] = []
         pcm.withUnsafeBytes { raw in
@@ -957,7 +1039,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
         }
         guard peak > 0.01 else { return pcm }   // nothing but room: keep as is
-        let bar = max(peak * 0.08, 0.005)
+        // 4% of the take's own peak: an opening word spoken at half the
+        // volume of the loudest one must still count as speech — at 8%
+        // quiet sentence-openers were being cut off with the silence.
+        let bar = max(peak * 0.04, 0.004)
         guard let firstLoud = energies.firstIndex(where: { $0 >= bar }),
               let lastLoud = energies.lastIndex(where: { $0 >= bar }) else { return pcm }
         let start = max(0, firstLoud * window - lead)
@@ -1027,6 +1112,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 self.pendingBuffers = max(0, self.pendingBuffers - 1)
                 if self.pendingBuffers == 0, self.state == .speaking {
                     self.level = 0
+                    // The last scheduled audio has been HEARD — if the server
+                    // already closed the line, it is the learner's turn now.
+                    if self.serverAudioEnded { self.state = .listening }
                 }
             }
         }

@@ -871,7 +871,11 @@ struct ConversationView: View {
                     Text("End")
                         .fontWeight(.semibold)
                 }
-                .disabled(phase != .idle)
+                // Always tappable. It used to wait for `.idle`, which meant
+                // hanging up was a two-step: pause the call, THEN end it —
+                // and nobody expects a phone to work that way (requested
+                // 2026-09-01). `endSession` already stops the mic, the
+                // player and the realtime socket from any phase.
             }
         }
     }
@@ -927,18 +931,23 @@ struct ConversationView: View {
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
                     if RealtimeMode.isEnabled {
-                        // Live dictation from the gateway. Without it the
-                        // learner's own words appear only when the turn
-                        // commits — a second after they stop talking, which
-                        // reads as the app not listening (2026-09-01).
-                        if !realtime.partial.isEmpty {
+                        // Same rule as the classic path below: the listening
+                        // bubble appears the moment it is the learner's turn,
+                        // EMPTY, and fills as they speak. Gating it on text
+                        // was tried and read as the app not listening — the
+                        // empty bubble IS the "your turn" signal
+                        // (2026-09-01).
+                        switch realtime.state {
+                        case .listening, .hearing:
                             PartialTurnView(text: realtime.partial)
                                 .id("partial-listening")
                                 .transition(.opacity)
-                        } else if realtime.state == .thinkingReply {
+                        case .thinkingReply:
                             ThinkingIndicator()
                                 .id("partial-thinking")
                                 .transition(.opacity)
+                        default:
+                            EmptyView()
                         }
                     } else if phase == .listening {
                         // Separate id from ThinkingIndicator + explicit opacity

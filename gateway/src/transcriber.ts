@@ -36,6 +36,7 @@ export class GeminiTranscriber {
 
   constructor(private apiKey: string,
               private model: string,
+              private language: string,
               private callbacks: TranscriberCallbacks) {}
 
   async connect(): Promise<void> {
@@ -68,15 +69,24 @@ export class GeminiTranscriber {
       setup: {
         model: this.model,
         generationConfig: { responseModalities: ["TEXT"] },
-        // The utterance finalization IS the turn endpoint, so its silence
-        // window is the first slice of every reply's latency. HIGH trades a
-        // little cut-off risk for a faster commit; revisit against real
-        // learners (the app's old VAD held 0.8–5 s adaptive tiers).
-        realtimeInputConfig: {
-          automaticActivityDetection: {
-            endOfSpeechSensitivity: "END_SENSITIVITY_HIGH",
-          },
+        // The ONLY language hint this model accepts (probed 2026-09-01:
+        // `speechConfig.languageCode` is rejected at setup, systemInstruction
+        // is not). Without it the first phonemes of an utterance get
+        // language-guessed from nothing, and the learner watched their
+        // English open in Thai script.
+        systemInstruction: {
+          parts: [{
+            text: `Transcribe the speaker's ${languageName(this.language)} exactly as `
+              + `heard. Output only ${languageName(this.language)} text — never `
+              + `another script, even for the first words of an utterance.`,
+          }],
         },
+        // Default end-of-speech sensitivity. HIGH was tried for the ~0.3 s
+        // it shaves and withdrawn the same day: on a real earphone call it
+        // committed turns on "…yet, but" and "…setting up my own" — cutting a
+        // learner off mid-thought, the one failure the whole app is built to
+        // avoid (its old VAD held 0.8–5 s adaptive tiers for exactly this).
+        realtimeInputConfig: { automaticActivityDetection: {} },
         sessionResumption: this.resumptionHandle ? { handle: this.resumptionHandle } : {},
       },
     }))
@@ -159,6 +169,16 @@ export class GeminiTranscriber {
     try { this.ws?.close() } catch { /* already closed */ }
     this.ws = null
   }
+}
+
+/** English name for the few languages the app teaches; the code itself for
+ *  anything else — still a better hint than nothing. */
+function languageName(code: string): string {
+  const names: Record<string, string> = {
+    en: "English", de: "German", ko: "Korean", ja: "Japanese",
+    es: "Spanish", fr: "French", zh: "Chinese",
+  }
+  return names[code.toLowerCase().split("-")[0]] ?? code
 }
 
 function base64Encode(buf: ArrayBuffer): string {

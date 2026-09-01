@@ -87,6 +87,34 @@ export class CallSession implements DurableObject {
   /** How long after a line an utterance is still suspect. */
   private static readonly echoSuspicionMs = 1200
 
+  /** An utterance that ended on a word nobody ends a thought on — held, not
+   *  answered. If the learner continues, the next utterance merges into it;
+   *  if this timer fires first, the pause was real and the turn commits as
+   *  is. Ported from the app's own VAD, whose lexical tiers held 5 s on a
+   *  hanging conjunction for exactly this reason; the transcriber's
+   *  endpointing has no such judgement and committed "…yet, but" as a turn
+   *  (earphone call, 2026-09-01). */
+  private pendingUtterance: string | null = null
+  private pendingTimer: number | null = null
+  private static readonly pendingHoldMs = 4000
+
+  /** Words a spoken thought does not END on. The app's lists, verbatim
+   *  (ConversationView.trailingConjunctions / trailingFunctionWords /
+   *  fillerWords). */
+  private static readonly hangingWords = new Set([
+    "and", "but", "or", "so", "because", "cause",
+    "if", "when", "while", "that", "which", "though", "although",
+    "the", "a", "an", "to", "in", "on", "at", "of",
+    "for", "with", "by", "from", "into", "about",
+    "uh", "um", "er", "ah", "hmm", "mm", "well",
+  ])
+
+  private static endsHanging(text: string): boolean {
+    const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    const last = words.at(-1)?.replace(/[^\p{L}\p{N}']+/gu, "")
+    return last !== undefined && CallSession.hangingWords.has(last)
+  }
+
   constructor(private state: DurableObjectState, private env: Env) {}
 
   async fetch(request: Request): Promise<Response> {
@@ -184,6 +212,7 @@ export class CallSession implements DurableObject {
     this.transcriber = new GeminiTranscriber(
       this.env.GEMINI_API_KEY,
       this.env.GEMINI_LIVE_MODEL ?? DEFAULT_TRANSCRIBE_MODEL,
+      msg.language || "en",
       {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
@@ -305,7 +334,8 @@ export class CallSession implements DurableObject {
     return norm(a) === norm(b)
   }
 
-  /** A turn ended (server-side endpoint). Commit it and speak the reply. */
+  /** The transcriber finalized an utterance. It becomes a turn now, or it
+   *  waits: a line ending on a hanging word is a breath, not an ending. */
   private handleUtterance(text: string): void {
     // Discard what is almost certainly our own voice: a scrap of a word,
     // arriving while (or just after) we were speaking. A real interjection
@@ -314,9 +344,39 @@ export class CallSession implements DurableObject {
     // silently; what lands here is the room.
     const words = text.trim().split(/\s+/).filter(Boolean)
     const sinceSpoke = Date.now() - this.lastSpokeAt
-    if (words.length <= 1 && sinceSpoke < CallSession.echoSuspicionMs) {
+    if (words.length <= 1 && sinceSpoke < CallSession.echoSuspicionMs
+        && this.pendingUtterance === null) {
       return
     }
+
+    // A held fragment absorbs whatever follows it — the learner was
+    // mid-thought, and this is the rest of the thought.
+    const merged = this.pendingUtterance !== null
+      ? this.pendingUtterance + " " + text.trim()
+      : text.trim()
+    this.clearPending()
+    if (CallSession.endsHanging(merged)) {
+      this.pendingUtterance = merged
+      this.emit({ type: "user_partial", text: merged })
+      this.pendingTimer = setTimeout(() => {
+        const held = this.pendingUtterance
+        this.clearPending()
+        // The pause was real — a learner who trails off on "but" still
+        // deserves an answer to what they DID say.
+        if (held) this.commitTurn(held)
+      }, CallSession.pendingHoldMs) as unknown as number
+      return
+    }
+    this.commitTurn(merged)
+  }
+
+  private clearPending(): void {
+    if (this.pendingTimer !== null) { clearTimeout(this.pendingTimer); this.pendingTimer = null }
+    this.pendingUtterance = null
+  }
+
+  /** A turn is settled. Commit it and speak the reply. */
+  private commitTurn(text: string): void {
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a
@@ -431,6 +491,7 @@ export class CallSession implements DurableObject {
     this.ended = true
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
+    this.clearPending()
     this.dropSpec()
     this.activeReplyAbort?.abort()
     this.transcriber?.close()
