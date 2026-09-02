@@ -419,7 +419,7 @@ Apple (blocking — nothing sells until these are done):
 At launch day:
 
 - [x] Paywall leaves survey mode — `BetaConfig` deleted 2026-08-18
-- [ ] Web `PLANS` already match this doc; set Stripe price IDs + `BILLING.enabled`
+- [ ] Web billing (post-launch, deliberately deferred 2026-08-23): code is ready as of 2026-09-02 — double-subscription 409 guard, 7-day trial parity, per-page currency (krw/usd via Stripe `currency_options`), `stripe-portal` self-serve cancel. Runbook: `web/README.md` § "Web billing" (Stripe products with krw currency_options + tax-inclusive, price IDs into `subscription_plans.stripe_price_id`, secrets, deploy 3 functions, portal config, Apple Services ID, then `BILLING.enabled`)
 - [ ] MeTab shows live plan label (already wired)
 
 Done (2026-08-11):
