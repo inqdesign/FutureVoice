@@ -60,4 +60,7 @@
     <string name="fluency">Fluency</string>
     <string name="expressiveness">Expressiveness</string>
     <string name="have_a_talk_and_this_gets_measured">Have a talk and this gets measured.</string>
+    <string name="things_you_studied_came_out_of_your_mouth">things you studied have come out of your mouth in a real conversation</string>
+    <string name="plus_lld_this_week">+%1$d this week</string>
+    <string name="mastered_out_of_lld_your_talks_have_made">words and lines mastered, out of %1$d your talks and watches have made</string>
 </resources>

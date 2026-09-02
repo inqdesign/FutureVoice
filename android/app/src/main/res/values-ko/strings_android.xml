@@ -60,4 +60,7 @@
     <string name="fluency">유창성</string>
     <string name="expressiveness">표현력</string>
     <string name="have_a_talk_and_this_gets_measured">대화를 하면 여기가 측정돼요.</string>
+    <string name="things_you_studied_came_out_of_your_mouth">공부한 것이 실제 대화에서 입 밖으로 나왔어요</string>
+    <string name="plus_lld_this_week">이번 주 +%1$d</string>
+    <string name="mastered_out_of_lld_your_talks_have_made">개를 익혔어요 — 대화와 장면이 만든 %1$d개 중에서</string>
 </resources>

@@ -725,6 +725,7 @@ private fun HomeScreen(
                     language = state.targetLanguage,
                     nativeLanguage = state.nativeLanguage,
                     onOpenAssessment = onOpenAssessment,
+                    onOpenActivity = onOpenActivity,
                     goalMinutes = LocalContext.current
                         .getSharedPreferences("futurevoice", 0)
                         .getInt("futurevoice.dailyGoalMinutes", 10),

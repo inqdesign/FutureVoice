@@ -33,6 +33,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.font.FontWeight
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
@@ -218,7 +223,8 @@ private const val DAILY_HAND = 10
  */
 @Composable
 fun ProgressBody(language: String, nativeLanguage: String,
-                 onOpenAssessment: () -> Unit, goalMinutes: Int = 10) {
+                 onOpenAssessment: () -> Unit, onOpenActivity: () -> Unit,
+                 goalMinutes: Int = 10) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -229,6 +235,10 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var unlock by remember { mutableStateOf<WeeklyReportEngine.Unlock?>(null) }
     var generating by remember { mutableStateOf(false) }
     var dim by remember { mutableStateOf(Dim.OVERALL) }
+    var carryoverTotal by remember { mutableStateOf(0) }
+    var carryoverWeek by remember { mutableStateOf(0) }
+    var material by remember { mutableStateOf(0 to 0) }
+    var streak by remember { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
@@ -237,6 +247,26 @@ fun ProgressBody(language: String, nativeLanguage: String,
         effortByDay = PracticeLog.recent(context, EFFORT_DAYS)
         report = WeeklyReportStore.shared(context).latest(language)
         unlock = WeeklyReportEngine.unlockState(talks.filter { it.endedAt != null }, report)
+        // Studied, then SAID — the loop closing, which is the one number that
+        // proves the app worked. The detector already writes it onto every
+        // summary; it had simply never been read back.
+        val carries = talks.flatMap { it.summary?.carryovers.orEmpty() }
+        carryoverTotal = carries.size
+        val weekAgo = System.currentTimeMillis() - 7L * 86_400_000L
+        carryoverWeek = carries.count { it.detectedAt >= weekAgo }
+        // Whole-library mastery: "how far along am I" is THIS tab's question,
+        // which is why it lives here rather than on Practice.
+        val books = ScenarioStore.shared(context).load(language)
+            .filter { it.archivedAt == null }
+        material = books.sumOf { b ->
+            b.curriculum?.let { c ->
+                c.words.count { it.masteredAt != null } +
+                    c.expressions.count { it.masteredAt != null }
+            } ?: 0
+        } to books.sumOf { b ->
+            b.curriculum?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
+        }
+        streak = TalkTimeLog.streakDays(context)
     }
     val scored = talks.mapNotNull { it.summary?.scorecard }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -324,6 +354,53 @@ fun ProgressBody(language: String, nativeLanguage: String,
             Text(stringResource(R.string.the_dashed_line_is_your_daily_goal),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        // Never drawn while zero: a headline "0" on the one number that
+        // proves the loop closed reads as a verdict on the learner.
+        if (carryoverTotal > 0) {
+            BigStat(
+                title = stringResource(R.string.studied_then_said),
+                value = carryoverTotal,
+                caption = stringResource(R.string.things_you_studied_came_out_of_your_mouth),
+                trailing = carryoverWeek.takeIf { it > 0 }
+                    ?.let { stringResource(R.string.plus_lld_this_week, it) },
+            )
+        }
+
+        if (material.second > 0) {
+            BigStat(
+                title = stringResource(R.string.your_material),
+                value = material.first,
+                caption = stringResource(
+                    R.string.mastered_out_of_lld_your_talks_have_made, material.second),
+                progress = material.first / material.second.toFloat(),
+            )
+        }
+
+        // The ONLY way into the activity calendar from this tab. A streak is
+        // a claim about a history, so it has to open the record — otherwise
+        // it is a number asking to be trusted.
+        Row(
+            Modifier.fillMaxWidth().clickable { onOpenActivity() }.padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Filled.LocalFireDepartment, contentDescription = null,
+                tint = if (streak > 0) Color(0xFFFF9500)
+                else MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    if (streak == 0) stringResource(R.string.no_streak_yet)
+                    else stringResource(R.string.lld_day_streak, streak),
+                    style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.lld_talks_tap_for_calendar,
+                    talks.count { it.endedAt != null }),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         AssessmentPanel(
@@ -513,5 +590,47 @@ private fun SkillPage(dim: Dim, card: com.roro.futurevoice.talk.SessionScorecard
         } ?: Text(stringResource(R.string.have_a_talk_and_this_gets_measured),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * One big measured number with the sentence that says what it counts.
+ *
+ * The figure carries the weight and the sentence does the explaining — a
+ * label above a number makes the reader assemble the fact from two places.
+ */
+@Composable
+private fun BigStat(
+    title: String,
+    value: Int,
+    caption: String,
+    trailing: String? = null,
+    progress: Float? = null,
+) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f))
+            trailing?.let {
+                Text(it, style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF34C759))
+            }
+        }
+        Row(verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("$value", style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold)
+            Text(caption, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 10.dp))
+        }
+        progress?.let {
+            LinearProgressIndicator(
+                progress = { it.coerceIn(0f, 1f) },
+                color = if (it >= 1f) Color(0xFF34C759) else MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
