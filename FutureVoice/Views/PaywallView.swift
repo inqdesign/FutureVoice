@@ -314,12 +314,18 @@ struct PaywallView: View {
             .padding(.top, 12)
 
             VStack(alignment: .leading, spacing: 18) {
+                // Ordered by importance: the call is the product, the daily
+                // call is what makes "every day" credible, then the two
+                // rehearse/review halves, then measurement.
                 featureRow("bubble.left.and.bubble.right.fill",
                            explain("Real conversations, your voice"),
-                           explain("Talk daily with your fluent self — every reply synthesized in your cloned voice."))
+                           explain("Talk with your fluent self like a live phone call — every reply in your cloned voice."))
+                featureRow("phone.fill",
+                           explain("Your fluent self calls first"),
+                           explain("Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you."))
                 featureRow("play.rectangle.on.rectangle.fill",
                            explain("Rehearse before it happens"),
-                           explain("Watch your fluent self handle what's coming — from your own life or this week's news."))
+                           explain("Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study."))
                 featureRow("sparkles",
                            explain("Corrections that stick"),
                            explain("Inline fixes become spaced-repetition drills, tuned to your mistakes."))

@@ -17542,16 +17542,6 @@
         }
       }
     },
-    "Talk daily with your fluent self — every reply synthesized in your cloned voice." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 나와 매일 대화해요. 대답은 전부 복제한 내 목소리로 들려요."
-          }
-        }
-      }
-    },
     "Talk mastered" : {
       "localizations" : {
         "de" : {
@@ -20588,16 +20578,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "적어주신 그대로 상황연습을 만들어요. 자유롭게 고치세요."
-          }
-        }
-      }
-    },
-    "Watch your fluent self handle what's coming — from your own life or this week's news." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "곧 겪을 일을 유창해진 내가 어떻게 넘기는지 봐요. 내 일상에서 가져와도 되고, 이번 주 뉴스에서 가져와도 돼요."
           }
         }
       }
@@ -24089,6 +24069,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ Min. ggü. %2$@"
+          }
+        }
+      }
+    },
+    "Talk with your fluent self like a live phone call — every reply in your cloned voice." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 나와 진짜 전화처럼 실시간으로 대화해요. 대답은 전부 복제한 내 목소리로 들려요."
+          }
+        }
+      }
+    },
+    "Your fluent self calls first" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화가 먼저 걸려와요"
+          }
+        }
+      }
+    },
+    "Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정해둔 시간에 유창해진 내가 전화를 걸어요. 못 받으면 질문이 담긴 음성 메시지가 기다려요."
+          }
+        }
+      }
+    },
+    "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "곧 겪을 일을 적어두면 유창해진 내가 먼저 겪는 걸 봐요. 거기서 쓴 표현은 전부 내 것으로 남아요."
           }
         }
       }
