@@ -30,6 +30,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.FilterChip
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
@@ -179,6 +182,20 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit) {
     )
 }
 
+/**
+ * Progress's dimensions. Shadowing is deliberately NOT one: shadow scores
+ * measure practice EFFORT, not level, and presenting them as an assessed
+ * skill made them read as part of the level estimate. They live in the
+ * activity strip and in Practice.
+ */
+enum class Dim(val labelRes: Int) {
+    OVERALL(R.string.overall),
+    VOCABULARY(R.string.vocabulary),
+    GRAMMAR(R.string.grammar),
+    FLUENCY(R.string.fluency),
+    EXPRESSIVENESS(R.string.expressiveness),
+}
+
 /** Two weeks: long enough to show a habit, short enough to read at a glance. */
 private const val EFFORT_DAYS = 14
 
@@ -211,6 +228,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var report by remember { mutableStateOf<WeeklyReport?>(null) }
     var unlock by remember { mutableStateOf<WeeklyReportEngine.Unlock?>(null) }
     var generating by remember { mutableStateOf(false) }
+    var dim by remember { mutableStateOf(Dim.OVERALL) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
@@ -222,6 +240,21 @@ fun ProgressBody(language: String, nativeLanguage: String,
     }
     val scored = talks.mapNotNull { it.summary?.scorecard }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Dim.entries.forEach { d ->
+                FilterChip(selected = d == dim, onClick = { dim = d },
+                    label = { Text(stringResource(d.labelRes)) })
+            }
+        }
+
+        if (dim != Dim.OVERALL) {
+            // Each skill's own page: its measured number and what the number
+            // is. Measurement only — the DOING lives in Practice.
+            SkillPage(dim, scored.firstOrNull())
+            return@Column
+        }
+
         // The pooled read outranks any single talk's: it is judged over the
         // whole window's speech at once, a far larger sample than one
         // conversation. A talk's own read is the fallback.
@@ -250,6 +283,28 @@ fun ProgressBody(language: String, nativeLanguage: String,
             Stat(stringResource(R.string.talks), "${talks.count { it.endedAt != null }}")
             if (scored.isNotEmpty()) {
                 Stat(stringResource(R.string.overall), "${scored.map { it.overall }.average().toInt()}")
+            }
+        }
+
+        // ONE unit on the level page: the CEFR read per skill, tappable for
+        // the measured numbers behind it. The raw figures (WPM, 0-100 score)
+        // live on each skill's own page, not here.
+        if (scored.isNotEmpty()) {
+            val card = scored.first()
+            Text(stringResource(R.string.across_skills),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(top = 8.dp))
+            SkillRow(stringResource(R.string.vocabulary), card.vocabulary.score) {
+                dim = Dim.VOCABULARY
+            }
+            SkillRow(stringResource(R.string.fluency), card.fluency.score) {
+                dim = Dim.FLUENCY
+            }
+            SkillRow(stringResource(R.string.grammar), card.grammar.score) {
+                dim = Dim.GRAMMAR
+            }
+            SkillRow(stringResource(R.string.expressiveness), card.expressiveness.score) {
+                dim = Dim.EXPRESSIVENESS
             }
         }
 
@@ -413,5 +468,50 @@ private fun AssessmentPanel(
                 }
             }
         }
+    }
+}
+
+/**
+ * One skill's line on the level page: what it is, and the band it measures
+ * at. Tappable, because the numbers behind it are on its own page.
+ */
+@Composable
+private fun SkillRow(title: String, score: Int, onOpen: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text("$score", style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+/**
+ * A skill's own page: the measured number, and a plain sentence saying what
+ * was measured. Nothing to DO here — Progress is the measurement tab, and
+ * the doing lives in Practice.
+ */
+@Composable
+private fun SkillPage(dim: Dim, card: com.roro.futurevoice.talk.SessionScorecard?) {
+    val axis = when (dim) {
+        Dim.VOCABULARY -> card?.vocabulary
+        Dim.GRAMMAR -> card?.grammar
+        Dim.FLUENCY -> card?.fluency
+        Dim.EXPRESSIVENESS -> card?.expressiveness
+        Dim.OVERALL -> null
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("${axis?.score ?: 0}",
+            style = MaterialTheme.typography.displaySmall,
+            color = MaterialTheme.colorScheme.primary)
+        Text(stringResource(dim.labelRes), style = MaterialTheme.typography.titleMedium)
+        // The coach's own note about this axis, in the learner's language.
+        axis?.note?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } ?: Text(stringResource(R.string.have_a_talk_and_this_gets_measured),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
