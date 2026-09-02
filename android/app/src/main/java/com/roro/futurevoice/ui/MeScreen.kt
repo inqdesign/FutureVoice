@@ -42,6 +42,11 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import com.roro.futurevoice.data.CefrLevel
+import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Groups
+import com.roro.futurevoice.ui.brand.FutureselfTheme
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -69,6 +74,9 @@ fun MeScreen(
     enrolledLanguages: List<String>,
     onSwitchLanguage: (String) -> Unit,
     onAddLanguage: (String, CefrLevel) -> Unit,
+    /** Whether this account has a clone — the Voice row's whole subject. */
+    hasVoice: Boolean,
+    onOpenPeople: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -91,6 +99,8 @@ fun MeScreen(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var addingLanguage by remember { mutableStateOf(false) }
+    var pickingTheme by remember { mutableStateOf(false) }
+    var theme by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     LaunchedEffect(Unit) {
         account = AccountStatus.load(AuthRepository()).also { BillingGate.remember(it) }
     }
@@ -176,6 +186,16 @@ fun MeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            // What was SPENT, never what is left. A remainder is a monthly
+            // receipt for time NOT used; it reads as money wasted.
+            account?.takeIf { it.isEntitled }?.let { a ->
+                SettingsRow(
+                    icon = Icons.Filled.Bolt,
+                    title = stringResource(R.string.talk_time),
+                    subtitle = stringResource(
+                        R.string.lld_min_talked_this_month, a.secondsUsedPeriod / 60),
+                )
+            }
             HorizontalDivider()
 
             // ── Daily goal ──
@@ -248,6 +268,31 @@ fun MeScreen(
             }
             HorizontalDivider()
 
+            // The clone itself. There was no way to even SEE whether a voice
+            // existed on this account, let alone which one.
+            SettingsRow(
+                icon = Icons.Filled.RecordVoiceOver,
+                title = stringResource(R.string.voice),
+                subtitle = if (hasVoice) stringResource(R.string.your_cloned_voice)
+                else stringResource(R.string.not_set_up_yet),
+            )
+            // The palette every Futureself surface reads — the call pill, the
+            // home ring, the day card, the widgets. Stored since day one and
+            // unchangeable until now.
+            SettingsRow(
+                icon = Icons.Filled.Palette,
+                title = stringResource(R.string.appearance),
+                subtitle = theme.label,
+                onClick = { pickingTheme = true },
+            )
+            SettingsRow(
+                icon = Icons.Filled.Groups,
+                title = stringResource(R.string.find_people),
+                subtitle = stringResource(R.string.publish_your_intro),
+                onClick = onOpenPeople,
+            )
+            HorizontalDivider()
+
             // ── The Core — a standing and a record, and it grants NOTHING.
             // Numbers only, no grid: the progress IS the number.
             coreProgress?.let { core ->
@@ -301,6 +346,13 @@ fun MeScreen(
                     Text(stringResource(R.string.back_b52b36))
                 }
             },
+        )
+    }
+
+    if (pickingTheme) {
+        AppearanceSheet(
+            onPicked = { theme = it },
+            onDismiss = { pickingTheme = false },
         )
     }
 

@@ -63,4 +63,7 @@
     <string name="things_you_studied_came_out_of_your_mouth">things you studied have come out of your mouth in a real conversation</string>
     <string name="plus_lld_this_week">+%1$d this week</string>
     <string name="mastered_out_of_lld_your_talks_have_made">words and lines mastered, out of %1$d your talks and watches have made</string>
+    <string name="your_cloned_voice">Your cloned voice</string>
+    <string name="not_set_up_yet">Not set up yet</string>
+    <string name="publish_your_intro">Publish your intro — others practice with \"you\"</string>
 </resources>

@@ -358,6 +358,8 @@ fun RootScreen() {
             enrolledLanguages = state.enrolledLanguages,
             onSwitchLanguage = app::switchLanguage,
             onAddLanguage = app::addLanguage,
+            hasVoice = state.voiceId != null,
+            onOpenPeople = { showMe = false; showPeople = true },
             onEditProfile = { editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
