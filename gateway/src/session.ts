@@ -82,6 +82,32 @@ export class CallSession implements DurableObject {
   private static readonly idleHangUpMs = 3 * 60 * 1000
   private idleTimer: number | null = null
 
+  /** Sliding window of what the fluent self RECENTLY said out loud — the
+   *  reference the echo judgement compares against. The server is the one
+   *  party that knows the speaker's words verbatim, so "the learner just
+   *  said a contiguous fragment of the line we're playing" is the one echo
+   *  test that needs no thresholds. Kept short: echo only ever quotes the
+   *  last few seconds. */
+  private recentReplyText = ""
+
+  private static normWords(s: string): string {
+    return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ")
+  }
+
+  /** Is this utterance almost certainly our own speaker coming back?
+   *  True when it lands while (or just after) the fluent self is audible AND
+   *  its words are a contiguous fragment of what was just spoken. The
+   *  contiguity requirement is what keeps a real short answer that happens
+   *  to reuse the reply's words ("yeah, I agree") alive — shared vocabulary
+   *  is conversation, a verbatim run of it during playback is a microphone. */
+  private isLikelyEcho(text: string): boolean {
+    if (this.activeContext === null
+        && Date.now() - this.lastSpokeAt > 3000) return false
+    const u = CallSession.normWords(text)
+    if (u.length === 0 || u.split(" ").length > 8) return false
+    return CallSession.normWords(this.recentReplyText).includes(u)
+  }
+
   /** When the fluent self last had audio in flight. Belt to the client's
    *  braces: even with the echo gate, a stray word can survive the speaker
    *  bouncing back into the mic, and a one-word "turn" landing right after a
@@ -254,8 +280,10 @@ export class CallSession implements DurableObject {
           // The learner is audibly speaking. If the fluent self is mid-reply,
           // that's a barge-in: cut the voice and the generation NOW — the
           // pending utterance will arrive as its own turn and get a fresh
-          // reply grounded in what was actually heard.
-          if (this.activeContext) this.interrupt()
+          // reply grounded in what was actually heard. Unless the "speech"
+          // is our own line coming back through the speaker: an interim
+          // that reads as a fragment of the playing reply must not cut it.
+          if (this.activeContext && !this.isLikelyEcho(text)) this.interrupt()
           // A changed interim invalidates any speculation answering older
           // words (matching the app's rule: only the TEXT moving on cancels,
           // never audio energy). A settled one re-arms the fire timer.
@@ -371,6 +399,16 @@ export class CallSession implements DurableObject {
    *  waits: a line ending on a hanging word is a breath, not an ending. */
   private handleUtterance(text: string): void {
     console.log(`utterance: "${text.slice(0, 80)}" pending=${this.pendingUtterance !== null}`)
+    // The speaker heard itself: an utterance that is a verbatim fragment of
+    // the line just played is the microphone, not the learner — drop it
+    // before it becomes a turn the fluent self answers on its own
+    // ("Apple Watch", speakerphone, 2026-09-03). The client's level gate
+    // can't catch this case: it learns the echo's own average level, so the
+    // loud syllables of the same echo sail over its margin.
+    if (this.pendingUtterance === null && this.isLikelyEcho(text)) {
+      console.log(`echo-drop: "${text.slice(0, 60)}"`)
+      return
+    }
     // Discard what is almost certainly our own voice: a scrap of a word,
     // arriving while (or just after) we were speaking. A real interjection
     // that short — "yeah", "wait" — arrives with the learner's own volume
@@ -473,6 +511,9 @@ export class CallSession implements DurableObject {
   }
 
   private routeDelta(context: string, delta: string): void {
+    // Echo reference: everything routed to the voice is what the room can
+    // hear. Sliding window — echo only ever quotes the last few seconds.
+    this.recentReplyText = (this.recentReplyText + " " + delta).slice(-600)
     this.emit({ type: "reply_delta", context, text: delta })
     this.eleven?.sendText(context, delta)
       .catch((e) => this.emit({ type: "error", code: "tts", message: String(e) }))
