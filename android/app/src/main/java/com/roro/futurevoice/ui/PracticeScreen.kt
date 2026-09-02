@@ -33,6 +33,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DailyStudyPick
 import com.roro.futurevoice.data.DrillStore
+import com.roro.futurevoice.data.GoalStore
 import com.roro.futurevoice.data.PracticeLog
 import com.roro.futurevoice.ui.brand.BookCard
 import com.roro.futurevoice.ui.brand.Books
@@ -65,11 +66,16 @@ fun PracticeBody(
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+    var shelf by remember { mutableStateOf(Shelf.STUDYING) }
     var due by remember { mutableStateOf(0) }
     var wordsDue by remember { mutableStateOf(0) }
     var expressionsDue by remember { mutableStateOf(0) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
+    var goals by remember { mutableStateOf(GoalStore.Goals()) }
+    var today by remember { mutableStateOf(PracticeLog.Day()) }
+    var streak by remember { mutableStateOf(0) }
+
     LaunchedEffect(language, revision) {
         due = DrillStore.shared(context).dueCount(language)
         // The two library decks say how big TODAY's hand is, not how much is
@@ -80,67 +86,97 @@ fun PracticeBody(
         scenarios = ScenarioStore.shared(context).load(language)
             .filter { it.archivedAt == null && it.isMeeting != true }
         talks = SessionStore.shared(context).load(language).filter { it.summary != null }
+        goals = GoalStore.load(context)
+        today = PracticeLog.day(context) ?: PracticeLog.Day()
+        streak = GoalStore.streak(context, goals)
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (due > 0) {
-            Row(Modifier.fillMaxWidth().clickable { onOpenDeck() }.padding(vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.review_cards),
-                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text("$due", style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary)
-            }
-        }
-        // The Library decks — words and expressions, dealt from the notebook,
-        // the books and the last talks. Always present, because "nothing due"
-        // is an answer the learner is entitled to see.
-        StudyRow(stringResource(R.string.words), wordsDue, onOpenWords)
-        StudyRow(stringResource(R.string.expressions), expressionsDue, onOpenExpressions)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        ShelfChips(
+            selected = shelf,
+            counts = { s ->
+                when (s) {
+                    Shelf.STUDYING -> null
+                    Shelf.TALK -> talks.size.takeIf { it > 0 }
+                    Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+                }
+            },
+            onSelect = { shelf = it },
+        )
 
-        if (scenarios.isNotEmpty()) {
-            Text(stringResource(R.string.scenarios), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp))
-            scenarios.forEach { sc ->
-                val cur = sc.curriculum
-                val total = cur?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
-                val done = cur?.let {
-                    it.words.count { w -> w.masteredAt != null } +
-                        it.expressions.count { e -> e.masteredAt != null }
-                } ?: 0
-                BookCard(
-                    title = sc.cardTitle,
-                    origin = sc.category,
-                    accent = Books.scenarios,
-                    detail = if (cur == null) stringResource(R.string.watch_the_scene_first)
-                    else stringResource(R.string.lld_of_lld_mastered, done, total),
-                    progress = if (total == 0) null else done / total.toFloat(),
-                    onClick = { onOpenScenarioBook(sc.id) },
-                    modifier = Modifier.padding(vertical = 4.dp),
+        when (shelf) {
+            // The cross-cutting page: what today asks for, then the books
+            // currently in progress as horizontal rows.
+            Shelf.STUDYING -> {
+                TodayCard(
+                    goals = goals, today = today, streak = streak,
+                    dueSentences = due, dueWords = wordsDue, dueExpressions = expressionsDue,
+                    onSentences = onOpenDeck, onWords = onOpenWords,
+                    onExpressions = onOpenExpressions,
+                    // Shadowing is reached through a book's line, so the tile
+                    // sends them to the shelf that has the lines in it.
+                    onShadowing = { shelf = Shelf.TALK },
+                    onEditGoals = {},
                 )
+                if (talks.isNotEmpty()) {
+                    BookRow(stringResource(R.string.talk), talks.size, talks.take(6),
+                        onOpenShelf = { shelf = Shelf.TALK }) { TalkCard(it, onOpenTalk) }
+                }
+                if (scenarios.isNotEmpty()) {
+                    BookRow(stringResource(R.string.watch), scenarios.size, scenarios.take(6),
+                        onOpenShelf = { shelf = Shelf.WATCH }) {
+                        ScenarioCard(it, onOpenScenarioBook)
+                    }
+                }
+                if (talks.isEmpty() && scenarios.isEmpty()) {
+                    Text(stringResource(R.string.nothing_here_yet_have_a_talk_or_watch_a_scene),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        }
-        if (talks.isNotEmpty()) {
-            Text(stringResource(R.string.talks), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp))
-            talks.forEach { t ->
-                BookCard(
-                    title = t.displayTitle ?: stringResource(R.string.conversation),
-                    origin = when (t.origin?.name?.lowercase()) {
-                        "news" -> stringResource(R.string.news)
-                        "scenario" -> stringResource(R.string.scenarios)
-                        else -> stringResource(R.string.free_talk)
-                    },
-                    accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
-                    detail = t.summary?.scorecard?.let {
-                        "${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}"
-                    },
-                    onClick = { onOpenTalk(t.id) },
-                    modifier = Modifier.padding(vertical = 4.dp),
-                )
-            }
+
+            Shelf.TALK -> talks.forEach { TalkCard(it, onOpenTalk) }
+            Shelf.WATCH -> scenarios.forEach { ScenarioCard(it, onOpenScenarioBook) }
         }
     }
+}
+
+@Composable
+private fun TalkCard(t: Session, onOpen: (String) -> Unit) {
+    BookCard(
+        title = t.displayTitle ?: stringResource(R.string.conversation),
+        origin = when (t.origin?.name?.lowercase()) {
+            "news" -> stringResource(R.string.news)
+            "scenario" -> stringResource(R.string.scenarios)
+            else -> stringResource(R.string.free_talk)
+        },
+        accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
+        detail = t.summary?.scorecard?.let {
+            "${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}"
+        },
+        onClick = { onOpen(t.id) },
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
+}
+
+@Composable
+private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit) {
+    val cur = sc.curriculum
+    val total = cur?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
+    val done = cur?.let {
+        it.words.count { w -> w.masteredAt != null } +
+            it.expressions.count { e -> e.masteredAt != null }
+    } ?: 0
+    BookCard(
+        title = sc.cardTitle,
+        origin = sc.category,
+        accent = Books.scenarios,
+        detail = if (cur == null) stringResource(R.string.watch_the_scene_first)
+        else stringResource(R.string.lld_of_lld_mastered, done, total),
+        progress = if (total == 0) null else done / total.toFloat(),
+        onClick = { onOpen(sc.id) },
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
 }
 
 /** Two weeks: long enough to show a habit, short enough to read at a glance. */
@@ -153,22 +189,6 @@ private fun dayLabel(at: Long): String =
 /** How many cards a daily deck deals. Mirrors iOS's per-day goal default. */
 private const val DAILY_HAND = 10
 
-/**
- * One library deck's row: what it is, and how many cards are waiting today.
- * A zero is shown as a dash rather than hidden — a row that vanishes when
- * it's empty teaches the learner to stop looking for it.
- */
-@Composable
-private fun StudyRow(title: String, count: Int, onOpen: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable { onOpen() }.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        Text(if (count == 0) "—" else "$count",
-            style = MaterialTheme.typography.titleMedium,
-            color = if (count == 0) MaterialTheme.colorScheme.onSurfaceVariant
-            else MaterialTheme.colorScheme.primary)
-    }
-}
 
 /**
  * Progress — measured, never guessed: the CEFR read comes from the talks
