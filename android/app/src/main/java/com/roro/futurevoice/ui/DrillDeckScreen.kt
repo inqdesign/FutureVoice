@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -237,7 +238,7 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
 
     verdictFor?.let { card ->
         ModalBottomSheet(onDismissRequest = { verdictFor = null }) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(card.targetPhrase, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.when_should_it_come_back),
                     style = MaterialTheme.typography.bodySmall,

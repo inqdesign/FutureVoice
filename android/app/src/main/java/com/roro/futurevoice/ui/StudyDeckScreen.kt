@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -289,7 +290,7 @@ fun StudyDeckScreen(
 
     verdictFor?.let { item ->
         ModalBottomSheet(onDismissRequest = { verdictFor = null }) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.navigationBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(item.text, style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.when_should_it_come_back),
                     style = MaterialTheme.typography.bodySmall,
@@ -317,7 +318,7 @@ fun StudyDeckScreen(
             if (bin == DrillBin.GOT_IT) finished.map { it.text to null }
             else (scheduled[bin] ?: emptyList()).map { it.text to it.at }
         ModalBottomSheet(onDismissRequest = { openFolder = null }) {
-            Column(Modifier.padding(20.dp).verticalScroll(rememberScrollState()),
+            Column(Modifier.navigationBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(stringResource(bin.folderTitleRes),
                     style = MaterialTheme.typography.titleMedium)
