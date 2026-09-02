@@ -23,6 +23,10 @@ struct WelcomeView: View {
         let start = UserDefaults.standard.integer(forKey: "welcomePage")
         _page = State(initialValue: start)
         _autoplay = State(initialValue: start == 0)
+        // `-welcomeSignIn 1` opens on the returning-user sign-in buttons.
+        if UserDefaults.standard.bool(forKey: "welcomeSignIn") {
+            _showingSignIn = State(initialValue: true)
+        }
         #endif
     }
     @State private var showInvite = false
@@ -197,6 +201,12 @@ struct WelcomeView: View {
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                 .frame(height: 52)
                 .clipShape(Capsule())
+                .padding(.horizontal, 32)
+
+                GoogleSignInButton(height: 52) {
+                    savePendingInvite()
+                    auth.signInWithGoogle()
+                }
                 .padding(.horizontal, 32)
 
                 Button("New here? Get started instead") {

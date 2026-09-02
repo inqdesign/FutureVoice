@@ -244,6 +244,27 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "welcome":
+            // The first screen, primary path (Get started).
+            return AnyView(WelcomeView().environmentObject(appState)
+                .environmentObject(AuthService()))
+        case "welcome-signin":
+            // The sign-in / sign-up buttons: Apple + Google. `register` is
+            // process-lifetime only — a persisted `set` here leaked into the
+            // NEXT normal launch, which then opened on the sign-in state.
+            once("welcome-signin") {
+                UserDefaults.standard.register(defaults: ["welcomeSignIn": true])
+            }
+            return AnyView(WelcomeView().environmentObject(appState)
+                .environmentObject(AuthService()))
+        case "signup-account":
+            // Onboarding's sign-UP moment: the account step after the clone
+            // was heard (Back · Apple · Google).
+            once("signup-account") {
+                UserDefaults.standard.register(defaults: ["cloneStatus": "account"])
+            }
+            return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
+                .environmentObject(AuthService()))
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))

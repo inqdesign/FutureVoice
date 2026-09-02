@@ -186,6 +186,95 @@ final class AuthService: NSObject, ObservableObject {
         }
     }
 
+    // MARK: - Google (OAuth web flow)
+
+    /// The OAuth callback for web-flow sign-ins. The `futurevoice` scheme is
+    /// registered in Info.plist and `futurevoice://login` is on Supabase's
+    /// redirect allow-list; ASWebAuthenticationSession captures it directly,
+    /// so no onOpenURL handling is involved.
+    static let oauthCallbackURL = URL(string: "futurevoice://login")!
+
+    /// Google sign-in via Supabase's OAuth web flow — the same web client the
+    /// site and the Android app use, so no extra SDK and the same Google
+    /// account resolves to the same Supabase user everywhere.
+    ///
+    /// Mirrors the Apple paths exactly: an anonymous session on stage gets the
+    /// identity LINKED to it (the voice clone, consent record and credit row
+    /// minted before sign-up stay attached), and a refused link means the
+    /// identity already owns an account (the reinstall case) — signing into
+    /// that account is what the person wants, and the throwaway clone under
+    /// the anonymous user is collected by the nightly cleanup.
+    func signInWithGoogle() {
+        Task {
+            isWorking = true
+            defer { isWorking = false }
+            do {
+                if isAnonymous {
+                    do {
+                        let linkURL = try await SupabaseProvider.shared.auth
+                            .getLinkIdentityURL(provider: .google,
+                                                redirectTo: Self.oauthCallbackURL).url
+                        let callback = try await Self.runWebAuth(url: linkURL)
+                        session = try await SupabaseProvider.shared.auth.session(from: callback)
+                        adoptedExistingAccount = false
+                    } catch let error as ASWebAuthenticationSessionError
+                        where error.code == .canceledLogin {
+                        return   // backed out of the sheet — never open a second one
+                    } catch {
+                        session = try await SupabaseProvider.shared.auth
+                            .signInWithOAuth(provider: .google,
+                                             redirectTo: Self.oauthCallbackURL)
+                        adoptedExistingAccount = true
+                    }
+                } else {
+                    session = try await SupabaseProvider.shared.auth
+                        .signInWithOAuth(provider: .google,
+                                         redirectTo: Self.oauthCallbackURL)
+                }
+                await redeemPendingInviteIfAny()
+            } catch let error as ASWebAuthenticationSessionError
+                where error.code == .canceledLogin {
+                // Same swallow as the Apple path's user-cancel.
+            } catch {
+                lastError = "Google sign-in failed: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Runs one ASWebAuthenticationSession and hands back the callback URL.
+    /// Only the LINK path needs this — plain sign-in uses the SDK's built-in
+    /// flow, but `linkIdentity`'s default opens Safari and would need a
+    /// deep-link round trip; running the session ourselves keeps both paths
+    /// inside one in-app sheet.
+    @MainActor
+    private static func runWebAuth(url: URL) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            let webSession = ASWebAuthenticationSession(
+                url: url,
+                callbackURLScheme: oauthCallbackURL.scheme
+            ) { url, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let url {
+                    continuation.resume(returning: url)
+                } else {
+                    continuation.resume(throwing: URLError(.badServerResponse))
+                }
+                _ = webAuthPresenter   // keep the presenter alive until completion
+            }
+            webSession.presentationContextProvider = webAuthPresenter
+            webSession.start()
+        }
+    }
+
+    private static let webAuthPresenter = WebAuthPresenter()
+
+    private final class WebAuthPresenter: NSObject, ASWebAuthenticationPresentationContextProviding {
+        func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
+            ASPresentationAnchor()
+        }
+    }
+
     /// Attach Apple to the anonymous user, falling back to a plain sign-in.
     ///
     /// The fallback is the returning user who reinstalled: their Apple identity

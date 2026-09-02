@@ -52,6 +52,17 @@ struct VoiceCloneOnboardingView: View {
     @StateObject private var player = AudioPlayer()
 
     @State private var status: Status = .intro
+
+    init() {
+        #if DEBUG
+        // Screenshot helper (same pattern as WelcomeView's `-welcomePage`):
+        // `-cloneStatus account` opens directly on the sign-up step.
+        if UserDefaults.standard.string(forKey: "cloneStatus") == "account" {
+            _status = State(initialValue: .account)
+        }
+        #endif
+    }
+
     /// The two toggles on the `.consent` step, which together arm its Next.
     /// Never pre-checked: a consent that arrives already ticked is not a
     /// consent — so they start false every time the step is shown, and the
@@ -185,6 +196,23 @@ struct VoiceCloneOnboardingView: View {
             actionBar
         }
         .background(Color(.systemBackground).ignoresSafeArea())
+        // The account step's Back, as a header control — it used to share the
+        // action bar with the Apple button, which forced the two sign-in
+        // buttons into different widths.
+        .overlay(alignment: .topLeading) {
+            if status == .account {
+                Button {
+                    error = nil
+                    // Back to whatever this step interrupted: the voice
+                    // they just met, or the take waiting to become one.
+                    status = appState.voiceCloneId == nil ? .reviewing : .meet
+                } label: {
+                    Label("Back", systemImage: "chevron.left")
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+            }
+        }
         // Attached to the BODY, not to `meetContent` inside the `status`
         // switch. A sheet lives and dies with the view it hangs off, and that
         // switch is a `_ConditionalContent`: any change of `status` while the
@@ -1034,27 +1062,21 @@ struct VoiceCloneOnboardingView: View {
                 }
 
             case .account:
-                HStack(spacing: 12) {
-                    Button {
-                        error = nil
-                        // Back to whatever this step interrupted: the voice
-                        // they just met, or the take waiting to become one.
-                        status = appState.voiceCloneId == nil ? .reviewing : .meet
-                    } label: {
-                        Label("Back", systemImage: "chevron.left")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    // `.continue` label — this is a first-time sign-UP moment,
-                    // not a returning-user sign-in (Welcome handles those).
-                    SignInWithAppleButton(
-                        .continue,
-                        onRequest: { auth.configure($0) },
-                        onCompletion: { auth.handle(result: $0) }
-                    )
-                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                    .frame(height: 50)
-                    .clipShape(Capsule())
+                // Back lives in the page header (see the body overlay) so the
+                // two providers stack full-width at equal size.
+                // `.continue` label — this is a first-time sign-UP moment,
+                // not a returning-user sign-in (Welcome handles those).
+                SignInWithAppleButton(
+                    .continue,
+                    onRequest: { auth.configure($0) },
+                    onCompletion: { auth.handle(result: $0) }
+                )
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 50)
+                .clipShape(Capsule())
+                GoogleSignInButton(height: 50) {
+                    error = nil
+                    auth.signInWithGoogle()
                 }
 
             case .uploading:
