@@ -52,6 +52,12 @@ enum class FutureselfMode(val raw: Float) {
 
 private const val AGSL = """
 uniform float2 uSize;
+// Device pixels per POINT. AGSL hands `main` a fragCoord in device PIXELS,
+// while Metal via SwiftUI's colorEffect works in POINTS — so every LENGTH
+// constant below (the hairline gap, the rim falloff, the grain frequency)
+// would be off by this factor. Converting once at the top keeps every
+// number identical to `Futureself.metal` instead of scaling each by hand.
+uniform float uPx;
 uniform float uTime;
 uniform float uLevel;
 uniform float uMode;
@@ -76,7 +82,8 @@ float3 rampAt(float i) {
     return p4;
 }
 
-half4 main(float2 position) {
+half4 main(float2 fragCoord) {
+    float2 position = fragCoord / uPx;
     // 5 rows of square cells; column count follows the surface width, so the
     // same shader stays icon-scaled on the pill and the home circle.
     float cellPt = uSize.y / 5.0;
@@ -184,10 +191,12 @@ fun Futureself(
         // On a 2.75x screen that turned the pill's 12.8dp cell into a 4.6dp
         // one: the surface still looked like a mosaic, just a far grainier
         // one than the design, and the ring read as flat noise.
-        val h = virtualHeight?.let { it * density } ?: size.height
+        // Everything the shader sees is in POINTS — see `uPx` in the source.
+        val h = virtualHeight ?: (size.height / density)
         val w = size.width * (h / max(size.height, 1f))
         if (shader != null && Build.VERSION.SDK_INT >= 33) {
             shader.setFloatUniform("uSize", w, h)
+            shader.setFloatUniform("uPx", density)
             shader.setFloatUniform("uTime", time)
             shader.setFloatUniform("uLevel", display)
             shader.setFloatUniform("uMode", mode.raw)
