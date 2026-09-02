@@ -324,7 +324,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("connect: mic granted")
             let token = try await Self.accessToken()
             Self.step("connect: got token")
-            try startAudio()
+            do { try startAudio() } catch {
+                // Launch-time races (another component touching the session
+                // mid-build) can stop the engine under the first attempt —
+                // one settle-and-retry saves the call instead of failing it.
+                Self.step("connect: startAudio threw (\(error)) — retrying once")
+                stopAudio()
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                try startAudio()
+            }
             Self.step("connect: audio up")
             try openSocket(token: token, voiceId: voiceId,
                            language: language, system: system,

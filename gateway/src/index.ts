@@ -69,7 +69,14 @@ export default {
       // A unique DO per call: no name to collide on, nothing persisted —
       // the object IS the call, and dies with it.
       const id = env.CALL_SESSION.newUniqueId()
-      return env.CALL_SESSION.get(id).fetch(request)
+      // Pin every call's DO to western North America. Left to Cloudflare,
+      // a fresh DO lands wherever the request's colo suggests — and on
+      // 2026-09-03 that was a colo whose egress Google geoblocks: every
+      // transcriber socket died with 1007 "User location is not supported
+      // for the API use" and no call could hear anything. The upstreams
+      // (Gemini, ElevenLabs) are US-hosted anyway, so pinning the DO next
+      // to them trades a longer client<->DO leg for shorter DO<->API legs.
+      return env.CALL_SESSION.get(id, { locationHint: "wnam" }).fetch(request)
     }
     return new Response("not found", { status: 404 })
   },

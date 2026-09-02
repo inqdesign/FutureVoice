@@ -636,7 +636,6 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
-                callStartedAt = Date()
                 // The in-call meter: wall-clock seconds tick to the server
                 // for the whole life of the seat. When today's minutes run
                 // out mid-call the mic closes; the line the fluent self is
@@ -799,6 +798,10 @@ struct ConversationView: View {
                 case .speaking:            phase = .speaking
                 case .idle, .connecting, .failed: phase = .idle
                 }
+                // First learner speech starts the clock (realtime path).
+                if case .hearing = state, callStartedAt == nil {
+                    callStartedAt = Date()
+                }
                 // The gateway meters the call server-side and hangs up with a
                 // wall code when the allowance is spent — the same two 402s
                 // the classic meter's tick returns, so they land on the same
@@ -813,10 +816,10 @@ struct ConversationView: View {
                 }
             }
             .onChange(of: phoneCallActive) { _, active in
-                // The elapsed clock starts when the seat opens and is armed
-                // once per call — a pause doesn't reset it (a phone call's
-                // timer runs through everything until hang-up).
-                if active, callStartedAt == nil { callStartedAt = Date() }
+                // The elapsed clock arms on the learner's FIRST speech, not
+                // here — a call opened and cancelled without a word shows no
+                // timer at all (asked for 2026-09-02: "누르고 그냥 취소"가
+                // 통화로 세어지는 게 이상하다). Hang-up clears it.
                 if !active { callStartedAt = nil }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -1806,7 +1809,12 @@ struct ConversationView: View {
         // frames. It runs while the opener text is fetched; awaited below
         // before anything plays.
         let audioSessionReady = Task.detached(priority: .userInitiated) {
-            AudioSessionRouting.warmUpForConversation()
+            // Classic path only. The realtime client configures the session
+            // itself inside startAudio, and this warm-up racing it mid-build
+            // stopped the engine twice and failed the whole call
+            // ("Couldn't open the microphone", 2026-09-02) — the two-stacks
+            // collision again, this time at session setup.
+            if !RealtimeMode.isEnabled { AudioSessionRouting.warmUpForConversation() }
         }
         do {
             let opener: String
@@ -2273,6 +2281,9 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
+        // First learner speech starts the clock (classic path — armed at the
+        // turn commit; the realtime path arms earlier, on `.hearing`).
+        if callStartedAt == nil { callStartedAt = Date() }
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
 
