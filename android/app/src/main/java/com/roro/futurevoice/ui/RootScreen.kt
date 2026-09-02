@@ -43,6 +43,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import com.roro.futurevoice.ui.brand.Symbols
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.roro.futurevoice.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -630,7 +632,10 @@ private fun HomeScreen(
                 actions = {
                     // The people page opens from the WATCH header, as on iOS.
                     if (tab == HomeTab.WATCH) {
-                        HeaderButton(stringResource(R.string.people), onClick = onOpenPeople)
+                        IconButton(onClick = onOpenPeople) {
+                            Icon(Symbols.icon("person.2"),
+                                contentDescription = stringResource(R.string.people))
+                        }
                     }
                     if (tab == HomeTab.TALK) {
                         HeaderButton(stringResource(R.string.me), onClick = onOpenMe)
@@ -1027,7 +1032,9 @@ private fun DiscoverSection(
                 DiscoverRow(
                     title = sc.cardTitle,
                     caption = sc.category,
-                    icon = Icons.Filled.Place,
+                    // The icon the categorizer picked for this scenario —
+                    // a fixed pin made every scenario look like a place.
+                    icon = Symbols.icon(sc.categoryIcon),
                     accent = Books.scenarios,
                     onClick = if (enabled) ({
                         scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
@@ -1201,7 +1208,9 @@ private fun WatchBody(
                 DiscoverRow(
                     title = sc.cardTitle,
                     caption = sc.category,
-                    icon = Icons.Filled.Place,
+                    // The icon the categorizer picked for this scenario —
+                    // a fixed pin made every scenario look like a place.
+                    icon = Symbols.icon(sc.categoryIcon),
                     accent = Books.scenarios,
                     onClick = if (enabled) ({ onWatch(sc.id) }) else null,
                     trailing = {
@@ -1220,12 +1229,29 @@ private fun WatchBody(
         Text(stringResource(R.string.likely_situations),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 12.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Deliberately LIGHTER than the scenario rows above — these open the
+        // composer, they are not saved content that plays. A filled tile with
+        // its own icon, not an outlined filter chip: a chip reads as "narrow
+        // the list", and nothing here is a filter.
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             SituationTree.roots.forEach { root ->
-                AssistChip(
-                    onClick = { branch = root },
-                    label = { Text(root.label) },
-                )
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        .clickable { branch = root }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(Symbols.icon(root.icon), contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp))
+                    Text(root.label, style = MaterialTheme.typography.bodyMedium)
+                }
             }
         }
         Text(stringResource(R.string.tap_a_category_the_composer_suggests_specific_scenarios),
