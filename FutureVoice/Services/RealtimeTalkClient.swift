@@ -1201,7 +1201,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             serverAudioEnded = true
             if pendingBuffers == 0, state == .speaking { state = .listening }
             handOverReply()
-            closeEchoGateAfterTail()
+            // Close the gate only when the SPEAKER has finished — "sent" is
+            // not "heard" here either. With chunks still queued, closing on
+            // this event left the reply's last seconds playing UNGATED, and
+            // on speakerphone their echo came back as a phantom learner turn
+            // the fluent self then answered (reported 2026-09-02, build 29).
+            // A drained queue closes it below, in the playback completion.
+            if pendingBuffers == 0 { closeEchoGateAfterTail() }
         case "interrupted":
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
@@ -1256,10 +1262,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Keep the gate shut for the room's tail. The speaker stops before the
     /// reverberation does, and the last buffers are still in flight.
     private func closeEchoGateAfterTail() {
-        echoHoldUntil = Date().addingTimeInterval(0.4)
+        // The room keeps speaking after the speaker stops. On the open
+        // speaker that reverberation is loud and long enough to clear the
+        // gate's margin, so it gets a longer tail than an earphone route.
+        let tail = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue ? 0.7 : 0.4
+        echoHoldUntil = Date().addingTimeInterval(tail)
         let deadline = echoHoldUntil
         Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 400_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(tail * 1_000_000_000))
             guard let self, self.echoHoldUntil <= deadline else { return }
             self.mic.setEchoGate(active: false)
         }
@@ -1393,11 +1403,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
+                    if self.pendingBuffers == 0, self.serverAudioEnded {
+                        // The last scheduled audio has been HEARD — only now
+                        // may the echo gate come down (plus the room's tail).
+                        self.closeEchoGateAfterTail()
+                    }
                     if self.pendingBuffers == 0, self.state == .speaking {
                         self.level = 0
-                        // The last scheduled audio has been HEARD — if the
-                        // server already closed the line, it is the learner's
-                        // turn now.
+                        // If the server already closed the line, it is the
+                        // learner's turn now.
                         if self.serverAudioEnded { self.state = .listening }
                     }
                 }
