@@ -972,9 +972,18 @@ struct ConversationView: View {
                         // (2026-09-01).
                         switch realtime.state {
                         case .listening, .hearing:
-                            PartialTurnView(text: realtime.partial)
-                                .id("partial-listening")
-                                .transition(.opacity)
+                            // ...except before the FIRST turn exists: the call
+                            // always opens with the fluent self, and the beat
+                            // between "gateway ready" and the opener's first
+                            // delta flashed an empty You bubble that blinked
+                            // away as the voice began (reported 2026-09-03).
+                            // A learner actually speaking first still shows —
+                            // their partial has text.
+                            if !turns.isEmpty || !realtime.partial.isEmpty {
+                                PartialTurnView(text: realtime.partial)
+                                    .id("partial-listening")
+                                    .transition(.opacity)
+                            }
                         case .thinkingReply:
                             ThinkingIndicator()
                                 .id("partial-thinking")

@@ -137,6 +137,28 @@ struct MeTab: View {
                 // language are the settings people actually return to.
                 learningLanguagesSection
 
+                // Talk on the realtime gateway (`gateway/`) instead of the
+                // per-turn HTTP pipeline: measured 2–3 s speech→voice against
+                // ~4.5 s, and it can be talked over mid-sentence. The DEFAULT
+                // since 2026-09-02 — the toggle is an opt-OUT for anyone who
+                // prefers the classic per-turn call. Lives with the other
+                // call settings; it sat below Delete account at first, which
+                // read as an afterthought (moved 2026-09-03).
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { realtimeTalk },
+                        set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
+                    )) {
+                        row(icon: "waveform.circle",
+                            title: explain("Realtime calls"),
+                            subtitle: explain("Answers in about two seconds — and you can talk over it"))
+                    }
+                } header: {
+                    Text("Calls")
+                } footer: {
+                    Text(explain("Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual."))
+                }
+
                 Section {
                     NavigationLink {
                         dailyCallPage
@@ -214,26 +236,6 @@ struct MeTab: View {
                     .disabled(deletingAccount)
                 } footer: {
                     Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
-                }
-
-                // Talk on the realtime gateway (`gateway/`) instead of the
-                // per-turn HTTP pipeline: measured 2–3 s speech→voice against
-                // ~4.5 s, and it can be talked over mid-sentence. The DEFAULT
-                // since 2026-09-02 — the toggle is an opt-OUT for anyone who
-                // prefers the classic per-turn call.
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { realtimeTalk },
-                        set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
-                    )) {
-                        row(icon: "waveform.circle",
-                            title: explain("Realtime calls"),
-                            subtitle: explain("Answers in about two seconds — and you can talk over it"))
-                    }
-                } header: {
-                    Text("Calls")
-                } footer: {
-                    Text(explain("Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual."))
                 }
 
                 #if DEBUG

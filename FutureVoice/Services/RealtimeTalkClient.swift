@@ -596,7 +596,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         if #available(iOS 17.0, *) {
             input.isVoiceProcessingAGCEnabled = false
         }
-        // AFTER the toggle: VPIO re-negotiates the input format.
+        // AFTER the toggle: VPIO re-negotiates the input format — and on a
+        // COLD session it lands on the raw 4-mic array, the exact state whose
+        // tap never fires. This became EVERY call's first build once the
+        // classic warm-up stopped pre-arming the session (2026-09-03: 1–2
+        // watchdog restarts per call, opener text with no voice, one call
+        // failed outright). The same deactivate/reactivate cycle that settles
+        // the channel count pre-VPIO settles it here too — done NOW, before
+        // the engine exists, instead of 1.5 s later by the watchdog.
+        if session.inputNumberOfChannels != 1 {
+            Self.step("audio: post-VPIO inCh=\(session.inputNumberOfChannels) — cycling session")
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            try? session.setPreferredInputNumberOfChannels(1)
+        }
         let probeFormat = input.outputFormat(forBus: 0)
         Self.step("audio: session sr=\(session.sampleRate) inCh=\(session.inputNumberOfChannels) "
             + "inputAvail=\(session.isInputAvailable) probe=\(probeFormat.sampleRate)/\(probeFormat.channelCount)")
