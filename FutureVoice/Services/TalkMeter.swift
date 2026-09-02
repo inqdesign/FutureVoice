@@ -73,6 +73,14 @@ final class TalkMeter: ObservableObject {
             .lowercased()
     }
 
+    /// True when the SERVER is the meter (the realtime gateway charges the
+    /// call itself — see gateway/src/billing.ts). The loop still runs so the
+    /// day's numbers keep landing in `TalkTimeLog` (the ring, the day card),
+    /// but `tick` stops calling `talk-tick`: two meters charging one call is
+    /// a double bill. Walls arrive as gateway error events instead of tick
+    /// 402s on that path.
+    var serverMetered = false
+
     private var task: Task<Void, Never>?
     private var sessionKey = ""
 
@@ -124,6 +132,12 @@ final class TalkMeter: ObservableObject {
     }
 
     private func tick(seconds: Int, label: String) async {
+        if serverMetered {
+            // The gateway already charged these seconds; record them locally
+            // so the ring and the day card read the same day the receipt does.
+            TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            return
+        }
         do {
             let res: TickResponse = try await SupabaseProvider.shared.functions.invoke(
                 "talk-tick",

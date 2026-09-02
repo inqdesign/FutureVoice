@@ -31,6 +31,9 @@ struct ConversationView: View {
     @State private var showTopicPicker = false
     @State private var dueDrillCount = 0
     @State private var phoneCallActive = false
+    /// When the current call seat opened — drives the elapsed clock in the
+    /// title. Set once per call; hidden (not frozen) once the call ends.
+    @State private var callStartedAt: Date?
     @State private var silenceTask: Task<Void, Never>?
     /// True only while `endSession` is wrapping up (summary generation in
     /// flight). Distinct from `phase == .thinking`, which also fires per-turn
@@ -633,6 +636,7 @@ struct ConversationView: View {
                 guard !didAutoStart else { return }
                 didAutoStart = true
                 phoneCallActive = true
+                callStartedAt = Date()
                 // The in-call meter: wall-clock seconds tick to the server
                 // for the whole life of the seat. When today's minutes run
                 // out mid-call the mic closes; the line the fluent self is
@@ -661,6 +665,10 @@ struct ConversationView: View {
                 // Silence isn't billed — see `isBillableMoment`. Set before
                 // start(): the ticker polls it from its first second.
                 meter.isBillable = { isBillableMoment() }
+                // On the realtime path the GATEWAY is the meter
+                // (gateway/src/billing.ts) — the local ticker only keeps the
+                // ring's TalkTimeLog; charging twice would double-bill.
+                meter.serverMetered = RealtimeMode.isEnabled
                 meter.start(sessionId: sessionId)
                 lastActivityAt = Date()   // the call starts occupied
                 // Put the call on the lock screen. Play/pause there are the
@@ -791,6 +799,25 @@ struct ConversationView: View {
                 case .speaking:            phase = .speaking
                 case .idle, .connecting, .failed: phase = .idle
                 }
+                // The gateway meters the call server-side and hangs up with a
+                // wall code when the allowance is spent — the same two 402s
+                // the classic meter's tick returns, so they land on the same
+                // sheets: a subscriber's finished day is never a paywall.
+                if case .failed = state {
+                    if realtime.wallCode == "daily_cap_reached" {
+                        dailyCapReached = true
+                    } else if realtime.wallCode == "insufficient_credits" {
+                        outOfCredits = true
+                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                    }
+                }
+            }
+            .onChange(of: phoneCallActive) { _, active in
+                // The elapsed clock starts when the seat opens and is armed
+                // once per call — a pause doesn't reset it (a phone call's
+                // timer runs through everything until hang-up).
+                if active, callStartedAt == nil { callStartedAt = Date() }
+                if !active { callStartedAt = nil }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 // Coming back to a call that should be listening but isn't.
@@ -826,7 +853,10 @@ struct ConversationView: View {
             LevelHeaderTitle(title: topic.isEmpty ? "Let's talk" : topic,
                              level: appState.proficiency,
                              surface: .talk,
-                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil })
+                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
+                             // Elapsed, phone-style — every tier. Hidden once
+                             // the call ends so it can't tick past the hang-up.
+                             callStartedAt: phoneCallActive ? callStartedAt : nil)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -1966,7 +1996,9 @@ struct ConversationView: View {
             history: turns.map { (role: $0.role == .user ? "user" : "model",
                                   text: $0.transcript) })
         if case .failed(let message) = realtime.state {
-            error = message
+            // A spent allowance already raised its own sheet (see the
+            // realtime.state observer) — don't stack an error alert on it.
+            if realtime.wallCode == nil { error = message }
             phase = .idle
         }
     }

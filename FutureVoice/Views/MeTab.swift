@@ -218,22 +218,22 @@ struct MeTab: View {
 
                 // Talk on the realtime gateway (`gateway/`) instead of the
                 // per-turn HTTP pipeline: measured 2–3 s speech→voice against
-                // ~4.5 s, and it can be talked over mid-sentence. Off by
-                // default — the old path is the one every learner has used so
-                // far, and it stays one toggle away.
+                // ~4.5 s, and it can be talked over mid-sentence. The DEFAULT
+                // since 2026-09-02 — the toggle is an opt-OUT for anyone who
+                // prefers the classic per-turn call.
                 Section {
                     Toggle(isOn: Binding(
                         get: { realtimeTalk },
                         set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
                     )) {
                         row(icon: "waveform.circle",
-                            title: explain("Faster calls"),
+                            title: explain("Realtime calls"),
                             subtitle: explain("Answers in about two seconds — and you can talk over it"))
                     }
                 } header: {
-                    Text("Speed test")
+                    Text("Calls")
                 } footer: {
-                    Text(explain("A new way of running the call. Everything else is the same: your talks, review material and talk time all work as usual."))
+                    Text(explain("Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual."))
                 }
 
                 #if DEBUG

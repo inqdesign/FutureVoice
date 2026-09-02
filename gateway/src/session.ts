@@ -22,6 +22,7 @@ import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, type Env } from "./supabase"
+import { TalkBilling } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
@@ -47,6 +48,9 @@ export class CallSession implements DurableObject {
   private speechSeconds = 0
   private lastInterimAt = 0
   private statsTimer: number | null = null
+  /** Server-side meter — the gateway charges the call itself (see billing.ts);
+   *  the app's TalkMeter stays local-only on this path. */
+  private billing: TalkBilling | null = null
 
   /** A reply generation fired BEFORE the transcriber committed the turn —
    *  the same trick the app's SpeculativeReply plays on its VAD, moved
@@ -175,6 +179,35 @@ export class CallSession implements DurableObject {
       if (!(await ownsVoice(this.env, userId, msg.voiceId))) {
         return this.fail("voice_forbidden", "voice_id not permitted")
       }
+      // The gateway meters the call itself — a client that never ticks
+      // still pays (the classic path's talk-tick is client-driven, which
+      // was the one bypass left on this path). Same billable rule as
+      // ConversationView.isBillableMoment, read off session state.
+      this.billing = new TalkBilling(
+        this.env,
+        msg.token,
+        crypto.randomUUID(),
+        msg.language || null,
+        () => this.activeContext !== null
+          || Date.now() - this.lastSpokeAt < 2000
+          || Date.now() - this.lastInterimAt < TalkBilling.graceMs,
+        (code) => {
+          // Out of minutes: say WHICH wall (the client shows the paywall for
+          // a spent free pool, "see you tomorrow" for a subscriber's day)
+          // and put the call down. Mid-sentence audio is allowed to finish
+          // client-side; nothing new is generated.
+          this.emit({ type: "error", code, message: "talk allowance spent" })
+          this.teardown()
+        },
+      )
+      // Preflight 1 s — an empty allowance must surface BEFORE the greeting
+      // speaks, not a free minute later (same rule as the classic path).
+      const wall = await this.billing.preflight()
+      if (wall) {
+        this.emit({ type: "error", code: wall, message: "talk allowance spent" })
+        return this.teardown()
+      }
+      this.billing.start()
     }
 
     this.history = msg.history ? [...msg.history] : []
@@ -492,6 +525,7 @@ export class CallSession implements DurableObject {
   private teardown(): void {
     if (this.ended) return
     this.ended = true
+    this.billing?.stop()   // final flush — the last partial batch still bills
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     this.clearPending()

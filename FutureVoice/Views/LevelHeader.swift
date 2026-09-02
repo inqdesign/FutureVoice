@@ -23,6 +23,11 @@ struct LevelHeaderTitle: View {
     /// leading/trailing slots have no room: next to End it fused into one
     /// "7 min End" button, and either side truncated in wider locales.
     var minutesLeft: Int? = nil
+    /// When the live call began (nil = no running call, hidden). Rendered as
+    /// a self-ticking elapsed clock — a phone call shows its duration, and
+    /// elapsed time counts UP, so it's safe on every tier including Plus,
+    /// whose rule is only that nothing counts DOWN.
+    var callStartedAt: Date? = nil
 
     @State private var showingInfo = false
 
@@ -41,6 +46,13 @@ struct LevelHeaderTitle: View {
                     // wider than the level it explains.
                     Image(systemName: "chevron.right")
                         .font(.system(size: 8, weight: .semibold))
+                    if let callStartedAt {
+                        Text("·")
+                            .font(.caption2.weight(.semibold))
+                        Text(callStartedAt, style: .timer)
+                            .font(.caption2.weight(.semibold))
+                            .monospacedDigit()
+                    }
                     if let minutesLeft {
                         Text("·")
                             .font(.caption2.weight(.semibold))

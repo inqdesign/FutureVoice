@@ -76,6 +76,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     @Published private(set) var micBytesSent = 0
     /// 0…1 level for the mic pill, from whichever side is currently audible.
     @Published private(set) var level: Float = 0
+    /// Set when the gateway ends the call on a spent allowance —
+    /// "insufficient_credits" or "daily_cap_reached". The view reads it from
+    /// the failed state to raise the right wall instead of an error alert.
+    @Published private(set) var wallCode: String?
 
     // MARK: Turn hand-off
     //
@@ -298,6 +302,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         default: return
         }
         isTornDown = false
+        wallCode = nil
         state = .connecting
         pendingRetry = fallbackVoiceId.map {
             Retry(voiceId: $0, language: language, system: system,
@@ -1229,6 +1234,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                                      history: retry.history) }
                 return
             }
+            // The gateway meters the call server-side (gateway/src/billing.ts)
+            // and says WHICH wall ended it. Remember the code so the view can
+            // raise the same sheet the classic meter's 402 would have —
+            // a spent day is a sheet, never a bare error alert.
+            if code == "insufficient_credits" || code == "daily_cap_reached" {
+                wallCode = code
+            }
             state = .failed(message)
             teardown()
         default:
@@ -1435,8 +1447,16 @@ extension RealtimeTalkClient {
 /// learners have used. The toggle lives in Me → Speed test.
 enum RealtimeMode {
     static let key = "futurevoice.realtimeTalk"
+    /// Realtime is the DEFAULT since 2026-09-02 (device-verified the day
+    /// before, billing server-side). The setting is now an opt-OUT: a learner
+    /// who prefers the classic per-turn call turns it off in Me. An account
+    /// that explicitly chose either way keeps its choice — only the
+    /// never-touched key changed meaning.
     static var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: key) }
+        get {
+            if UserDefaults.standard.object(forKey: key) == nil { return true }
+            return UserDefaults.standard.bool(forKey: key)
+        }
         set { UserDefaults.standard.set(newValue, forKey: key) }
     }
 }
