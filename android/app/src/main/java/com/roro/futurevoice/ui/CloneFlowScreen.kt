@@ -41,6 +41,9 @@ import com.roro.futurevoice.audio.RoomGates
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
@@ -406,13 +409,29 @@ fun CloneFlowScreen(
 
                 CloneAct.REVIEW -> {
                     quality?.let { q ->
-                        Text(when (q.rating) {
-                            SampleQuality.Rating.GOOD -> "Great sample"
-                            SampleQuality.Rating.OKAY -> "Usable — could be better"
-                            SampleQuality.Rating.POOR -> "Re-record recommended"
-                        }, style = MaterialTheme.typography.titleMedium)
-                        q.issues.forEach {
-                            Text(it, style = MaterialTheme.typography.bodySmall,
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Icon(
+                                when (q.rating) {
+                                    SampleQuality.Rating.GOOD -> Icons.Filled.CheckCircle
+                                    SampleQuality.Rating.OKAY -> Icons.Filled.Info
+                                    SampleQuality.Rating.POOR -> Icons.Filled.Warning
+                                },
+                                contentDescription = null,
+                                tint = when (q.rating) {
+                                    SampleQuality.Rating.GOOD -> Color(0xFF34C759)
+                                    SampleQuality.Rating.OKAY -> Color(0xFFFF9500)
+                                    SampleQuality.Rating.POOR -> MaterialTheme.colorScheme.error
+                                },
+                            )
+                            Text(stringResource(when (q.rating) {
+                                SampleQuality.Rating.GOOD -> R.string.great_sample
+                                SampleQuality.Rating.OKAY -> R.string.usable_could_be_better
+                                SampleQuality.Rating.POOR -> R.string.re_record_recommended
+                            }), style = MaterialTheme.typography.titleMedium)
+                        }
+                        q.issues.forEach { issue ->
+                            Text(issueText(issue), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -439,6 +458,9 @@ fun CloneFlowScreen(
                     Button(onClick = { performClone() }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.use_this_voice))
                     }
+                    Text(stringResource(R.string.no_need_to_be_loud_just_be_clear),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 CloneAct.UPLOADING -> {
@@ -589,4 +611,23 @@ private fun GateRow(
         }
         Text(stringResource(label), style = MaterialTheme.typography.labelLarge, color = tint)
     }
+}
+
+/**
+ * What is wrong with a take, in the learner's own language.
+ *
+ * The analyzer reports FACTS (`SampleQuality.Issue`) and this writes the
+ * sentence — the split exists because the analyzer used to build English
+ * strings, which put untranslatable English in front of a Korean learner on
+ * the one screen that tells them their recording is bad.
+ */
+@Composable
+private fun issueText(issue: SampleQuality.Issue): String = when (issue) {
+    is SampleQuality.Issue.TooShort ->
+        stringResource(R.string.too_short_llds_aim_for_60_90s, issue.seconds)
+    SampleQuality.Issue.ALittleShort -> stringResource(R.string.a_little_short_60_90s_clones_best)
+    SampleQuality.Issue.Clipping -> stringResource(R.string.clipping_detected_move_further)
+    SampleQuality.Issue.NoisyBackground -> stringResource(R.string.noisy_background_try_quieter)
+    SampleQuality.Issue.SomeNoise -> stringResource(R.string.some_background_noise_quieter_better)
+    SampleQuality.Issue.QuietTake -> stringResource(R.string.quiet_take_well_boost_it)
 }

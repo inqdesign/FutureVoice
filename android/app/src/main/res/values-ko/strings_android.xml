@@ -75,4 +75,13 @@
     <string name="im_ready">준비됐어요</string>
     <string name="pick_your_look">색을 골라요</string>
     <string name="its_built_and_its_yours">다 만들어졌고 내 것이에요. 로그인하면 그대로 남아요 — 기록과 함께, 어느 폰에서든.</string>
+    <string name="great_sample">좋은 녹음이에요</string>
+    <string name="usable_could_be_better">쓸 만해요 — 더 좋을 수 있고요</string>
+    <string name="re_record_recommended">다시 녹음하는 걸 권해요</string>
+    <string name="too_short_llds_aim_for_60_90s">너무 짧아요 (%1$d초) — 60~90초를 목표로.</string>
+    <string name="a_little_short_60_90s_clones_best">조금 짧아요 — 60~90초가 가장 잘 만들어져요.</string>
+    <string name="clipping_detected_move_further">소리가 깨졌어요 — 마이크에서 조금 떨어져 보세요.</string>
+    <string name="noisy_background_try_quieter">주변이 시끄러워요 — 더 조용한 곳으로 (옷장이 아주 좋아요).</string>
+    <string name="some_background_noise_quieter_better">약간의 배경 소음이 있어요 — 조용할수록 좋아요.</string>
+    <string name="quiet_take_well_boost_it">녹음이 작아요 — 키워 드리지만, 마이크에 더 가까우면 좋아요.</string>
 </resources>

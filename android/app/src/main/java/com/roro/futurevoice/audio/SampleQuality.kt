@@ -23,10 +23,31 @@ data class SampleQuality(
     val rmsDbfs: Float,
     val clippedPercent: Float,
     val estimatedSnrDb: Float,
-    val issues: List<String>,
+    val issues: List<Issue>,
     val rating: Rating,
 ) {
     enum class Rating { GOOD, OKAY, POOR }
+
+    /**
+     * WHAT is wrong with the take — never the sentence saying so.
+     *
+     * The analyzer used to build English strings, which put untranslatable
+     * English in front of a Korean learner on the one screen where they are
+     * being told their recording is bad. Every string the app writes has to
+     * resolve in the learner's own language, so the analyzer reports facts
+     * and the screen writes the words.
+     *
+     * TOO_SHORT carries the measured seconds, because "too short" without a
+     * number leaves nothing to act on.
+     */
+    sealed interface Issue {
+        data class TooShort(val seconds: Int) : Issue
+        data object ALittleShort : Issue
+        data object Clipping : Issue
+        data object NoisyBackground : Issue
+        data object SomeNoise : Issue
+        data object QuietTake : Issue
+    }
 
     companion object {
 
@@ -66,25 +87,25 @@ data class SampleQuality(
             val peakDb = 20 * log10(max(peak, 1e-7f))
             val rmsDb = 20 * log10(max(rms, 1e-7f))
 
-            val issues = mutableListOf<String>()
+            val issues = mutableListOf<Issue>()
             var rating = Rating.GOOD
             fun demote(r: Rating) { if (r == Rating.POOR || rating == Rating.GOOD) rating = r }
 
             if (duration < 30) {
-                issues.add("Too short (${duration.toInt()}s) — aim for 60–90s."); demote(Rating.POOR)
+                issues.add(Issue.TooShort(duration.toInt())); demote(Rating.POOR)
             } else if (duration < 45) {
-                issues.add("A little short — 60–90s clones best."); demote(Rating.OKAY)
+                issues.add(Issue.ALittleShort); demote(Rating.OKAY)
             }
             if (clippedPct > 0.05f || peakDb > -0.3f) {
-                issues.add("Clipping detected — move a little further from the mic."); demote(Rating.POOR)
+                issues.add(Issue.Clipping); demote(Rating.POOR)
             }
             if (snr < 14) {
-                issues.add("Noisy background — try a quieter spot (a closet works great)."); demote(Rating.POOR)
+                issues.add(Issue.NoisyBackground); demote(Rating.POOR)
             } else if (snr < 22) {
-                issues.add("Some background noise — quieter is better."); demote(Rating.OKAY)
+                issues.add(Issue.SomeNoise); demote(Rating.OKAY)
             }
             if (rmsDb < -34) {
-                issues.add("Quiet take — we'll boost it, but closer to the mic helps."); demote(Rating.OKAY)
+                issues.add(Issue.QuietTake); demote(Rating.OKAY)
             }
             return SampleQuality(duration, peakDb, rmsDb, clippedPct, snr, issues, rating)
         }

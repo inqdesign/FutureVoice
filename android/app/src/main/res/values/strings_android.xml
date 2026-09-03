@@ -75,4 +75,13 @@
     <string name="im_ready">I\'m ready</string>
     <string name="pick_your_look">Pick your look</string>
     <string name="its_built_and_its_yours">It\'s built and it\'s yours. Sign in and it stays — with your progress, on whichever phone you use.</string>
+    <string name="great_sample">Great sample</string>
+    <string name="usable_could_be_better">Usable — could be better</string>
+    <string name="re_record_recommended">Re-record recommended</string>
+    <string name="too_short_llds_aim_for_60_90s">Too short (%1$ds) — aim for 60–90s.</string>
+    <string name="a_little_short_60_90s_clones_best">A little short — 60–90s clones best.</string>
+    <string name="clipping_detected_move_further">Clipping detected — move a little further from the mic.</string>
+    <string name="noisy_background_try_quieter">Noisy background — try a quieter spot (a closet works great).</string>
+    <string name="some_background_noise_quieter_better">Some background noise — quieter is better.</string>
+    <string name="quiet_take_well_boost_it">Quiet take — we\'ll boost it, but closer to the mic helps.</string>
 </resources>
