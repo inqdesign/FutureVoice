@@ -86,4 +86,6 @@
     <string name="quiet_take_well_boost_it">Quiet take — we\'ll boost it, but closer to the mic helps.</string>
     <string name="continue_with_google">Continue with Google</string>
     <string name="continue_with_apple">Continue with Apple</string>
+    <string name="other_ways_to_say_it">Other ways to say it</string>
+    <string name="show_me_more">Show me more</string>
 </resources>

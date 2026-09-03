@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -75,7 +76,12 @@ import kotlin.math.roundToInt
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun DrillDeckScreen(language: String, onBack: () -> Unit) {
+fun DrillDeckScreen(
+    language: String,
+    persona: com.roro.futurevoice.talk.UserPersona? = null,
+    nativeLanguage: String = "en",
+    onBack: () -> Unit,
+) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -90,6 +96,8 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
     /** "Got it" is session-local here too — a graduated card is not "waiting". */
     var finished by remember { mutableIntStateOf(0) }
     var verdictFor by remember { mutableStateOf<DrillCard?>(null) }
+    /** The card opened up — examples, variants, a hook to remember it by. */
+    var enrichFor by remember { mutableStateOf<DrillCard?>(null) }
 
     var dragOffset by remember { mutableStateOf(0f to 0f) }
     var dragging by remember { mutableStateOf(false) }
@@ -219,10 +227,23 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
                     )
                 }
 
-                Text(stringResource(R.string.drag_the_card_into_a_folder),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(stringResource(R.string.drag_the_card_into_a_folder),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f))
+                    // Offered on the REVEALED card only: the back is where
+                    // the learner is already asking "why", and on the front it
+                    // would give the answer away.
+                    if (revealed) {
+                        TextButton(onClick = { enrichFor = top }) {
+                            Text(stringResource(R.string.show_me_more))
+                        }
+                    }
+                }
 
                 VerdictRow(
                     dragging = dragging,
@@ -234,6 +255,16 @@ fun DrillDeckScreen(language: String, onBack: () -> Unit) {
                 )
             }
         }
+    }
+
+    enrichFor?.let { card ->
+        DrillEnrichmentSheet(
+            card = card,
+            persona = persona,
+            targetLanguage = language,
+            nativeLanguage = nativeLanguage,
+            onDismiss = { enrichFor = null },
+        )
     }
 
     verdictFor?.let { card ->

@@ -328,6 +328,8 @@ fun RootScreen() {
 
         showDeck -> DrillDeckScreen(
             language = state.targetLanguage,
+            persona = state.persona,
+            nativeLanguage = state.nativeLanguage,
             onBack = { showDeck = false },
         )
 

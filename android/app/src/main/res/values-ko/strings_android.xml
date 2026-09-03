@@ -86,4 +86,6 @@
     <string name="quiet_take_well_boost_it">녹음이 작아요 — 키워 드리지만, 마이크에 더 가까우면 좋아요.</string>
     <string name="continue_with_google">Google로 계속하기</string>
     <string name="continue_with_apple">Apple로 계속하기</string>
+    <string name="other_ways_to_say_it">다르게 말하는 법</string>
+    <string name="show_me_more">더 보기</string>
 </resources>
