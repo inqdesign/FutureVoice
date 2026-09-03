@@ -617,9 +617,11 @@ struct ConversationView: View {
                     }
                     Divider().opacity(0.15)
                 }
+                // The transcript dissolves beneath the mic bar exactly the
+                // way the Talk home dissolves beneath the tab bar — see
+                // `fadingBottomBar` (2026-09-03).
                 feed
-                Divider().opacity(0.15)
-                bottomBar
+                    .fadingBottomBar { bottomBar }
             }
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
@@ -1125,8 +1127,8 @@ struct ConversationView: View {
         .padding(.top, 14)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
-        // No background — the mic floats above the feed and the tab bar gets
-        // a clean gap below it, so users don't read mic + tabs as one chunk.
+        // No background of its own — the feed's edge treatment beneath it
+        // comes from `fadingBottomBar`.
         .onChange(of: live.level) { _, new in
             guard phase == .listening else { return }
             voiceLevel = new
@@ -3944,4 +3946,59 @@ private struct SummarySheet: View {
 
 extension SessionSummary: Identifiable {
     public var id: String { overallNote }
+}
+
+
+// MARK: - Bottom bar attachment
+
+extension View {
+    /// Attaches a bottom bar the way the system attaches the tab bar, so the
+    /// content scrolling under it gets the SAME treatment the Talk home gets
+    /// beneath its tabs: on iOS 26 a `safeAreaBar`, which is what makes the
+    /// scroll view draw its soft scroll-edge effect under the bar (a plain
+    /// `safeAreaInset` gets none). Earlier OSes get a hand-drawn wash of the
+    /// page colour over the last few points above the bar.
+    ///
+    /// Two hand-drawn attempts preceded this (2026-09-03): an alpha mask on
+    /// the feed, which SwiftUI's safe-area maths parked 50–100 pt above the
+    /// pill, and a gradient in the bar's background, which was in the right
+    /// place but was still ours and not the system's. Every conversation
+    /// surface with a pinned bottom bar goes through here — the call's mic
+    /// pill and the talk book's replay controls — so the dissolve is one
+    /// implementation, and a bar attached this way must NOT carry a
+    /// background of its own.
+    @ViewBuilder
+    func fadingBottomBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
+        if #available(iOS 26, *) {
+            self
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .safeAreaBar(edge: .bottom, spacing: 0, content: bar)
+        } else {
+            self.safeAreaInset(edge: .bottom, spacing: 0) {
+                bar().background(alignment: .top) { BottomBarWash() }
+            }
+        }
+    }
+}
+
+/// Pre-iOS-26 stand-in for the scroll-edge effect: page colour under the
+/// bar (and on down through the home indicator), with a gradient into
+/// transparency reaching `fadeHeight` ABOVE the bar's top edge — the
+/// negative padding is what lets it overhang, which pins the fade to the bar
+/// by construction.
+private struct BottomBarWash: View {
+    static let fadeHeight: CGFloat = 36
+
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [Color(.systemBackground).opacity(0),
+                                    Color(.systemBackground)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: Self.fadeHeight)
+            Color(.systemBackground)
+        }
+        .padding(.top, -Self.fadeHeight)
+        .ignoresSafeArea(edges: .bottom)
+        .allowsHitTesting(false)
+    }
 }

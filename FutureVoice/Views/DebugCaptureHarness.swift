@@ -388,6 +388,57 @@ enum DebugCapture {
                     }
                 }
             })
+        case "call-feed-fade":
+            // Geometry check for the call feed's edge under the mic bar: the
+            // same attachment ConversationView uses (`fadingBottomBar`), with a
+            // stand-in pill. Scrolled to the end so the last line's rest
+            // position is visible.
+            return AnyView(NavigationStack {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 18) {
+                            ForEach(0..<14, id: \.self) { i in
+                                if i % 2 == 0 {
+                                    DialogueLine(speaker: .other, name: "Future self") {
+                                        Text("So — how did the interview go yesterday? Anything you'd do differently next time?")
+                                    }
+                                    .id(i)
+                                } else {
+                                    DialogueLine(speaker: .user, name: "You") {
+                                        Text("Honestly, it went really well. I felt prepared. \(i)")
+                                    }
+                                }
+                            }
+                            Color.clear.frame(height: 8).id("end")
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
+                    }
+                    // `-captureScrolled`: park a bubble under the bar instead
+                    // of resting at the end, to photograph the fade itself.
+                    .onAppear {
+                        if UserDefaults.standard.bool(forKey: "captureScrolled") {
+                            proxy.scrollTo(8, anchor: .top)
+                        } else {
+                            proxy.scrollTo("end", anchor: .bottom)
+                        }
+                    }
+                }
+                .fadingBottomBar {
+                    VStack(spacing: 10) {
+                        Capsule().fill(Color.accentColor.opacity(0.3))
+                            .frame(width: 156, height: 64)
+                        Text("Listening").font(.footnote).foregroundStyle(.secondary).frame(height: 16)
+                    }
+                    .padding(.top, 14)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Let's talk")
+            })
         case "summary-progress", "summary-progress-start":
             // The end-of-talk board, mid-build: the analysis has landed and
             // the counts are filling in. `-start` is the long first step,
