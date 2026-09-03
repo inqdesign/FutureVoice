@@ -46,6 +46,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import com.roro.futurevoice.ui.brand.Futureself
+import com.roro.futurevoice.ui.brand.FutureselfTheme
+import com.roro.futurevoice.ui.brand.FutureselfMode
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import com.roro.futurevoice.audio.WavRecorder
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.EdgeError
@@ -79,13 +89,17 @@ import java.io.File
  * A clone made in the wrong room cannot be undone without spending another
  * provider slot, which is why these come before the recorder and not after.
  */
-private enum class CloneAct { INTRO, CONSENT, MIC, SPOT, SCRIPT, REVIEW, UPLOADING, MEET }
+private enum class CloneAct { INTRO, CONSENT, MIC, SPOT, SCRIPT, REVIEW, UPLOADING, MEET, ACCOUNT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CloneFlowScreen(
     targetLanguage: String,
     onCloned: (voiceId: String) -> Unit,
+    /** True once the session has a real account behind it. */
+    signedIn: Boolean = false,
+    /** Opens the sign-up. Null when there is nothing to keep the voice in. */
+    onSaveVoice: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -93,6 +107,7 @@ fun CloneFlowScreen(
     val room = remember { RoomCheck() }
     var ambient by remember { mutableFloatStateOf(-90f) }
     var echoTail by remember { mutableStateOf<Double?>(null) }
+    var theme by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     var startRecordingRequested by remember { mutableStateOf(false) }
     val recordPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -200,6 +215,7 @@ fun CloneFlowScreen(
                     CloneAct.REVIEW -> R.string.how_you_sound
                     CloneAct.UPLOADING -> R.string.becoming_you
                     CloneAct.MEET -> R.string.meet_your_fluent_self
+                    CloneAct.ACCOUNT -> R.string.make_it_yours
                 }))
             })
         },
@@ -248,6 +264,41 @@ fun CloneFlowScreen(
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // The orb, present on every act and never decoration: it is the
+            // thing the learner is building, and it reacts to what the act is
+            // about. The spot step wears LISTENING because ambient noise
+            // visibly stirs the surface — walking into a closet visibly
+            // settles it, which is the instruction that step is giving.
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Futureself(
+                    mode = when (act) {
+                        CloneAct.SPOT -> FutureselfMode.LISTENING
+                        CloneAct.SCRIPT -> if (recording) FutureselfMode.LISTENING
+                        else FutureselfMode.IDLE
+                        CloneAct.REVIEW -> FutureselfMode.IDLE
+                        CloneAct.UPLOADING -> FutureselfMode.THINKING
+                        CloneAct.MEET -> FutureselfMode.SPEAKING
+                        else -> FutureselfMode.IDLE
+                    },
+                    level = when (act) {
+                        CloneAct.SPOT -> level
+                        CloneAct.SCRIPT -> if (recording) level else 0f
+                        // Something is happening that the learner cannot
+                        // see; a still surface would read as a hang.
+                        CloneAct.UPLOADING -> 0.35f
+                        CloneAct.MEET -> 0.6f
+                        else -> 0f
+                    },
+                    theme = theme,
+                    // The script step shrinks it: the paragraphs are the
+                    // subject there, and a full-size orb pushes them off.
+                    virtualHeight = 64f,
+                    modifier = Modifier
+                        .size(if (act == CloneAct.SCRIPT) 72.dp else 168.dp)
+                        .clip(CircleShape),
+                )
+            }
+
             when (act) {
                 // Why they are about to read their own voice aloud. Without
                 // it the first thing a learner meets is a consent form.
@@ -405,9 +456,72 @@ fun CloneFlowScreen(
                             Text(stringResource(R.string.listen))
                         }
                     }
-                    Button(onClick = { clonedVoiceId?.let(onCloned) },
-                        modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.continue_))
+
+                    // The palette, picked while the voice is still in their
+                    // ears — this is the moment the surface becomes theirs,
+                    // and every Futureself in the app reads the choice.
+                    Text(stringResource(R.string.pick_your_look),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(top = 8.dp))
+                    Row(Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FutureselfTheme.entries.forEach { t ->
+                            Column(
+                                Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .border(
+                                        width = if (t == theme) 2.dp else 1.dp,
+                                        color = if (t == theme) t.tint()
+                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        shape = RoundedCornerShape(14.dp))
+                                    .clickable {
+                                        theme = t
+                                        context.getSharedPreferences("futurevoice", 0).edit()
+                                            .putInt(FutureselfTheme.PREF_KEY, t.ordinal).apply()
+                                    }
+                                    .padding(8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Futureself(
+                                    mode = FutureselfMode.IDLE, level = 0f, theme = t,
+                                    virtualHeight = 64f,
+                                    modifier = Modifier.size(width = 64.dp, height = 34.dp)
+                                        .clip(CircleShape),
+                                )
+                                Text(t.label, style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    // Two exits, one button. With an account behind the
+                    // session this is onboarding's last tap; on an anonymous
+                    // one it hands over to the sign-up — which now asks about
+                    // a voice they have HEARD rather than a promise.
+                    Button(
+                        onClick = {
+                            if (signedIn) clonedVoiceId?.let(onCloned)
+                            else act = CloneAct.ACCOUNT
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(
+                            if (signedIn) R.string.start_talking else R.string.save_this_voice))
+                    }
+                }
+
+                // Nothing here CREATES the voice — it only keeps it.
+                // Everything before this ran on an anonymous session, which is
+                // the whole point of the order: the ask lands after they have
+                // heard the thing they are being asked to keep.
+                CloneAct.ACCOUNT -> {
+                    StepHeader(
+                        stringResource(R.string.save_this_voice_to_your_account),
+                        stringResource(R.string.its_built_and_its_yours),
+                    )
+                    onSaveVoice?.let { save ->
+                        Button(onClick = save, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.continue_))
+                        }
                     }
                 }
             }

@@ -200,6 +200,7 @@ fun RootScreen() {
         }
     }
     var editProfile by remember { mutableStateOf(false) }
+    var pendingAccount by remember { mutableStateOf(false) }
     var dailyCallOnboarded by remember {
         mutableStateOf(OnboardingFlags.seen(context, OnboardingFlags.DAILY_CALL))
     }
@@ -210,6 +211,10 @@ fun RootScreen() {
     // out to have nothing to buy, so it waits for the answer rather than
     // guessing at one.
     var onboardingNeedsPlan by remember { mutableStateOf<Boolean?>(null) }
+    // Sign-up landed: the account act resolves itself with no second tap.
+    LaunchedEffect(state.signedIn, state.isAnonymous) {
+        if (state.signedIn && !state.isAnonymous) pendingAccount = false
+    }
     LaunchedEffect(state.voiceId, dailyCallOnboarded) {
         if (state.voiceId != null && !onboardingPaywallSeen && onboardingNeedsPlan == null) {
             onboardingNeedsPlan = AccountStatus.load(AuthRepository())
@@ -394,6 +399,19 @@ fun RootScreen() {
         !state.restoringVoice && state.voiceId == null -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             onCloned = app::onVoiceCloned,
+            // The sign-up is the flow's LAST act, not a gate in front of it:
+            // by then the learner has heard the voice they are being asked to
+            // keep. An anonymous session gets the ask; a real account skips
+            // straight into the first call.
+            signedIn = state.signedIn && !state.isAnonymous,
+            onSaveVoice = { pendingAccount = true },
+        )
+
+        // The sign-up itself, raised by the clone flow's last act.
+        pendingAccount -> AccountScreen(
+            googleAvailable = app.isGoogleConfigured,
+            onGoogleSignIn = app::signInWithGoogle,
+            onAppleSignIn = app::signIn,
         )
 
         // The clone's first real job, introduced right after it exists — so

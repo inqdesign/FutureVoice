@@ -73,4 +73,6 @@
     <string name="take_your_earbuds_out_before_recording">녹음 전에 이어폰을 빼세요</string>
     <string name="clothes_soak_up_the_echo">옷이 울림을 먹어 줘서 녹음이 깨끗하게 나와요. 옷장이 없으면 커튼 앞이나 세워 둔 차 안도 괜찮아요. 아래 수치가 조용해지면 시작하세요.</string>
     <string name="im_ready">준비됐어요</string>
+    <string name="pick_your_look">색을 골라요</string>
+    <string name="its_built_and_its_yours">다 만들어졌고 내 것이에요. 로그인하면 그대로 남아요 — 기록과 함께, 어느 폰에서든.</string>
 </resources>
