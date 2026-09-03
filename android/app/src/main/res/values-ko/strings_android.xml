@@ -84,4 +84,6 @@
     <string name="noisy_background_try_quieter">주변이 시끄러워요 — 더 조용한 곳으로 (옷장이 아주 좋아요).</string>
     <string name="some_background_noise_quieter_better">약간의 배경 소음이 있어요 — 조용할수록 좋아요.</string>
     <string name="quiet_take_well_boost_it">녹음이 작아요 — 키워 드리지만, 마이크에 더 가까우면 좋아요.</string>
+    <string name="continue_with_google">Google로 계속하기</string>
+    <string name="continue_with_apple">Apple로 계속하기</string>
 </resources>

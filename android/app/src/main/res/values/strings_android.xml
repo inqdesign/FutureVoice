@@ -84,4 +84,6 @@
     <string name="noisy_background_try_quieter">Noisy background — try a quieter spot (a closet works great).</string>
     <string name="some_background_noise_quieter_better">Some background noise — quieter is better.</string>
     <string name="quiet_take_well_boost_it">Quiet take — we\'ll boost it, but closer to the mic helps.</string>
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="continue_with_apple">Continue with Apple</string>
 </resources>

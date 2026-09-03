@@ -67,4 +67,20 @@ object StudyWidgetSnapshotStore {
     fun chromeLanguage(context: Context): String =
         context.getSharedPreferences("futurevoice", 0)
             .getString("futurevoice.nativeLanguage", null) ?: "en"
+
+    /**
+     * A widget string in the APP's language.
+     *
+     * Glance draws outside the app's composition, so `stringResource` would
+     * resolve against the SYSTEM locale — a learner whose phone is English
+     * and whose app is Korean would get an English widget beside a Korean
+     * app. The resources are read through a context configured for the app
+     * language instead.
+     */
+    fun chrome(context: Context, resId: Int): String {
+        val locale = java.util.Locale.forLanguageTag(chromeLanguage(context))
+        val config = android.content.res.Configuration(context.resources.configuration)
+        config.setLocale(locale)
+        return context.createConfigurationContext(config).getString(resId)
+    }
 }

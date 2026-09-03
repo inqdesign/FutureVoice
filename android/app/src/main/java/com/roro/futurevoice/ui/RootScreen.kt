@@ -573,11 +573,11 @@ private fun AccountScreen(
         )
         if (googleAvailable) {
             Button(onClick = { onGoogleSignIn(context) }, modifier = Modifier.fillMaxWidth()) {
-                Text("Continue with Google")
+                Text(stringResource(R.string.continue_with_google))
             }
         }
         Button(onClick = onAppleSignIn, modifier = Modifier.fillMaxWidth()) {
-            Text("Continue with Apple")
+            Text(stringResource(R.string.continue_with_apple))
         }
     }
 }

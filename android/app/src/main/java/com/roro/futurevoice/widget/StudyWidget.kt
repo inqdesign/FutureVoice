@@ -1,5 +1,7 @@
 package com.roro.futurevoice.widget
 
+import com.roro.futurevoice.R
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -53,6 +55,10 @@ class StudyWidget(private val section: StudyWidgetSection) : GlanceAppWidget() {
 
     @Composable
     private fun Body(snapshot: StudyWidgetSnapshot) {
+        // Glance draws outside the app's composition, so its own context is
+        // the only route to resources — and they have to be read through the
+        // APP's language, not the phone's.
+        val context = androidx.glance.LocalContext.current
         // The tap deep-links into the app on the same scheme iOS uses.
         val open = actionStartActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(section.deepLink)).apply {
@@ -68,7 +74,9 @@ class StudyWidget(private val section: StudyWidgetSection) : GlanceAppWidget() {
         ) {
             Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (section == StudyWidgetSection.WORDS) "Words" else "Expressions",
+                    StudyWidgetSnapshotStore.chrome(context,
+                        if (section == StudyWidgetSection.WORDS) R.string.words
+                        else R.string.expressions),
                     style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium,
                         color = GlanceTheme.colors.onSurfaceVariant),
                     modifier = GlanceModifier.defaultWeight(),
@@ -81,7 +89,7 @@ class StudyWidget(private val section: StudyWidgetSection) : GlanceAppWidget() {
             }
             Spacer(GlanceModifier.height(6.dp))
             if (snapshot.items.isEmpty()) {
-                Text("Nothing to study yet.",
+                Text(StudyWidgetSnapshotStore.chrome(context, R.string.nothing_to_study_yet),
                     style = TextStyle(fontSize = 13.sp,
                         color = GlanceTheme.colors.onSurfaceVariant))
             } else {
