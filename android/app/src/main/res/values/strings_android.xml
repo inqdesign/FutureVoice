@@ -66,4 +66,11 @@
     <string name="your_cloned_voice">Your cloned voice</string>
     <string name="not_set_up_yet">Not set up yet</string>
     <string name="publish_your_intro">Publish your intro — others practice with \"you\"</string>
+    <string name="dont_imitate_a_stranger">Don\'t imitate a stranger — practice with the fluent you.</string>
+    <string name="time_to_meet_the_you_who_speaks">Time to meet the you who speaks perfectly — in your own voice. One minute of reading is all it takes.</string>
+    <string name="use_the_phones_mic_or_a_better_one">Use the phone\'s mic — or a better one.</string>
+    <string name="the_better_the_mic_the_better_the_voice">The better the mic, the better the voice that comes out. A wired mic is best if you have one.</string>
+    <string name="take_your_earbuds_out_before_recording">Take your earbuds out before recording</string>
+    <string name="clothes_soak_up_the_echo">Clothes soak up the echo, so the recording comes out clean. No closet? A curtain or a parked car works too. Start once the readings below go quiet.</string>
+    <string name="im_ready">I\'m ready</string>
 </resources>

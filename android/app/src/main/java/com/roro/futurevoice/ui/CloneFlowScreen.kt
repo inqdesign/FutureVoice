@@ -36,6 +36,16 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.audio.Mp3Player
 import com.roro.futurevoice.audio.SampleQuality
+import com.roro.futurevoice.audio.RoomCheck
+import com.roro.futurevoice.audio.RoomGates
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
+import androidx.compose.material3.Icon
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Alignment
 import com.roro.futurevoice.audio.WavRecorder
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.EdgeError
@@ -57,7 +67,19 @@ import java.io.File
  * voice). Accent picks and A/B comparison arrive later; the contract they
  * hang off (SNR, takes on disk) is already here.
  */
-private enum class CloneAct { CONSENT, SCRIPT, REVIEW, UPLOADING, MEET }
+/**
+ * The acts, in iOS's order. The three before SCRIPT are not ceremony — they
+ * are what protects the ONE take that becomes the learner's voice:
+ *
+ *   INTRO — why they are about to read their own voice aloud at all.
+ *   MIC   — take the AirPods out. Bluetooth records at phone-call quality,
+ *           and the clone is the one surface where the worn mic must NOT win.
+ *   SPOT  — the room, measured. Quiet AND dry, both gates green.
+ *
+ * A clone made in the wrong room cannot be undone without spending another
+ * provider slot, which is why these come before the recorder and not after.
+ */
+private enum class CloneAct { INTRO, CONSENT, MIC, SPOT, SCRIPT, REVIEW, UPLOADING, MEET }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,7 +89,10 @@ fun CloneFlowScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var act by remember { mutableStateOf(CloneAct.CONSENT) }
+    var act by remember { mutableStateOf(CloneAct.INTRO) }
+    val room = remember { RoomCheck() }
+    var ambient by remember { mutableFloatStateOf(-90f) }
+    var echoTail by remember { mutableStateOf<Double?>(null) }
     var startRecordingRequested by remember { mutableStateOf(false) }
     val recordPermission = androidx.activity.compose.rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
@@ -84,6 +109,22 @@ fun CloneFlowScreen(
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
     val listenPlayer = remember { MediaPlayer() }
     val mp3 = remember { Mp3Player(context.cacheDir) }
+
+    // The room is listened to ONLY on the spot step — an open mic on every
+    // screen of onboarding is both a battery cost and a thing to explain.
+    LaunchedEffect(act) {
+        if (act == CloneAct.SPOT) {
+            room.start()
+            while (act == CloneAct.SPOT) {
+                ambient = room.ambientDbfs
+                echoTail = room.echoTailMs
+                level = room.level
+                delay(100)
+            }
+        }
+        room.stop()
+    }
+    DisposableEffect(Unit) { onDispose { room.stop() } }
 
     LaunchedEffect(recording) {
         while (recording) {
@@ -151,7 +192,10 @@ fun CloneFlowScreen(
         topBar = {
             TopAppBar(title = {
                 Text(stringResource(when (act) {
+                    CloneAct.INTRO -> R.string.your_fluent_self
                     CloneAct.CONSENT -> R.string.your_voice_in_safe_hands
+                    CloneAct.MIC -> R.string.mic_check
+                    CloneAct.SPOT -> R.string.find_a_quiet_spot
                     CloneAct.SCRIPT -> if (recording) R.string.it_s_listening else R.string.read_this_aloud
                     CloneAct.REVIEW -> R.string.how_you_sound
                     CloneAct.UPLOADING -> R.string.becoming_you
@@ -205,6 +249,80 @@ fun CloneFlowScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             when (act) {
+                // Why they are about to read their own voice aloud. Without
+                // it the first thing a learner meets is a consent form.
+                CloneAct.INTRO -> {
+                    StepHeader(
+                        stringResource(R.string.another_you_already_fluent),
+                        stringResource(R.string.dont_imitate_a_stranger),
+                    )
+                    Text(stringResource(R.string.time_to_meet_the_you_who_speaks),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Button(onClick = { act = CloneAct.CONSENT },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.next))
+                    }
+                }
+
+                // Framed as QUALITY, not as a threat: the same instruction
+                // reads better as what a good mic buys than as a punishment
+                // for getting it wrong. The AirPods line stays because it is
+                // the one concrete action — Bluetooth records at phone-call
+                // quality, and this is the one surface where the worn mic
+                // must NOT win.
+                CloneAct.MIC -> {
+                    StepHeader(
+                        stringResource(R.string.use_the_phones_mic_or_a_better_one),
+                        stringResource(R.string.the_better_the_mic_the_better_the_voice),
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Headphones, contentDescription = null,
+                            tint = Color(0xFFFF9500))
+                        Text(stringResource(R.string.take_your_earbuds_out_before_recording),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color(0xFFFF9500))
+                    }
+                    Button(onClick = { act = CloneAct.SPOT },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.next))
+                    }
+                }
+
+                // The room, measured. Just give the answer — this used to be
+                // "walk until it settles", which asks the reader to wander
+                // their home running an experiment whose result we know.
+                CloneAct.SPOT -> {
+                    StepHeader(
+                        stringResource(R.string.a_closet_is_the_best_spot),
+                        stringResource(R.string.clothes_soak_up_the_echo),
+                    )
+                    GateRow(
+                        title = stringResource(R.string.noise),
+                        value = "%.0f dB".format(ambient),
+                        state = RoomGates.noise(ambient),
+                        labels = listOf(R.string.quiet, R.string.almost, R.string.too_noisy),
+                    )
+                    HorizontalDivider()
+                    GateRow(
+                        title = stringResource(R.string.echo),
+                        value = echoTail?.let { "%.0f ms".format(it) },
+                        state = RoomGates.echo(echoTail),
+                        labels = listOf(R.string.dry, R.string.echoey, R.string.echoey),
+                        unknownLabel = R.string.clap_to_check,
+                    )
+                    // The go-signal only appears once BOTH gates are green —
+                    // quiet alone is not enough, an open room can be silent
+                    // and still smear the clone with its own reflections.
+                    if (RoomGates.bothPass(ambient, echoTail)) {
+                        Button(onClick = { act = CloneAct.SCRIPT },
+                            modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.im_ready))
+                        }
+                    }
+                }
+
                 CloneAct.CONSENT -> {
                     Text(stringResource(R.string.re_record_it_or_delete_it_whenever_you_want_and_deleting_you_5a997f),
                         style = MaterialTheme.typography.bodyMedium)
@@ -223,7 +341,7 @@ fun CloneFlowScreen(
                                 .putLong("futurevoice.consent.voiceAt", System.currentTimeMillis())
                                 .putLong("futurevoice.consent.ageAt", System.currentTimeMillis())
                                 .apply()
-                            act = CloneAct.SCRIPT
+                            act = CloneAct.MIC
                         },
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.next)) }
@@ -301,3 +419,60 @@ fun CloneFlowScreen(
 private const val MIN_SECONDS = 60f
 private const val MAX_SECONDS = 90f
 private const val MINIMUM_AGE = 16
+
+/**
+ * A step's headline and the one line under it. Every act in this flow wears
+ * the same pair, so the wizard reads as one idea per screen rather than a
+ * form with varying furniture.
+ */
+@Composable
+private fun StepHeader(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold)
+        Text(subtitle, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * One measured fact about the room: what it is, where it currently stands,
+ * and the reading itself.
+ *
+ * The VALUE is shown, not just the verdict — a learner who is told "too
+ * noisy" with no number has nothing to act on, while one who watches −38 fall
+ * to −57 as they walk into a closet can see the room getting better.
+ */
+@Composable
+private fun GateRow(
+    title: String,
+    value: String?,
+    state: RoomGates.State,
+    labels: List<Int>,
+    unknownLabel: Int? = null,
+) {
+    val tint = when (state) {
+        RoomGates.State.GOOD -> Color(0xFF34C759)
+        RoomGates.State.NEAR -> Color(0xFFFF9500)
+        RoomGates.State.BAD -> MaterialTheme.colorScheme.error
+        RoomGates.State.UNKNOWN -> MaterialTheme.colorScheme.primary
+    }
+    val label = when (state) {
+        RoomGates.State.GOOD -> labels[0]
+        RoomGates.State.NEAR -> labels[1]
+        RoomGates.State.BAD -> labels[2]
+        RoomGates.State.UNKNOWN -> unknownLabel ?: labels[1]
+    }
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        value?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(stringResource(label), style = MaterialTheme.typography.labelLarge, color = tint)
+    }
+}

@@ -66,4 +66,11 @@
     <string name="your_cloned_voice">내 복제 목소리</string>
     <string name="not_set_up_yet">아직 만들지 않음</string>
     <string name="publish_your_intro">내 소개를 공개해요 — 다른 사람이 \"나\"와 연습해요</string>
+    <string name="dont_imitate_a_stranger">낯선 사람을 따라 하지 말고, 유창한 나와 연습해요.</string>
+    <string name="time_to_meet_the_you_who_speaks">완벽하게 말하는 나를 만날 시간이에요 — 내 목소리로. 1분만 읽으면 돼요.</string>
+    <string name="use_the_phones_mic_or_a_better_one">폰 마이크를 쓰세요 — 더 좋은 게 있으면 그걸로.</string>
+    <string name="the_better_the_mic_the_better_the_voice">마이크가 좋을수록 나오는 목소리도 좋아져요. 유선 마이크가 있으면 제일 좋고요.</string>
+    <string name="take_your_earbuds_out_before_recording">녹음 전에 이어폰을 빼세요</string>
+    <string name="clothes_soak_up_the_echo">옷이 울림을 먹어 줘서 녹음이 깨끗하게 나와요. 옷장이 없으면 커튼 앞이나 세워 둔 차 안도 괜찮아요. 아래 수치가 조용해지면 시작하세요.</string>
+    <string name="im_ready">준비됐어요</string>
 </resources>
