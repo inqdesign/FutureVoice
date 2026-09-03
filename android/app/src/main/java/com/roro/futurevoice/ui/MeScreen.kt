@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,6 +49,10 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Groups
 import com.roro.futurevoice.ui.brand.FutureselfTheme
+import com.roro.futurevoice.data.AudioPrefs
+import androidx.compose.material3.Slider
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.runtime.mutableFloatStateOf
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +106,7 @@ fun MeScreen(
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingTheme by remember { mutableStateOf(false) }
+    var callVolume by remember { mutableFloatStateOf(AudioPrefs.talkVoiceVolume(context)) }
     var theme by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     LaunchedEffect(Unit) {
         account = AccountStatus.load(AuthRepository()).also { BillingGate.remember(it) }
@@ -280,6 +286,36 @@ fun MeScreen(
             // The palette every Futureself surface reads — the call pill, the
             // home ring, the day card, the widgets. Stored since day one and
             // unchangeable until now.
+            // How loud the fluent self speaks. On Bluetooth a call plays
+            // through the earphone's CALL chain, which the system's
+            // headphone-safety cap does NOT limit — so with that cap on the
+            // call can tower over everything else the app plays. We cannot
+            // detect the cap and will not tell anyone to switch off a
+            // hearing-safety setting; this brings the voice DOWN to meet it.
+            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Icon(Icons.Filled.VolumeUp, contentDescription = null,
+                        modifier = Modifier.size(22.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.call_voice_volume),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f))
+                    Text("${(callVolume * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Slider(
+                    value = callVolume,
+                    onValueChange = { callVolume = it },
+                    onValueChangeFinished = { AudioPrefs.setTalkVoiceVolume(context, callVolume) },
+                    // Never to zero: a slider that can silence the fluent
+                    // self is a way to make the app look broken.
+                    valueRange = 0.25f..1f,
+                    steps = 14,
+                )
+            }
+
             SettingsRow(
                 icon = Icons.Filled.Palette,
                 title = stringResource(R.string.appearance),

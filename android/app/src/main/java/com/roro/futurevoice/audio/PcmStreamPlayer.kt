@@ -19,6 +19,15 @@ class PcmStreamPlayer(private val sampleRate: Int = 22_050) {
     private var track: AudioTrack? = null
     private var writtenFrames: Int = 0
 
+    /**
+     * Playback gain, 0…1 — the learner's own ceiling on the fluent self
+     * (`AudioPrefs.talkVoiceVolume`). This is the call's MAIN path, so
+     * setting it only on the mp3 fallback would leave the slider doing
+     * nothing on almost every turn.
+     */
+    @Volatile var volume: Float = 1f
+        set(value) { field = value.coerceIn(0f, 1f); track?.setVolume(field) }
+
     val isPlaying: Boolean get() = track?.playState == AudioTrack.PLAYSTATE_PLAYING
 
     fun start() {
@@ -52,6 +61,7 @@ class PcmStreamPlayer(private val sampleRate: Int = 22_050) {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
         writtenFrames = 0
+        track?.setVolume(volume)
         track?.play()
     }
 

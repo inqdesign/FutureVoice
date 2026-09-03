@@ -14,6 +14,17 @@ import kotlin.coroutines.resume
  */
 class Mp3Player(private val cacheDir: File) {
 
+    /**
+     * Playback gain, 0…1. Unity everywhere EXCEPT the live call, which is the
+     * one surface the learner can turn down (`AudioPrefs.talkVoiceVolume`) —
+     * on Bluetooth a call plays through the earphone's CALL chain, which the
+     * system's headphone-safety cap does not limit, so it can tower over
+     * every other sound the app makes. Every other surface plays at unity, as
+     * on iOS: a global gain would quietly turn down the shadow reference and
+     * the scene audio too, which are not the thing that was too loud.
+     */
+    @Volatile var volume: Float = 1f
+
     private var player: MediaPlayer? = null
 
     /** Playback head, ms — what karaoke follows. 0 when nothing is playing. */
@@ -56,6 +67,7 @@ class Mp3Player(private val cacheDir: File) {
                 if (cont.isActive) cont.resume(Unit)
                 true
             }
+            setVolume(volume, volume)
             prepare()
             start()
         }

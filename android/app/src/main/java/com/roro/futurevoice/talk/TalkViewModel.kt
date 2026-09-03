@@ -105,8 +105,13 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val eleven = ElevenLabsClient(auth)
     private val live = LiveTranscriber(context)
     private val meter = TalkMeter(auth, viewModelScope, appContext)
-    private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE)
-    private val mp3 = Mp3Player(appContext.cacheDir)
+    private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE).apply {
+        volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext)
+    }
+    private val mp3 = Mp3Player(appContext.cacheDir).apply {
+        // The ONE surface the learner can turn down — see Mp3Player.volume.
+        volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext)
+    }
     private val sessions = SessionStore.shared(appContext)
 
     private val _state = MutableStateFlow(TalkUiState())
