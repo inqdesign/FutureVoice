@@ -86,8 +86,15 @@ final class TalkMeter: ObservableObject {
     private var task: Task<Void, Never>?
     private var sessionKey = ""
 
+    /// Is a call being metered right now? Read by `TalkTimeLog.syncFromServer`
+    /// — while this is true the ledger is still filling, so today's figure may
+    /// only be raised; with no meter running the ledger is the whole day and
+    /// can correct it downward.
+    private(set) static var isRunning = false
+
     func start(sessionId: UUID) {
         stop()
+        Self.isRunning = true
         sessionKey = sessionId.uuidString
         task = Task { [weak self] in
             // Preflight before the first sleep — see type comment.
@@ -114,6 +121,7 @@ final class TalkMeter: ObservableObject {
     func stop() {
         task?.cancel()
         task = nil
+        Self.isRunning = false
     }
 
     private struct TickBody: Encodable {
