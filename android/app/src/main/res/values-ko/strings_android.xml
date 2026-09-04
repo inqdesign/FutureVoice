@@ -122,4 +122,5 @@
     <string name="couldnt_take_it_down">내리지 못했어요. 연결을 확인하고 다시 해 주세요.</string>
     <string name="youre_in_the_pool_other_lld_learners_can_find_you">풀에 올라가 있어요. 다른 %1$s 학습자들이 내 인물을 찾아 대화할 수 있어요.</string>
     <string name="take_your_intro_out_of_the_pool">소개를 풀에서 내릴까요? 이미 만난 학습자들의 지난 대화는 그대로 남아요.</string>
+    <string name="copy">복사</string>
 </resources>

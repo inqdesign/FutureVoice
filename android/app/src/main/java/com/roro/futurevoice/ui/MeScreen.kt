@@ -63,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.AccountEraser
 import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.CardGiftcard
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -97,6 +98,8 @@ fun MeScreen(
     /** Writing and publishing YOUR row. The row below says "publish your
      *  intro", and until now it opened the browser instead. */
     onOpenPublicIntro: () -> Unit,
+    /** The invite page: my code, who joined, and the entry box. */
+    onOpenInvite: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -249,6 +252,15 @@ fun MeScreen(
                         R.string.lld_min_talked_this_month, a.secondsUsedPeriod / 60),
                 )
             }
+            // Invite minutes are spent BEFORE the plan's monthly pool, so
+            // this belongs beside the plan rather than off in a growth
+            // corner: it is talk time, and it comes off the top.
+            SettingsRow(
+                icon = Icons.Filled.CardGiftcard,
+                title = stringResource(R.string.invite_talk_time),
+                subtitle = stringResource(R.string.invite_earn_talk_time),
+                onClick = onOpenInvite,
+            )
             HorizontalDivider()
 
             // ── Daily goal ──

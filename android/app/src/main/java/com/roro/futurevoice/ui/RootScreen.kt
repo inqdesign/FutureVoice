@@ -151,6 +151,7 @@ fun RootScreen() {
     var callCastVoice by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showPublicIntro by remember { mutableStateOf(false) }
+    var showInvite by remember { mutableStateOf(false) }
     // Existing learners appear in Find people automatically. Gated on a real
     // account: an anonymous session's data dies with the install, so
     // publishing it would put a row in the pool nobody can ever talk to
@@ -370,6 +371,8 @@ fun RootScreen() {
         )
 
         // Above Me, so backing out of these lands on Me rather than the tabs.
+        showInvite -> InviteScreen(onBack = { showInvite = false })
+
         showPublicIntro -> PublicIntroScreen(
             persona = state.persona,
             targetLanguage = state.targetLanguage,
@@ -397,6 +400,7 @@ fun RootScreen() {
             hasVoice = state.voiceId != null,
             onOpenPeople = { showMe = false; showPeople = true },
             onOpenPublicIntro = { showPublicIntro = true },
+            onOpenInvite = { showInvite = true },
             onEditProfile = { editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },

@@ -122,4 +122,5 @@
     <string name="couldnt_take_it_down">Couldn\'t take it down — check your connection and try again.</string>
     <string name="youre_in_the_pool_other_lld_learners_can_find_you">You\'re in the pool — other %1$s learners can find and talk with your persona.</string>
     <string name="take_your_intro_out_of_the_pool">Take your intro out of the pool? Learners who already met your persona keep their own past talks.</string>
+    <string name="copy">Copy</string>
 </resources>
