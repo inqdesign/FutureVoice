@@ -31,6 +31,8 @@ data class AppState(
     val restoringVoice: Boolean = false,
     /** The whole magic moment lives on this being non-null after sign-in. */
     val voiceId: String? = null,
+    /** The accent the live clone was remixed with, if any. */
+    val voiceAccentId: String? = null,
     val targetLanguage: String = "en",
     /** Every target the learner has enrolled, in enrollment order. */
     val enrolledLanguages: List<String> = emptyList(),
@@ -57,6 +59,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
                 "futurevoice.level." + (prefs.getString("futurevoice.targetLanguage", null) ?: "en"),
                 null) ?: prefs.getString(LEVEL_KEY, null)),
         enrolledLanguages = LanguageScope.enrolled(appContext),
+        voiceAccentId = prefs.getString(ACCENT_KEY, null),
     ))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
@@ -217,6 +220,26 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         }
     }
 
+    /**
+     * A remixed take was promoted to the live voice.
+     *
+     * The outgoing clone is deleted upstream — a voice slot we pay for, and
+     * there is no way back to it except rebuilding from the saved recording.
+     * That is why applying a take is an explicit choice on its own button and
+     * never a side effect of auditioning one.
+     */
+    fun adoptRemixedVoice(newId: String, accentId: String) {
+        val old = _state.value.voiceId
+        if (newId == old) return
+        _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
+        prefs.edit().putString(ACCENT_KEY, accentId).apply()
+        viewModelScope.launch {
+            if (old != null) {
+                runCatching { com.roro.futurevoice.data.AccountEraser.deleteVoice(old) }
+            }
+        }
+    }
+
     /** A clone just landed on this device — the server row already exists. */
     fun onVoiceCloned(voiceId: String) {
         _state.update { it.copy(voiceId = voiceId) }
@@ -312,6 +335,8 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     private companion object {
         const val SETUP_COMPLETE_KEY = "futurevoice.setupComplete"
         const val NATIVE_KEY = "futurevoice.nativeLanguage"
+        /** Same key name as iOS's defaults key. */
+        const val ACCENT_KEY = "futurevoice.voiceAccentId"
         const val LEVEL_KEY = "futurevoice.proficiency"
         const val GOAL_KEY = "futurevoice.dailyGoalMinutes"
     }

@@ -7,6 +7,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import okhttp3.MediaType.Companion.toMediaType
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -189,5 +191,88 @@ class ElevenLabsClient(private val auth: AuthRepository) {
             )
         if (accept != null) builder.header("Accept", accept)
         return builder.build()
+    }
+}
+
+/**
+ * Accent remixing: audition a few takes of the learner's OWN clone speaking
+ * with an instructed accent, then promote the one they keep.
+ *
+ * Separate from [ElevenLabsClient] because it is a different shape of call —
+ * preview generation runs tens of seconds upstream and comes back as a few MB
+ * of base64 audio, so it needs its own roomier timeout rather than the call
+ * loop's.
+ */
+class VoiceRemixClient(private val auth: com.roro.futurevoice.data.AuthRepository) {
+
+    data class Preview(val id: String, val audio: ByteArray)
+
+    @kotlinx.serialization.Serializable
+    private data class PreviewRow(
+        val generated_voice_id: String = "",
+        val audio_base_64: String = "",
+    )
+
+    @kotlinx.serialization.Serializable
+    private data class PreviewsResponse(val previews: List<PreviewRow> = emptyList())
+
+    @kotlinx.serialization.Serializable
+    private data class SavedResponse(val voice_id: String = "")
+
+    private val slowClient = Edge.client.newBuilder()
+        .readTimeout(180, java.util.concurrent.TimeUnit.SECONDS)
+        .callTimeout(240, java.util.concurrent.TimeUnit.SECONDS)
+        .build()
+
+    /**
+     * Generate accent-remix previews of an existing clone. Same person,
+     * instructed accent — see [com.roro.futurevoice.data.VoiceAccentCatalog]
+     * for the descriptions. [text] is what the previews speak (upstream wants
+     * 100–1000 chars).
+     */
+    suspend fun previews(
+        voiceId: String, voiceDescription: String, text: String,
+    ): List<Preview> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val body = buildJsonObject {
+            put("voice_id", voiceId)
+            put("voice_description", voiceDescription)
+            put("text", text)
+        }
+        val raw = post(body.toString())
+        Edge.json.decodeFromString(PreviewsResponse.serializer(), raw).previews.mapNotNull { p ->
+            runCatching {
+                Preview(p.generated_voice_id, android.util.Base64.decode(p.audio_base_64, 0))
+            }.getOrNull()
+        }
+    }
+
+    /**
+     * Promote the picked preview into a permanent voice and return its id.
+     * The edge function mirrors the new id into `voice_clones`, so the
+     * swap-and-delete machinery treats it exactly like a re-record.
+     */
+    suspend fun save(
+        generatedVoiceId: String, name: String, voiceDescription: String,
+    ): String = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+        val body = buildJsonObject {
+            put("generated_voice_id", generatedVoiceId)
+            put("voice_name", name)
+            put("voice_description", voiceDescription)
+        }
+        Edge.json.decodeFromString(SavedResponse.serializer(), post(body.toString())).voice_id
+    }
+
+    private suspend fun post(json: String): String {
+        val req = okhttp3.Request.Builder()
+            .url(com.roro.futurevoice.core.Config.functionUrl("elevenlabs-voice-remix"))
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("X-Idempotency-Key", java.util.UUID.randomUUID().toString())
+            .post(json.toRequestBody("application/json".toMediaType()))
+            .build()
+        return slowClient.newCall(req).execute().use { resp ->
+            val raw = resp.body.string()
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, raw.take(512))
+            raw
+        }
     }
 }

@@ -123,4 +123,14 @@
     <string name="youre_in_the_pool_other_lld_learners_can_find_you">You\'re in the pool — other %1$s learners can find and talk with your persona.</string>
     <string name="take_your_intro_out_of_the_pool">Take your intro out of the pool? Learners who already met your persona keep their own past talks.</string>
     <string name="copy">Copy</string>
+    <string name="accent">Accent</string>
+    <string name="your_clone_speaking_with_a_different_accent">Your own voice, speaking with a different accent. A clone recorded in your language doesn\'t carry one, so it borrows a default.</string>
+    <string name="hear_some_takes">Hear some takes</string>
+    <string name="making_a_few_takes">Making a few takes…</string>
+    <string name="pick_the_one_that_sounds_most_like_you">Pick the one that sounds most like you</string>
+    <string name="use_this_take">Use this take</string>
+    <string name="this_replaces_your_current_voice">This replaces your current voice. You can always rebuild the original from your saved recording.</string>
+    <string name="couldnt_make_the_takes_try_again">Couldn\'t make the takes — try again.</string>
+    <string name="couldnt_apply_that_take_try_again">Couldn\'t apply that take — try again.</string>
+    <string name="as_recorded">As recorded</string>
 </resources>

@@ -64,6 +64,7 @@ import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.AccountEraser
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Translate
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +101,10 @@ fun MeScreen(
     onOpenPublicIntro: () -> Unit,
     /** The invite page: my code, who joined, and the entry box. */
     onOpenInvite: () -> Unit,
+    /** The live clone, and the accent it was remixed with. */
+    voiceId: String? = null,
+    voiceAccentId: String? = null,
+    onAccentApplied: (voiceId: String, accentId: String) -> Unit = { _, _ -> },
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -132,6 +137,7 @@ fun MeScreen(
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingTheme by remember { mutableStateOf(false) }
     var managingBackup by remember { mutableStateOf(false) }
+    var pickingAccent by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the row says where it has got to.
     var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
@@ -341,6 +347,21 @@ fun MeScreen(
                 subtitle = if (hasVoice) stringResource(R.string.your_cloned_voice)
                 else stringResource(R.string.not_set_up_yet),
             )
+            // A clone recorded in the learner's own language carries no
+            // target-language accent, so the model borrows a default. Only
+            // offered where the catalog has options — an empty picker is
+            // worse than no row.
+            if (hasVoice && com.roro.futurevoice.data.VoiceAccentCatalog
+                    .options(targetLanguage).isNotEmpty()) {
+                SettingsRow(
+                    icon = Icons.Filled.Translate,
+                    title = stringResource(R.string.accent),
+                    subtitle = com.roro.futurevoice.data.VoiceAccentCatalog
+                        .options(targetLanguage).firstOrNull { it.id == voiceAccentId }?.label
+                        ?: stringResource(R.string.as_recorded),
+                    onClick = { pickingAccent = true },
+                )
+            }
             // The palette every Futureself surface reads — the call pill, the
             // home ring, the day card, the widgets. Stored since day one and
             // unchangeable until now.
@@ -563,6 +584,16 @@ fun MeScreen(
                 ) { Text(stringResource(R.string.import_practice_data)) }
             }
         }
+    }
+
+    if (pickingAccent && voiceId != null) {
+        VoiceAccentSheet(
+            voiceId = voiceId,
+            targetLanguage = targetLanguage,
+            appliedAccentId = voiceAccentId,
+            onApplied = onAccentApplied,
+            onDismiss = { pickingAccent = false },
+        )
     }
 
     if (pickingTheme) {
