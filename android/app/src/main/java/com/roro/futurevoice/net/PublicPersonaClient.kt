@@ -6,6 +6,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.JsonObject
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Request
 
 /**
@@ -40,6 +45,135 @@ class PublicPersonaClient(private val auth: AuthRepository) {
     private val columns =
         "id,owner_user_id,display_name,intro,location,occupation,interests," +
             "conversation_style,language,voice_preset_id,kind"
+
+    // MARK: - My own row
+
+    /** Set once the learner edits or takes down their intro BY HAND. After
+     *  that auto-sync never touches the row again — an explicit choice always
+     *  wins over a derived one. */
+    private val manualIntroKey = "futurevoice.publicIntroManaged"
+
+    /** The bar an ACTIVE pool row must clear, enforced in the database
+     *  (`public_personas_intro_bounds`). A one-liner can't carry a
+     *  conversation, and the same bar keeps thin rows out of the pool. */
+    private val MIN_INTRO = 80
+
+    /**
+     * Publish the learner's onboarding profile into the pool, so existing
+     * users appear without doing anything.
+     *
+     * Skipped entirely once the learner has managed the row by hand, and for
+     * a profile too thin to carry a conversation — the pool's whole value is
+     * that a row can be talked to.
+     */
+    suspend fun autoSyncMyPersona(
+        context: android.content.Context,
+        persona: com.roro.futurevoice.talk.UserPersona?,
+        language: String,
+    ) {
+        if (context.getSharedPreferences("futurevoice", 0).getBoolean(manualIntroKey, false)) return
+        val p = persona ?: return
+        if (!isMinimallyComplete(p)) return
+        val intro = composedIntro(p)
+        // 80 because the DATABASE says 80: `public_personas_intro_bounds`
+        // rejects any active row under it. A lower client bar doesn't publish
+        // thinner rows, it just fails the write silently on every launch —
+        // and leaves the learner believing they are in the pool.
+        if (intro.length < MIN_INTRO) return
+        val uid = auth.userId ?: return
+        // Stable per-user voice pick so "you" doesn't change voices between
+        // launches — hash the user id into the preset catalog.
+        val catalog = com.roro.futurevoice.talk.StockPerson.catalog
+        val voice = catalog[Math.floorMod(uid.hashCode(), catalog.size)]
+        runCatching {
+            publishMine(
+                displayName = p.displayName,
+                intro = intro,
+                location = listOf(p.city, p.country).filter { it.isNotBlank() }.joinToString(", "),
+                occupation = p.occupation,
+                interests = p.interests.joinToString(", "),
+                voicePresetId = voice.voiceId,
+                language = language,
+            )
+        }
+    }
+
+    /**
+     * The onboarding profile, folded into one spoken-style paragraph. The
+     * learner wrote these fields in their own words (often their native
+     * language) — the conversation prompt's language guard keeps the talk in
+     * the target language regardless.
+     *
+     * It reads ONLY fields the user typed about themselves. What the fluent
+     * self learned in a call (`learnedNotes`) is deliberately absent:
+     * something said to your own future self was not said to strangers.
+     */
+    private fun composedIntro(p: com.roro.futurevoice.talk.UserPersona): String {
+        val parts = ArrayList<String>()
+        if (p.occupation.isNotBlank()) parts.add(p.occupation)
+        if (p.household.isNotBlank()) parts.add(p.household)
+        if (p.lengthOfStay.isNotBlank() && p.city.isNotBlank()) parts.add("${p.city} · ${p.lengthOfStay}")
+        if (p.situations.isNotEmpty()) parts.add(p.situations.joinToString(", "))
+        if (p.freeNotes.isNotBlank()) parts.add(p.freeNotes)
+        return parts.joinToString("\n")
+    }
+
+    private fun isMinimallyComplete(p: com.roro.futurevoice.talk.UserPersona): Boolean {
+        val core = p.displayName.isNotBlank() && p.city.isNotBlank()
+        val context = p.occupation.isNotBlank() || p.household.isNotBlank() ||
+            p.interests.isNotEmpty() || p.situations.isNotEmpty()
+        return core && context
+    }
+
+    /** Upsert by hand: the table has no unique key on (owner, language), so a
+     *  blind insert would give one learner two rows in the same pool. */
+    suspend fun publishMine(
+        displayName: String, intro: String, location: String, occupation: String,
+        interests: String, voicePresetId: String, language: String,
+    ) = withContext(Dispatchers.IO) {
+        val uid = auth.userId ?: return@withContext
+        val row = buildJsonObject {
+            put("owner_user_id", uid)
+            put("display_name", displayName)
+            put("intro", intro)
+            put("location", location)
+            put("occupation", occupation)
+            put("interests", interests)
+            put("language", language)
+            put("voice_preset_id", voicePresetId)
+            put("is_active", true)
+        }
+        val existing = fetchMine(language)
+        val base = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas"
+        val url = if (existing != null) "$base?id=eq.${existing.id}" else base
+        val body = Edge.json.encodeToString(JsonObject.serializer(), row)
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder().url(url)
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .header("Prefer", "return=minimal")
+            .let { if (existing != null) it.patch(body) else it.post(body) }
+            .build()
+        Edge.client.newCall(req).execute().use { resp ->
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
+        }
+    }
+
+    /** The learner's own row for one language, if they have one. */
+    suspend fun fetchMine(language: String): PublicPersona? = withContext(Dispatchers.IO) {
+        val uid = auth.userId ?: return@withContext null
+        val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
+            "?select=$columns&language=eq.$language&owner_user_id=eq.$uid"
+        val req = Request.Builder().url(url)
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .build()
+        Edge.client.newCall(req).execute().use { resp ->
+            val raw = resp.body.string()
+            if (resp.code !in 200..299) return@use null
+            Edge.json.decodeFromString(ListSerializer(PublicPersona.serializer()), raw).firstOrNull()
+        }
+    }
 
     /**
      * The whole active pool for one language — curated-catalog sized (tens,

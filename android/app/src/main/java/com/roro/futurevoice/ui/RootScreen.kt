@@ -149,6 +149,13 @@ fun RootScreen() {
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
+    // Existing learners appear in Find people automatically. Gated on a real
+    // account: an anonymous session's data dies with the install, so
+    // publishing it would put a row in the pool nobody can ever talk to
+    // again.
+    LaunchedEffect(state.signedIn, state.isAnonymous, state.persona, state.targetLanguage) {
+        if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
+    }
     var showPeople by remember { mutableStateOf(false) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }

@@ -191,7 +191,30 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     fun savePersona(persona: com.roro.futurevoice.talk.UserPersona) {
         _state.update { it.copy(persona = persona) }
-        viewModelScope.launch { PersonaStore.shared(appContext).save(persona) }
+        viewModelScope.launch {
+            PersonaStore.shared(appContext).save(persona)
+            // Keep the learner's Find-people presence in step with their
+            // profile (a no-op once they manage their intro by hand).
+            syncPublicPersona()
+        }
+    }
+
+    /**
+     * Mirror the onboarding profile into the shared Find-people pool, so an
+     * existing learner appears without doing anything.
+     *
+     * Called at app start and whenever the profile changes. Never throws into
+     * the caller: a pool the learner cannot reach is not a reason to break
+     * the app they opened.
+     */
+    fun syncPublicPersona() {
+        viewModelScope.launch {
+            val s = _state.value
+            runCatching {
+                com.roro.futurevoice.net.PublicPersonaClient(auth)
+                    .autoSyncMyPersona(appContext, s.persona, s.targetLanguage)
+            }
+        }
     }
 
     /** A clone just landed on this device — the server row already exists. */
