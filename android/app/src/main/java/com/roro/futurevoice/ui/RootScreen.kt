@@ -153,6 +153,7 @@ fun RootScreen() {
     var showPublicIntro by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
+    var showPlanPage by remember { mutableStateOf(false) }
     // Existing learners appear in Find people automatically. Gated on a real
     // account: an anonymous session's data dies with the install, so
     // publishing it would put a row in the pool nobody can ever talk to
@@ -374,6 +375,12 @@ fun RootScreen() {
         // Above Me, so backing out of these lands on Me rather than the tabs.
         showCreditGuide -> CreditGuideScreen(onBack = { showCreditGuide = false })
 
+        showPlanPage -> PlanPageScreen(
+            onOpenCreditGuide = { showCreditGuide = true },
+            onOpenInvite = { showInvite = true },
+            onBack = { showPlanPage = false },
+        )
+
         showInvite -> InviteScreen(onBack = { showInvite = false })
 
         showPublicIntro -> PublicIntroScreen(
@@ -403,8 +410,7 @@ fun RootScreen() {
             hasVoice = state.voiceId != null,
             onOpenPeople = { showMe = false; showPeople = true },
             onOpenPublicIntro = { showPublicIntro = true },
-            onOpenInvite = { showInvite = true },
-            onOpenCreditGuide = { showCreditGuide = true },
+            onOpenPlanPage = { showPlanPage = true },
             voiceId = state.voiceId,
             voiceAccentId = state.voiceAccentId,
             onAccentApplied = app::adoptRemixedVoice,

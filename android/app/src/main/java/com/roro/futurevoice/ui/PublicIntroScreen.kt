@@ -200,7 +200,7 @@ fun PublicIntroScreen(
             }
             GroupedFooter(stringResource(R.string.a_stock_voice_that_plays_you))
 
-            androidx.compose.foundation.layout.Spacer(Modifier.height(24.dp))
+            GroupedSectionSpacer()
             GroupedCard {
                 Row(
                     Modifier.fillMaxWidth()

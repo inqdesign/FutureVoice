@@ -1,6 +1,8 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -31,6 +33,13 @@ fun GroupedSectionHeader(text: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 6.dp),
     )
+}
+
+/** The gap between two cards that have no header between them — iOS's
+ *  section spacing. An empty header would leave a taller, uneven gap. */
+@Composable
+fun GroupedSectionSpacer() {
+    Spacer(Modifier.height(22.dp))
 }
 
 @Composable

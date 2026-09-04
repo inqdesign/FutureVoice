@@ -66,6 +66,10 @@ import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -100,10 +104,8 @@ fun MeScreen(
     /** Writing and publishing YOUR row. The row below says "publish your
      *  intro", and until now it opened the browser instead. */
     onOpenPublicIntro: () -> Unit,
-    /** The invite page: my code, who joined, and the entry box. */
-    onOpenInvite: () -> Unit,
-    /** "What uses talk time?" — the transparency page. */
-    onOpenCreditGuide: () -> Unit,
+    /** Me → Talk time: the month, the plan, then help. */
+    onOpenPlanPage: () -> Unit,
     /** The live clone, and the accent it was remixed with. */
     voiceId: String? = null,
     voiceAccentId: String? = null,
@@ -188,119 +190,128 @@ fun MeScreen(
         }
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground).padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp).padding(bottom = 32.dp),
         ) {
             // ── Profile ──
-            Column(Modifier.fillMaxWidth().clickable { onEditProfile() }) {
-                Text(stringResource(R.string.profile), style = MaterialTheme.typography.titleMedium)
-                Text(
+            GroupedCard {
+                MeRow(Icons.Filled.Person, stringResource(R.string.profile),
                     listOfNotNull(persona?.displayName?.takeIf { it.isNotBlank() },
                         persona?.city?.takeIf { it.isNotBlank() }).joinToString(" · ")
                         .ifEmpty { email.orEmpty() },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // What the future self has learned — the other half of the
-            // profile. Each note removable; the learner can always correct
-            // the memory.
-            persona?.learnedNotes?.takeIf { it.isNotEmpty() }?.let { notes ->
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    notes.forEach { note ->
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(note.text, style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.weight(1f))
-                            TextButton(onClick = {
-                                onSavePersona(persona.copy(
-                                    learnedNotes = persona.learnedNotes.filterNot { it.id == note.id }))
-                            }) { Text("×") }
-                        }
+                    onClick = onEditProfile)
+                // What the future self has learned — the other half of the
+                // profile. Each note removable; the learner can always
+                // correct the memory.
+                persona?.learnedNotes?.takeIf { it.isNotEmpty() }?.forEach { note ->
+                    GroupedRowDivider()
+                    Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(note.text, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f).padding(vertical = 10.dp))
+                        TextButton(onClick = {
+                            onSavePersona(persona.copy(
+                                learnedNotes = persona.learnedNotes.filterNot { it.id == note.id }))
+                        }) { Text("×") }
                     }
                 }
             }
+
             // ── Subscribe / Subscription ──
-            // Directly under the profile and on its own: this is the one
-            // control that decides whether the app works at all, and burying
-            // it three rows inside a "Plan & talk time" page made it read as
-            // an accounting detail.
-            Column(Modifier.fillMaxWidth().clickable { onOpenPaywall() }) {
-                Text(
-                    stringResource(
-                        if (account?.isEntitled == true) R.string.subscription
-                        else R.string.subscribe),
-                    style = MaterialTheme.typography.titleMedium,
-                )
+            // On its own and first: this is the one control that decides
+            // whether the app works at all.
+            GroupedSectionSpacer()
+            GroupedCard {
                 val acct = account
-                Text(
+                MeRow(Icons.Filled.AutoAwesome,
+                    stringResource(
+                        if (acct?.isEntitled == true) R.string.subscription
+                        else R.string.subscribe),
                     when {
                         acct == null -> stringResource(R.string.checking)
                         acct.isEntitled -> {
-                            // What was SPENT, never what is left. A remainder
-                            // is a monthly receipt for time NOT used; it reads
-                            // as money wasted and is the likeliest thing to
-                            // end a subscription.
-                            val spent = acct.secondsUsedPeriod / 60
                             val tier = if (acct.isPlusPlan) stringResource(R.string.plus)
                             else stringResource(R.string.light)
-                            "$tier · " + stringResource(R.string.lld_min_talked_this_month, spent)
+                            "$tier · " + stringResource(
+                                R.string.lld_min_talked_this_month, acct.secondsUsedPeriod / 60)
                         }
-                        else -> stringResource(R.string.see_the_plans)
+                        else -> stringResource(R.string.talking_needs_a_plan_19fb7a)
                     },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                    onClick = onOpenPaywall)
             }
-            // What was SPENT, never what is left. A remainder is a monthly
-            // receipt for time NOT used; it reads as money wasted.
-            account?.takeIf { it.isEntitled }?.let { a ->
-                SettingsRow(
-                    icon = Icons.Filled.Bolt,
-                    title = stringResource(R.string.talk_time),
-                    subtitle = stringResource(
-                        R.string.lld_min_talked_this_month, a.secondsUsedPeriod / 60),
-                )
-            }
-            // Invite minutes are spent BEFORE the plan's monthly pool, so
-            // this belongs beside the plan rather than off in a growth
-            // corner: it is talk time, and it comes off the top.
-            // Same pair and same order as iOS's plan page: the transparency
-            // page, then the invite.
-            SettingsRow(
-                icon = Icons.Filled.HelpOutline,
-                title = stringResource(R.string.what_uses_talk_time),
-                subtitle = stringResource(R.string.and_what_s_always_free),
-                onClick = onOpenCreditGuide,
-            )
-            SettingsRow(
-                icon = Icons.Filled.CardGiftcard,
-                title = stringResource(R.string.invite_earn_talk_time),
-                subtitle = stringResource(R.string.lld_minutes_each_per_friend,
-                    com.roro.futurevoice.net.ReferralClient.bonusMinutes),
-                onClick = onOpenInvite,
-            )
-            HorizontalDivider()
 
-            // ── Daily goal ──
-            Column {
-                Text(stringResource(R.string.daily_goal), style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5, 10, 15, 20, 30).forEach { m ->
-                        FilterChip(selected = goal == m, onClick = {
-                            goal = m
-                            context.getSharedPreferences("futurevoice", 0).edit()
-                                .putInt("futurevoice.dailyGoalMinutes", m).apply()
-                        }, label = { Text(stringResource(R.string.lld_min_a_day, m)) })
+            // ── Talk time, and the club ──
+            GroupedSectionSpacer()
+            GroupedCard {
+                // What was SPENT, never what is left: a remainder is a
+                // monthly receipt for time NOT used.
+                MeRow(Icons.Filled.Bolt, stringResource(R.string.talk_time),
+                    account?.let {
+                        stringResource(R.string.lld_min_talked_this_month,
+                            it.secondsUsedPeriod / 60)
+                    } ?: stringResource(R.string.checking),
+                    onClick = onOpenPlanPage)
+                GroupedRowDivider()
+                MeRow(Icons.Filled.WorkspacePremium, stringResource(R.string.the_core),
+                    coreSubtitle(coreProgress), onClick = null)
+            }
+            coreProgress?.let { GroupedFooter(coreFooter(it)) }
+
+            // ── Practice ──
+            GroupedSectionHeader(stringResource(R.string.practice))
+            GroupedCard {
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.daily_goal))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(5, 10, 15, 20, 30).forEach { m ->
+                            FilterChip(selected = goal == m, onClick = {
+                                goal = m
+                                context.getSharedPreferences("futurevoice", 0).edit()
+                                    .putInt("futurevoice.dailyGoalMinutes", m).apply()
+                            }, label = { Text(stringResource(R.string.lld_min_a_day, m)) })
+                        }
                     }
                 }
+                GroupedRowDivider(inset = false)
+                // Switching is a chip, not a page: every store already takes
+                // the language as a parameter, so a switch is only a change
+                // of which one they are handed.
+                Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.learn_which_language))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        enrolledLanguages.forEach { code ->
+                            FilterChip(
+                                selected = code == targetLanguage,
+                                onClick = { if (code != targetLanguage) onSwitchLanguage(code) },
+                                label = { Text(LanguageCatalog.endonym(code)) },
+                            )
+                        }
+                        // Never gated on a plan: every server pool is keyed
+                        // per ACCOUNT with no language in it, so a second
+                        // language adds no cost.
+                        AssistChip(
+                            onClick = { addingLanguage = true },
+                            label = { Text(stringResource(R.string.add_a_language)) },
+                        )
+                    }
+                    Text(
+                        LanguageCatalog.ownName(targetLanguage, nativeLanguage),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
-            HorizontalDivider()
 
-            // ── Daily call — the habit anchor. Answering opens the talk. ──
-            Column {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(stringResource(R.string.daily_call),
-                        style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            // ── Call — the habit anchor. Answering opens the talk. ──
+            GroupedSectionHeader(stringResource(R.string.call))
+            GroupedCard {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.daily_call), Modifier.weight(1f))
                     androidx.compose.material3.Switch(checked = callEnabled, onCheckedChange = { on ->
                         callEnabled = on
                         com.roro.futurevoice.data.DailyCallStore.set(context, on, callHour, 0)
@@ -308,7 +319,11 @@ fun MeScreen(
                     })
                 }
                 if (callEnabled) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GroupedRowDivider(inset = false)
+                    FlowRow(
+                        Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         listOf(7, 8, 9, 12, 19, 21).forEach { h ->
                             FilterChip(selected = callHour == h, onClick = {
                                 callHour = h
@@ -318,171 +333,105 @@ fun MeScreen(
                     }
                 }
             }
-            HorizontalDivider()
 
-            // ── Learning language ──
-            // Switching is a chip, not a page: every store already takes the
-            // language as a parameter, so a switch is only a change of which
-            // one they are handed — nothing is copied and nothing is cleared.
-            Column {
-                Text(stringResource(R.string.learn_which_language), style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    enrolledLanguages.forEach { code ->
-                        FilterChip(
-                            selected = code == targetLanguage,
-                            onClick = { if (code != targetLanguage) onSwitchLanguage(code) },
-                            label = { Text(LanguageCatalog.endonym(code)) },
-                        )
-                    }
-                    // Never gated on a plan: every server pool is keyed per
-                    // ACCOUNT with no language in it, so a second language
-                    // adds no cost. Someone splitting five minutes across
-                    // three languages is spending their own time.
-                    AssistChip(
-                        onClick = { addingLanguage = true },
-                        label = { Text(stringResource(R.string.add_a_language)) },
-                    )
+            // ── The voice, and how it reaches the learner's ears ──
+            GroupedSectionSpacer()
+            GroupedCard {
+                MeRow(Icons.Filled.RecordVoiceOver, stringResource(R.string.voice),
+                    if (hasVoice) stringResource(R.string.your_cloned_voice)
+                    else stringResource(R.string.not_set_up_yet),
+                    onClick = null)
+                // A clone recorded in the learner's own language carries no
+                // target-language accent, so the model borrows a default.
+                // Only offered where the catalog has options — an empty
+                // picker is worse than no row.
+                if (hasVoice && com.roro.futurevoice.data.VoiceAccentCatalog
+                        .options(targetLanguage).isNotEmpty()) {
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.Translate, stringResource(R.string.accent),
+                        com.roro.futurevoice.data.VoiceAccentCatalog
+                            .options(targetLanguage).firstOrNull { it.id == voiceAccentId }?.label
+                            ?: stringResource(R.string.as_recorded),
+                        onClick = { pickingAccent = true })
                 }
-                Text(
-                    LanguageCatalog.ownName(targetLanguage, nativeLanguage),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            HorizontalDivider()
-
-            // The clone itself. There was no way to even SEE whether a voice
-            // existed on this account, let alone which one.
-            SettingsRow(
-                icon = Icons.Filled.RecordVoiceOver,
-                title = stringResource(R.string.voice),
-                subtitle = if (hasVoice) stringResource(R.string.your_cloned_voice)
-                else stringResource(R.string.not_set_up_yet),
-            )
-            // A clone recorded in the learner's own language carries no
-            // target-language accent, so the model borrows a default. Only
-            // offered where the catalog has options — an empty picker is
-            // worse than no row.
-            if (hasVoice && com.roro.futurevoice.data.VoiceAccentCatalog
-                    .options(targetLanguage).isNotEmpty()) {
-                SettingsRow(
-                    icon = Icons.Filled.Translate,
-                    title = stringResource(R.string.accent),
-                    subtitle = com.roro.futurevoice.data.VoiceAccentCatalog
-                        .options(targetLanguage).firstOrNull { it.id == voiceAccentId }?.label
-                        ?: stringResource(R.string.as_recorded),
-                    onClick = { pickingAccent = true },
-                )
-            }
-            // The palette every Futureself surface reads — the call pill, the
-            // home ring, the day card, the widgets. Stored since day one and
-            // unchangeable until now.
-            // How loud the fluent self speaks. On Bluetooth a call plays
-            // through the earphone's CALL chain, which the system's
-            // headphone-safety cap does NOT limit — so with that cap on the
-            // call can tower over everything else the app plays. We cannot
-            // detect the cap and will not tell anyone to switch off a
-            // hearing-safety setting; this brings the voice DOWN to meet it.
-            Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Icon(Icons.Filled.VolumeUp, contentDescription = null,
-                        modifier = Modifier.size(22.dp),
-                        tint = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.call_voice_volume),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.weight(1f))
-                    Text("${(callVolume * 100).toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Slider(
-                    value = callVolume,
-                    onValueChange = { callVolume = it },
-                    onValueChangeFinished = { AudioPrefs.setTalkVoiceVolume(context, callVolume) },
-                    // Never to zero: a slider that can silence the fluent
-                    // self is a way to make the app look broken.
-                    valueRange = 0.25f..1f,
-                    steps = 14,
-                )
-            }
-
-            SettingsRow(
-                icon = Icons.Filled.Palette,
-                title = stringResource(R.string.appearance),
-                subtitle = theme.label,
-                onClick = { pickingTheme = true },
-            )
-            // Moving progress between INSTALLS — the dev build and the
-            // release build are separate sandboxes, so practice done in one
-            // never reaches the other by itself. The envelope is iOS's, so a
-            // backup written on an iPhone opens here.
-            SettingsRow(
-                icon = Icons.Filled.PrivacyTip,
-                title = stringResource(R.string.privacy),
-                subtitle = if (com.roro.futurevoice.data.ConsentStore.hasVoiceConsent(context))
-                    stringResource(R.string.voice_consent_policy)
-                else stringResource(R.string.policy),
-                onClick = onOpenPrivacy,
-            )
-            SettingsRow(
-                icon = Icons.Filled.ImportExport,
-                title = stringResource(R.string.practice_data),
-                subtitle = backupStep?.let { stepLabel(it) }
-                    ?: stringResource(R.string.export_or_import_this_devices_practice),
-                onClick = if (backupStep == null) ({ managingBackup = true }) else null,
-            )
-            SettingsRow(
-                icon = Icons.Filled.Groups,
-                title = stringResource(R.string.find_people),
-                subtitle = stringResource(R.string.publish_your_intro),
-                onClick = onOpenPublicIntro,
-            )
-            HorizontalDivider()
-
-            // ── The Core — a standing and a record, and it grants NOTHING.
-            // Numbers only, no grid: the progress IS the number.
-            coreProgress?.let { core ->
-                Column {
+                GroupedRowDivider()
+                // How loud the fluent self speaks. On Bluetooth a call plays
+                // through the earphone's CALL chain, which the system's
+                // headphone-safety cap does NOT limit — so with that cap on
+                // the call can tower over everything else the app plays. We
+                // cannot detect the cap and will not tell anyone to switch
+                // off a hearing-safety setting; this brings the voice DOWN
+                // to meet it.
+                Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(stringResource(R.string.the_core),
-                            style = MaterialTheme.typography.titleMedium)
-                        if (core.seated) CoreSeal()
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.VolumeUp, contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.call_voice_volume), Modifier.weight(1f))
+                        Text("${(callVolume * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text(
-                        if (core.seated) stringResource(R.string.you_re_in)
-                        // A BAR, never a rank: how many days in a row, against
-                        // the entry streak. No grid — the progress is the number.
-                        else "${core.streak} / ${core.entry_streak}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Slider(
+                        value = callVolume,
+                        onValueChange = { callVolume = it },
+                        onValueChangeFinished = { AudioPrefs.setTalkVoiceVolume(context, callVolume) },
+                        // Never to zero: a slider that can silence the fluent
+                        // self is a way to make the app look broken.
+                        valueRange = 0.25f..1f,
+                        steps = 14,
                     )
-                    Text(stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                GroupedRowDivider()
+                MeRow(Icons.Filled.Groups, stringResource(R.string.find_people),
+                    stringResource(R.string.publish_your_intro),
+                    onClick = onOpenPublicIntro)
             }
-            HorizontalDivider()
+
+            GroupedSectionSpacer()
+            GroupedCard {
+                MeRow(Icons.Filled.Palette, stringResource(R.string.appearance),
+                    theme.label, onClick = { pickingTheme = true })
+                GroupedRowDivider()
+                // Moving progress between INSTALLS — the dev build and the
+                // release build are separate sandboxes. The envelope is
+                // iOS's, so a backup written on an iPhone opens here.
+                MeRow(Icons.Filled.ImportExport, stringResource(R.string.practice_data),
+                    backupStep?.let { stepLabel(it) }
+                        ?: stringResource(R.string.export_or_import_this_devices_practice),
+                    onClick = if (backupStep == null) ({ managingBackup = true }) else null)
+                GroupedRowDivider()
+                MeRow(Icons.Filled.PrivacyTip, stringResource(R.string.privacy),
+                    if (com.roro.futurevoice.data.ConsentStore.hasVoiceConsent(context))
+                        stringResource(R.string.voice_consent_policy)
+                    else stringResource(R.string.policy),
+                    onClick = onOpenPrivacy)
+            }
 
             // ── Account ──
-            Text(email.orEmpty(), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (com.roro.futurevoice.BuildConfig.DEBUG) {
-                TextButton(onClick = { com.roro.futurevoice.data.DailyCallScheduler.ring(context) }) {
-                    Text("Ring now (debug)")
+            GroupedSectionSpacer()
+            GroupedCard {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp)) {
+                    Text(email.orEmpty(), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-            }
-            TextButton(onClick = { confirmingSignOut = true }) {
-                Text(stringResource(R.string.sign_out_dc1649), color = MaterialTheme.colorScheme.error)
-            }
-            // Play requires an in-app path to account deletion for any app
-            // that creates accounts, and it has to be reachable — not behind
-            // a support email. It sits under Sign out because that is where
-            // someone looking to leave will already be.
-            TextButton(onClick = { confirmingDelete = true }, enabled = !deleting) {
-                Text(stringResource(R.string.delete_account),
-                    color = MaterialTheme.colorScheme.error)
+                if (com.roro.futurevoice.BuildConfig.DEBUG) {
+                    GroupedRowDivider(inset = false)
+                    PlainActionRow("Ring now (debug)",
+                        MaterialTheme.colorScheme.primary) {
+                        com.roro.futurevoice.data.DailyCallScheduler.ring(context)
+                    }
+                }
+                GroupedRowDivider(inset = false)
+                PlainActionRow(stringResource(R.string.sign_out_dc1649),
+                    MaterialTheme.colorScheme.error) { confirmingSignOut = true }
+                GroupedRowDivider(inset = false)
+                // Play requires an in-app path to account deletion for any
+                // app that creates accounts, and it has to be reachable —
+                // not behind a support email.
+                PlainActionRow(stringResource(R.string.delete_account),
+                    MaterialTheme.colorScheme.error) { if (!deleting) confirmingDelete = true }
             }
         }
     }
@@ -719,3 +668,67 @@ private fun stepLabel(step: BackupService.Step): String = when (step) {
     is BackupService.Step.Writing ->
         stringResource(R.string.restoring_lld_of_lld, step.done, step.total)
 }
+
+/**
+ * One settings row inside a grouped card.
+ *
+ * The subtitle is the SETTING'S CURRENT VALUE, not a description of the
+ * screen behind it — that is what lets the page be read without opening
+ * anything.
+ */
+@Composable
+private fun MeRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String?,
+    onClick: (() -> Unit)?,
+) {
+    Row(
+        Modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
+            tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text(title)
+            subtitle?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (onClick != null) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** A destructive or plain action, drawn as a list row rather than a button —
+ *  the same shape iOS gives a `Button` inside a `Form`. */
+@Composable
+private fun PlainActionRow(
+    title: String,
+    color: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+    ) { Text(title, color = color) }
+}
+
+/** A BAR, never a rank: how many days in a row, against the entry streak. */
+@Composable
+private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
+    core == null -> ""
+    core.seated -> stringResource(R.string.you_re_in)
+    else -> "${core.streak} / ${core.entry_streak}"
+}
+
+@Composable
+private fun coreFooter(core: CoreClubClient.Progress): String =
+    stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter)
