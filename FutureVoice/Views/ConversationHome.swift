@@ -503,16 +503,19 @@ struct ConversationHome: View {
             : "Opens activity calendar.")
     }
 
+    /// The day's talk time on a clock face — and nothing else.
+    ///
+    /// It used to read "3 of 10 min today", which is the RING's sentence: the
+    /// arc already says how much of the goal is spent, so the words repeated
+    /// it and had no room left for the one thing the ring cannot show — how
+    /// long you actually talked. Floored minutes also called a 42-second day
+    /// zero (2026-09-05) while the arc had visibly moved. mm:ss says both, at
+    /// every size of day, and keeps counting past the goal (10:11) rather
+    /// than stopping at a congratulation.
     private var goalHeadline: String {
         let secs = todaySpokenSeconds
-        let mins = secs / 60
-        if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
-        if secs == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
-        // A talk that hasn't reached a minute still happened — the ring has
-        // already moved for it, so the line must not still be asking for the
-        // first word (see PracticeStats.talkTimeText).
-        if mins == 0 { return chrome("\(secs) sec of \(effectiveGoalMinutes) min today") }
-        return chrome("\(mins) of \(effectiveGoalMinutes) min today")
+        guard secs > 0 else { return chrome("Today's goal \(effectiveGoalMinutes) min") }
+        return String(format: "%02d:%02d", secs / 60, secs % 60)
     }
 
 
