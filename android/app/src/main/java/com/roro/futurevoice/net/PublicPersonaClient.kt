@@ -48,15 +48,18 @@ class PublicPersonaClient(private val auth: AuthRepository) {
 
     // MARK: - My own row
 
-    /** Set once the learner edits or takes down their intro BY HAND. After
-     *  that auto-sync never touches the row again — an explicit choice always
-     *  wins over a derived one. */
-    private val manualIntroKey = "futurevoice.publicIntroManaged"
+    companion object {
+        /** Set once the learner edits or takes down their intro BY HAND.
+         *  After that auto-sync never touches the row again — an explicit
+         *  choice always wins over a derived one. */
+        const val MANUAL_INTRO_KEY = "futurevoice.publicIntroManaged"
 
-    /** The bar an ACTIVE pool row must clear, enforced in the database
-     *  (`public_personas_intro_bounds`). A one-liner can't carry a
-     *  conversation, and the same bar keeps thin rows out of the pool. */
-    private val MIN_INTRO = 80
+        /** The bar an ACTIVE pool row must clear, enforced in the database
+         *  (`public_personas_intro_bounds`). A one-liner can't carry a
+         *  conversation, and the same bar keeps thin rows out of the pool. */
+        const val MIN_INTRO = 80
+    }
+
 
     /**
      * Publish the learner's onboarding profile into the pool, so existing
@@ -71,7 +74,7 @@ class PublicPersonaClient(private val auth: AuthRepository) {
         persona: com.roro.futurevoice.talk.UserPersona?,
         language: String,
     ) {
-        if (context.getSharedPreferences("futurevoice", 0).getBoolean(manualIntroKey, false)) return
+        if (context.getSharedPreferences("futurevoice", 0).getBoolean(MANUAL_INTRO_KEY, false)) return
         val p = persona ?: return
         if (!isMinimallyComplete(p)) return
         val intro = composedIntro(p)
@@ -153,6 +156,28 @@ class PublicPersonaClient(private val auth: AuthRepository) {
             .header("apikey", Config.supabaseAnonKey)
             .header("Prefer", "return=minimal")
             .let { if (existing != null) it.patch(body) else it.post(body) }
+            .build()
+        Edge.client.newCall(req).execute().use { resp ->
+            if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))
+        }
+    }
+
+    /**
+     * Take the learner's row out of the pool for this language.
+     *
+     * Learners who already met the persona keep their own past talks — those
+     * are ordinary sessions on their own device, and nothing here reaches
+     * them.
+     */
+    suspend fun withdrawMine(language: String) = withContext(Dispatchers.IO) {
+        val uid = auth.userId ?: return@withContext
+        val url = "${Config.supabaseUrl.trimEnd('/')}/rest/v1/public_personas" +
+            "?owner_user_id=eq.$uid&language=eq.$language"
+        val req = Request.Builder().url(url)
+            .header("Authorization", "Bearer ${auth.accessToken()}")
+            .header("apikey", Config.supabaseAnonKey)
+            .header("Prefer", "return=minimal")
+            .delete()
             .build()
         Edge.client.newCall(req).execute().use { resp ->
             if (resp.code !in 200..299) throw EdgeError.Http(resp.code, resp.body.string().take(512))

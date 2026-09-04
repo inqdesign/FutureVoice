@@ -115,4 +115,11 @@
     <string name="that_file_held_no_practice_data">That file held no practice data — nothing was restored. Export again from the other install and check the file is the one you just made.</string>
     <string name="restored_lld_files_and_lld_settings">Restored %1$d files and %2$d settings. Quit the app completely and reopen it.</string>
     <string name="tap_to_toggle_or_type_your_own">Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.</string>
+    <string name="the_name_other_learners_will_see">The name other learners will see — first name or nickname is plenty.</string>
+    <string name="write_it_in_lld_its_what_you_will_talk_from">Write it in %1$s — it\'s what “you” will talk from, and writing it is practice too. The specific beats the polished: your job, your town, the thing you\'d actually talk about for an hour.</string>
+    <string name="a_stock_voice_that_plays_you">A stock voice that plays “you” — your cloned voice is never used, and nobody\'s talks with your persona are ever shown to you or anyone else.</string>
+    <string name="couldnt_publish_check_your_connection">Couldn\'t publish — check your connection and try again.</string>
+    <string name="couldnt_take_it_down">Couldn\'t take it down — check your connection and try again.</string>
+    <string name="youre_in_the_pool_other_lld_learners_can_find_you">You\'re in the pool — other %1$s learners can find and talk with your persona.</string>
+    <string name="take_your_intro_out_of_the_pool">Take your intro out of the pool? Learners who already met your persona keep their own past talks.</string>
 </resources>

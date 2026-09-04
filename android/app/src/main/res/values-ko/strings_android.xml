@@ -115,4 +115,11 @@
     <string name="that_file_held_no_practice_data">그 파일엔 연습 데이터가 없어서 아무것도 복원되지 않았어요. 다른 기기에서 다시 내보내고, 방금 만든 파일이 맞는지 확인해 주세요.</string>
     <string name="restored_lld_files_and_lld_settings">파일 %1$d개와 설정 %2$d개를 복원했어요. 앱을 완전히 종료했다 다시 열어 주세요.</string>
     <string name="tap_to_toggle_or_type_your_own">눌러서 켜고 끄거나, 직접 써서 엔터를 누르세요. 여기에 맞는 오늘 기사가 “뉴스”에 나와요.</string>
+    <string name="the_name_other_learners_will_see">다른 학습자에게 보일 이름이에요. 이름이나 별명이면 충분해요.</string>
+    <string name="write_it_in_lld_its_what_you_will_talk_from">%1$s로 쓰세요. “나”가 여기서 말하게 되고, 쓰는 것 자체가 연습이에요. 다듬은 문장보다 구체적인 게 나아요 — 하는 일, 사는 동네, 한 시간은 떠들 수 있는 것.</string>
+    <string name="a_stock_voice_that_plays_you">“나”를 연기할 기본 목소리예요. 내 클론 목소리는 절대 쓰이지 않고, 누가 내 인물과 나눈 대화는 나에게도 누구에게도 보이지 않아요.</string>
+    <string name="couldnt_publish_check_your_connection">공개하지 못했어요. 연결을 확인하고 다시 해 주세요.</string>
+    <string name="couldnt_take_it_down">내리지 못했어요. 연결을 확인하고 다시 해 주세요.</string>
+    <string name="youre_in_the_pool_other_lld_learners_can_find_you">풀에 올라가 있어요. 다른 %1$s 학습자들이 내 인물을 찾아 대화할 수 있어요.</string>
+    <string name="take_your_intro_out_of_the_pool">소개를 풀에서 내릴까요? 이미 만난 학습자들의 지난 대화는 그대로 남아요.</string>
 </resources>

@@ -92,7 +92,11 @@ fun MeScreen(
     onAddLanguage: (String, CefrLevel) -> Unit,
     /** Whether this account has a clone — the Voice row's whole subject. */
     hasVoice: Boolean,
+    /** Browsing the pool — the Talk header's own entry leads here too. */
     onOpenPeople: () -> Unit,
+    /** Writing and publishing YOUR row. The row below says "publish your
+     *  intro", and until now it opened the browser instead. */
+    onOpenPublicIntro: () -> Unit,
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -387,7 +391,7 @@ fun MeScreen(
                 icon = Icons.Filled.Groups,
                 title = stringResource(R.string.find_people),
                 subtitle = stringResource(R.string.publish_your_intro),
-                onClick = onOpenPeople,
+                onClick = onOpenPublicIntro,
             )
             HorizontalDivider()
 

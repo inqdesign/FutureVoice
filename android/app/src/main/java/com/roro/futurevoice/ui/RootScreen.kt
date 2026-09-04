@@ -150,6 +150,7 @@ fun RootScreen() {
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
+    var showPublicIntro by remember { mutableStateOf(false) }
     // Existing learners appear in Find people automatically. Gated on a real
     // account: an anonymous session's data dies with the install, so
     // publishing it would put a row in the pool nobody can ever talk to
@@ -368,7 +369,13 @@ fun RootScreen() {
             onBack = { showPeople = false },
         )
 
-        // Above Me, so backing out of it lands on Me rather than the tabs.
+        // Above Me, so backing out of these lands on Me rather than the tabs.
+        showPublicIntro -> PublicIntroScreen(
+            persona = state.persona,
+            targetLanguage = state.targetLanguage,
+            onBack = { showPublicIntro = false },
+        )
+
         showPrivacy -> PrivacyScreen(
             voiceId = state.voiceId,
             // Withdrawing deletes the model, so the app has no voice to hold
@@ -389,6 +396,7 @@ fun RootScreen() {
             onAddLanguage = app::addLanguage,
             hasVoice = state.voiceId != null,
             onOpenPeople = { showMe = false; showPeople = true },
+            onOpenPublicIntro = { showPublicIntro = true },
             onEditProfile = { editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
