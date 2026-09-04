@@ -185,10 +185,15 @@ App Store Connect → Apps → nawana → (좌측) Subscriptions
 ```
 Test account: <계정> / <비밀번호>
 The subscription unlocks talk time with the user's own cloned voice.
-Daily = 5 minutes of talk per day; Unlimited = unrestricted daily talk.
+Light = 150 min of talk and 60 Watch scenes per month;
+Plus = unlimited talk and 120 Watch scenes per month.
 Reviewing, drills, replays and progress are free without a subscription.
-The 7-day free trial is metered at the Daily allowance (5 min/day).
+The 7-day free trial is metered at the Light allowance.
 ```
+
+> 2026-09-04까지 이 노트는 Daily/Unlimited 시절 문구였습니다. 카드에 찍히는
+> 숫자(`monthly_seconds`/`monthly_scenes`)와 심사 노트가 다르면 심사관이
+> 앱과 상품 설명이 안 맞는다고 봅니다.
 
 ---
 
@@ -269,3 +274,30 @@ DB에는 `daily_weekly` / `unlimited_weekly` 행이 있지만 **가격이 확정
    `status = 'trialing'` 이어야 합니다.
 3. 5분 넘게 통화 → 402 `daily_cap_reached` (페이월이 아니라 "내일 다시" 문구)
 4. 설정 › 구독에서 이름이 `라이트` 처럼 보이는지 확인
+
+---
+
+## 5. 리젝 기록 — 2026-09-04, 1.0 (29)
+
+Guideline 2.1(b) 두 건, 원인은 하나였습니다: **구독 4개가 버전 심사에 첨부되지
+않았습니다** (§3의 심사 스크린샷도 비어 있어 "Missing Metadata" 상태).
+
+- "IAP products have not been submitted for review" — 상품이 버전과 함께
+  제출되지 않았다는 말 그대로.
+- "subscription plans were not available … error on Subscribe" — 앱이
+  `Product.products(for:)`에서 빈 배열을 받아
+  `StoreKitService.purchase`의 "This plan isn't available on the App Store
+  yet." 를 띄운 것. **첫 버전의 IAP는 버전에 첨부돼야만 심사 환경에서
+  로드됩니다.** 서버 카탈로그(`subscription_plans` 4행 활성, id 일치)와
+  코드는 정상이었고, 샌드박스 구매는 2026-08-20에 이미 성공했으므로 유료 앱
+  계약도 문제가 아니었습니다.
+
+해결 순서 (전부 ASC, 코드 변경 없음):
+
+1. 구독 상품 4개 각각 → Review Information에 페이월 스크린샷 1장 + 위 심사
+   노트. 상태가 "Ready to Submit"으로 바뀌어야 함. 스크린샷은 TestFlight
+   빌드의 페이월을 폰에서 캡처하면 됨 (Debug 캡처는 dev 번들 id라 가격이 빈칸).
+2. 앱 버전 1.0 페이지 → "In-App Purchases and Subscriptions" 섹션 → 4개
+   추가. 이 섹션은 첫 IAP 제출 때만 나타남.
+3. 빌드를 최신 TestFlight 빌드로 교체하고(Apple이 새 바이너리를 요구),
+   Submit for Review. IAP는 버전과 함께 제출됨.
