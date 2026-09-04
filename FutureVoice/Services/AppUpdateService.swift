@@ -29,6 +29,26 @@ final class AppUpdateService: ObservableObject {
     /// that first needed it: the link is about the App Store, not invites.
     static let appStoreURL = URL(string: "https://apps.apple.com/app/id6792794655")!
 
+    /// The same app, on its TestFlight page. `itms-beta://` is the scheme
+    /// TestFlight registers; the path is Apple's per-app beta endpoint keyed
+    /// by the same numeric id, so it needs no public-link code to exist.
+    static let testFlightURL = URL(string: "itms-beta://beta.itunes.apple.com/v1/app/6792794655")!
+
+    /// Whether THIS install came from TestFlight. A TestFlight build carries
+    /// a sandbox receipt (`sandboxReceipt`) where an App Store build carries a
+    /// production one. Debug builds read the same way and that is fine: they
+    /// are ours, and the sheet is about where a newer build lives.
+    static var isTestFlight: Bool {
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    }
+
+    /// Where a newer build of THIS install is found. The sheet sent every
+    /// tester to the App Store while the app was still in beta — a page that
+    /// either did not exist or showed a build older than the one they had —
+    /// so beta users read the button as a bug. A TestFlight install updates
+    /// in TestFlight; an App Store install updates in the App Store.
+    static var updateURL: URL { isTestFlight ? testFlightURL : appStoreURL }
+
     struct AppUpdate: Identifiable, Equatable {
         let latestBuild: Int
         let latestVersion: String?
