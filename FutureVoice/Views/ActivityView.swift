@@ -16,6 +16,11 @@ struct ActivityView: View {
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
     /// see `talkSeconds(on:)` for what that is and what it isn't.
     @State private var minutesByDay: [Date: Int] = [:]
+    /// The same days in SECONDS — the day summary names a sub-minute day by
+    /// its seconds rather than calling it zero (see
+    /// PracticeStats.talkTimeText). Minutes stay the unit everywhere else:
+    /// the heat buckets, the month totals and the card all agree on floors.
+    @State private var talkSecondsByDay: [Date: Int] = [:]
     /// Foreground minutes per day, floored — the card's "Study" figure.
     @State private var studyMinutesByDay: [Date: Int] = [:]
     /// The day's finished talks, newest first — the tap-through to their books.
@@ -437,7 +442,8 @@ struct ActivityView: View {
                         // that has something else: it is the number the home
                         // ring reports, and a day whose talk was closed
                         // without saving has nothing else to name it by.
-                        factRow("Talk time", explain("\(mins) min"))
+                        factRow("Talk time",
+                                PracticeStats.talkTimeText(seconds: talkSecondsByDay[day] ?? 0))
                         if talks > 0 { factRow("Talks", "\(talks)") }
                         if study > 0 { factRow("Study time", explain("\(study) min")) }
                         if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
@@ -663,6 +669,7 @@ struct ActivityView: View {
             (seconds[$0] ?? 0) > 0 || byDay[$0] != nil || reps(on: $0) > 0
         }
         minutesByDay = seconds.mapValues { $0 / 60 }
+        talkSecondsByDay = seconds
         studyMinutesByDay = study.mapValues { $0 / 60 }
         sessionsByDay = byDay
         totalTalkSeconds = seconds.values.reduce(0, +)

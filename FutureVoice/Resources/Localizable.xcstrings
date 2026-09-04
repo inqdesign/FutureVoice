@@ -1433,6 +1433,28 @@
         }
       }
     },
+    "%lld sec of %lld min today" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heute %1$lld Sek. von %2$lld Min."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lld sec of %2$lld min today"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "오늘 %2$lld분 중 %1$lld초"
+          }
+        }
+      }
+    },
     "%lld sentences" : {
       "localizations" : {
         "de" : {

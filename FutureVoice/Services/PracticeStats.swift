@@ -28,6 +28,19 @@ enum PracticeStats {
         TalkTimeLog.secondsToday(now: now)
     }
 
+    /// A talk time as the app SAYS it. Minutes are FLOORED everywhere — the
+    /// ring, the widget, the day card — which is right for a number that has
+    /// to agree across surfaces, but it printed "0 min" for a day with 42
+    /// metered seconds on it, beside a calendar tile that was lit and a ring
+    /// that had moved (reported 2026-09-05). Under a minute the SECONDS are
+    /// named: the same number, said precisely, and never zero on a day that
+    /// was talked on.
+    static func talkTimeText(seconds: Int) -> String {
+        seconds > 0 && seconds < 60
+            ? explain("\(seconds) sec")
+            : explain("\(seconds / 60) min")
+    }
+
     static func snapshot(now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
         let sessions = SessionStore.shared.load()
         let endedSessions = sessions.filter { $0.endedAt != nil }

@@ -504,9 +504,14 @@ struct ConversationHome: View {
     }
 
     private var goalHeadline: String {
-        let mins = todaySpokenSeconds / 60
+        let secs = todaySpokenSeconds
+        let mins = secs / 60
         if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
-        if mins == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
+        if secs == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
+        // A talk that hasn't reached a minute still happened — the ring has
+        // already moved for it, so the line must not still be asking for the
+        // first word (see PracticeStats.talkTimeText).
+        if mins == 0 { return chrome("\(secs) sec of \(effectiveGoalMinutes) min today") }
         return chrome("\(mins) of \(effectiveGoalMinutes) min today")
     }
 
