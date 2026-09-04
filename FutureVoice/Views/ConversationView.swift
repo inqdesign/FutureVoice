@@ -34,6 +34,10 @@ struct ConversationView: View {
     /// When the current call seat opened — drives the elapsed clock in the
     /// title. Set once per call; hidden (not frozen) once the call ends.
     @State private var callStartedAt: Date?
+    /// Talk time banked across pauses. A pause STOPS the clock and a resume
+    /// continues it (the first cut reset to zero on every pause, reported
+    /// 2026-09-03) — on resume the virtual start date is backdated by this.
+    @State private var callElapsedAtPause: TimeInterval = 0
     @State private var silenceTask: Task<Void, Never>?
     /// True only while `endSession` is wrapping up (summary generation in
     /// flight). Distinct from `phase == .thinking`, which also fires per-turn
@@ -83,6 +87,9 @@ struct ConversationView: View {
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
+    /// An uncapped plan past the abuse line. Its own alert, never the spent-
+    /// allowance sheet: nothing ran out.
+    @State private var fairUseHalted = false
     /// This account is on Light, so there IS somewhere to go when the pool
     /// runs out. Resolved at call start so the sheet's button is there the
     /// moment the wall lands. False on Plus: nothing left to sell, and the
@@ -94,6 +101,8 @@ struct ConversationView: View {
     @State private var poolMinutes: Int?
     /// When the pool refills, for the sheet's "back on the 14th" line.
     @State private var renewalLabel = ""
+    /// The plan stops on that date instead of refilling (cancelled).
+    @State private var planEndsAtPeriodEnd = false
     /// What the cap sheet was dismissed FOR. A sheet can't raise the next
     /// sheet while it is closing, so the choice is recorded and acted on in
     /// `onDismiss`.
@@ -656,7 +665,9 @@ struct ConversationView: View {
                         stopListeningDiscardingChunks()
                     }
                     if phase == .listening || phase == .thinking { phase = .idle }
-                    if meter.wallReason == .dailyCapReached {
+                    if meter.wallReason == .fairUseLimit {
+                        fairUseHalted = true
+                    } else if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
                     } else {
                         outOfCredits = true
@@ -740,8 +751,18 @@ struct ConversationView: View {
                     canUpgrade: canUpgradePlan,
                     allowance: poolMinutes,
                     renewsOn: renewalLabel,
+                    endsInstead: planEndsAtPeriodEnd,
                     onReview: { capChoice = .review },
                     onUpgrade: { capChoice = .upgrade })
+            }
+            // Not a sheet and not an upsell: there is nothing to offer and
+            // nothing to wait for. One line saying what happened and how to
+            // reach us.
+            .alert(explain("We've paused talking on this account"),
+                   isPresented: $fairUseHalted) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(explain("Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works."))
             }
             .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
                 // Reached here from an out-of-credits failure → no trial pitch.
@@ -777,6 +798,7 @@ struct ConversationView: View {
                 canUpgradePlan = account.isLightPlan
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel
+                planEndsAtPeriodEnd = account.cancelAtPeriodEnd
             }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.
@@ -809,7 +831,9 @@ struct ConversationView: View {
                 // the classic meter's tick returns, so they land on the same
                 // sheets: a subscriber's finished day is never a paywall.
                 if case .failed = state {
-                    if realtime.wallCode == "daily_cap_reached" {
+                    if realtime.wallCode == "fair_use_limit" {
+                        fairUseHalted = true
+                    } else if realtime.wallCode == "daily_cap_reached" {
                         dailyCapReached = true
                     } else if realtime.wallCode == "insufficient_credits" {
                         outOfCredits = true
@@ -821,8 +845,17 @@ struct ConversationView: View {
                 // The elapsed clock arms on the learner's FIRST speech, not
                 // here — a call opened and cancelled without a word shows no
                 // timer at all (asked for 2026-09-02: "누르고 그냥 취소"가
-                // 통화로 세어지는 게 이상하다). Hang-up clears it.
-                if !active { callStartedAt = nil }
+                // 통화로 세어지는 게 이상하다).
+                if !active {
+                    // Pause: bank what ran so far and stop the clock.
+                    if let start = callStartedAt {
+                        callElapsedAtPause += Date().timeIntervalSince(start)
+                    }
+                    callStartedAt = nil
+                } else if callElapsedAtPause > 0 {
+                    // Resume: continue from the banked time, not from zero.
+                    callStartedAt = Date().addingTimeInterval(-callElapsedAtPause)
+                }
             }
             .onChange(of: scenePhase) { _, newPhase in
                 // Coming back to a call that should be listening but isn't.
@@ -859,9 +892,12 @@ struct ConversationView: View {
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
-                             // Elapsed, phone-style — every tier. Hidden once
-                             // the call ends so it can't tick past the hang-up.
-                             callStartedAt: phoneCallActive ? callStartedAt : nil)
+                             // Elapsed, phone-style — every tier. Ticks while
+                             // the call runs, freezes while it's paused, and
+                             // goes away once the talk is wrapped up.
+                             callStartedAt: phoneCallActive ? callStartedAt : nil,
+                             pausedElapsed: !phoneCallActive && callElapsedAtPause > 0
+                                 && !didSaveCurrentSession ? callElapsedAtPause : nil)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -1932,6 +1968,7 @@ struct ConversationView: View {
             phase = .idle
             // A spent day is not a failed opener — same rule as the meter's
             // own wall, so it lands on the same sheet.
+            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
@@ -2553,6 +2590,7 @@ struct ConversationView: View {
             // Today's allowance, not a blip: no Retry row (retrying can only
             // fail again today) and no error alert — the sheet says what
             // happened and what's left to do.
+            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
@@ -3425,6 +3463,10 @@ struct ConversationView: View {
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
+        // A new session's clock starts empty — the banked time belongs to
+        // the call that just ended, not this one.
+        callElapsedAtPause = 0
+        callStartedAt = nil
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {

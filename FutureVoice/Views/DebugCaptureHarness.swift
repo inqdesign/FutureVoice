@@ -210,11 +210,14 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
-        case "usage":
-            // The talk-time receipt, for the shared sample account below.
-            return AnyView(NavigationStack {
-                UsageDetailView(account: Self.sampleLightAccount, previewUsage: .sample)
-            })
+        case "activity-unsaved":
+            // The reported bug: a call closed with "Close without saving" —
+            // metered, no `Session`. The day must still be on the calendar,
+            // in the month total, and able to make its card.
+            once("activity-unsaved") {
+                TalkTimeLog.add(seconds: 8 * 60, language: appState.targetLanguage)
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "activity", "activity-cards":
             // The activity calendar with today selected — the day summary
             // carries the share-card button. "-cards" opens the card grid,
@@ -281,11 +284,12 @@ enum DebugCapture {
                 topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"])
             return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
         case "plan":
-            // Me → Plan & talk time, for the same Light subscriber the usage
-            // receipt uses — the two pages quote each other's numbers, so they
-            // have to be reviewed against ONE account or the check is worthless.
+            // Me → Talk time, for a Light subscriber. The receipt used to be
+            // its own capture (`-capture usage`); it is this page now, so the
+            // sample usage rides along and the whole thing is reviewed at
+            // once — which is what the two-capture split kept failing to do.
             return AnyView(NavigationStack {
-                PlanPageView(account: Self.sampleLightAccount)
+                PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
             })
         case "plan-guide":
             // The transparency page for a Light subscriber — the one place
@@ -1292,14 +1296,28 @@ private struct UpdateCaptureHost: View {
     let required: Bool
     @State private var showing = false
 
+    /// The notes a real release actually ships — a paragraph plus five
+    /// bullets, verbatim from `fastlane/metadata/ko/release_notes.txt`. The
+    /// capture is only worth anything at this length: a one-line note fits
+    /// anywhere, and it was the real notes that ran off both ends of the sheet.
+    private static let releaseNotes = """
+    nawana를 시작합니다.
+
+    말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.
+
+    - 내 관심사에서 시작하는 매일 통화
+    - 매 턴 돌아오는 유창한 버전
+    - 통화가 끝나면 자동으로 만들어지는 나만의 교재
+    - 내 목소리로 하는 섀도잉, 입으로 답하는 복습
+    - 실제로 말한 것들로만 측정되는 레벨
+    """
+
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
                 UpdateAvailableSheet(
-                    update: .init(latestBuild: 15, latestVersion: "1.0.1",
-                                  notes: required
-                                      ? nil
-                                      : "초대로 받은 시간을 이번 달 통화 시간보다 먼저 쓰도록 고쳤어요.",
+                    update: .init(latestBuild: 99, latestVersion: "1.1",
+                                  notes: required ? nil : Self.releaseNotes,
                                   required: required),
                     onDismiss: {})
             }

@@ -65,6 +65,12 @@ struct AccountStatus {
     /// When this pool refills — the end of the billing period. Nil for free
     /// accounts, whose balance never refills at all.
     var periodEnd: Date?
+    /// The plan is set to STOP at `periodEnd` rather than renew — cancelled
+    /// in the App Store, or a sandbox subscription running out. Read because
+    /// every screen that names that date called it a refill: telling someone
+    /// their pool comes back on the day their plan ends is the app promising
+    /// something it has been told will not happen.
+    var cancelAtPeriodEnd: Bool = false
     /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
     /// `20260821100000`, so for a subscriber this is time on top of the plan
     /// rather than the "kept for after you cancel" balance it used to be.
@@ -307,10 +313,11 @@ struct AccountStatus {
         struct SubRow: Decodable {
             let plan_id: String?
             let status: String
+            let cancel_at_period_end: Bool?
         }
         if let rows: [SubRow] = try? await SupabaseProvider.shared
             .from("user_subscriptions")
-            .select("plan_id,status")
+            .select("plan_id,status,cancel_at_period_end")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
@@ -318,6 +325,7 @@ struct AccountStatus {
            let row = rows.first {
             out.planId = row.plan_id
             out.subscriptionStatus = row.status
+            out.cancelAtPeriodEnd = row.cancel_at_period_end ?? false
         }
 
         if out.unlimited { out.fullTankSeconds = adminResetSeconds }

@@ -1,74 +1,73 @@
 import SwiftUI
 
-/// Me → Talk time. What this account has left this month, and where it went.
+/// Me → Talk time. Four facts and nothing else (2026-09-04):
+///
+///   · which plan this is           — the row above this page, in `MeTab`
+///   · Light: minutes used, minutes left
+///   · Plus:  minutes actually talked this period
+///   · invite minutes, on Light only, as a SEPARATE "+N" — never folded into
+///     the figure above
+///
+/// The page kept growing sideways from that. It had a receipt behind it, then
+/// a week of day bars, and the two numbers came from different places: the
+/// header counted only what the PLAN paid for, the bars counted every metered
+/// second — so one screen read "5 min this month" above "47 min" and "46 min"
+/// on the two days before. Nothing on the page can disagree with anything else
+/// on it now: Light's number is the pool the meter enforces, Plus's is what
+/// the ledger says was spoken, and those are the only two questions each tier
+/// has.
+///
+/// **Plus's figure is the LEDGER, not the pool.** Plus has no talk ceiling, so
+/// the pool figure measures nothing — and it excluded any call that invite
+/// minutes had paid for, which is how a 46-minute Sunday reported zero.
 ///
 /// **Buying is not here.** The subscription sits on its own row at the TOP of
-/// settings (`MeTab`), because "do I have a plan at all" and "how much of it
-/// is left" are different questions asked by different people — and the first
-/// one is asked by someone who cannot talk yet, so it must not be three rows
-/// deep inside a page about metering. This page answers only the second.
-///
-/// It used to be one undivided run of six rows that said WHEN the pool refills
-/// three separate times — its own row, that row's subtitle, and "lands
-/// automatically every cycle" under Manage plan — while the two allowances the
-/// page exists to report were shaped differently from each other, one a
-/// sentence and one a fraction. Sibling numbers read as siblings now, and the
-/// refill date is stated once.
-///
-/// It lives in its own file rather than as a `private var` on `MeTab` for the
-/// same reason `UsageDetailView` and `CreditGuideView` do: a subpage nobody
-/// can render on its own is a subpage nobody reviews, which is how it kept the
-/// word "daily" for two days after the pools went monthly.
+/// settings, because "do I have a plan at all" and "how much of it is left"
+/// are different questions asked by different people — and the first is asked
+/// by someone who cannot talk yet.
 struct PlanPageView: View {
     let account: AccountStatus
+    /// Screenshot harness only — renders this instead of fetching, so the page
+    /// can be reviewed without a signed-in account carrying real usage.
+    var previewUsage: UsageBreakdown? = nil
+
+    @State private var usage = UsageBreakdown()
 
     var body: some View {
         List {
             Section {
-                // The two allowances, same shape, same unit per row. Talk time
-                // is a fraction like the scenes are: "132 / 150분" and "12 / 60"
-                // are the same kind of fact and must not look like two kinds.
                 row(icon: "bolt.fill",
                     title: explain("Talk time"),
-                    value: talkAllowanceValue)
-                // Watch is a SECOND allowance since 2026-08-14, and an
-                // invisible allowance is the thing that made the old shared
-                // meter feel dishonest. Shown only when a plan actually grants
-                // scenes — a free account still pays for them in seconds, so a
-                // count would be a lie there.
+                    value: talkValue)
+                // Invite minutes are time ON TOP of the pool, so they are
+                // their own row and never part of the figure above — added in,
+                // they would make the fraction stop adding up; left out
+                // silently, the account would look smaller than it is. Only
+                // where there is a pool for them to be on top of: an uncapped
+                // plan cannot run out, so nothing is waiting to be topped up.
+                if !isUncappedTalk, account.hasBonusMinutes {
+                    row(icon: "gift.fill",
+                        title: explain("Invite minutes"),
+                        value: explain("+\(account.bonusMinutes) min"))
+                }
+                // Scenes are capped on EVERY tier — a scene plays itself, so a
+                // count is the only limit there is. A real limit is never
+                // hidden.
                 if account.monthlyScenesCap != nil {
                     row(icon: "play.circle.fill",
                         title: explain("Watch scenes"),
                         value: sceneAllowanceValue)
                 }
-                // WHEN the pool refills — in the same section as the numbers
-                // it refills, because it is a fact ABOUT them. A monthly pool
-                // has a date; without it the fractions above are a countdown
-                // to nothing in particular. Plus counts no talk minutes
-                // down, but its SCENES still
-                // refill, so the date keeps its meaning on both tiers.
                 if account.isEntitled, !account.renewalLabel.isEmpty {
                     // A trial's date is not a refill — it is the day it starts
-                    // costing money, which is the one date somebody in a trial
-                    // is actually looking for. It is also the promise that
-                    // survives a declined notification prompt: the reminder is
-                    // best effort, this is always here.
-                    row(icon: account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise",
-                        title: account.isTrialing
-                            ? explain("Your trial becomes paid on \(account.renewalLabel)")
-                            : explain("Refills on \(account.renewalLabel)"),
+                    // costing money. And a plan told to stop does not refill on
+                    // that date either; it ends on it. Same date, three
+                    // different promises.
+                    row(icon: refillIcon,
+                        title: refillTitle,
                         subtitle: account.isTrialing
                             ? explain("Cancel any time before then in the App Store")
                             : nil)
-                }
-                // Tapping through opens the receipt: what spent minutes, and
-                // what didn't. A fraction alone is the same opacity that made
-                // beta users afraid to tap anything.
-                NavigationLink {
-                    UsageDetailView(account: account)
-                } label: {
-                    row(icon: "list.bullet.rectangle",
-                        title: explain("See where it went"))
                 }
             } header: {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
@@ -90,40 +89,74 @@ struct PlanPageView: View {
                         subtitle: explain("\(ReferralService.bonusMinutes) minutes each, per friend"))
                 }
             } footer: {
-                Text(explain("Minutes buy talk time with your fluent self. Reviewing always stays free."))
+                // Only where minutes actually run down. On an uncapped plan
+                // nothing is being spent, so this would describe a meter the
+                // account doesn't have.
+                if !isUncappedTalk {
+                    Text(explain("Minutes buy talk time with your fluent self. Reviewing always stays free."))
+                }
             }
         }
         .navigationTitle("Talk time")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            // Only an uncapped plan needs the ledger: every other tier's
+            // number is the pool the server already reported.
+            guard isUncappedTalk else { return }
+            if let previewUsage { usage = previewUsage; return }
+            usage = await UsageBreakdown.fetch(periodStart: account.periodStart)
+        }
     }
 
-    /// The talk row's trailing figure. A subscriber gets the fraction their
-    /// pool actually is; a one-time balance has no denominator to show, and an
-    /// account with neither has nothing to count at all.
-    private var talkAllowanceValue: String {
-        // Plus is told forward — what was SPENT, never what is left. See
-        // `AccountStatus.talkTimeLabel` for why a remainder is the wrong
-        // number to hand an account that isn't rationing.
-        //
-        // The plan branches come BEFORE the admin flag on purpose. The flag
-        // used to win, and on a Plus account it printed `minutesRemaining`,
-        // which with no cap is the one-time free balance ÷ 60 — a number
-        // that has nothing to do with talking and read "0 min" once that
-        // balance was gone, while the month's real talk seconds were being
-        // received and never shown. The admin account exists to watch real
-        // burn; it must see what its plan sees.
-        if account.isPlusPlan { return explain("\(account.minutesUsedPeriod) min talked") }
-        // Light: what was talked OUT OF what the plan gives — "12 of 150 min
-        // talked". It used to print the remainder over the pool, which under
-        // a row titled "Talk time" read as the amount talked and was the
-        // opposite number. Same direction as the Home ring, which fills as
-        // minutes are spent.
-        if account.isEntitled, account.monthlyCapSeconds != nil {
-            return explain("\(account.minutesUsedPeriod) of \(account.tankMinutes) min talked")
+    /// Uncapped talk is decided by the TIER, never by the cap the server
+    /// reports. The deployed `talk_allowance` has no unlimited branch — it
+    /// hands every plan its `monthly_seconds` — so a Plus account was told it
+    /// had 1,795 of 1,800 minutes left, which is a pool that tier does not
+    /// have and a number nothing enforces. Same lesson as the paywall's
+    /// `isUncappedTalk`: read the plan id, and the client never waits on a
+    /// server deploy to be right about what it sold.
+    private var isUncappedTalk: Bool {
+        account.isPlusPlan || (account.isEntitled && account.monthlyCapSeconds == nil)
+    }
+
+    /// The one number this tier is owed.
+    ///
+    ///   · uncapped plan — what was TALKED, from the ledger, whoever paid for
+    ///     it. There is no pool to count down and no cap to count against, so
+    ///     the only honest figure is the one the day bars and the home ring
+    ///     are also made of.
+    ///   · a pool — both halves of it: spent and left. "55 of 150" made the
+    ///     reader do the subtraction, and under a row titled Talk time the
+    ///     single figure was read as whichever one the reader expected.
+    ///   · no plan — what is left of the one-time balance.
+    private var talkValue: String {
+        if isUncappedTalk {
+            guard usage.loaded else { return "" }
+            return explain("\(usage.periodTalkSeconds / 60) min talked")
         }
-        if account.unlimited { return explain("\(account.minutesRemaining) min") }
-        if account.hasLegacyPool { return explain("\(account.minutesRemaining) min") }
+        if account.isEntitled, account.monthlyCapSeconds != nil {
+            let left = max(0, account.tankMinutes - account.minutesUsedPeriod)
+            return explain("\(account.minutesUsedPeriod) min used · \(left) min left")
+        }
+        if account.unlimited || account.hasLegacyPool {
+            return explain("\(account.minutesRemaining) min")
+        }
         return explain("None")
+    }
+
+    private var refillIcon: String {
+        if account.isTrialing { return "calendar.badge.exclamationmark" }
+        return account.cancelAtPeriodEnd ? "calendar.badge.minus" : "arrow.clockwise"
+    }
+
+    private var refillTitle: String {
+        if account.isTrialing {
+            return explain("Your trial becomes paid on \(account.renewalLabel)")
+        }
+        if account.cancelAtPeriodEnd {
+            return explain("Your plan ends on \(account.renewalLabel)")
+        }
+        return explain("Refills on \(account.renewalLabel)")
     }
 
     /// Scenes are capped on EVERY tier — a scene plays itself, so a count is

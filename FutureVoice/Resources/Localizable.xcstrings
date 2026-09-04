@@ -7,17 +7,6 @@
     " " : {
       "shouldTranslate" : false
     },
-    "Conversation" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "대화"
-          }
-        }
-      }
-    },
     " — get under %.1f and this reads ≈%@" : {
       "localizations" : {
         "en" : {
@@ -62,36 +51,6 @@
         }
       }
     },
-    "Not their real voice — an AI speaks their words in a voice you pick." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "진짜 목소리가 아니에요. 내가 고른 목소리로 AI가 이 사람의 말을 읽어요."
-          }
-        }
-      }
-    },
-    "Strangers" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "낯선 사람"
-          }
-        }
-      }
-    },
-    "Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "내가 만든 사람들과, 사람 페이지에서 북마크한 사람들이에요. 대화만으로는 여기 추가되지 않아요 — 곁에 두려면 북마크하세요."
-          }
-        }
-      }
-    },
     "—" : {
       "shouldTranslate" : false
     },
@@ -100,17 +59,6 @@
     },
     "“%@”" : {
       "shouldTranslate" : false
-    },
-    "Start recording" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "녹음 시작"
-          }
-        }
-      }
     },
     "“Well” describes how something went." : {
       "localizations" : {
@@ -421,6 +369,23 @@
         }
       }
     },
+    "%@ min vs %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ Min. ggü. %2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$@보다 %1$@분"
+          }
+        }
+      }
+    },
     "%@ min/mo" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -630,6 +595,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이번 세션 %2$@ %1$lld개"
+          }
+        }
+      }
+    },
+    "%lld active days · %lld min" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld aktive Tage · %2$lld Min."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld일 활동 · %2$lld분"
           }
         }
       }
@@ -902,6 +884,7 @@
       }
     },
     "%lld lines played" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1057,6 +1040,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 %lld분 쓸 수 있어요"
+          }
+        }
+      }
+    },
+    "%lld min used · %lld min left" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld min used · %2$lld min left"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld분 사용 · %2$lld분 남음"
           }
         }
       }
@@ -1506,6 +1505,7 @@
       }
     },
     "%lld times today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2787,6 +2787,7 @@
       }
     },
     "Add someone from your real life — their cloned voice can act out any scenario you build." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3167,6 +3168,7 @@
         }
       }
     },
+    "Answers in about two seconds — and you can talk over it" : {},
     "Any %lld days together still hold one week's minutes — spend them in one sitting or a few. Today's number is always in Me → Talk time." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3882,6 +3884,16 @@
         }
       }
     },
+    "Build %lld → %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Build %1$lld → %2$lld"
+          }
+        }
+      }
+    },
     "Build a scenario" : {
       "localizations" : {
         "de" : {
@@ -4185,6 +4197,7 @@
         }
       }
     },
+    "Calls" : {},
     "Calls at" : {
       "localizations" : {
         "de" : {
@@ -4797,6 +4810,33 @@
         }
       }
     },
+    "Continue with Google" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weiter mit Google"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google로 계속하기"
+          }
+        }
+      }
+    },
+    "Conversation" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화"
+          }
+        }
+      }
+    },
     "Conversational — I get by on familiar topics" : {
       "localizations" : {
         "de" : {
@@ -5397,6 +5437,23 @@
         }
       }
     },
+    "days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tage"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일"
+          }
+        }
+      }
+    },
     "Days in the Core" : {
       "localizations" : {
         "de" : {
@@ -5717,6 +5774,16 @@
         }
       }
     },
+    "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "곧 겪을 일을 적어두면 유창해진 내가 먼저 겪는 걸 봐요. 거기서 쓴 표현은 전부 내 것으로 남아요."
+          }
+        }
+      }
+    },
     "Details" : {
       "localizations" : {
         "de" : {
@@ -6015,7 +6082,6 @@
       }
     },
     "Drills" : {
-      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7565,6 +7631,17 @@
         }
       }
     },
+    "Free talk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유 대화"
+          }
+        }
+      }
+    },
     "Free talk, today's topics, real situations — speaking practice with your fluent self, in your voice." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -7660,12 +7737,12 @@
         }
       }
     },
-    "From your talks. Swipe to remove anything I got wrong." : {
+    "From your talks. Tap a line to fix what I misheard, or swipe to remove it." : {
       "localizations" : {
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "통화 내용에서 적어둔 거예요. 잘못 안 건 밀어서 지우세요."
+            "value" : "통화 내용에서 적어둔 거예요. 잘못 들은 건 눌러서 고치고, 아니면 밀어서 지우세요."
           }
         }
       }
@@ -8520,6 +8597,7 @@
         }
       }
     },
+    "Honestly, it went really well. I felt prepared. %lld" : {},
     "How comfortable are you right now?" : {
       "localizations" : {
         "de" : {
@@ -9459,6 +9537,16 @@
         }
       }
     },
+    "Invite minutes" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "초대로 받은 시간"
+          }
+        }
+      }
+    },
     "Invite minutes are kept for after your plan ends. Reviewing is always free." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -10078,6 +10166,7 @@
       }
     },
     "less" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10342,6 +10431,7 @@
         }
       }
     },
+    "Listening" : {},
     "Listening — tap to finish" : {
       "localizations" : {
         "de" : {
@@ -10467,6 +10557,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오랜만이네. 어디까지 했더라?"
+          }
+        }
+      }
+    },
+    "longest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Längste"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최장"
           }
         }
       }
@@ -11052,6 +11159,7 @@
       }
     },
     "Missed call" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11108,6 +11216,7 @@
       }
     },
     "more" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12233,6 +12342,16 @@
         }
       }
     },
+    "Not their real voice — an AI speaks their words in a voice you pick." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진짜 목소리가 아니에요. 내가 고른 목소리로 AI가 이 사람의 말을 읽어요."
+          }
+        }
+      }
+    },
     "Not today" : {
       "localizations" : {
         "de" : {
@@ -12276,7 +12395,7 @@
       }
     },
     "Not yet" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12287,7 +12406,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "아직은 이용할 수 없어요"
+            "value" : "아직"
           }
         }
       }
@@ -12765,6 +12884,16 @@
         }
       }
     },
+    "Open TestFlight" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TestFlight 열기"
+          }
+        }
+      }
+    },
     "Open the App Store" : {
       "localizations" : {
         "ko" : {
@@ -13180,6 +13309,7 @@
       }
     },
     "People today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13363,6 +13493,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "상황 고르기"
+          }
+        }
+      }
+    },
+    "Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정해둔 시간에 유창해진 내가 전화를 걸어요. 못 받으면 질문이 담긴 음성 메시지가 기다려요."
           }
         }
       }
@@ -13616,7 +13756,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "복습"
+            "value" : "연습"
           }
         }
       }
@@ -14338,6 +14478,7 @@
         }
       }
     },
+    "Realtime calls" : {},
     "Rebuild" : {
       "localizations" : {
         "de" : {
@@ -16522,6 +16663,7 @@
       },
       "shouldTranslate" : false
     },
+    "So — how did the interview go yesterday? Anything you'd do differently next time?" : {},
     "Someone joined the Core — %lld seats taken." : {
       "localizations" : {
         "de" : {
@@ -16710,6 +16852,10 @@
         }
       }
     },
+    "Speaking… · talk over it · tap to stop" : {
+      "comment" : "Hint for the mic when the user is speaking.",
+      "isCommentAutoGenerated" : true
+    },
     "Speaking… · tap to stop" : {
       "localizations" : {
         "ko" : {
@@ -16876,6 +17022,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "연습 시작"
+          }
+        }
+      }
+    },
+    "Start recording" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "녹음 시작"
           }
         }
       }
@@ -17082,6 +17239,16 @@
         }
       }
     },
+    "Strangers" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "낯선 사람"
+          }
+        }
+      }
+    },
     "Streak" : {
       "localizations" : {
         "ko" : {
@@ -17156,6 +17323,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "학습 기록"
+          }
+        }
+      }
+    },
+    "Study time" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lernzeit"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "학습 시간"
           }
         }
       }
@@ -17635,6 +17819,16 @@
         }
       }
     },
+    "Talk with your fluent self like a live phone call — every reply in your cloned voice." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유창해진 나와 진짜 전화처럼 실시간으로 대화해요. 대답은 전부 복제한 내 목소리로 들려요."
+          }
+        }
+      }
+    },
     "Talk your fill, every day" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -17708,6 +17902,7 @@
       }
     },
     "Talking needs a plan." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
@@ -19605,6 +19800,23 @@
         }
       }
     },
+    "total" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gesamt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "합계"
+          }
+        }
+      }
+    },
     "Total" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -19791,6 +20003,7 @@
         }
       }
     },
+    "Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual." : {},
     "Type a topic" : {
       "localizations" : {
         "de" : {
@@ -20120,6 +20333,7 @@
       }
     },
     "Used no talk time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -20516,6 +20730,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이 책의 바탕이 된 대화를 봐요."
+          }
+        }
+      }
+    },
+    "Watch the scene first." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "장면을 먼저 보세요."
           }
         }
       }
@@ -21004,6 +21229,7 @@
     },
     "What's left of your free talk time. It doesn't refill — only talking and Watch scenes use it." : {
       "comment" : "Explanation of a one-time pool that never refills, used when the user's account has a legacy pool.",
+      "extractionState" : "stale",
       "isCommentAutoGenerated" : true,
       "localizations" : {
         "ko" : {
@@ -21026,6 +21252,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "측정 항목"
+          }
+        }
+      }
+    },
+    "What's new" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새로워진 것"
           }
         }
       }
@@ -21913,6 +22149,17 @@
         }
       }
     },
+    "Writing the scene…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "장면을 쓰는 중…"
+          }
+        }
+      }
+    },
     "Writing this scenario's scene…" : {
       "localizations" : {
         "de" : {
@@ -22505,6 +22752,7 @@
       }
     },
     "You're on %@ (%lld) · newest is %@ (%lld)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -22521,6 +22769,7 @@
       }
     },
     "You're on build %lld · newest is %lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -22980,6 +23229,16 @@
         }
       }
     },
+    "Your fluent self calls first" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "전화가 먼저 걸려와요"
+          }
+        }
+      }
+    },
     "Your fluent self is ready" : {
       "localizations" : {
         "de" : {
@@ -23433,6 +23692,16 @@
         }
       }
     },
+    "Your own people, plus anyone you bookmarked from the People page. Talking with someone doesn't add them here — bookmark them to keep them." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 만든 사람들과, 사람 페이지에서 북마크한 사람들이에요. 대화만으로는 여기 추가되지 않아요 — 곁에 두려면 북마크하세요."
+          }
+        }
+      }
+    },
     "Your own review book" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -23574,6 +23843,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "요금제에는 두 가지가 들어 있어요. 유창해진 나와 통화하는 시간, 그리고 하루에 볼 수 있는 상황연습 수. 서로 따로 세고, 둘 다 자정에 다시 채워져요."
+          }
+        }
+      }
+    },
+    "Your plan ends on %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 구독이 끝나요"
+          }
+        }
+      }
+    },
+    "Your plan ends on %@." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 구독이 끝나요."
           }
         }
       }
@@ -23852,6 +24141,7 @@
       }
     },
     "Your trial gives you %lld minutes to use however you like." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
@@ -23907,6 +24197,21 @@
           }
         }
       }
+    },
+    "Your voice is ready — sign in to keep it." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목소리가 준비됐어요 — 로그인하면 계속 쓸 수 있어요."
+          }
+        }
+      }
+    },
+    "Your voice isn't ready yet." : {
+      "comment" : "Error message when the user's voice isn't ready.",
+      "isCommentAutoGenerated" : true
     },
     "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." : {
       "localizations" : {
@@ -23984,147 +24289,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "목소리는 안전하게"
-          }
-        }
-      }
-    },
-    "longest" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "최장"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Längste"
-          }
-        }
-      }
-    },
-    "total" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "합계"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gesamt"
-          }
-        }
-      }
-    },
-    "days" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "일"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tage"
-          }
-        }
-      }
-    },
-    "%lld active days · %lld min" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld일 활동 · %2$lld분"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld aktive Tage · %2$lld Min."
-          }
-        }
-      }
-    },
-    "%@ min vs %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%2$@보다 %1$@분"
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ Min. ggü. %2$@"
-          }
-        }
-      }
-    },
-    "Talk with your fluent self like a live phone call — every reply in your cloned voice." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "유창해진 나와 진짜 전화처럼 실시간으로 대화해요. 대답은 전부 복제한 내 목소리로 들려요."
-          }
-        }
-      }
-    },
-    "Your fluent self calls first" : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "전화가 먼저 걸려와요"
-          }
-        }
-      }
-    },
-    "Pick a time and the phone rings. Miss it, and a voicemail with a question waits for you." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "정해둔 시간에 유창해진 내가 전화를 걸어요. 못 받으면 질문이 담긴 음성 메시지가 기다려요."
-          }
-        }
-      }
-    },
-    "Describe what's coming and watch your fluent self handle it first — its expressions stay yours to study." : {
-      "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "곧 겪을 일을 적어두면 유창해진 내가 먼저 겪는 걸 봐요. 거기서 쓴 표현은 전부 내 것으로 남아요."
-          }
-        }
-      }
-    },
-    "Continue with Google" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Weiter mit Google"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google로 계속하기"
           }
         }
       }

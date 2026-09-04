@@ -37,7 +37,9 @@ final class TalkMeter: ObservableObject {
     /// until the first tick lands.
     @Published private(set) var minutesRemaining: Int?
 
-    enum WallReason { case outOfMinutes, dailyCapReached }
+    /// `fairUseLimit` is NOT a spent allowance — only an uncapped plan can
+    /// hit it, and only far past the figure it is quietly flagged at.
+    enum WallReason { case outOfMinutes, dailyCapReached, fairUseLimit }
     /// Which wall ended the call — set just before `onWallHit` fires.
     @Published private(set) var wallReason: WallReason?
 
@@ -171,7 +173,9 @@ final class TalkMeter: ObservableObject {
             stop()
             minutesRemaining = 0
             let body = String(data: data, encoding: .utf8) ?? ""
-            wallReason = body.contains("daily_cap_reached") ? .dailyCapReached : .outOfMinutes
+            if body.contains("fair_use_limit") { wallReason = .fairUseLimit }
+            else if body.contains("daily_cap_reached") { wallReason = .dailyCapReached }
+            else { wallReason = .outOfMinutes }
             onWallHit?()
         } catch {
             // Transient failure: skip this tick. The idempotency key was

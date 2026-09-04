@@ -1265,7 +1265,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // and says WHICH wall ended it. Remember the code so the view can
             // raise the same sheet the classic meter's 402 would have —
             // a spent day is a sheet, never a bare error alert.
-            if code == "insufficient_credits" || code == "daily_cap_reached" {
+            if code == "insufficient_credits" || code == "daily_cap_reached"
+                || code == "fair_use_limit" {
                 wallCode = code
             }
             state = .failed(message)

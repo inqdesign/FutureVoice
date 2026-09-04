@@ -31,6 +31,9 @@ struct DailyAllowanceSheet: View {
     /// moment someone is stopped, and the one a monthly pool has that a daily
     /// one didn't: "tomorrow" needed no date.
     var renewsOn: String = ""
+    /// The plan stops on `renewsOn` instead of refilling — cancelled in the
+    /// App Store. Same date, opposite promise.
+    var endsInstead: Bool = false
 
     let onReview: () -> Void
     let onUpgrade: () -> Void
@@ -161,6 +164,7 @@ struct DailyAllowanceSheet: View {
     /// comes back. "Tomorrow" explained itself; a date has to be said.
     private var renewalLine: String? {
         guard !renewsOn.isEmpty else { return nil }
+        if endsInstead { return explain("Your plan ends on \(renewsOn).") }
         return explain("Your pool refills on \(renewsOn).")
     }
 }

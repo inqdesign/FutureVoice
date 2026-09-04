@@ -99,6 +99,13 @@ sub('<section style="display:grid; grid-template-columns:repeat(auto-fit,minmax(
 # ---------------------------------------------------------------- 5) cost markup
 COST = """
 <section data-tab="cost" hidden>
+  <h2>이상 사용</h2>
+  <p class="sub">상한 없는 요금제에서 공정사용 선을 넘은 계정이에요. 넘었다고 통화가 막히지는 않아요 —
+  훨씬 위(차단선)까지 가야 멈춰요. 그래서 이 목록을 사람이 보는 게 유일한 제재 경로예요.</p>
+  <div class="card scroll"><table id="fairUseTable"></table></div>
+</section>
+
+<section data-tab="cost" hidden>
   <h2>단가</h2>
   <p class="sub">구독 요금제를 설계할 때 필요한 세 숫자예요. 통화 1분과 Watch 장면 1개가 각각 얼마인지,
   그리고 둘의 비율. 비율은 요율 가정과 무관해서 가장 단단한 숫자예요.</p>
@@ -310,7 +317,29 @@ try{ const t=localStorage.getItem('nawana.admin.tab');
      if(t && document.querySelector(`.tabs button[data-go="${t}"]`)) startTab=t; }catch(e){}
 showTab(startTab);
 
-renderCostTiles(); renderMech(); renderTiers(); renderCostDaily(); renderBuilds();
+function renderFairUse(){
+  const rows=(DATA.fairUse||[]);
+  const el=document.getElementById('fairUseTable');
+  if(!el) return;
+  if(!rows.length){ el.innerHTML='<tbody><tr><td class="legend">넘은 계정 없음</td></tr></tbody>'; return; }
+  const byId={}; for(const u of DATA.users) byId[u.id]=u;
+  let html=`<thead><tr><th>유저</th><th>플랜</th><th class="num">이번 주기 통화</th>
+    <th class="num">공정사용 선</th><th class="num">차단선</th><th>주기 시작</th></tr></thead><tbody>`;
+  for(const r of rows){
+    const u=byId[r.id];
+    html+=`<tr>
+      <td><span class="uname">${esc(u?nameOf(u):r.id.slice(0,8))}</span></td>
+      <td><span class="chip">${PLAN_KO[r.plan]||r.plan}</span></td>
+      <td class="num"><b>${fmtMin(r.secs)}</b></td>
+      <td class="num">${fmtMin(r.line)}</td>
+      <td class="num">${r.stop?fmtMin(r.stop):'없음'}</td>
+      <td>${r.since}</td>
+    </tr>`;
+  }
+  el.innerHTML=html+'</tbody>';
+}
+
+renderCostTiles(); renderMech(); renderTiers(); renderCostDaily(); renderBuilds(); renderFairUse();
 """
 sub("""renderFeatures();
 renderChannels();

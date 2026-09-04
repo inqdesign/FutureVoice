@@ -310,13 +310,18 @@ enum PracticeStats {
         computeStreak(now: day, calendar: calendar)
     }
 
-    private static func computeStreak(now: Date, calendar: Calendar) -> Int {
-        let language = CoreClubService.activeLanguage()
-        let bar = CoreClubService.dailyBarSeconds()
+    /// Did `day` clear the Core's daily bar in the language being practised?
+    /// The one predicate the streak is built from — anything that needs to
+    /// say "today counts" (the streak widget's face, for one) asks THIS,
+    /// never the learner's own daily goal. The goal fills a ring; the bar
+    /// decides a day.
+    static func metCoreBar(on day: Date = Date()) -> Bool {
+        TalkTimeLog.seconds(on: day, language: CoreClubService.activeLanguage())
+            >= CoreClubService.dailyBarSeconds()
+    }
 
-        func met(_ day: Date) -> Bool {
-            TalkTimeLog.seconds(on: day, language: language) >= bar
-        }
+    private static func computeStreak(now: Date, calendar: Calendar) -> Int {
+        func met(_ day: Date) -> Bool { metCoreBar(on: day) }
 
         var streak = 0
         var cursor = calendar.startOfDay(for: now)

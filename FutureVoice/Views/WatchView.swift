@@ -316,6 +316,8 @@ struct WatchView: View {
     @State private var capAllowance: Int?
     /// When that pool refills.
     @State private var renewalLabel = ""
+    /// The plan stops on that date instead of refilling (cancelled).
+    @State private var planEndsAtPeriodEnd = false
 
     /// What the cap sheet was dismissed FOR; acted on in `onDismiss`, because
     /// a sheet can't raise the next one while it is closing.
@@ -366,6 +368,7 @@ struct WatchView: View {
             canUpgrade: canUpgradePlan,
             allowance: capAllowance,
             renewsOn: renewalLabel,
+            endsInstead: planEndsAtPeriodEnd,
             onReview: { capChoice = .review },
             onUpgrade: { capChoice = .upgrade })
     }
@@ -801,6 +804,7 @@ struct WatchView: View {
                     ? account.monthlyCapSeconds.map { $0 / 60 }
                     : account.monthlyScenesCap
                 renewalLabel = account.renewalLabel
+                planEndsAtPeriodEnd = account.cancelAtPeriodEnd
                 sceneCapReached = true
                 isPlaying = false
                 return
