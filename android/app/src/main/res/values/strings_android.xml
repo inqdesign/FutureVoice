@@ -114,4 +114,5 @@
     <string name="speech_recognition_isnt_available_type_instead">Speech recognition isn\'t available here — type instead.</string>
     <string name="that_file_held_no_practice_data">That file held no practice data — nothing was restored. Export again from the other install and check the file is the one you just made.</string>
     <string name="restored_lld_files_and_lld_settings">Restored %1$d files and %2$d settings. Quit the app completely and reopen it.</string>
+    <string name="tap_to_toggle_or_type_your_own">Tap to toggle, or type your own and hit return. Current stories matched to these show up under “In the news”.</string>
 </resources>

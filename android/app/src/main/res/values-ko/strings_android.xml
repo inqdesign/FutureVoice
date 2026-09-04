@@ -114,4 +114,5 @@
     <string name="speech_recognition_isnt_available_type_instead">여기선 음성 인식을 쓸 수 없어요. 입력해 주세요.</string>
     <string name="that_file_held_no_practice_data">그 파일엔 연습 데이터가 없어서 아무것도 복원되지 않았어요. 다른 기기에서 다시 내보내고, 방금 만든 파일이 맞는지 확인해 주세요.</string>
     <string name="restored_lld_files_and_lld_settings">파일 %1$d개와 설정 %2$d개를 복원했어요. 앱을 완전히 종료했다 다시 열어 주세요.</string>
+    <string name="tap_to_toggle_or_type_your_own">눌러서 켜고 끄거나, 직접 써서 엔터를 누르세요. 여기에 맞는 오늘 기사가 “뉴스”에 나와요.</string>
 </resources>

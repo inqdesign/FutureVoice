@@ -48,6 +48,7 @@ import com.roro.futurevoice.ui.brand.Symbols
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.PersonAddAlt
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.Tune
 import com.roro.futurevoice.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -760,6 +761,7 @@ private fun HomeScreen(
                     DiscoverSection(
                         state = state,
                         enabled = state.voiceId != null,
+                        onSavePersona = onSavePersona,
                         onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
                         onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                         onWatch = onWatch,
@@ -1003,13 +1005,23 @@ private fun DiscoverSection(
     onPickNews: (SuggestedTopic) -> Unit,
     onPickScenario: (Scenario) -> Unit,
     onWatch: (String) -> Unit,
+    onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
 ) {
+    var editingInterests by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var newsTab by remember { mutableStateOf(true) }
     val interests = state.persona?.interests.orEmpty()
     val language = state.targetLanguage
+
+    if (editingInterests) {
+        InterestsEditorSheet(
+            persona = state.persona,
+            onSave = onSavePersona,
+            onDismiss = { editingInterests = false },
+        )
+    }
     val store = remember { NewsTopicStore.shared(context) }
     val scenarioStore = remember { ScenarioStore.shared(context) }
     var topics by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
@@ -1085,6 +1097,9 @@ private fun DiscoverSection(
                             fetchNews(true)
                         }
                     }) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
+                }
+                IconButton(onClick = { editingInterests = true }) {
+                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.interests))
                 }
             } else {
                 IconButton(onClick = { composing = true }) {
