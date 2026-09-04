@@ -96,8 +96,8 @@ fun CreditGuideScreen(onBack: () -> Unit) {
             // and gating on it made this whole section vanish for the tier
             // whose shape most needs explaining.
             account?.takeIf { it.monthlyScenesCap != null }?.let { a ->
-                SectionHeader(stringResource(R.string.what_your_plan_holds))
-                GuideCard {
+                GroupedSectionHeader(stringResource(R.string.what_your_plan_holds))
+                GroupedCard {
                     PlainRow(
                         icon = Icons.Filled.CalendarMonth,
                         title = a.monthlyCapSeconds?.let {
@@ -112,7 +112,7 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                         else stringResource(R.string.use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811),
                     )
                     a.monthlyScenesCap?.let { scenes ->
-                        RowDivider()
+                        GroupedRowDivider()
                         PlainRow(
                             icon = Icons.Filled.PlayCircle,
                             title = stringResource(R.string.lld_watch_scenes_a_month, scenes),
@@ -123,85 +123,55 @@ fun CreditGuideScreen(onBack: () -> Unit) {
                 // A cancelled plan refills nothing — the same date, the
                 // opposite promise.
                 val renews = a.renewalLabel(locale)
-                Footer(when {
+                GroupedFooter(when {
                     renews.isEmpty() -> stringResource(R.string.scenes_refill_at_the_start_of_each_billing_period)
                     a.cancelAtPeriodEnd -> stringResource(R.string.your_plan_ends_on_lld, renews)
                     else -> stringResource(R.string.scenes_refill_on, renews)
                 })
             }
 
-            SectionHeader(stringResource(R.string.uses_talk_time))
-            GuideCard {
+            GroupedSectionHeader(stringResource(R.string.uses_talk_time))
+            GroupedCard {
                 CostRow(Icons.Filled.Phone, stringResource(R.string.talking),
                     stringResource(R.string.clock_time),
                     stringResource(R.string.the_call_clock_is_the_meter_a_10_minute_call_uses_10_minutes_6bb450))
-                RowDivider()
+                GroupedRowDivider()
                 CostRow(Icons.Filled.RecordVoiceOver,
                     stringResource(R.string.re_cloning_your_voice),
                     stringResource(R.string.s_1_min),
                     stringResource(R.string.setup_is_free_including_re_records_in_the_first_day_later_re_d175df))
             }
-            Footer(stringResource(R.string.only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d))
+            GroupedFooter(stringResource(R.string.only_the_call_clock_spends_your_talk_minutes_watching_a_scen_d6c32d))
 
-            SectionHeader(stringResource(R.string.watch_scenes))
-            GuideCard {
+            GroupedSectionHeader(stringResource(R.string.watch_scenes))
+            GroupedCard {
                 CostRow(Icons.Filled.PlayCircle, stringResource(R.string.watching_a_scene),
                     stringResource(R.string.s_1_scene),
                     stringResource(R.string.watch_has_its_own_pool_separate_from_your_talk_minutes_a_sce_98932d))
             }
-            Footer(stringResource(R.string.scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2))
+            GroupedFooter(stringResource(R.string.scenes_you_ve_already_watched_replay_free_forever_and_never_d6d2d2))
 
-            SectionHeader(stringResource(R.string.always_free))
-            GuideCard {
+            GroupedSectionHeader(stringResource(R.string.always_free))
+            GroupedCard {
                 FreeRow(Icons.Filled.Layers, stringResource(R.string.all_reviewing),
                     stringResource(R.string.drills_shadowing_including_coach_feedback_word_and_expressio_1d0899))
-                RowDivider()
+                GroupedRowDivider()
                 FreeRow(Icons.Filled.Repeat, stringResource(R.string.replays),
                     stringResource(R.string.anything_already_synthesized_is_cached_loop_it_slow_it_down_fed756))
-                RowDivider()
+                GroupedRowDivider()
                 FreeRow(Icons.Filled.AutoAwesome, stringResource(R.string.summaries_reports),
                     stringResource(R.string.session_scorecards_weekly_reports_and_the_daily_call_are_on_1c6cf8))
-                RowDivider()
+                GroupedRowDivider()
                 FreeRow(Icons.Filled.GridView, stringResource(R.string.exploring),
                     stringResource(R.string.building_situations_browsing_topics_translations_dictionarie_456d7f))
-                RowDivider()
+                GroupedRowDivider()
                 FreeRow(Icons.AutoMirrored.Filled.MenuBook,
                     stringResource(R.string.vocabulary_progress),
                     stringResource(R.string.the_word_cloud_cefr_estimate_and_stats_never_cost_anything))
             }
-            Footer(stringResource(R.string.in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac))
+            GroupedFooter(stringResource(R.string.in_short_minutes_buy_speaking_time_with_your_fluent_self_pra_828cac))
         }
     }
-}
-
-/** One grouped section's card — the inset-grouped list iOS draws. */
-@Composable
-private fun GuideCard(content: @Composable () -> Unit) {
-    Column(
-        Modifier.fillMaxWidth()
-            .background(AppSurfaces.card, RoundedCornerShape(12.dp))
-            .padding(vertical = 4.dp),
-    ) { content() }
-}
-
-@Composable
-private fun RowDivider() {
-    androidx.compose.material3.HorizontalDivider(
-        Modifier.padding(start = 52.dp), color = MaterialTheme.colorScheme.outlineVariant)
-}
-
-@Composable
-private fun SectionHeader(text: String) {
-    Text(text.uppercase(), style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 20.dp, bottom = 6.dp))
-}
-
-@Composable
-private fun Footer(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, top = 6.dp))
 }
 
 @Composable

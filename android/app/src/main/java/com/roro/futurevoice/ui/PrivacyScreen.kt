@@ -85,7 +85,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            SectionHeader(stringResource(R.string.consent))
+            GroupedSectionHeader(stringResource(R.string.consent))
             voiceAt?.let {
                 SettingsRow(
                     icon = Icons.Filled.GraphicEq,
@@ -100,7 +100,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                     subtitle = stringResource(R.string.at_least_lld, ConsentStore.MINIMUM_AGE),
                 )
             }
-            Footer(stringResource(R.string.your_voice_model_is_biometric_data))
+            GroupedFooter(stringResource(R.string.your_voice_model_is_biometric_data))
 
             if (voiceAt != null || voiceId != null) {
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -151,7 +151,7 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                         }
                     }
                 }
-                Footer(stringResource(R.string.this_deletes_your_voice_model_here_and_at_elevenlabs))
+                GroupedFooter(stringResource(R.string.this_deletes_your_voice_model_here_and_at_elevenlabs))
             }
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
@@ -167,22 +167,10 @@ fun PrivacyScreen(voiceId: String?, onVoiceDeleted: () -> Unit, onBack: () -> Un
                 subtitle = ConsentStore.CONTACT_EMAIL,
                 onClick = { uri.openUri("mailto:${ConsentStore.CONTACT_EMAIL}") },
             )
-            Footer(stringResource(R.string.write_to_us_to_see_or_correct_what_we_hold))
+            GroupedFooter(stringResource(R.string.write_to_us_to_see_or_correct_what_we_hold))
             Column(Modifier.padding(bottom = 32.dp)) {}
         }
     }
 }
 
-@Composable
-private fun SectionHeader(text: String) {
-    Text(text, style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 16.dp, bottom = 2.dp))
-}
 
-@Composable
-private fun Footer(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
-}

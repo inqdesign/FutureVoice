@@ -47,6 +47,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.graphics.Color
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.AuthRepository
@@ -104,133 +108,172 @@ fun InviteScreen(onBack: () -> Unit) {
             Modifier.padding(padding).fillMaxSize().background(AppSurfaces.ground)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp).padding(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Icon(Icons.Filled.Bolt, contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.primary)
-                Text(stringResource(R.string.talk_time), Modifier.weight(1f))
-                Text(talkTimeLabel(account),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            GroupedCard {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Filled.Bolt, contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.talk_time), Modifier.weight(1f))
+                    Text(talkTimeLabel(account),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             // Invite minutes are spent BEFORE the plan's monthly pool
             // (20260821100000), so a subscriber sees them come off the top.
-            Footer(stringResource(
-                if (account.isEntitled) R.string.invite_minutes_are_used_before_your_monthly_time_so_they_com_41a7e6
+            GroupedFooter(stringResource(
+                if (account.isEntitled)
+                    R.string.invite_minutes_are_used_before_your_monthly_time_so_they_com_41a7e6
                 else R.string.minutes_buy_talk_time_with_your_fluent_self_reviewing_is_alw_1b9654))
 
-            HorizontalDivider(Modifier.padding(vertical = 6.dp))
-            Text(stringResource(R.string.your_invite_code),
-                style = MaterialTheme.typography.titleSmall)
-
-            val code = status.code
-            if (code == null) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(code, fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold, fontSize = 24.sp,
-                        letterSpacing = 3.sp, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }) {
-                        Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.copy))
+            GroupedSectionHeader(stringResource(R.string.your_invite_code))
+            GroupedCard {
+                val code = status.code
+                if (code == null) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(code, fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold, fontSize = 22.sp,
+                            letterSpacing = 3.sp, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { clipboard.setText(AnnotatedString(code)) }) {
+                            Icon(Icons.Filled.ContentCopy,
+                                contentDescription = stringResource(R.string.copy))
+                        }
+                    }
+                    GroupedRowDivider(inset = false)
+                    // The store LINK is the payload and the sentence rides
+                    // along: shared this way the friend gets something
+                    // tappable, not six letters and no way to get the app.
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable {
+                                val text = context.getString(
+                                    R.string.i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d,
+                                    code, bonus) + "\n" + PLAY_URL
+                                context.startActivity(Intent.createChooser(
+                                    Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "nawana")
+                                        putExtra(Intent.EXTRA_TEXT, text)
+                                    }, null))
+                            }
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(Icons.Filled.Share, contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.share_invite),
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    GroupedRowDivider(inset = false)
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Group, contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.friends_joined), Modifier.weight(1f))
+                        Text("${status.invitesUsed} / ${ReferralClient.REWARDED_INVITE_CAP}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                OutlinedButton(
-                    onClick = {
-                        // The store LINK is the payload and the sentence rides
-                        // along: shared this way the friend gets something
-                        // tappable, not six letters and no way to get the app.
-                        val text = context.getString(
-                            R.string.i_m_practicing_speaking_with_my_own_ai_voice_on_nawana_enter_50926d, code, bonus) +
-                            "\n" + PLAY_URL
-                        context.startActivity(Intent.createChooser(
-                            Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, "nawana")
-                                putExtra(Intent.EXTRA_TEXT, text)
-                            }, null))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Icon(Icons.Filled.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text(stringResource(R.string.share_invite), Modifier.padding(start = 8.dp))
-                }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Filled.Group, contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.friends_joined), Modifier.weight(1f))
-                    Text("${status.invitesUsed} / ${ReferralClient.REWARDED_INVITE_CAP}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Footer(stringResource(R.string.your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad,
+            }
+            if (status.code != null) {
+                GroupedFooter(stringResource(
+                    R.string.your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad,
                     bonus, ReferralClient.REWARDED_INVITE_CAP))
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 6.dp))
             val joined = status.redeemedCode
             if (joined != null) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Icon(Icons.Filled.Verified, contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary)
-                    Text(stringResource(R.string.joined_with_a_code), Modifier.weight(1f))
-                    Text(joined, fontFamily = FontFamily.Monospace,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                GroupedCard {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Verified, contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(R.string.joined_with_a_code), Modifier.weight(1f))
+                        Text(joined, fontFamily = FontFamily.Monospace,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
-                Footer(stringResource(R.string.a_code_counts_once_per_account_so_this_one_is_done))
+                GroupedFooter(stringResource(R.string.a_code_counts_once_per_account_so_this_one_is_done))
             } else {
-                Text(stringResource(R.string.didn_t_use_a_code_when_you_signed_up),
-                    style = MaterialTheme.typography.titleSmall)
-                OutlinedTextField(
-                    value = codeInput,
-                    onValueChange = { codeInput = it.uppercase() },
-                    label = { Text(stringResource(R.string.enter_invite_code)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Button(
-                    onClick = {
-                        redeeming = true; error = null; message = null
-                        scope.launch {
-                            runCatching { client.redeem(codeInput) }
-                                .onSuccess { r ->
-                                    message = if (r.isComp)
-                                        context.getString(R.string.redeemed_is_on_your_account,
-                                            tierName(r.compPlanId))
-                                    else context.getString(R.string.redeemed_lld_minutes_added, bonus)
-                                    codeInput = ""
-                                    reload()
+                GroupedSectionHeader(stringResource(R.string.didn_t_use_a_code_when_you_signed_up))
+                GroupedCard {
+                    OutlinedTextField(
+                        value = codeInput,
+                        onValueChange = { codeInput = it.uppercase() },
+                        placeholder = { Text(stringResource(R.string.enter_invite_code)) },
+                        textStyle = LocalTextStyle.current.copy(fontFamily = FontFamily.Monospace),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedBorderColor = Color.Transparent),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    GroupedRowDivider(inset = false)
+                    // A List-row button, like iOS — not a filled slab, which
+                    // would be the only one on the page and read as the
+                    // screen's purpose rather than one row's action.
+                    Row(
+                        Modifier.fillMaxWidth()
+                            .clickable(enabled = !redeeming && codeInput.isNotBlank()) {
+                                redeeming = true; error = null; message = null
+                                scope.launch {
+                                    runCatching { client.redeem(codeInput) }
+                                        .onSuccess { r ->
+                                            message = if (r.isComp)
+                                                context.getString(
+                                                    R.string.redeemed_is_on_your_account,
+                                                    tierName(r.compPlanId))
+                                            else context.getString(
+                                                R.string.redeemed_lld_minutes_added, bonus)
+                                            codeInput = ""
+                                            reload()
+                                        }
+                                        .onFailure { e -> error = context.getString(reasonText(e)) }
+                                    redeeming = false
                                 }
-                                .onFailure { e ->
-                                    error = context.getString(reasonText(e))
-                                }
-                            redeeming = false
+                            }
+                            .padding(horizontal = 14.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(stringResource(R.string.redeem),
+                            color = if (!redeeming && codeInput.isNotBlank())
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.weight(1f))
+                        if (redeeming) {
+                            CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         }
-                    },
-                    enabled = !redeeming && codeInput.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    if (redeeming) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(R.string.redeem))
+                    }
+                    message?.let {
+                        GroupedRowDivider(inset = false)
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF34C759),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                    }
+                    error?.let {
+                        GroupedRowDivider(inset = false)
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                    }
                 }
-                message?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary)
-                }
-                error?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error)
-                }
-                Footer(stringResource(R.string.enter_it_here_instead_lld_minutes_once, bonus))
+                GroupedFooter(stringResource(R.string.enter_it_here_instead_lld_minutes_once, bonus))
             }
         }
     }
