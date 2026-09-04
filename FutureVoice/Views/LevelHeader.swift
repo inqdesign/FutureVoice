@@ -28,8 +28,21 @@ struct LevelHeaderTitle: View {
     /// elapsed time counts UP, so it's safe on every tier including Plus,
     /// whose rule is only that nothing counts DOWN.
     var callStartedAt: Date? = nil
+    /// Elapsed talk time while the call is PAUSED — shown frozen, so putting
+    /// a call down doesn't erase how long it has run. nil while running
+    /// (the ticking clock above) or when no call is up.
+    var pausedElapsed: TimeInterval? = nil
 
     @State private var showingInfo = false
+
+    /// "5:32" / "1:05:32" — the same shape `Text(_, style: .timer)` draws, so
+    /// pausing doesn't change the number's form, only its motion.
+    static func mmss(_ interval: TimeInterval) -> String {
+        let total = Int(interval)
+        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s)
+                     : String(format: "%d:%02d", m, s)
+    }
 
     var body: some View {
         Button { showingInfo = true } label: {
@@ -50,6 +63,12 @@ struct LevelHeaderTitle: View {
                         Text("·")
                             .font(.caption2.weight(.semibold))
                         Text(callStartedAt, style: .timer)
+                            .font(.caption2.weight(.semibold))
+                            .monospacedDigit()
+                    } else if let pausedElapsed {
+                        Text("·")
+                            .font(.caption2.weight(.semibold))
+                        Text(Self.mmss(pausedElapsed))
                             .font(.caption2.weight(.semibold))
                             .monospacedDigit()
                     }

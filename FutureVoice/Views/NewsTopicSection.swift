@@ -347,6 +347,12 @@ struct DiscoverSection: View {
         } catch is CancellationError {
             // View went away mid-poll — nothing to report.
         } catch {
+            // Same thing, other shape: a cancellation that lands while the
+            // request is in flight surfaces as `URLError(.cancelled)`, whose
+            // description is literally "cancelled" — and painted red under
+            // the list every time someone left within the ~30 s poll window.
+            guard !Task.isCancelled else { return }
+            if let urlError = error as? URLError, urlError.code == .cancelled { return }
             newsError = error.localizedDescription
         }
     }

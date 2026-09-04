@@ -9,10 +9,6 @@ struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
-    /// Observed so a call settling as missed puts its row on screen right
-    /// away — the settle happens inside an async refresh, long after onAppear.
-    @ObservedObject private var callStore = DailyCallStore.shared
-
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -73,15 +69,6 @@ struct ConversationHome: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     heroSection
-                    // A call that rang out doesn't just disappear the way a
-                    // dismissed alarm does — the message it left is still
-                    // here. This row IS the "someone tried to reach you"
-                    // trace, and it's the whole reason the call reads as a
-                    // person rather than a timer.
-                    if let plan = missedCall {
-                        missedCallRow(plan)
-                            .padding(.horizontal, 20)
-                    }
                     if sessionCount == 0 {
                         firstRunCard
                             .padding(.horizontal, 20)
@@ -242,60 +229,6 @@ struct ConversationHome: View {
     /// The hero owns the whole first viewport: the ring sits at its center
     /// (≈ screen center at rest) and the question floats in the gap between
     /// the header and the ring; the list scrolls up from underneath.
-    // MARK: - Missed call
-
-    /// The last call, if it went unanswered and its message is still unplayed.
-    /// Cleared the moment they call back or listen — this is a trace, not a
-    /// standing reminder, and it must never accumulate into a guilt pile.
-    private var missedCall: DailyCallPlan? {
-        guard DailyCallStore.shared.isEnabled else { return nil }
-        // Read the store's OWN record of the waiting message, not the pending
-        // plan: `refresh` overwrites that plan with the next call as soon as
-        // it settles this one, so reading it here showed the row only when a
-        // render happened to land in between.
-        return callStore.unheardVoicemail
-    }
-
-    /// Tapping calls them back — same script, same cached audio, straight into
-    /// the talk. Not "review the notification you missed": returning a call.
-    @ViewBuilder
-    private func missedCallRow(_ plan: DailyCallPlan) -> some View {
-        Button {
-            DailyCallScheduler.markVoicemailHeard()
-            DailyCallInbox.shared.pendingAnswer = plan
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "phone.arrow.down.left.fill")
-                    .font(.title3)
-                    .foregroundStyle(.red)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Missed call")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    // The message itself, so the row carries a real sentence
-                    // of target-language material even unopened.
-                    Text(plan.script)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Missed call"))
-        .accessibilityHint(Text(plan.script))
-    }
-
     private var heroSection: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
