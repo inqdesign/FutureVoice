@@ -234,7 +234,13 @@ enum PublicPersonaService {
         guard !UserDefaults.standard.bool(forKey: manualIntroKey),
               let p = persona, p.isMinimallyComplete else { return }
         let intro = composedIntro(p)
-        guard intro.count >= 30 else { return }
+        // 80 because the DATABASE says 80: `public_personas_intro_bounds`
+        // rejects any row with `is_active = true` under it, and publishMine
+        // always writes true. A lower bar here doesn't publish thinner rows —
+        // it fires an insert that can only ever fail, on every launch and
+        // every profile save, for anyone whose composed intro lands in
+        // between.
+        guard intro.count >= 80 else { return }
         guard let uid = try? await SupabaseProvider.shared.auth.session.user.id else { return }
         // Stable per-user voice pick so "you" doesn't change voices between
         // launches — hash the user id into the preset catalog.
