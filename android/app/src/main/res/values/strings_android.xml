@@ -88,4 +88,11 @@
     <string name="continue_with_apple">Continue with Apple</string>
     <string name="other_ways_to_say_it">Other ways to say it</string>
     <string name="show_me_more">Show me more</string>
+    <string name="export_or_import_this_devices_practice">Export or import this device\'s practice</string>
+    <string name="a_backup_moves_your_practice_between_installs">A backup moves your practice between installs — and between phones.</string>
+    <string name="scanning">Scanning…</string>
+    <string name="encoding">Encoding…</string>
+    <string name="decoding">Decoding…</string>
+    <string name="packing_lld_of_lld">Packing %1$d of %2$d</string>
+    <string name="restoring_lld_of_lld">Restoring %1$d of %2$d</string>
 </resources>

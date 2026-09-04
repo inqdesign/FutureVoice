@@ -88,4 +88,11 @@
     <string name="continue_with_apple">Apple로 계속하기</string>
     <string name="other_ways_to_say_it">다르게 말하는 법</string>
     <string name="show_me_more">더 보기</string>
+    <string name="export_or_import_this_devices_practice">이 기기의 연습을 내보내거나 가져오기</string>
+    <string name="a_backup_moves_your_practice_between_installs">백업은 설치본 사이로, 그리고 폰 사이로 연습을 옮겨요.</string>
+    <string name="scanning">살펴보는 중…</string>
+    <string name="encoding">묶는 중…</string>
+    <string name="decoding">푸는 중…</string>
+    <string name="packing_lld_of_lld">%2$d개 중 %1$d개 담는 중</string>
+    <string name="restoring_lld_of_lld">%2$d개 중 %1$d개 복원 중</string>
 </resources>

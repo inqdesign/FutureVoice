@@ -53,6 +53,14 @@ import com.roro.futurevoice.data.AudioPrefs
 import androidx.compose.material3.Slider
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.mutableFloatStateOf
+import com.roro.futurevoice.data.BackupService
+import com.roro.futurevoice.data.BookExport
+import androidx.compose.material.icons.filled.ImportExport
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -90,6 +98,7 @@ fun MeScreen(
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var confirmingSignOut by remember { mutableStateOf(false) }
     var coreProgress by remember { mutableStateOf<CoreClubClient.Progress?>(null) }
     LaunchedEffect(targetLanguage) {
@@ -106,6 +115,19 @@ fun MeScreen(
     var account by remember { mutableStateOf<AccountStatus?>(null) }
     var addingLanguage by remember { mutableStateOf(false) }
     var pickingTheme by remember { mutableStateOf(false) }
+    var managingBackup by remember { mutableStateOf(false) }
+    // Non-null while a pack or a restore is running — both are slow enough to
+    // look hung, so the row says where it has got to.
+    var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
+    val importPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            runCatching { BackupService.import(context, uri) { backupStep = it } }
+            backupStep = null
+        }
+    }
     var callVolume by remember { mutableFloatStateOf(AudioPrefs.talkVoiceVolume(context)) }
     var theme by remember { mutableStateOf(FutureselfTheme.stored(context)) }
     LaunchedEffect(Unit) {
@@ -322,6 +344,17 @@ fun MeScreen(
                 subtitle = theme.label,
                 onClick = { pickingTheme = true },
             )
+            // Moving progress between INSTALLS — the dev build and the
+            // release build are separate sandboxes, so practice done in one
+            // never reaches the other by itself. The envelope is iOS's, so a
+            // backup written on an iPhone opens here.
+            SettingsRow(
+                icon = Icons.Filled.ImportExport,
+                title = stringResource(R.string.practice_data),
+                subtitle = backupStep?.let { stepLabel(it) }
+                    ?: stringResource(R.string.export_or_import_this_devices_practice),
+                onClick = if (backupStep == null) ({ managingBackup = true }) else null,
+            )
             SettingsRow(
                 icon = Icons.Filled.Groups,
                 title = stringResource(R.string.find_people),
@@ -384,6 +417,46 @@ fun MeScreen(
                 }
             },
         )
+    }
+
+    if (managingBackup) {
+        ModalBottomSheet(onDismissRequest = { managingBackup = false }) {
+            Column(
+                Modifier.fillMaxWidth().navigationBarsPadding()
+                    .padding(horizontal = 20.dp).padding(bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(stringResource(R.string.practice_data),
+                    style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.a_backup_moves_your_practice_between_installs),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(
+                    onClick = {
+                        managingBackup = false
+                        scope.launch {
+                            val file = runCatching {
+                                BackupService.export(context) { backupStep = it }
+                            }.getOrNull()
+                            backupStep = null
+                            // Build it with a visible bar, THEN share the
+                            // finished file. Packing inside a share sheet is
+                            // a minutes-long wait behind a screen that shows
+                            // nothing.
+                            file?.let { BookExport.share(context, it, "application/json") }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.export_practice_data)) }
+                OutlinedButton(
+                    onClick = {
+                        managingBackup = false
+                        importPicker.launch(arrayOf("application/json"))
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.import_practice_data)) }
+            }
+        }
     }
 
     if (pickingTheme) {
@@ -477,4 +550,23 @@ private fun AddLanguageSheet(
             ) { Text(stringResource(R.string.start_learning)) }
         }
     }
+}
+
+/**
+ * Where a pack or a restore has got to.
+ *
+ * Both directions are slow enough to look hung — a full library is hundreds
+ * of megabytes — so the per-file loops are counted, and the two opaque ends
+ * (encoding the envelope, decoding it back) get named steps of their own
+ * rather than a frozen row.
+ */
+@Composable
+private fun stepLabel(step: BackupService.Step): String = when (step) {
+    BackupService.Step.Scanning -> stringResource(R.string.scanning)
+    is BackupService.Step.Packing ->
+        stringResource(R.string.packing_lld_of_lld, step.done, step.total)
+    BackupService.Step.Encoding -> stringResource(R.string.encoding)
+    BackupService.Step.Decoding -> stringResource(R.string.decoding)
+    is BackupService.Step.Writing ->
+        stringResource(R.string.restoring_lld_of_lld, step.done, step.total)
 }
