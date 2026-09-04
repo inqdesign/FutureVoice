@@ -61,6 +61,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import com.roro.futurevoice.data.AccountEraser
+import androidx.compose.material.icons.filled.PrivacyTip
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -94,12 +96,17 @@ fun MeScreen(
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
+    /** Opens the consent read-back and withdrawal page. */
+    onOpenPrivacy: () -> Unit,
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var confirmingSignOut by remember { mutableStateOf(false) }
+    var confirmingDelete by remember { mutableStateOf(false) }
+    var deleting by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
     var coreProgress by remember { mutableStateOf<CoreClubClient.Progress?>(null) }
     LaunchedEffect(targetLanguage) {
         coreProgress = CoreClubClient(AuthRepository()).progress(targetLanguage)
@@ -349,6 +356,14 @@ fun MeScreen(
             // never reaches the other by itself. The envelope is iOS's, so a
             // backup written on an iPhone opens here.
             SettingsRow(
+                icon = Icons.Filled.PrivacyTip,
+                title = stringResource(R.string.privacy),
+                subtitle = if (com.roro.futurevoice.data.ConsentStore.hasVoiceConsent(context))
+                    stringResource(R.string.voice_consent_policy)
+                else stringResource(R.string.policy),
+                onClick = onOpenPrivacy,
+            )
+            SettingsRow(
                 icon = Icons.Filled.ImportExport,
                 title = stringResource(R.string.practice_data),
                 subtitle = backupStep?.let { stepLabel(it) }
@@ -399,6 +414,14 @@ fun MeScreen(
             TextButton(onClick = { confirmingSignOut = true }) {
                 Text(stringResource(R.string.sign_out_dc1649), color = MaterialTheme.colorScheme.error)
             }
+            // Play requires an in-app path to account deletion for any app
+            // that creates accounts, and it has to be reachable — not behind
+            // a support email. It sits under Sign out because that is where
+            // someone looking to leave will already be.
+            TextButton(onClick = { confirmingDelete = true }, enabled = !deleting) {
+                Text(stringResource(R.string.delete_account),
+                    color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 
@@ -415,6 +438,49 @@ fun MeScreen(
                 TextButton(onClick = { confirmingSignOut = false }) {
                     Text(stringResource(R.string.back_b52b36))
                 }
+            },
+        )
+    }
+
+    if (confirmingDelete) {
+        AlertDialog(
+            onDismissRequest = { confirmingDelete = false },
+            title = { Text(stringResource(R.string.delete_your_account)) },
+            text = { Text(stringResource(R.string.this_permanently_deletes_your_voice_clone_talk_time_and_account)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingDelete = false
+                    deleting = true
+                    scope.launch {
+                        // The server goes FIRST and the device is only erased
+                        // once it succeeded — a local wipe on a failed request
+                        // leaves a learner with a billable account they can no
+                        // longer reach.
+                        runCatching { AccountEraser.deleteAccount(context) }
+                            .onSuccess { onSignOut() }
+                            .onFailure { deleteError = it.message ?: "" }
+                        deleting = false
+                    }
+                }) {
+                    Text(stringResource(R.string.delete_forever),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingDelete = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    deleteError?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { deleteError = null },
+            title = { Text(stringResource(R.string.couldnt_delete_account)) },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = { deleteError = null }) { Text("OK") }
             },
         )
     }

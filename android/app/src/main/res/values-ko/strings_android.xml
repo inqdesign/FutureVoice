@@ -95,4 +95,12 @@
     <string name="decoding">푸는 중…</string>
     <string name="packing_lld_of_lld">%2$d개 중 %1$d개 담는 중</string>
     <string name="restoring_lld_of_lld">%2$d개 중 %1$d개 복원 중</string>
+    <string name="your_voice_model_is_built_by_the_most_trusted_service">목소리 모델은 가장 믿을 만한 곳에서 만들고, 어학 연습에만 써요.</string>
+    <string name="given_lld">%1$s에 동의</string>
+    <string name="your_voice_model_is_biometric_data">목소리 모델은 생체정보예요. 연습 문장을 내 목소리로 들려주는 데에만 쓰고, 팔거나 공유하거나 다른 사람 모델 학습에 쓰지 않아요.</string>
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">여기와 ElevenLabs 양쪽에서 지워지고, 되돌릴 수 없어요. 다음 통화 전에 새로 녹음하게 돼요.</string>
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">여기와 ElevenLabs 양쪽에서 목소리 모델을 지워요. 이미 만들어진 오디오는 계정을 지울 때까지 남아요. 목소리 없이는 통화를 할 수 없어서 새로 녹음하게 되고, 원하면 계정을 통째로 지울 수도 있어요.</string>
+    <string name="write_to_us_to_see_or_correct_what_we_hold">보관 중인 내 정보를 확인하거나 고치고 싶으면 메일 주세요. 동의한 날짜도 포함돼요.</string>
+    <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">목소리 클론과 통화 시간, 계정을 영구히 지워요. 되돌릴 수 없어요. 구독 중이라면 Play 스토어에서 따로 해지해야 해요.</string>
+    <string name="couldnt_delete_account">계정을 지우지 못했어요</string>
 </resources>

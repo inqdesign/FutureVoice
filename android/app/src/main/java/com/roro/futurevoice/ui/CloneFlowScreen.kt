@@ -32,6 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.roro.futurevoice.data.ConsentStore
+import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextDecoration
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.audio.Mp3Player
@@ -378,23 +383,39 @@ fun CloneFlowScreen(
                 }
 
                 CloneAct.CONSENT -> {
-                    Text(stringResource(R.string.re_record_it_or_delete_it_whenever_you_want_and_deleting_you_5a997f),
-                        style = MaterialTheme.typography.bodyMedium)
+                    // The plain-language description of what happens to a
+                    // recording: who processes it, what it is for, how it
+                    // ends. It sits ABOVE the toggle because consent to
+                    // something unexplained isn't informed consent — this IS
+                    // the disclosure the toggle agrees to. Two lines, not
+                    // five; the processor is named in the policy, which is
+                    // linked right under the box.
+                    ConsentPoint(Icons.Filled.RecordVoiceOver,
+                        stringResource(R.string.your_voice_model_is_built_by_the_most_trusted_service))
+                    ConsentPoint(Icons.Filled.Delete,
+                        stringResource(R.string.re_record_it_or_delete_it_whenever_you_want_and_deleting_you_5a997f))
                     Row(
                         Modifier.fillMaxWidth().clickable { consented = !consented },
                         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
                         Checkbox(checked = consented, onCheckedChange = { consented = it })
-                        Text(stringResource(R.string.i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d, MINIMUM_AGE),
+                        Text(stringResource(R.string.i_m_lld_or_older_and_i_agree_to_my_recording_being_used_to_b_a31e9d, ConsentStore.MINIMUM_AGE),
                             style = MaterialTheme.typography.bodyMedium)
                     }
+                    val uriHandler = LocalUriHandler.current
+                    Text(
+                        stringResource(R.string.privacy_policy),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        textDecoration = TextDecoration.Underline,
+                        modifier = Modifier.clickable {
+                            uriHandler.openUri(ConsentStore.privacyUrl())
+                        },
+                    )
                     Button(
                         enabled = consented,
                         onClick = {
-                            context.getSharedPreferences("futurevoice", 0).edit()
-                                .putLong("futurevoice.consent.voiceAt", System.currentTimeMillis())
-                                .putLong("futurevoice.consent.ageAt", System.currentTimeMillis())
-                                .apply()
+                            ConsentStore.record(context)
                             act = CloneAct.MIC
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -554,7 +575,6 @@ fun CloneFlowScreen(
 
 private const val MIN_SECONDS = 60f
 private const val MAX_SECONDS = 90f
-private const val MINIMUM_AGE = 16
 
 /**
  * A step's headline and the one line under it. Every act in this flow wears
@@ -630,4 +650,22 @@ private fun issueText(issue: SampleQuality.Issue): String = when (issue) {
     SampleQuality.Issue.NoisyBackground -> stringResource(R.string.noisy_background_try_quieter)
     SampleQuality.Issue.SomeNoise -> stringResource(R.string.some_background_noise_quieter_better)
     SampleQuality.Issue.QuietTake -> stringResource(R.string.quiet_take_well_boost_it)
+}
+
+/**
+ * One line of the voice disclosure: a glyph and the promise it stands for.
+ * Secondary-coloured because the thing being agreed to is the toggle below —
+ * these are what make agreeing to it informed.
+ */
+@Composable
+private fun ConsentPoint(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(text, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

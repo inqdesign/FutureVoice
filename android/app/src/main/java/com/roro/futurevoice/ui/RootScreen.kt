@@ -146,6 +146,7 @@ fun RootScreen() {
     var callOpener by remember { mutableStateOf("") }
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
+    var showPrivacy by remember { mutableStateOf(false) }
     var showPeople by remember { mutableStateOf(false) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
@@ -357,6 +358,16 @@ fun RootScreen() {
             onBack = { showPeople = false },
         )
 
+        // Above Me, so backing out of it lands on Me rather than the tabs.
+        showPrivacy -> PrivacyScreen(
+            voiceId = state.voiceId,
+            // Withdrawing deletes the model, so the app has no voice to hold
+            // a call with — the flow has to ask for a new one, which is what
+            // reopening setup does.
+            onVoiceDeleted = { showPrivacy = false; showMe = false; app.reopenSetup() },
+            onBack = { showPrivacy = false },
+        )
+
         showMe -> MeScreen(
             email = state.email,
             persona = state.persona,
@@ -371,6 +382,7 @@ fun RootScreen() {
             onEditProfile = { editProfile = true },
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
+            onOpenPrivacy = { showPrivacy = true },
             onBack = { showMe = false },
         )
 

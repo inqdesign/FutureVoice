@@ -95,4 +95,12 @@
     <string name="decoding">Decoding…</string>
     <string name="packing_lld_of_lld">Packing %1$d of %2$d</string>
     <string name="restoring_lld_of_lld">Restoring %1$d of %2$d</string>
+    <string name="your_voice_model_is_built_by_the_most_trusted_service">Your voice model is built by the most trusted service there is, and used for your language practice only.</string>
+    <string name="given_lld">Given %1$s</string>
+    <string name="your_voice_model_is_biometric_data">Your voice model is biometric data. It\'s used only to speak your practice lines back in your own voice — never sold, never shared, never used to train anyone else\'s model.</string>
+    <string name="your_voice_model_is_deleted_here_and_at_elevenlabs">Your voice model is deleted here and at ElevenLabs, and this can\'t be undone. You\'ll be asked to record a new one before your next call.</string>
+    <string name="this_deletes_your_voice_model_here_and_at_elevenlabs">This deletes your voice model here and at ElevenLabs. Audio already generated keeps playing until you delete your account. The app can\'t hold a call without a voice, so it will ask you to record a new one — or you can delete your account entirely.</string>
+    <string name="write_to_us_to_see_or_correct_what_we_hold">Write to us to see or correct what we hold about you, including the date you gave consent.</string>
+    <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active Google Play subscription must be canceled separately in the Play Store.</string>
+    <string name="couldnt_delete_account">Couldn\'t delete account</string>
 </resources>
