@@ -393,23 +393,41 @@ struct FindPersonCard: View {
 
     /// Raised in place of Talk/Watch when the account can't pay for them.
     @State private var showingPaywall = false
-    /// The voice this stranger speaks in — the learner's pick, never the
-    /// stranger's real voice (there isn't one to have). Starts on the preset
-    /// their row carries; changing it saves the person, so the pick sticks
-    /// (`asCounterpart` returns the saved row over the pool's).
-    @State private var voicePresetId: String = ""
 
-    /// The person with the learner's voice pick applied — every action
-    /// (Talk, Watch, compose, save) goes through this, so a voice changed a
-    /// second ago is the voice that speaks.
-    private var effectivePerson: Counterpart {
-        var c = person
-        if !voicePresetId.isEmpty { c.voicePresetId = voicePresetId }
-        return c
+    /// This person as they are RIGHT NOW: the saved row when one exists (it
+    /// carries every earlier voice pick), else the pool's row.
+    ///
+    /// `person` is the value the navigation stack is holding, and it is
+    /// FROZEN at push time — it never sees a later save. The card used to
+    /// keep the voice in `@State` seeded from it in `onAppear`, so popping
+    /// back from the voice picker (which re-fires `onAppear`) put the OLD
+    /// preset back on screen and into every action below: the pick was on
+    /// disk but nothing after it used it. Read the store instead and there
+    /// is no state to reset.
+    private var currentPerson: Counterpart {
+        appState.counterparts.first(where: { $0.id == person.id }) ?? person
+    }
+
+    /// The person every action (Talk, Watch, compose, save) goes through, so
+    /// a voice changed a second ago is the voice that speaks.
+    private var effectivePerson: Counterpart { currentPerson }
+
+    /// The voice this stranger speaks in — the learner's pick, never the
+    /// stranger's real voice (there isn't one to have). Picking one saves the
+    /// person on the spot, so the pick sticks (`asCounterpart` returns the
+    /// saved row over the pool's).
+    private var voiceSelection: Binding<String> {
+        Binding(get: { currentPerson.voicePresetId },
+                set: { picked in
+                    var c = currentPerson
+                    guard picked != c.voicePresetId else { return }
+                    c.voicePresetId = picked
+                    appState.saveCounterpart(c)
+                })
     }
 
     private var currentVoiceName: String {
-        VoicePreset.catalog.first(where: { $0.id == effectivePerson.voicePresetId })?.displayName ?? ""
+        VoicePreset.catalog.first(where: { $0.id == currentPerson.voicePresetId })?.displayName ?? ""
     }
 
     private var pastTalks: [Session] {
@@ -454,7 +472,7 @@ struct FindPersonCard: View {
 
             Section {
                 NavigationLink {
-                    VoicePresetPickerView(selection: $voicePresetId)
+                    VoicePresetPickerView(selection: voiceSelection)
                         .environmentObject(appState)
                 } label: {
                     HStack {
@@ -497,11 +515,6 @@ struct FindPersonCard: View {
             }
         }
         .listStyle(.insetGrouped)
-        .onAppear { voicePresetId = person.voicePresetId }
-        .onChange(of: voicePresetId) { _, picked in
-            guard picked != person.voicePresetId else { return }
-            appState.saveCounterpart(effectivePerson)
-        }
         .navigationTitle("")
         .toolbar {
             if let rid = person.remoteId {
@@ -554,8 +567,9 @@ struct FindPersonCard: View {
     /// met". Idempotent: the local id is derived from the remote one, and the
     /// store dedupes on `remoteId`, so re-tapping can't file a twin.
     private func savedPerson() -> Counterpart {
-        if appState.counterparts.contains(where: { $0.id == person.id }) { return effectivePerson }
-        appState.saveCounterpart(effectivePerson)
-        return effectivePerson
+        let c = currentPerson
+        if appState.counterparts.contains(where: { $0.id == c.id }) { return c }
+        appState.saveCounterpart(c)
+        return c
     }
 }
