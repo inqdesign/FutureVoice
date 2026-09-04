@@ -98,6 +98,8 @@ fun MeScreen(
     onSignOut: () -> Unit,
     /** Opens the consent read-back and withdrawal page. */
     onOpenPrivacy: () -> Unit,
+    /** Re-reads state a restore just overwrote. */
+    onRestored: () -> Unit,
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
@@ -126,12 +128,23 @@ fun MeScreen(
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the row says where it has got to.
     var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
+    var backupResult by remember { mutableStateOf<String?>(null) }
     val importPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             runCatching { BackupService.import(context, uri) { backupStep = it } }
+                .onSuccess { r ->
+                    // The state flow was built from preferences the restore
+                    // has since replaced, so it has to be re-read or the
+                    // install keeps pointing at the old language.
+                    onRestored()
+                    backupResult = if (r.files == 0)
+                        context.getString(R.string.that_file_held_no_practice_data)
+                    else context.getString(R.string.restored_lld_files_and_lld_settings, r.files, r.defaults)
+                }
+                .onFailure { backupResult = it.message ?: "" }
             backupStep = null
         }
     }
@@ -481,6 +494,17 @@ fun MeScreen(
             text = { Text(msg) },
             confirmButton = {
                 TextButton(onClick = { deleteError = null }) { Text("OK") }
+            },
+        )
+    }
+
+    backupResult?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { backupResult = null },
+            title = { Text(stringResource(R.string.practice_data)) },
+            text = { Text(msg) },
+            confirmButton = {
+                TextButton(onClick = { backupResult = null }) { Text("OK") }
             },
         )
     }

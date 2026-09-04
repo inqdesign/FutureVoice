@@ -103,4 +103,15 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">Write to us to see or correct what we hold about you, including the date you gave consent.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">This permanently deletes your voice clone, talk time, and account. It cannot be undone. An active Google Play subscription must be canceled separately in the Play Store.</string>
     <string name="couldnt_delete_account">Couldn\'t delete account</string>
+    <string name="make_me_sound_more_like_you">Make me sound more like you</string>
+    <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">The more I know your life, the more real every talk feels. Just talk — your native language is fine.</string>
+    <string name="what_do_you_do">What do you do?</string>
+    <string name="work_study_or_your_main_project">Work, study, or your main project — what a typical day looks like</string>
+    <string name="whos_in_your_daily_life">Who\'s in your daily life?</string>
+    <string name="who_you_live_with_kids_pets">Who you live with, kids, pets — people you end up talking about</string>
+    <string name="quirks_goals_pet_peeves">Quirks, goals, pet peeves — whatever helps me sound like you</string>
+    <string name="speak">Speak</string>
+    <string name="speech_recognition_isnt_available_type_instead">Speech recognition isn\'t available here — type instead.</string>
+    <string name="that_file_held_no_practice_data">That file held no practice data — nothing was restored. Export again from the other install and check the file is the one you just made.</string>
+    <string name="restored_lld_files_and_lld_settings">Restored %1$d files and %2$d settings. Quit the app completely and reopen it.</string>
 </resources>

@@ -60,6 +60,40 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
     ))
     val state: StateFlow<AppState> = _state.asStateFlow()
 
+    /**
+     * Re-read everything a restore just overwrote.
+     *
+     * The stores hold whatever they read BEFORE the import, and the state
+     * flow was built from preferences that have since changed — without this
+     * a restored install keeps pointing at the old language, so every file
+     * lands correctly and the screen shows nothing.
+     */
+    fun adoptRestoredData() {
+        // No store repointing to do: every scoped store resolves
+        // `lang/<code>/` on each call rather than caching a handle, which is
+        // exactly why a language switch needs no flush here.
+        val target = prefs.getString("futurevoice.targetLanguage", null)
+        val native = prefs.getString(NATIVE_KEY, null)
+        val enrolled = LanguageScope.enrolled(appContext)
+        viewModelScope.launch {
+            val persona = PersonaStore.shared(appContext).load()
+            _state.update {
+                it.copy(
+                    setupComplete = prefs.getBoolean(SETUP_COMPLETE_KEY, it.setupComplete),
+                    targetLanguage = target ?: it.targetLanguage,
+                    nativeLanguage = native ?: it.nativeLanguage,
+                    enrolledLanguages = enrolled.ifEmpty { it.enrolledLanguages },
+                    level = CefrLevel.from(
+                        prefs.getString("futurevoice.level.${target ?: it.targetLanguage}", null)
+                            ?: prefs.getString(LEVEL_KEY, null)),
+                    persona = persona,
+                    personaResolved = true,
+                )
+            }
+            StoreEvents.bump()
+        }
+    }
+
     init {
         viewModelScope.launch {
             val persona = PersonaStore.shared(appContext).load()

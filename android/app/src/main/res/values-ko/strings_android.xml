@@ -103,4 +103,15 @@
     <string name="write_to_us_to_see_or_correct_what_we_hold">보관 중인 내 정보를 확인하거나 고치고 싶으면 메일 주세요. 동의한 날짜도 포함돼요.</string>
     <string name="this_permanently_deletes_your_voice_clone_talk_time_and_account">목소리 클론과 통화 시간, 계정을 영구히 지워요. 되돌릴 수 없어요. 구독 중이라면 Play 스토어에서 따로 해지해야 해요.</string>
     <string name="couldnt_delete_account">계정을 지우지 못했어요</string>
+    <string name="make_me_sound_more_like_you">너처럼 들리게 해줘</string>
+    <string name="the_more_i_know_your_life_the_more_real_every_talk_feels">네 생활을 알수록 대화가 진짜 같아져. 그냥 말해 — 모국어로 해도 돼.</string>
+    <string name="what_do_you_do">무슨 일 해?</string>
+    <string name="work_study_or_your_main_project">일, 공부, 하고 있는 프로젝트 — 보통 하루가 어떤지</string>
+    <string name="whos_in_your_daily_life">매일 누구랑 지내?</string>
+    <string name="who_you_live_with_kids_pets">같이 사는 사람, 아이, 반려동물 — 자꾸 얘기하게 되는 사람들</string>
+    <string name="quirks_goals_pet_peeves">버릇, 목표, 질색하는 것 — 너처럼 들리게 하는 건 뭐든</string>
+    <string name="speak">말하기</string>
+    <string name="speech_recognition_isnt_available_type_instead">여기선 음성 인식을 쓸 수 없어요. 입력해 주세요.</string>
+    <string name="that_file_held_no_practice_data">그 파일엔 연습 데이터가 없어서 아무것도 복원되지 않았어요. 다른 기기에서 다시 내보내고, 방금 만든 파일이 맞는지 확인해 주세요.</string>
+    <string name="restored_lld_files_and_lld_settings">파일 %1$d개와 설정 %2$d개를 복원했어요. 앱을 완전히 종료했다 다시 열어 주세요.</string>
 </resources>

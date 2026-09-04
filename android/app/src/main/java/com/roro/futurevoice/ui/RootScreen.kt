@@ -46,6 +46,8 @@ import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import com.roro.futurevoice.ui.brand.Symbols
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.PersonAddAlt
+import androidx.compose.ui.text.font.FontWeight
 import com.roro.futurevoice.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
@@ -383,6 +385,7 @@ fun RootScreen() {
             onOpenPaywall = { BillingGate.showPaywall.value = true },
             onSignOut = { showMe = false; app.signOut() },
             onOpenPrivacy = { showPrivacy = true },
+            onRestored = app::adoptRestoredData,
             onBack = { showMe = false },
         )
 
@@ -484,6 +487,7 @@ fun RootScreen() {
             onWatch = { id -> gate { watchScenarioId = id } },
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
+            onSavePersona = app::savePersona,
         )
     }
 }
@@ -627,8 +631,34 @@ private fun HomeScreen(
     onOpenBook: (String) -> Unit = {},
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
+    onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
 ) {
     val context = LocalContext.current
+    var showDeepen by remember { mutableStateOf(false) }
+
+    // Auto-present exactly once, right after the first talk ends — the moment
+    // the "richer persona = more real talks" pitch has lived evidence behind
+    // it. Before that it is a promise, and asked in onboarding it is a form.
+    LaunchedEffect(state.persona, tab) {
+        val prefs = context.getSharedPreferences("futurevoice", 0)
+        val prompted = prefs.getBoolean("futurevoice.personaDeepenPrompted", false)
+        val talks = com.roro.futurevoice.data.SessionStore.shared(context)
+            .load(state.targetLanguage).count { it.endedAt != null }
+        if (!prompted && talks > 0 && personaNeedsDepth(state.persona)) {
+            prefs.edit().putBoolean("futurevoice.personaDeepenPrompted", true).apply()
+            showDeepen = true
+        }
+    }
+
+    if (showDeepen) {
+        PersonaDeepenSheet(
+            persona = state.persona,
+            nativeLanguage = state.nativeLanguage,
+            targetLanguage = state.targetLanguage,
+            onSave = onSavePersona,
+            onDismiss = { showDeepen = false },
+        )
+    }
 
     var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
     val permission = rememberLauncherForActivityResult(
@@ -715,6 +745,9 @@ private fun HomeScreen(
                         onTap = { launch("", emptyList()) },
                         onOpenActivity = onOpenActivity,
                     )
+                    if (personaNeedsDepth(state.persona)) {
+                        DeepenRow(onClick = { showDeepen = true })
+                    }
                     // One Discover section, two chips — what to talk about
                     // today: the day's stories, or a situation you built.
                     DiscoverSection(
@@ -1470,5 +1503,49 @@ private fun ScenarioComposer(
                 },
             ) { Text(stringResource(if (committing) R.string.working else R.string.create)) }
         }
+    }
+}
+
+/**
+ * True while the persona's narrative fields are still blank — the ones
+ * onboarding deliberately skips and [PersonaDeepenSheet] collects.
+ *
+ * The first call now asks these out loud and writes down the answers
+ * (`UserPersona.learnedNotes`). Once it has, a form asking the same three
+ * questions reads as the app not having listened.
+ */
+private fun personaNeedsDepth(p: com.roro.futurevoice.talk.UserPersona?): Boolean {
+    if (p == null) return false
+    if (p.learnedNotes.isNotEmpty()) return false
+    return listOf(p.occupation, p.household, p.freeNotes).all { it.isBlank() }
+}
+
+/**
+ * The persistent re-entry once the auto-prompt has passed — visible only
+ * while those fields stay empty, so it disappears the moment it is answered
+ * rather than sitting on the home as a permanent chore.
+ */
+@Composable
+private fun DeepenRow(onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth()
+            .background(AppSurfaces.card, RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(Icons.Filled.PersonAddAlt, contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(R.string.tell_me_more_about_you),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.talks_get_more_real_when_i_know_your_life),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
