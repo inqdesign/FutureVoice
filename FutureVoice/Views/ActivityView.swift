@@ -16,6 +16,8 @@ struct ActivityView: View {
     /// Whole minutes of TALK TIME per day (start-of-day keyed), floored —
     /// see `talkSeconds(on:)` for what that is and what it isn't.
     @State private var minutesByDay: [Date: Int] = [:]
+    /// Foreground minutes per day, floored — the card's "Study" figure.
+    @State private var studyMinutesByDay: [Date: Int] = [:]
     /// The day's finished talks, newest first — the tap-through to their books.
     @State private var sessionsByDay: [Date: [Session]] = [:]
     @State private var totalTalkSeconds = 0
@@ -388,7 +390,8 @@ struct ActivityView: View {
                                c.lastReviewedAt.map { cal.isDate($0, inSameDayAs: day) } ?? false
                            }.count)
 
-        let isEmpty = mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0
+        let study = studyMinutesByDay[day] ?? 0
+        let isEmpty = mins == 0 && talks == 0 && shadowed == 0 && reviewed == 0 && study == 0
 
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 8) {
@@ -398,7 +401,8 @@ struct ActivityView: View {
                     .minimumScaleFactor(0.85)
                 Spacer(minLength: 8)
                 // The day's share card — only for a day that has something
-                // on it; an empty day has nothing to put on a card.
+                // on it; an empty day has nothing to put on a card. A talk
+                // closed without saving still counts: it was metered.
                 if !isEmpty {
                     // A bare glyph, no container. The label said what the
                     // glyph already says, and a bordered capsule drawn around
@@ -429,8 +433,13 @@ struct ActivityView: View {
                 HStack(alignment: .top, spacing: 16) {
                     cardPreviewRow(day)
                     VStack(spacing: 12) {
-                        factRow("Talks", "\(talks)")
+                        // Talk time leads, and is shown even at zero on a day
+                        // that has something else: it is the number the home
+                        // ring reports, and a day whose talk was closed
+                        // without saving has nothing else to name it by.
                         factRow("Talk time", explain("\(mins) min"))
+                        if talks > 0 { factRow("Talks", "\(talks)") }
+                        if study > 0 { factRow("Study time", explain("\(study) min")) }
                         if shadowed > 0 { factRow("Shadowing", "\(shadowed)") }
                         if reviewed > 0 { factRow("Drills", "\(reviewed)") }
                     }
@@ -630,19 +639,31 @@ struct ActivityView: View {
     private func load() {
         let sessions = SessionStore.shared.load().filter { $0.endedAt != nil }
 
-        var days: Set<Date> = []
         var byDay: [Date: [Session]] = [:]
         for session in sessions.sorted(by: { ($0.endedAt ?? $0.startedAt) > ($1.endedAt ?? $1.startedAt) }) {
-            let day = cal.startOfDay(for: session.endedAt ?? session.startedAt)
-            days.insert(day)
-            byDay[day, default: []].append(session)
+            byDay[cal.startOfDay(for: session.endedAt ?? session.startedAt), default: []].append(session)
         }
 
-        var seconds: [Date: Int] = [:]
-        for day in days { seconds[day] = talkSeconds(on: day) }
+        var days = Set(byDay.keys)
+        days.formUnion(cardStore.recordedDays().map { cal.startOfDay(for: $0) })
+        days.formUnion(loggedDays())
 
-        activeDays = days
+        var seconds: [Date: Int] = [:]
+        var study: [Date: Int] = [:]
+        for day in days {
+            let talk = talkSeconds(on: day)
+            seconds[day] = talk
+            study[day] = studySeconds(on: day, talk: talk)
+        }
+
+        // Shaded and counted only where practice actually happened. Being in
+        // `days` is a weaker claim — a day can hold a photo, or nothing but
+        // foreground time, and neither is a rep.
+        activeDays = days.filter {
+            (seconds[$0] ?? 0) > 0 || byDay[$0] != nil || reps(on: $0) > 0
+        }
         minutesByDay = seconds.mapValues { $0 / 60 }
+        studyMinutesByDay = study.mapValues { $0 / 60 }
         sessionsByDay = byDay
         totalTalkSeconds = seconds.values.reduce(0, +)
         drillCards = DrillStore.shared.load()
@@ -658,6 +679,38 @@ struct ActivityView: View {
             selectedDay = days.contains(today) ? today : days.max()
         }
         loadCellPhotos()
+    }
+
+    /// How far back the rolling logs keep a day — `TalkTimeLog` and
+    /// `AppUsageLog` both prune at 45.
+    private static let logWindowDays = 45
+
+    /// Days the LOGS know about, whether or not a talk was ever saved.
+    ///
+    /// A call closed with "Close without saving" leaves no `Session` — but it
+    /// was metered, and the home ring counts it. This page built its whole
+    /// calendar out of sessions, so such a day fell out of the grid, out of
+    /// the month total, and out of reach of its own card: the summary read
+    /// "no practice" for an afternoon the ring had just reported 8 minutes of.
+    private func loggedDays() -> Set<Date> {
+        let today = cal.startOfDay(for: Date())
+        return Set((0..<Self.logWindowDays).compactMap { back -> Date? in
+            guard let day = cal.date(byAdding: .day, value: -back, to: today) else { return nil }
+            return TalkTimeLog.seconds(on: day) > 0 || reps(on: day) > 0 ? day : nil
+        })
+    }
+
+    private func reps(on day: Date) -> Int {
+        PracticeLog.shared.day(day)?.total ?? 0
+    }
+
+    /// Foreground time, never less than the talk time — `DayCardData.make`'s
+    /// rule, so this row and the card printed beside it agree. Falls back to
+    /// the frozen card once `AppUsageLog` has pruned the day.
+    private func studySeconds(on day: Date, talk: Int) -> Int {
+        let usage = AppUsageLog.seconds(on: day)
+        if usage > 0 { return max(usage, talk) }
+        return max((cardStore.snapshot(for: day)?.studyMinutes ?? 0) * 60, talk)
     }
 
     /// The day's talk time, read where every other surface reads it: the
