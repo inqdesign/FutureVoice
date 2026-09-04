@@ -219,8 +219,27 @@ struct ConversationView: View {
     // 5s for the same reason as before: it only fires on a hanging conjunction
     // or filler, where cutting the learner off is the failure this whole
     // scheme exists to prevent.
-    private static let vadShortSeconds: Double   = 0.8
-    private static let vadDefaultSeconds: Double = 1.6
+    // 2026-09-04, REVERTING the second retune: the learner reports being cut
+    // off mid-sentence, which is the failure that telemetry structurally
+    // cannot see — a turn ended early looks like a fast turn, and the words
+    // that never got said look like the start of the next one. Both retunes
+    // above were driven entirely by that blind number. Short 0.8 → 1.2,
+    // default 1.6 → 2.2 (still under `quietCommitThreshold` = 2.6, so the
+    // recognizer's own rotation still comes second).
+    //
+    // Two things make the wait cost far less than it did when it was cut:
+    //   • `SpeculativeReply` fires at 0.6 s of silence, so the extra
+    //     confirmation time is spent INSIDE Gemini's ~2.4 s of thinking
+    //     rather than in front of it (adopted on ~half of turns, and a
+    //     longer, calmer wait raises that rate);
+    //   • the chunk pipeline cuts a piece at 0.5 s of silence and its round
+    //     trip runs ~1.3 s — under an 0.8 s tier the assembly was ALWAYS
+    //     late (`chunk_path=late` on ~87% of turns, `asr=fixed` on 73%), so
+    //     the reply was written from the on-device guess. At 2.2 s the tail
+    //     lands before the turn ships, and the fluent self answers what was
+    //     actually said instead of what the phone guessed.
+    private static let vadShortSeconds: Double   = 1.2
+    private static let vadDefaultSeconds: Double = 2.2
     private static let vadLongSeconds: Double    = 5.0
     /// Headroom over a pause the learner has already taken and come back from.
     /// Matching it exactly would end the turn on the very gap they proved they
@@ -236,7 +255,19 @@ struct ConversationView: View {
     /// Exists because `LiveTranscriber`'s meter resets every turn, which left
     /// the first pause of every turn judged with no evidence at all — and the
     /// first pause is exactly where a learner gets cut off.
+    ///
+    /// Seeded from the LAST call (2026-09-04): how long someone goes quiet
+    /// while composing is a property of the person, not of the call, and
+    /// starting every call at zero meant the first pause of every call was
+    /// judged by the fixed tiers alone — the one moment with no evidence at
+    /// all, and the moment the learner remembers being cut off. It decays per
+    /// turn exactly as before, so a call that never needs it forgets it
+    /// within three turns.
     @State private var sessionPauseFloor: Double = 0
+    private static let pauseFloorDefaultsKey = "futurevoice.talk.pauseFloor"
+    private static func rememberedPauseFloor() -> Double {
+        min(UserDefaults.standard.double(forKey: pauseFloorDefaultsKey), vadLongSeconds)
+    }
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
     private static let sttSettleSeconds: Double  = 0.7
@@ -492,7 +523,10 @@ struct ConversationView: View {
     @State private var didSaveCurrentSession = false
     /// ✕ tapped with unsaved turns — asks save vs. discard before leaving.
     @State private var confirmingDiscard = false
-    @State private var userSpeechStartedAt: Date?
+    /// When the mic OPENED for the current listening turn — not when the
+    /// learner started talking. The gap between the two is thinking time; the
+    /// clock that matters (`speechStartedAt`) skips it.
+    @State private var micOpenedAt: Date?
     /// True when the topic is a news story ("In the news" picker). The opener
     /// call then runs search-grounded and collects `newsFacts`.
     @State private var topicIsNews = false
@@ -606,6 +640,18 @@ struct ConversationView: View {
               voicedSecondsThisTurn() >= Self.minVoicedSecondsPerTurn
         else { return false }
         return true
+    }
+
+    /// When the learner actually started TALKING this turn — the mic's own
+    /// open time only until the first voiced frame lands.
+    ///
+    /// Everything timed against it is about the person, not the microphone:
+    /// how long this turn's speech ran (`Turn.durationMs`, which feeds the
+    /// profile's speaking-seconds) and the 30 s listening ceiling, which used
+    /// to count a long think toward a limit that exists for rooms talking
+    /// into an open mic.
+    private func speechStartedAt() -> Date? {
+        live.firstVoicedAt ?? micOpenedAt
     }
 
     /// How much of the CURRENT mic run cleared the voiced threshold. The meter
@@ -1517,7 +1563,7 @@ struct ConversationView: View {
         if let stale = live.lastChunkRecordingURL {
             try? FileManager.default.removeItem(at: stale)
         }
-        userSpeechStartedAt = nil
+        micOpenedAt = nil
     }
 
     /// Encode one cut piece and put its transcription in flight. Fully
@@ -1696,7 +1742,7 @@ struct ConversationView: View {
                 // evidence says a person is speaking — a room's babble never
                 // clears the voiced threshold, so the café case fires exactly
                 // as before — and only the absolute cap cuts a person.
-                let listened = userSpeechStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+                let listened = speechStartedAt().map { Date().timeIntervalSince($0) } ?? 0
                 let ranLong = listened >= Self.maxListenSecondsHard
                     || (listened >= Self.maxListenSeconds && !someoneIsTalkingHere())
                 guard audioSettled || transcriptSettled || ranLong else { continue }
@@ -1721,6 +1767,8 @@ struct ConversationView: View {
                     // endpointing signal ever fired and the turn was cut by
                     // the clock. A rising share of it is a room problem.
                     "vad_path": audioSettled ? "audio" : (transcriptSettled ? "noisy" : "ceiling"),
+                    // Since 2026-09-04: from the FIRST VOICED frame, not the
+                    // mic opening — a long think no longer counts as listening.
                     "listened_ms": String(Int(listened * 1000)),
                     "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
                     "noise": String(format: "%.2f", live.ambientNoiseLevel),
@@ -1745,6 +1793,13 @@ struct ConversationView: View {
                     "spec_fires": String(specFiresThisTurn),
                 ]
                 turnEndedSpeakingAt = Date()
+                // This learner's composing pace, kept for the NEXT call — with
+                // one turn's decay already applied, so a single 4 s gap in the
+                // last turn of tonight's call doesn't open tomorrow's on a
+                // 3.5 s wait for "Yeah."
+                UserDefaults.standard.set(
+                    min(sessionPauseFloor * Self.pauseFloorDecay, Self.vadLongSeconds),
+                    forKey: Self.pauseFloorDefaultsKey)
                 HapticEngine.voiceSent()
                 await stopAndSend()
                 return
@@ -1818,6 +1873,13 @@ struct ConversationView: View {
     private static func isLikelyIncomplete(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if trimmed.isEmpty { return true }
+        // Dictation punctuates from prosody: a COMMA is the recognizer saying
+        // this sentence keeps going, and an ellipsis or a dash that they
+        // trailed off. Without this they all fell to the default tier, which
+        // is the recognizer telling us the learner is mid-thought and us
+        // answering anyway.
+        if let last = trimmed.last, ",;:-–—…、，".contains(last) { return true }
+        if trimmed.hasSuffix("...") { return true }
         let words = trimmed
             .components(separatedBy: CharacterSet.whitespacesAndNewlines)
             .filter { !$0.isEmpty }
@@ -1848,6 +1910,7 @@ struct ConversationView: View {
         // a conversation. No-op after the first answer, and whenever no
         // Bluetooth device is connected.
         await askMicChoiceIfNeeded()
+        sessionPauseFloor = max(sessionPauseFloor, Self.rememberedPauseFloor())
         phase = .thinking
         // The opener plays before any mic session exists — arm the call's
         // audio session or the greeting streams into `.soloAmbient` (muted by
@@ -2220,7 +2283,7 @@ struct ConversationView: View {
                            chunkCapture: Self.chunkedASREnabled,
                            voiceProcessing: true)
             startChunkPipeline()
-            userSpeechStartedAt = Date()
+            micOpenedAt = Date()
             // Last turn's pausing still describes this learner, but with less
             // and less authority the longer they go without needing it.
             sessionPauseFloor *= Self.pauseFloorDecay
@@ -2281,8 +2344,8 @@ struct ConversationView: View {
         turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
         lastRecognizerText[turnId] = finalText
         let fluency = live.fluencyStats()
-        let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
-        userSpeechStartedAt = nil
+        let elapsedMs = Int((Date().timeIntervalSince(speechStartedAt() ?? Date())) * 1000)
+        micOpenedAt = nil
 
         // Chunk pipeline: whatever was captured since the last cut is the
         // tail. With voice in it, it becomes the final piece; without, it is
