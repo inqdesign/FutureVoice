@@ -129,6 +129,26 @@ fun TalkScreen(
     }
     DisposableEffect(Unit) { onDispose { vm.end() } }
 
+    // Today's notebook, dealt once when the call opens. It never re-deals
+    // mid-call: a row that changed under the learner would be asking for a
+    // different word than the one they were about to say.
+    var goals by remember { mutableStateOf<List<TalkGoalItem>>(emptyList()) }
+    var goalsUsed by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var openGoal by remember { mutableStateOf<TalkGoalItem?>(null) }
+    LaunchedEffect(targetLanguage) {
+        goals = TalkGoalPicker.pick(context, targetLanguage)
+    }
+    // ADDITIVE: every version of a user turn's text is checked, from the
+    // recognizer's first line to the audio-grounded rewrite, and a tick is
+    // never taken back. A check that disappears mid-call reads as the app
+    // changing its mind about the learner.
+    LaunchedEffect(state.turns) {
+        if (goals.isEmpty()) return@LaunchedEffect
+        var next = goalsUsed
+        for (turn in state.turns) next = next + TalkGoalPicker.hits(turn, goals)
+        if (next != goalsUsed) goalsUsed = next
+    }
+
     LaunchedEffect(state.turns.size) {
         if (state.turns.isNotEmpty()) listState.animateScrollToItem(state.turns.lastIndex)
     }
@@ -168,6 +188,23 @@ fun TalkScreen(
         }
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize()) {
+            // Pinned ABOVE the transcript, which scrolls away constantly —
+            // the whole point is that it is in front of the learner at the
+            // moment they could spend the word.
+            if (goals.isNotEmpty()) {
+                TalkGoalChipsRow(goals, goalsUsed, onTap = { openGoal = it })
+            }
+            // Nothing pauses underneath: WordLore is free and globally
+            // cached, so a mid-call tap costs nothing metered.
+            openGoal?.let { goal ->
+                TalkGoalSheet(
+                    item = goal,
+                    used = goalsUsed.contains(goal.key),
+                    nativeLanguage = nativeLanguage,
+                    targetLanguage = targetLanguage,
+                    onDismiss = { openGoal = null },
+                )
+            }
             LazyColumn(
                 state = listState,
                 modifier = Modifier
