@@ -49,6 +49,11 @@ struct DrillView: View {
     /// Which card's user recording is playing right now — drives the play
     /// button's play→stop icon swap so a tap has visible feedback.
     @State private var playingTurnId: UUID?
+    /// Recording being located on-device right now (`playUserRecording`'s
+    /// alignment pass) — swaps the play icon for a spinner; a second tap
+    /// cancels.
+    @State private var aligningTurnId: UUID?
+    @State private var alignTask: Task<Void, Never>?
     @State private var initialCount: Int = 0
     @State private var isLoadingAudio = false
     @State private var error: String?
@@ -163,6 +168,7 @@ struct DrillView: View {
         }
         .onDisappear {
             player.stop()
+            cancelAlignment()
             // The queue just changed shape — every card graded here moved its
             // due date. Without this the pending notification keeps whatever
             // the last app launch computed, and a 10-minute snooze never
@@ -781,22 +787,31 @@ private extension DrillView {
                         if let turnId = card.sourceTurnId,
                            TurnAudioStore.shared.url(for: turnId) != nil {
                             let playingThis = playingTurnId == turnId && player.isPlaying
+                            let aligningThis = aligningTurnId == turnId
                             Button {
                                 if playingThis {
                                     player.stop()
                                     playingTurnId = nil
+                                } else if aligningThis {
+                                    cancelAlignment()
                                 } else {
-                                    playUserRecording(turnId)
+                                    playUserRecording(card, turnId: turnId)
                                 }
                             } label: {
                                 // play → stop while the recording runs, with a
                                 // replace transition — the tap visibly "takes"
                                 // and the running state is tellable at a glance.
-                                Image(systemName: playingThis ? "stop.circle.fill" : "play.circle.fill")
-                                    .font(.title3)
-                                    .foregroundStyle(.tint)
-                                    .contentTransition(.symbolEffect(.replace))
-                                    .symbolEffect(.pulse, isActive: playingThis)
+                                if aligningThis {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .frame(width: 24, height: 24)
+                                } else {
+                                    Image(systemName: playingThis ? "stop.circle.fill" : "play.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(.tint)
+                                        .contentTransition(.symbolEffect(.replace))
+                                        .symbolEffect(.pulse, isActive: playingThis)
+                                }
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(playingThis ? "Stop your recording" : "Play your recording")
@@ -835,6 +850,8 @@ private extension DrillView {
                     .disabled(isLoadingAudio)
 
                     pillButton(systemImage: "waveform.badge.mic", text: "Shadow") {
+                        // Shadow runs its own recognizer — never two at once.
+                        cancelAlignment()
                         shadowingCard = card
                     }
 
@@ -1043,19 +1060,98 @@ private extension DrillView {
         topCardRevealed = false
         player.stop()
         playingTurnId = nil
+        cancelAlignment()
         if queue.isEmpty { onDeckCompleted?() }
     }
 
     /// Replay the user's own mic recording for the turn this card came from.
     /// Local file only — no credits, no network.
-    private func playUserRecording(_ turnId: UUID) {
+    ///
+    /// The card quotes only the SENTENCE the correction fixed
+    /// (`relevantFragment`), so playback matches: the free on-device
+    /// alignment (`LocalAlignment`, timings cached per turn) locates that
+    /// fragment's words in the recording and only that slice plays. A turn
+    /// can be a minute of speech — playing it whole next to a two-line quote
+    /// made the button feel broken. Any miss — no transcript, alignment too
+    /// unreliable, fragment not found — falls back to the whole recording,
+    /// which is what this always played.
+    private func playUserRecording(_ card: DrillCard, turnId: UUID) {
         guard let data = TurnAudioStore.shared.data(for: turnId) else { return }
-        do {
-            try player.play(data, source: "drill", forceSessionReset: true)
-            playingTurnId = turnId
-        } catch {
-            self.error = error.localizedDescription
+        alignTask?.cancel()
+        aligningTurnId = turnId
+        // Loading the player up front resets the audio session at tap time
+        // (same fix as playTarget) and hands the trim the file's true length.
+        player.prepare(data, forceSessionReset: true)
+        let durationMs = Int(player.duration * 1000)
+        alignTask = Task {
+            let segment = await fragmentSegment(for: card, turnId: turnId,
+                                                durationMs: durationMs)
+            guard !Task.isCancelled else { return }
+            aligningTurnId = nil
+            if let segment, player.isLoaded {
+                Analytics.capture("audio_played", ["source": "drill"])
+                player.playSegment(from: segment.start, to: segment.end, loop: false)
+                playingTurnId = turnId
+            } else {
+                do {
+                    try player.play(data, source: "drill", forceSessionReset: false)
+                    playingTurnId = turnId
+                } catch {
+                    self.error = error.localizedDescription
+                }
+            }
         }
+    }
+
+    private func cancelAlignment() {
+        alignTask?.cancel()
+        alignTask = nil
+        aligningTurnId = nil
+    }
+
+    /// Where the card's quoted fragment sits inside the turn recording, in
+    /// seconds — or nil when the whole file should play (the fragment IS the
+    /// turn, or it couldn't be located).
+    private func fragmentSegment(for card: DrillCard, turnId: UUID,
+                                 durationMs: Int) async -> (start: TimeInterval, end: TimeInterval)? {
+        let fragment = DrillStore.relevantFragment(of: card.sourcePhrase,
+                                                   matching: card.targetPhrase)
+        let fragmentWords = DrillStore.matchWords(of: fragment)
+        guard !fragmentWords.isEmpty else { return nil }
+        // The text that matches the AUDIO is the session turn's transcript —
+        // the card's sourcePhrase may already be ingest-trimmed to one
+        // sentence of a longer turn.
+        let transcript = SessionStore.shared.load()
+            .first { $0.id == card.sourceSessionId }?
+            .turns.first { $0.id == turnId }?.transcript ?? card.sourcePhrase
+        guard fragmentWords.count < DrillStore.matchWords(of: transcript).count
+        else { return nil }
+
+        var timings = TurnAudioStore.shared.timings(for: turnId) ?? []
+        if timings.isEmpty {
+            guard let url = TurnAudioStore.shared.url(for: turnId) else { return nil }
+            timings = await LocalAlignment.wordTimings(
+                audioURL: url, languageCode: appState.targetLanguage,
+                expectedText: transcript, durationMs: durationMs)
+            guard !timings.isEmpty, !Task.isCancelled else { return nil }
+            // Same per-turn store the shadow surfaces use — the next tap
+            // skips the recognition pass entirely. User-turn ids never
+            // collide with shadow-line ids (those are byte-flipped).
+            TurnAudioStore.shared.saveTimings(timings, for: turnId)
+        }
+        // Search only word-bearing entries: a punctuation-only token
+        // normalizes to "" and would break the contiguous match.
+        let words = timings.enumerated()
+            .map { (index: $0.offset, word: LocalAlignment.normalized($0.element.word)) }
+            .filter { !$0.word.isEmpty }
+        guard let span = DrillStore.fragmentSpan(of: fragmentWords,
+                                                 in: words.map { $0.word })
+        else { return nil }
+        // Breathing room so a hair-early cut doesn't clip the first syllable.
+        let pad = 0.25
+        let start = max(0, Double(timings[words[span.lowerBound].index].startMs) / 1000 - pad)
+        let end = Double(timings[words[span.upperBound].index].endMs) / 1000 + pad
+        return (start, end)
     }
 
     private func playTarget(_ card: DrillCard) async {
@@ -1063,6 +1159,8 @@ private extension DrillView {
         // Force-reset keeps playback loud even if another surface left the
         // audio session in .measurement mode (same fix as ShadowDrillView).
         playingTurnId = nil
+        // An alignment still running would start the mic recording over this.
+        cancelAlignment()
         if let cached = PhraseAudioStore.shared.data(text: card.targetPhrase, voiceId: voiceId) {
             do { try player.play(cached, source: "drill", forceSessionReset: true) } catch { self.error = error.localizedDescription }
             return

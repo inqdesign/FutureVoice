@@ -207,7 +207,11 @@ extension BookDocument {
         for line in curriculum.shadowLines {
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
-            let original = session.turns.first { $0.id == UUID(uuid: bytes) }?.transcript
+            // Quote the SENTENCE the correction rewrites, not the whole turn —
+            // same trim the Drill chapter applies (a minute-long turn struck
+            // through in full reads as "everything you said was wrong").
+            let original = session.turns.first { $0.id == UUID(uuid: bytes) }
+                .map { DrillStore.relevantFragment(of: $0.transcript, matching: line.text) }
             corrections.append(Entry(text: line.text, note: line.note,
                                      original: original,
                                      mastered: line.masteredAt != nil))
@@ -217,7 +221,8 @@ extension BookDocument {
             guard seen.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
             else { continue }
             corrections.append(Entry(text: p.fluentAlternative, note: p.reason,
-                                     original: p.userSaid))
+                                     original: DrillStore.relevantFragment(
+                                        of: p.userSaid, matching: p.fluentAlternative)))
         }
         if !corrections.isEmpty {
             doc.sections.append(Section(title: chrome("Drill"), entries: corrections))
