@@ -83,3 +83,9 @@ __pycache__/
 .dev.vars*
 !.dev.vars.example
 !.env.example
+
+# Screen-capture output (`-capture …` renders, hundreds of MB of simulator builds)
+build-capture/
+
+# App Store review dumps (scripts/admin) — data pulls, not source
+reviews_full.json

@@ -80,7 +80,9 @@ export class ElevenTTS {
       `?model_id=${this.config.modelId}` +
       `&output_format=${this.config.outputFormat}` +
       // auto_mode drops the chunk scheduler — the lowest-latency setting;
-      // we flush explicitly at turn end anyway.
+      // we flush explicitly at turn end anyway. It voices each text message
+      // AS IS, so the caller must send complete sentences, never raw model
+      // deltas (see CallSession.voiceBuffer).
       `&auto_mode=true` +
       `&inactivity_timeout=180`
     const resp = await fetch(url, {

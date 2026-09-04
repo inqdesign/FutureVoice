@@ -89,6 +89,20 @@ export class CallSession implements DurableObject {
    *  test that needs no thresholds. Kept short: echo only ever quotes the
    *  last few seconds. */
   private recentReplyText = ""
+  /** Reply text written but not yet VOICED, per context. The ElevenLabs
+   *  socket runs `auto_mode` (no server-side buffering — lowest latency),
+   *  which its docs recommend only for full sentences: "sending partial
+   *  phrases will result in highly reduced quality". Gemini's SSE deltas
+   *  break wherever the tokenizer happened to ("Take" ‖ " a deep breath",
+   *  "for the" ‖ " constant shifts", even "U" ‖ "gh" — probed 2026-09-03),
+   *  and each fragment came out as its own generation: a pitch reset and a
+   *  stray pause at every seam, which learners heard as odd phrasing. So
+   *  the voice gets text one complete SENTENCE at a time; the screen still
+   *  gets every delta the instant it lands. The whole reply burst-writes in
+   *  ~200 ms, so waiting for the first terminator costs a delta or two. */
+  private voiceBuffer = new Map<string, string>()
+  /** Projected instant the PHONE finishes playing what we have sent. */
+  private playoutEndAt = 0
 
   private static normWords(s: string): string {
     return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ")
@@ -101,8 +115,12 @@ export class CallSession implements DurableObject {
    *  to reuse the reply's words ("yeah, I agree") alive — shared vocabulary
    *  is conversation, a verbatim run of it during playback is a microphone. */
   private isLikelyEcho(text: string): boolean {
-    if (this.activeContext === null
-        && Date.now() - this.lastSpokeAt > 3000) return false
+    // Suspicion holds while the reply is still being written, while the
+    // PHONE is still projected to be playing it (the play-out clock), and
+    // for a beat of room tail after — never keyed to send time alone.
+    const withinWindow = this.activeContext !== null
+      || Date.now() < this.playoutEndAt + 3000
+    if (!withinWindow) return false
     const u = CallSession.normWords(text)
     if (u.length === 0 || u.split(" ").length > 8) return false
     return CallSession.normWords(this.recentReplyText).includes(u)
@@ -257,6 +275,15 @@ export class CallSession implements DurableObject {
           // barge-in can still have chunks in flight, and playing them would
           // talk over the learner who just interrupted.
           if (contextId !== this.activeContext || !this.client) return
+          // Play-out clock: the DO SENDS a reply's audio in a burst, but the
+          // phone plays it for its real duration — the echo of a long line's
+          // TAIL lands seconds after `lastSpokeAt`, outside any window
+          // anchored to send time (build 31, speakerphone, 2026-09-03: the
+          // same "sent is not heard" gap the client's gate had). Model the
+          // speaker instead: each chunk extends the projected end of
+          // playback by its own duration.
+          const ms = pcm.byteLength / 2 / (this.eleven?.sampleRate ?? 22050) * 1000
+          this.playoutEndAt = Math.max(this.playoutEndAt, Date.now()) + ms
           this.client.send(pcm)
         },
         onContextDone: (contextId) => {
@@ -333,7 +360,7 @@ export class CallSession implements DurableObject {
     })
     this.routeDelta(context, text)
     this.history.push({ role: "model", text })
-    this.eleven?.flush(context)
+    this.finishVoice(context)
     this.emit({ type: "reply", context, text })
   }
 
@@ -515,18 +542,59 @@ export class CallSession implements DurableObject {
     // hear. Sliding window — echo only ever quotes the last few seconds.
     this.recentReplyText = (this.recentReplyText + " " + delta).slice(-600)
     this.emit({ type: "reply_delta", context, text: delta })
-    this.eleven?.sendText(context, delta)
+    const pending = (this.voiceBuffer.get(context) ?? "") + delta
+    const [sentences, rest] = CallSession.splitCompleteSentences(pending)
+    this.voiceBuffer.set(context, rest)
+    if (sentences.length > 0) this.voice(context, sentences)
+  }
+
+  /** Send one piece of text to the voice. ElevenLabs asks that every chunk
+   *  end in a single space — it is the word boundary the synthesizer keys
+   *  on, and the next chunk is glued straight onto it. */
+  private voice(context: string, text: string): void {
+    const chunk = text.replace(/\s+$/, "") + " "
+    if (chunk.trim().length === 0) return
+    this.eleven?.sendText(context, chunk)
       .catch((e) => this.emit({ type: "error", code: "tts", message: String(e) }))
+  }
+
+  /** The reply is fully written: voice whatever sentence tail is still
+   *  buffered (a final line without a terminator, or the terminator with
+   *  nothing after it), then flush the context. */
+  private finishVoice(context: string): void {
+    const rest = this.voiceBuffer.get(context) ?? ""
+    this.voiceBuffer.delete(context)
+    if (rest.trim().length > 0) this.voice(context, rest)
+    this.eleven?.flush(context)
+  }
+
+  /** Split off every complete sentence — a terminator (.!?… and CJK
+   *  equivalents, optionally followed by a closing quote/bracket) that is
+   *  FOLLOWED by whitespace, which is what tells "Mr." apart from a sentence
+   *  end mid-stream as well as a tokenizer can. Returns the complete
+   *  sentences joined (they go out as ONE chunk — the more of the reply a
+   *  generation sees, the better its prosody) and the unfinished remainder.
+   *  A terminator at the very end of the text is NOT taken: the next delta
+   *  could start with a closing quote, and the tail is drained at finish
+   *  anyway. */
+  static splitCompleteSentences(text: string): [string, string] {
+    let cut = -1
+    const re = /[.!?…。！？][)"'”’」』]*\s+/g
+    let m: RegExpExecArray | null
+    while ((m = re.exec(text)) !== null) cut = m.index + m[0].length
+    if (cut < 0) return ["", text]
+    return [text.slice(0, cut), text.slice(cut)]
   }
 
   private finishReply(context: string, full: string): void {
     if (this.ended) return
     if (full.trim().length === 0) {
+      this.voiceBuffer.delete(context)
       this.activeContext = null
       return
     }
     this.history.push({ role: "model", text: full })
-    this.eleven?.flush(context)
+    this.finishVoice(context)
     this.emit({ type: "reply", context, text: full })
   }
 
@@ -535,7 +603,12 @@ export class CallSession implements DurableObject {
     const context = this.activeContext
     if (!context) return
     this.activeContext = null
+    // The client stops playback NOW — the projected play-out is void, and
+    // leaving it running would hold the echo window open over the learner's
+    // own next words.
+    this.playoutEndAt = Date.now()
     this.activeReplyAbort?.abort()
+    this.voiceBuffer.delete(context)
     this.eleven?.closeContext(context)
     this.emit({ type: "interrupted", context })
     // What was already voiced still happened — keep the model's half honest
