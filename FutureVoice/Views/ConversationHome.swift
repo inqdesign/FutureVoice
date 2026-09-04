@@ -347,7 +347,7 @@ struct ConversationHome: View {
         heroLine = HeroGreeting.text(for: HeroGreeting.live())
     }
 
-    /// A thin, fully-closed goal ring (progress from 12 o'clock) around the
+    /// A fully-closed goal ring (progress from 12 o'clock) around the
     /// Futureself surface. virtualHeight pins the surface's pixel grid to
     /// the call pill's cell size, so the eventual morph onto the call screen
     /// never changes pixel scale.
@@ -357,7 +357,7 @@ struct ConversationHome: View {
             // full circle is merely SENSED against the background on a good
             // display, never seen as a shape of its own.
             Circle()
-                .stroke(Color.primary.opacity(0.015), lineWidth: 14)
+                .stroke(Color.primary.opacity(0.015), lineWidth: 20)
             // Accent, even at goal — the ring follows the app's palette
             // (green-at-goal clashed with non-green Futureself themes).
             // ONE gradient stroke: the tail FADES IN from near-transparent
@@ -392,7 +392,7 @@ struct ConversationHome: View {
                         center: .center,
                         startAngle: .degrees(0),
                         endAngle: .degrees(360 * goalProgress0to1)),
-                    style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                    style: StrokeStyle(lineWidth: 20, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(goalProgress0to1 > 0.005 ? 1 : 0)
             // At full progress the circle closes and the stroke loses its
@@ -403,7 +403,7 @@ struct ConversationHome: View {
             Circle()
                 .trim(from: max(goalProgress0to1 - 0.02, 0), to: goalProgress0to1)
                 .stroke(Color.accentColor,
-                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        style: StrokeStyle(lineWidth: 20, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .opacity(goalProgress0to1 > 0.97 ? 1 : 0)
 
@@ -442,7 +442,9 @@ struct ConversationHome: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                .frame(width: 262, height: 262)
+                // 260 = the 280 frame minus the 20 pt stroke: the surface
+                // meets the ring's inner edge with no gap.
+                .frame(width: 260, height: 260)
                 // The proxy morph needs the surface's live pose (global) —
                 // reported from HERE so it tracks layout, not guesses.
                 .background(GeometryReader { g in
@@ -622,8 +624,11 @@ struct ConversationHome: View {
                     // strokeBorder / inset keep the 3 pt stroke INSIDE the
                     // 30 pt frame — a centered stroke overhangs it by half a
                     // linewidth and the container clips the arc's caps flat.
+                    // Tertiary, not systemFill: the track is a groove for the
+                    // arc to sit in, and at full systemFill it read as a second
+                    // ring competing with the accent one.
                     Circle()
-                        .strokeBorder(Color(.systemFill), lineWidth: 3)
+                        .strokeBorder(Color(.tertiarySystemFill), lineWidth: 3)
                     // Usage gauge: the arc grows clockwise from 12 o'clock
                     // as minutes are SPENT — fresh tank = empty ring.
                     Circle()
@@ -632,7 +637,10 @@ struct ConversationHome: View {
                         .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
                                 style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 24)
+                    // 20 pt inside a 24 pt hole: the ring's inner edge would
+                    // otherwise sit flush on the avatar, which reads as the
+                    // arc being drawn ON the picture rather than around it.
+                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 20)
                 } else {
                     ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
                 }
