@@ -1495,19 +1495,29 @@ extension RealtimeTalkClient {
 /// talked over, but it is new, and the old path is the one five months of
 /// learners have used. The toggle lives in Me → Speed test.
 enum RealtimeMode {
-    static let key = "futurevoice.realtimeTalk"
-    /// Realtime is the DEFAULT since 2026-09-02 (device-verified the day
-    /// before, billing server-side). The setting is now an opt-OUT: a learner
-    /// who prefers the classic per-turn call turns it off in Me. An account
-    /// that explicitly chose either way keeps its choice — only the
-    /// never-touched key changed meaning.
-    static var isEnabled: Bool {
-        get {
-            if UserDefaults.standard.object(forKey: key) == nil { return true }
-            return UserDefaults.standard.bool(forKey: key)
-        }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
-    }
+    /// Realtime is the ONLY call path since 2026-09-05, and the opt-out
+    /// toggle in Me is gone.
+    ///
+    /// It was a DEFAULT with an escape hatch (2026-09-02), which is the right
+    /// shape for a new transport — until the hatch turns out to be broken.
+    /// Off, a learner got the classic per-turn call, and that path
+    /// ends turns on its own VAD tiers: it cut the learner off mid-sentence
+    /// (reported 2026-09-04, and the tiers had been tuned down twice on
+    /// latency telemetry that structurally cannot see a turn ending early).
+    /// The same learner reported the call's time not being tracked there.
+    /// A setting whose job is "use this if the new one misbehaves" cannot
+    /// itself be the worse call.
+    ///
+    /// The stored key is deliberately IGNORED rather than read once and
+    /// migrated: an account that turned realtime off is on the broken path
+    /// right now, and the point of this change is to bring it back.
+    ///
+    /// The classic path's code is untouched and still compiles — every
+    /// `if RealtimeMode.isEnabled` in `ConversationView` keeps its `else`.
+    /// It is now unreachable, and deleting it is its own change, worth
+    /// making only after the realtime path has run a while without anyone
+    /// wishing they could turn it off.
+    static let isEnabled = true
 }
 
 enum RealtimeError: LocalizedError {

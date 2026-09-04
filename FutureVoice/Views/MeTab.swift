@@ -68,10 +68,6 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     #endif
-    /// Mirrors `RealtimeMode.isEnabled` so the toggle redraws; the flag
-    /// itself lives in defaults because the call screen reads it directly.
-    @State private var realtimeTalk = RealtimeMode.isEnabled
-
     var body: some View {
         NavigationStack {
             List {
@@ -137,27 +133,10 @@ struct MeTab: View {
                 // language are the settings people actually return to.
                 learningLanguagesSection
 
-                // Talk on the realtime gateway (`gateway/`) instead of the
-                // per-turn HTTP pipeline: measured 2–3 s speech→voice against
-                // ~4.5 s, and it can be talked over mid-sentence. The DEFAULT
-                // since 2026-09-02 — the toggle is an opt-OUT for anyone who
-                // prefers the classic per-turn call. Lives with the other
-                // call settings; it sat below Delete account at first, which
-                // read as an afterthought (moved 2026-09-03).
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { realtimeTalk },
-                        set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
-                    )) {
-                        row(icon: "waveform.circle",
-                            title: explain("Realtime calls"),
-                            subtitle: explain("Answers in about two seconds — and you can talk over it"))
-                    }
-                } header: {
-                    Text("Calls")
-                } footer: {
-                    Text(explain("Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual."))
-                }
+                // NOTE (2026-09-05): the "Realtime calls" toggle that stood
+                // here is gone — see `RealtimeMode`. Every call now runs on
+                // the gateway, so there is nothing to choose and no row to
+                // explain a choice nobody has.
 
                 Section {
                     NavigationLink {
