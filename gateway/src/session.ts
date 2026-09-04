@@ -145,6 +145,16 @@ export class CallSession implements DurableObject {
   private pendingUtterance: string | null = null
   private pendingTimer: number | null = null
   private static readonly pendingHoldMs = 4000
+  /** EVERY final is held this long before it becomes a turn — not only
+   *  the hanging-word ones. The transcriber's final is not "the learner
+   *  stopped": it segments a long monologue mid-stream (a 36 s sentence
+   *  finalized at "…let's see if this", and "and works" arrived 2 s later
+   *  as its own turn, answered on its own), and it finalizes a clause the
+   *  learner resumes 0.3–0.6 s later. Measured on device 2026-09-04: every
+   *  observed continuation reached its next interim within 0.6 s of the
+   *  final. The reply the speculation already wrote waits with it, so the
+   *  cost is this window on the VOICE, not on the thinking. */
+  private static readonly continuationMs = 800
 
   /** Words a spoken thought does not END on. The app's lists, verbatim
    *  (ConversationView.trailingConjunctions / trailingFunctionWords /
@@ -303,7 +313,20 @@ export class CallSession implements DurableObject {
         onInterim: (text) => {
           this.lastInterimAt = Date.now()
           this.armIdleHangUp()
-          this.emit({ type: "user_partial", text })
+          if (this.pendingUtterance !== null) {
+            // The held line is not over: the next final merges into it, so
+            // the hold waits for that final instead of its own clock. The
+            // clock is re-armed, not cleared — an interim the transcriber
+            // never finalizes must still let the held text go out alone.
+            // And the screen keeps the held words in front of the new ones:
+            // a fresh interim replacing the whole bubble is what the learner
+            // saw as their sentence vanishing mid-thought ("I don't know
+            // why it's overwriting what I said", 2026-09-04).
+            this.armPending(CallSession.pendingHoldMs)
+            this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
+          } else {
+            this.emit({ type: "user_partial", text })
+          }
           // The learner is audibly speaking. If the fluent self is mid-reply,
           // that's a barge-in: cut the voice and the generation NOW — the
           // pending utterance will arrive as its own turn and get a fresh
@@ -313,10 +336,15 @@ export class CallSession implements DurableObject {
           if (this.activeContext && !this.isLikelyEcho(text)) this.interrupt()
           // A changed interim invalidates any speculation answering older
           // words (matching the app's rule: only the TEXT moving on cancels,
-          // never audio energy). A settled one re-arms the fire timer.
-          if (this.spec && this.spec.text !== text) this.dropSpec()
+          // never audio energy). A settled one re-arms the fire timer — on
+          // the MERGED line while a hold is open, which is the text the
+          // commit will compare against.
+          const specText = this.pendingUtterance !== null
+            ? this.pendingUtterance + " " + text
+            : text
+          if (this.spec && this.spec.text !== specText) this.dropSpec()
           if (this.specTimer !== null) clearTimeout(this.specTimer)
-          this.specTimer = setTimeout(() => this.fireSpec(text),
+          this.specTimer = setTimeout(() => this.fireSpec(specText),
                                       CallSession.specSettleMs) as unknown as number
         },
         onUtterance: (text) => this.handleUtterance(text),
@@ -454,20 +482,26 @@ export class CallSession implements DurableObject {
       ? this.pendingUtterance + " " + text.trim()
       : text.trim()
     this.clearPending()
-    if (CallSession.endsHanging(merged)) {
-      this.pendingUtterance = merged
-      this.emit({ type: "user_partial", text: merged })
-      console.log(`holding (ends hanging): "${merged.slice(-30)}"`)
-      this.pendingTimer = setTimeout(() => {
-        const held = this.pendingUtterance
-        this.clearPending()
-        // The pause was real — a learner who trails off on "but" still
-        // deserves an answer to what they DID say.
-        if (held) this.commitTurn(held)
-      }, CallSession.pendingHoldMs) as unknown as number
-      return
-    }
-    this.commitTurn(merged)
+    // Held, always. A hanging word says "still composing" and earns the
+    // long hold; anything else gets the continuation window, because a
+    // final alone never proved the learner stopped (see `continuationMs`).
+    const hanging = CallSession.endsHanging(merged)
+    this.pendingUtterance = merged
+    this.emit({ type: "user_partial", text: merged })
+    console.log(`holding (${hanging ? "ends hanging" : "continuation"}): "${merged.slice(-30)}"`)
+    this.armPending(hanging ? CallSession.pendingHoldMs : CallSession.continuationMs)
+  }
+
+  /** (Re)start the clock on the held utterance. When it fires the pause was
+   *  real — a learner who trails off on "but" still deserves an answer to
+   *  what they DID say. */
+  private armPending(ms: number): void {
+    if (this.pendingTimer !== null) clearTimeout(this.pendingTimer)
+    this.pendingTimer = setTimeout(() => {
+      const held = this.pendingUtterance
+      this.clearPending()
+      if (held) this.commitTurn(held)
+    }, ms) as unknown as number
   }
 
   private clearPending(): void {

@@ -1157,7 +1157,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("gateway: ready")
             state = .listening
         case "user_partial":
-            partial = json["text"] as? String ?? ""
+            let text = json["text"] as? String ?? ""
+            // Every interim, stamped: how far behind the mouth the on-screen
+            // line runs is exactly the thing being debugged (2026-09-04).
+            if text != partial { Self.step("partial(\(text.count)): \(text.suffix(40))") }
+            partial = text
             if state != .speaking { state = partial.isEmpty ? .listening : .hearing }
         case "user_turn":
             let said = json["text"] as? String ?? ""
@@ -1456,9 +1460,18 @@ extension RealtimeTalkClient {
     /// unthrottled print would bury the very thing being looked for.
     /// Unthrottled: setup happens once per call, and losing one of these
     /// lines to a rate limiter is how "it just does nothing" stays unsolved.
+    /// Wall-clock stamp for the DEBUG console. The device console adds none,
+    /// and "the transcript showed up late" is unreadable without one.
+    nonisolated private static let stampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+    nonisolated private static func stamp() -> String { stampFormatter.string(from: Date()) }
+
     nonisolated static func step(_ message: String) {
         #if DEBUG
-        print("[realtime] \(message)")
+        print("[realtime \(stamp())] \(message)")
         #endif
     }
 
@@ -1469,7 +1482,7 @@ extension RealtimeTalkClient {
         let due = now - lastTraceAt > 1.0
         if due { lastTraceAt = now }
         traceLock.unlock()
-        if due { print("[realtime] \(message())") }
+        if due { print("[realtime \(stamp())] \(message())") }
         #endif
     }
     nonisolated(unsafe) static var sawFirstBuffer = false
