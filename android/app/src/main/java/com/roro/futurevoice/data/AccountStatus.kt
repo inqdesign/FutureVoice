@@ -35,6 +35,13 @@ data class AccountStatus(
     val monthlyCapSeconds: Int? = null,
     val scenesUsedPeriod: Int = 0,
     val monthlyScenesCap: Int? = null,
+    /** When this billing period ends, `yyyy-MM-dd` from `talk_allowance`. */
+    val periodEnd: String? = null,
+    /** The plan is set to STOP at [periodEnd] rather than renew. A date on a
+     *  billing surface says what will happen to the pool, and this decides
+     *  which — "Refills on…" to someone who cancelled is the same date with
+     *  the opposite promise. */
+    val cancelAtPeriodEnd: Boolean = false,
 ) {
     val isEntitled: Boolean
         get() = subscriptionStatus in setOf("trialing", "active", "grace")
@@ -67,10 +74,18 @@ data class AccountStatus(
         private data class CreditRow(val balance: Int = 0, val unlimited: Boolean = false)
 
         @Serializable
-        private data class SubRow(val plan_id: String? = null, val status: String = "inactive")
+        private data class SubRow(
+            val plan_id: String? = null,
+            val status: String = "inactive",
+            val cancel_at_period_end: Boolean? = null,
+        )
 
         @Serializable
-        private data class AllowanceRow(val used: Int = 0, val cap: Int? = null)
+        private data class AllowanceRow(
+            val used: Int = 0,
+            val cap: Int? = null,
+            val period_end: String? = null,
+        )
 
         /**
          * Three reads, none of them decisive on their own. The pools come from
@@ -86,14 +101,19 @@ data class AccountStatus(
                 ?.firstOrNull()?.let {
                     out = out.copy(secondsBalance = it.balance, unlimited = it.unlimited)
                 }
-            table<SubRow>(auth, "user_subscriptions", "plan_id,status", userId)
+            // Both columns have existed since the original subscriptions
+            // migration, so naming them here can't fail the whole query.
+            table<SubRow>(auth, "user_subscriptions",
+                "plan_id,status,cancel_at_period_end", userId)
                 ?.firstOrNull()?.let {
-                    out = out.copy(planId = it.plan_id, subscriptionStatus = it.status)
+                    out = out.copy(planId = it.plan_id, subscriptionStatus = it.status,
+                        cancelAtPeriodEnd = it.cancel_at_period_end == true)
                 }
             rpc(auth, "talk_allowance")?.let {
                 // A null cap on an entitled plan is "uncapped", not "no plan";
                 // `used` is real either way.
-                out = out.copy(secondsUsedPeriod = it.used, monthlyCapSeconds = it.cap)
+                out = out.copy(secondsUsedPeriod = it.used, monthlyCapSeconds = it.cap,
+                    periodEnd = it.period_end)
             }
             rpc(auth, "scene_allowance")?.let {
                 out = out.copy(scenesUsedPeriod = it.used, monthlyScenesCap = it.cap)
@@ -141,4 +161,18 @@ data class AccountStatus(
         internal inline fun <reified T> serializer() =
             kotlinx.serialization.serializer<T>()
     }
+}
+
+/**
+ * The period-end date, written in the language the APP is drawing in — the
+ * caller passes the composition's locale rather than letting this reach for
+ * the system's, which would print "Sep 14" inside an otherwise Korean
+ * sentence.
+ */
+fun AccountStatus.renewalLabel(locale: java.util.Locale): String {
+    val raw = periodEnd ?: return ""
+    return runCatching {
+        java.time.LocalDate.parse(raw.take(10))
+            .format(java.time.format.DateTimeFormatter.ofPattern("MMM d", locale))
+    }.getOrDefault("")
 }

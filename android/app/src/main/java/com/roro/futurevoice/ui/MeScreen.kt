@@ -65,6 +65,7 @@ import com.roro.futurevoice.data.AccountEraser
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.HelpOutline
 import com.roro.futurevoice.R
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
@@ -101,6 +102,8 @@ fun MeScreen(
     onOpenPublicIntro: () -> Unit,
     /** The invite page: my code, who joined, and the entry box. */
     onOpenInvite: () -> Unit,
+    /** "What uses talk time?" — the transparency page. */
+    onOpenCreditGuide: () -> Unit,
     /** The live clone, and the accent it was remixed with. */
     voiceId: String? = null,
     voiceAccentId: String? = null,
@@ -261,10 +264,19 @@ fun MeScreen(
             // Invite minutes are spent BEFORE the plan's monthly pool, so
             // this belongs beside the plan rather than off in a growth
             // corner: it is talk time, and it comes off the top.
+            // Same pair and same order as iOS's plan page: the transparency
+            // page, then the invite.
+            SettingsRow(
+                icon = Icons.Filled.HelpOutline,
+                title = stringResource(R.string.what_uses_talk_time),
+                subtitle = stringResource(R.string.and_what_s_always_free),
+                onClick = onOpenCreditGuide,
+            )
             SettingsRow(
                 icon = Icons.Filled.CardGiftcard,
-                title = stringResource(R.string.invite_talk_time),
-                subtitle = stringResource(R.string.invite_earn_talk_time),
+                title = stringResource(R.string.invite_earn_talk_time),
+                subtitle = stringResource(R.string.lld_minutes_each_per_friend,
+                    com.roro.futurevoice.net.ReferralClient.bonusMinutes),
                 onClick = onOpenInvite,
             )
             HorizontalDivider()

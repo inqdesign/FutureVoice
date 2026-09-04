@@ -133,4 +133,5 @@
     <string name="couldnt_make_the_takes_try_again">테이크를 만들지 못했어요. 다시 해 주세요.</string>
     <string name="couldnt_apply_that_take_try_again">적용하지 못했어요. 다시 해 주세요.</string>
     <string name="as_recorded">녹음한 그대로</string>
+    <string name="your_plan_ends_on_lld">%s에 요금제가 끝나요.</string>
 </resources>

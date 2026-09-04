@@ -133,4 +133,5 @@
     <string name="couldnt_make_the_takes_try_again">Couldn\'t make the takes — try again.</string>
     <string name="couldnt_apply_that_take_try_again">Couldn\'t apply that take — try again.</string>
     <string name="as_recorded">As recorded</string>
+    <string name="your_plan_ends_on_lld">Your plan ends on %s.</string>
 </resources>
