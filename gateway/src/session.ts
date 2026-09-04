@@ -82,6 +82,37 @@ export class CallSession implements DurableObject {
   private static readonly idleHangUpMs = 3 * 60 * 1000
   private idleTimer: number | null = null
 
+  /// A call whose PHONE is gone hangs itself up — and pays for nothing while
+  /// it works that out.
+  ///
+  /// The idle clock above is armed by transcriber interims, which is a
+  /// judgement about the ROOM. It says nothing about whether anyone is still
+  /// on the other end: a killed app on a mobile network leaves a half-open
+  /// socket that never delivers a `close` event, so `teardown` is never
+  /// reached, and any session state that happens to read as "busy" (an
+  /// `activeContext` whose ElevenLabs context never reported done) then bills
+  /// every second forever. Two such sessions were found alive 45 minutes
+  /// after their call ended, charging 15 s every 15 s (2026-09-05).
+  ///
+  /// The phone is the witness: the client streams mic PCM continuously —
+  /// echo-muted buffers are sent as SILENCE, never as a gap — so frames stop
+  /// only when nobody is there. A route rebuild costs a second or two of
+  /// them, hence the generous windows.
+  private lastClientFrameAt = Date.now()
+  /** Nothing from the phone for this long → the socket is dead; hang up. */
+  private static readonly clientGoneMs = 45_000
+  /** Billing needs the phone present, whatever the session thinks it is
+   *  doing. Silence between frames is never this long on a live call. */
+  private static readonly billableClientGapMs = 10_000
+  /** No conversation runs this long; past it the session is a leak. */
+  private static readonly maxSessionMs = 60 * 60 * 1000
+  /** An `activeContext` outliving this is a lost ElevenLabs context, not a
+   *  reply — clearing it is what stops the meter believing we are speaking. */
+  private static readonly maxContextMs = 90_000
+  private sessionStartedAt = Date.now()
+  private watchTimer: number | null = null
+  private watchSeenContext: { context: string; at: number } | null = null
+
   /** Sliding window of what the fluent self RECENTLY said out loud — the
    *  reference the echo judgement compares against. The server is the one
    *  party that knows the speaker's words verbatim, so "the learner just
@@ -197,6 +228,9 @@ export class CallSession implements DurableObject {
 
   private async handleClientMessage(ev: MessageEvent): Promise<void> {
     if (this.ended) return
+    // Any frame at all — audio or control — is proof the phone is still on
+    // the other end. See `lastClientFrameAt`.
+    this.lastClientFrameAt = Date.now()
     if (typeof ev.data !== "string") {
       if (this.started && this.transcriber) {
         // Binary frames are ArrayBuffer on the edge but Blob under
@@ -242,9 +276,10 @@ export class CallSession implements DurableObject {
         msg.token,
         crypto.randomUUID(),
         msg.language || null,
-        () => this.activeContext !== null
-          || Date.now() - this.lastSpokeAt < 2000
-          || Date.now() - this.lastInterimAt < TalkBilling.graceMs,
+        () => this.clientPresent(CallSession.billableClientGapMs)
+          && (this.activeContext !== null
+            || Date.now() - this.lastSpokeAt < 2000
+            || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
         (code) => {
           // Out of minutes: say WHICH wall (the client shows the paywall for
           // a spent free pool, "see you tomorrow" for a subscriber's day)
@@ -358,7 +393,9 @@ export class CallSession implements DurableObject {
     // mid-turn — open the socket now, while the learner is still greeting.
     this.eleven.warm()
     this.started = true
+    this.sessionStartedAt = Date.now()
     this.armIdleHangUp()
+    this.startWatchdog()
     this.emit({ type: "ready" })
     // The fluent self speaks first, exactly as a phone call does. Sent
     // through the normal reply path so the client needs no special case,
@@ -661,6 +698,42 @@ export class CallSession implements DurableObject {
     }, CallSession.idleHangUpMs) as unknown as number
   }
 
+  private clientPresent(withinMs: number): boolean {
+    return Date.now() - this.lastClientFrameAt < withinMs
+  }
+
+  /** The one clock that does not trust the session's own state: it watches
+   *  the PHONE. See `lastClientFrameAt` for why the idle clock is not
+   *  enough. */
+  private startWatchdog(): void {
+    if (this.watchTimer !== null) return
+    this.watchTimer = setInterval(() => {
+      if (this.ended) return
+      if (!this.clientPresent(CallSession.clientGoneMs)) {
+        console.log("watchdog: no client frames — hanging up")
+        this.teardown()
+        return
+      }
+      if (Date.now() - this.sessionStartedAt > CallSession.maxSessionMs) {
+        console.log("watchdog: session ceiling reached — hanging up")
+        this.emit({ type: "error", code: "idle", message: "Call ended." })
+        this.teardown()
+        return
+      }
+      // A context that never reported done is a lost TTS context. Left set
+      // it reads as "the fluent self is speaking" to the meter, forever.
+      const context = this.activeContext
+      if (context === null) { this.watchSeenContext = null; return }
+      if (this.watchSeenContext?.context !== context) {
+        this.watchSeenContext = { context, at: Date.now() }
+      } else if (Date.now() - this.watchSeenContext.at > CallSession.maxContextMs) {
+        console.log(`watchdog: dropping stale context ${context}`)
+        this.activeContext = null
+        this.watchSeenContext = null
+      }
+    }, 5000) as unknown as number
+  }
+
   private emit(msg: ServerMessage): void {
     if (this.client) send(this.client, msg)
   }
@@ -676,6 +749,7 @@ export class CallSession implements DurableObject {
     this.billing?.stop()   // final flush — the last partial batch still bills
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
+    if (this.watchTimer !== null) clearInterval(this.watchTimer)
     this.clearPending()
     this.dropSpec()
     this.activeReplyAbort?.abort()

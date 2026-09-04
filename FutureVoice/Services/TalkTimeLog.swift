@@ -76,9 +76,10 @@ enum TalkTimeLog {
     /// a read, not an estimate.
     ///
     /// Bucketed by the LOCAL day (the ledger's timestamps allow it, unlike
-    /// the server's UTC-pooled `tts_char_pool`) and applied as a FLOOR: a tick
+    /// the server's UTC-pooled `tts_char_pool`). A floor for TODAY — a tick
     /// accepted seconds ago may not be visible in this query yet, and a
-    /// ledger read must never walk the ring backwards mid-call.
+    /// ledger read must never walk the ring backwards mid-call — and the
+    /// plain truth for the few days behind it (see the loop).
     @MainActor
     static func syncFromServer(now: Date = Date(), calendar: Calendar = .current) async {
         guard let session = try? await SupabaseProvider.shared.auth.session,
@@ -114,11 +115,32 @@ enum TalkTimeLog {
         guard !serverByDay.isEmpty else { return }
 
         var map = load()
-        for (day, seconds) in serverByDay where seconds > (map[day] ?? 0) {
-            map[day] = seconds
+        let today = dayKey(now)
+        let correctableFrom = dayKey(now.addingTimeInterval(-Double(correctDownDays) * 86_400))
+        for (day, seconds) in serverByDay {
+            let date = String(day.prefix(10))
+            // The last few days are also corrected DOWNWARD, because the
+            // floor's one failure mode is unbounded: a gateway session that
+            // outlived its call billed 45 minutes of silence (2026-09-05,
+            // fixed server-side), and a floor can only ever agree with it.
+            // The ledger is the receipt, so where it has the day's rows it
+            // is the day. Not TODAY — a tick accepted seconds ago may not be
+            // visible yet, and the ring must never walk backwards mid-call —
+            // and not further back than a few days, where `usage_ledger`'s
+            // oldest-first truncation could leave a day only partly present
+            // and quietly shorten a streak.
+            if date != today, date >= correctableFrom {
+                map[day] = seconds
+            } else if seconds > (map[day] ?? 0) {
+                map[day] = seconds
+            }
         }
         save(prune(map, now: now))
     }
+
+    /// How far back a day may be corrected downward. Deliberately short —
+    /// see the loop above.
+    private static let correctDownDays = 3
 
     /// How far back the backfill reaches — today for the ring, plus enough
     /// history for the widget's recent days.
