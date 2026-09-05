@@ -1006,6 +1006,50 @@
         }
       }
     },
+    "%@ of %lld min talked this month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ von %2$lld Min. diesen Monat gesprochen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$lld min talked this month"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 달 %2$lld분 중 %1$@ 통화"
+          }
+        }
+      }
+    },
+    "%@ talked this month" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ diesen Monat gesprochen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%@ talked this month"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 달 %@ 통화"
+          }
+        }
+      }
+    },
     "%lld min talked this month" : {
       "extractionState" : "manual",
       "localizations" : {

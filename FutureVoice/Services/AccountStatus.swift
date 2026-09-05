@@ -258,12 +258,18 @@ struct AccountStatus {
         // — and since `talk_allowance` reports no cap on Plus, that is the
         // one-time balance ÷ 60, not talk time at all: "0 min left" with a
         // month of real talk seconds sitting unshown in `secondsUsedPeriod`.
-        if isPlusPlan { return explain("\(minutesUsedPeriod) min talked this month") }
+        // Said through `PracticeStats.talkSpan`, so a month whose talking is
+        // still under a minute says the seconds instead of "0 min" — the one
+        // size minutes cannot tell apart from nothing at all.
+        if isPlusPlan {
+            return explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) talked this month")
+        }
         // Light reads the same direction as Plus — minutes TALKED, over the
         // pool — so the two tiers' rows say the same kind of thing and a
         // learner switching between them isn't handed a reversed number.
         if isEntitled, monthlyCapSeconds != nil {
-            let plan = explain("\(minutesUsedPeriod) of \(tankMinutes) min talked this month")
+            let plan = explain(
+                "\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
             // Invite minutes are spent first, so they are not part of the
             // month's fraction and must not be folded into it — they are
             // named separately or the two numbers stop adding up.

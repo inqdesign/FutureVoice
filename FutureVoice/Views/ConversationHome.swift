@@ -515,7 +515,7 @@ struct ConversationHome: View {
     private var goalHeadline: String {
         let secs = todaySpokenSeconds
         guard secs > 0 else { return chrome("Today's goal \(effectiveGoalMinutes) min") }
-        return String(format: "%02d:%02d", secs / 60, secs % 60)
+        return PracticeStats.talkClock(seconds: secs)
     }
 
 

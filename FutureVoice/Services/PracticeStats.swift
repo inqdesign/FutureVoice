@@ -28,14 +28,26 @@ enum PracticeStats {
         TalkTimeLog.secondsToday(now: now)
     }
 
-    /// A talk time as the app SAYS it. Minutes are FLOORED everywhere — the
-    /// ring, the widget, the day card — which is right for a number that has
-    /// to agree across surfaces, but it printed "0 min" for a day with 42
-    /// metered seconds on it, beside a calendar tile that was lit and a ring
-    /// that had moved (reported 2026-09-05). Under a minute the SECONDS are
-    /// named: the same number, said precisely, and never zero on a day that
-    /// was talked on.
-    static func talkTimeText(seconds: Int) -> String {
+    /// Talk time is written in TWO registers, with one rule under both: a day
+    /// — or a month — that was talked on is never called zero. Every surface
+    /// already reads the same METER (see `todayTalkSeconds`); these two are
+    /// how that one number is said, and nothing may format talk time on its
+    /// own.
+    ///
+    /// A DAY is a CLOCK. It can be 40 seconds or 40 minutes, and floored
+    /// minutes called the first one "0 min" beside a lit calendar tile and a
+    /// ring that had visibly moved (reported 2026-09-05). Same shape a
+    /// running app gives one run. Home's ring and the activity day summary.
+    static func talkClock(seconds: Int) -> String {
+        String(format: "%02d:%02d", max(0, seconds) / 60, max(0, seconds) % 60)
+    }
+
+    /// A SPAN — a month's pool, a plan's allowance — is MINUTES: the plan is
+    /// sold in minutes, and "55 min 12 sec of 150 min" makes the remainder
+    /// harder to read rather than more precise. Under a minute it names the
+    /// seconds, because that is the one size minutes cannot say: a new
+    /// account's first 40 seconds must not read as nothing used.
+    static func talkSpan(seconds: Int) -> String {
         seconds > 0 && seconds < 60
             ? explain("\(seconds) sec")
             : explain("\(seconds / 60) min")
