@@ -47,7 +47,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : " · %lld명 대기 중"
+            "value" : " · %lld장 대기 중"
           }
         }
       }

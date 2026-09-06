@@ -308,9 +308,20 @@ final class DrillStore: LanguageScopedStore {
     /// A user turn can be a minute-long ramble while the suggestion rewrites
     /// ONE sentence of it — quoting the whole transcript blew the drill card
     /// off the screen. Keep the sentence that actually corresponds to the
-    /// correction (highest word overlap with the target); fall back to a hard
-    /// prefix cut when there's nothing to match against. Applied at ingest for
+    /// correction (highest word overlap with the target). Applied at ingest for
     /// new cards AND at render for the cards already in users' stores.
+    ///
+    /// **Dictation does not punctuate.** The sentence split above is the happy
+    /// path and stays first — when the transcript HAS sentences it gives a
+    /// clean, whole one. But a live ASR turn routinely arrives as one
+    /// unbroken 300-character run ("uh hey I'm doing great and we are um so my
+    /// um my brother-in-law uh living in Seoul…"), which splits into exactly
+    /// one sentence, and the old fallback then cut a blind 160-char PREFIX.
+    /// That is how a card came to strike through the learner's opening words
+    /// while correcting something they said half a minute later — the "You
+    /// said" and the "Why" on the same card described different sentences,
+    /// which reads as the app inventing a mistake. So the fallback now LOCATES
+    /// the correction instead of guessing: `matchingWindow` below.
     static func relevantFragment(of source: String, matching target: String,
                                  maxChars: Int = 160) -> String {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -323,9 +334,118 @@ final class DrillStore: LanguageScopedStore {
         if sentences.count > 1, !targetWords.isEmpty,
            let best = sentences.max(by: { overlap($0, targetWords) < overlap($1, targetWords) }),
            overlap(best, targetWords) > 0 {
-            return best.count > maxChars ? best.prefix(maxChars) + "…" : best
+            // A single sentence can still be longer than the card — window it
+            // rather than prefix-cutting, for the same reason as below.
+            return best.count > maxChars ? matchingWindow(in: best, matching: target, maxChars: maxChars) : best
         }
-        return trimmed.prefix(maxChars) + "…"
+        return matchingWindow(in: trimmed, matching: target, maxChars: maxChars)
+    }
+
+    /// The stretch of `text` the correction is actually about, for text with no
+    /// sentence boundaries to cut on.
+    ///
+    /// Slides a word window over the text and keeps the one carrying the most
+    /// of the target's vocabulary, each matched word weighted by **1 / how
+    /// often it occurs in the whole text**. The weighting is what makes it work
+    /// on a ramble: "we", "are" and "so" recur all through a turn and are worth
+    /// almost nothing, while "enjoying" occurs once and pins the window to the
+    /// place the learner actually said it. A plain count would score the
+    /// opening words of the turn just as highly as the sentence being
+    /// corrected.
+    ///
+    /// The window is then grown outward a word at a time for context — never
+    /// past `maxChars`, and never mid-word — and each cut end is marked with an
+    /// ellipsis so it reads as an excerpt rather than as the whole utterance.
+    /// Nothing scoring below one full unique word (`minScore`) is trusted; that
+    /// falls back to the old prefix cut, which is at least honest about being
+    /// the start of the turn.
+    static func matchingWindow(in text: String, matching target: String,
+                               maxChars: Int = 160) -> String {
+        let minScore = 1.0
+        let words = wordRanges(in: text)
+        let targetWords = Set(normalizedForMatch(target).split(separator: " ").map(String.init))
+        guard !words.isEmpty, !targetWords.isEmpty else {
+            return String(text.prefix(maxChars)) + "…"
+        }
+        var frequency: [String: Int] = [:]
+        for word in words { frequency[word.normalized, default: 0] += 1 }
+
+        // Wide enough to hold the corrected sentence plus the filler dictation
+        // sprays through it, short enough that it can't span the whole turn.
+        let span = max(targetWords.count + 4, 8)
+        var bestScore = 0.0
+        var bestRange: (lower: Int, upper: Int)?
+        for start in words.indices {
+            var seen = Set<String>()
+            var score = 0.0
+            var lower: Int?
+            var upper = start
+            for index in start..<min(start + span, words.count) {
+                let word = words[index].normalized
+                guard targetWords.contains(word), !seen.contains(word) else { continue }
+                seen.insert(word)
+                score += 1.0 / Double(frequency[word] ?? 1)
+                if lower == nil { lower = index }
+                upper = index
+            }
+            if let lower, score > bestScore {
+                bestScore = score
+                bestRange = (lower, upper)
+            }
+        }
+        guard bestScore >= minScore, let bestRange else {
+            return String(text.prefix(maxChars)) + "…"
+        }
+
+        // Context budget: enough to read as a sentence, not the whole card.
+        let budget = min(maxChars, max(96, target.count + 64))
+        var lower = bestRange.lower
+        var upper = bestRange.upper
+        var start = words[lower].range.lowerBound
+        var end = words[upper].range.upperBound
+        while true {
+            var grew = false
+            if upper + 1 < words.count,
+               text.distance(from: start, to: words[upper + 1].range.upperBound) <= budget {
+                upper += 1
+                end = words[upper].range.upperBound
+                grew = true
+            }
+            if lower > 0,
+               text.distance(from: words[lower - 1].range.lowerBound, to: end) <= budget {
+                lower -= 1
+                start = words[lower].range.lowerBound
+                grew = true
+            }
+            if !grew { break }
+        }
+        let fragment = text[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+        let head = start > text.startIndex ? "…" : ""
+        let tail = end < text.endIndex ? "…" : ""
+        return head + fragment + tail
+    }
+
+    /// Words with where they sit in the original string, so a window can be cut
+    /// on word boundaries and still carry the text's own punctuation and case.
+    private static func wordRanges(in text: String) -> [(normalized: String, range: Range<String.Index>)] {
+        var out: [(normalized: String, range: Range<String.Index>)] = []
+        var index = text.startIndex
+        while index < text.endIndex {
+            guard text[index].isLetter || text[index].isNumber else {
+                index = text.index(after: index)
+                continue
+            }
+            let start = index
+            while index < text.endIndex,
+                  text[index].isLetter || text[index].isNumber
+                    || text[index] == "'" || text[index] == "’" || text[index] == "-" {
+                index = text.index(after: index)
+            }
+            let range = start..<index
+            let normalized = normalizedForMatch(String(text[range]))
+            if !normalized.isEmpty { out.append((normalized, range)) }
+        }
+        return out
     }
 
     /// Target-side twin of `relevantFragment`. Gemini sometimes rewrites a

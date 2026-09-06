@@ -113,6 +113,84 @@ final class DrillStoreTests: XCTestCase {
         XCTAssertEqual(store.load().first?.targetPhrase, "Could you pass the salt?")
     }
 
+    // MARK: - relevantFragment (which part of the turn the card quotes)
+
+    /// The bug this exists for: a dictated turn arrives as one unpunctuated
+    /// run, and the card struck through the learner's OPENING words while
+    /// correcting something they said half a minute later. Built by
+    /// concatenation, not a multiline literal — a newline in the source would
+    /// split it into "sentences" and exercise the wrong path.
+    private static let ramble =
+        "Uh hey, I'm doing great and we are um so my um my brother-in-law uh living in "
+        + "in Seoul uh next to um the Oksu uh area, Oksu-dong area and right behind his uh "
+        + "apartment there is a big park and uh we go there every weekend and we are so "
+        + "enjoying a lot the the walking and the coffee shops around uh there"
+
+    private static let fluentTake = "We are enjoying it so much."
+
+    func testFragmentFindsTheCorrectedPartOfAnUnpunctuatedTurn() {
+        let fragment = DrillStore.relevantFragment(of: Self.ramble, matching: Self.fluentTake)
+        XCTAssertTrue(fragment.contains("enjoying"),
+                      "The quote must contain the words the correction is about: \(fragment)")
+        XCTAssertFalse(fragment.contains("brother-in-law"),
+                       "The quote must not be the unrelated start of the turn: \(fragment)")
+    }
+
+    func testFragmentStaysWithinTheCardsBudget() {
+        let fragment = DrillStore.relevantFragment(of: Self.ramble, matching: Self.fluentTake)
+        XCTAssertLessThanOrEqual(fragment.count, 160)
+    }
+
+    func testFragmentMarksACutFrontAsAnExcerpt() {
+        let fragment = DrillStore.relevantFragment(of: Self.ramble, matching: Self.fluentTake)
+        XCTAssertTrue(fragment.hasPrefix("…"), "A window cut off the front says so: \(fragment)")
+    }
+
+    /// The happy path is untouched: when the transcript HAS sentences, the
+    /// card still quotes one whole clean sentence, not a window.
+    func testFragmentStillPrefersAWholeSentenceWhenPunctuationExists() {
+        let source =
+            "I go to store yesterday. Then I meet my friend and we talk long time about "
+            + "the new job she got last month at the hospital downtown which is very far "
+            + "from her house so she must wake up early every day."
+        let fragment = DrillStore.relevantFragment(of: source,
+                                                   matching: "I went to the store yesterday.")
+        XCTAssertEqual(fragment, "I go to store yesterday")
+    }
+
+    func testFragmentReturnsShortSourcesUntouched() {
+        XCTAssertEqual(DrillStore.relevantFragment(of: "how I can say this",
+                                                   matching: "How can I say this?"),
+                       "how I can say this")
+    }
+
+    /// Nothing to match against — a blind prefix is the honest answer, and it
+    /// must still fit on the card.
+    func testFragmentFallsBackToAPrefixWhenNothingMatches() {
+        let source = String(repeating: "um uh yeah so ", count: 30)
+        let fragment = DrillStore.relevantFragment(of: source,
+                                                   matching: "The weather is lovely today.")
+        XCTAssertLessThanOrEqual(fragment.count, 161)
+        XCTAssertTrue(fragment.hasSuffix("…"))
+    }
+
+    /// Common words alone must not pin the window: "we", "are" and "so" all
+    /// occur in the turn's opening too, and a plain overlap count scored that
+    /// just as highly as the sentence actually being corrected.
+    func testFragmentWeightsRareWordsOverFiller() {
+        let source =
+            "so I work at a company in Gangnam and uh I take the subway every morning it "
+            + "takes about fifty minutes and uh yesterday I was late because the train was "
+            + "uh very crowded so I couldn't get on the first one and then I waited maybe "
+            + "ten minutes for the next train"
+        let fragment = DrillStore.relevantFragment(of: source,
+                                                   matching: "I couldn't get on the first one.")
+        XCTAssertTrue(fragment.contains("crowded") || fragment.contains("get on"),
+                      "Expected the window around the correction: \(fragment)")
+        XCTAssertFalse(fragment.contains("Gangnam"),
+                       "Expected the window NOT to be the start of the turn: \(fragment)")
+    }
+
     func testIngestPicksUpTurnSuggestions() {
         let turn = Turn(id: UUID(), role: .user, audioURL: nil,
                         transcript: "how I can say this",

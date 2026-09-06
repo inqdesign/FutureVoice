@@ -193,10 +193,12 @@ struct DrillView: View {
     /// queue reflects it.
     private func refreshTopCard() {
         guard let top = queue.first else { return }
-        let fresh = DrillStore.shared.due().first(where: { $0.id == top.id })
-        if let fresh = fresh {
-            queue[0] = fresh
-        }
+        guard var fresh = DrillStore.shared.due().first(where: { $0.id == top.id }) else { return }
+        // Only the enrichment can have changed here — keep the quote the card
+        // is already showing, or a `repairedQuotes` repair would be undone by
+        // the raw copy coming back off disk.
+        fresh.sourcePhrase = top.sourcePhrase
+        queue[0] = fresh
     }
 
     private var cardDeck: some View {
@@ -979,7 +981,45 @@ private extension DrillView {
             // reads honestly ("nothing here") instead of opening a stranger.
             queue = DrillStore.shared.load().filter { $0.id == id }
         }
+        queue = repairedQuotes(queue)
         initialCount = queue.count
+    }
+
+    /// Cards minted before the matching-window fix stored a blind 160-character
+    /// PREFIX of the turn as their quote — and for a dictated turn, which has
+    /// no sentence boundaries to cut on, that prefix is usually the learner's
+    /// OPENING words rather than the sentence the card corrects. The result was
+    /// a card whose "You said" and "Why" described different sentences, which
+    /// reads as the app inventing a mistake the learner never made.
+    ///
+    /// The stored prefix can't be un-cut, but the turn it was cut from is still
+    /// in the session, so re-derive the quote from that. Read-time only — the
+    /// same shape as `DrillStore.load()`'s target trim: no migration, and a
+    /// card whose session has been deleted simply keeps what it has. Grading
+    /// the card writes the repaired quote back, so the backlog heals as it is
+    /// worked through.
+    private func repairedQuotes(_ cards: [DrillCard]) -> [DrillCard] {
+        // Only a quote that was cut needs looking at, and only one that still
+        // knows which turn it came from can be repaired at all.
+        guard cards.contains(where: { $0.sourceTurnId != nil && $0.sourcePhrase.hasSuffix("\u{2026}") })
+        else { return cards }
+        var transcripts: [UUID: String] = [:]
+        for session in SessionStore.shared.load() {
+            for turn in session.turns where turn.role == .user {
+                transcripts[turn.id] = turn.transcript
+            }
+        }
+        return cards.map { card in
+            guard card.sourcePhrase.hasSuffix("\u{2026}"),
+                  let turnId = card.sourceTurnId,
+                  let full = transcripts[turnId],
+                  full.count > card.sourcePhrase.count
+            else { return card }
+            var repaired = card
+            repaired.sourcePhrase = DrillStore.relevantFragment(of: full,
+                                                                matching: card.targetPhrase)
+            return repaired
+        }
     }
 
     /// Write the bin's choice to the top card and move on.
