@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
         user_id: user.id,
         elevenlabs_voice_id: json.voice_id,
         is_active: true,
+        name: (body.voice_name ?? "").trim() || null,
       })
     if (insErr) console.error("voice_clones insert failed", insErr)
 
