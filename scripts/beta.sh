@@ -46,6 +46,36 @@ if [[ "$BUILD" != "$WIDGET_BUILD" ]]; then
 fi
 echo "▸ Shipping $VERSION ($BUILD)"
 
+# --- 1b. Upload credentials ------------------------------------------------
+# Uploading through the Apple ID signed into Xcode works right up until the
+# session token in the login keychain disappears — which is not a rare event
+# on this machine: an EAS/Expo build in another project inserts its own
+# temporary keychain into the search list and takes Xcode's token with it when
+# it cleans up. The archive then builds and signs perfectly and the upload
+# dies on "Failed to Use Accounts" (2026-09-07, and not the first time).
+#
+# An App Store Connect API key has no session to lose. Drop the .p8 in
+# ~/.appstoreconnect/private_keys/ (the path Apple's own tools search) and put
+# the issuer id beside it in `issuer_id`, or export ASC_KEY_ID/ASC_ISSUER_ID.
+# With no key present nothing changes: the Apple ID path runs exactly as
+# before.
+AUTH=()
+KEY_DIR="$HOME/.appstoreconnect/private_keys"
+ASC_KEY_ID="${ASC_KEY_ID:-}"
+ASC_ISSUER_ID="${ASC_ISSUER_ID:-$( [[ -f "$HOME/.appstoreconnect/issuer_id" ]] && tr -d '[:space:]' < "$HOME/.appstoreconnect/issuer_id" )}"
+if [[ -z "$ASC_KEY_ID" ]]; then
+  KEY_FILE=$(ls "$KEY_DIR"/AuthKey_*.p8 2>/dev/null | head -1 || true)
+  if [[ -n "$KEY_FILE" ]]; then
+    ASC_KEY_ID=$(basename "$KEY_FILE" .p8); ASC_KEY_ID=${ASC_KEY_ID#AuthKey_}
+  fi
+fi
+if [[ -n "$ASC_KEY_ID" && -n "$ASC_ISSUER_ID" && -f "$KEY_DIR/AuthKey_$ASC_KEY_ID.p8" ]]; then
+  AUTH=(-authenticationKeyPath "$KEY_DIR/AuthKey_$ASC_KEY_ID.p8"
+        -authenticationKeyID "$ASC_KEY_ID"
+        -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+  echo "▸ Using App Store Connect API key $ASC_KEY_ID"
+fi
+
 # --- 2. Project ------------------------------------------------------------
 # The .xcodeproj is generated from project.yml — archive what the spec says,
 # never a stale project someone forgot to regenerate.
@@ -63,7 +93,7 @@ xcodebuild archive \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE" \
-  -allowProvisioningUpdates \
+  -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
   | grep -E '^\*\* |error: ' || true
 
 [[ -d "$ARCHIVE" ]] || { echo "✗ Archive failed" >&2; exit 1; }
@@ -88,7 +118,7 @@ xcodebuild -exportArchive \
   -archivePath "$ARCHIVE" \
   -exportPath "$EXPORT_DIR" \
   -exportOptionsPlist build/ExportOptions.plist \
-  -allowProvisioningUpdates \
+  -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
   | grep -E '^\*\* |error: ' || true
 
 IPA=$(find "$EXPORT_DIR" -name '*.ipa' | head -1)
@@ -183,7 +213,7 @@ PLIST
 if xcodebuild -exportArchive \
      -archivePath "$ARCHIVE" \
      -exportOptionsPlist build/UploadOptions.plist \
-     -allowProvisioningUpdates \
+     -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
      | grep -E '^\*\* |Upload succeeded|error: ' ; then
   echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight once Apple finishes processing."
   publish_release_row
