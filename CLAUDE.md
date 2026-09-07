@@ -281,6 +281,24 @@ interruption. `-capture daycard` renders it on a sample day.
   the same thing the goal is judged by. `Session.turns` speech sums survive
   only where the learner's own speech IS the subject — ranking the day's main
   talk, the CEFR estimate's ~10-minute gate, and the per-talk fluency stats.
+- **The headline is the learner's to settle, and reads across every
+  language** (2026-09-07). The automatic pick — the talk spoken longest in —
+  was re-read live on every look, so a card shared at noon changed its face
+  when a second talk outran the first; and `DayCardData.make` read only the
+  ACTIVE language's sessions while the minutes it printed were every
+  language's, so a free talk in one language and a news talk in the other
+  left the numbers of two talks under the title of none. Three rules now:
+  `make` reads `SessionStore.loadAcrossLanguages()` (a day is the learner's,
+  not a language's); a talk whose summary never landed — `displayTitle`'s
+  quoted first words or "Conversation" — sorts BEHIND every titled talk, so
+  it heads the card only when nothing titled exists; and the sheet's
+  **Headline** section lists the day's talks to pick from with a field to
+  write your own (`DayCardStore.setHeadline`, per local day, empty = back to
+  automatic). Picking a photo pins the automatic headline the same way, since
+  the card is about to be shared. The pin rides in `DayCardData.headline`
+  (optional, so old snapshots decode) and is frozen with the day. A typed
+  headline is MATERIAL — the footer asks for the language being learned —
+  which is the one thing on this English-chrome card that follows the talk.
 - **The call pill is the card's brand badge, in the learner's theme.** A
   first cut laid the Futureself mosaic on a time axis as the day's "map" (lit
   where the fluent self spoke); it was retired the same day because nobody

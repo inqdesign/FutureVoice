@@ -98,6 +98,31 @@ final class DayCardStore: ObservableObject {
         return days.sorted(by: >)
     }
 
+    // MARK: - Headline
+
+    /// The day's headline as the learner settled it — picked from the day's
+    /// talks or typed — keyed by local day. Nil means automatic: the talk
+    /// spoken longest in, re-read live. Once set it never moves, so a card
+    /// already shared keeps its face when a later talk outruns the first;
+    /// `freeze` carries it into the day's snapshot.
+    private static let headlinesKey = "futurevoice.dayCard.headlines"
+
+    func headline(for day: Date) -> String? {
+        let map = UserDefaults.standard.dictionary(forKey: Self.headlinesKey) as? [String: String] ?? [:]
+        return map[AppUsageLog.dayKey(day)]
+    }
+
+    /// Empty or whitespace clears the pin and the day goes back to automatic.
+    func setHeadline(_ text: String?, for day: Date) {
+        var map = UserDefaults.standard.dictionary(forKey: Self.headlinesKey) as? [String: String] ?? [:]
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let key = AppUsageLog.dayKey(day)
+        guard map[key] != (trimmed.isEmpty ? nil : trimmed) else { return }
+        map[key] = trimmed.isEmpty ? nil : trimmed
+        UserDefaults.standard.set(map, forKey: Self.headlinesKey)
+        version += 1
+    }
+
     // MARK: - Photo
 
     func photo(for day: Date) -> UIImage? {
