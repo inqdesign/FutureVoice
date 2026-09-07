@@ -3212,7 +3212,6 @@
         }
       }
     },
-    "Answers in about two seconds — and you can talk over it" : {},
     "Any %lld days together still hold one week's minutes — spend them in one sitting or a few. Today's number is always in Me → Talk time." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4241,7 +4240,6 @@
         }
       }
     },
-    "Calls" : {},
     "Calls at" : {
       "localizations" : {
         "de" : {
@@ -4362,7 +4360,18 @@
         }
       }
     },
+    "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known, and swipe away anything that came out of a mishearing." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내가 한 말, 유창해진 내가 되돌려준 말, 그리고 본 상황연습이 알려준 표현을 모아둬요. 익숙해진 건 아는 표현으로 표시하고, 잘못 들려서 들어온 건 옆으로 밀어 지워요."
+          }
+        }
+      }
+    },
     "Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known." : {
+      "extractionState" : "stale",
       "localizations" : {
         "ko" : {
           "stringUnit" : {
@@ -8088,6 +8097,7 @@
       }
     },
     "Goal reached · %lld min" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8407,6 +8417,16 @@
         }
       }
     },
+    "Headline" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤드라인"
+          }
+        }
+      }
+    },
     "Hear it" : {
       "localizations" : {
         "de" : {
@@ -8641,7 +8661,9 @@
         }
       }
     },
-    "Honestly, it went really well. I felt prepared. %lld" : {},
+    "Honestly, it went really well. I felt prepared. %lld" : {
+      "shouldTranslate" : false
+    },
     "How comfortable are you right now?" : {
       "localizations" : {
         "de" : {
@@ -10260,6 +10282,7 @@
       }
     },
     "Let's talk — start a call. %lld of %lld minutes today." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10475,7 +10498,9 @@
         }
       }
     },
-    "Listening" : {},
+    "Listening" : {
+      "shouldTranslate" : false
+    },
     "Listening — tap to finish" : {
       "localizations" : {
         "de" : {
@@ -13109,6 +13134,16 @@
         }
       }
     },
+    "Or write your own" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "직접 적기"
+          }
+        }
+      }
+    },
     "Other free activity" : {
       "localizations" : {
         "de" : {
@@ -14522,7 +14557,6 @@
         }
       }
     },
-    "Realtime calls" : {},
     "Rebuild" : {
       "localizations" : {
         "de" : {
@@ -14888,6 +14922,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "억양 없애기"
+          }
+        }
+      }
+    },
+    "Remove from expressions" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현 목록에서 지우기"
           }
         }
       }
@@ -16707,7 +16751,19 @@
       },
       "shouldTranslate" : false
     },
-    "So — how did the interview go yesterday? Anything you'd do differently next time?" : {},
+    "So — how did the interview go yesterday? Anything you'd do differently next time?" : {
+      "shouldTranslate" : false
+    },
+    "Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "평소와 다른 사용이 있어 확인하고 있어요. 메일을 보내 주시면 바로 정리해 드릴게요. 저장한 건 그대로고, 복습도 계속 할 수 있어요."
+          }
+        }
+      }
+    },
     "Someone joined the Core — %lld seats taken." : {
       "localizations" : {
         "de" : {
@@ -17639,6 +17695,7 @@
       }
     },
     "Talk %lld min today" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -20069,7 +20126,6 @@
         }
       }
     },
-    "Turn this off to use the classic call, which waits for your full turn before answering. Everything else is the same: your talks, review material and talk time all work as usual." : {},
     "Type a topic" : {
       "localizations" : {
         "de" : {
@@ -20987,6 +21043,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "이름을 불러가며 말을 걸어요. 여기서 답한 것들은 그대로 대화 소재가 되고, 많이 알려줄수록 교과서 예문이 아니라 내 얘기를 하게 돼요."
+          }
+        }
+      }
+    },
+    "We've paused talking on this account" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 계정의 통화를 잠시 멈췄어요"
+          }
+        }
+      }
+    },
+    "We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "평소와 다른 사용이 있어 확인하는 동안 이 계정의 통화를 잠시 멈췄어요. 메일을 보내 주시면 바로 정리해 드릴게요."
           }
         }
       }
@@ -22147,6 +22223,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@로 써 보세요 — \"나\"가 이 소개를 바탕으로 말하고, 쓰는 것 자체가 연습이에요. 매끈한 문장보다 구체적인 내용이 좋아요: 하는 일, 사는 동네, 한 시간이고 떠들 수 있는 그 이야기."
+          }
+        }
+      }
+    },
+    "Write it in %@." : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@로 적어요."
           }
         }
       }
