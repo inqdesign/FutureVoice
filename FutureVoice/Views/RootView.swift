@@ -83,9 +83,13 @@ struct RootView: View {
     private var gatedContent: some View {
         if !auth.didResolveInitialSession && !authBypassed
             && !appState.onboardingStarted && !appState.holdVoiceOnboarding {
-            // Match the (blank) launch screen until we know whether there's a
+            // Match the launch screen EXACTLY until we know whether there's a
             // stored session — a returning user then lands straight on Home
-            // with no Welcome-screen flash.
+            // with no Welcome-screen flash. Same asset, same colour, same
+            // centring as `UILaunchScreen` in Info.plist: resolving the
+            // session can include a token refresh over the network, and a
+            // plain background here read as the logo blinking off into a
+            // blank page before Talk arrived (reported 2026-09-07).
             //
             // `holdVoiceOnboarding` vetoes this branch and the next one. The
             // flag means "a voice-clone act is on stage, don't move", and a
@@ -94,7 +98,7 @@ struct RootView: View {
             // for a frame and came back, which destroys and rebuilds the
             // whole voice screen. Every `@State` on it resets, so anything
             // open on top (the accent picker, mid-generate) silently closes.
-            Color(.systemBackground).ignoresSafeArea()
+            launchScreenTwin
         } else if auth.session == nil && !authBypassed
                     && !appState.onboardingStarted && !appState.holdVoiceOnboarding {
             // Welcome gates on "has the journey begun", NOT on the session:
@@ -141,6 +145,18 @@ struct RootView: View {
             RootTabView()
                 .id(appState.targetLanguage)
         }
+    }
+
+    /// The static launch screen, redrawn in SwiftUI so the hand-off from
+    /// `UILaunchScreen` to the first frame is invisible. Keep it in step with
+    /// the `LaunchLogo` / `LaunchBackground` assets — nothing else may draw
+    /// here, since anything the launch screen can't show would pop in.
+    private var launchScreenTwin: some View {
+        ZStack {
+            Color("LaunchBackground").ignoresSafeArea()
+            Image("LaunchLogo")
+        }
+        .ignoresSafeArea()
     }
 
     #if DEBUG
