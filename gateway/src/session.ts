@@ -98,6 +98,9 @@ export class CallSession implements DurableObject {
   /// echo-muted buffers are sent as SILENCE, never as a gap — so frames stop
   /// only when nobody is there. A route rebuild costs a second or two of
   /// them, hence the generous windows.
+  /** Has the learner said anything yet in this call? The meter waits for
+   *  it — see the billing predicate. */
+  private learnerSpoke = false
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
   private static readonly clientGoneMs = 45_000
@@ -276,7 +279,14 @@ export class CallSession implements DurableObject {
         msg.token,
         crypto.randomUUID(),
         msg.language || null,
-        () => this.clientPresent(CallSession.billableClientGapMs)
+        // Nothing is charged until the learner has actually SAID something.
+        // The opener speaks whether or not it is answered, so a call opened
+        // and abandoned billed its own greeting and the silence after it —
+        // and the ring showed that wait back as talk time (2026-09-07). A
+        // committed turn is the witness, never an interim: a room's noise
+        // makes interims all day.
+        () => this.learnerSpoke
+          && this.clientPresent(CallSession.billableClientGapMs)
           && (this.activeContext !== null
             || Date.now() - this.lastSpokeAt < 2000
             || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
@@ -549,6 +559,7 @@ export class CallSession implements DurableObject {
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
     console.log(`commit: "${text.slice(0, 80)}"`)
+    this.learnerSpoke = true
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a

@@ -594,7 +594,19 @@ struct ConversationView: View {
     ///
     /// The learner half of that is `someoneIsTalkingHere`, which is where the
     /// café problem lives — see below.
+    /// Has the learner spoken since this call started? Gates the meter —
+    /// see `isBillableMoment`. Set where a user turn is made (both paths),
+    /// cleared with the session.
+    @State private var learnerSpokeThisCall = false
+
     private func isBillableMoment() -> Bool {
+        // Nothing counts until the learner has said something IN THIS CALL.
+        // The opener speaks whether or not it is answered, and a call that
+        // was opened, listened to and left behind is not a minute of theirs
+        // — the ring showed the wait as talk time (reported 2026-09-07).
+        // Per call, not per transcript: Continue reopens a book with its old
+        // turns in hand, and those were spoken on another day.
+        guard learnerSpokeThisCall else { return false }
         if RealtimeMode.isEnabled {
             // Same rule, read off the gateway's state instead of the local
             // VAD: the fluent self speaking, a reply being written, or the
@@ -2063,6 +2075,7 @@ struct ConversationView: View {
                 try? FileManager.default.removeItem(at: url)
             }
             turns.append(turn)
+            learnerSpokeThisCall = true
             didSaveCurrentSession = false
             creditGoalChips(turnId: turn.id)
             requestRealtimeSuggestion(for: turn.id, said: text)
@@ -2392,6 +2405,7 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
+        learnerSpokeThisCall = true
         // First learner speech starts the clock (classic path — armed at the
         // turn commit; the realtime path arms earlier, on `.hearing`).
         if callStartedAt == nil { callStartedAt = Date() }
@@ -3526,6 +3540,7 @@ struct ConversationView: View {
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
+        learnerSpokeThisCall = false
         // A new session's clock starts empty — the banked time belongs to
         // the call that just ended, not this one.
         callElapsedAtPause = 0
