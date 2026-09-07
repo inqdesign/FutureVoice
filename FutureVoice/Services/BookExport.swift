@@ -179,8 +179,12 @@ extension BookDocument {
 
         // Both halves of the book's Expressions chapter: the phrases the
         // fluent self offered, then the ones the learner already said.
-        let offered = session.summary?.expressionsOffered ?? []
-        let expressions = session.summary?.expressionsUsed ?? []
+        // A phrase the learner threw out of the collection isn't in the book
+        // either — the page and the paper copy tell the same story.
+        let offered = (session.summary?.expressionsOffered ?? [])
+            .filter { !VocabStore.shared.isDismissedExpression($0) }
+        let expressions = (session.summary?.expressionsUsed ?? [])
+            .filter { !VocabStore.shared.isDismissedExpression($0) }
         doc.terms += (offered + expressions).map { Term(text: $0, isExpression: true) }
         if !offered.isEmpty || !expressions.isEmpty {
             var s = Section(title: chrome("Expressions"))

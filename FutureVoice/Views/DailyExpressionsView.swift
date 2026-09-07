@@ -95,6 +95,8 @@ struct DailyExpressionsView: View {
             // still unmastered in its Watch book and still in the expression
             // catalog, and neither of those knows about the schedule.
             guard schedule.isDue(.expression, p, now: now) else { return }
+            // Thrown out of the collection — no source may deal it back.
+            guard !store.isDismissedExpression(p) else { return }
             seen.insert(k)
             out.append(p)
         }

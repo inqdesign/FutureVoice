@@ -352,7 +352,8 @@ struct ConversationDetailView: View {
     private var usedExpressions: [String] {
         let credited = creditedItems
         return (session.summary?.expressionsUsed ?? [])
-            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
+            .filter { !credited.contains(CarryoverDetector.normalized($0))
+                        && !VocabStore.shared.isDismissedExpression($0) }
     }
 
     /// The other half of this chapter: reusable phrases the fluent self used
@@ -366,6 +367,7 @@ struct ConversationDetailView: View {
         let mine = Set(usedExpressions.map(CarryoverDetector.normalized))
         return (session.summary?.expressionsOffered ?? []).filter {
             !VocabStore.shared.isKnownExpression($0)
+                && !VocabStore.shared.isDismissedExpression($0)
                 && !mine.contains(CarryoverDetector.normalized($0))
         }
     }

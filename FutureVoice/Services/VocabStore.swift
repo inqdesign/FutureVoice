@@ -26,6 +26,18 @@ final class VocabStore: ObservableObject {
     /// Expressions the user bookmarked to keep studying — the phrase-level
     /// analogue of `studying`. Lowercased keys, newest first.
     @Published private(set) var studyingExpressions: [String] = []
+    /// Expressions the learner threw OUT of the collection. Not "known" and
+    /// not snoozed: not material at all.
+    ///
+    /// A word can't get here by mistake — it has to be in `CoreVocabulary` to
+    /// be collected, so a mistranscription is filtered out by construction.
+    /// An expression has no such lexicon; its only guard is that the phrase
+    /// appears verbatim in the learner's own turns, and a transcriber's error
+    /// passes that check every time (it really is in the transcript, letter
+    /// for letter). So the learner is the last judge, and their verdict is
+    /// kept rather than just deleting the record — the next talk misheard the
+    /// same way would otherwise put the same junk straight back.
+    @Published private(set) var dismissedExpressions: Set<String> = []
     /// Session id → how many of its user texts are already folded in. A
     /// resumed talk is summarized AGAIN over its whole transcript; counting
     /// texts (instead of the old all-or-nothing session set) lets the second
@@ -48,6 +60,7 @@ final class VocabStore: ObservableObject {
     private var expressionsURL: URL
     private var expressionsMetaURL: URL
     private var studyingExpressionsURL: URL
+    private var dismissedExpressionsURL: URL
 
     init() {
         let dir = LanguageScope.activeDirectory
@@ -57,6 +70,7 @@ final class VocabStore: ObservableObject {
         expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
+        dismissedExpressionsURL = dir.appendingPathComponent("vocab_dismissed_expressions.json")
         load()
     }
 
@@ -70,10 +84,12 @@ final class VocabStore: ObservableObject {
         expressionsURL = dir.appendingPathComponent("vocab_expressions.json")
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
+        dismissedExpressionsURL = dir.appendingPathComponent("vocab_dismissed_expressions.json")
         records = [:]
         studying = []
         expressionRecords = [:]
         studyingExpressions = []
+        dismissedExpressions = []
         ingestedTextCounts = [:]
         ingestedExpressionKeys = [:]
         legacyExpressionSessions = []
@@ -86,6 +102,14 @@ final class VocabStore: ObservableObject {
 
     func addStudying(_ word: String) {
         guard !studying.contains(word) else { return }
+        // Opposite verdicts: keeping a word takes back a self-marked "known",
+        // exactly as `markKnown` takes back the bookmark — the later tap wins
+        // in both directions, so the two can never be lit together. A `.used`
+        // record stays: that's evidence the learner said it, not a verdict.
+        if records[word]?.state == .known {
+            records[word] = nil
+            save()
+        }
         studying.insert(word, at: 0)   // newest first
         saveStudying()
         // Effort, not a finished word: keeping it means you're still
@@ -151,6 +175,27 @@ final class VocabStore: ObservableObject {
         // Known-state changes can move a phrase in/out of the widget's studying
         // view is unaffected, but keep the snapshot fresh for the count badge.
         StudyWidgetRefresher.schedule()
+    }
+
+    /// Thrown out: never dealt, never listed, never re-collected.
+    func isDismissedExpression(_ phrase: String) -> Bool {
+        dismissedExpressions.contains(exprKey(phrase))
+    }
+
+    /// The learner's verdict that this was never an expression — usually the
+    /// transcriber's words rather than theirs. It leaves the collection
+    /// entirely: the record, the bookmark and the return date all go, and the
+    /// key is remembered so no later talk can re-collect it.
+    func dismissExpression(_ phrase: String) {
+        let k = exprKey(phrase)
+        guard !k.isEmpty, dismissedExpressions.insert(k).inserted else { return }
+        expressionRecords[k] = nil
+        studyingExpressions.removeAll { $0 == k }
+        StudyScheduleStore.shared.clear(.expression, k)
+        saveDismissedExpressions()
+        saveExpressions()
+        saveStudyingExpressions()
+        Analytics.capture("expression_dismissed")
     }
 
     // MARK: - Stats
@@ -230,6 +275,9 @@ final class VocabStore: ObservableObject {
             guard !display.isEmpty else { continue }
             let key = exprKey(display)
             guard !counted.contains(key) else { continue }
+            // Thrown out once, thrown out for good: the same mishearing
+            // recurring in a later talk must not re-collect it.
+            guard !dismissedExpressions.contains(key) else { continue }
             counted.insert(key)
             if var r = expressionRecords[key] {
                 r.count += 1
@@ -573,6 +621,10 @@ final class VocabStore: ObservableObject {
            let list = try? JSONDecoder().decode([String].self, from: data) {
             studyingExpressions = list
         }
+        if let data = try? Data(contentsOf: dismissedExpressionsURL),
+           let list = try? JSONDecoder().decode([String].self, from: data) {
+            dismissedExpressions = Set(list)
+        }
     }
 
     private func save() {
@@ -597,6 +649,14 @@ final class VocabStore: ObservableObject {
             try? data.write(to: studyingExpressionsURL, options: [.atomic])
         }
         // The Expressions widget shows only bookmarked phrases — refresh it.
+        StudyWidgetRefresher.schedule()
+    }
+
+    private func saveDismissedExpressions() {
+        if let data = try? JSONEncoder().encode(Array(dismissedExpressions)) {
+            try? data.write(to: dismissedExpressionsURL, options: [.atomic])
+        }
+        // A dismissed phrase may have been on the Expressions widget.
         StudyWidgetRefresher.schedule()
     }
 
