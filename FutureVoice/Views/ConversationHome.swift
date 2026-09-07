@@ -808,27 +808,41 @@ private struct TalkHeroSection: View {
             // instead of animating their trim: the draw-on sweep only works
             // on a view that already exists.
             //
-            // The tail ALWAYS fades — but only over the REAR of the arc: at
-            // most 90° of circle, never past the arc's halfway point. The
-            // head half stays solid accent, so a short arc reads as a crisp
-            // little comet instead of a smeared translucent pill. (Zero
-            // progress also needs the hide below: a near-empty trim under
-            // the angular gradient renders as a half-cut dot at 12.)
+            // The tail fades over a FIXED span of circle, never a fraction of
+            // the arc, and not at all while the arc is short. It used to be
+            // a fraction (a quarter of the ring, capped at half the arc), so
+            // a ten-second day — six degrees of arc, which is really just the
+            // two round caps — spent its whole rear half at 15% opacity: a
+            // pill that was pale on the left and solid on the right
+            // (2026-09-07). Below `solidBelow` the arc is plain accent, a
+            // crisp dot; above it the last `fadeSpan` degrees of tail fade,
+            // held to two fifths of the arc so a mid-size arc still reads as
+            // mostly solid. Near the threshold the span grows in from zero,
+            // so the comet appears rather than switches on.
+            //
+            // The gradient's start is pulled back by the cap's own angular
+            // width, because an angular gradient clamps to its end colours
+            // outside its range: with the range starting exactly at 0° the
+            // tail cap sat entirely BEFORE the gradient and was painted at
+            // the floor opacity as one solid block.
             //
             // At zero the ring is just its faint track. A start-line dot at
             // 12 marked the start for a while and was removed (2026-08-31): on
             // the home screen it read as a stray mark, not a marker.
-            let fadeEnd = min(0.5, 0.25 / max(progress, 0.001))
+            let solidBelow = 0.12
+            let fadeSpan = min(60.0 / 360, progress * 0.4)
+            let fadeEnd = progress > solidBelow ? fadeSpan / max(progress, 0.001) : 0
+            let capDegrees: Double = 360 * (10 / (2 * Double.pi * 130))
             Circle()
                 .trim(from: 0, to: progress)
                 .stroke(
                     AngularGradient(
                         stops: [
-                            .init(color: Color.accentColor.opacity(0.15), location: 0),
+                            .init(color: Color.accentColor.opacity(fadeEnd > 0 ? 0.4 : 1), location: 0),
                             .init(color: Color.accentColor, location: fadeEnd),
                         ],
                         center: .center,
-                        startAngle: .degrees(0),
+                        startAngle: .degrees(-capDegrees),
                         endAngle: .degrees(360 * progress)),
                     style: StrokeStyle(lineWidth: 20, lineCap: .round))
                 .rotationEffect(.degrees(-90))

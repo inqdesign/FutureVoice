@@ -486,6 +486,16 @@ enum DebugCapture {
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
             return AnyView(ConversationHome())
+        case "home-ring":
+            // The hero ring at an exact talk time — `-ringSeconds N` — so the
+            // arc can be reviewed short, mid and near-full. Seeds only the
+            // shortfall, so reinstall between runs to go DOWN.
+            once("home-ring") {
+                seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                let want = UserDefaults.standard.integer(forKey: "ringSeconds") - TalkTimeLog.secondsToday()
+                TalkTimeLog.add(seconds: want, language: appState.targetLanguage)
+            }
+            return AnyView(ConversationHome())
         case "home-plus":
             // The same home for a PLUS subscriber, which draws NO ring — an
             // hour a day is a pool the arc would sit near-empty on all month.
