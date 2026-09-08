@@ -25,6 +25,7 @@ import androidx.compose.material3.TopAppBar
 import com.roro.futurevoice.BuildConfig
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -202,6 +203,11 @@ fun RootScreen() {
     var detailSessionId by remember { mutableStateOf<String?>(null) }
     var watchScenarioId by remember { mutableStateOf<String?>(null) }
     var shadowLine by remember { mutableStateOf<String?>(null) }
+    // Today's shadow hand and where we are in it. A dealt hand, not a
+    // browser: opening everything ever said and asking the learner to choose
+    // is a decision they have no basis for making.
+    var shadowHand by remember { mutableStateOf<List<com.roro.futurevoice.data.ShadowPicks.Pick>>(emptyList()) }
+    var shadowAt by remember { mutableIntStateOf(0) }
     var bookScenarioId by remember { mutableStateOf<String?>(null) }
     val callAnswered by com.roro.futurevoice.data.DailyCallInbox.answered.collectAsStateWithLifecycle()
     LaunchedEffect(callAnswered) {
@@ -210,6 +216,7 @@ fun RootScreen() {
         if (callAnswered > 0 && state.voiceId != null) {
             showMe = false; showDeck = false; detailSessionId = null
             watchScenarioId = null; shadowLine = null; clonePreview = false
+            shadowHand = emptyList(); shadowAt = 0
             callTopic = ""; callFacts = emptyList(); callScenarioId = null
             // The pre-written voicemail IS the call's first line; consumed
             // so a plain free talk later doesn't replay it.
@@ -291,6 +298,16 @@ fun RootScreen() {
             nativeLanguage = state.nativeLanguage,
             onBackToSetup = { editProfile = false },
             onFinish = { app.savePersona(it); editProfile = false },
+        )
+
+        shadowHand.isNotEmpty() -> ShadowScreen(
+            line = shadowHand[shadowAt].turn.transcript,
+            turnId = shadowHand[shadowAt].turn.id,
+            voiceId = state.voiceId ?: "",
+            targetLanguage = state.targetLanguage,
+            position = (shadowAt + 1) to shadowHand.size,
+            onNext = if (shadowAt + 1 < shadowHand.size) ({ shadowAt += 1 }) else null,
+            onBack = { shadowHand = emptyList(); shadowAt = 0 },
         )
 
         shadowLine != null -> ShadowScreen(
@@ -526,6 +543,7 @@ fun RootScreen() {
             onWelcomePreview = { welcomePreview = true },
             onSavePersona = app::savePersona,
             onMeasuredLevel = app::applyMeasuredLevel,
+            onShadowHand = { shadowHand = it; shadowAt = 0 },
         )
     }
 }
@@ -671,6 +689,7 @@ private fun HomeScreen(
     onWelcomePreview: () -> Unit = {},
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     onMeasuredLevel: (String) -> Unit = {},
+    onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -827,6 +846,7 @@ private fun HomeScreen(
                     onOpenExpressions = onOpenExpressions,
                     onOpenScenarioBook = onOpenBook,
                     onOpenTalk = onOpenTalk,
+                    onShadowHand = onShadowHand,
                 )
 
                 HomeTab.PROGRESS -> ProgressBody(

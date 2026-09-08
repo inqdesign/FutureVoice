@@ -64,6 +64,13 @@ fun ShadowScreen(
     voiceId: String,
     targetLanguage: String,
     onBack: () -> Unit,
+    /** The line's origin turn, when it came from a talk — an attempt is
+     *  filed against it so the next deal knows this one has been tried. */
+    turnId: String? = null,
+    /** Position in today's hand, for the header. Null = a one-off line. */
+    position: Pair<Int, Int>? = null,
+    /** Move to the next line of the hand. Null = this is the last one. */
+    onNext: (() -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
@@ -113,7 +120,17 @@ fun ShadowScreen(
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.say_it_out_loud)) },
+                title = {
+                    Column {
+                        Text(stringResource(R.string.say_it_out_loud),
+                            style = MaterialTheme.typography.titleMedium)
+                        position?.let { (i, total) ->
+                            Text(stringResource(R.string.lld_of_lld, i, total),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { mp3.stop(); runCatching { live.stop() }; onBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -193,9 +210,32 @@ fun ShadowScreen(
                     val text = runCatching { live.stop() }.getOrDefault("")
                     recording = false
                     said = text
-                    attempt = ShadowScore.analyze(line, text, targetLanguage)
+                    val a = ShadowScore.analyze(line, text, targetLanguage)
+                    attempt = a
+                    // File it: the score decides whether this line comes back,
+                    // and the rep is what the day's Shadowing goal counts.
+                    scope.launch {
+                        com.roro.futurevoice.data.ShadowAttemptStore.shared(context).add(
+                            com.roro.futurevoice.data.ShadowAttempt(
+                                turnId = turnId ?: com.roro.futurevoice.data.StoreJson.newId(),
+                                targetText = line,
+                                learnerTranscript = text,
+                                matchScore = a.score,
+                            ),
+                            targetLanguage)
+                        com.roro.futurevoice.data.PracticeLog.record(
+                            context, com.roro.futurevoice.data.PracticeLog.Kind.SHADOW,
+                            finished = true)
+                    }
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.stop))
+                }
+            }
+            // Only after a score: moving on before saying it would make the
+            // hand a list to click through.
+            if (attempt != null && onNext != null) {
+                Button(onClick = onNext, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.next))
                 }
             }
         }

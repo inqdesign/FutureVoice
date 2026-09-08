@@ -71,6 +71,8 @@ fun PracticeBody(
     onOpenExpressions: () -> Unit,
     onOpenScenarioBook: (String) -> Unit,
     onOpenTalk: (String) -> Unit,
+    /** Today's shadow hand — dealt here, played by the root. */
+    onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
 ) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -79,6 +81,7 @@ fun PracticeBody(
     var wordsDue by remember { mutableStateOf(0) }
     var expressionsDue by remember { mutableStateOf(0) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    val scope = rememberCoroutineScope()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var goals by remember { mutableStateOf(GoalStore.Goals()) }
     var today by remember { mutableStateOf(PracticeLog.Day()) }
@@ -123,7 +126,22 @@ fun PracticeBody(
                     onExpressions = onOpenExpressions,
                     // Shadowing is reached through a book's line, so the tile
                     // sends them to the shelf that has the lines in it.
-                    onShadowing = { shelf = Shelf.TALK },
+                    onShadowing = {
+                        // Deal today's hand. With nothing to deal — no talks
+                        // yet — the Talk shelf is the honest fallback: the
+                        // material comes from conversations, so that is where
+                        // the learner has to go first.
+                        scope.launch {
+                            val picks = com.roro.futurevoice.data.ShadowPicks.pick(
+                                sessions = talks,
+                                attempts = com.roro.futurevoice.data.ShadowAttemptStore
+                                    .shared(context).load(language),
+                                level = level,
+                                language = language,
+                                limit = maxOf(goals.shadows, 1))
+                            if (picks.isEmpty()) shelf = Shelf.TALK else onShadowHand(picks)
+                        }
+                    },
                     onEditGoals = {},
                 )
                 if (talks.isNotEmpty()) {
