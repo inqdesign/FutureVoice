@@ -29,7 +29,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         buildConfigField("String", "SUPABASE_URL", "\"${secret("SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${secret("SUPABASE_ANON_KEY")}\"")
@@ -38,8 +38,29 @@ android {
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${secret("GOOGLE_WEB_CLIENT_ID")}\"")
     }
 
+    // Play needs a SIGNED bundle. The keystore lives outside the repo and
+    // its path/passwords come from local.properties (gitignored) or the
+    // environment, so a checkout can build debug without holding the key —
+    // and CI can sign by setting the same four variables.
+    signingConfigs {
+        create("release") {
+            val path = secret("RELEASE_STORE_FILE")
+            if (path.isNotBlank() && file(path).exists()) {
+                storeFile = file(path)
+                storePassword = secret("RELEASE_STORE_PASSWORD")
+                keyAlias = secret("RELEASE_KEY_ALIAS")
+                keyPassword = secret("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // Only sign when the key is actually present: an unsigned
+            // release build is still useful locally, and a missing key must
+            // fail at upload time rather than at every developer's build.
+            signingConfig = signingConfigs.getByName("release")
+                .takeIf { it.storeFile != null }
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
