@@ -1,9 +1,1 @@
-First update.
-
-- The app opens on the logo instead of a blank screen
-- Today's ring on Home draws correctly when it's short
-- A call under a minute shows its seconds instead of 0 min
-- Talk time only counts once you start speaking
-- Misheard expressions can be discarded, and stay discarded
-- Pick your own headline for the day card
-- A bookmarked word no longer lights up as "known" at the same time
+Performance and stability improvements throughout the app.
