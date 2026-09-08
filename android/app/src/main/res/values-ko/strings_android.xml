@@ -135,4 +135,6 @@
     <string name="as_recorded">녹음한 그대로</string>
     <string name="your_plan_ends_on_lld">%s에 요금제가 끝나요.</string>
     <string name="help">도움말</string>
+    <string name="ring_exactly_on_time">정확한 시각에 울리기</string>
+    <string name="without_this_the_call_can_arrive_a_few_minutes_late">이걸 켜지 않으면 통화가 몇 분 늦게 올 수 있어요.</string>
 </resources>

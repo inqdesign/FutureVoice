@@ -5,7 +5,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- The daily call IS an alarm-clock use (Play declaration: alarm). -->
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- SCHEDULE_EXACT_ALARM, not USE_EXACT_ALARM: Play restricts the latter
+         to alarm-clock, timer and calendar apps, and a language app that
+         declares it has its release rejected. This one the learner grants,
+         and DailyCallScheduler falls back to an inexact window without it. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <!-- SpeechRecognizer lives in another process; package visibility (API 30+)

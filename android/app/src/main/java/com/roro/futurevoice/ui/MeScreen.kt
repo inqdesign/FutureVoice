@@ -319,6 +319,38 @@ fun MeScreen(
                     })
                 }
                 if (callEnabled) {
+                    // Without the exact-alarm grant the call still rings, just
+                    // inside a window — say so rather than letting a learner
+                    // wonder why 08:00 became 08:06. The route is a system
+                    // settings page; there is no in-app prompt for it.
+                    if (!com.roro.futurevoice.data.DailyCallScheduler
+                            .canScheduleExact(context = context)) {
+                        GroupedRowDivider(inset = false)
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .clickable {
+                                    runCatching {
+                                        context.startActivity(android.content.Intent(
+                                            android.provider.Settings
+                                                .ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                                            android.net.Uri.parse("package:${context.packageName}")))
+                                    }
+                                }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(stringResource(R.string.ring_exactly_on_time))
+                                Text(stringResource(R.string.without_this_the_call_can_arrive_a_few_minutes_late),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null, modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     GroupedRowDivider(inset = false)
                     FlowRow(
                         Modifier.padding(horizontal = 14.dp, vertical = 12.dp),

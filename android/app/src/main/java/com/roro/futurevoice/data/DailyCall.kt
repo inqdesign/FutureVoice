@@ -66,12 +66,47 @@ object DailyCallScheduler {
             if (timeInMillis <= System.currentTimeMillis()) add(Calendar.DAY_OF_YEAR, 1)
         }
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        // setAlarmClock: rings through Doze, shows in the status bar — this
-        // IS an alarm-clock use, which is what the Play declaration says.
-        am.setAlarmClock(
-            AlarmManager.AlarmClockInfo(cal.timeInMillis, contentIntent(context)),
-            firePendingIntent(context))
+        // `setAlarmClock` rings through Doze and shows in the status bar,
+        // which is what a call at a chosen time needs.
+        //
+        // It requires an exact-alarm permission, and WHICH one matters for
+        // shipping: `USE_EXACT_ALARM` is granted without asking but Play
+        // restricts it to alarm-clock, timer and calendar apps — a language
+        // app declaring it gets the release rejected. So we hold
+        // `SCHEDULE_EXACT_ALARM` instead, which the learner grants, and fall
+        // back to an inexact window when they haven't.
+        //
+        // The fallback is not a degraded feature so much as a later one: the
+        // system may drift the fire by minutes to batch it. A call that rings
+        // at 08:04 is still the call; a call that never rings because the
+        // permission was refused would be the app breaking over something the
+        // learner never saw.
+        if (canScheduleExact(am)) {
+            am.setAlarmClock(
+                AlarmManager.AlarmClockInfo(cal.timeInMillis, contentIntent(context)),
+                firePendingIntent(context))
+        } else {
+            am.setWindow(
+                AlarmManager.RTC_WAKEUP, cal.timeInMillis, INEXACT_WINDOW_MS,
+                firePendingIntent(context))
+        }
     }
+
+    /** Whether an exact alarm can be armed right now. Always true below
+     *  Android 12, where the permission did not exist. */
+    fun canScheduleExact(
+        am: AlarmManager? = null,
+        context: Context? = null,
+    ): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S) return true
+        val manager = am ?: (context?.getSystemService(Context.ALARM_SERVICE) as? AlarmManager)
+        return manager?.canScheduleExactAlarms() == true
+    }
+
+    /** How far the system may drift an inexact call. Ten minutes: late enough
+     *  for the OS to batch it with other work, early enough that the learner
+     *  still reads it as "my 8 o'clock call". */
+    private const val INEXACT_WINDOW_MS = 10L * 60 * 1000
 
     fun cancel(context: Context) {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

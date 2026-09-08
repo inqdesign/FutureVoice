@@ -135,4 +135,6 @@
     <string name="as_recorded">As recorded</string>
     <string name="your_plan_ends_on_lld">Your plan ends on %s.</string>
     <string name="help">Help</string>
+    <string name="ring_exactly_on_time">Ring exactly on time</string>
+    <string name="without_this_the_call_can_arrive_a_few_minutes_late">Without this the call can arrive a few minutes late.</string>
 </resources>
