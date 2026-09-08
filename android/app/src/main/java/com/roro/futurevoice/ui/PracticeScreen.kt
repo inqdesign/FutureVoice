@@ -224,7 +224,9 @@ private const val DAILY_HAND = 10
 @Composable
 fun ProgressBody(language: String, nativeLanguage: String,
                  onOpenAssessment: () -> Unit, onOpenActivity: () -> Unit,
-                 goalMinutes: Int = 10) {
+                 goalMinutes: Int = 10,
+                 /** A measured CEFR level from a fresh assessment. */
+                 onMeasuredLevel: (String) -> Unit = {}) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -417,6 +419,13 @@ fun ProgressBody(language: String, nativeLanguage: String,
                     }.getOrNull()?.let {
                         WeeklyReportStore.shared(context).save(it, language)
                         report = it
+                        // The MEASURED level replaces the self-reported
+                        // setting — from here scoring calibration, pickup-word
+                        // difficulty and the talk-card label all track
+                        // measurement rather than what someone guessed about
+                        // themselves in onboarding. A manual change in Me
+                        // still wins until the next assessment.
+                        it.cefrLevel?.let { measured -> onMeasuredLevel(measured) }
                         unlock = WeeklyReportEngine.unlockState(
                             talks.filter { s -> s.endedAt != null }, it)
                     }

@@ -33,6 +33,8 @@ data class AppState(
     val voiceId: String? = null,
     /** The accent the live clone was remixed with, if any. */
     val voiceAccentId: String? = null,
+    /** Set when a MEASURED assessment raised the level; the sheet clears it. */
+    val levelUp: Pair<CefrLevel, CefrLevel>? = null,
     val targetLanguage: String = "en",
     /** Every target the learner has enrolled, in enrollment order. */
     val enrolledLanguages: List<String> = emptyList(),
@@ -210,6 +212,34 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * the caller: a pool the learner cannot reach is not a reason to break
      * the app they opened.
      */
+    /**
+     * A fresh assessment measured the learner's level.
+     *
+     * The measurement REPLACES the self-reported setting: from here scoring
+     * calibration, pickup-word difficulty and the talk-card label all track
+     * what was measured rather than what someone guessed about themselves in
+     * onboarding. A manual change in Me still wins until the next assessment.
+     *
+     * Only a RISE is announced. Being told you dropped a band is not news
+     * anyone asked for, and the number is an estimate — it moves both ways
+     * for reasons that have nothing to do with the learner getting worse.
+     */
+    fun applyMeasuredLevel(raw: String) {
+        val measured = CefrLevel.from(raw)
+        val current = _state.value.level
+        if (measured == current) return
+        val target = _state.value.targetLanguage
+        LanguageScope.setLevel(appContext, target, measured.code)
+        val rose = measured.ordinal > current.ordinal
+        _state.update {
+            it.copy(level = measured, levelUp = if (rose) current to measured else it.levelUp)
+        }
+    }
+
+    fun clearLevelUp() {
+        _state.update { it.copy(levelUp = null) }
+    }
+
     fun syncPublicPersona() {
         viewModelScope.launch {
             val s = _state.value

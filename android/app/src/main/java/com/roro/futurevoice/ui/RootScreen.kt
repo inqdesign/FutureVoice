@@ -150,6 +150,10 @@ fun RootScreen() {
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
+    // A measured level-up, announced once wherever the learner happens to be.
+    state.levelUp?.let { (from, to) ->
+        LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)
+    }
     var showPublicIntro by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
@@ -521,6 +525,7 @@ fun RootScreen() {
             onClonePreview = { clonePreview = true },
             onWelcomePreview = { welcomePreview = true },
             onSavePersona = app::savePersona,
+            onMeasuredLevel = app::applyMeasuredLevel,
         )
     }
 }
@@ -665,6 +670,7 @@ private fun HomeScreen(
     onClonePreview: () -> Unit = {},
     onWelcomePreview: () -> Unit = {},
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
+    onMeasuredLevel: (String) -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -824,6 +830,7 @@ private fun HomeScreen(
                 )
 
                 HomeTab.PROGRESS -> ProgressBody(
+                    onMeasuredLevel = onMeasuredLevel,
                     language = state.targetLanguage,
                     nativeLanguage = state.nativeLanguage,
                     onOpenAssessment = onOpenAssessment,
