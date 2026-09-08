@@ -1,9 +1,9 @@
-nawana is here.
+First update.
 
-Your language isn't growing for one reason: you don't speak enough. Build your fluent future voice from sixty seconds of recording, then call it every day. Hang up, and the words, expressions, and grammar you used become your own textbook.
-
-- Daily calls that start from your interests
-- Every turn comes back fluent
-- A personal textbook built from each talk
-- Shadowing in your own voice, review answered out loud
-- A level measured only from what you actually said
+- The app opens on the logo instead of a blank screen
+- Today's ring on Home draws correctly when it's short
+- A call under a minute shows its seconds instead of 0 min
+- Talk time only counts once you start speaking
+- Misheard expressions can be discarded, and stay discarded
+- Pick your own headline for the day card
+- A bookmarked word no longer lights up as "known" at the same time

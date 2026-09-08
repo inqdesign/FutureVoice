@@ -62,7 +62,13 @@ echo "▸ Shipping $VERSION ($BUILD)"
 AUTH=()
 KEY_DIR="$HOME/.appstoreconnect/private_keys"
 ASC_KEY_ID="${ASC_KEY_ID:-}"
-ASC_ISSUER_ID="${ASC_ISSUER_ID:-$( [[ -f "$HOME/.appstoreconnect/issuer_id" ]] && tr -d '[:space:]' < "$HOME/.appstoreconnect/issuer_id" )}"
+# Plain `if`, not `${X:-$( [[ -f … ]] && … )}`: with `set -e` the failed
+# `[[ -f ]]` inside that substitution exits the whole script — silently, right
+# after "Shipping …" — on every machine WITHOUT a key (2026-09-08).
+ASC_ISSUER_ID="${ASC_ISSUER_ID:-}"
+if [[ -z "$ASC_ISSUER_ID" && -f "$HOME/.appstoreconnect/issuer_id" ]]; then
+  ASC_ISSUER_ID=$(tr -d '[:space:]' < "$HOME/.appstoreconnect/issuer_id")
+fi
 if [[ -z "$ASC_KEY_ID" ]]; then
   KEY_FILE=$(ls "$KEY_DIR"/AuthKey_*.p8 2>/dev/null | head -1 || true)
   if [[ -n "$KEY_FILE" ]]; then
