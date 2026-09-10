@@ -1347,23 +1347,26 @@ private fun WatchBody(
             Text(stringResource(R.string.your_scenarios),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp))
-            live.forEach { sc ->
-                DiscoverRow(
-                    title = sc.cardTitle,
-                    caption = sc.category,
-                    // The icon the categorizer picked for this scenario —
-                    // a fixed pin made every scenario look like a place.
-                    icon = Symbols.icon(sc.categoryIcon),
-                    accent = Books.scenarios,
-                    onClick = if (enabled) ({ onWatch(sc.id) }) else null,
-                    trailing = {
-                        TextButton(onClick = {
-                            scope.launch { store.touch(sc.id, language); StoreEvents.bump() }
-                            onTalk(sc)
-                        }) { Text(stringResource(R.string.talk)) }
-                    },
-                )
+            // A two-column grid of cards, like iOS. And no Talk button:
+            // starting a call is the TALK tab's job, and a scenario that can
+            // be called from here makes the two tabs the same tab. Watch is
+            // where a fresh take gets written; past takes live in Practice.
+            live.chunked(2).forEach { pair ->
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    pair.forEach { sc ->
+                        ScenarioCard(sc, Modifier.weight(1f),
+                            onClick = if (enabled) ({ onWatch(sc.id) }) else null)
+                    }
+                    // Keep a lone card half-width rather than letting it
+                    // stretch across — a full-width card in a grid reads as a
+                    // different kind of row.
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
             }
+            Text(stringResource(R.string.tap_a_card_to_review_or_tweak_it_then_watch_every_watch_writ_1b78a6),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // Deliberately LIGHTER than the scenario rows above: these are
@@ -1621,5 +1624,42 @@ private fun DeepenRow(onClick: () -> Unit) {
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/**
+ * One saved scenario, as a card in the Watch grid.
+ *
+ * A scenario is a reusable TEMPLATE — tapping it writes a FRESH take every
+ * time — so the card shows what the situation IS, not when it last ran.
+ */
+@Composable
+private fun ScenarioCard(
+    sc: com.roro.futurevoice.talk.Scenario,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)?,
+) {
+    Column(
+        modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppSurfaces.card)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(Symbols.icon(sc.categoryIcon), contentDescription = null,
+            tint = Books.scenarios, modifier = Modifier.size(22.dp))
+        Text(sc.cardTitle, style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold, maxLines = 3,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        // The concrete situation under the tidy title — skipped when the
+        // title already IS that text, or the card says the same thing twice.
+        val partner = sc.role?.trim()?.takeIf { it.isNotEmpty() }
+        val blurb = partner ?: sc.category?.takeIf { it.isNotBlank() }
+        blurb?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
     }
 }
