@@ -8384,6 +8384,22 @@
         }
       }
     },
+    "Opening the App Store…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store wird geöffnet…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store 여는 중…"
+          }
+        }
+      }
+    },
     "Have a conversation or watch a scene, then come back to shadow any line your fluent self said." : {
       "localizations" : {
         "de" : {

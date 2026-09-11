@@ -44,6 +44,10 @@ struct PaywallView: View {
     // opens on the year-long option reads as pressure rather than a choice.
     @State private var period: PlanPeriod = .monthly
     @State private var selectedTier: String = "plus"
+    /// Apple's offer-code sheet takes seconds to appear (it loads the
+    /// store page inside itself, and a blank sheet is all the learner sees
+    /// meanwhile). The button says it is opening so the tap isn't judged dead.
+    @State private var openingCodeSheet = false
 
     /// `.resolving` is the state before StoreKit and the account snapshot
     /// have answered. Without it the sheet opened on `.pitch` and jumped to
@@ -261,9 +265,24 @@ struct PaywallView: View {
                     // App Store offer codes (docs/launch-billing.md §7).
                     // The mail's link opens the same sheet; this is for the
                     // person who opened the app first.
-                    Button(explain("Have a code?")) {
-                        Task { await StoreKitService.presentOfferCodeSheet() }
+                    Button {
+                        guard !openingCodeSheet else { return }
+                        openingCodeSheet = true
+                        Task {
+                            await StoreKitService.presentOfferCodeSheet()
+                            openingCodeSheet = false
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            if openingCodeSheet {
+                                ProgressView().controlSize(.mini)
+                                Text(explain("Opening the App Store…"))
+                            } else {
+                                Text(explain("Have a code?"))
+                            }
+                        }
                     }
+                    .disabled(openingCodeSheet)
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)
