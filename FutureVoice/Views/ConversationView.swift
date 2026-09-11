@@ -2457,6 +2457,7 @@ struct ConversationView: View {
             "guess_len": String(guess.count),
             "audio": "aac",
             "input": Self.currentInputPortType(),
+            "worn_mic": AudioSessionRouting.hasWornMicAvailable() ? "1" : "0",
         ])
         chunkResolvedTurns.insert(turnId)
         // The REPLY is generated from this text (see `turnPayload`), but the
@@ -2759,6 +2760,7 @@ struct ConversationView: View {
             "guess_len": String(guess.count),
             "audio": audio,
             "input": Self.currentInputPortType(),
+            "worn_mic": AudioSessionRouting.hasWornMicAvailable() ? "1" : "0",
         ])
     }
 

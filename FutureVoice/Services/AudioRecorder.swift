@@ -132,6 +132,9 @@ final class AudioRecorder: ObservableObject {
                             : AudioSessionRouting.recordOptions)
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true)
+        // Same ask as LiveTranscriber's, because this recorder re-sets the
+        // session beside it and would otherwise undo its choice.
+        if quality == .sttOptimal && !forceBuiltIn { AudioSessionRouting.engageWornMic(session) }
         if quality == .sttOptimal { AudioSessionRouting.applyOutputRoute(session) }
 
         if forceBuiltIn { AudioSessionRouting.preferBuiltInMic(session) }

@@ -285,6 +285,8 @@ final class LiveTranscriber: ObservableObject {
         let mode: AVAudioSession.Mode = useMeasurement ? .measurement : .default
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
+        // The worn mic is asked for, not assumed — see `engageWornMic`.
+        if !preferBuiltInMic { AudioSessionRouting.engageWornMic(session) }
         AudioSessionRouting.applyOutputRoute(session)
         if preferBuiltInMic { AudioSessionRouting.preferBuiltInMic(session) }
 
