@@ -174,8 +174,11 @@ Deno.serve(async (req) => {
     is_trial:                isTrial,
     is_upgrade:              false,
     revocation_date:         revoked ? isoFromMs(tx.revocationDate) : null,
+    offer_type:              typeof tx.offerType === "number" ? tx.offerType : null,
+    offer_discount_type:     tx.offerDiscountType ?? null,
+    offer_period:            tx.offerPeriod ?? null,
     notification_type:       "CLIENT_CLAIM",
-    subtype:                 tx.offerType != null ? `offerType:${tx.offerType}` : null,
+    subtype:                 null,
     environment:             tx.environment ?? "unknown",
   }, { onConflict: "transaction_id" })
   if (txErr) console.error("apple-claim subscription_transactions upsert", txErr.message)

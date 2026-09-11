@@ -73,6 +73,45 @@ struct PlanPageView: View {
                 Text(account.isEntitled ? explain("This month") : explain("Left to spend"))
             }
 
+            // The subscription itself, as the store bills it (2026-09-12):
+            // since when, what the last charge was, whether the launch code
+            // is still pricing it. READ only — changing or cancelling is
+            // Apple's screen, linked at the bottom; an in-app copy of that
+            // could only disagree with Apple's.
+            if account.isEntitled, let source = account.source {
+                Section {
+                    if let since = account.startedAt {
+                        row(icon: "calendar",
+                            title: explain("Since \(AccountStatus.dayLabel(since))"))
+                    }
+                    if source == "comp" {
+                        row(icon: "gift.fill",
+                            title: explain("Provided by nawana until \(account.renewalLabel)"))
+                    } else {
+                        if let charge = account.lastChargeLabel, let on = account.lastChargeDate {
+                            row(icon: "creditcard",
+                                title: explain("Last charge \(charge)"),
+                                value: AccountStatus.dayLabel(on))
+                        }
+                        if let until = account.offerCodeUntil {
+                            row(icon: "tag.fill",
+                                title: explain("Half price with your launch code"),
+                                subtitle: explain("Until \(AccountStatus.dayLabel(until)), then the regular price"))
+                        }
+                        if source == "apple" {
+                            Link(destination: AccountStatus.manageSubscriptionsURL) {
+                                row(icon: "arrow.up.forward.app",
+                                    title: explain("Manage in the App Store"),
+                                    subtitle: explain("Change or cancel your plan"))
+                            }
+                            .foregroundStyle(.primary)
+                        }
+                    }
+                } header: {
+                    Text(explain("Subscription"))
+                }
+            }
+
             Section {
                 NavigationLink {
                     CreditGuideView(account: account)
@@ -97,7 +136,9 @@ struct PlanPageView: View {
                 }
             }
         }
-        .navigationTitle("Talk time")
+        // "Usage", not "Talk time" (2026-09-12): the page reports Watch
+        // scenes and the subscription too, and the talk figure is one row.
+        .navigationTitle("Usage")
         .navigationBarTitleDisplayMode(.inline)
         .task {
             // Only an uncapped plan needs the ledger: every other tier's

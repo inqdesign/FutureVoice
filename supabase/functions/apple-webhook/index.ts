@@ -160,6 +160,11 @@ Deno.serve(async (req) => {
       is_trial:                isTrial,
       is_upgrade:              payload.subtype === "UPGRADE",
       revocation_date:         tx.revocationDate ? iso(tx.revocationDate) : null,
+      // Which offer priced this period, if any — what Me → Talk time reads
+      // to say "code discount running" (20260912100000).
+      offer_type:              typeof tx.offerType === "number" ? tx.offerType : null,
+      offer_discount_type:     tx.offerDiscountType ?? null,
+      offer_period:            tx.offerPeriod ?? null,
       notification_type:       payload.notificationType ?? null,
       subtype:                 payload.subtype ?? null,
       environment,

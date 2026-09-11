@@ -109,7 +109,7 @@ struct MeTab: View {
                         planPage
                     } label: {
                         row(icon: "bolt.fill",
-                            title: explain("Talk time"),
+                            title: explain("Usage"),
                             subtitle: account.talkTimeLabel)
                     }
                     // Sits under the plan row because both are about how much

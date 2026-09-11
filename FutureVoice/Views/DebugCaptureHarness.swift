@@ -116,6 +116,15 @@ enum DebugCapture {
             fullTankSeconds: 9000)
         out.periodEnd = Calendar.current.date(byAdding: .day, value: 18, to: Date())
         out.periodStart = Calendar.current.date(byAdding: .day, value: -12, to: Date())
+        // A launch-code subscriber (docs/launch-billing.md §7): the Usage
+        // page's subscription section has every row to show.
+        out.source = "apple"
+        out.startedAt = Calendar.current.date(byAdding: .day, value: -12, to: Date())
+        out.lastChargeMilliunits = 7_500_000
+        out.lastChargeCurrency = "KRW"
+        out.lastChargeDate = out.periodStart
+        out.currentOfferType = 3
+        out.offerCodeSince = out.startedAt
         return out
     }
 
