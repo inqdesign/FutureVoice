@@ -79,6 +79,7 @@ final class AppUpdateService: ObservableObject {
 
         struct Row: Decodable {
             let latest_build: Int
+            let latest_testflight_build: Int?
             let min_build: Int
             let latest_version: String?
             let notes_ko: String?
@@ -86,7 +87,7 @@ final class AppUpdateService: ObservableObject {
         }
         guard let rows: [Row] = try? await SupabaseProvider.shared
             .from("app_release")
-            .select("latest_build,min_build,latest_version,notes_ko,notes_en")
+            .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en")
             .eq("platform", value: "ios")
             .limit(1)
             .execute()
@@ -99,15 +100,25 @@ final class AppUpdateService: ObservableObject {
         // failed lookup is the one outcome worse than a missed notice.
         guard build > 0 else { return }
 
-        let required = build < row.min_build
-        guard required || build < row.latest_build else { return }
+        // The build this install can actually GO AND GET. A TestFlight
+        // install updates from TestFlight, which has every upload; an App
+        // Store install can only ever get what App Review has released —
+        // `latest_build`, written by `beta.sh released` after the fact.
+        // Reading the upload number for both told every App Store user
+        // about a version the store didn't have yet (2026-09-11).
+        let latest = Self.isTestFlight
+            ? max(row.latest_testflight_build ?? 0, row.latest_build)
+            : row.latest_build
 
-        if !required, UserDefaults.standard.integer(forKey: Self.seenKey) >= row.latest_build {
+        let required = build < row.min_build
+        guard required || build < latest else { return }
+
+        if !required, UserDefaults.standard.integer(forKey: Self.seenKey) >= latest {
             return
         }
 
         let notes = LanguageCatalog.currentNative.hasPrefix("ko") ? row.notes_ko : row.notes_en
-        pending = AppUpdate(latestBuild: row.latest_build,
+        pending = AppUpdate(latestBuild: latest,
                             latestVersion: row.latest_version,
                             notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines),
                             required: required)

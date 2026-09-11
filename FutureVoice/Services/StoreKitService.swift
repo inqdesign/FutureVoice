@@ -1,6 +1,7 @@
 import Foundation
 import StoreKit
 import Supabase
+import UIKit
 
 /// Joins the server-side plan catalog (`subscription_plans` — credits per
 /// cycle, tier, period) with live StoreKit products (localized price, intro
@@ -102,9 +103,11 @@ final class StoreKitService: ObservableObject {
     /// unfinished transaction on each launch forever, and an Ask-to-Buy
     /// approval never resolves in-app without this.
     ///
-    /// Entitlement is NOT read from here: the server decides that from
-    /// Apple's server notifications (`apple-webhook`), so a jailbroken client
-    /// can't mint a subscription. This only clears Apple's queue.
+    /// Entitlement is NOT decided here: the server decides that, from Apple's
+    /// server notifications (`apple-webhook`) and from the signed transaction
+    /// this hands over (`apple-claim`, below) — both carry Apple's signature,
+    /// so a jailbroken client can't mint a subscription. This clears Apple's
+    /// queue and tells the server what arrived.
     ///
     /// Must run for the app's whole life, so it lives on the type rather than
     /// on the instance the paywall creates and throws away.
@@ -113,9 +116,92 @@ final class StoreKitService: ObservableObject {
         updatesTask = Task.detached(priority: .background) {
             for await update in Transaction.updates {
                 guard case .verified(let transaction) = update else { continue }
+                await claim(update)
                 await transaction.finish()
             }
         }
+    }
+
+    // MARK: - Telling the server about subscriptions it never saw
+
+    /// Every subscription this Apple ID currently holds for us, handed to the
+    /// server as its signed JWS.
+    ///
+    /// Why: the webhook attributes a notification through the
+    /// `appAccountToken` that only `purchase()` sets. An offer code redeemed
+    /// from a link in the App Store, a purchase restored on a new phone, a
+    /// subscription bought from the store's own page — none carry it, and
+    /// until 2026-09-11 the server dropped them: the learner paid Apple and
+    /// the app still showed "No plan". Now the app itself says what it
+    /// holds, on every foreground and whenever StoreKit delivers something,
+    /// and the server verifies Apple's signature before believing a word.
+    ///
+    /// Idempotent and cheap to repeat: a (transaction, expiry) pair already
+    /// claimed is skipped locally, and the server treats a re-claim as a
+    /// no-op. Never throws — a failed claim is retried next time.
+    static func claimCurrentEntitlements() async {
+        for await result in Transaction.currentEntitlements {
+            await claim(result)
+        }
+    }
+
+    private static let claimedKey = "futurevoice.appleClaimed"
+
+    /// Takes the VerificationResult, not the Transaction: the signed JWS the
+    /// server verifies (`jwsRepresentation`) lives on the wrapper.
+    private static func claim(_ result: VerificationResult<Transaction>) async {
+        guard case .verified(let transaction) = result else { return }
+        // Only our subscriptions; anything else in the queue is not ours to
+        // describe. Every product id we sell starts with the bundle id.
+        guard transaction.productType == .autoRenewable,
+              transaction.productID.hasPrefix("com.roro.futurevoice.") else { return }
+        // Must be signed in: the claim files the subscription under the
+        // session. Anonymous onboarding sessions count — the account step
+        // links Apple to the same user id.
+        guard (try? await SupabaseProvider.shared.auth.session) != nil else { return }
+
+        let expiry = Int(transaction.expirationDate?.timeIntervalSince1970 ?? 0)
+        let revoked = transaction.revocationDate != nil
+        let tag = "\(transaction.id):\(expiry):\(revoked ? "r" : "")"
+        var claimed = Set(UserDefaults.standard.stringArray(forKey: claimedKey) ?? [])
+        guard !claimed.contains(tag) else { return }
+
+        struct ClaimBody: Encodable { let jws: String }
+        struct ClaimResponse: Decodable { let status: String; let applied: Bool }
+        do {
+            let res: ClaimResponse = try await SupabaseProvider.shared.functions.invoke(
+                "apple-claim",
+                options: FunctionInvokeOptions(body: ClaimBody(jws: result.jwsRepresentation))
+            )
+            claimed.insert(tag)
+            // Keep the set small; an Apple ID holds a handful of these.
+            UserDefaults.standard.set(Array(claimed.suffix(50)), forKey: claimedKey)
+            if res.applied {
+                // The paywall gate and the Me tab read a cached snapshot;
+                // a subscription that just became real must not be paywalled
+                // for another minute.
+                await MainActor.run { BillingGate.shared.invalidate() }
+            }
+        } catch {
+            // Offline, or the function is not deployed yet. Next foreground
+            // tries again; nothing here is allowed to surface.
+        }
+    }
+
+    /// The App Store's own "enter an offer code" sheet, for someone who was
+    /// handed a code and is already in the app. The link in the mail works
+    /// without this; this is for the person who tapped Subscribe first.
+    static func presentOfferCodeSheet() async {
+        guard let scene = await MainActor.run(body: {
+            UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first { $0.activationState == .foregroundActive }
+        }) else { return }
+        try? await AppStore.presentOfferCodeRedeemSheet(in: scene)
+        // Whatever was redeemed arrives through Transaction.updates and is
+        // claimed there; this just makes sure nothing is missed if the
+        // listener delivered it before the session settled.
+        await claimCurrentEntitlements()
     }
 
     func load() async {

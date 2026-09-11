@@ -490,3 +490,29 @@ machinery and lands through the ordinary webhooks as PAID rows:
 
 Waitlist: 54 emails (32 `wants_beta`), none `notified_at` yet — the mail
 carries the code; stamp `notified_at` when sent so the list can be resumed.
+
+**Dealing the codes (2026-09-11).** One-time codes, not a custom code — the
+list is named people, and a shared string is a coupon for whoever it leaks
+to. Two offers, `Beta50 Light Monthly` and `Beta50 Plus Monthly` (an offer
+is per product; a Light code cannot buy Plus), so every person gets TWO
+codes and can use one — after redeeming one they are an existing subscriber
+and the other is refused. The launch mail IS the delivery:
+`scripts/waitlist-launch-mail.py --light L.csv --plus P.csv` resolves
+recipients from the database (comp beta testers via `user_waitlist_mapping`,
+then every unnotified `waitlist` email), files each (code → person) in
+`offer_code_grants` (`20260911120000`) BEFORE sending, mails from
+hello@nawana.app via Resend, then stamps `sent_at` and `waitlist.notified_at`.
+Relay-only testers get codes reserved and printed for hand-over in the beta
+chat. Re-runs reuse a person's filed codes and never mail anyone twice.
+
+**Do not send before 1.0.2 (build 42+) is live on the App Store.** A code
+redeemed in the App Store carries no `appAccountToken`, and every build up to
+41 has no other way to tell the server about it — the person pays Apple and
+the app keeps showing "No plan". 1.0.2 adds `apple-claim` (the app hands the
+server the signed transaction; see CLAUDE.md), and the mail's recipients
+install whatever the store has on the day. A
+Gmail-based `offer-code-mail` edge function was built and retired the same
+day (one mail, one sender); delete it with `supabase functions delete
+offer-code-mail` if it is still deployed. Annual offers are deliberately not
+offered: half of an already-discounted annual price is a third less revenue
+for the same year.

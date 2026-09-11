@@ -253,8 +253,17 @@ struct PaywallView: View {
             .allowsHitTesting(step != .resolving)
 
             if step == .plans {
-                Button(explain("Restore purchases")) {
-                    Task { await store.restore() }
+                HStack(spacing: 18) {
+                    Button(explain("Restore purchases")) {
+                        Task { await store.restore() }
+                    }
+                    // Beta testers and the waitlist were mailed one-time
+                    // App Store offer codes (docs/launch-billing.md §7).
+                    // The mail's link opens the same sheet; this is for the
+                    // person who opened the app first.
+                    Button(explain("Have a code?")) {
+                        Task { await StoreKitService.presentOfferCodeSheet() }
+                    }
                 }
                 .font(.footnote)
                 .foregroundStyle(.secondary)

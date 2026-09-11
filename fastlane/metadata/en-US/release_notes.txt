@@ -1,1 +1,5 @@
-Performance and stability improvements throughout the app.
+Subscriptions started in the App Store are recognized right away.
+
+- A subscription started with a code, or restored on another device, is applied the moment you open the app
+- New "Have a code?" button on the subscription screen
+- The update notice only mentions versions that are actually on the App Store

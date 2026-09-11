@@ -119,6 +119,10 @@ struct FutureVoiceApp: App {
                 // Same reason as the two above: the app cannot know it, and
                 // the answer only matters when it has changed.
                 Task { await AppUpdateService.shared.check() }
+                // Subscriptions Apple knows about and the server may not —
+                // an offer code redeemed in the App Store, a restore on a
+                // new phone. Signed by Apple, verified server-side.
+                Task { await StoreKitService.claimCurrentEntitlements() }
                 // Drop the trial-ending notice once the trial isn't one any
                 // more. Reads the billing snapshot the app already keeps, so
                 // it usually costs nothing.
