@@ -37,6 +37,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.DayCardStore
 import com.roro.futurevoice.ui.brand.DayCard
@@ -57,13 +62,17 @@ import java.io.File
  * point), and saving re-encodes, which drops EXIF/GPS. Opening the sheet
  * stores nothing; only a picked photo does.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var format by remember { mutableStateOf(DayCardFormat.FEED) }
     var photo by remember { mutableStateOf<Bitmap?>(null) }
+    // The headline the card prints. It starts as the day's main talk and can
+    // be replaced — the topic of a news talk is a sentence, and the learner
+    // is the one who knows what the day was about.
+    var headline by remember(data.date) { mutableStateOf(data.topics.firstOrNull().orEmpty()) }
     val theme = remember { FutureselfTheme.stored(context).ordinal }
     LaunchedEffect(data.date) { photo = DayCardStore.photo(context, data.date) }
 
@@ -80,20 +89,47 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
     val cameraPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (granted) camera.launch(null) }
+    // A photo already taken is a place too — the camera is the point, but
+    // refusing the library would mean a day can only be illustrated live.
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.openInputStream(uri).use {
+                android.graphics.BitmapFactory.decodeStream(it)
+            }
+        }.getOrNull()?.let { bitmap ->
+            photo = bitmap
+            DayCardStore.savePhoto(context, data.date, bitmap)
+            DayCardStore.freeze(context, data)
+        }
+    }
 
     val layer = rememberGraphicsLayer()
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Fully expanded: the card is 450dp tall and a half-height sheet cut it
+    // off, so the learner saw a black slab with no footer and no date.
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(R.string.today_s_card), style = MaterialTheme.typography.titleLarge,
+            // "Today's card" is a claim about WHICH day — say it only when it
+            // is true, and name the day otherwise.
+            val isToday = android.text.format.DateUtils.isToday(data.date)
+            Text(
+                if (isToday) stringResource(R.string.today_s_card)
+                else java.text.SimpleDateFormat("d MMM", java.util.Locale.getDefault())
+                    .format(java.util.Date(data.date)),
+                style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.fillMaxWidth())
             DayCard(
-                data = data, photo = photo?.asImageBitmap(), format = format, theme = theme,
+                data = data.copy(topics = listOfNotNull(headline.takeIf { it.isNotBlank() })),
+                photo = photo?.asImageBitmap(), format = format, theme = theme,
                 modifier = Modifier.drawWithContent {
                     // Record the card as it is drawn, so the exported picture
                     // is exactly what the learner is looking at.
@@ -109,12 +145,53 @@ fun DayCardSheet(data: DayCardData, onDismiss: () -> Unit) {
                     onClick = { format = DayCardFormat.SQUARE },
                     label = { Text(stringResource(R.string.square)) })
             }
+            // Headline — the day's talks to pick from, or write your own.
+            if (data.topics.size > 1) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    data.topics.forEach { t ->
+                        FilterChip(headline == t, onClick = { headline = t },
+                            label = { Text(t, maxLines = 1) })
+                    }
+                }
+            }
+            OutlinedTextField(
+                value = headline,
+                onValueChange = { headline = it },
+                label = { Text(stringResource(R.string.headline)) },
+                placeholder = { Text(stringResource(R.string.or_write_your_own)) },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
             OutlinedButton(
                 onClick = { cameraPermission.launch(android.Manifest.permission.CAMERA) },
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(stringResource(R.string.take_a_photo))
             }
+            OutlinedButton(
+                onClick = { imagePicker.launch("image/*") },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.choose_a_photo))
+            }
+            if (photo != null) {
+                TextButton(
+                    onClick = {
+                        photo = null
+                        DayCardStore.removePhoto(context, data.date)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.remove_photo),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            }
+            // Said plainly because it is the whole privacy story of this
+            // feature: the photo is the place, and nothing else about where
+            // the learner was is kept.
+            Text(stringResource(R.string.where_you_studied_that_day_the_photo_is_the_place_nothing_el_642592),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             Button(
                 onClick = {
                     scope.launch {

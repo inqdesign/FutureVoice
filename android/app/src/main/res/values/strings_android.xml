@@ -138,4 +138,6 @@
     <string name="ring_exactly_on_time">Ring exactly on time</string>
     <string name="without_this_the_call_can_arrive_a_few_minutes_late">Without this the call can arrive a few minutes late.</string>
     <string name="keep_going">Keep going</string>
+    <string name="headline">Headline</string>
+    <string name="or_write_your_own">Or write your own</string>
 </resources>
