@@ -61,6 +61,18 @@ final class NewsTopicStore: LanguageScopedStore {
         return cached.topics
     }
 
+    /// The last batch saved for this interest set, however old. This is the
+    /// backup the section falls back on when the network can't deliver
+    /// today's — yesterday's stories beat an error message. Still nil when
+    /// the interests changed: an old batch for a different set would be the
+    /// wrong stories, not just old ones.
+    func lastKnown(for interests: [String]) -> [SuggestedTopic]? {
+        guard let cached = load(),
+              cached.interestsKey == Self.key(for: interests),
+              !cached.topics.isEmpty else { return nil }
+        return cached.topics
+    }
+
     func save(_ topics: [SuggestedTopic], interests: [String], now: Date = Date()) {
         // Keep seen-rotation state across saves of the same interest set —
         // a refresh save must not make everything look "unseen" again.

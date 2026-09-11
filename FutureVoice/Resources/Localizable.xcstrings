@@ -5036,6 +5036,22 @@
         }
       }
     },
+    "Couldn't load stories" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Artikel konnten nicht geladen werden"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기사를 불러오지 못했어요"
+          }
+        }
+      }
+    },
     "Couldn't load this one." : {
       "localizations" : {
         "de" : {
@@ -16587,6 +16603,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "더 다듬기"
+          }
+        }
+      }
+    },
+    "Showing earlier stories" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frühere Artikel werden angezeigt"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지난 기사를 보여드리고 있어요"
           }
         }
       }
