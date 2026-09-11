@@ -300,6 +300,14 @@ struct AccountStatus {
         guard let session = try? await SupabaseProvider.shared.auth.session else {
             return .empty
         }
+        // Before reading what the server thinks, tell it what Apple holds.
+        // Every paywall decision funnels through this fetch — the onboarding
+        // pitch, BillingGate, the Me tab — and a person who redeemed an offer
+        // code in the App Store BEFORE installing reaches the first of those
+        // without ever backgrounding the app, so the foreground claim has not
+        // run yet. Cheap when nothing is held (no network), and a no-op for
+        // anything already claimed.
+        await StoreKitService.claimCurrentEntitlements()
         var out = AccountStatus.empty
         out.email = session.user.email
         let userId = session.user.id.uuidString
