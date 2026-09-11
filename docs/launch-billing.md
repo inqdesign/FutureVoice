@@ -463,3 +463,30 @@ $$;
 - Family / student plans
 - Hiding weekly from the app UI (keep for experiments)
 - Monthly drip for annual credits
+
+## 7. Beta ends 2026-09-21 → half price for a year (decided 2026-09-11)
+
+The five hand-comped beta rows END on 2026-09-21
+(`20260911100000_beta_ends_0921`, `cancel_at_period_end = true`; the sweep on
+09-22 expires them). What follows is **not a comp** — a server row cannot set
+a price, only the stores can — so the discount rides on the stores' own offer
+machinery and lands through the ordinary webhooks as PAID rows:
+
+- **Apple — Offer Codes** (ASC → app → Subscriptions → *product* → Offer Codes
+  → Custom Codes). One code per PRODUCT: pay-as-you-go **50% × 12 months** on
+  `daily_monthly` / `unlimited_monthly`, pay-up-front **50% × 1 year** on the
+  annuals. Eligibility "new subscribers" covers every beta tester and every
+  waitlist signup (none has ever held an Apple subscription). Redeem with no
+  app change: `https://apps.apple.com/redeem?ctx=offercodes&id=6792794655&code=<CODE>`.
+  `apple-webhook` already handles it — `offerDiscountType` is
+  `PAY_AS_YOU_GO`/`PAY_UP_FRONT`, so `status = 'active'` (not trial), and
+  `price_milliunits` records what Apple actually charged, so margin stays
+  honest. Set a redemption limit + expiry on each code.
+- **Stripe (web, once `BILLING.enabled` flips)** — a Coupon (50% off,
+  `duration = repeating`, `duration_in_months = 12`) behind a Promotion Code;
+  `stripe-checkout` already sets `allow_promotion_codes: true`, so the field
+  is on the checkout page and nothing else is needed.
+- Comp codes (`comp_codes`) are the wrong tool: they grant FREE months.
+
+Waitlist: 54 emails (32 `wants_beta`), none `notified_at` yet — the mail
+carries the code; stamp `notified_at` when sent so the list can be resumed.
