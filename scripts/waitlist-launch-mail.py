@@ -63,7 +63,7 @@ SUBJECT = "나와나가 App Store에 출시되었습니다 · nawana is on the A
 PER_SEND_PAUSE = 0.6  # Resend allows 2 req/s
 
 LIGHT_OFFER = "Beta50 Light Monthly"   # ASC offer reference names, verbatim
-PLUS_OFFER = "Beta50 Plus Monthly"
+PLUS_OFFER = "Beta50 Plus Monthly v2"
 CODE_VALID_UNTIL_KO = "2026년 12월 31일"
 CODE_VALID_UNTIL_EN = "December 31, 2026"
 RELAY = "@privaterelay.appleid.com"
