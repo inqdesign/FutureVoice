@@ -205,27 +205,47 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         private var gateActive = false
         private var gateFloor: Float = 0
         private var gateLearned = 0
+        /// Playback has actually reached the player for this line. Until
+        /// then nothing is learned: `audio_start` arrives a TTS round trip
+        /// before the first audible sample, and a floor measured in that
+        /// gap is the ROOM, not the echo — so every line's echo cleared the
+        /// margin, and only a converged echo canceller hid that.
+        private var gatePlaying = false
+        /// The whole line is forwarded as silence — no learning, no judging.
+        private var gateHalfDuplex = false
 
         /// Open or close the gate. Called when a line starts and ends playing.
-        func setEchoGate(active: Bool) {
+        func setEchoGate(active: Bool, halfDuplex: Bool = false) {
             lock.lock(); defer { lock.unlock() }
             if active && !gateActive {
                 gateFloor = 0
                 gateLearned = 0
+                gatePlaying = false
+                gateHalfDuplex = halfDuplex
             }
+            if !active { gateHalfDuplex = false }
             gateActive = active
         }
 
-        func echoGate() -> (active: Bool, floor: Float, learnedFrames: Int) {
+        /// The first reply buffer of the line was handed to the player.
+        func markPlaybackStarted() {
             lock.lock(); defer { lock.unlock() }
-            return (gateActive, gateFloor, gateLearned)
+            gatePlaying = true
         }
 
-        /// Fold one buffer of pure echo into the floor.
-        func learnEcho(rms: Float) {
+        func echoGate() -> (active: Bool, playing: Bool, halfDuplex: Bool,
+                            floor: Float, learnedFrames: Int) {
+            lock.lock(); defer { lock.unlock() }
+            return (gateActive, gatePlaying, gateHalfDuplex, gateFloor, gateLearned)
+        }
+
+        /// Fold one buffer of echo into the floor. Called for the learn
+        /// window AND for every later buffer judged to be echo, so the floor
+        /// follows the line's loudest echo instead of its first 0.4 s.
+        func learnEcho(rms: Float, counts: Bool) {
             lock.lock(); defer { lock.unlock() }
             gateFloor = max(gateFloor, rms)
-            gateLearned += 1
+            if counts { gateLearned += 1 }
         }
     }
     private let mic = MicUplink()
@@ -278,6 +298,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The server said the line is complete; the moment the local queue
     /// drains after this is when the learner's turn actually begins.
     private var serverAudioEnded = false
+    /// Lines the fluent self has started on THIS call — the first one on the
+    /// speaker is half-duplex (see `audio_start`).
+    private var linesStarted = 0
 
     private var isTornDown = false
 
@@ -304,6 +327,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         isTornDown = false
         wallCode = nil
         state = .connecting
+        linesStarted = 0
         pendingRetry = fallbackVoiceId.map {
             Retry(voiceId: $0, language: language, system: system,
                   opener: opener, history: history)
@@ -1038,11 +1062,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let gate = mic.echoGate()
         var muted = false
         if gate.active {
-            if gate.learnedFrames < Self.echoLearnFrames {
-                mic.learnEcho(rms: rms)
+            if gate.halfDuplex || !gate.playing {
+                // Half-duplex line, or the voice hasn't reached the player
+                // yet: nothing to measure against, forward silence.
+                muted = true
+            } else if gate.learnedFrames < Self.echoLearnFrames {
+                mic.learnEcho(rms: rms, counts: true)
                 muted = true
             } else {
                 muted = rms < gate.floor * Self.echoMargin
+                // Echo under the bar raises the bar for the rest of the
+                // line. Only judged-echo feeds the floor, so a real barge-in
+                // never mutes its own continuation.
+                if muted { mic.learnEcho(rms: rms, counts: false) }
             }
         }
         if muted {
@@ -1194,7 +1226,22 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 replyContext = context
                 onReplyBegan?(context)
             }
-            mic.setEchoGate(active: true)
+            // The FIRST line of a call on the open speaker is half-duplex.
+            // Measured 2026-09-11 (device, speakerphone): the opener's own
+            // words came back as the learner's turn ("What is the best
+            // thing that is…"), cut the line and got answered — and the
+            // very next reply on the same call leaked nothing. The echo
+            // canceller is adaptive: it has cancelled nothing until it has
+            // heard the speaker, so the first line of every call is the one
+            // it cannot yet remove, and the level gate alone (learning on
+            // room noise, see `gatePlaying`) never stood a chance against
+            // it. Nobody needs to interrupt a greeting; a learner in
+            // earphones keeps full duplex from the first word.
+            linesStarted += 1
+            let halfDuplex = linesStarted == 1
+                && builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+            if halfDuplex { Self.step("echo gate: first line on speaker — half-duplex") }
+            mic.setEchoGate(active: true, halfDuplex: halfDuplex)
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the
@@ -1219,6 +1266,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 if let context = replyContext { onReplyDelta?(context, "\u{0}" + full) }
             }
         case "audio_end":
+            Self.step("audio_end (queued=\(pendingBuffers))")
             // "Sent" is not "heard": chunks are still draining through the
             // player. The turn flips to listening when the QUEUE empties —
             // flipping here put the You bubble up while the fluent self was
@@ -1287,6 +1335,33 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// syllable and ramp gently after that so nothing pumps mid-sentence.
     /// Keep the gate shut for the room's tail. The speaker stops before the
     /// reverberation does, and the last buffers are still in flight.
+    /// The queue ran dry but the server never said the line was over.
+    /// Measured 2026-09-11 (device, speakerphone): the opener's `audio_end`
+    /// never arrived, so the state sat on `speaking` and — now that the
+    /// first line is half-duplex — the mic stayed muted for the rest of the
+    /// call. A line whose audio has all been HEARD and nothing new has
+    /// arrived for a beat is over whatever the server says: close the gate
+    /// and hand the turn over. A late `audio_end` after this is harmless
+    /// (both paths are idempotent).
+    private static let drainFallbackSeconds: TimeInterval = 1.2
+    private var drainFallbackTask: Task<Void, Never>?
+
+    private func armDrainFallback() {
+        drainFallbackTask?.cancel()
+        let context = replyContext
+        drainFallbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.drainFallbackSeconds * 1_000_000_000))
+            guard let self, !Task.isCancelled, !self.isTornDown else { return }
+            guard self.pendingBuffers == 0, self.state == .speaking,
+                  self.replyContext == context, !self.serverAudioEnded else { return }
+            Self.step("audio_end never came — queue drained \(Self.drainFallbackSeconds)s ago, ending line locally")
+            self.serverAudioEnded = true
+            self.closeEchoGateAfterTail()
+            self.state = .listening
+            self.handOverReply()
+        }
+    }
+
     private func closeEchoGateAfterTail() {
         // The room keeps speaking after the speaker stops. On the open
         // speaker that reverberation is loud and long enough to clear the
@@ -1424,6 +1499,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
         }
         pendingBuffers += 1
+        mic.markPlaybackStarted()
         let scheduled = Self.avGuard("scheduleBuffer") {
             self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
                 Task { @MainActor [weak self] in
@@ -1439,6 +1515,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                         // If the server already closed the line, it is the
                         // learner's turn now.
                         if self.serverAudioEnded { self.state = .listening }
+                        else { self.armDrainFallback() }
                     }
                 }
             }

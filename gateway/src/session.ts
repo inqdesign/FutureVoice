@@ -138,8 +138,45 @@ export class CallSession implements DurableObject {
   /** Projected instant the PHONE finishes playing what we have sent. */
   private playoutEndAt = 0
 
+  /** Dictation EXPANDS contractions ("what's" → "what is"), so the mic's
+   *  version of our own line never matched it verbatim and the echo check
+   *  below let "What is the best thing that is" through as the learner
+   *  (speakerphone, 2026-09-11). Both sides are expanded before comparing;
+   *  the table is the app's own `ConversationEngine` list, plus the
+   *  negations. Ambiguous forms ('d, 's as "has") are left alone — a miss
+   *  there costs one uncaught echo, a wrong expansion costs nothing worse. */
+  private static readonly contractions: [RegExp, string][] = [
+    [/\b(what|that|it|he|she|there|here|who|where|how)'s\b/g, "$1 is"],
+    [/\bi'm\b/g, "i am"], [/\blet's\b/g, "let us"],
+    [/\b(you|we|they)'re\b/g, "$1 are"],
+    [/\b(i|you|we|they)'ve\b/g, "$1 have"],
+    [/\b(i|you|we|they|it|he|she|that|there)'ll\b/g, "$1 will"],
+    [/\bcan't\b/g, "cannot"], [/\bwon't\b/g, "will not"],
+    [/\b(do|does|did|is|are|was|were|has|have|had|would|could|should|must)n't\b/g, "$1 not"],
+  ]
+
   private static normWords(s: string): string {
-    return s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ")
+    let t = s.toLowerCase().replace(/[’‘]/g, "'")
+    for (const [re, to] of CallSession.contractions) t = t.replace(re, to)
+    return t.replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ")
+  }
+
+  /** Longest run of consecutive `u` words that appears consecutively in
+   *  `reply` (word-level longest common substring). */
+  private static longestRun(u: string[], reply: string[]): number {
+    let best = 0
+    let prev = new Array<number>(reply.length + 1).fill(0)
+    for (let i = 1; i <= u.length; i++) {
+      const cur = new Array<number>(reply.length + 1).fill(0)
+      for (let j = 1; j <= reply.length; j++) {
+        if (u[i - 1] === reply[j - 1]) {
+          cur[j] = prev[j - 1] + 1
+          if (cur[j] > best) best = cur[j]
+        }
+      }
+      prev = cur
+    }
+    return best
   }
 
   /** Is this utterance almost certainly our own speaker coming back?
@@ -156,8 +193,18 @@ export class CallSession implements DurableObject {
       || Date.now() < this.playoutEndAt + 3000
     if (!withinWindow) return false
     const u = CallSession.normWords(text)
-    if (u.length === 0 || u.split(" ").length > 8) return false
-    return CallSession.normWords(this.recentReplyText).includes(u)
+    if (u.length === 0) return false
+    const words = u.split(" ")
+    // A long verbatim run is MORE certainly the speaker, not less — the
+    // old 8-word cap waved through exactly the fragments a loud line
+    // produces. Short utterances must match whole; from four words on, a
+    // transcriber slip inside an otherwise verbatim run still counts.
+    if (words.length > 16) return false
+    const reply = CallSession.normWords(this.recentReplyText)
+    if (reply.includes(u)) return true
+    if (words.length < 4) return false
+    const run = CallSession.longestRun(words, reply.split(" "))
+    return run >= Math.ceil(words.length * 0.75)
   }
 
   /** When the fluent self last had audio in flight. Belt to the client's
@@ -342,9 +389,8 @@ export class CallSession implements DurableObject {
           this.client.send(pcm)
         },
         onContextDone: (contextId) => {
-          if (contextId !== this.activeContext) return
-          this.emit({ type: "audio_end", context: contextId })
-          this.activeContext = null
+          console.log(`tts: context ${contextId} final (active=${this.activeContext})`)
+          this.endLine(contextId)
         },
         onError: (message) => this.emit({ type: "error", code: "tts", message }),
       },
@@ -648,6 +694,41 @@ export class CallSession implements DurableObject {
     this.voiceBuffer.delete(context)
     if (rest.trim().length > 0) this.voice(context, rest)
     this.eleven?.flush(context)
+    this.armLineEndFallback(context)
+  }
+
+  /** The line is over: tell the client, and free the turn. Idempotent —
+   *  the TTS final and the play-out fallback below can both land. */
+  private endLine(context: string): void {
+    if (context !== this.activeContext) return
+    if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
+    this.emit({ type: "audio_end", context })
+    this.activeContext = null
+  }
+
+  /** `audio_end` used to ride on ElevenLabs' `isFinal` alone, and on
+   *  2026-09-11 (device, opener line) it never came: the client sat on
+   *  "speaking", its echo gate never opened, and — with the first line
+   *  half-duplex — the learner talked into a muted mic for the rest of the
+   *  call. The play-out clock already knows when the phone will have gone
+   *  quiet, so once it has, plus a beat for a straggling chunk, the line is
+   *  declared over from here. A `isFinal` that arrives first wins and
+   *  clears this. */
+  private lineEndTimer: number | null = null
+  private static readonly lineEndGraceMs = 1500
+
+  private armLineEndFallback(context: string): void {
+    if (this.lineEndTimer !== null) clearInterval(this.lineEndTimer)
+    this.lineEndTimer = setInterval(() => {
+      if (this.ended || this.activeContext !== context) {
+        if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
+        return
+      }
+      if (Date.now() > this.playoutEndAt + CallSession.lineEndGraceMs) {
+        console.log(`tts: no final for ${context} — play-out over, ending line`)
+        this.endLine(context)
+      }
+    }, 500) as unknown as number
   }
 
   /** Split off every complete sentence — a terminator (.!?… and CJK
