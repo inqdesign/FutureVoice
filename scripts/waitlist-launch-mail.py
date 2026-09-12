@@ -126,6 +126,11 @@ EN_UNSUB = "Don't want more mail from us? Reply and say so."
 
 SIGN = "— nawana"
 FOOTER = "Dear RoRo · Munich"
+TAGLINE = "Learn a language from your fluent self."
+# The app icon, served from the site (web/mail/, deployed with it). Mail
+# clients load remote images through their own proxy; a data: URI would be
+# stripped by Gmail. 256 px source, drawn at 56 px so it stays crisp on 2x.
+LOGO_URL = f"{SITE_URL}/mail/nawana-icon-256.png"
 
 
 def text_body(kind: str, light: str, plus: str) -> str:
@@ -185,19 +190,45 @@ def html_body(kind: str, light: str, plus: str) -> str:
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3ef;padding:40px 16px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#ffffff;border:1px solid #e6e4dd;">
-        <tr><td style="padding:36px 34px;font-family:Helvetica,Arial,sans-serif;color:#1c1814;">
-          <div style="font-size:22px;font-weight:700;letter-spacing:-.01em;">nawana</div>
-          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a7c6d;margin:6px 0 26px;">Now on the App Store</div>
+        <tr><td style="padding:34px 34px 36px;font-family:Helvetica,Arial,sans-serif;color:#1c1814;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+            <tr>
+              <td style="vertical-align:middle;padding-right:14px;">
+                <a href="{SITE_URL}" style="text-decoration:none;">
+                  <img src="{LOGO_URL}" width="56" height="56" alt="nawana"
+                       style="display:block;width:56px;height:56px;border-radius:14px;border:1px solid #e6e4dd;">
+                </a>
+              </td>
+              <td style="vertical-align:middle;">
+                <div style="font-size:22px;font-weight:700;letter-spacing:-.01em;color:#1c1814;">nawana</div>
+                <div style="font-size:13px;color:#8a7c6d;margin-top:3px;">{html.escape(TAGLINE)}</div>
+              </td>
+            </tr>
+          </table>
+          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a7c6d;margin:0 0 18px;">Now on the App Store</div>
           {"".join(ko)}
           {divider}
           {"".join(en)}
           <div style="margin-top:30px;padding-top:20px;border-top:1px solid #ececE6;">
             <div style="font-size:14px;color:#3a332e;">{html.escape(SIGN)}</div>
-            <a href="{SITE_URL}" style="font-size:13px;color:#1c1814;text-decoration:none;">nawana.app &rarr;</a>
           </div>
         </td></tr>
       </table>
-      <div style="font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#a89f92;margin-top:16px;">{html.escape(FOOTER)}</div>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px;font-family:Helvetica,Arial,sans-serif;">
+        <tr>
+          <td style="vertical-align:middle;padding-right:10px;">
+            <img src="{LOGO_URL}" width="20" height="20" alt="" style="display:block;width:20px;height:20px;border-radius:5px;opacity:.85;">
+          </td>
+          <td style="vertical-align:middle;font-size:11px;color:#a89f92;line-height:1.6;">
+            <a href="{SITE_URL}" style="color:#8a7c6d;text-decoration:none;">nawana.app</a>
+            &nbsp;·&nbsp;
+            <a href="{APP_STORE_URL}" style="color:#8a7c6d;text-decoration:none;">App Store</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:{REPLY_TO}" style="color:#8a7c6d;text-decoration:none;">{REPLY_TO}</a>
+            <br>{html.escape(FOOTER)}
+          </td>
+        </tr>
+      </table>
     </td></tr>
   </table></body></html>"""
 
