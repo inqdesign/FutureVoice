@@ -160,7 +160,15 @@ SURF = "#F0EFE9"
 DIM = "#57544D"
 FAINT = "#918E85"
 BLUE = "#0A5CF5"
-FONT = "-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif"
+# The site's three stacks (ko.next.html --sans / --mono / --pixel). Geist
+# Pixel is the wordmark face; it is declared with @font-face from the site,
+# which Apple Mail honours and Gmail ignores — Gmail readers get the sans
+# fallback, which is the same stack the body uses.
+FONT = "'Helvetica Neue',Helvetica,-apple-system,'Apple SD Gothic Neo',Arial,sans-serif"
+MONO = "ui-monospace,'SF Mono',Menlo,'Roboto Mono',monospace"
+PIXEL = f"'Geist Pixel',{FONT}"
+FONT_FACE = (f"@font-face{{font-family:'Geist Pixel';font-style:normal;font-weight:400;"
+             f"font-display:swap;src:url({SITE_URL}/GeistPixel.ttf) format('truetype');}}")
 
 
 def html_body(kind: str, light: str, plus: str) -> str:
@@ -171,9 +179,9 @@ def html_body(kind: str, light: str, plus: str) -> str:
     def code_box(label, code, cta):
         return (
             f'<div style="margin:14px 0 0;padding:18px 20px;background:{SURF};border-radius:14px;">'
-            f'<div style="font-size:13px;color:{DIM};">{html.escape(label)}</div>'
+            f'<div style="font-size:12px;letter-spacing:.02em;color:{DIM};font-family:{MONO};">{html.escape(label)}</div>'
             f'<div style="font-size:22px;font-weight:700;letter-spacing:.06em;margin-top:6px;color:{INK};'
-            f'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">{html.escape(code)}</div>'
+            f'font-family:{MONO};">{html.escape(code)}</div>'
             f'<p style="margin:14px 0 0;"><a href="{redeem(code)}" '
             f'style="display:inline-block;background:{BLUE};color:#ffffff;text-decoration:none;'
             f'font-size:15px;font-weight:600;padding:11px 18px;border-radius:999px;">{html.escape(cta)}</a></p>'
@@ -199,7 +207,7 @@ def html_body(kind: str, light: str, plus: str) -> str:
     en.append(p(EN_UNSUB, color=FAINT, top=10, size="13px"))
 
     divider = f'<div style="margin:36px 0 32px;border-top:1px solid {SURF};"></div>'
-    return f"""<!doctype html><html><body style="margin:0;background:{PAPER};">
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>{FONT_FACE}</style></head><body style="margin:0;background:{PAPER};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};padding:44px 20px 40px;">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
@@ -213,8 +221,8 @@ def html_body(kind: str, light: str, plus: str) -> str:
                 </a>
               </td>
               <td style="vertical-align:middle;">
-                <div style="font-size:21px;font-weight:700;letter-spacing:-.01em;color:{INK};">nawana</div>
-                <div style="font-size:13px;color:{FAINT};margin-top:2px;">{html.escape(TAGLINE)}</div>
+                <div style="font-size:24px;font-weight:400;letter-spacing:0;color:{INK};font-family:{PIXEL};">nawana</div>
+                <div style="font-size:12px;color:{FAINT};margin-top:3px;font-family:{MONO};">{html.escape(TAGLINE)}</div>
               </td>
             </tr>
           </table>
