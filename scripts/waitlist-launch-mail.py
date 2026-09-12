@@ -180,8 +180,8 @@ def html_body(kind: str, light: str, plus: str) -> str:
         return (
             f'<div style="margin:14px 0 0;padding:18px 20px;background:{SURF};border-radius:14px;">'
             f'<div style="font-size:12px;letter-spacing:.02em;color:{DIM};font-family:{MONO};">{html.escape(label)}</div>'
-            f'<div style="font-size:22px;font-weight:700;letter-spacing:.06em;margin-top:6px;color:{INK};'
-            f'font-family:{MONO};">{html.escape(code)}</div>'
+            f'<div style="font-size:26px;font-weight:400;letter-spacing:.04em;margin-top:8px;color:{INK};'
+            f'font-family:{PIXEL};">{html.escape(code)}</div>'
             f'<p style="margin:14px 0 0;"><a href="{redeem(code)}" '
             f'style="display:inline-block;background:{BLUE};color:#ffffff;text-decoration:none;'
             f'font-size:15px;font-weight:600;padding:11px 18px;border-radius:999px;">{html.escape(cta)}</a></p>'
@@ -221,7 +221,7 @@ def html_body(kind: str, light: str, plus: str) -> str:
                 </a>
               </td>
               <td style="vertical-align:middle;">
-                <div style="font-size:24px;font-weight:400;letter-spacing:0;color:{INK};font-family:{PIXEL};">nawana</div>
+                <div style="font-size:21px;font-weight:700;letter-spacing:-.01em;color:{INK};">nawana</div>
                 <div style="font-size:12px;color:{FAINT};margin-top:3px;font-family:{MONO};">{html.escape(TAGLINE)}</div>
               </td>
             </tr>
