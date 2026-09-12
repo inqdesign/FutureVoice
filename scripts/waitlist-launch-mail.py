@@ -151,19 +151,32 @@ def text_body(kind: str, light: str, plus: str) -> str:
     return "\n\n".join(ko + ["— · —"] + en + [SIGN, SITE_URL])
 
 
+# The app's own palette (DayCardView / the site): one paper ground, ink text,
+# the mosaic blue for the one thing to tap. No card floating on a grey
+# field — the mail is a page, not a widget.
+INK = "#141310"
+PAPER = "#FCFBF8"
+SURF = "#F0EFE9"
+DIM = "#57544D"
+FAINT = "#918E85"
+BLUE = "#0A5CF5"
+FONT = "-apple-system,BlinkMacSystemFont,'Helvetica Neue',Helvetica,Arial,sans-serif"
+
+
 def html_body(kind: str, light: str, plus: str) -> str:
-    def p(s, color="#3a332e", top=14, size="15.5px"):
+    def p(s, color=INK, top=14, size="16px"):
         return (f'<p style="font-size:{size};line-height:1.7;color:{color};margin:{top}px 0 0;">'
                 f'{html.escape(s)}</p>')
 
     def code_box(label, code, cta):
         return (
-            '<div style="margin:16px 0 0;padding:16px 18px;background:#f4f3ef;border:1px solid #e6e4dd;">'
-            f'<div style="font-size:12px;letter-spacing:.06em;color:#8a7c6d;">{html.escape(label)}</div>'
-            f'<div style="font-size:21px;font-weight:700;letter-spacing:.08em;margin-top:6px;font-family:Menlo,Consolas,monospace;">{html.escape(code)}</div>'
-            f'<p style="margin:12px 0 0;"><a href="{redeem(code)}" '
-            'style="display:inline-block;background:#1c1814;color:#ffffff;text-decoration:none;'
-            f'font-size:14px;font-weight:600;padding:10px 16px;border-radius:8px;">{html.escape(cta)} &rarr;</a></p>'
+            f'<div style="margin:14px 0 0;padding:18px 20px;background:{SURF};border-radius:14px;">'
+            f'<div style="font-size:13px;color:{DIM};">{html.escape(label)}</div>'
+            f'<div style="font-size:22px;font-weight:700;letter-spacing:.06em;margin-top:6px;color:{INK};'
+            f'font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;">{html.escape(code)}</div>'
+            f'<p style="margin:14px 0 0;"><a href="{redeem(code)}" '
+            f'style="display:inline-block;background:{BLUE};color:#ffffff;text-decoration:none;'
+            f'font-size:15px;font-weight:600;padding:11px 18px;border-radius:999px;">{html.escape(cta)}</a></p>'
             '</div>'
         )
 
@@ -172,62 +185,52 @@ def html_body(kind: str, light: str, plus: str) -> str:
     ko.append(p(KO_CODES_INTRO))
     ko.append(code_box(KO_LIGHT_LABEL, light, KO_CTA))
     ko.append(code_box(KO_PLUS_LABEL, plus, KO_CTA))
-    ko.append(p(KO_HOWTO, top=18, size="14px"))
+    ko.append(p(KO_HOWTO, color=DIM, top=18, size="14px"))
     ko.append(p(KO_TAIL, top=24))
-    ko.append(p(KO_UNSUB, color="#8a7c6d", top=10, size="13px"))
+    ko.append(p(KO_UNSUB, color=FAINT, top=10, size="13px"))
 
     en = [p(EN_OPEN[0], top=0)] + [p(s) for s in EN_OPEN[1:]]
     en.append(p(EN_OFFER_BETA if kind == "beta" else EN_OFFER_WAITLIST, top=22))
     en.append(p(EN_CODES_INTRO))
     en.append(code_box("Light — 150 min of talk a month", light, "Redeem on the App Store"))
     en.append(code_box("Plus — unlimited talk", plus, "Redeem on the App Store"))
-    en.append(p(EN_HOWTO, top=18, size="14px"))
+    en.append(p(EN_HOWTO, color=DIM, top=18, size="14px"))
     en.append(p(EN_TAIL, top=24))
-    en.append(p(EN_UNSUB, color="#8a7c6d", top=10, size="13px"))
+    en.append(p(EN_UNSUB, color=FAINT, top=10, size="13px"))
 
-    divider = '<div style="margin:34px 0 30px;border-top:1px solid #ececE6;"></div>'
-    return f"""<!doctype html><html><body style="margin:0;background:#f4f3ef;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f3ef;padding:40px 16px;">
+    divider = f'<div style="margin:36px 0 32px;border-top:1px solid {SURF};"></div>'
+    return f"""<!doctype html><html><body style="margin:0;background:{PAPER};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{PAPER};padding:44px 20px 40px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:460px;background:#ffffff;border:1px solid #e6e4dd;">
-        <tr><td style="padding:34px 34px 36px;font-family:Helvetica,Arial,sans-serif;color:#1c1814;">
-          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;">
+        <tr><td style="font-family:{FONT};color:{INK};">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 30px;">
             <tr>
               <td style="vertical-align:middle;padding-right:14px;">
                 <a href="{SITE_URL}" style="text-decoration:none;">
-                  <img src="{LOGO_URL}" width="56" height="56" alt="nawana"
-                       style="display:block;width:56px;height:56px;border-radius:14px;border:1px solid #e6e4dd;">
+                  <img src="{LOGO_URL}" width="52" height="52" alt="nawana"
+                       style="display:block;width:52px;height:52px;border-radius:13px;">
                 </a>
               </td>
               <td style="vertical-align:middle;">
-                <div style="font-size:22px;font-weight:700;letter-spacing:-.01em;color:#1c1814;">nawana</div>
-                <div style="font-size:13px;color:#8a7c6d;margin-top:3px;">{html.escape(TAGLINE)}</div>
+                <div style="font-size:21px;font-weight:700;letter-spacing:-.01em;color:{INK};">nawana</div>
+                <div style="font-size:13px;color:{FAINT};margin-top:2px;">{html.escape(TAGLINE)}</div>
               </td>
             </tr>
           </table>
-          <div style="font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8a7c6d;margin:0 0 18px;">Now on the App Store</div>
           {"".join(ko)}
           {divider}
           {"".join(en)}
-          <div style="margin-top:30px;padding-top:20px;border-top:1px solid #ececE6;">
-            <div style="font-size:14px;color:#3a332e;">{html.escape(SIGN)}</div>
+          <p style="font-size:15px;color:{DIM};margin:32px 0 0;">{html.escape(SIGN)}</p>
+          <div style="margin-top:40px;padding-top:18px;border-top:1px solid {SURF};font-size:12px;line-height:1.7;color:{FAINT};">
+            <a href="{SITE_URL}" style="color:{FAINT};text-decoration:none;">nawana.app</a>
+            &nbsp;·&nbsp;
+            <a href="{APP_STORE_URL}" style="color:{FAINT};text-decoration:none;">App Store</a>
+            &nbsp;·&nbsp;
+            <a href="mailto:{REPLY_TO}" style="color:{FAINT};text-decoration:none;">{REPLY_TO}</a>
+            <br>{html.escape(FOOTER)}
           </div>
         </td></tr>
-      </table>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px;font-family:Helvetica,Arial,sans-serif;">
-        <tr>
-          <td style="vertical-align:middle;padding-right:10px;">
-            <img src="{LOGO_URL}" width="20" height="20" alt="" style="display:block;width:20px;height:20px;border-radius:5px;opacity:.85;">
-          </td>
-          <td style="vertical-align:middle;font-size:11px;color:#a89f92;line-height:1.6;">
-            <a href="{SITE_URL}" style="color:#8a7c6d;text-decoration:none;">nawana.app</a>
-            &nbsp;·&nbsp;
-            <a href="{APP_STORE_URL}" style="color:#8a7c6d;text-decoration:none;">App Store</a>
-            &nbsp;·&nbsp;
-            <a href="mailto:{REPLY_TO}" style="color:#8a7c6d;text-decoration:none;">{REPLY_TO}</a>
-            <br>{html.escape(FOOTER)}
-          </td>
-        </tr>
       </table>
     </td></tr>
   </table></body></html>"""
