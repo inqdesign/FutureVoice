@@ -35,6 +35,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BookDocument
 import com.roro.futurevoice.data.SessionStore
@@ -60,6 +64,8 @@ private enum class TalkChapter { INTRO, WORDS, EXPRESSIONS, LINES, CARDS }
 fun TalkDetailScreen(
     sessionId: String,
     language: String,
+    /** Decides which pickup words are worth keeping and which lines teach. */
+    level: com.roro.futurevoice.data.CefrLevel = com.roro.futurevoice.data.CefrLevel.B1,
     onBack: () -> Unit,
     onShadow: (String) -> Unit = {},
 ) {
@@ -73,24 +79,41 @@ fun TalkDetailScreen(
     }
     val s = session ?: return
     val sm = s.summary
-    val fluentLines = s.turns.filter { it.role == TurnRole.FLUENT_SELF }.map { it.transcript }
+    // The talk's review material, DERIVED — the same anatomy a Watch book
+    // has. Words are the fluent self's PICKUP words (ones it used and the
+    // learner hasn't), not the learner's own; shadow lines are the few worth
+    // saying again, not every line it spoke.
+    var curriculum by remember(sessionId, revision) {
+        mutableStateOf(com.roro.futurevoice.data.TalkCurriculum.Snapshot())
+    }
+    var shadowLines by remember(sessionId, revision) {
+        mutableStateOf<List<com.roro.futurevoice.talk.Turn>>(emptyList())
+    }
+    LaunchedEffect(sessionId, revision, level) {
+        curriculum = com.roro.futurevoice.data.TalkCurriculum.build(
+            session = s, level = level, language = language,
+            vocab = com.roro.futurevoice.data.VocabStore.shared(context),
+            attempts = com.roro.futurevoice.data.ShadowAttemptStore.shared(context).load(language),
+            drillCards = com.roro.futurevoice.data.DrillStore.shared(context).load(language))
+        shadowLines = com.roro.futurevoice.data.TalkCurriculum.shadowPicks(s, level, language)
+    }
     val corrections = sm?.phrasesUsed.orEmpty()
     val grammar = sm?.grammarIssues.orEmpty()
 
     val tabs = buildList {
         add(BookmarkTab(TalkChapter.INTRO, Icons.Filled.MenuBook, stringResource(R.string.overview)))
-        if (!sm?.newWordsUsed.isNullOrEmpty()) {
+        if (curriculum.words.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.WORDS, Icons.Filled.Abc,
-                stringResource(R.string.words_d26d55), count = sm.newWordsUsed.size))
+                stringResource(R.string.words_d26d55), count = curriculum.words.size))
         }
         val expressions = sm?.expressionsOffered.orEmpty() + sm?.expressionsUsed.orEmpty()
         if (expressions.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.EXPRESSIONS, Icons.Filled.FormatQuote,
                 stringResource(R.string.expressions), count = expressions.size))
         }
-        if (fluentLines.isNotEmpty()) {
+        if (shadowLines.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.LINES, Icons.Filled.Mic,
-                stringResource(R.string.shadow), count = fluentLines.size))
+                stringResource(R.string.shadow), count = shadowLines.size))
         }
         if (corrections.isNotEmpty() || grammar.isNotEmpty()) {
             add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
@@ -152,11 +175,24 @@ fun TalkDetailScreen(
                     TalkChapter.WORDS -> {
                         PageTitle(stringResource(R.string.words_d26d55))
                         Column(Modifier.padding(horizontal = 20.dp)) {
-                            sm?.newWordsUsed.orEmpty().forEach {
-                                Text(it, style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(vertical = 5.dp))
+                            curriculum.words.forEach { item ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    // Mastery is READ, never stored here: the
+                                    // vocab store is the one source of truth.
+                                    Icon(
+                                        if (item.masteredAt != null) Icons.Filled.CheckCircle
+                                        else Icons.Outlined.Circle,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(15.dp),
+                                        tint = if (item.masteredAt != null) Color(0xFF34C759)
+                                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(item.text, style = MaterialTheme.typography.bodyLarge)
+                                }
                             }
                         }
+                        PageFooter(stringResource(R.string.words_your_fluent_self_used_that_you_havent))
                     }
 
                     TalkChapter.EXPRESSIONS -> {
@@ -183,10 +219,11 @@ fun TalkDetailScreen(
                     TalkChapter.LINES -> {
                         PageTitle(stringResource(R.string.shadow))
                         Column(Modifier.padding(horizontal = 20.dp)) {
-                            fluentLines.forEach { line ->
-                                Text(line, style = MaterialTheme.typography.bodyLarge,
+                            shadowLines.forEach { turn ->
+                                Text(turn.transcript, style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.fillMaxWidth()
-                                        .clickable { onShadow(line) }.padding(vertical = 8.dp))
+                                        .clickable { onShadow(turn.transcript) }
+                                        .padding(vertical = 8.dp))
                             }
                         }
                         PageFooter(stringResource(R.string.repeat_your_fluent_self_s_lines_from_this_talk))

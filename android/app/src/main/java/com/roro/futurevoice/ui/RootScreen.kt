@@ -329,6 +329,7 @@ fun RootScreen() {
         detailSessionId != null -> TalkDetailScreen(
             sessionId = detailSessionId!!,
             language = state.targetLanguage,
+            level = state.level,
             onBack = { detailSessionId = null },
             onShadow = { shadowLine = it },
         )

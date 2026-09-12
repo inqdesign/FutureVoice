@@ -176,6 +176,15 @@ class VocabStore private constructor(context: Context) {
     }
 
     /**
+     * When this word was last credited — the REAL study time, not a build
+     * time. Book shelves order by it, so a snapshot built today must not make
+     * a word look studied today.
+     */
+    suspend fun lastAt(lemma: String, language: String): Long? = mutex.withLock {
+        readRecords(file(language, "vocab_pool.json"))[lemma.trim().lowercase()]?.lastAt
+    }
+
+    /**
      * The learner says they know it. A record is only MINTED here if none
      * existed: a word they have actually said carries a `used` record with its
      * own count, and that evidence outlives an opinion about it.
