@@ -108,21 +108,33 @@ KO_TAIL = "사용해 보시고 의견이 있으시면 이 메일에 답장해 �
 KO_UNSUB = "더 이상 메일을 받고 싶지 않으시면 답장으로 알려 주세요."
 
 EN_OPEN = [
-    "Hi, this is nawana.",
-    "Thank you for waiting — nawana is on the App Store.",
-    "Clone your voice once, then learn a language by talking with the fluent version of yourself, "
-    "in your own voice, and getting a little closer to that future self every day.",
+    "Hello, this is nawana.",
+    "First of all, thank you for waiting. And finally, nawana is out on the App Store.",
+    "Learn a language with the fluent you. If you listened to the audio I left, you may already have a sense of it: "
+    "not imitating someone else, but talking with a version of yourself who speaks fluently in your own voice, "
+    "repeating after them, and getting a little closer to that future self, bit by bit. "
+    "I built the app hoping you would have exactly that experience.",
+    "Please meet it on the App Store, and if you find it worthwhile, tell the people around you or leave a review "
+    "so that more people can discover nawana.",
+    "It is still far from perfect, but I built it with everything I had. Please keep watching what comes next.",
 ]
-EN_OFFER_BETA = "Thank you for testing the beta. Your current plan ends on September 21. To keep going, here is a year at half price."
-EN_OFFER_WAITLIST = "You asked to be told, or to test the beta, and never got to try it. Here is a year at half price to start with."
-EN_CODES_INTRO = "Pick one of the two plans. Only one code can be used; the other simply expires."
-EN_HOWTO = (
-    "Open the button on your iPhone. The App Store opens and installs the app if you don't have it. "
-    "The first 7 days are free, then 12 months at half the monthly price, then the regular price — cancel any time in Settings. "
-    f"Each code works once and is valid until {CODE_VALID_UNTIL_EN}."
+EN_OFFER_BETA = (
+    "Thank you for being with us through the beta. The plan you are on now ends on September 21. "
+    "For those who want to keep going, I have prepared a launch code: 50% off for one year."
 )
-EN_TAIL = "Try it, and if you have a thought, just reply to this email. I read every one."
-EN_UNSUB = "Don't want more mail from us? Reply and say so."
+EN_OFFER_WAITLIST = (
+    "For those who signed up for updates or for the beta but never got to try it, "
+    "I have prepared a launch code: 50% off for one year."
+)
+EN_CODES_INTRO = "You can choose one of the two plans. Only one code can be used; the other simply expires."
+EN_HOWTO = (
+    "Using it is simple. Tap the button above on your iPhone: the App Store opens, and if the app is not installed yet, "
+    "it takes you through that as well. The first 7 days are free, then 12 months at half the monthly price, "
+    "and after that the regular price. You can cancel any time in Settings. "
+    f"Each code works for one person and is valid until {CODE_VALID_UNTIL_EN}."
+)
+EN_TAIL = "Try it, and if you have any thoughts, just reply to this email. I read every one myself."
+EN_UNSUB = "If you would rather not receive more mail from us, reply and let me know."
 
 SIGN = "— nawana"
 FOOTER = "Dear RoRo · Munich"
