@@ -42,7 +42,12 @@ object BillingGate {
         // one the primary button must never wait on.
         if (cached?.needsSubscription == false) { action(); return true }
 
-        val fresh = AccountStatus.load(auth)
+        // A "no" is never given from cache, and it is never given from a
+        // FAILURE either: if the account can't be read right now, the primary
+        // button must not die silently — run the action, and let the metered
+        // call's own 402 raise the wall if there is one.
+        val fresh = runCatching { AccountStatus.load(auth) }.getOrNull()
+        if (fresh == null) { action(); return true }
         cached = fresh
         if (!fresh.needsSubscription) { action(); return true }
         showPaywall.value = true
