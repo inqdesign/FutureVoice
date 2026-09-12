@@ -105,6 +105,19 @@ class TalkViewModel(context: Context) : ViewModel() {
     private val eleven = ElevenLabsClient(auth)
     private val live = LiveTranscriber(context)
     private val meter = TalkMeter(auth, viewModelScope, appContext)
+
+    /**
+     * The realtime transport — the ONLY call path since 2026-09-05 (iOS
+     * `RealtimeMode`). The classic per-turn machine below is kept as the
+     * reference it was ported from, not as a fallback: as an escape hatch it
+     * turned out to be the worse call (it cut learners off mid-sentence on
+     * its own VAD tiers), and a setting whose job is "use this if the new
+     * one misbehaves" cannot itself be the worse one.
+     */
+    private val realtime = RealtimeTalkClient(appContext)
+    /** Reply context → the fluent-self turn its deltas patch. */
+    private val realtimeReplyTurns = HashMap<String, String>()
+    private var realtimeSystem: String = ""
     private val pcm = PcmStreamPlayer(ElevenLabsClient.STREAM_SAMPLE_RATE).apply {
         volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(appContext)
     }
@@ -152,6 +165,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
+        // On the realtime path the GATEWAY is the meter — nothing below arms.
+        if (REALTIME) { startRealtime(config); return }
 
         // Metering starts with the call, not with the first turn. Silence isn't
         // billed — see `isBillableMoment`; set before start(), the ticker polls
@@ -192,6 +207,9 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     fun end() {
         if (_state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE) return
+        // The gateway holds the mic and the sockets; putting the call down
+        // has to reach it, or the room keeps streaming.
+        if (REALTIME) { realtime.hangUp(); flushRealtimeReply() }
         meter.stop()
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
@@ -244,8 +262,207 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Realtime path
+
+    private fun startRealtime(config: TalkConfig) {
+        lastActivityAt = System.currentTimeMillis()
+        callJob = viewModelScope.launch {
+            try {
+                val profile = ProfileStore.shared(appContext)
+                    .load(config.targetLanguage, config.level.code)
+                // The same prompt the classic path builds, minus the JSON
+                // packaging: on this path the reply is PROSE Gemini Live
+                // speaks, and the correction is a separate, later request.
+                realtimeSystem = ConversationEngine.conversationSystemPrompt(
+                    targetLanguage = config.targetLanguage,
+                    nativeLanguage = config.nativeLanguage,
+                    level = config.level,
+                    topPatterns = profile.recurringMistakes,
+                    weakVocabAreas = profile.weakVocabAreas,
+                    topic = config.topic,
+                    persona = config.persona,
+                    newsFacts = config.newsFacts,
+                    cast = config.cast,
+                ) + REALTIME_STYLE_RULES
+                // The first line, spoken by the fluent self before the learner
+                // says anything — spoken BY THE GATEWAY, not the app: two
+                // audio engines fighting over one session is how a call goes
+                // silent. Canned pools and voicemails arrive as initialOpener;
+                // otherwise one request writes it, as the classic path did.
+                val opener = config.initialOpener.ifBlank {
+                    runCatching {
+                        GeminiClient(auth).sendJson(
+                            system = realtimeSystem + ConversationEngine.turnOutputInstruction(
+                                config.targetLanguage, config.nativeLanguage),
+                            messages = listOf(GeminiClient.Message(
+                                GeminiClient.Message.Role.USER,
+                                "(the call just connected — say your opening line, nothing else)")),
+                            serializer = ConversationTurnPayload.serializer(),
+                            maxTokens = 512, purpose = "turn",
+                            idempotencyKey = "open:${UUID.randomUUID()}",
+                        ).reply
+                    }.getOrDefault("")
+                }
+                if (opener.isNotBlank()) appendFluentSelf(opener)
+                connectRealtime(config, opener, emptyList())
+            } catch (e: Exception) {
+                fail(e)
+            }
+        }
+    }
+
+    private fun resumeRealtime() {
+        val cfg = config ?: return
+        _state.update { it.copy(phase = TalkPhase.CONNECTING, pausedForIdle = false) }
+        viewModelScope.launch {
+            connectRealtime(cfg, null,
+                _state.value.turns.map {
+                    (if (it.role == TurnRole.USER) "user" else "model") to it.transcript
+                })
+        }
+    }
+
+    private suspend fun connectRealtime(cfg: TalkConfig, opener: String?, history: List<Pair<String, String>>) {
+        wireRealtime(cfg)
+        val token = auth.accessToken()
+        // A cast (Find people) speaks in its preset voice; the fluent self in
+        // the learner's own clone. Ownership is enforced by the gateway.
+        realtime.connect(
+            token = token,
+            voiceId = cfg.castVoiceId ?: cfg.voiceId,
+            language = cfg.targetLanguage,
+            system = realtimeSystem,
+            opener = opener,
+            history = history,
+        )
+    }
+
+    private fun wireRealtime(cfg: TalkConfig) {
+        realtime.onState = { st ->
+            val phase = when (st) {
+                RealtimeTalkClient.State.CONNECTING -> TalkPhase.CONNECTING
+                RealtimeTalkClient.State.LISTENING, RealtimeTalkClient.State.HEARING -> TalkPhase.LISTENING
+                RealtimeTalkClient.State.THINKING -> TalkPhase.THINKING
+                RealtimeTalkClient.State.SPEAKING -> TalkPhase.SPEAKING
+                RealtimeTalkClient.State.IDLE, RealtimeTalkClient.State.FAILED -> null
+            }
+            if (phase != null) {
+                lastActivityAt = System.currentTimeMillis()
+                _state.update { it.copy(phase = phase, level = realtime.level) }
+            }
+        }
+        realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
+        realtime.onUserTurn = { said, wav, ms ->
+            val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
+                audioURL = wav?.let { keepTurnAudio(it) })
+            _state.update { it.copy(turns = it.turns + turn, partial = "") }
+            requestRealtimeSuggestion(turn.id, said, cfg)
+        }
+        realtime.onReplyBegan = { ctx ->
+            val turn = Turn(role = TurnRole.FLUENT_SELF, transcript = "")
+            realtimeReplyTurns[ctx] = turn.id
+            _state.update { it.copy(turns = it.turns + turn) }
+        }
+        realtime.onReplyDelta = { ctx, delta ->
+            val id = realtimeReplyTurns[ctx]
+            if (id != null) _state.update { st ->
+                st.copy(turns = st.turns.map { t ->
+                    if (t.id != id) t
+                    // A NUL-prefixed delta is the authoritative full text.
+                    else if (delta.startsWith("\u0000")) t.copy(transcript = delta.drop(1))
+                    else t.copy(transcript = t.transcript + delta)
+                })
+            }
+        }
+        realtime.onInterrupted = { _ -> lastActivityAt = System.currentTimeMillis() }
+        realtime.onWall = { code ->
+            val kind = when (code) {
+                "daily_cap_reached" -> TalkWall.ALLOWANCE_SPENT
+                else -> TalkWall.OUT_OF_MINUTES
+            }
+            _state.update { it.copy(phase = TalkPhase.ENDED, wall = kind, partial = "") }
+            persist()
+        }
+        realtime.onFailed = { message ->
+            // A wall already ended the call with its own sheet; anything
+            // else is a failure the learner can retry from.
+            if (realtime.wallCode == null) {
+                _state.update { it.copy(phase = TalkPhase.ENDED, error = message, partial = "") }
+                persist()
+            }
+        }
+    }
+
+    /** The reply still in flight when the call was put down — without this
+     *  the closing line is the one Replay silently skips. */
+    private fun flushRealtimeReply() {
+        val (pcm, rate) = realtime.takeReplyAudio()
+        if (pcm.isEmpty()) return
+        val id = realtimeReplyTurns.values.lastOrNull() ?: return
+        val wav = writeWav(pcm, rate, id) ?: return
+        _state.update { st ->
+            st.copy(turns = st.turns.map { if (it.id == id) it.copy(audioURL = wav) else it })
+        }
+    }
+
+    /**
+     * The correction card, on its own clock. On this path the reply is prose
+     * and the correction is a separate, later request — the voice is already
+     * playing by the time this fires, so nothing the learner hears ever waits
+     * on coaching. Lines under three words are not worth a request.
+     */
+    private fun requestRealtimeSuggestion(turnId: String, said: String, cfg: TalkConfig) {
+        if (said.split(Regex("\\s+")).count { it.isNotBlank() } < 3) return
+        viewModelScope.launch {
+            val payload = runCatching {
+                GeminiClient(auth).sendJson(
+                    system = CorrectionOnlyPrompt.build(cfg.targetLanguage, cfg.nativeLanguage, cfg.level),
+                    messages = listOf(GeminiClient.Message(GeminiClient.Message.Role.USER, said)),
+                    serializer = ConversationTurnPayload.serializer(),
+                    maxTokens = 512, purpose = "turn",
+                    idempotencyKey = "rt-suggest:$turnId",
+                )
+            }.getOrNull() ?: return@launch
+            attachSuggestion(turnId, payload)
+        }
+    }
+
+    /** Move a captured turn's WAV into the app's own store — one copy. */
+    private fun keepTurnAudio(tmp: java.io.File): String? = runCatching {
+        val dir = java.io.File(appContext.filesDir, "turn-audio").apply { mkdirs() }
+        val dst = java.io.File(dir, tmp.name)
+        tmp.copyTo(dst, overwrite = true); tmp.delete()
+        dst.absolutePath
+    }.getOrNull()
+
+    private fun writeWav(pcm: ByteArray, rate: Int, id: String): String? = runCatching {
+        val dir = java.io.File(appContext.filesDir, "turn-audio").apply { mkdirs() }
+        val f = java.io.File(dir, "$id.wav")
+        val h = java.nio.ByteBuffer.allocate(44).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        h.put("RIFF".toByteArray()).putInt(36 + pcm.size).put("WAVE".toByteArray())
+            .put("fmt ".toByteArray()).putInt(16).putShort(1).putShort(1)
+            .putInt(rate).putInt(rate * 2).putShort(2).putShort(16)
+            .put("data".toByteArray()).putInt(pcm.size)
+        f.outputStream().use { it.write(h.array()); it.write(pcm) }
+        f.absolutePath
+    }.getOrNull()
+
     /** The one tap: put the call down, or pick it back up. */
     fun togglePause() {
+        if (REALTIME) {
+            // Pausing IS hanging up on this path; resuming reconnects with
+            // the history so the fluent self knows what was already said.
+            when (_state.value.phase) {
+                TalkPhase.PAUSED -> resumeRealtime()
+                TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> {
+                    realtime.hangUp(); flushRealtimeReply()
+                    _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f) }
+                }
+                else -> Unit
+            }
+            return
+        }
         when (_state.value.phase) {
             TalkPhase.PAUSED -> resume()
             TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> pauseCall(forIdle = false)
@@ -656,6 +873,8 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     companion object {
+        /** Realtime is the only call path (iOS `RealtimeMode`, 2026-09-05). */
+        const val REALTIME = true
         private const val TAG = "TalkViewModel"
         /** Voiced seconds this turn before a segment counts as a person talking. */
         private const val MIN_VOICED_SECONDS_PER_TURN = 1.5
@@ -675,3 +894,8 @@ class TalkViewModel(context: Context) : ViewModel() {
         private const val IDLE_WATCH_TICK_SECONDS = 5
     }
 }
+
+/** Appended to the system prompt on the realtime path (iOS `realtimeStyleRules`). */
+private const val REALTIME_STYLE_RULES = """
+
+This is a LIVE phone call. Speak in one to three short sentences, never write JSON, never add labels or stage directions — just say your line."""
