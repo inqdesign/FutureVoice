@@ -339,7 +339,10 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         val uid = auth.userId ?: return
         _state.update { it.copy(restoringVoice = true) }
         viewModelScope.launch {
+            // A swallowed failure here walks a paying learner into re-cloning
+            // a voice they already own — say what went wrong, every time.
             val voiceId = runCatching { voices.activeVoiceId(uid) }
+                .onFailure { android.util.Log.w("AppViewModel", "voice restore failed", it) }
                 .onFailure { e -> _state.update { it.copy(error = e.message) } }
                 .getOrNull()
             val profile = runCatching { voices.profile(uid) }.getOrNull()
