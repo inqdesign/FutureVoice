@@ -181,8 +181,9 @@ object ConversationEngine {
      * never add a second per-turn LLM call, and never drop the suggestion field
      * (drills, the scorecard's suggestionRate and the weekly report all read it).
      */
-    fun turnOutputInstruction(targetLanguage: String): String {
+    fun turnOutputInstruction(targetLanguage: String, nativeLanguage: String): String {
         val languageName = LanguageCatalog.englishName(targetLanguage)
+        val nativeName = LanguageCatalog.englishName(nativeLanguage)
         return """
 
         OUTPUT FORMAT (overrides nothing above about HOW to talk — only about packaging):
@@ -197,7 +198,7 @@ object ConversationEngine {
         - "suggestion": include whenever the user's most recent line has a grammar slip or wording a fluent speaker wouldn't choose — give the natural version. Set it to null only when the line was already natural as spoken. Don't invent a change for a line that was fine.
         - "alternative" must be a CONCRETE full utterance the user could say out loud (their corrected sentence), never a rule or category.
         - "alternative" rewrites ONE sentence only — the single sentence with the most teachable slip. NEVER the whole turn: when the user speaks several sentences, pick the one worth fixing and ignore the rest, even if they also had minor slips. Target ≤ 15 words; a learner drills this line later, and a paragraph is un-drillable.
-        - "reason": ≤ 12 words on why it's better.
+        - "reason": ≤ 12 words on why it's better, written in $nativeName — the learner glances at this mid-conversation and must get it without decoding. Quote the $languageName words that changed, untranslated, inside the $nativeName sentence. Those quoted words are the ONLY foreign text allowed here. Every other word is $nativeName: no $languageName adjectives dropped into a $nativeName sentence, no romanized shorthand — write the $nativeName word for it. This holds even when $nativeName speakers commonly mix that word in casually. "alternative" above is unaffected: it stays $languageName material.
         - The suggestion is shown silently as text — never mention it in "reply", never correct the user out loud.
         """.trimIndent()
     }

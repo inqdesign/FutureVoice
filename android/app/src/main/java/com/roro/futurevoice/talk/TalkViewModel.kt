@@ -180,7 +180,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                     persona = config.persona,
                     newsFacts = config.newsFacts,
                     cast = config.cast,
-                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage)
+                ) + ConversationEngine.turnOutputInstruction(config.targetLanguage, config.nativeLanguage)
                 if (BuildConfig.DEBUG) Log.d(TAG, "prompt: patterns=${profile.recurringMistakes.size}" +
                     " weak=${profile.weakVocabAreas} first='${profile.recurringMistakes.firstOrNull()?.mistake}'")
                 openConversation()
