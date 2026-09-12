@@ -121,7 +121,7 @@ struct VoiceCloneOnboardingView: View {
     private static let pendingTakeKey = "futurevoice.pendingCloneTake"
 
     enum Status: Int, Equatable {
-        // Order is load-bearing: `prepareNativeScript` compares rawValues to
+        // Order is load-bearing: `adoptNativeScript` compares rawValues to
         // decide whether the script choice is still ahead of the reader.
         case intro, consent, mic, spot, script   // the wizard — one idea per screen
         case recording
@@ -146,6 +146,10 @@ struct VoiceCloneOnboardingView: View {
     /// generation lands (or forever, for a native language it never does,
     /// in which case the picker simply never appears).
     @State private var nativeScript: [String]?
+    /// True while the generation is in flight. Nine languages ship in the
+    /// binary and resolve instantly; the rest cost one call, and the script
+    /// step says so rather than leaving the choice invisibly missing.
+    @State private var preparingNativeScript = false
 
     /// The clone's first words — spoken in the user's own voice the moment it
     /// exists. Short on purpose (one TTS call per onboarding).
@@ -708,6 +712,18 @@ struct VoiceCloneOnboardingView: View {
                 .padding(.horizontal, 28)
             }
 
+            if nativeScript == nil, preparingNativeScript {
+                // The option is coming, not absent. Without this the picker
+                // pops in with no explanation, or never arrives with none.
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini)
+                    Text(explain("Preparing a version in your own language…"))
+                }
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 28)
+            }
+
             Text(nativeScript == nil
                  ? "Read it naturally. Mistakes are fine — just keep going."
                  : "Read whichever one feels natural — we're capturing your voice, not your reading.")
@@ -993,7 +1009,13 @@ struct VoiceCloneOnboardingView: View {
                 wizardBar(next: chrome("Next"), backTo: stepAfterIntro) { handleMicPermission() }
 
             case .spot:
-                wizardBar(next: chrome("Next"), backTo: .mic) { status = .script }
+                wizardBar(next: chrome("Next"), backTo: .mic) {
+                    status = .script
+                    // Last chance: a generation that failed or is still in
+                    // flight leaves the learner with no way to read in their
+                    // own language at all, so try again as the step opens.
+                    Task { await prepareNativeScript() }
+                }
 
             case .script:
                 // Re-recording from the meet act: Back means "never mind,
@@ -1199,16 +1221,30 @@ struct VoiceCloneOnboardingView: View {
 
     private func prepareNativeScript() async {
         let code = appState.nativeLanguage
-        guard code != appState.targetLanguage, nativeScript == nil else { return }
-        // Hand-authored languages resolve synchronously; the rest cost one
-        // Gemini call, once per device, cached forever.
-        var script = CloneScriptStore.shared.script(for: code)
-        if script == nil { script = await CloneScriptStore.shared.ensure(for: code) }
+        guard code != appState.targetLanguage, nativeScript == nil,
+              !preparingNativeScript else { return }
+        // Hand-authored languages resolve synchronously — nine of them, since
+        // `CloneScriptStore.handAuthored` reads the bundled scripts too. Only
+        // the rest cost a Gemini call, once per device, cached forever.
+        if let bundled = CloneScriptStore.shared.script(for: code) {
+            adoptNativeScript(bundled)
+            return
+        }
+        preparingNativeScript = true
+        let script = await CloneScriptStore.shared.ensure(for: code)
+        preparingNativeScript = false
         guard let script else { return }
+        adoptNativeScript(script)
+    }
+
+    private func adoptNativeScript(_ script: [String]) {
         nativeScript = script
-        // Only pre-select while the choice is still ahead of them — never
-        // swap the text out from under someone mid-read.
-        if status.rawValue < Status.script.rawValue,
+        // Pre-select up to and including the script step — nothing is
+        // recording there and the text is still a preview the learner is
+        // deciding about, with the picker right above it saying which
+        // language is on stage. Past it, never: a generation that lands late
+        // must not swap the text out from under someone mid-read.
+        if status.rawValue <= Status.script.rawValue,
            Self.prefersNativeScript(appState.proficiency) {
             readInNative = true
         }

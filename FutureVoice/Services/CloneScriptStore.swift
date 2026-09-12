@@ -13,9 +13,11 @@ import Foundation
 /// offers both and defaults by the learner's self-rated level.
 ///
 /// Sources, in order:
-///   1. hand-authored — English (the target) and Korean (the main market);
-///   2. one cached Gemini generation per native language, written to the same
-///      brief (kept on disk forever, so it's a once-per-device call);
+///   1. hand-authored, in the binary — English and Korean written here, plus
+///      the seven other scripts `VoiceCloneScript` already ships (de, ja, es,
+///      fr, it, pt, zh). Nine languages, instant and offline;
+///   2. one cached Gemini generation per remaining native language, written to
+///      the same brief (kept on disk forever, so it's a once-per-device call);
 ///   3. English, as the floor — a generation that never lands must never
 ///      block the flow.
 final class CloneScriptStore {
@@ -83,18 +85,42 @@ final class CloneScriptStore {
         self.decoder = dec
     }
 
-    /// The script for a language RIGHT NOW — hand-authored or already cached.
-    /// nil means "not on this device yet"; call `ensure` to fetch one.
+    /// The script for a language RIGHT NOW — written here, already cached, or
+    /// bundled. nil means "not on this device yet"; call `ensure` to fetch one.
+    ///
+    /// A CACHED generation outranks the bundled script deliberately: a device
+    /// that already generated one may have a take recorded from it, and
+    /// `VoiceCloneScript.comparisonOpening` has to hand back the words the
+    /// learner actually read. New devices never reach the cache for a bundled
+    /// language, so they get the hand-authored text and no network call.
     func script(for code: String) -> [String]? {
-        if let built = Self.handAuthored(code) { return built }
-        guard let entry = load()[code],
-              entry.promptVersion == Self.promptVersion,
-              !entry.paragraphs.isEmpty else { return nil }
-        return entry.paragraphs
+        if let written = Self.written(code) { return written }
+        if let entry = load()[code],
+           entry.promptVersion == Self.promptVersion,
+           !entry.paragraphs.isEmpty {
+            return entry.paragraphs
+        }
+        return VoiceCloneScript.bundled(code)
     }
 
+    /// A script that ships in the binary, or nil — what `ensure` must never
+    /// pay to generate.
+    ///
+    /// Korean and English are `written` HERE, for a native reader. Everything
+    /// else comes from `VoiceCloneScript`, whose nine scripts were authored as
+    /// TARGET-language read-alouds — but a read-aloud script has no target in
+    /// it, only a person talking about themselves, so the German one serves a
+    /// German native exactly as well as it serves a German learner. Reading it
+    /// here raises offline native coverage from two languages to nine and
+    /// saves those learners a Gemini call on the one screen where their voice
+    /// is captured.
     static func handAuthored(_ code: String) -> [String]? {
-        switch code {
+        written(code) ?? VoiceCloneScript.bundled(code)
+    }
+
+    private static func written(_ code: String) -> [String]? {
+        let base = code.split(separator: "-").first.map(String.init) ?? code
+        switch base {
         case "en": return english
         case "ko": return korean
         default:   return nil
@@ -106,7 +132,21 @@ final class CloneScriptStore {
     /// `script(for:)` later. Failures return nil and are never surfaced — the
     /// script step falls back to English.
     @discardableResult
-    func ensure(for code: String) async -> [String]? {
+    func ensure(for code: String, attempts: Int = 2) async -> [String]? {
+        for attempt in 0..<max(1, attempts) {
+            if let script = await generate(for: code) { return script }
+            // A dropped first request must not cost the learner the option —
+            // the call is free and capped at 20/day, and the alternative is a
+            // picker that silently never appears. Short gap: the script step
+            // is three wizard taps away.
+            if attempt + 1 < attempts {
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+            }
+        }
+        return nil
+    }
+
+    private func generate(for code: String) async -> [String]? {
         if let have = script(for: code) { return have }
         do {
             let payload: Payload = try await GeminiClient.shared.sendJSON(

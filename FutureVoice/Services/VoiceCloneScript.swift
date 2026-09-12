@@ -27,6 +27,20 @@ enum VoiceCloneScript {
         return byLanguage[code] ?? byLanguage["en"]!
     }
 
+    /// The bundled script for a bare language code, or nil when none ships —
+    /// `paragraphs(for:)` without the English floor.
+    ///
+    /// These are written to be READ ALOUD by a person, not to teach a target,
+    /// so they are just as good as a NATIVE-language script: `CloneScriptStore`
+    /// reads this before it pays for a generation. Nine languages ship here,
+    /// which means a Japanese, Chinese, Spanish, French, Italian, Portuguese
+    /// or German speaker gets the native-script option instantly and offline
+    /// instead of waiting on a Gemini call that can fail.
+    static func bundled(_ code: String) -> [String]? {
+        let base = code.split(separator: "-").first.map(String.init) ?? code
+        return byLanguage[base]
+    }
+
     /// The clone's first words, spoken back in the user's own voice the moment
     /// it exists. Short on purpose — one TTS call per onboarding.
     static func greeting(for language: String) -> String {

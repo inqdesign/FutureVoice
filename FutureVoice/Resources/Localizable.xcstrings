@@ -13916,6 +13916,22 @@
         }
       }
     },
+    "Preparing a version in your own language…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Fassung in deiner eigenen Sprache wird vorbereitet…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모국어로 읽을 수 있는 지문을 준비하는 중…"
+          }
+        }
+      }
+    },
     "Preparing the file…" : {
       "localizations" : {
         "ko" : {
