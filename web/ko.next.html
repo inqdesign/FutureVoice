@@ -446,10 +446,11 @@ nav.sec .logo { color: #F5F2EB; }
 .m-pin { position: sticky; top: 0; height: 100vh; display: flex; align-items: center; }
 .m-pin > .inner { width: 100%; }
 .m-stack { position: relative; height: 46vh; }
+/* The swap is scroll-driven, not a class flip: JS writes opacity and the
+   offset every frame, so a claim leaves exactly as fast as the finger
+   moves. A CSS transition here would fight those writes and lag behind. */
 .js .m-stack .m-line { position: absolute; left: 0; right: 0; top: 50%; margin: 0 auto;
-  opacity: 0; transform: translateY(calc(-50% + 22px));
-  transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.2,0.7,0.2,1); }
-.js .m-stack .m-line.live { opacity: 1; transform: translateY(-50%); }
+  opacity: 0; transform: translateY(-50%); will-change: opacity, transform; }
 /* reduced motion (and no-JS): the three claims simply stack and sit still */
 .m-track.m-static { height: auto; }
 .m-track.m-static .m-pin { position: static; height: auto; padding: 120px 0 100px; }
@@ -741,7 +742,7 @@ footer a:hover { color: var(--ink); }
       <a href="#watch">Watch</a>
       <a href="#practice">Practice</a>
       <a href="#pricing" id="nav-pricing" hidden>가격</a>
-      <a href="index.next.html">English</a>
+      <a href="index.html">English</a>
       <a class="btn-store" href="#" data-appstore><svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><use href="#applelogo"/></svg><span class="tx"><small>App Store에서</small><b>App Store</b></span></a>
       <button class="nav-burger" id="nav-burger" type="button" aria-label="메뉴"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
     </div>
@@ -751,7 +752,7 @@ footer a:hover { color: var(--ink); }
     <a href="#watch">Watch</a>
     <a href="#practice">Practice</a>
     <a href="#pricing" id="nav-pricing-m" hidden>가격</a>
-    <a href="index.next.html">English</a>
+    <a href="index.html">English</a>
   </div>
 </nav>
 
@@ -1024,6 +1025,8 @@ footer a:hover { color: var(--ink); }
   </div>
   <div class="inner">
     <p class="p-error" id="pricing-error"></p>
+    <p class="p-fine" id="signin-choice" hidden>앱에서 쓰는 계정으로 로그인해 주세요: <a href="#" data-signin="apple">Apple로 계속</a> · <a href="#" data-signin="google">Google로 계속</a></p>
+    <p class="p-fine" id="manage-sub" hidden>웹에서 구독 중이라면 <a href="#" id="manage-link">구독 관리</a>에서 변경·해지할 수 있습니다.</p>
     <p class="p-fine">플러스는 통화 시간에 제한이 없습니다. 말하는 데는 실제로 힘이 들어가니, 아껴 쓸 이유를 따로 만들지 않았습니다. 상황연습은 탭 한 번이면 재생되는 쪽이라 편수로 셉니다 — 두 몫은 서로 별개고, 상황연습을 봐도 통화 시간은 줄지 않습니다. 7일 무료 체험이고 언제든 해지할 수 있습니다.</p>
   </div>
 </section>
@@ -1108,6 +1111,8 @@ footer a:hover { color: var(--ink); }
     <div class="links">
       <a href="privacy.html">Privacy</a>
       <a href="privacy-ko.html">개인정보 처리방침</a>
+      <a href="terms-ko.html">이용약관</a>
+      <a href="impressum.html">Impressum</a>
       <a href="support-ko.html">고객 지원</a>
       <a href="mailto:hello.dearroroapp@gmail.com">문의하기</a>
       <a href="#" data-appstore>App Store</a>
@@ -1547,6 +1552,10 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   });
   if (reduce) { tracks.forEach(function (t) { t.classList.add("m-static"); }); return; }
   var ticking = false;
+  var RISE = 64;    // px a claim travels on the way in and on the way out
+  var ENTER = 0.18; // fraction of a segment the next claim rises over
+  var EXIT = 0.18;  // …and the one before it leaves over — they overlap
+  function ease(u) { u = Math.max(0, Math.min(1, u)); return u * u * (3 - 2 * u); }
   function paint() {
     ticking = false;
     var vh = window.innerHeight || 1;
@@ -1560,8 +1569,21 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       // words finish before the segment does, so the completed line has a
       // beat to be read whole before the next one arrives
       var t = Math.max(0, Math.min(1, (seg - idx) / 0.62));
+      // Each claim owns a slot: it rises from below, holds still while its
+      // words light, then leaves upward as the next one rises into the same
+      // place. The two overlap briefly moving OPPOSITE ways, so the swap
+      // reads as a hand-off rather than two texts dissolving on top of each
+      // other. The last claim never leaves — the pin itself carries it off.
       st.lines.forEach(function (it, i) {
-        it.line.classList.toggle("live", i === idx);
+        var d = seg - i, last = i === n - 1, op, y;
+        if (d < -ENTER) { op = 0; y = RISE; }
+        else if (d < 0) { var e = ease((d + ENTER) / ENTER); op = e; y = (1 - e) * RISE; }
+        else if (!last && d > 1 - EXIT) {
+          var x = ease(Math.min(1, (d - (1 - EXIT)) / EXIT)); op = 1 - x; y = -x * RISE;
+        } else { op = 1; y = 0; }
+        it.line.style.opacity = op.toFixed(3);
+        it.line.style.transform = "translateY(calc(-50% + " + y.toFixed(1) + "px))";
+        it.line.classList.toggle("live", op > 0.5);
         var lit = i < idx ? it.words.length
                 : i > idx ? 0
                 : Math.round(t * it.words.length);
@@ -1584,18 +1606,19 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // set enabled=true, update the PLACEHOLDER prices, and follow web/README.md
 // (Stripe products + price IDs, webhook, Apple web sign-in in Supabase).
 const BILLING = {
-  // Flip to true once Stripe Products/Prices exist and
-  // subscription_plans.stripe_price_id is filled (see web/README.md).
-  enabled: false,
+  // ON since 2026-09-03 — Stripe products/prices/webhook/portal and Apple web
+  // sign-in are all live (web/README.md § Web billing). This page is not
+  // deployed until launch day, so nothing is sold before the root swap.
+  enabled: true,
   supabaseUrl: "https://chhzjtigzdotacutwcyo.supabase.co",
   supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU",
 }
 // Locked launch prices — keep in sync with docs/launch-billing.md.
 //
-// KRW here, because at launch this button goes to the App Store and Apple
-// charges Korean buyers in won; the EUR figures are on the English page. When
-// BILLING.enabled flips, Stripe charges one currency everywhere — revisit
-// this table then rather than showing a won price that Stripe will not honour.
+// KRW here — Apple's hand-set Korean price points. When BILLING.enabled
+// flips, checkout passes CURRENCY below ("krw") so Stripe charges exactly
+// the won figure this page shows — the Stripe Prices must carry a krw
+// currency_option (see web/README.md). Do not flip billing on without it.
 //
 // Allowances are MONTHLY POOLS since 2026-08-20, and the tiers are Light /
 // Plus. What is printed here is `subscription_plans.monthly_seconds` ÷ 60 and
@@ -1659,7 +1682,7 @@ const params = new URLSearchParams(location.search)
 if (params.get("checkout") === "success") {
   const toast = document.createElement("div")
   toast.className = "toast"
-  toast.textContent = "결제가 완료됐습니다. 앱을 열고 같은 Apple 계정으로 로그인하면 구독이 이미 적용되어 있습니다."
+  toast.textContent = "결제가 완료됐습니다. 앱을 열고 같은 계정으로 로그인하면 구독이 이미 적용되어 있습니다."
   document.body.appendChild(toast)
   setTimeout(() => toast.remove(), 9000)
 }
@@ -1685,20 +1708,60 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     errEl.style.display = "block"
   }
 
-  async function checkout(session, planId) {
-    const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/stripe-checkout", {
+  // What this page PRINTS is what Stripe must charge — the en page passes usd.
+  const CURRENCY = "krw"
+
+  async function callFn(session, fn, body) {
+    const resp = await fetch(BILLING.supabaseUrl + "/functions/v1/" + fn, {
       method: "POST",
       headers: {
         Authorization: "Bearer " + session.access_token,
         apikey: BILLING.supabaseAnonKey,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ plan_id: planId, return_url: baseUrl() }),
+      body: JSON.stringify(body),
     })
     const data = await resp.json().catch(() => ({}))
-    if (!resp.ok || !data.url) throw new Error(data.error || "checkout failed")
+    if (!resp.ok || !data.url) {
+      const err = new Error(data.error || fn + " failed")
+      err.code = data.error
+      throw err
+    }
     location.href = data.url
   }
+
+  function checkout(session, planId) {
+    return callFn(session, "stripe-checkout",
+      { plan_id: planId, return_url: baseUrl(), currency: CURRENCY })
+  }
+
+  function checkoutErrorMessage(e) {
+    // 409s from stripe-checkout: an entitled subscription already exists.
+    if (e.code === "already_subscribed")
+      return "이미 웹에서 구독 중입니다. 아래 “구독 관리”에서 변경할 수 있습니다."
+    if (e.code === "store_subscription_active")
+      return "앱 스토어 구독이 아직 유효합니다. 여기서 또 결제하면 이중 청구가 되니, 구독 관리는 스토어 쪽에서 해주세요."
+    return "결제를 시작하는 중 문제가 발생했습니다. 다시 시도해 주세요."
+  }
+
+  // Two app stores, two identities — the page can't know whether this person
+  // lives on Apple or Google, so a sign-in click reveals the chooser and the
+  // chosen provider resumes the pending action after the OAuth round trip.
+  // Either way it's the same account the app uses, so the purchase lands on
+  // the same Supabase user with no email matching.
+  let pendingAuth = null
+  const signinRow = document.getElementById("signin-choice")
+  document.querySelectorAll("[data-signin]").forEach((a) => {
+    a.addEventListener("click", (ev) => {
+      ev.preventDefault()
+      const suffix = pendingAuth && pendingAuth.manage ? "?manage=1"
+        : pendingAuth && pendingAuth.plan ? "?plan=" + pendingAuth.plan : ""
+      sb.auth.signInWithOAuth({
+        provider: a.dataset.signin,
+        options: { redirectTo: baseUrl() + suffix },
+      })
+    })
+  })
 
   async function buy(planId, button) {
     errEl.style.display = "none"
@@ -1706,21 +1769,45 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     try {
       const { data: { session } } = await sb.auth.getSession()
       if (!session) {
-        // Same Apple identity as the app → same Supabase user, no email matching.
-        await sb.auth.signInWithOAuth({
-          provider: "apple",
-          options: { redirectTo: baseUrl() + "?plan=" + planId },
-        })
+        pendingAuth = { plan: planId }
+        signinRow.hidden = false
         return
       }
+      signinRow.hidden = true
       await checkout(session, planId)
     } catch (e) {
-      showError("결제를 시작하는 중 문제가 발생했습니다. 다시 시도해 주세요.")
+      showError(checkoutErrorMessage(e))
       console.error(e)
     } finally {
       button.disabled = false
     }
   }
+
+  // Self-serve cancel / plan change / card update — Stripe's hosted portal.
+  // A web subscription can't be cancelled from the App Store, so this link
+  // is the only way out; it must be visible whenever web billing is.
+  const manageRow = document.getElementById("manage-sub")
+  if (manageRow) manageRow.hidden = false
+  async function openPortal() {
+    errEl.style.display = "none"
+    try {
+      const { data: { session } } = await sb.auth.getSession()
+      if (!session) {
+        pendingAuth = { manage: true }
+        signinRow.hidden = false
+        return
+      }
+      signinRow.hidden = true
+      await callFn(session, "stripe-portal", { return_url: baseUrl() })
+    } catch (e) {
+      showError(e.code === "no_web_subscription"
+        ? "이 계정에는 웹 구독이 없습니다. 앱에서 구독했다면 기기의 구독 설정에서 관리해 주세요."
+        : "구독 관리를 여는 중 문제가 발생했습니다. 다시 시도해 주세요.")
+      console.error(e)
+    }
+  }
+  const manageLink = document.getElementById("manage-link")
+  if (manageLink) manageLink.addEventListener("click", (ev) => { ev.preventDefault(); openPortal() })
 
   // The cycle lives on the renderer above (window.__cycle), so the toggle and
   // the checkout can never disagree about which SKU is on screen.
@@ -1728,13 +1815,20 @@ if (BILLING.enabled && BILLING.supabaseUrl && BILLING.supabaseAnonKey) {
     btn.addEventListener("click", () => buy(PLANS[btn.dataset.tier][window.__cycle].id, btn))
   })
 
-  // Returning from the Apple sign-in redirect with ?plan= → continue to checkout.
+  // Returning from the Apple sign-in redirect with ?plan= → continue to
+  // checkout; with ?manage=1 → continue to the portal.
   const pendingPlan = params.get("plan")
   if (pendingPlan) {
     const { data: { session } } = await sb.auth.getSession()
     if (session) {
       history.replaceState(null, "", baseUrl())
-      checkout(session, pendingPlan).catch((e) => { showError("결제를 시작하는 중 문제가 발생했습니다. 다시 시도해 주세요."); console.error(e) })
+      checkout(session, pendingPlan).catch((e) => { showError(checkoutErrorMessage(e)); console.error(e) })
+    }
+  } else if (params.get("manage") === "1") {
+    const { data: { session } } = await sb.auth.getSession()
+    if (session) {
+      history.replaceState(null, "", baseUrl())
+      openPortal()
     }
   }
 }

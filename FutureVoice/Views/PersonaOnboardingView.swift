@@ -168,16 +168,20 @@ struct PersonaOnboardingView: View {
     }
 
     /// The half of this profile the learner didn't type: what the fluent self
-    /// picked up in their calls. Read-only and deletable — it can only be as
-    /// right as what it heard, and a line the learner never meant has to come
-    /// off the same way any other line about them would.
+    /// picked up in their calls. Editable and deletable — it can only be as
+    /// right as what it heard, and what it heard came through a transcriber:
+    /// a misheard name or a wrong number lands here as a fact about the
+    /// learner, and until 2026-09-03 the only remedy was to delete the whole
+    /// line and hope the next call re-learned it right. A line emptied in
+    /// place is dropped on save, so clearing is the same gesture as fixing.
     @ViewBuilder
     private var rememberedSection: some View {
         if !persona.learnedNotes.isEmpty {
             Section {
-                ForEach(persona.learnedNotes) { note in
-                    Text(note.text)
+                ForEach($persona.learnedNotes) { $note in
+                    TextField("", text: $note.text, axis: .vertical)
                         .font(.subheadline)
+                        .lineLimit(1...3)
                 }
                 .onDelete { offsets in
                     persona.learnedNotes.remove(atOffsets: offsets)
@@ -185,7 +189,7 @@ struct PersonaOnboardingView: View {
             } header: {
                 Text("What I've picked up")
             } footer: {
-                Text(explain("From your talks. Swipe to remove anything I got wrong."))
+                Text(explain("From your talks. Tap a line to fix what I misheard, or swipe to remove it."))
             }
         }
     }
@@ -313,6 +317,14 @@ struct PersonaOnboardingView: View {
         // Make sure any unsubmitted free text gets folded in.
         mergeDraft(into: &persona.interests, from: &interestsDraft)
         mergeDraft(into: &persona.situations, from: &situationsDraft)
+        // A remembered line edited down to nothing was meant as a delete.
+        persona.learnedNotes = persona.learnedNotes.compactMap { note in
+            let text = note.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else { return nil }
+            var kept = note
+            kept.text = text
+            return kept
+        }
         appState.savePersona(persona)
         dismiss()   // closes the edit sheet; on first-onboarding RootView swaps anyway
     }

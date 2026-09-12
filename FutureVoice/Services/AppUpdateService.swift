@@ -29,6 +29,26 @@ final class AppUpdateService: ObservableObject {
     /// that first needed it: the link is about the App Store, not invites.
     static let appStoreURL = URL(string: "https://apps.apple.com/app/id6792794655")!
 
+    /// The same app, on its TestFlight page. `itms-beta://` is the scheme
+    /// TestFlight registers; the path is Apple's per-app beta endpoint keyed
+    /// by the same numeric id, so it needs no public-link code to exist.
+    static let testFlightURL = URL(string: "itms-beta://beta.itunes.apple.com/v1/app/6792794655")!
+
+    /// Whether THIS install came from TestFlight. A TestFlight build carries
+    /// a sandbox receipt (`sandboxReceipt`) where an App Store build carries a
+    /// production one. Debug builds read the same way and that is fine: they
+    /// are ours, and the sheet is about where a newer build lives.
+    static var isTestFlight: Bool {
+        Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+    }
+
+    /// Where a newer build of THIS install is found. The sheet sent every
+    /// tester to the App Store while the app was still in beta — a page that
+    /// either did not exist or showed a build older than the one they had —
+    /// so beta users read the button as a bug. A TestFlight install updates
+    /// in TestFlight; an App Store install updates in the App Store.
+    static var updateURL: URL { isTestFlight ? testFlightURL : appStoreURL }
+
     struct AppUpdate: Identifiable, Equatable {
         let latestBuild: Int
         let latestVersion: String?
@@ -59,6 +79,7 @@ final class AppUpdateService: ObservableObject {
 
         struct Row: Decodable {
             let latest_build: Int
+            let latest_testflight_build: Int?
             let min_build: Int
             let latest_version: String?
             let notes_ko: String?
@@ -66,7 +87,7 @@ final class AppUpdateService: ObservableObject {
         }
         guard let rows: [Row] = try? await SupabaseProvider.shared
             .from("app_release")
-            .select("latest_build,min_build,latest_version,notes_ko,notes_en")
+            .select("latest_build,latest_testflight_build,min_build,latest_version,notes_ko,notes_en")
             .eq("platform", value: "ios")
             .limit(1)
             .execute()
@@ -79,15 +100,25 @@ final class AppUpdateService: ObservableObject {
         // failed lookup is the one outcome worse than a missed notice.
         guard build > 0 else { return }
 
-        let required = build < row.min_build
-        guard required || build < row.latest_build else { return }
+        // The build this install can actually GO AND GET. A TestFlight
+        // install updates from TestFlight, which has every upload; an App
+        // Store install can only ever get what App Review has released —
+        // `latest_build`, written by `beta.sh released` after the fact.
+        // Reading the upload number for both told every App Store user
+        // about a version the store didn't have yet (2026-09-11).
+        let latest = Self.isTestFlight
+            ? max(row.latest_testflight_build ?? 0, row.latest_build)
+            : row.latest_build
 
-        if !required, UserDefaults.standard.integer(forKey: Self.seenKey) >= row.latest_build {
+        let required = build < row.min_build
+        guard required || build < latest else { return }
+
+        if !required, UserDefaults.standard.integer(forKey: Self.seenKey) >= latest {
             return
         }
 
         let notes = LanguageCatalog.currentNative.hasPrefix("ko") ? row.notes_ko : row.notes_en
-        pending = AppUpdate(latestBuild: row.latest_build,
+        pending = AppUpdate(latestBuild: latest,
                             latestVersion: row.latest_version,
                             notes: notes?.trimmingCharacters(in: .whitespacesAndNewlines),
                             required: required)

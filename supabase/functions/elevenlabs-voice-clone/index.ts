@@ -97,6 +97,11 @@ Deno.serve(async (req) => {
     else outgoing.append(key, value)
   }
 
+  // Mirrored into voice_clones below. The name is otherwise known only to
+  // ElevenLabs and to the device that chose it, so nothing on our side can
+  // say which user a voice in the library belongs to.
+  const voiceName = ((incoming.get("name") as string | null) ?? "").trim() || null
+
   const upstream = await fetch("https://api.elevenlabs.io/v1/voices/add", {
     method: "POST",
     headers: { "xi-api-key": apiKey },
@@ -141,6 +146,7 @@ Deno.serve(async (req) => {
       user_id: user.id,
       elevenlabs_voice_id: json.voice_id,
       is_active: true,
+      name: voiceName,
     })
   if (insErr) console.error("voice_clones insert failed", insErr)
 

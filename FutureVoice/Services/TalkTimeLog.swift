@@ -76,9 +76,9 @@ enum TalkTimeLog {
     /// a read, not an estimate.
     ///
     /// Bucketed by the LOCAL day (the ledger's timestamps allow it, unlike
-    /// the server's UTC-pooled `tts_char_pool`) and applied as a FLOOR: a tick
-    /// accepted seconds ago may not be visible in this query yet, and a
-    /// ledger read must never walk the ring backwards mid-call.
+    /// the server's UTC-pooled `tts_char_pool`). A floor for older days, and
+    /// the plain TRUTH for the last few — today included, whenever no call
+    /// is being metered (see the loop).
     @MainActor
     static func syncFromServer(now: Date = Date(), calendar: Calendar = .current) async {
         guard let session = try? await SupabaseProvider.shared.auth.session,
@@ -114,11 +114,48 @@ enum TalkTimeLog {
         guard !serverByDay.isEmpty else { return }
 
         var map = load()
-        for (day, seconds) in serverByDay where seconds > (map[day] ?? 0) {
-            map[day] = seconds
+        let today = dayKey(now)
+        let correctableFrom = dayKey(now.addingTimeInterval(-Double(correctDownDays) * 86_400))
+        func correctable(_ date: String) -> Bool {
+            date == today ? !TalkMeter.isRunning : date >= correctableFrom
+        }
+        // A day the ledger has no rows for is a day nothing was billed on.
+        // Dropping those keys is the same correction as lowering one, and
+        // it is the only one that reaches a day whose every row turned out
+        // to be a mistake — the loop below can never visit a key the server
+        // didn't send.
+        for local in Array(map.keys) where correctable(String(local.prefix(10))) {
+            if serverByDay[local] == nil { map[local] = nil }
+        }
+        for (day, seconds) in serverByDay {
+            let date = String(day.prefix(10))
+            // Days are also corrected DOWNWARD, because the floor's one
+            // failure mode is unbounded: a gateway session that outlived its
+            // call billed 45 minutes of silence (2026-09-05, fixed
+            // server-side), and a floor can only ever agree with it. The
+            // ledger is the receipt, so where it has the day's rows it is
+            // the day.
+            //
+            // Today counts only with NO METER RUNNING: a tick accepted
+            // seconds ago may not be in this query yet, and mid-call the
+            // ring must never walk backwards. With the call over the ledger
+            // is the whole day — which is what takes a runaway figure off
+            // the ring today instead of tomorrow. And never further back
+            // than a few days, where `usage_ledger`'s oldest-first
+            // truncation could leave a day only partly present and quietly
+            // shorten a streak.
+            if correctable(date) {
+                map[day] = seconds
+            } else if seconds > (map[day] ?? 0) {
+                map[day] = seconds
+            }
         }
         save(prune(map, now: now))
     }
+
+    /// How far back a day may be corrected downward. Deliberately short —
+    /// see the loop above.
+    private static let correctDownDays = 3
 
     /// How far back the backfill reaches — today for the ring, plus enough
     /// history for the widget's recent days.

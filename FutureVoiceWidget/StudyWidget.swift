@@ -73,7 +73,10 @@ struct StreakProvider: TimelineProvider {
         // Only count "today" if the snapshot is actually from today; otherwise a
         // stale snapshot after midnight would wrongly read as done.
         let freshToday = Calendar.current.isDate(s.updatedAt, inSameDayAs: now)
-        let done = freshToday && s.todaySeconds >= max(1, s.goalMinutes * 60)
+        // The Core bar, decided app-side — the same rule `streakDays` beside
+        // it was counted by. Judging this by the learner's daily goal made the
+        // face and the number disagree about the very same day.
+        let done = freshToday && s.metToday
 
         var entries = [entry(at: now, done: done, streak: s.streakDays, deadline: deadline)]
         // If the streak's alive but unmet, add an entry 3h before the wire so the
@@ -228,7 +231,8 @@ struct ProgressProvider: TimelineProvider {
 
     static let sample = StudyProgressSnapshot(
         updatedAt: Date(), todaySeconds: 7 * 60, goalMinutes: 10,
-        streakDays: 4, dueCount: 12, studyingWords: 18, studyingExpressions: 6)
+        streakDays: 4, dueCount: 12, studyingWords: 18, studyingExpressions: 6,
+        metToday: true)
 }
 
 struct ProgressWidgetView: View {

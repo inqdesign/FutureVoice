@@ -28,6 +28,31 @@ enum PracticeStats {
         TalkTimeLog.secondsToday(now: now)
     }
 
+    /// Talk time is written in TWO registers, with one rule under both: a day
+    /// — or a month — that was talked on is never called zero. Every surface
+    /// already reads the same METER (see `todayTalkSeconds`); these two are
+    /// how that one number is said, and nothing may format talk time on its
+    /// own.
+    ///
+    /// A DAY is a CLOCK. It can be 40 seconds or 40 minutes, and floored
+    /// minutes called the first one "0 min" beside a lit calendar tile and a
+    /// ring that had visibly moved (reported 2026-09-05). Same shape a
+    /// running app gives one run. Home's ring and the activity day summary.
+    static func talkClock(seconds: Int) -> String {
+        String(format: "%02d:%02d", max(0, seconds) / 60, max(0, seconds) % 60)
+    }
+
+    /// A SPAN — a month's pool, a plan's allowance — is MINUTES: the plan is
+    /// sold in minutes, and "55 min 12 sec of 150 min" makes the remainder
+    /// harder to read rather than more precise. Under a minute it names the
+    /// seconds, because that is the one size minutes cannot say: a new
+    /// account's first 40 seconds must not read as nothing used.
+    static func talkSpan(seconds: Int) -> String {
+        seconds > 0 && seconds < 60
+            ? explain("\(seconds) sec")
+            : explain("\(seconds / 60) min")
+    }
+
     static func snapshot(now: Date = Date(), calendar: Calendar = .current) -> Snapshot {
         let sessions = SessionStore.shared.load()
         let endedSessions = sessions.filter { $0.endedAt != nil }
@@ -310,13 +335,18 @@ enum PracticeStats {
         computeStreak(now: day, calendar: calendar)
     }
 
-    private static func computeStreak(now: Date, calendar: Calendar) -> Int {
-        let language = CoreClubService.activeLanguage()
-        let bar = CoreClubService.dailyBarSeconds()
+    /// Did `day` clear the Core's daily bar in the language being practised?
+    /// The one predicate the streak is built from — anything that needs to
+    /// say "today counts" (the streak widget's face, for one) asks THIS,
+    /// never the learner's own daily goal. The goal fills a ring; the bar
+    /// decides a day.
+    static func metCoreBar(on day: Date = Date()) -> Bool {
+        TalkTimeLog.seconds(on: day, language: CoreClubService.activeLanguage())
+            >= CoreClubService.dailyBarSeconds()
+    }
 
-        func met(_ day: Date) -> Bool {
-            TalkTimeLog.seconds(on: day, language: language) >= bar
-        }
+    private static func computeStreak(now: Date, calendar: Calendar) -> Int {
+        func met(_ day: Date) -> Bool { metCoreBar(on: day) }
 
         var streak = 0
         var cursor = calendar.startOfDay(for: now)

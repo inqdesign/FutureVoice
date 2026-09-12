@@ -31,6 +31,13 @@ struct ConversationView: View {
     @State private var showTopicPicker = false
     @State private var dueDrillCount = 0
     @State private var phoneCallActive = false
+    /// When the current call seat opened — drives the elapsed clock in the
+    /// title. Set once per call; hidden (not frozen) once the call ends.
+    @State private var callStartedAt: Date?
+    /// Talk time banked across pauses. A pause STOPS the clock and a resume
+    /// continues it (the first cut reset to zero on every pause, reported
+    /// 2026-09-03) — on resume the virtual start date is backdated by this.
+    @State private var callElapsedAtPause: TimeInterval = 0
     @State private var silenceTask: Task<Void, Never>?
     /// True only while `endSession` is wrapping up (summary generation in
     /// flight). Distinct from `phase == .thinking`, which also fires per-turn
@@ -80,6 +87,9 @@ struct ConversationView: View {
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
+    /// An uncapped plan past the abuse line. Its own alert, never the spent-
+    /// allowance sheet: nothing ran out.
+    @State private var fairUseHalted = false
     /// This account is on Light, so there IS somewhere to go when the pool
     /// runs out. Resolved at call start so the sheet's button is there the
     /// moment the wall lands. False on Plus: nothing left to sell, and the
@@ -91,6 +101,8 @@ struct ConversationView: View {
     @State private var poolMinutes: Int?
     /// When the pool refills, for the sheet's "back on the 14th" line.
     @State private var renewalLabel = ""
+    /// The plan stops on that date instead of refilling (cancelled).
+    @State private var planEndsAtPeriodEnd = false
     /// What the cap sheet was dismissed FOR. A sheet can't raise the next
     /// sheet while it is closing, so the choice is recorded and acted on in
     /// `onDismiss`.
@@ -207,8 +219,27 @@ struct ConversationView: View {
     // 5s for the same reason as before: it only fires on a hanging conjunction
     // or filler, where cutting the learner off is the failure this whole
     // scheme exists to prevent.
-    private static let vadShortSeconds: Double   = 0.8
-    private static let vadDefaultSeconds: Double = 1.6
+    // 2026-09-04, REVERTING the second retune: the learner reports being cut
+    // off mid-sentence, which is the failure that telemetry structurally
+    // cannot see — a turn ended early looks like a fast turn, and the words
+    // that never got said look like the start of the next one. Both retunes
+    // above were driven entirely by that blind number. Short 0.8 → 1.2,
+    // default 1.6 → 2.2 (still under `quietCommitThreshold` = 2.6, so the
+    // recognizer's own rotation still comes second).
+    //
+    // Two things make the wait cost far less than it did when it was cut:
+    //   • `SpeculativeReply` fires at 0.6 s of silence, so the extra
+    //     confirmation time is spent INSIDE Gemini's ~2.4 s of thinking
+    //     rather than in front of it (adopted on ~half of turns, and a
+    //     longer, calmer wait raises that rate);
+    //   • the chunk pipeline cuts a piece at 0.5 s of silence and its round
+    //     trip runs ~1.3 s — under an 0.8 s tier the assembly was ALWAYS
+    //     late (`chunk_path=late` on ~87% of turns, `asr=fixed` on 73%), so
+    //     the reply was written from the on-device guess. At 2.2 s the tail
+    //     lands before the turn ships, and the fluent self answers what was
+    //     actually said instead of what the phone guessed.
+    private static let vadShortSeconds: Double   = 1.2
+    private static let vadDefaultSeconds: Double = 2.2
     private static let vadLongSeconds: Double    = 5.0
     /// Headroom over a pause the learner has already taken and come back from.
     /// Matching it exactly would end the turn on the very gap they proved they
@@ -224,7 +255,19 @@ struct ConversationView: View {
     /// Exists because `LiveTranscriber`'s meter resets every turn, which left
     /// the first pause of every turn judged with no evidence at all — and the
     /// first pause is exactly where a learner gets cut off.
+    ///
+    /// Seeded from the LAST call (2026-09-04): how long someone goes quiet
+    /// while composing is a property of the person, not of the call, and
+    /// starting every call at zero meant the first pause of every call was
+    /// judged by the fixed tiers alone — the one moment with no evidence at
+    /// all, and the moment the learner remembers being cut off. It decays per
+    /// turn exactly as before, so a call that never needs it forgets it
+    /// within three turns.
     @State private var sessionPauseFloor: Double = 0
+    private static let pauseFloorDefaultsKey = "futurevoice.talk.pauseFloor"
+    private static func rememberedPauseFloor() -> Double {
+        min(UserDefaults.standard.double(forKey: pauseFloorDefaultsKey), vadLongSeconds)
+    }
     /// Don't send while the STT partial is still changing — recognition lag
     /// after the last spoken word is typically 0.3–0.5s.
     private static let sttSettleSeconds: Double  = 0.7
@@ -480,7 +523,10 @@ struct ConversationView: View {
     @State private var didSaveCurrentSession = false
     /// ✕ tapped with unsaved turns — asks save vs. discard before leaving.
     @State private var confirmingDiscard = false
-    @State private var userSpeechStartedAt: Date?
+    /// When the mic OPENED for the current listening turn — not when the
+    /// learner started talking. The gap between the two is thinking time; the
+    /// clock that matters (`speechStartedAt`) skips it.
+    @State private var micOpenedAt: Date?
     /// True when the topic is a news story ("In the news" picker). The opener
     /// call then runs search-grounded and collects `newsFacts`.
     @State private var topicIsNews = false
@@ -548,7 +594,19 @@ struct ConversationView: View {
     ///
     /// The learner half of that is `someoneIsTalkingHere`, which is where the
     /// café problem lives — see below.
+    /// Has the learner spoken since this call started? Gates the meter —
+    /// see `isBillableMoment`. Set where a user turn is made (both paths),
+    /// cleared with the session.
+    @State private var learnerSpokeThisCall = false
+
     private func isBillableMoment() -> Bool {
+        // Nothing counts until the learner has said something IN THIS CALL.
+        // The opener speaks whether or not it is answered, and a call that
+        // was opened, listened to and left behind is not a minute of theirs
+        // — the ring showed the wait as talk time (reported 2026-09-07).
+        // Per call, not per transcript: Continue reopens a book with its old
+        // turns in hand, and those were spoken on another day.
+        guard learnerSpokeThisCall else { return false }
         if RealtimeMode.isEnabled {
             // Same rule, read off the gateway's state instead of the local
             // VAD: the fluent self speaking, a reply being written, or the
@@ -596,6 +654,18 @@ struct ConversationView: View {
         return true
     }
 
+    /// When the learner actually started TALKING this turn — the mic's own
+    /// open time only until the first voiced frame lands.
+    ///
+    /// Everything timed against it is about the person, not the microphone:
+    /// how long this turn's speech ran (`Turn.durationMs`, which feeds the
+    /// profile's speaking-seconds) and the 30 s listening ceiling, which used
+    /// to count a long think toward a limit that exists for rooms talking
+    /// into an open mic.
+    private func speechStartedAt() -> Date? {
+        live.firstVoicedAt ?? micOpenedAt
+    }
+
     /// How much of the CURRENT mic run cleared the voiced threshold. The meter
     /// resets on every `live.start()`, so this is per turn by construction.
     private func voicedSecondsThisTurn() -> Double {
@@ -614,9 +684,11 @@ struct ConversationView: View {
                     }
                     Divider().opacity(0.15)
                 }
+                // The transcript dissolves beneath the mic bar exactly the
+                // way the Talk home dissolves beneath the tab bar — see
+                // `fadingBottomBar` (2026-09-03).
                 feed
-                Divider().opacity(0.15)
-                bottomBar
+                    .fadingBottomBar { bottomBar }
             }
             .background(Color(.systemBackground))
             .overlay { endingOverlay }
@@ -651,7 +723,9 @@ struct ConversationView: View {
                         stopListeningDiscardingChunks()
                     }
                     if phase == .listening || phase == .thinking { phase = .idle }
-                    if meter.wallReason == .dailyCapReached {
+                    if meter.wallReason == .fairUseLimit {
+                        fairUseHalted = true
+                    } else if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
                     } else {
                         outOfCredits = true
@@ -661,6 +735,10 @@ struct ConversationView: View {
                 // Silence isn't billed — see `isBillableMoment`. Set before
                 // start(): the ticker polls it from its first second.
                 meter.isBillable = { isBillableMoment() }
+                // On the realtime path the GATEWAY is the meter
+                // (gateway/src/billing.ts) — the local ticker only keeps the
+                // ring's TalkTimeLog; charging twice would double-bill.
+                meter.serverMetered = RealtimeMode.isEnabled
                 meter.start(sessionId: sessionId)
                 lastActivityAt = Date()   // the call starts occupied
                 // Put the call on the lock screen. Play/pause there are the
@@ -731,8 +809,18 @@ struct ConversationView: View {
                     canUpgrade: canUpgradePlan,
                     allowance: poolMinutes,
                     renewsOn: renewalLabel,
+                    endsInstead: planEndsAtPeriodEnd,
                     onReview: { capChoice = .review },
                     onUpgrade: { capChoice = .upgrade })
+            }
+            // Not a sheet and not an upsell: there is nothing to offer and
+            // nothing to wait for. One line saying what happened and how to
+            // reach us.
+            .alert(explain("We've paused talking on this account"),
+                   isPresented: $fairUseHalted) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(explain("Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works."))
             }
             .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
                 // Reached here from an out-of-credits failure → no trial pitch.
@@ -768,6 +856,7 @@ struct ConversationView: View {
                 canUpgradePlan = account.isLightPlan
                 poolMinutes = account.monthlyCapSeconds.map { $0 / 60 }
                 renewalLabel = account.renewalLabel
+                planEndsAtPeriodEnd = account.cancelAtPeriodEnd
             }
             // A real phone call, Siri, or an alarm takes the audio session
             // away and stops the engine WITHOUT going through `live.stop()`.
@@ -790,6 +879,40 @@ struct ConversationView: View {
                 case .thinkingReply:       phase = .thinking
                 case .speaking:            phase = .speaking
                 case .idle, .connecting, .failed: phase = .idle
+                }
+                // First learner speech starts the clock (realtime path).
+                if case .hearing = state, callStartedAt == nil {
+                    callStartedAt = Date()
+                }
+                // The gateway meters the call server-side and hangs up with a
+                // wall code when the allowance is spent — the same two 402s
+                // the classic meter's tick returns, so they land on the same
+                // sheets: a subscriber's finished day is never a paywall.
+                if case .failed = state {
+                    if realtime.wallCode == "fair_use_limit" {
+                        fairUseHalted = true
+                    } else if realtime.wallCode == "daily_cap_reached" {
+                        dailyCapReached = true
+                    } else if realtime.wallCode == "insufficient_credits" {
+                        outOfCredits = true
+                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                    }
+                }
+            }
+            .onChange(of: phoneCallActive) { _, active in
+                // The elapsed clock arms on the learner's FIRST speech, not
+                // here — a call opened and cancelled without a word shows no
+                // timer at all (asked for 2026-09-02: "누르고 그냥 취소"가
+                // 통화로 세어지는 게 이상하다).
+                if !active {
+                    // Pause: bank what ran so far and stop the clock.
+                    if let start = callStartedAt {
+                        callElapsedAtPause += Date().timeIntervalSince(start)
+                    }
+                    callStartedAt = nil
+                } else if callElapsedAtPause > 0 {
+                    // Resume: continue from the banked time, not from zero.
+                    callStartedAt = Date().addingTimeInterval(-callElapsedAtPause)
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -826,7 +949,13 @@ struct ConversationView: View {
             LevelHeaderTitle(title: topic.isEmpty ? "Let's talk" : topic,
                              level: appState.proficiency,
                              surface: .talk,
-                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil })
+                             minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
+                             // Elapsed, phone-style — every tier. Ticks while
+                             // the call runs, freezes while it's paused, and
+                             // goes away once the talk is wrapped up.
+                             callStartedAt: phoneCallActive ? callStartedAt : nil,
+                             pausedElapsed: !phoneCallActive && callElapsedAtPause > 0
+                                 && !didSaveCurrentSession ? callElapsedAtPause : nil)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -939,9 +1068,18 @@ struct ConversationView: View {
                         // (2026-09-01).
                         switch realtime.state {
                         case .listening, .hearing:
-                            PartialTurnView(text: realtime.partial)
-                                .id("partial-listening")
-                                .transition(.opacity)
+                            // ...except before the FIRST turn exists: the call
+                            // always opens with the fluent self, and the beat
+                            // between "gateway ready" and the opener's first
+                            // delta flashed an empty You bubble that blinked
+                            // away as the voice began (reported 2026-09-03).
+                            // A learner actually speaking first still shows —
+                            // their partial has text.
+                            if !turns.isEmpty || !realtime.partial.isEmpty {
+                                PartialTurnView(text: realtime.partial)
+                                    .id("partial-listening")
+                                    .transition(.opacity)
+                            }
                         case .thinkingReply:
                             ThinkingIndicator()
                                 .id("partial-thinking")
@@ -1083,8 +1221,8 @@ struct ConversationView: View {
         .padding(.top, 14)
         .padding(.bottom, 20)
         .frame(maxWidth: .infinity)
-        // No background — the mic floats above the feed and the tab bar gets
-        // a clean gap below it, so users don't read mic + tabs as one chunk.
+        // No background of its own — the feed's edge treatment beneath it
+        // comes from `fadingBottomBar`.
         .onChange(of: live.level) { _, new in
             guard phase == .listening else { return }
             voiceLevel = new
@@ -1437,7 +1575,7 @@ struct ConversationView: View {
         if let stale = live.lastChunkRecordingURL {
             try? FileManager.default.removeItem(at: stale)
         }
-        userSpeechStartedAt = nil
+        micOpenedAt = nil
     }
 
     /// Encode one cut piece and put its transcription in flight. Fully
@@ -1616,7 +1754,7 @@ struct ConversationView: View {
                 // evidence says a person is speaking — a room's babble never
                 // clears the voiced threshold, so the café case fires exactly
                 // as before — and only the absolute cap cuts a person.
-                let listened = userSpeechStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+                let listened = speechStartedAt().map { Date().timeIntervalSince($0) } ?? 0
                 let ranLong = listened >= Self.maxListenSecondsHard
                     || (listened >= Self.maxListenSeconds && !someoneIsTalkingHere())
                 guard audioSettled || transcriptSettled || ranLong else { continue }
@@ -1641,6 +1779,8 @@ struct ConversationView: View {
                     // endpointing signal ever fired and the turn was cut by
                     // the clock. A rising share of it is a room problem.
                     "vad_path": audioSettled ? "audio" : (transcriptSettled ? "noisy" : "ceiling"),
+                    // Since 2026-09-04: from the FIRST VOICED frame, not the
+                    // mic opening — a long think no longer counts as listening.
                     "listened_ms": String(Int(listened * 1000)),
                     "text_quiet_ms": String(Int(min(sinceTextChange, 60) * 1000)),
                     "noise": String(format: "%.2f", live.ambientNoiseLevel),
@@ -1665,6 +1805,13 @@ struct ConversationView: View {
                     "spec_fires": String(specFiresThisTurn),
                 ]
                 turnEndedSpeakingAt = Date()
+                // This learner's composing pace, kept for the NEXT call — with
+                // one turn's decay already applied, so a single 4 s gap in the
+                // last turn of tonight's call doesn't open tomorrow's on a
+                // 3.5 s wait for "Yeah."
+                UserDefaults.standard.set(
+                    min(sessionPauseFloor * Self.pauseFloorDecay, Self.vadLongSeconds),
+                    forKey: Self.pauseFloorDefaultsKey)
                 HapticEngine.voiceSent()
                 await stopAndSend()
                 return
@@ -1738,6 +1885,13 @@ struct ConversationView: View {
     private static func isLikelyIncomplete(_ text: String) -> Bool {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if trimmed.isEmpty { return true }
+        // Dictation punctuates from prosody: a COMMA is the recognizer saying
+        // this sentence keeps going, and an ellipsis or a dash that they
+        // trailed off. Without this they all fell to the default tier, which
+        // is the recognizer telling us the learner is mid-thought and us
+        // answering anyway.
+        if let last = trimmed.last, ",;:-–—…、，".contains(last) { return true }
+        if trimmed.hasSuffix("...") { return true }
         let words = trimmed
             .components(separatedBy: CharacterSet.whitespacesAndNewlines)
             .filter { !$0.isEmpty }
@@ -1768,6 +1922,7 @@ struct ConversationView: View {
         // a conversation. No-op after the first answer, and whenever no
         // Bluetooth device is connected.
         await askMicChoiceIfNeeded()
+        sessionPauseFloor = max(sessionPauseFloor, Self.rememberedPauseFloor())
         phase = .thinking
         // The opener plays before any mic session exists — arm the call's
         // audio session or the greeting streams into `.soloAmbient` (muted by
@@ -1776,7 +1931,12 @@ struct ConversationView: View {
         // frames. It runs while the opener text is fetched; awaited below
         // before anything plays.
         let audioSessionReady = Task.detached(priority: .userInitiated) {
-            AudioSessionRouting.warmUpForConversation()
+            // Classic path only. The realtime client configures the session
+            // itself inside startAudio, and this warm-up racing it mid-build
+            // stopped the engine twice and failed the whole call
+            // ("Couldn't open the microphone", 2026-09-02) — the two-stacks
+            // collision again, this time at session setup.
+            if !RealtimeMode.isEnabled { AudioSessionRouting.warmUpForConversation() }
         }
         do {
             let opener: String
@@ -1883,6 +2043,7 @@ struct ConversationView: View {
             phase = .idle
             // A spent day is not a failed opener — same rule as the meter's
             // own wall, so it lands on the same sheet.
+            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             self.error = error.localizedDescription
@@ -1914,6 +2075,7 @@ struct ConversationView: View {
                 try? FileManager.default.removeItem(at: url)
             }
             turns.append(turn)
+            learnerSpokeThisCall = true
             didSaveCurrentSession = false
             creditGoalChips(turnId: turn.id)
             requestRealtimeSuggestion(for: turn.id, said: text)
@@ -1966,7 +2128,9 @@ struct ConversationView: View {
             history: turns.map { (role: $0.role == .user ? "user" : "model",
                                   text: $0.transcript) })
         if case .failed(let message) = realtime.state {
-            error = message
+            // A spent allowance already raised its own sheet (see the
+            // realtime.state observer) — don't stack an error alert on it.
+            if realtime.wallCode == nil { error = message }
             phase = .idle
         }
     }
@@ -2132,7 +2296,7 @@ struct ConversationView: View {
                            chunkCapture: Self.chunkedASREnabled,
                            voiceProcessing: true)
             startChunkPipeline()
-            userSpeechStartedAt = Date()
+            micOpenedAt = Date()
             // Last turn's pausing still describes this learner, but with less
             // and less authority the longer they go without needing it.
             sessionPauseFloor *= Self.pauseFloorDecay
@@ -2193,8 +2357,8 @@ struct ConversationView: View {
         turnTiming["finalize_ms"] = String(Int(Date().timeIntervalSince(finalizeStarted) * 1000))
         lastRecognizerText[turnId] = finalText
         let fluency = live.fluencyStats()
-        let elapsedMs = Int((Date().timeIntervalSince(userSpeechStartedAt ?? Date())) * 1000)
-        userSpeechStartedAt = nil
+        let elapsedMs = Int((Date().timeIntervalSince(speechStartedAt() ?? Date())) * 1000)
+        micOpenedAt = nil
 
         // Chunk pipeline: whatever was captured since the last cut is the
         // tail. With voice in it, it becomes the final piece; without, it is
@@ -2241,6 +2405,10 @@ struct ConversationView: View {
         // in flight" so late arrivals resolve in the right order.
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
+        learnerSpokeThisCall = true
+        // First learner speech starts the clock (classic path — armed at the
+        // turn commit; the realtime path arms earlier, on `.hearing`).
+        if callStartedAt == nil { callStartedAt = Date() }
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
 
@@ -2289,6 +2457,7 @@ struct ConversationView: View {
             "guess_len": String(guess.count),
             "audio": "aac",
             "input": Self.currentInputPortType(),
+            "worn_mic": AudioSessionRouting.hasWornMicAvailable() ? "1" : "0",
         ])
         chunkResolvedTurns.insert(turnId)
         // The REPLY is generated from this text (see `turnPayload`), but the
@@ -2499,6 +2668,7 @@ struct ConversationView: View {
             // Today's allowance, not a blip: no Retry row (retrying can only
             // fail again today) and no error alert — the sheet says what
             // happened and what's left to do.
+            if case ElevenLabsError.fairUseLimit = error { fairUseHalted = true; return }
             if error.isDailyCapReached { dailyCapReached = true; return }
             outOfCredits = error.isOutOfCredits
             failedTurnId = turnId
@@ -2590,6 +2760,7 @@ struct ConversationView: View {
             "guess_len": String(guess.count),
             "audio": audio,
             "input": Self.currentInputPortType(),
+            "worn_mic": AudioSessionRouting.hasWornMicAvailable() ? "1" : "0",
         ])
     }
 
@@ -3371,6 +3542,11 @@ struct ConversationView: View {
         sessionId = UUID()
         sessionStartedAt = Date()
         turns = []
+        learnerSpokeThisCall = false
+        // A new session's clock starts empty — the banked time belongs to
+        // the call that just ended, not this one.
+        callElapsedAtPause = 0
+        callStartedAt = nil
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
@@ -3892,4 +4068,59 @@ private struct SummarySheet: View {
 
 extension SessionSummary: Identifiable {
     public var id: String { overallNote }
+}
+
+
+// MARK: - Bottom bar attachment
+
+extension View {
+    /// Attaches a bottom bar the way the system attaches the tab bar, so the
+    /// content scrolling under it gets the SAME treatment the Talk home gets
+    /// beneath its tabs: on iOS 26 a `safeAreaBar`, which is what makes the
+    /// scroll view draw its soft scroll-edge effect under the bar (a plain
+    /// `safeAreaInset` gets none). Earlier OSes get a hand-drawn wash of the
+    /// page colour over the last few points above the bar.
+    ///
+    /// Two hand-drawn attempts preceded this (2026-09-03): an alpha mask on
+    /// the feed, which SwiftUI's safe-area maths parked 50–100 pt above the
+    /// pill, and a gradient in the bar's background, which was in the right
+    /// place but was still ours and not the system's. Every conversation
+    /// surface with a pinned bottom bar goes through here — the call's mic
+    /// pill and the talk book's replay controls — so the dissolve is one
+    /// implementation, and a bar attached this way must NOT carry a
+    /// background of its own.
+    @ViewBuilder
+    func fadingBottomBar<Bar: View>(@ViewBuilder _ bar: () -> Bar) -> some View {
+        if #available(iOS 26, *) {
+            self
+                .scrollEdgeEffectStyle(.soft, for: .bottom)
+                .safeAreaBar(edge: .bottom, spacing: 0, content: bar)
+        } else {
+            self.safeAreaInset(edge: .bottom, spacing: 0) {
+                bar().background(alignment: .top) { BottomBarWash() }
+            }
+        }
+    }
+}
+
+/// Pre-iOS-26 stand-in for the scroll-edge effect: page colour under the
+/// bar (and on down through the home indicator), with a gradient into
+/// transparency reaching `fadeHeight` ABOVE the bar's top edge — the
+/// negative padding is what lets it overhang, which pins the fade to the bar
+/// by construction.
+private struct BottomBarWash: View {
+    static let fadeHeight: CGFloat = 36
+
+    var body: some View {
+        VStack(spacing: 0) {
+            LinearGradient(colors: [Color(.systemBackground).opacity(0),
+                                    Color(.systemBackground)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: Self.fadeHeight)
+            Color(.systemBackground)
+        }
+        .padding(.top, -Self.fadeHeight)
+        .ignoresSafeArea(edges: .bottom)
+        .allowsHitTesting(false)
+    }
 }

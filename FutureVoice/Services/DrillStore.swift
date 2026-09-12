@@ -357,6 +357,35 @@ final class DrillStore: LanguageScopedStore {
         return best
     }
 
+    /// Whitespace tokens through the same normalization the on-device aligner
+    /// keys on — how the drill card's playback trim locates its quoted
+    /// fragment inside the turn recording's word timings.
+    static func matchWords(of text: String) -> [String] {
+        text.split(whereSeparator: { $0.isWhitespace })
+            .map { LocalAlignment.normalized(String($0)) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// First contiguous run of `fragment` inside `words` (both already
+    /// normalized via `matchWords`). The fragment can be a hard prefix cut
+    /// ending mid-word (`relevantFragment`'s `prefix(maxChars) + "…"`), so
+    /// its LAST word may match as a prefix of the full word.
+    static func fragmentSpan(of fragment: [String], in words: [String]) -> ClosedRange<Int>? {
+        guard !fragment.isEmpty, fragment.count <= words.count else { return nil }
+        for start in 0...(words.count - fragment.count) {
+            var matched = true
+            for (k, f) in fragment.enumerated() {
+                let w = words[start + k]
+                if k == fragment.count - 1 ? !w.hasPrefix(f) : w != f {
+                    matched = false
+                    break
+                }
+            }
+            if matched { return start...(start + fragment.count - 1) }
+        }
+        return nil
+    }
+
     private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
         Set(normalizedForMatch(sentence).split(separator: " ")).intersection(targetWords).count
     }

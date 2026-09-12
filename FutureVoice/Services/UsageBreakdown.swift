@@ -297,6 +297,10 @@ struct UsageBreakdown {
         if key == dayKey(Date().addingTimeInterval(-86_400)) { return explain("Yesterday") }
         let out = DateFormatter()
         out.timeZone = TimeZone(identifier: "UTC")!
+        // The LEARNER's language, not the device's — a formatter reads
+        // `Locale.current` and printed "Tue 1. Sep" down a list whose header,
+        // rows and "Today" were all Korean.
+        out.locale = Locale(identifier: LanguageCatalog.currentNative)
         out.setLocalizedDateFormatFromTemplate("EEE d MMM")
         return out.string(from: date)
     }

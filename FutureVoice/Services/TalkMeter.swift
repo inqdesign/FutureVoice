@@ -37,7 +37,9 @@ final class TalkMeter: ObservableObject {
     /// until the first tick lands.
     @Published private(set) var minutesRemaining: Int?
 
-    enum WallReason { case outOfMinutes, dailyCapReached }
+    /// `fairUseLimit` is NOT a spent allowance — only an uncapped plan can
+    /// hit it, and only far past the figure it is quietly flagged at.
+    enum WallReason { case outOfMinutes, dailyCapReached, fairUseLimit }
     /// Which wall ended the call — set just before `onWallHit` fires.
     @Published private(set) var wallReason: WallReason?
 
@@ -73,11 +75,26 @@ final class TalkMeter: ObservableObject {
             .lowercased()
     }
 
+    /// True when the SERVER is the meter (the realtime gateway charges the
+    /// call itself — see gateway/src/billing.ts). The loop still runs so the
+    /// day's numbers keep landing in `TalkTimeLog` (the ring, the day card),
+    /// but `tick` stops calling `talk-tick`: two meters charging one call is
+    /// a double bill. Walls arrive as gateway error events instead of tick
+    /// 402s on that path.
+    var serverMetered = false
+
     private var task: Task<Void, Never>?
     private var sessionKey = ""
 
+    /// Is a call being metered right now? Read by `TalkTimeLog.syncFromServer`
+    /// — while this is true the ledger is still filling, so today's figure may
+    /// only be raised; with no meter running the ledger is the whole day and
+    /// can correct it downward.
+    private(set) static var isRunning = false
+
     func start(sessionId: UUID) {
         stop()
+        Self.isRunning = true
         sessionKey = sessionId.uuidString
         task = Task { [weak self] in
             // Preflight before the first sleep — see type comment.
@@ -104,6 +121,7 @@ final class TalkMeter: ObservableObject {
     func stop() {
         task?.cancel()
         task = nil
+        Self.isRunning = false
     }
 
     private struct TickBody: Encodable {
@@ -124,6 +142,12 @@ final class TalkMeter: ObservableObject {
     }
 
     private func tick(seconds: Int, label: String) async {
+        if serverMetered {
+            // The gateway already charged these seconds; record them locally
+            // so the ring and the day card read the same day the receipt does.
+            TalkTimeLog.add(seconds: seconds, language: Self.spokenLanguage())
+            return
+        }
         do {
             let res: TickResponse = try await SupabaseProvider.shared.functions.invoke(
                 "talk-tick",
@@ -157,7 +181,9 @@ final class TalkMeter: ObservableObject {
             stop()
             minutesRemaining = 0
             let body = String(data: data, encoding: .utf8) ?? ""
-            wallReason = body.contains("daily_cap_reached") ? .dailyCapReached : .outOfMinutes
+            if body.contains("fair_use_limit") { wallReason = .fairUseLimit }
+            else if body.contains("daily_cap_reached") { wallReason = .dailyCapReached }
+            else { wallReason = .outOfMinutes }
             onWallHit?()
         } catch {
             // Transient failure: skip this tick. The idempotency key was

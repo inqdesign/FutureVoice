@@ -192,7 +192,13 @@ enum SessionSummarizer {
         // when a RESUMED talk is summarized again the fresh batch covers only
         // the new turns — merge with the previous summary's list instead of
         // overwriting it, or every resume erased "words you used first".
-        let userTexts = turns.filter { $0.role == .user }.map { $0.transcript }
+        // A turn the learner marked as misheard is out of every assessment
+        // path — and the pool and the expression list ARE review material.
+        // They were the one place still reading it, so the transcriber's
+        // words could still end up collected as the learner's.
+        let userTexts = turns
+            .filter { $0.role == .user && !$0.excludedFromScoring }
+            .map { $0.transcript }
         let freshWords = VocabStore.shared.ingest(
             sessionId: sessionId, userTexts: userTexts)
         let priorWords = session.summary?.newWordsUsed ?? []

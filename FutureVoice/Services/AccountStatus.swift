@@ -65,6 +65,12 @@ struct AccountStatus {
     /// When this pool refills — the end of the billing period. Nil for free
     /// accounts, whose balance never refills at all.
     var periodEnd: Date?
+    /// The plan is set to STOP at `periodEnd` rather than renew — cancelled
+    /// in the App Store, or a sandbox subscription running out. Read because
+    /// every screen that names that date called it a refill: telling someone
+    /// their pool comes back on the day their plan ends is the app promising
+    /// something it has been told will not happen.
+    var cancelAtPeriodEnd: Bool = false
     /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
     /// `20260821100000`, so for a subscriber this is time on top of the plan
     /// rather than the "kept for after you cancel" balance it used to be.
@@ -73,6 +79,33 @@ struct AccountStatus {
     /// ledger window from this: the pool is monthly, so a fixed 7-day window
     /// could never account for the month the header counts down from.
     var periodStart: Date?
+
+    /// Where the subscription comes from: 'apple' | 'stripe' | 'comp' | 'google'.
+    /// Nil when there is no row at all.
+    var source: String?
+    /// When this subscription was first started (`started_at`) — survives
+    /// renewals, so "since" reads as the day they became a subscriber.
+    var startedAt: Date?
+    /// The last amount actually charged, as the store charged it, in the
+    /// storefront's currency (milliunits → `lastChargeLabel`). From
+    /// `subscription_transactions`, readable by its owner since
+    /// `20260912100000`. Nil on a comp, or before the first charge lands.
+    var lastChargeMilliunits: Int?
+    var lastChargeCurrency: String?
+    var lastChargeDate: Date?
+    /// Apple's `offerType` on the LATEST transaction: 1 intro, 2 promotional,
+    /// 3 offer code. Nil at full price.
+    var currentOfferType: Int?
+    /// First transaction priced by an OFFER CODE (offerType 3). The launch
+    /// codes run `offerCodeMonths` from here.
+    var offerCodeSince: Date?
+
+    /// How long the launch offer codes discount (docs/launch-billing.md §7:
+    /// pay-as-you-go 12 months on both `Beta50 … v2` offers). Apple's
+    /// transaction says WHICH offer priced a period, not how many periods the
+    /// offer runs, so the length is ours to know. Change here if a future
+    /// code is cut differently.
+    static let offerCodeMonths = 12
 
     /// True while the subscription actually entitles (paid or in trial).
     var isEntitled: Bool {
@@ -231,6 +264,28 @@ struct AccountStatus {
             .locale(Locale(identifier: LanguageCatalog.currentNative)))
     }
 
+    /// The last charge as money, in the learner's language ("₩14,500",
+    /// "11,49 €"). Nil when nothing has been charged.
+    var lastChargeLabel: String? {
+        guard let m = lastChargeMilliunits, m > 0, let code = lastChargeCurrency else { return nil }
+        return (Decimal(m) / 1000).formatted(
+            .currency(code: code).locale(Locale(identifier: LanguageCatalog.currentNative)))
+    }
+
+    /// The day the launch code's discount ends, when one is running.
+    var offerCodeUntil: Date? {
+        guard currentOfferType == 3, let since = offerCodeSince else { return nil }
+        return Calendar.current.date(byAdding: .month, value: Self.offerCodeMonths, to: since)
+    }
+
+    /// A date with its year ("2027년 9월 12일") for facts that outlive the
+    /// month — `renewalLabel` drops the year because a refill is always
+    /// within one. Learner's language, not the device's.
+    static func dayLabel(_ date: Date) -> String {
+        date.formatted(.dateTime.year().month(.abbreviated).day()
+            .locale(Locale(identifier: LanguageCatalog.currentNative)))
+    }
+
     /// The one-line read of talk time for the settings row and the usage
     /// page header.
     ///
@@ -252,12 +307,18 @@ struct AccountStatus {
         // — and since `talk_allowance` reports no cap on Plus, that is the
         // one-time balance ÷ 60, not talk time at all: "0 min left" with a
         // month of real talk seconds sitting unshown in `secondsUsedPeriod`.
-        if isPlusPlan { return explain("\(minutesUsedPeriod) min talked this month") }
+        // Said through `PracticeStats.talkSpan`, so a month whose talking is
+        // still under a minute says the seconds instead of "0 min" — the one
+        // size minutes cannot tell apart from nothing at all.
+        if isPlusPlan {
+            return explain("\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) talked this month")
+        }
         // Light reads the same direction as Plus — minutes TALKED, over the
         // pool — so the two tiers' rows say the same kind of thing and a
         // learner switching between them isn't handed a reversed number.
         if isEntitled, monthlyCapSeconds != nil {
-            let plan = explain("\(minutesUsedPeriod) of \(tankMinutes) min talked this month")
+            let plan = explain(
+                "\(PracticeStats.talkSpan(seconds: secondsUsedPeriod)) of \(tankMinutes) min talked this month")
             // Invite minutes are spent first, so they are not part of the
             // month's fraction and must not be folded into it — they are
             // named separately or the two numbers stop adding up.
@@ -282,12 +343,24 @@ struct AccountStatus {
     static let empty = AccountStatus(email: nil, secondsBalance: 0,
                                      planId: nil, subscriptionStatus: "inactive")
 
+    /// Apple's own subscription management screen. Changing or cancelling a
+    /// live subscription happens there, never in-app.
+    static let manageSubscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")!
+
     /// Best-effort fetch — billing display should never block or break the
     /// Me tab, so every failure degrades to the empty snapshot.
     static func fetch() async -> AccountStatus {
         guard let session = try? await SupabaseProvider.shared.auth.session else {
             return .empty
         }
+        // Before reading what the server thinks, tell it what Apple holds.
+        // Every paywall decision funnels through this fetch — the onboarding
+        // pitch, BillingGate, the Me tab — and a person who redeemed an offer
+        // code in the App Store BEFORE installing reaches the first of those
+        // without ever backgrounding the app, so the foreground claim has not
+        // run yet. Cheap when nothing is held (no network), and a no-op for
+        // anything already claimed.
+        await StoreKitService.claimCurrentEntitlements()
         var out = AccountStatus.empty
         out.email = session.user.email
         let userId = session.user.id.uuidString
@@ -307,10 +380,13 @@ struct AccountStatus {
         struct SubRow: Decodable {
             let plan_id: String?
             let status: String
+            let cancel_at_period_end: Bool?
+            let source: String?
+            let started_at: String?
         }
         if let rows: [SubRow] = try? await SupabaseProvider.shared
             .from("user_subscriptions")
-            .select("plan_id,status")
+            .select("plan_id,status,cancel_at_period_end,source,started_at")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
@@ -318,6 +394,48 @@ struct AccountStatus {
            let row = rows.first {
             out.planId = row.plan_id
             out.subscriptionStatus = row.status
+            out.cancelAtPeriodEnd = row.cancel_at_period_end ?? false
+            out.source = row.source
+            out.startedAt = row.started_at.flatMap(Self.timestamp(from:))
+        }
+
+        // The receipt, as the store wrote it: the latest charge, and whether
+        // an offer code is pricing the current period. Own rows only (RLS).
+        // Both reads degrade to nil — the page simply has less to say.
+        struct TxRow: Decodable {
+            let purchase_date: String?
+            let price_milliunits: Int?
+            let currency: String?
+            let offer_type: Int?
+        }
+        if out.isEntitled {
+            if let rows: [TxRow] = try? await SupabaseProvider.shared
+                .from("subscription_transactions")
+                .select("purchase_date,price_milliunits,currency,offer_type")
+                .eq("user_id", value: userId)
+                .order("purchase_date", ascending: false)
+                .limit(1)
+                .execute()
+                .value,
+               let latest = rows.first {
+                out.lastChargeMilliunits = latest.price_milliunits
+                out.lastChargeCurrency = latest.currency
+                out.lastChargeDate = latest.purchase_date.flatMap(Self.timestamp(from:))
+                out.currentOfferType = latest.offer_type
+            }
+            if out.currentOfferType == 3,
+               let rows: [TxRow] = try? await SupabaseProvider.shared
+                .from("subscription_transactions")
+                .select("purchase_date,price_milliunits,currency,offer_type")
+                .eq("user_id", value: userId)
+                .eq("offer_type", value: 3)
+                .order("purchase_date", ascending: true)
+                .limit(1)
+                .execute()
+                .value,
+               let first = rows.first {
+                out.offerCodeSince = first.purchase_date.flatMap(Self.timestamp(from:))
+            }
         }
 
         if out.unlimited { out.fullTankSeconds = adminResetSeconds }
@@ -356,6 +474,16 @@ struct AccountStatus {
             out.monthlyScenesCap = scenes.cap
         }
         return out
+    }
+
+    /// A `timestamptz` column, which PostgREST writes as ISO 8601 with a
+    /// fractional second and an offset ("2026-09-11T16:31:31.123+00:00") —
+    /// or without the fraction when there is none.
+    private static func timestamp(from raw: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = withFraction.date(from: raw) { return d }
+        return ISO8601DateFormatter().date(from: raw)
     }
 
     /// `period_end` arrives as a bare `yyyy-MM-dd` from Postgres.

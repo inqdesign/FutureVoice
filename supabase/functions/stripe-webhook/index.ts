@@ -83,8 +83,9 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     // Return 500 so Stripe retries this event later instead of marking it
-    // delivered while our side silently failed. grant_credits is idempotent,
-    // so retries are safe.
+    // delivered while our side silently failed. The upsert is a plain
+    // overwrite keyed on user_id, so retries are safe. (Minutes-native:
+    // nothing is granted here — the subscription row IS the entitlement.)
     console.error("stripe-webhook failed", event.type, e)
     return json(500, { error: "handler failed" })
   }
@@ -96,11 +97,39 @@ Deno.serve(async (req) => {
 
 // deno-lint-ignore no-explicit-any
 async function upsertSubscription(db: any, sub: Stripe.Subscription, forceStatus?: string) {
-  const userId = sub.metadata?.user_id
-  const planId = sub.metadata?.plan_id
-  if (!userId) {
-    console.error("subscription without user_id metadata", sub.id)
+  // SHARED Stripe account (Dear RoRo): humhumhum and DeskSquat bill here too,
+  // and every webhook endpoint on the account receives every matching event.
+  // Ours is subscribed to subscription-shaped events only and both of those
+  // projects sell one-time payments, so foreign events are rare here — but a
+  // subscription that isn't ours must be SKIPPED quietly, never retried and
+  // never written. Ours carry metadata.project = "futurevoice" (and always
+  // user_id); anything else is another project's.
+  const project = sub.metadata?.project
+  if (project && project !== "futurevoice") {
+    console.log("skipping another project's subscription", project, sub.id)
     return
+  }
+  const userId = sub.metadata?.user_id
+  if (!userId) {
+    console.warn("subscription without user_id metadata — not ours, skipping", sub.id)
+    return
+  }
+  // The plan comes from the PRICE actually on the subscription, not from the
+  // checkout metadata: a portal upgrade/downgrade swaps the price but keeps
+  // the metadata written at checkout, so metadata alone goes stale the first
+  // time anyone changes plan. Metadata stays as the fallback (e.g. a price
+  // not yet in the catalog).
+  // deno-lint-ignore no-explicit-any
+  const priceId = (sub as any).items?.data?.[0]?.price?.id
+  let planId: string | null = sub.metadata?.plan_id ?? null
+  if (priceId) {
+    const { data: planRow } = await db
+      .from("subscription_plans")
+      .select("id")
+      .eq("stripe_price_id", priceId)
+      .maybeSingle()
+    if (planRow) planId = planRow.id
+    else console.warn("no plan for stripe price", priceId, "— falling back to metadata", planId)
   }
   const period = periodOf(sub)
   const { error } = await db.from("user_subscriptions").upsert({

@@ -475,6 +475,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/stripe-checkout/index.ts"
 
+[functions.stripe-portal]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/stripe-portal/index.ts"
+
 [functions.stripe-webhook]
 enabled = true
 # Stripe can't send a Supabase JWT — authenticity is the Stripe-Signature HMAC

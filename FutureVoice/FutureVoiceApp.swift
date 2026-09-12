@@ -119,6 +119,10 @@ struct FutureVoiceApp: App {
                 // Same reason as the two above: the app cannot know it, and
                 // the answer only matters when it has changed.
                 Task { await AppUpdateService.shared.check() }
+                // Subscriptions Apple knows about and the server may not —
+                // an offer code redeemed in the App Store, a restore on a
+                // new phone. Signed by Apple, verified server-side.
+                Task { await StoreKitService.claimCurrentEntitlements() }
                 // Drop the trial-ending notice once the trial isn't one any
                 // more. Reads the billing snapshot the app already keeps, so
                 // it usually costs nothing.
@@ -1183,7 +1187,7 @@ final class AppState: ObservableObject {
             // Both walls are 402 on the wire; a clone can only ever hit the
             // credit one, but the status has to stay faithful to what the
             // server actually answered.
-            case .insufficientCredits, .sceneCapReached, .dailyCapReached: return 402
+            case .insufficientCredits, .sceneCapReached, .dailyCapReached, .fairUseLimit: return 402
             case .httpError(let status, _): return status
             case .invalidResponse: return -1
             }

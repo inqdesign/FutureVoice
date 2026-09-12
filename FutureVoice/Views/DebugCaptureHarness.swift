@@ -116,6 +116,15 @@ enum DebugCapture {
             fullTankSeconds: 9000)
         out.periodEnd = Calendar.current.date(byAdding: .day, value: 18, to: Date())
         out.periodStart = Calendar.current.date(byAdding: .day, value: -12, to: Date())
+        // A launch-code subscriber (docs/launch-billing.md §7): the Usage
+        // page's subscription section has every row to show.
+        out.source = "apple"
+        out.startedAt = Calendar.current.date(byAdding: .day, value: -12, to: Date())
+        out.lastChargeMilliunits = 7_500_000
+        out.lastChargeCurrency = "KRW"
+        out.lastChargeDate = out.periodStart
+        out.currentOfferType = 3
+        out.offerCodeSince = out.startedAt
         return out
     }
 
@@ -210,11 +219,14 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
-        case "usage":
-            // The talk-time receipt, for the shared sample account below.
-            return AnyView(NavigationStack {
-                UsageDetailView(account: Self.sampleLightAccount, previewUsage: .sample)
-            })
+        case "activity-unsaved":
+            // The reported bug: a call closed with "Close without saving" —
+            // metered, no `Session`. The day must still be on the calendar,
+            // in the month total, and able to make its card.
+            once("activity-unsaved") {
+                TalkTimeLog.add(seconds: 8 * 60, language: appState.targetLanguage)
+            }
+            return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
         case "activity", "activity-cards":
             // The activity calendar with today selected — the day summary
             // carries the share-card button. "-cards" opens the card grid,
@@ -244,6 +256,27 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "welcome":
+            // The first screen, primary path (Get started).
+            return AnyView(WelcomeView().environmentObject(appState)
+                .environmentObject(AuthService()))
+        case "welcome-signin":
+            // The sign-in / sign-up buttons: Apple + Google. `register` is
+            // process-lifetime only — a persisted `set` here leaked into the
+            // NEXT normal launch, which then opened on the sign-in state.
+            once("welcome-signin") {
+                UserDefaults.standard.register(defaults: ["welcomeSignIn": true])
+            }
+            return AnyView(WelcomeView().environmentObject(appState)
+                .environmentObject(AuthService()))
+        case "signup-account":
+            // Onboarding's sign-UP moment: the account step after the clone
+            // was heard (Back · Apple · Google).
+            once("signup-account") {
+                UserDefaults.standard.register(defaults: ["cloneStatus": "account"])
+            }
+            return AnyView(VoiceCloneOnboardingView().environmentObject(appState)
+                .environmentObject(AuthService()))
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))
@@ -260,11 +293,12 @@ enum DebugCapture {
                 topics: ["Did you read about the study on AI replacing language teachers?", "Weekend plans", "Job interview"])
             return AnyView(DayCardSheet(day: Date(), preview: sample).environmentObject(appState))
         case "plan":
-            // Me → Plan & talk time, for the same Light subscriber the usage
-            // receipt uses — the two pages quote each other's numbers, so they
-            // have to be reviewed against ONE account or the check is worthless.
+            // Me → Talk time, for a Light subscriber. The receipt used to be
+            // its own capture (`-capture usage`); it is this page now, so the
+            // sample usage rides along and the whole thing is reviewed at
+            // once — which is what the two-capture split kept failing to do.
             return AnyView(NavigationStack {
-                PlanPageView(account: Self.sampleLightAccount)
+                PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
             })
         case "plan-guide":
             // The transparency page for a Light subscriber — the one place
@@ -367,6 +401,57 @@ enum DebugCapture {
                     }
                 }
             })
+        case "call-feed-fade":
+            // Geometry check for the call feed's edge under the mic bar: the
+            // same attachment ConversationView uses (`fadingBottomBar`), with a
+            // stand-in pill. Scrolled to the end so the last line's rest
+            // position is visible.
+            return AnyView(NavigationStack {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 18) {
+                            ForEach(0..<14, id: \.self) { i in
+                                if i % 2 == 0 {
+                                    DialogueLine(speaker: .other, name: "Future self") {
+                                        Text("So — how did the interview go yesterday? Anything you'd do differently next time?")
+                                    }
+                                    .id(i)
+                                } else {
+                                    DialogueLine(speaker: .user, name: "You") {
+                                        Text("Honestly, it went really well. I felt prepared. \(i)")
+                                    }
+                                }
+                            }
+                            Color.clear.frame(height: 8).id("end")
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
+                    }
+                    // `-captureScrolled`: park a bubble under the bar instead
+                    // of resting at the end, to photograph the fade itself.
+                    .onAppear {
+                        if UserDefaults.standard.bool(forKey: "captureScrolled") {
+                            proxy.scrollTo(8, anchor: .top)
+                        } else {
+                            proxy.scrollTo("end", anchor: .bottom)
+                        }
+                    }
+                }
+                .fadingBottomBar {
+                    VStack(spacing: 10) {
+                        Capsule().fill(Color.accentColor.opacity(0.3))
+                            .frame(width: 156, height: 64)
+                        Text("Listening").font(.footnote).foregroundStyle(.secondary).frame(height: 16)
+                    }
+                    .padding(.top, 14)
+                    .padding(.bottom, 20)
+                    .frame(maxWidth: .infinity)
+                }
+                .background(Color(.systemBackground))
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("Let's talk")
+            })
         case "summary-progress", "summary-progress-start":
             // The end-of-talk board, mid-build: the analysis has landed and
             // the counts are filling in. `-start` is the long first step,
@@ -409,6 +494,16 @@ enum DebugCapture {
                 .environmentObject(appState))
         case "home":
             once("home") { seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState) }
+            return AnyView(ConversationHome())
+        case "home-ring":
+            // The hero ring at an exact talk time — `-ringSeconds N` — so the
+            // arc can be reviewed short, mid and near-full. Seeds only the
+            // shortfall, so reinstall between runs to go DOWN.
+            once("home-ring") {
+                seedVocab(); seedSessions(); seedNews(into: appState); seedScenarios(into: appState)
+                let want = UserDefaults.standard.integer(forKey: "ringSeconds") - TalkTimeLog.secondsToday()
+                TalkTimeLog.add(seconds: want, language: appState.targetLanguage)
+            }
             return AnyView(ConversationHome())
         case "home-plus":
             // The same home for a PLUS subscriber, which draws NO ring — an
@@ -1220,14 +1315,28 @@ private struct UpdateCaptureHost: View {
     let required: Bool
     @State private var showing = false
 
+    /// The notes a real release actually ships — a paragraph plus five
+    /// bullets, verbatim from `fastlane/metadata/ko/release_notes.txt`. The
+    /// capture is only worth anything at this length: a one-line note fits
+    /// anywhere, and it was the real notes that ran off both ends of the sheet.
+    private static let releaseNotes = """
+    nawana를 시작합니다.
+
+    말이 늘지 않는 이유는 하나 — 충분히 말하지 않아서예요. 60초 녹음으로 유창해진 미래의 내 목소리를 만들고, 매일 통화하세요. 통화가 끝나면 내가 쓴 단어·표현·문법으로 나만의 교재가 만들어져요.
+
+    - 내 관심사에서 시작하는 매일 통화
+    - 매 턴 돌아오는 유창한 버전
+    - 통화가 끝나면 자동으로 만들어지는 나만의 교재
+    - 내 목소리로 하는 섀도잉, 입으로 답하는 복습
+    - 실제로 말한 것들로만 측정되는 레벨
+    """
+
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
                 UpdateAvailableSheet(
-                    update: .init(latestBuild: 15, latestVersion: "1.0.1",
-                                  notes: required
-                                      ? nil
-                                      : "초대로 받은 시간을 이번 달 통화 시간보다 먼저 쓰도록 고쳤어요.",
+                    update: .init(latestBuild: 99, latestVersion: "1.1",
+                                  notes: required ? nil : Self.releaseNotes,
                                   required: required),
                     onDismiss: {})
             }

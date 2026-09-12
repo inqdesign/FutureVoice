@@ -139,16 +139,47 @@ let progressWidgetKind = "FutureVoiceProgressWidget"
 /// change. All deterministic, computed in-app (no LLM).
 struct StudyProgressSnapshot: Codable {
     var updatedAt: Date
-    var todaySeconds: Int         // seconds spoken today (user turns)
+    var todaySeconds: Int         // metered talk seconds today, all languages
     var goalMinutes: Int          // the daily goal (minutes)
     var streakDays: Int           // consecutive days over the Core bar, in the active language
     var dueCount: Int             // SRS cards due right now
     var studyingWords: Int        // notebook words being studied
     var studyingExpressions: Int  // bookmarked phrases being studied
+    /// Whether today already cleared the Core bar in the language being
+    /// practised — the streak's own rule, decided app-side by the same
+    /// predicate that computes `streakDays`. It is NOT `todaySeconds >=
+    /// goalMinutes`: the goal is the learner's ring, the bar is what makes a
+    /// day count, and the streak widget judging by the goal put a "you're
+    /// about to lose it" face on a streak that had already been extended.
+    /// The two inputs don't even match — `todaySeconds` pools every language.
+    var metToday: Bool
 
     static let empty = StudyProgressSnapshot(
         updatedAt: .distantPast, todaySeconds: 0, goalMinutes: 10,
-        streakDays: 0, dueCount: 0, studyingWords: 0, studyingExpressions: 0)
+        streakDays: 0, dueCount: 0, studyingWords: 0, studyingExpressions: 0,
+        metToday: false)
+}
+
+/// The Core's daily bar, for the ONE case the extension has to guess: a
+/// snapshot written by a build older than `metToday`. The app mirrors the real
+/// value from `core_club_config`; nothing here may treat this as the rule.
+let coreDailyBarFallbackSeconds = 240
+
+extension StudyProgressSnapshot {
+    /// Lenient decode, so adding a field can never collapse the whole
+    /// snapshot to `.empty` and blank a widget until the app next runs.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        updatedAt = (try? c.decode(Date.self, forKey: .updatedAt)) ?? .distantPast
+        todaySeconds = (try? c.decode(Int.self, forKey: .todaySeconds)) ?? 0
+        goalMinutes = (try? c.decode(Int.self, forKey: .goalMinutes)) ?? 10
+        streakDays = (try? c.decode(Int.self, forKey: .streakDays)) ?? 0
+        dueCount = (try? c.decode(Int.self, forKey: .dueCount)) ?? 0
+        studyingWords = (try? c.decode(Int.self, forKey: .studyingWords)) ?? 0
+        studyingExpressions = (try? c.decode(Int.self, forKey: .studyingExpressions)) ?? 0
+        metToday = (try? c.decode(Bool.self, forKey: .metToday))
+            ?? (todaySeconds >= coreDailyBarFallbackSeconds)
+    }
 }
 
 /// WidgetKit `kind` for the "continue studying" widget — the one book you're

@@ -108,7 +108,11 @@ enum ExpressionCatalog {
                               origin: .said(count: entry.count), at: entry.lastAt)
         }
 
-        return byKey.values.sorted { $0.at > $1.at }
+        // Whatever the source, a phrase the learner threw out is gone: it was
+        // never material (see `VocabStore.dismissedExpressions`).
+        return byKey.values
+            .filter { !store.isDismissedExpression($0.key) }
+            .sorted { $0.at > $1.at }
     }
 
     /// The "to study" set — what the Practice tile counts and the page's

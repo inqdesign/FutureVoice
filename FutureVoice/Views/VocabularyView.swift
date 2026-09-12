@@ -442,7 +442,15 @@ struct WordCard: View {
     /// Words the user has USED count as known too — using a word in a real
     /// conversation is stronger evidence than a self-check, and every other
     /// surface (chips, cloud, counts) already treats them that way.
-    private var isKnown: Bool { store.records[word] != nil }
+    ///
+    /// Except while it's bookmarked: Keep and I-know are opposite verdicts on
+    /// one row, and a used word the learner chose to keep studying must not
+    /// light both. The bookmark wins, as it does for the cloud's badge; the
+    /// `.used` record itself is untouched.
+    private var isKnown: Bool {
+        guard let state = store.state(of: word) else { return false }
+        return state == .known || !store.isStudying(word)
+    }
 
     var body: some View {
         Group {

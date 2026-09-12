@@ -66,7 +66,7 @@ body{
 @keyframes pulse{ 0%,100%{box-shadow:0 0 0 0 rgba(64,100,245,.5)} 50%{box-shadow:0 0 0 6px rgba(64,100,245,0)} }
 .brand-word{ font-family:var(--pixel); font-weight:400; font-size:clamp(30px,4.2vw,46px); line-height:1; letter-spacing:-0.01em; }
 .tag{ margin-top:18px; font-size:clamp(15px,1.6vw,19px); line-height:1.4; color:var(--dim); letter-spacing:.01em; }
-.mini{ margin-top:18px; font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; color:var(--faint); }
+.mini{ margin-top:18px; font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; color:var(--faint); line-height:1.9; }
 .mini a{ color:var(--faint); text-decoration:none; } .mini a:hover{ color:var(--tx); }
 .join{ width:min(468px,100%); display:flex; flex-direction:column; gap:16px; }
 /* text-based tabs with a sliding underline indicator */
@@ -126,7 +126,7 @@ body{
       <div class="eyebrow"><span class="dot"></span><span class="etx">In beta testing</span></div>
       <div class="brand-word">nawana</div>
       <p class="tag">Learn a language from<br />your fluent self.</p>
-      <p class="mini"><a href="/privacy.html" class="mprivacy">Privacy</a> · <a href="mailto:hello.dearroroapp@gmail.com" class="mcontact">Contact</a></p>
+      <p class="mini"><a href="/privacy.html" class="mprivacy">Privacy</a> · <a href="/terms.html" class="mterms">Terms</a> · <a href="/impressum.html" class="mimprint">Impressum</a> · <a href="mailto:hello.dearroroapp@gmail.com" class="mcontact">Contact</a></p>
     </div>
     <form class="join" id="join" novalidate>
       <div class="seg" id="seg" role="group" aria-label="Choose an option">
@@ -382,14 +382,14 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       noteBeta:"We'll invite you to the TestFlight beta before launch.",
       okNotify:"You're on the list. We'll email you at launch.",
       okBeta:"You're on the waitlist — we'll email you when a beta spot opens up.",
-      bad:'Please enter a valid email.', privacy:'Privacy', contact:'Contact', ph:'you@email.com' },
+      bad:'Please enter a valid email.', privacy:'Privacy', terms:'Terms', imprint:'Impressum', contact:'Contact', ph:'you@email.com' },
     ko:{ eyebrow:'베타 테스트 중', tag:'유창한 나에게<br>언어를 배우세요.',
       notify:'알림 받기', beta:'베타 신청', btnNotify:'알림 받기', btnApply:'신청하기',
       noteNotify:'출시되면 이메일로 알려드릴게요.',
       noteBeta:'출시 전 TestFlight 베타로 초대해드릴게요.',
       okNotify:'등록됐어요. 출시되면 이메일로 알려드릴게요.',
       okBeta:'대기명단에 등록됐어요 — 자리가 나면 이메일로 바로 연락드릴게요.',
-      bad:'올바른 이메일을 입력해주세요.', privacy:'개인정보처리방침', contact:'문의', ph:'you@email.com' }
+      bad:'올바른 이메일을 입력해주세요.', privacy:'개인정보처리방침', terms:'이용약관', imprint:'Impressum', contact:'문의', ph:'you@email.com' }
   };
   var lang; try{ lang=localStorage.getItem('nawana_lang'); }catch(e){}
   if(lang!=='ko'&&lang!=='en'){ var nv=(navigator.languages&&navigator.languages[0])||navigator.language||'en'; lang=/^ko/i.test(nv)?'ko':'en'; }
@@ -409,7 +409,9 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     var e;
     if((e=qs('.eyebrow .etx'))) e.textContent=t('eyebrow');
     if((e=qs('.tag'))) e.innerHTML=t('tag');
-    if((e=qs('.mini .mprivacy'))) e.textContent=t('privacy');
+    if((e=qs('.mini .mprivacy'))){ e.textContent=t('privacy'); e.setAttribute('href', l==='ko'?'/privacy-ko.html':'/privacy.html'); }
+    if((e=qs('.mini .mterms'))){ e.textContent=t('terms'); e.setAttribute('href', l==='ko'?'/terms-ko.html':'/terms.html'); }
+    if((e=qs('.mini .mimprint'))) e.textContent=t('imprint');
     if((e=qs('.mini .mcontact'))) e.textContent=t('contact');
     if(input) input.setAttribute('placeholder', t('ph'));
     Array.prototype.forEach.call(seg.querySelectorAll('.opt'), function(o){ o.textContent=t(o.getAttribute('data-beta')==='1'?'beta':'notify'); });

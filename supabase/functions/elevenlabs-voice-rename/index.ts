@@ -58,6 +58,16 @@ Deno.serve(async (req) => {
     return errorResponse(upstream.status, "elevenlabs upstream error", detail.slice(0, 500))
   }
 
+  // Keep our copy in step with upstream. Written AFTER the upstream edit, so
+  // a row never claims a name ElevenLabs refused; a failure here is logged and
+  // swallowed, because the rename itself already succeeded.
+  const { error: nameErr } = await supabase
+    .from("voice_clones")
+    .update({ name })
+    .eq("user_id", user.id)
+    .eq("elevenlabs_voice_id", body.voice_id)
+  if (nameErr) console.error("voice_clones name update failed", nameErr)
+
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: { "Content-Type": "application/json", ...cors() },

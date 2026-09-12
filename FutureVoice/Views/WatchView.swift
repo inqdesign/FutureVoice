@@ -270,6 +270,13 @@ struct WatchView: View {
     /// Feed mode: playback auto-starts exactly once, on the first turn.
     @State private var streamAutoStarted = false
 
+    /// True while the playback loop is parked waiting for a line that hasn't
+    /// been written yet. It gates the prefetch refill above: a line that is
+    /// about to be claimed the instant it appears must NOT be turned into a
+    /// buffered prefetch — the loop's own streaming path starts audio on the
+    /// first PCM chunk, and re-synthesizing it would also bill the line twice.
+    @State private var waitingAtFrontier = false
+
     /// Audio for the line AFTER the one playing, fetched while it plays.
     /// Without this the loop was fully serial — synthesize, play, synthesize,
     /// play — so a full network round-trip of silence sat between every line,
@@ -316,6 +323,8 @@ struct WatchView: View {
     @State private var capAllowance: Int?
     /// When that pool refills.
     @State private var renewalLabel = ""
+    /// The plan stops on that date instead of refilling (cancelled).
+    @State private var planEndsAtPeriodEnd = false
 
     /// What the cap sheet was dismissed FOR; acted on in `onDismiss`, because
     /// a sheet can't raise the next one while it is closing.
@@ -366,6 +375,7 @@ struct WatchView: View {
             canUpgrade: canUpgradePlan,
             allowance: capAllowance,
             renewsOn: renewalLabel,
+            endsInstead: planEndsAtPeriodEnd,
             onReview: { capChoice = .review },
             onUpgrade: { capChoice = .upgrade })
     }
@@ -478,6 +488,17 @@ struct WatchView: View {
             if !streamAutoStarted {
                 streamAutoStarted = true
                 Task { await playFrom(index: 0) }
+            } else if isPlaying, !waitingAtFrontier, let idx = currentIndex {
+                // A streamed scene starts playing when only the FIRST turn
+                // exists, so `startPrefetch(after: 0)` had nothing to reach
+                // for and line 1 paid the whole round trip in the open —
+                // scene lines are serial server-side (rate · ownership ·
+                // scene claim · charge) before ElevenLabs is even called, so
+                // that one unhidden gap was seconds long while every later
+                // line was covered. Refill the window the moment a new line
+                // lands, so line 1 synthesizes behind line 0's playback like
+                // every other line does.
+                startPrefetch(after: idx)
             }
         }
         .onReceive(feedTitlePublisher) { title in
@@ -763,8 +784,10 @@ struct WatchView: View {
             // generation closes the scene. In practice the model writes
             // faster than speech, so this only ever waits at the very front.
             while isPlaying && i >= turns.count && awaitingMoreTurns {
+                waitingAtFrontier = true
                 try? await Task.sleep(nanoseconds: 120_000_000)
             }
+            waitingAtFrontier = false
             guard isPlaying, i < turns.count else { break }
             currentIndex = i
             let request = speechRequest(at: i)
@@ -801,6 +824,7 @@ struct WatchView: View {
                     ? account.monthlyCapSeconds.map { $0 / 60 }
                     : account.monthlyScenesCap
                 renewalLabel = account.renewalLabel
+                planEndsAtPeriodEnd = account.cancelAtPeriodEnd
                 sceneCapReached = true
                 isPlaying = false
                 return

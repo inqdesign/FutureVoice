@@ -186,6 +186,15 @@ Rules:
   list only when the user genuinely produced nothing reusable (very
   short or single-word turns) — in a normal conversation there are
   usually several.
+  - ASR GUARD: the transcript is machine-transcribed SPEECH, so a
+    mistranscription arrives wearing the user's own words and passes the
+    verbatim rule above — it really is in the transcript, letter for
+    letter. SKIP any candidate that is not WELL-FORMED in the target
+    language: a broken verb ending or particle, a word that doesn't
+    exist, a chunk no fluent writer would ever write. Do not repair it
+    either — a repaired phrase is not one they said. This list becomes
+    dictionary cards the user studies as real language, so returning
+    fewer is always right.
 - expressions_offered: up to ${expressionBudget} REUSABLE multi-word expressions YOU (the
   fluent self) said this conversation that the user did NOT — the
   phrases worth stealing out of this exact talk. Same test as

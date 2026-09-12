@@ -76,6 +76,20 @@ struct ExpressionsView: View {
                             }
                             .buttonStyle(.plain)
                             .task(id: entry.text) { await loadMeaning(entry) }
+                            // A phrase gets here by appearing verbatim in the
+                            // learner's own turns — which a mishearing does
+                            // too, in their own words ("넉다운이 된던"). Words
+                            // are safe by construction (they must be in
+                            // `CoreVocabulary`); expressions have no lexicon,
+                            // so the learner is the last judge and needs a way
+                            // to say it.
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) {
+                                    store.dismissExpression(entry.text)
+                                } label: {
+                                    Label("Remove", systemImage: "trash")
+                                }
+                            }
                         }
                     } header: {
                         // What this lens adds up to — same grammar as the
@@ -83,7 +97,7 @@ struct ExpressionsView: View {
                         Text("\(entries.count) expressions")
                     } footer: {
                         if filter == .toStudy {
-                            Text(explain("Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known."))
+                            Text(explain("Captured from what you say, what your fluent self says back, and the expressions your watched scenes teach. Mark the ones you've got down as known, and swipe away anything that came out of a mishearing."))
                         }
                     }
                 }
@@ -252,6 +266,7 @@ struct ExpressionCard: View {
     var navigationPhrases: [String]? = nil
     var context: Context? = nil
 
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var store = VocabStore.shared
     @StateObject private var player = AudioPlayer()
@@ -378,6 +393,21 @@ struct ExpressionCard: View {
                         .disabled(i == 0)
                     Button { currentPhrase = navList[i + 1] } label: { Image(systemName: "chevron.down") }
                         .disabled(i + 1 >= navList.count)
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    // The card is where a bad phrase is actually recognized as
+                    // bad — the dictionary entry for it reads as nonsense — so
+                    // the way out is here as well as on the list row.
+                    Button(role: .destructive) {
+                        store.dismissExpression(phrase)
+                        dismiss()
+                    } label: {
+                        Label("Remove from expressions", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }

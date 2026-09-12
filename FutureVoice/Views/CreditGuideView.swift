@@ -53,9 +53,12 @@ struct CreditGuideView: View {
                 } header: {
                     Text("What your plan holds")
                 } footer: {
+                    // A cancelled plan refills nothing — see PlanPageView.
                     Text(account.renewalLabel.isEmpty
                          ? explain("Scenes refill at the start of each billing period.")
-                         : explain("Scenes refill on \(account.renewalLabel)."))
+                         : account.cancelAtPeriodEnd
+                           ? explain("Your plan ends on \(account.renewalLabel).")
+                           : explain("Scenes refill on \(account.renewalLabel)."))
                 }
             }
 

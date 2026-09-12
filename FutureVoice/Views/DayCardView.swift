@@ -26,9 +26,23 @@ struct DayCardData: Codable, Equatable {
     /// number. Kept as a list so frozen snapshots still hold the record.
     var topics: [String]
     static let maxTopics = 4
+    /// The headline the learner settled (`DayCardStore.setHeadline`) — one
+    /// of `topics`, or their own words. Nil is automatic. Optional with a
+    /// default so snapshots written before it decode.
+    var headline: String? = nil
+
+    /// What the card prints at the top: the settled headline, else the main
+    /// talk's title.
+    var title: String? {
+        headline.flatMap { $0.isEmpty ? nil : $0 } ?? topics.first
+    }
 
     private static func spokenMs(_ s: Session) -> Int {
         s.turns.filter { $0.role == .user }.reduce(0) { $0 + $1.durationMs }
+    }
+    /// A picked or generated title, as opposed to `displayTitle`'s fallbacks.
+    private static func hasTitle(_ s: Session) -> Bool {
+        !(s.topic?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
 
     /// Anything on it at all — an empty day has no card.
@@ -73,13 +87,21 @@ struct DayCardData: Codable, Equatable {
     /// so yesterday's is as real as today's.
     @MainActor
     static func make(day: Date, calendar: Calendar = .current) -> DayCardData {
-        let sessions = SessionStore.shared.load()
+        // Every enrolled language: the card is the DAY's, and its minutes
+        // already are. Reading the active language alone put the numbers of
+        // two talks under the title of none, whenever the second was in the
+        // other language.
+        let sessions = SessionStore.shared.loadAcrossLanguages()
             .filter { $0.mode == .conversation }
             .filter { s in s.endedAt.map { calendar.isDate($0, inSameDayAs: day) } ?? false }
             .sorted { $0.startedAt < $1.startedAt }
-        // Main talk first: the one the learner spoke longest in.
+        // Main talk first: the one the learner spoke longest in — among the
+        // talks that HAVE a title. A talk whose summary never landed falls
+        // back to its first words or "Conversation", and that must not head
+        // the card while a titled talk sits beside it.
         let bySpoken = sessions.sorted {
-            spokenMs($0) > spokenMs($1)
+            let (a, b) = (hasTitle($0), hasTitle($1))
+            return a != b ? a : spokenMs($0) > spokenMs($1)
         }
         var seen = Set<String>()
         let topics = bySpoken.map(\.displayTitle)
@@ -98,7 +120,8 @@ struct DayCardData: Codable, Equatable {
             talks: sessions.count,
             reviews: log?.drillReps ?? 0,
             shadowTakes: log?.shadowReps ?? 0,
-            topics: Array(topics.prefix(maxTopics)))
+            topics: Array(topics.prefix(maxTopics)),
+            headline: DayCardStore.shared.headline(for: day))
     }
 }
 
@@ -157,7 +180,7 @@ struct DayCardView: View {
                 startPoint: .top, endPoint: .bottom)
 
             VStack(alignment: .leading, spacing: isFeed ? 15 : 11) {
-                if let topic = data.topics.first {
+                if let topic = data.title {
                     Text(topic)
                         .geistPixel(isFeed ? 35 : 29)
                         .lineLimit(3)

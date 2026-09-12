@@ -76,6 +76,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     @Published private(set) var micBytesSent = 0
     /// 0…1 level for the mic pill, from whichever side is currently audible.
     @Published private(set) var level: Float = 0
+    /// Set when the gateway ends the call on a spent allowance —
+    /// "insufficient_credits" or "daily_cap_reached". The view reads it from
+    /// the failed state to raise the right wall instead of an error alert.
+    @Published private(set) var wallCode: String?
 
     // MARK: Turn hand-off
     //
@@ -201,27 +205,47 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         private var gateActive = false
         private var gateFloor: Float = 0
         private var gateLearned = 0
+        /// Playback has actually reached the player for this line. Until
+        /// then nothing is learned: `audio_start` arrives a TTS round trip
+        /// before the first audible sample, and a floor measured in that
+        /// gap is the ROOM, not the echo — so every line's echo cleared the
+        /// margin, and only a converged echo canceller hid that.
+        private var gatePlaying = false
+        /// The whole line is forwarded as silence — no learning, no judging.
+        private var gateHalfDuplex = false
 
         /// Open or close the gate. Called when a line starts and ends playing.
-        func setEchoGate(active: Bool) {
+        func setEchoGate(active: Bool, halfDuplex: Bool = false) {
             lock.lock(); defer { lock.unlock() }
             if active && !gateActive {
                 gateFloor = 0
                 gateLearned = 0
+                gatePlaying = false
+                gateHalfDuplex = halfDuplex
             }
+            if !active { gateHalfDuplex = false }
             gateActive = active
         }
 
-        func echoGate() -> (active: Bool, floor: Float, learnedFrames: Int) {
+        /// The first reply buffer of the line was handed to the player.
+        func markPlaybackStarted() {
             lock.lock(); defer { lock.unlock() }
-            return (gateActive, gateFloor, gateLearned)
+            gatePlaying = true
         }
 
-        /// Fold one buffer of pure echo into the floor.
-        func learnEcho(rms: Float) {
+        func echoGate() -> (active: Bool, playing: Bool, halfDuplex: Bool,
+                            floor: Float, learnedFrames: Int) {
+            lock.lock(); defer { lock.unlock() }
+            return (gateActive, gatePlaying, gateHalfDuplex, gateFloor, gateLearned)
+        }
+
+        /// Fold one buffer of echo into the floor. Called for the learn
+        /// window AND for every later buffer judged to be echo, so the floor
+        /// follows the line's loudest echo instead of its first 0.4 s.
+        func learnEcho(rms: Float, counts: Bool) {
             lock.lock(); defer { lock.unlock() }
             gateFloor = max(gateFloor, rms)
-            gateLearned += 1
+            if counts { gateLearned += 1 }
         }
     }
     private let mic = MicUplink()
@@ -274,6 +298,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The server said the line is complete; the moment the local queue
     /// drains after this is when the learner's turn actually begins.
     private var serverAudioEnded = false
+    /// Lines the fluent self has started on THIS call — the first one on the
+    /// speaker is half-duplex (see `audio_start`).
+    private var linesStarted = 0
 
     private var isTornDown = false
 
@@ -298,7 +325,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         default: return
         }
         isTornDown = false
+        wallCode = nil
         state = .connecting
+        linesStarted = 0
         pendingRetry = fallbackVoiceId.map {
             Retry(voiceId: $0, language: language, system: system,
                   opener: opener, history: history)
@@ -319,7 +348,15 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("connect: mic granted")
             let token = try await Self.accessToken()
             Self.step("connect: got token")
-            try startAudio()
+            do { try startAudio() } catch {
+                // Launch-time races (another component touching the session
+                // mid-build) can stop the engine under the first attempt —
+                // one settle-and-retry saves the call instead of failing it.
+                Self.step("connect: startAudio threw (\(error)) — retrying once")
+                stopAudio()
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                try startAudio()
+            }
             Self.step("connect: audio up")
             try openSocket(token: token, voiceId: voiceId,
                            language: language, system: system,
@@ -583,7 +620,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         if #available(iOS 17.0, *) {
             input.isVoiceProcessingAGCEnabled = false
         }
-        // AFTER the toggle: VPIO re-negotiates the input format.
+        // AFTER the toggle: VPIO re-negotiates the input format — and on a
+        // COLD session it lands on the raw 4-mic array, the exact state whose
+        // tap never fires. This became EVERY call's first build once the
+        // classic warm-up stopped pre-arming the session (2026-09-03: 1–2
+        // watchdog restarts per call, opener text with no voice, one call
+        // failed outright). The same deactivate/reactivate cycle that settles
+        // the channel count pre-VPIO settles it here too — done NOW, before
+        // the engine exists, instead of 1.5 s later by the watchdog.
+        if session.inputNumberOfChannels != 1 {
+            Self.step("audio: post-VPIO inCh=\(session.inputNumberOfChannels) — cycling session")
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            try session.setActive(true, options: .notifyOthersOnDeactivation)
+            try? session.setPreferredInputNumberOfChannels(1)
+        }
         let probeFormat = input.outputFormat(forBus: 0)
         Self.step("audio: session sr=\(session.sampleRate) inCh=\(session.inputNumberOfChannels) "
             + "inputAvail=\(session.isInputAvailable) probe=\(probeFormat.sampleRate)/\(probeFormat.channelCount)")
@@ -1012,11 +1062,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         let gate = mic.echoGate()
         var muted = false
         if gate.active {
-            if gate.learnedFrames < Self.echoLearnFrames {
-                mic.learnEcho(rms: rms)
+            if gate.halfDuplex || !gate.playing {
+                // Half-duplex line, or the voice hasn't reached the player
+                // yet: nothing to measure against, forward silence.
+                muted = true
+            } else if gate.learnedFrames < Self.echoLearnFrames {
+                mic.learnEcho(rms: rms, counts: true)
                 muted = true
             } else {
                 muted = rms < gate.floor * Self.echoMargin
+                // Echo under the bar raises the bar for the rest of the
+                // line. Only judged-echo feeds the floor, so a real barge-in
+                // never mutes its own continuation.
+                if muted { mic.learnEcho(rms: rms, counts: false) }
             }
         }
         if muted {
@@ -1131,7 +1189,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             Self.step("gateway: ready")
             state = .listening
         case "user_partial":
-            partial = json["text"] as? String ?? ""
+            let text = json["text"] as? String ?? ""
+            // Every interim, stamped: how far behind the mouth the on-screen
+            // line runs is exactly the thing being debugged (2026-09-04).
+            if text != partial { Self.step("partial(\(text.count)): \(text.suffix(40))") }
+            partial = text
             if state != .speaking { state = partial.isEmpty ? .listening : .hearing }
         case "user_turn":
             let said = json["text"] as? String ?? ""
@@ -1164,7 +1226,22 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 replyContext = context
                 onReplyBegan?(context)
             }
-            mic.setEchoGate(active: true)
+            // The FIRST line of a call on the open speaker is half-duplex.
+            // Measured 2026-09-11 (device, speakerphone): the opener's own
+            // words came back as the learner's turn ("What is the best
+            // thing that is…"), cut the line and got answered — and the
+            // very next reply on the same call leaked nothing. The echo
+            // canceller is adaptive: it has cancelled nothing until it has
+            // heard the speaker, so the first line of every call is the one
+            // it cannot yet remove, and the level gate alone (learning on
+            // room noise, see `gatePlaying`) never stood a chance against
+            // it. Nobody needs to interrupt a greeting; a learner in
+            // earphones keeps full duplex from the first word.
+            linesStarted += 1
+            let halfDuplex = linesStarted == 1
+                && builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+            if halfDuplex { Self.step("echo gate: first line on speaker — half-duplex") }
+            mic.setEchoGate(active: true, halfDuplex: halfDuplex)
             replySampleRate = json["sampleRate"] as? Double ?? 22050
             ensurePlaybackFormat(rate: replySampleRate)
             // The line is appended empty and filled by the deltas, so the
@@ -1189,6 +1266,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 if let context = replyContext { onReplyDelta?(context, "\u{0}" + full) }
             }
         case "audio_end":
+            Self.step("audio_end (queued=\(pendingBuffers))")
             // "Sent" is not "heard": chunks are still draining through the
             // player. The turn flips to listening when the QUEUE empties —
             // flipping here put the You bubble up while the fluent self was
@@ -1196,7 +1274,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             serverAudioEnded = true
             if pendingBuffers == 0, state == .speaking { state = .listening }
             handOverReply()
-            closeEchoGateAfterTail()
+            // Close the gate only when the SPEAKER has finished — "sent" is
+            // not "heard" here either. With chunks still queued, closing on
+            // this event left the reply's last seconds playing UNGATED, and
+            // on speakerphone their echo came back as a phantom learner turn
+            // the fluent self then answered (reported 2026-09-02, build 29).
+            // A drained queue closes it below, in the playback completion.
+            if pendingBuffers == 0 { closeEchoGateAfterTail() }
         case "interrupted":
             // Drop everything queued: the learner is talking over it, and the
             // gateway has already stopped generating. Anything still in the
@@ -1229,6 +1313,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                                      history: retry.history) }
                 return
             }
+            // The gateway meters the call server-side (gateway/src/billing.ts)
+            // and says WHICH wall ended it. Remember the code so the view can
+            // raise the same sheet the classic meter's 402 would have —
+            // a spent day is a sheet, never a bare error alert.
+            if code == "insufficient_credits" || code == "daily_cap_reached"
+                || code == "fair_use_limit" {
+                wallCode = code
+            }
             state = .failed(message)
             teardown()
         default:
@@ -1243,11 +1335,42 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// syllable and ramp gently after that so nothing pumps mid-sentence.
     /// Keep the gate shut for the room's tail. The speaker stops before the
     /// reverberation does, and the last buffers are still in flight.
+    /// The queue ran dry but the server never said the line was over.
+    /// Measured 2026-09-11 (device, speakerphone): the opener's `audio_end`
+    /// never arrived, so the state sat on `speaking` and — now that the
+    /// first line is half-duplex — the mic stayed muted for the rest of the
+    /// call. A line whose audio has all been HEARD and nothing new has
+    /// arrived for a beat is over whatever the server says: close the gate
+    /// and hand the turn over. A late `audio_end` after this is harmless
+    /// (both paths are idempotent).
+    private static let drainFallbackSeconds: TimeInterval = 1.2
+    private var drainFallbackTask: Task<Void, Never>?
+
+    private func armDrainFallback() {
+        drainFallbackTask?.cancel()
+        let context = replyContext
+        drainFallbackTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.drainFallbackSeconds * 1_000_000_000))
+            guard let self, !Task.isCancelled, !self.isTornDown else { return }
+            guard self.pendingBuffers == 0, self.state == .speaking,
+                  self.replyContext == context, !self.serverAudioEnded else { return }
+            Self.step("audio_end never came — queue drained \(Self.drainFallbackSeconds)s ago, ending line locally")
+            self.serverAudioEnded = true
+            self.closeEchoGateAfterTail()
+            self.state = .listening
+            self.handOverReply()
+        }
+    }
+
     private func closeEchoGateAfterTail() {
-        echoHoldUntil = Date().addingTimeInterval(0.4)
+        // The room keeps speaking after the speaker stops. On the open
+        // speaker that reverberation is loud and long enough to clear the
+        // gate's margin, so it gets a longer tail than an earphone route.
+        let tail = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue ? 0.7 : 0.4
+        echoHoldUntil = Date().addingTimeInterval(tail)
         let deadline = echoHoldUntil
         Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 400_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(tail * 1_000_000_000))
             guard let self, self.echoHoldUntil <= deadline else { return }
             self.mic.setEchoGate(active: false)
         }
@@ -1376,17 +1499,23 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
         }
         pendingBuffers += 1
+        mic.markPlaybackStarted()
         let scheduled = Self.avGuard("scheduleBuffer") {
             self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
+                    if self.pendingBuffers == 0, self.serverAudioEnded {
+                        // The last scheduled audio has been HEARD — only now
+                        // may the echo gate come down (plus the room's tail).
+                        self.closeEchoGateAfterTail()
+                    }
                     if self.pendingBuffers == 0, self.state == .speaking {
                         self.level = 0
-                        // The last scheduled audio has been HEARD — if the
-                        // server already closed the line, it is the learner's
-                        // turn now.
+                        // If the server already closed the line, it is the
+                        // learner's turn now.
                         if self.serverAudioEnded { self.state = .listening }
+                        else { self.armDrainFallback() }
                     }
                 }
             }
@@ -1408,9 +1537,18 @@ extension RealtimeTalkClient {
     /// unthrottled print would bury the very thing being looked for.
     /// Unthrottled: setup happens once per call, and losing one of these
     /// lines to a rate limiter is how "it just does nothing" stays unsolved.
+    /// Wall-clock stamp for the DEBUG console. The device console adds none,
+    /// and "the transcript showed up late" is unreadable without one.
+    nonisolated private static let stampFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
+    nonisolated private static func stamp() -> String { stampFormatter.string(from: Date()) }
+
     nonisolated static func step(_ message: String) {
         #if DEBUG
-        print("[realtime] \(message)")
+        print("[realtime \(stamp())] \(message)")
         #endif
     }
 
@@ -1421,7 +1559,7 @@ extension RealtimeTalkClient {
         let due = now - lastTraceAt > 1.0
         if due { lastTraceAt = now }
         traceLock.unlock()
-        if due { print("[realtime] \(message())") }
+        if due { print("[realtime \(stamp())] \(message())") }
         #endif
     }
     nonisolated(unsafe) static var sawFirstBuffer = false
@@ -1434,11 +1572,29 @@ extension RealtimeTalkClient {
 /// talked over, but it is new, and the old path is the one five months of
 /// learners have used. The toggle lives in Me → Speed test.
 enum RealtimeMode {
-    static let key = "futurevoice.realtimeTalk"
-    static var isEnabled: Bool {
-        get { UserDefaults.standard.bool(forKey: key) }
-        set { UserDefaults.standard.set(newValue, forKey: key) }
-    }
+    /// Realtime is the ONLY call path since 2026-09-05, and the opt-out
+    /// toggle in Me is gone.
+    ///
+    /// It was a DEFAULT with an escape hatch (2026-09-02), which is the right
+    /// shape for a new transport — until the hatch turns out to be broken.
+    /// Off, a learner got the classic per-turn call, and that path
+    /// ends turns on its own VAD tiers: it cut the learner off mid-sentence
+    /// (reported 2026-09-04, and the tiers had been tuned down twice on
+    /// latency telemetry that structurally cannot see a turn ending early).
+    /// The same learner reported the call's time not being tracked there.
+    /// A setting whose job is "use this if the new one misbehaves" cannot
+    /// itself be the worse call.
+    ///
+    /// The stored key is deliberately IGNORED rather than read once and
+    /// migrated: an account that turned realtime off is on the broken path
+    /// right now, and the point of this change is to bring it back.
+    ///
+    /// The classic path's code is untouched and still compiles — every
+    /// `if RealtimeMode.isEnabled` in `ConversationView` keeps its `else`.
+    /// It is now unreachable, and deleting it is its own change, worth
+    /// making only after the realtime path has run a while without anyone
+    /// wishing they could turn it off.
+    static let isEnabled = true
 }
 
 enum RealtimeError: LocalizedError {

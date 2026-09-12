@@ -39,6 +39,7 @@ final class SessionStore: LanguageScopedStore {
         lock.lock(); defer { lock.unlock() }
         fileURL = LanguageScope.activeDirectory.appendingPathComponent(filename)
         cache = nil
+        otherLanguageCache = [:]
     }
 
     /// All sessions, newest-ended-first. Sessions are value types, so callers
@@ -50,6 +51,30 @@ final class SessionStore: LanguageScopedStore {
         cache = sessions
         return sessions
     }
+
+    /// Every enrolled language's sessions together, newest-ended-first —
+    /// for the surfaces that are about a DAY rather than a language (the
+    /// day card). The active language comes from the cache; the others are
+    /// decoded from their own files and kept until that file changes, so a
+    /// day's card costs one decode per language, not one per look.
+    func loadAcrossLanguages() -> [Session] {
+        var all = load()
+        lock.lock(); defer { lock.unlock() }
+        for code in LanguageScope.enrolled where code != LanguageScope.active {
+            let url = LanguageScope.directory(for: code).appendingPathComponent(filename)
+            let stamp = (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+            if let cached = otherLanguageCache[code], cached.stamp == stamp {
+                all += cached.sessions
+                continue
+            }
+            let sessions = (try? Data(contentsOf: url))
+                .flatMap { try? decoder.decode([Session].self, from: $0) } ?? []
+            otherLanguageCache[code] = (stamp, sessions)
+            all += sessions
+        }
+        return all.sorted { rank($0) > rank($1) }
+    }
+    private var otherLanguageCache: [String: (stamp: Date?, sessions: [Session])] = [:]
 
     /// Inserts or overwrites by `session.id`.
     func save(_ session: Session) {

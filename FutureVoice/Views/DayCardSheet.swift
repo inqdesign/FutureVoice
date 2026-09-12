@@ -32,6 +32,16 @@ struct DayCardSheet: View {
     @State private var exported: SharedCard?
     @State private var thumb: UIImage?
     @State private var photoStamp = 0
+    /// The headline field — the learner's OWN words only. A picked talk
+    /// title shows as a checkmark on its row, never in here. Edits show on
+    /// the card as they're typed; the store is written when the field is
+    /// left, so the page underneath isn't asked to redraw its thumbnails on
+    /// every keystroke.
+    @State private var headlineText = ""
+    @FocusState private var editingHeadline: Bool
+    /// Set while `pick` empties the field, so the field's change handler
+    /// doesn't read that emptying as "back to automatic".
+    @State private var clearingField = false
 
     private var store: DayCardStore { DayCardStore.shared }
     private var isToday: Bool { Calendar.current.isDateInToday(day) }
@@ -56,6 +66,35 @@ struct DayCardSheet: View {
                     .pickerStyle(.segmented)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
+                }
+                Section {
+                    // The day's talks, to pick from. The card's automatic
+                    // choice is the first; a tap makes it the day's for good.
+                    if let data {
+                        ForEach(data.topics, id: \.self) { topic in
+                            Button { pick(topic) } label: {
+                                HStack {
+                                    Text(topic).lineLimit(2)
+                                    Spacer()
+                                    if topic == data.title {
+                                        Image(systemName: "checkmark").foregroundStyle(.tint)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    TextField("Or write your own", text: $headlineText)
+                        .focused($editingHeadline)
+                        .submitLabel(.done)
+                        .onSubmit { editingHeadline = false }
+                } header: {
+                    Text("Headline")
+                } footer: {
+                    // Material, so the language being learned — like the talk
+                    // titles it stands in for.
+                    Text("Write it in \(LanguageCatalog.learnerName(LanguageScope.active)).")
                 }
                 Section {
                     if hasCamera {
@@ -98,6 +137,17 @@ struct DayCardSheet: View {
             }
         }
         .onAppear(perform: load)
+        .onChange(of: headlineText) { _, text in
+            if clearingField { clearingField = false; return }
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            // Typing takes the headline; clearing the field hands it back
+            // to the automatic pick, not to whatever was chosen before.
+            data?.headline = trimmed.isEmpty ? nil : trimmed
+        }
+        .onChange(of: editingHeadline) { _, editing in
+            if !editing { commitHeadline() }
+        }
+        .onDisappear(perform: commitHeadline)
         .onChange(of: pick) { _, item in
             guard let item else { return }
             Task {
@@ -128,12 +178,35 @@ struct DayCardSheet: View {
             .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
     }
 
-    private struct RenderKey: Equatable { var format: DayCardFormat; var photoStamp: Int; var ready: Bool }
-    private var renderKey: RenderKey { RenderKey(format: format, photoStamp: photoStamp, ready: data != nil) }
+    private struct RenderKey: Equatable {
+        var format: DayCardFormat; var photoStamp: Int; var ready: Bool; var headline: String?
+    }
+    private var renderKey: RenderKey {
+        RenderKey(format: format, photoStamp: photoStamp, ready: data != nil, headline: data?.headline)
+    }
 
     private func load() {
         data = preview ?? DayCardData.resolve(day: day)
         photo = store.photo(for: day)
+        // Only a headline the learner WROTE belongs in the field; one that
+        // matches a talk shows on that talk's row instead.
+        if let h = data?.headline, !(data?.topics.contains(h) ?? false) { headlineText = h }
+    }
+
+    /// A talk's title as the day's headline. The field empties — its text is
+    /// the learner's own words, and this isn't one of them.
+    private func pick(_ topic: String) {
+        editingHeadline = false
+        if !headlineText.isEmpty { clearingField = true; headlineText = "" }
+        data?.headline = topic
+        commitHeadline()
+    }
+
+    /// Settle the typed headline as the day's. Empty goes back to automatic.
+    private func commitHeadline() {
+        guard preview == nil, let data else { return }
+        store.setHeadline(data.headline, for: day)
+        store.freeze(data)
     }
 
     private func setPhoto(_ image: UIImage?) {
@@ -141,8 +214,15 @@ struct DayCardSheet: View {
         photo = store.photo(for: day)
         photoStamp += 1
         // Taking the photo is making the card, so settle the day with it —
-        // a no-op while that day is today, which the store refuses.
-        if preview == nil, let data { store.freeze(data) }
+        // the numbers only for today (the store refuses to freeze a running
+        // day), but the HEADLINE always: the card is about to be shared, and
+        // a later talk that outruns this one must not change its face.
+        guard preview == nil, let data else { return }
+        if data.headline == nil, let auto = data.topics.first {
+            self.data?.headline = auto
+            store.setHeadline(auto, for: day)
+        }
+        store.freeze(self.data ?? data)
     }
 
     @MainActor

@@ -391,6 +391,25 @@ export async function refund(opts: {
 }
 
 /**
+ * Ping the owner on Telegram. Best-effort and silent: every caller is on a
+ * path that must not fail because a notification did.
+ */
+export async function notifyOwner(text: string): Promise<void> {
+  try {
+    const token = Deno.env.get("TELEGRAM_BOT_TOKEN")
+    const chatId = Deno.env.get("TELEGRAM_ADMIN_CHAT_ID")
+    if (!token || !chatId) return
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    })
+  } catch (e) {
+    console.error("notifyOwner failed (non-fatal)", e)
+  }
+}
+
+/**
  * Best-effort owner alert the FIRST time a user hits the credit wall.
  * Writes one row to credit_depletion_alerts (dedup by user_id) and, when
  * TELEGRAM_BOT_TOKEN + TELEGRAM_ADMIN_CHAT_ID are configured, pings the
@@ -445,6 +464,23 @@ export function dailyCapResponse(corsHeaders: HeadersInit): Response {
     JSON.stringify({
       error: "daily_cap_reached",
       message: "Today's talk minutes are used up. They reset at midnight UTC.",
+    }),
+    { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
+  )
+}
+
+/**
+ * An uncapped plan (Plus) crossed the ABUSE line — not the fair-use figure,
+ * which is only ever flagged and never shown. Its own code because the
+ * spent-allowance copy ("all N minutes are used up") is the one sentence an
+ * account sold "no limit" must never be shown: nothing ran out, the account is
+ * under review. 402 like the others so an old client still stops the call.
+ */
+export function fairUseLimitResponse(corsHeaders: HeadersInit): Response {
+  return new Response(
+    JSON.stringify({
+      error: "fair_use_limit",
+      message: "This account's usage is being reviewed.",
     }),
     { status: 402, headers: { "Content-Type": "application/json", ...corsHeaders } },
   )

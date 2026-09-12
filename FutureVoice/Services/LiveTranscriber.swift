@@ -146,6 +146,14 @@ final class LiveTranscriber: ObservableObject {
     /// last changed", which lags real speech by an unpredictable amount.
     var lastVoicedAt: Date? { fluency.lastVoicedTime() }
 
+    /// Wall-clock moment the mic FIRST heard voiced audio this run — i.e. when
+    /// the learner actually started talking, as opposed to when the mic
+    /// opened. The gap between the two is thinking time, and it belongs to
+    /// nobody: it used to be recorded into the turn's audio file, counted as
+    /// the turn's duration, and clocked against the 30 s listening ceiling.
+    /// nil until the first voiced frame.
+    var firstVoicedAt: Date? { fluency.firstVoicedTime() }
+
     /// Ambient noise estimate the endpointer is currently working against
     /// (0…1 on the mic level curve; ~0.35 ≈ −32.5 dBFS). Telemetry only.
     var ambientNoiseLevel: Float { fluency.noiseFloorLevel() }
@@ -277,6 +285,8 @@ final class LiveTranscriber: ObservableObject {
         let mode: AVAudioSession.Mode = useMeasurement ? .measurement : .default
         try session.setCategory(.playAndRecord, mode: mode, options: options)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
+        // The worn mic is asked for, not assumed — see `engageWornMic`.
+        if !preferBuiltInMic { AudioSessionRouting.engageWornMic(session) }
         AudioSessionRouting.applyOutputRoute(session)
         if preferBuiltInMic { AudioSessionRouting.preferBuiltInMic(session) }
 
@@ -350,7 +360,7 @@ final class LiveTranscriber: ObservableObject {
             let format = input.outputFormat(forBus: 0)
             let sampleRate = format.sampleRate
             if capture {
-                localRecorder.begin(format: format)
+                localRecorder.begin(format: format, trimLeadingSilence: true)
                 if chunkCapture {
                     localChunkRecorder.begin(format: format)
                     self?.captureFormat = format
@@ -358,10 +368,16 @@ final class LiveTranscriber: ObservableObject {
             }
             input.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
                 localAppender.append(buffer)
-                localRecorder.append(buffer)
-                localChunkRecorder.append(buffer)
+                // Metered BEFORE the writers: the full-turn capture is
+                // head-trimmed, and only the meter knows which frames are
+                // speech (its threshold adapts to the room).
                 let rms = Self.rms(of: buffer)
-                localFluency.feed(level: rms, seconds: Double(buffer.frameLength) / sampleRate)
+                let voiced = localFluency.feed(level: rms,
+                                               seconds: Double(buffer.frameLength) / sampleRate)
+                localRecorder.append(buffer, voiced: voiced)
+                // Chunks are cut at pause boundaries and each piece is judged
+                // by voiced seconds already — they keep every frame.
+                localChunkRecorder.append(buffer, voiced: true)
                 Task { @MainActor [weak self] in
                     self?.level = rms
                 }
@@ -747,6 +763,11 @@ final class LiveTranscriber: ObservableObject {
             }
 
             if segmentText != lastSegmentText {
+                // The recognizer heard WORDS. Belt and braces for the capture's
+                // head trim: a learner speaking softly into a loud room can
+                // stay under the meter's adaptive voiced threshold, and a
+                // recording gated on energy alone would open mid-sentence.
+                recorder.armIfNeeded()
                 lastChangeTime = Date()
                 // The ONLY place the endpointer's settle clock advances: this
                 // is the recognizer still trailing live speech. A late rescore
@@ -824,6 +845,7 @@ private final class FluencyMeter: @unchecked Sendable {
     private var pauseSeconds = 0.0
     private var longestPause = 0.0
     private var lastVoicedAt: Date?
+    private var firstVoicedAt: Date?
 
     /// Absolute "this is speech" floor — 0.35 on the `rms()` curve is
     /// −32.5 dBFS. A quiet room's ambient sits far below it, so there this
@@ -870,12 +892,18 @@ private final class FluencyMeter: @unchecked Sendable {
         total = 0; voiced = 0; started = false; silenceRun = 0
         pauseCount = 0; pauseSeconds = 0; longestPause = 0
         lastVoicedAt = nil
+        firstVoicedAt = nil
         noiseFloor = 0; hasNoiseFloor = false
     }
 
     func lastVoicedTime() -> Date? {
         lock.lock(); defer { lock.unlock() }
         return lastVoicedAt
+    }
+
+    func firstVoicedTime() -> Date? {
+        lock.lock(); defer { lock.unlock() }
+        return firstVoicedAt
     }
 
     func longestPauseSoFar() -> Double {
@@ -891,8 +919,13 @@ private final class FluencyMeter: @unchecked Sendable {
         return noiseFloor
     }
 
-    func feed(level: Float, seconds: Double) {
-        guard seconds > 0 else { return }
+    /// - Returns: whether THIS frame was speech (above the adaptive voiced
+    ///   threshold). The turn's capture uses it to drop the silence in front
+    ///   of the first word — the meter is the only thing in the graph that
+    ///   knows where the room ends and the learner begins.
+    @discardableResult
+    func feed(level: Float, seconds: Double) -> Bool {
+        guard seconds > 0 else { return false }
         lock.lock(); defer { lock.unlock() }
         total += seconds
         // Seed from the first frame (the mic opens before the user starts, so
@@ -917,10 +950,14 @@ private final class FluencyMeter: @unchecked Sendable {
             silenceRun = 0
             voiced += seconds
             started = true
-            lastVoicedAt = Date()
+            let now = Date()
+            lastVoicedAt = now
+            if firstVoicedAt == nil { firstVoicedAt = now }
+            return true
         } else if started {
             silenceRun += seconds   // ignore leading/trailing silence
         }
+        return false
     }
 
     func snapshot() -> FluencyStats {
@@ -940,7 +977,37 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
     private var file: AVAudioFile?
     private var url: URL?
 
-    func begin(format: AVAudioFormat) {
+    /// Head trim (2026-09-04). The mic opens the moment the fluent self stops
+    /// speaking, and the learner then thinks — so everything from the opening
+    /// of the mic to their first word was landing at the FRONT of this file:
+    /// the listen-back in Practice opened on a wall of nothing, and the same
+    /// dead air was uploaded to the transcription call. Frames are held back
+    /// until the meter says speech, keeping `prerollSeconds` of them so the
+    /// first phoneme — which is quieter than the vowel that proves it — is
+    /// never clipped off the front.
+    ///
+    /// It can only ever remove silence: `armIfNeeded` opens the gate on the
+    /// recognizer's first partial too, and `finish` flushes whatever is still
+    /// held. A run that never armed leaves the last `prerollSeconds`, not an
+    /// empty file.
+    private var armed = true
+    private var preroll: [AVAudioPCMBuffer] = []
+    private var prerollFrames: AVAudioFrameCount = 0
+    private var prerollCapacity: AVAudioFrameCount = 0
+    /// Consecutive voiced frames seen so far while still gated.
+    private var voicedRunFrames: AVAudioFrameCount = 0
+    private var armFrames: AVAudioFrameCount = 0
+    /// Speech before the meter's threshold is met: a leading consonant, and
+    /// the recognizer's own lead-in. Costs ~230 KB of float frames at 48 kHz.
+    private static let prerollSeconds = 1.2
+    /// Voiced audio that must run UNBROKEN before the gate opens. One hot
+    /// buffer is the engine-start click or a knock on the table; a vowel is
+    /// many. Without this the click armed the writer on frame one and the
+    /// trim silently did nothing on those turns. Far inside the preroll, so
+    /// the frames that earned the arming are all still held.
+    private static let armSeconds = 0.06
+
+    func begin(format: AVAudioFormat, trimLeadingSilence: Bool = false) {
         let dest = FileManager.default.temporaryDirectory
             .appendingPathComponent("user-turn-\(UUID().uuidString).m4a")
         // 64 kbps, not the 32 it was until 2026-08. This file is not just
@@ -959,6 +1026,48 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         file = try? AVAudioFile(forWriting: dest, settings: settings)
         url = file == nil ? nil : dest
+        armed = !trimLeadingSilence
+        preroll.removeAll()
+        prerollFrames = 0
+        voicedRunFrames = 0
+        prerollCapacity = AVAudioFrameCount(format.sampleRate * Self.prerollSeconds)
+        armFrames = AVAudioFrameCount(format.sampleRate * Self.armSeconds)
+    }
+
+    /// Open the gate from outside the audio thread — the recognizer heard
+    /// words even though the energy meter hasn't called anything speech yet.
+    func armIfNeeded() {
+        lock.lock(); defer { lock.unlock() }
+        guard !armed else { return }
+        flushPrerollLocked()
+        armed = true
+    }
+
+    /// Caller holds the lock.
+    private func flushPrerollLocked() {
+        guard let f = file else { preroll.removeAll(); prerollFrames = 0; return }
+        for held in preroll { try? f.write(from: held) }
+        preroll.removeAll()
+        prerollFrames = 0
+    }
+
+    /// A tap buffer is only valid for the duration of the callback, so a held
+    /// frame has to be copied. Float is the format every tap in the app hands
+    /// back; anything else refuses to be held and simply arms the writer,
+    /// which is exactly the pre-2026-09 behavior.
+    private static func copy(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer? {
+        guard let src = buffer.floatChannelData,
+              !buffer.format.isInterleaved,
+              buffer.frameLength > 0,
+              let out = AVAudioPCMBuffer(pcmFormat: buffer.format,
+                                         frameCapacity: buffer.frameLength),
+              let dst = out.floatChannelData else { return nil }
+        out.frameLength = buffer.frameLength
+        let bytes = Int(buffer.frameLength) * MemoryLayout<Float>.size
+        for channel in 0..<Int(buffer.format.channelCount) {
+            memcpy(dst[channel], src[channel], bytes)
+        }
+        return out
     }
 
     /// Writes INSIDE the lock on purpose. Copying the `AVAudioFile` reference
@@ -968,9 +1077,30 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
     /// already read the file back, yielding a truncated, unopenable capture.
     /// That is the audio the Gemini turn attaches, so a lost flush costs the
     /// user their verbatim transcript. Contention is start/finish only.
-    func append(_ buffer: AVAudioPCMBuffer) {
+    func append(_ buffer: AVAudioPCMBuffer, voiced: Bool) {
         lock.lock(); defer { lock.unlock() }
         guard let f = file else { return }
+        if !armed {
+            voicedRunFrames = voiced ? voicedRunFrames + buffer.frameLength : 0
+            if voicedRunFrames >= armFrames {
+                flushPrerollLocked()
+                armed = true
+                try? f.write(from: buffer)
+                return
+            }
+            guard let held = Self.copy(buffer) else {
+                armed = true
+                try? f.write(from: buffer)
+                return
+            }
+            preroll.append(held)
+            prerollFrames += held.frameLength
+            while prerollFrames > prerollCapacity, let oldest = preroll.first {
+                preroll.removeFirst()
+                prerollFrames -= oldest.frameLength
+            }
+            return
+        }
         try? f.write(from: buffer)
     }
 
@@ -980,6 +1110,10 @@ private final class TurnAudioFileWriter: @unchecked Sendable {
     /// flight because it holds the same lock.
     func finish() -> URL? {
         lock.lock(); defer { lock.unlock() }
+        // Never armed — the whole run stayed under the voiced threshold and
+        // the recognizer never spoke up. Keep the tail rather than hand back
+        // an empty file: quiet audio still transcribes, silence never does.
+        if !armed { flushPrerollLocked() }
         let u = url
         file = nil    // AVAudioFile closes (and flushes) when released
         url = nil

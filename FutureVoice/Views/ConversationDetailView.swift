@@ -352,7 +352,8 @@ struct ConversationDetailView: View {
     private var usedExpressions: [String] {
         let credited = creditedItems
         return (session.summary?.expressionsUsed ?? [])
-            .filter { !credited.contains(CarryoverDetector.normalized($0)) }
+            .filter { !credited.contains(CarryoverDetector.normalized($0))
+                        && !VocabStore.shared.isDismissedExpression($0) }
     }
 
     /// The other half of this chapter: reusable phrases the fluent self used
@@ -366,6 +367,7 @@ struct ConversationDetailView: View {
         let mine = Set(usedExpressions.map(CarryoverDetector.normalized))
         return (session.summary?.expressionsOffered ?? []).filter {
             !VocabStore.shared.isKnownExpression($0)
+                && !VocabStore.shared.isDismissedExpression($0)
                 && !mine.contains(CarryoverDetector.normalized($0))
         }
     }
@@ -1113,7 +1115,9 @@ struct TalkTranscriptView: View {
         .navigationTitle(session.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.hidden, for: .tabBar)
-        .safeAreaInset(edge: .bottom) { controls }
+        // Same dissolve the live call uses: the transcript slides under the
+        // controls instead of stopping at a solid strip (2026-09-03).
+        .fadingBottomBar { controls }
         .onAppear {
             fluentSelfNewWords = VocabStore.shared.pickupWords(
                 fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
@@ -1172,7 +1176,7 @@ struct TalkTranscriptView: View {
         .controlSize(.large)
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(.bar)
+        // No background — `fadingBottomBar` owns what happens behind it.
     }
 
     /// Sequential replay of the stored per-turn audio (user mic + synthesized

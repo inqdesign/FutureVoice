@@ -616,6 +616,11 @@ enum ElevenLabsError: Error, LocalizedError {
     /// and told a paying learner they were out of credits — measured on a
     /// Daily account whose Watch scenes had eaten the day's 300 s.
     case dailyCapReached
+    /// An UNCAPPED plan crossed the abuse line (`fair_use_limit`). Not a
+    /// spent allowance and not a paywall: that tier was sold no limit, and
+    /// the fair-use figure it is watched against is never shown to it. Only a
+    /// script can reach this, so the answer is a support conversation.
+    case fairUseLimit
 
     var errorDescription: String? {
         switch self {
@@ -636,6 +641,9 @@ enum ElevenLabsError: Error, LocalizedError {
             // Surfaces that have no cap sheet of their own (drills, library
             // previews) fall back to this line. It must never say "credits".
             return explain("You've used today's talk time. It comes back at midnight — reviewing is always free.")
+        case .fairUseLimit:
+            // Says nothing about an allowance, because none ran out.
+            return explain("We've paused talking on this account while we check some unusual usage. Write to us and we'll sort it out.")
         }
     }
 
@@ -646,6 +654,7 @@ enum ElevenLabsError: Error, LocalizedError {
     /// first time this was written by hand twice.
     static func wall(body: String) -> ElevenLabsError {
         if body.contains("scene_cap_reached") { return .sceneCapReached }
+        if body.contains("fair_use_limit") { return .fairUseLimit }
         if body.contains("daily_cap_reached") { return .dailyCapReached }
         return .insufficientCredits
     }

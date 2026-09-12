@@ -26,6 +26,15 @@
 | **Privacy Policy URL** | https://nawana.app/privacy.html (live; ko at /privacy-ko.html) |
 | **Copyright** | © 2026 Dear RoRo |
 
+> **Terms of Use (EULA) 링크는 Description 맨 끝에 반드시 들어간다** (2026-09-04, 자동 리젝).
+> 자동 갱신 구독이 있는 앱은 App Store 제품 페이지에 약관 링크가 있어야 하고, 이건 제출
+> 즉시 기계가 검사한다. 앱은 Apple 표준 EULA를 쓰므로(`PaywallView.termsURL`) 커스텀 EULA
+> 필드가 아니라 Description에 `https://www.apple.com/legal/internet-services/itunes/dev/stdeula/`
+> 한 줄을 넣는다. 두 언어의 description.txt 끝에 이미 붙어 있다 — 붙여넣을 때 잘라내지 말 것.
+> 자체 약관은 2026-09-04에 썼다 — `web/terms.html` / `terms-ko.html` / `impressum.html`.
+> 출시 후 `PaywallView.termsURL`을 거기로 바꾸는 빌드를 올릴 때 이 Description 링크와
+> ASC의 License Agreement도 같이 바꾼다. 앱과 스토어는 항상 같은 약관을 가리켜야 한다.
+
 ---
 
 ## Promotional Text (≤170)

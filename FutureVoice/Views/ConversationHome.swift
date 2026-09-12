@@ -9,10 +9,6 @@ struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
-    /// Observed so a call settling as missed puts its row on screen right
-    /// away — the settle happens inside an async refresh, long after onAppear.
-    @ObservedObject private var callStore = DailyCallStore.shared
-
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -73,15 +69,6 @@ struct ConversationHome: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     heroSection
-                    // A call that rang out doesn't just disappear the way a
-                    // dismissed alarm does — the message it left is still
-                    // here. This row IS the "someone tried to reach you"
-                    // trace, and it's the whole reason the call reads as a
-                    // person rather than a timer.
-                    if let plan = missedCall {
-                        missedCallRow(plan)
-                            .padding(.horizontal, 20)
-                    }
                     if sessionCount == 0 {
                         firstRunCard
                             .padding(.horizontal, 20)
@@ -216,7 +203,6 @@ struct ConversationHome: View {
     /// up to `goalProgress` whenever the ring (re)takes the stage, instead
     /// of popping in fully drawn.
     @State private var displayedProgress: Double = 0
-    private var goalProgress0to1: Double { displayedProgress }
 
     /// Sweep the arc from zero to today's value. Called on first appear and
     /// every time the ring is revealed again (call close, cover dismiss).
@@ -234,168 +220,21 @@ struct ConversationHome: View {
         }
     }
 
-    /// The page's opening move: a time-of-day question in the display face,
-    /// and one giant goal ring whose interior is the living Futureself
-    /// surface — tapping it IS starting the call (via RootTabView's staged
-    /// free-talk transition, same path as the widget deep link).
-    ///
-    /// The hero owns the whole first viewport: the ring sits at its center
-    /// (≈ screen center at rest) and the question floats in the gap between
-    /// the header and the ring; the list scrolls up from underneath.
-    // MARK: - Missed call
-
-    /// The last call, if it went unanswered and its message is still unplayed.
-    /// Cleared the moment they call back or listen — this is a trace, not a
-    /// standing reminder, and it must never accumulate into a guilt pile.
-    private var missedCall: DailyCallPlan? {
-        guard DailyCallStore.shared.isEnabled else { return nil }
-        // Read the store's OWN record of the waiting message, not the pending
-        // plan: `refresh` overwrites that plan with the next call as soon as
-        // it settles this one, so reading it here showed the row only when a
-        // render happened to land in between.
-        return callStore.unheardVoicemail
-    }
-
-    /// Tapping calls them back — same script, same cached audio, straight into
-    /// the talk. Not "review the notification you missed": returning a call.
-    @ViewBuilder
-    private func missedCallRow(_ plan: DailyCallPlan) -> some View {
-        Button {
-            DailyCallScheduler.markVoicemailHeard()
-            DailyCallInbox.shared.pendingAnswer = plan
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "phone.arrow.down.left.fill")
-                    .font(.title3)
-                    .foregroundStyle(.red)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Missed call")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    // The message itself, so the row carries a real sentence
-                    // of target-language material even unopened.
-                    Text(plan.script)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemGroupedBackground),
-                        in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text("Missed call"))
-        .accessibilityHint(Text(plan.script))
-    }
-
+    /// The hero is its own view (`TalkHeroSection`) so its per-frame scroll
+    /// state never re-evaluates this page. The tap writes the ring's pose
+    /// into AppState ONCE, for the morph proxy to start from.
     private var heroSection: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            Text(welcomeQuestion)
-                .geistPixel(28)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 24)
-            Spacer(minLength: 0)
-            talkRing
-                .scaleEffect(ringScale)
-                .compositingGroup()
-                .opacity(appState.talkRingProxyActive ? 0 : 1)
-                // The scroll fade is a WASH of the page background, not an
-                // alpha fade: the Metal-backed Futureself layer doesn't
-                // reliably inherit ancestor opacity, but nothing escapes
-                // being painted over. On the flat background the two are
-                // visually identical.
-                .overlay(
-                    Rectangle()
-                        .fill(Color(.systemGroupedBackground))
-                        .opacity(1 - ringOpacity)
-                        .allowsHitTesting(false)
-                )
-            // Breathing room under the ring (with the outer stack's 24pt,
-            // ≈44pt to the list) — close enough to invite the scroll, far
-            // enough not to crowd the ring.
-            Color.clear.frame(height: 20)
-        }
-        .frame(maxWidth: .infinity)
-        // Bottom-anchored ring, hero exactly tall enough that the ring's
-        // CENTER lands on the DEVICE screen's midline — solved from the
-        // hero's measured global top (status bar + nav bar + padding), not
-        // guessed from the scroll viewport.
-        .frame(height: heroHeight)
-        .background(GeometryReader { g in
-            Color.clear.preference(key: HeroTopYKey.self,
-                                   value: g.frame(in: .global).minY)
-        })
-        // Layout-transient frames report garbage minY (0 before the nav
-        // inset lands, overshoot during settle) — so track the latest report
-        // WITHOUT laying out from it, and adopt it once, after the first
-        // layout has settled. heroHeight uses only the adopted value.
-        // The continuous stream doubles as the scroll link: how far the hero
-        // has moved up from rest drives the ring's shrink.
-        .onPreferenceChange(HeroTopYKey.self) { y in
-            latestHeroTopReport = y
-            scrollOffset = max(0, heroTopY - y)
-        }
-        .onPreferenceChange(TalkRingFrameKey.self) { appState.talkRingFrame = $0 }
-        // This task RE-RUNS on every re-appearance — including the daily
-        // call's fullScreenCover lifting. A fixed one-shot sample here is
-        // what sank the page after an answered call: the 250ms landed
-        // mid-dismissal and adopted the pre-inset 0, pushing the hero down
-        // by a nav bar until a tab switch re-measured. Adopt only a report
-        // that is PLAUSIBLE (a rest top always has a status bar above it)
-        // and SETTLED (unchanged across two samples), waiting as long as
-        // that takes.
-        .task {
-            var previous = CGFloat.nan
-            while !Task.isCancelled {
-                let current = latestHeroTopReport
-                if current > 40, abs(current - previous) < 0.5 {
-                    heroTopY = current
-                    return
-                }
-                previous = current
-                try? await Task.sleep(nanoseconds: 250_000_000)
-            }
-        }
-    }
-
-    /// How far the hero has scrolled up from its at-rest pose.
-    @State private var scrollOffset: CGFloat = 0
-    /// Two-phase exit. Phase 1 (0–110pt): the ring only SHRINKS, fully
-    /// opaque — no premature translucency while it's still mid-page. Phase 2
-    /// (110–250pt): it keeps shrinking AND fades to zero, gone before it
-    /// could slide under the header chips. The scale floor sits beyond the
-    /// fade's end, so the shrink never visibly stops.
-    private var ringScale: CGFloat {
-        max(0.3, 1 - scrollOffset / 450)
-    }
-    private var ringOpacity: CGFloat {
-        let fadeStart: CGFloat = 110
-        let fadeLength: CGFloat = 140
-        guard scrollOffset > fadeStart else { return 1 }
-        return max(0, 1 - (scrollOffset - fadeStart) / fadeLength)
-    }
-
-    /// Where the hero starts in GLOBAL coordinates at rest (scrolled to top)
-    /// — everything above it: status bar, inline nav bar, top padding.
-    /// Seeded with a close guess so the first frame is near-correct; the
-    /// settle-sample above then replaces it with the measured value.
-    @State private var heroTopY: CGFloat = 106
-    @State private var latestHeroTopReport: CGFloat = 106
-    /// Ring center must sit at screenHeight/2. The ring's center is 160pt
-    /// above the hero's bottom (140 half-ring + 20 tail), so:
-    /// heroTop + heroHeight − 160 = screenHeight/2.
-    private var heroHeight: CGFloat {
-        max(380, UIScreen.main.bounds.height / 2 + 160 - heroTopY)
+        TalkHeroSection(
+            question: welcomeQuestion,
+            progress: displayedProgress,
+            headline: goalHeadline,
+            accessibilityLabel: "Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.",
+            hidden: appState.talkRingProxyActive,
+            onRestFrame: { appState.talkRingFrame = $0 },
+            onTap: { frame in
+                appState.talkRingFrame = frame
+                appState.pendingFreeTalk = true
+            })
     }
 
     /// See `HeroGreeting`. Cached in state because the hero re-evaluates on
@@ -414,117 +253,6 @@ struct ConversationHome: View {
         heroLine = HeroGreeting.text(for: HeroGreeting.live())
     }
 
-    /// A thin, fully-closed goal ring (progress from 12 o'clock) around the
-    /// Futureself surface. virtualHeight pins the surface's pixel grid to
-    /// the call pill's cell size, so the eventual morph onto the call screen
-    /// never changes pixel scale.
-    private var talkRing: some View {
-        ZStack {
-            // Whisper of a track: primary at 1.5% — all but invisible. The
-            // full circle is merely SENSED against the background on a good
-            // display, never seen as a shape of its own.
-            Circle()
-                .stroke(Color.primary.opacity(0.015), lineWidth: 14)
-            // Accent, even at goal — the ring follows the app's palette
-            // (green-at-goal clashed with non-green Futureself themes).
-            // ONE gradient stroke: the tail FADES IN from near-transparent
-            // at 12 o'clock to full accent by ~55% of the arc — comet-style
-            // depth, no black overlay. (Angles are PRE-rotation; 0° lands on
-            // the tail once the -90° below spins the layer.)
-            // Both arc layers render UNCONDITIONALLY (hidden via opacity at
-            // zero) — an `if` around them re-INSERTS the view when progress
-            // moves off zero, and inserted views fade in at final length
-            // instead of animating their trim: the draw-on sweep only works
-            // on a view that already exists.
-            //
-            // The tail ALWAYS fades — but only over the REAR of the arc: at
-            // most 90° of circle, never past the arc's halfway point. The
-            // head half stays solid accent, so a short arc reads as a crisp
-            // little comet instead of a smeared translucent pill. (Zero
-            // progress also needs the hide below: a near-empty trim under
-            // the angular gradient renders as a half-cut dot at 12.)
-            //
-            // At zero the ring is just its faint track. A start-line dot at
-            // 12 marked the start for a while and was removed (2026-08-31): on
-            // the home screen it read as a stray mark, not a marker.
-            let fadeEnd = min(0.5, 0.25 / max(goalProgress0to1, 0.001))
-            Circle()
-                .trim(from: 0, to: goalProgress0to1)
-                .stroke(
-                    AngularGradient(
-                        stops: [
-                            .init(color: Color.accentColor.opacity(0.15), location: 0),
-                            .init(color: Color.accentColor, location: fadeEnd),
-                        ],
-                        center: .center,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(360 * goalProgress0to1)),
-                    style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .opacity(goalProgress0to1 > 0.005 ? 1 : 0)
-            // At full progress the circle closes and the stroke loses its
-            // caps — the seam at 12 turns into a flat butt joint. Re-draw
-            // the last sliver with a round cap (NO shadow): its head pokes
-            // just past 12 over the faded tail, and its trailing edge is the
-            // same full accent as the base arc, so no seam shows.
-            Circle()
-                .trim(from: max(goalProgress0to1 - 0.02, 0), to: goalProgress0to1)
-                .stroke(Color.accentColor,
-                        style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-                .opacity(goalProgress0to1 > 0.97 ? 1 : 0)
-
-            Button {
-                // The gate lives in RootTabView's `startFreeTalk`, which is
-                // where BOTH paths into a free talk meet (this ring and the
-                // widget's deep link). Checking here as well would ask the
-                // server the same question twice for one tap.
-                appState.pendingFreeTalk = true
-            } label: {
-                ZStack {
-                    Futureself(mode: .idle, level: 0, virtualHeight: 64)
-                    // Wash the surface toward the page background so the
-                    // circle sits IN the page instead of glowing against it
-                    // (the shader's own base runs brighter than grouped bg).
-                    Color(.systemGroupedBackground).opacity(0.35)
-                    // Uniform inner shadow — a blurred inner ring, masked to
-                    // the circle so the vignette hugs the whole edge evenly
-                    // (a one-sided shadow here reads as a lighting mistake).
-                    // Light mode gets a MUCH gentler pass: on the airy light
-                    // surface the dark-mode strength reads as a hole.
-                    // Tight spread: a narrow stroke + small blur keeps the
-                    // vignette hugging the rim instead of flooding inward.
-                    Circle()
-                        .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
-                                      lineWidth: 10)
-                        .blur(radius: 6)
-                        .mask(Circle())
-                    VStack(spacing: 6) {
-                        Text("Let's talk")
-                            .geistPixel(20)
-                            .foregroundStyle(.primary)
-                        Text(goalHeadline)
-                            .font(.footnote.weight(.medium))
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(width: 262, height: 262)
-                // The proxy morph needs the surface's live pose (global) —
-                // reported from HERE so it tracks layout, not guesses.
-                .background(GeometryReader { g in
-                    Color.clear.preference(key: TalkRingFrameKey.self,
-                                           value: g.frame(in: .global))
-                })
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
-                .contentShape(Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Let's talk — start a call. \(todaySpokenSeconds / 60) of \(effectiveGoalMinutes) minutes today.")
-        }
-        .frame(width: 280, height: 280)
-    }
 
     /// Header chip — the one Today stat up here, and the ONLY way into the
     /// activity calendar.
@@ -568,11 +296,19 @@ struct ConversationHome: View {
             : "Opens activity calendar.")
     }
 
+    /// The day's talk time on a clock face — and nothing else.
+    ///
+    /// It used to read "3 of 10 min today", which is the RING's sentence: the
+    /// arc already says how much of the goal is spent, so the words repeated
+    /// it and had no room left for the one thing the ring cannot show — how
+    /// long you actually talked. Floored minutes also called a 42-second day
+    /// zero (2026-09-05) while the arc had visibly moved. mm:ss says both, at
+    /// every size of day, and keeps counting past the goal (10:11) rather
+    /// than stopping at a congratulation.
     private var goalHeadline: String {
-        let mins = todaySpokenSeconds / 60
-        if goalProgress >= 1 { return chrome("Goal reached · \(mins) min") }
-        if mins == 0 { return chrome("Talk \(effectiveGoalMinutes) min today") }
-        return chrome("\(mins) of \(effectiveGoalMinutes) min today")
+        let secs = todaySpokenSeconds
+        guard secs > 0 else { return chrome("Today's goal \(effectiveGoalMinutes) min") }
+        return PracticeStats.talkClock(seconds: secs)
     }
 
 
@@ -689,8 +425,11 @@ struct ConversationHome: View {
                     // strokeBorder / inset keep the 3 pt stroke INSIDE the
                     // 30 pt frame — a centered stroke overhangs it by half a
                     // linewidth and the container clips the arc's caps flat.
+                    // Tertiary, not systemFill: the track is a groove for the
+                    // arc to sit in, and at full systemFill it read as a second
+                    // ring competing with the accent one.
                     Circle()
-                        .strokeBorder(Color(.systemFill), lineWidth: 3)
+                        .strokeBorder(Color(.tertiarySystemFill), lineWidth: 3)
                     // Usage gauge: the arc grows clockwise from 12 o'clock
                     // as minutes are SPENT — fresh tank = empty ring.
                     Circle()
@@ -699,7 +438,10 @@ struct ConversationHome: View {
                         .stroke(account.isLowBalance ? Color.orange : Color.accentColor,
                                 style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .rotationEffect(.degrees(-90))
-                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 24)
+                    // 20 pt inside a 24 pt hole: the ring's inner edge would
+                    // otherwise sit flush on the avatar, which reads as the
+                    // arc being drawn ON the picture rather than around it.
+                    ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 20)
                 } else {
                     ProfileAvatar(initials: appState.persona?.displayName ?? "", size: 30)
                 }
@@ -890,6 +632,285 @@ private struct TalkRingFrameKey: PreferenceKey {
     static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
         let next = nextValue()
         if next != .zero { value = next }
+    }
+}
+
+/// The Talk home's first viewport — the question, the goal ring, and the
+/// scroll-linked shrink/fade. A child view on purpose: the scroll offset it
+/// tracks changes every frame, and while it lived on `ConversationHome` the
+/// whole page (discover rail included) re-evaluated per frame. Now only this
+/// subtree does; the parent passes in the few values that change between
+/// calls, not per scroll.
+private struct TalkHeroSection: View {
+    let question: String
+    /// The arc fraction actually drawn (already animated by the parent).
+    let progress: Double
+    let headline: String
+    let accessibilityLabel: String
+    /// True while RootTabView's morph proxy stands in for the ring.
+    let hidden: Bool
+    /// The ring surface's global frame at REST (scroll offset 0) — the pose
+    /// a widget-launched call flies in from.
+    let onRestFrame: (CGRect) -> Void
+    /// Tap on the ring, with the surface's global frame at that instant.
+    let onTap: (CGRect) -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+    /// Latest reported global frame of the ring surface (local; see the
+    /// preference handler below for why it is not published).
+    @State private var ringFrame: CGRect = .zero
+
+    var body: some View {
+        heroSection
+    }
+    /// The page's opening move: a time-of-day question in the display face,
+    /// and one giant goal ring whose interior is the living Futureself
+    /// surface — tapping it IS starting the call (via RootTabView's staged
+    /// free-talk transition, same path as the widget deep link).
+    ///
+    /// The hero owns the whole first viewport: the ring sits at its center
+    /// (≈ screen center at rest) and the question floats in the gap between
+    /// the header and the ring; the list scrolls up from underneath.
+    private var heroSection: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            Text(question)
+                .geistPixel(28)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 24)
+            Spacer(minLength: 0)
+            talkRing
+                .scaleEffect(ringScale)
+                .compositingGroup()
+                .opacity(hidden ? 0 : 1)
+                // The scroll fade is a WASH of the page background, not an
+                // alpha fade: the Metal-backed Futureself layer doesn't
+                // reliably inherit ancestor opacity, but nothing escapes
+                // being painted over. On the flat background the two are
+                // visually identical.
+                .overlay(
+                    Rectangle()
+                        .fill(Color(.systemGroupedBackground))
+                        .opacity(1 - ringOpacity)
+                        .allowsHitTesting(false)
+                )
+            // Breathing room under the ring (with the outer stack's 24pt,
+            // ≈44pt to the list) — close enough to invite the scroll, far
+            // enough not to crowd the ring.
+            Color.clear.frame(height: 20)
+        }
+        .frame(maxWidth: .infinity)
+        // Bottom-anchored ring, hero exactly tall enough that the ring's
+        // CENTER lands on the DEVICE screen's midline — solved from the
+        // hero's measured global top (status bar + nav bar + padding), not
+        // guessed from the scroll viewport.
+        .frame(height: heroHeight)
+        .background(GeometryReader { g in
+            Color.clear.preference(key: HeroTopYKey.self,
+                                   value: g.frame(in: .global).minY)
+        })
+        // Layout-transient frames report garbage minY (0 before the nav
+        // inset lands, overshoot during settle) — so track the latest report
+        // WITHOUT laying out from it, and adopt it once, after the first
+        // layout has settled. heroHeight uses only the adopted value.
+        // The continuous stream doubles as the scroll link: how far the hero
+        // has moved up from rest drives the ring's shrink.
+        .onPreferenceChange(HeroTopYKey.self) { y in
+            latestHeroTopReport = y
+            scrollOffset = max(0, heroTopY - y)
+        }
+        // The ring's pose is kept HERE, not published. It changes on every
+        // scroll frame (the ring moves and shrinks with the page), and it
+        // used to be written straight into `AppState.talkRingFrame` — an
+        // @Published on the object every tab observes, so each frame of a
+        // scroll re-evaluated every mounted view in the app, Practice's
+        // book sorts included. That was the Talk-home scroll jank
+        // (2026-09-07). Only two moments need the value: the rest pose
+        // (for a widget deep link's fly-in) and the tap itself.
+        .onPreferenceChange(TalkRingFrameKey.self) { frame in
+            ringFrame = frame
+            if scrollOffset == 0 { onRestFrame(frame) }
+        }
+        // This task RE-RUNS on every re-appearance — including the daily
+        // call's fullScreenCover lifting. A fixed one-shot sample here is
+        // what sank the page after an answered call: the 250ms landed
+        // mid-dismissal and adopted the pre-inset 0, pushing the hero down
+        // by a nav bar until a tab switch re-measured. Adopt only a report
+        // that is PLAUSIBLE (a rest top always has a status bar above it)
+        // and SETTLED (unchanged across two samples), waiting as long as
+        // that takes.
+        .task {
+            var previous = CGFloat.nan
+            while !Task.isCancelled {
+                let current = latestHeroTopReport
+                if current > 40, abs(current - previous) < 0.5 {
+                    heroTopY = current
+                    return
+                }
+                previous = current
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+        }
+    }
+
+    /// How far the hero has scrolled up from its at-rest pose.
+    @State private var scrollOffset: CGFloat = 0
+    /// Two-phase exit. Phase 1 (0–110pt): the ring only SHRINKS, fully
+    /// opaque — no premature translucency while it's still mid-page. Phase 2
+    /// (110–250pt): it keeps shrinking AND fades to zero, gone before it
+    /// could slide under the header chips. The scale floor sits beyond the
+    /// fade's end, so the shrink never visibly stops.
+    private var ringScale: CGFloat {
+        max(0.3, 1 - scrollOffset / 450)
+    }
+    private var ringOpacity: CGFloat {
+        let fadeStart: CGFloat = 110
+        let fadeLength: CGFloat = 140
+        guard scrollOffset > fadeStart else { return 1 }
+        return max(0, 1 - (scrollOffset - fadeStart) / fadeLength)
+    }
+
+    /// Where the hero starts in GLOBAL coordinates at rest (scrolled to top)
+    /// — everything above it: status bar, inline nav bar, top padding.
+    /// Seeded with a close guess so the first frame is near-correct; the
+    /// settle-sample above then replaces it with the measured value.
+    @State private var heroTopY: CGFloat = 106
+    @State private var latestHeroTopReport: CGFloat = 106
+    /// Ring center must sit at screenHeight/2. The ring's center is 160pt
+    /// above the hero's bottom (140 half-ring + 20 tail), so:
+    /// heroTop + heroHeight − 160 = screenHeight/2.
+    private var heroHeight: CGFloat {
+        max(380, UIScreen.main.bounds.height / 2 + 160 - heroTopY)
+    }
+
+
+    /// A fully-closed goal ring (progress from 12 o'clock) around the
+    /// Futureself surface. virtualHeight pins the surface's pixel grid to
+    /// the call pill's cell size, so the eventual morph onto the call screen
+    /// never changes pixel scale.
+    private var talkRing: some View {
+        ZStack {
+            // Whisper of a track: primary at 1.5% — all but invisible. The
+            // full circle is merely SENSED against the background on a good
+            // display, never seen as a shape of its own.
+            Circle()
+                .stroke(Color.primary.opacity(0.015), lineWidth: 20)
+            // Accent, even at goal — the ring follows the app's palette
+            // (green-at-goal clashed with non-green Futureself themes).
+            // ONE gradient stroke: the tail FADES IN from near-transparent
+            // at 12 o'clock to full accent by ~55% of the arc — comet-style
+            // depth, no black overlay. (Angles are PRE-rotation; 0° lands on
+            // the tail once the -90° below spins the layer.)
+            // Both arc layers render UNCONDITIONALLY (hidden via opacity at
+            // zero) — an `if` around them re-INSERTS the view when progress
+            // moves off zero, and inserted views fade in at final length
+            // instead of animating their trim: the draw-on sweep only works
+            // on a view that already exists.
+            //
+            // The tail fades over a FIXED span of circle, never a fraction of
+            // the arc, and not at all while the arc is short. It used to be
+            // a fraction (a quarter of the ring, capped at half the arc), so
+            // a ten-second day — six degrees of arc, which is really just the
+            // two round caps — spent its whole rear half at 15% opacity: a
+            // pill that was pale on the left and solid on the right
+            // (2026-09-07). Below `solidBelow` the arc is plain accent, a
+            // crisp dot; above it the last `fadeSpan` degrees of tail fade,
+            // held to two fifths of the arc so a mid-size arc still reads as
+            // mostly solid. Near the threshold the span grows in from zero,
+            // so the comet appears rather than switches on.
+            //
+            // The gradient's start is pulled back by the cap's own angular
+            // width, because an angular gradient clamps to its end colours
+            // outside its range: with the range starting exactly at 0° the
+            // tail cap sat entirely BEFORE the gradient and was painted at
+            // the floor opacity as one solid block.
+            //
+            // At zero the ring is just its faint track. A start-line dot at
+            // 12 marked the start for a while and was removed (2026-08-31): on
+            // the home screen it read as a stray mark, not a marker.
+            let solidBelow = 0.12
+            let fadeSpan = min(60.0 / 360, progress * 0.4)
+            let fadeEnd = progress > solidBelow ? fadeSpan / max(progress, 0.001) : 0
+            let capDegrees: Double = 360 * (10 / (2 * Double.pi * 130))
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(
+                    AngularGradient(
+                        stops: [
+                            .init(color: Color.accentColor.opacity(fadeEnd > 0 ? 0.4 : 1), location: 0),
+                            .init(color: Color.accentColor, location: fadeEnd),
+                        ],
+                        center: .center,
+                        startAngle: .degrees(-capDegrees),
+                        endAngle: .degrees(360 * progress)),
+                    style: StrokeStyle(lineWidth: 20, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .opacity(progress > 0.005 ? 1 : 0)
+            // At full progress the circle closes and the stroke loses its
+            // caps — the seam at 12 turns into a flat butt joint. Re-draw
+            // the last sliver with a round cap (NO shadow): its head pokes
+            // just past 12 over the faded tail, and its trailing edge is the
+            // same full accent as the base arc, so no seam shows.
+            Circle()
+                .trim(from: max(progress - 0.02, 0), to: progress)
+                .stroke(Color.accentColor,
+                        style: StrokeStyle(lineWidth: 20, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .opacity(progress > 0.97 ? 1 : 0)
+
+            Button {
+                // The gate lives in RootTabView's `startFreeTalk`, which is
+                // where BOTH paths into a free talk meet (this ring and the
+                // widget's deep link). Checking here as well would ask the
+                // server the same question twice for one tap.
+                onTap(ringFrame)
+            } label: {
+                ZStack {
+                    Futureself(mode: .idle, level: 0, virtualHeight: 64)
+                    // Wash the surface toward the page background so the
+                    // circle sits IN the page instead of glowing against it
+                    // (the shader's own base runs brighter than grouped bg).
+                    Color(.systemGroupedBackground).opacity(0.35)
+                    // Uniform inner shadow — a blurred inner ring, masked to
+                    // the circle so the vignette hugs the whole edge evenly
+                    // (a one-sided shadow here reads as a lighting mistake).
+                    // Light mode gets a MUCH gentler pass: on the airy light
+                    // surface the dark-mode strength reads as a hole.
+                    // Tight spread: a narrow stroke + small blur keeps the
+                    // vignette hugging the rim instead of flooding inward.
+                    Circle()
+                        .strokeBorder(Color.black.opacity(colorScheme == .dark ? 0.45 : 0.15),
+                                      lineWidth: 10)
+                        .blur(radius: 6)
+                        .mask(Circle())
+                    VStack(spacing: 6) {
+                        Text("Let's talk")
+                            .geistPixel(20)
+                            .foregroundStyle(.primary)
+                        Text(headline)
+                            .font(.footnote.weight(.medium))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                // 260 = the 280 frame minus the 20 pt stroke: the surface
+                // meets the ring's inner edge with no gap.
+                .frame(width: 260, height: 260)
+                // The proxy morph needs the surface's live pose (global) —
+                // reported from HERE so it tracks layout, not guesses.
+                .background(GeometryReader { g in
+                    Color.clear.preference(key: TalkRingFrameKey.self,
+                                           value: g.frame(in: .global))
+                })
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Color(.separator).opacity(0.4), lineWidth: 0.5))
+                .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(accessibilityLabel)
+        }
+        .frame(width: 280, height: 280)
     }
 }
 

@@ -1,0 +1,16 @@
+{
+  "name": "nawana-admin",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  // shell.html is imported as a string and inlined into the bundle — the page
+  // is served from the Worker, not from an assets bucket, because every byte
+  // of it is behind the token check.
+  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
+  "vars": {
+    "SUPABASE_URL": "https://chhzjtigzdotacutwcyo.supabase.co"
+  },
+  "observability": { "enabled": true }
+  // Secrets (set with `wrangler secret put <NAME>`):
+  //   ADMIN_TOKEN                — the ?k= key; without it every path 404s
+  //   SUPABASE_SERVICE_ROLE_KEY  — admin_raw() is granted to service_role only
+}

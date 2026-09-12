@@ -419,7 +419,7 @@ Apple (blocking — nothing sells until these are done):
 At launch day:
 
 - [x] Paywall leaves survey mode — `BetaConfig` deleted 2026-08-18
-- [ ] Web `PLANS` already match this doc; set Stripe price IDs + `BILLING.enabled`
+- [ ] Web billing (post-launch, deliberately deferred 2026-08-23): code is ready as of 2026-09-02 — double-subscription 409 guard, 7-day trial parity, per-page currency (krw/usd via Stripe `currency_options`), `stripe-portal` self-serve cancel. Runbook: `web/README.md` § "Web billing" (Stripe products with krw currency_options + tax-inclusive, price IDs into `subscription_plans.stripe_price_id`, secrets, deploy 3 functions, portal config, Apple Services ID, then `BILLING.enabled`)
 - [ ] MeTab shows live plan label (already wired)
 
 Done (2026-08-11):
@@ -463,3 +463,56 @@ $$;
 - Family / student plans
 - Hiding weekly from the app UI (keep for experiments)
 - Monthly drip for annual credits
+
+## 7. Beta ends 2026-09-21 → half price for a year (decided 2026-09-11)
+
+The five hand-comped beta rows END on 2026-09-21
+(`20260911100000_beta_ends_0921`, `cancel_at_period_end = true`; the sweep on
+09-22 expires them). What follows is **not a comp** — a server row cannot set
+a price, only the stores can — so the discount rides on the stores' own offer
+machinery and lands through the ordinary webhooks as PAID rows:
+
+- **Apple — Offer Codes** (ASC → app → Subscriptions → *product* → Offer Codes
+  → Custom Codes). One code per PRODUCT: pay-as-you-go **50% × 12 months** on
+  `daily_monthly` / `unlimited_monthly`, pay-up-front **50% × 1 year** on the
+  annuals. Eligibility "new subscribers" covers every beta tester and every
+  waitlist signup (none has ever held an Apple subscription). Redeem with no
+  app change: `https://apps.apple.com/redeem?ctx=offercodes&id=6792794655&code=<CODE>`.
+  `apple-webhook` already handles it — `offerDiscountType` is
+  `PAY_AS_YOU_GO`/`PAY_UP_FRONT`, so `status = 'active'` (not trial), and
+  `price_milliunits` records what Apple actually charged, so margin stays
+  honest. Set a redemption limit + expiry on each code.
+- **Stripe (web, once `BILLING.enabled` flips)** — a Coupon (50% off,
+  `duration = repeating`, `duration_in_months = 12`) behind a Promotion Code;
+  `stripe-checkout` already sets `allow_promotion_codes: true`, so the field
+  is on the checkout page and nothing else is needed.
+- Comp codes (`comp_codes`) are the wrong tool: they grant FREE months.
+
+Waitlist: 54 emails (32 `wants_beta`), none `notified_at` yet — the mail
+carries the code; stamp `notified_at` when sent so the list can be resumed.
+
+**Dealing the codes (2026-09-11).** One-time codes, not a custom code — the
+list is named people, and a shared string is a coupon for whoever it leaks
+to. Two offers, `Beta50 Light Monthly` and `Beta50 Plus Monthly` (an offer
+is per product; a Light code cannot buy Plus), so every person gets TWO
+codes and can use one — after redeeming one they are an existing subscriber
+and the other is refused. The launch mail IS the delivery:
+`scripts/waitlist-launch-mail.py --light L.csv --plus P.csv` resolves
+recipients from the database (comp beta testers via `user_waitlist_mapping`,
+then every unnotified `waitlist` email), files each (code → person) in
+`offer_code_grants` (`20260911120000`) BEFORE sending, mails from
+hello@nawana.app via Resend, then stamps `sent_at` and `waitlist.notified_at`.
+Relay-only testers get codes reserved and printed for hand-over in the beta
+chat. Re-runs reuse a person's filed codes and never mail anyone twice.
+
+**Do not send before 1.0.2 (build 42+) is live on the App Store.** A code
+redeemed in the App Store carries no `appAccountToken`, and every build up to
+41 has no other way to tell the server about it — the person pays Apple and
+the app keeps showing "No plan". 1.0.2 adds `apple-claim` (the app hands the
+server the signed transaction; see CLAUDE.md), and the mail's recipients
+install whatever the store has on the day. A
+Gmail-based `offer-code-mail` edge function was built and retired the same
+day (one mail, one sender); delete it with `supabase functions delete
+offer-code-mail` if it is still deployed. Annual offers are deliberately not
+offered: half of an already-discounted annual price is a third less revenue
+for the same year.

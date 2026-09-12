@@ -103,7 +103,9 @@ enum StudyWidgetRefresher {
             streakDays: PracticeStats.snapshot().streakDays,
             dueCount: DrillStore.shared.dueCount(),
             studyingWords: vocab.studying.count,
-            studyingExpressions: vocab.studyingExpressions.count)
+            studyingExpressions: vocab.studyingExpressions.count,
+            // The streak's rule, not the ring's — see StudyProgressSnapshot.
+            metToday: PracticeStats.metCoreBar())
         StudyWidgetSnapshotStore.saveProgress(snapshot)
         WidgetCenter.shared.reloadTimelines(ofKind: progressWidgetKind)
         // The streak widget reads the same snapshot.

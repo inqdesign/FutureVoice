@@ -20,7 +20,10 @@ struct DiscoverSection: View {
     @State private var tab: Tab = .news
     @State private var newsTopics: [SuggestedTopic] = []
     @State private var loadingNews = false
-    @State private var newsError: String?
+    /// The last fetch failed. Painted as a quiet caption, never the raw
+    /// error: with a list on screen it means "these may be yesterday's",
+    /// with none it means "tap to retry".
+    @State private var newsFetchFailed = false
     @State private var showingInterests = false
 
     enum Tab: String, CaseIterable {
@@ -64,6 +67,12 @@ struct DiscoverSection: View {
             // within the same day.
             guard newsTopics.isEmpty, !interests.isEmpty else { return }
             guard let cached = NewsTopicStore.shared.valid(for: interests) else {
+                // No fresh cache: paint whatever was saved last (however old)
+                // so the section is never empty on open, then fetch today's
+                // behind it. A failed fetch leaves the old list standing.
+                if let stale = NewsTopicStore.shared.lastKnown(for: interests) {
+                    newsTopics = displaySelection(from: stale)
+                }
                 await fetchNews()
                 return
             }
@@ -224,8 +233,9 @@ struct DiscoverSection: View {
                 }
             }
         }
-        if let e = newsError {
-            Text(e).font(.caption).foregroundStyle(.red)
+        if newsFetchFailed {
+            Text(newsTopics.isEmpty ? "Couldn't load stories" : "Showing earlier stories")
+                .font(.caption).foregroundStyle(.secondary)
                 .padding(.horizontal, 20)
         }
     }
@@ -309,7 +319,7 @@ struct DiscoverSection: View {
 
     private func fetchNews(refresh: Bool = false) async {
         loadingNews = true
-        newsError = nil
+        newsFetchFailed = false
         defer { loadingNews = false }
         if refresh {
             // What's on screen right now has been seen — rotate it back so
@@ -347,7 +357,18 @@ struct DiscoverSection: View {
         } catch is CancellationError {
             // View went away mid-poll — nothing to report.
         } catch {
-            newsError = error.localizedDescription
+            // Same thing, other shape: a cancellation that lands while the
+            // request is in flight surfaces as `URLError(.cancelled)`, whose
+            // description is literally "cancelled" — and painted red under
+            // the list every time someone left within the ~30 s poll window.
+            guard !Task.isCancelled else { return }
+            if let urlError = error as? URLError, urlError.code == .cancelled { return }
+            newsFetchFailed = true
+            // Nothing on screen: fall back to the last batch we ever saved
+            // for these interests rather than leaving the slot empty.
+            if newsTopics.isEmpty, let stale = NewsTopicStore.shared.lastKnown(for: interests) {
+                newsTopics = displaySelection(from: stale)
+            }
         }
     }
 

@@ -21,7 +21,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { insufficientCreditsResponse, dailyCapResponse, billingClient } from "../_shared/credits.ts"
+import { insufficientCreditsResponse, dailyCapResponse, fairUseLimitResponse, notifyOwner, billingClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "talk-tick"
 
@@ -70,11 +70,29 @@ Deno.serve(async (req) => {
     if (error.message?.includes("DAILY_CAP_REACHED")) {
       return dailyCapResponse(cors())
     }
+    // Only an uncapped plan can raise this, and only far above the fair-use
+    // line it is merely flagged at. Never the spent-allowance answer.
+    if (error.message?.includes("FAIR_USE_LIMIT")) {
+      return fairUseLimitResponse(cors())
+    }
     return errorResponse(500, "talk tick failed", error.message)
   }
 
   const parsed = data as {
     balance?: number; charged?: number; seconds_today?: number; daily_cap?: number
+    fair_use_flagged?: boolean; fair_use_seconds?: number
+  }
+
+  // The fair-use line is not a wall: the call continues and the learner sees
+  // nothing. It is a message to the OWNER, sent once per billing period (the
+  // RPC flags only the tick that crossed it), because a person deciding what
+  // to do about an account IS the enforcement.
+  if (parsed?.fair_use_flagged) {
+    const mins = Math.round((parsed.fair_use_seconds ?? 0) / 60)
+    await notifyOwner(
+      `[nawana] fair-use line crossed\nuser: ${user.id}\nthis period: ${mins} min\n` +
+      `talking continues — check the admin console's 이상 사용 table`,
+    )
   }
   return new Response(
     JSON.stringify({

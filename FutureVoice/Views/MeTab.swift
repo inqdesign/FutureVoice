@@ -68,10 +68,6 @@ struct MeTab: View {
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
     #endif
-    /// Mirrors `RealtimeMode.isEnabled` so the toggle redraws; the flag
-    /// itself lives in defaults because the call screen reads it directly.
-    @State private var realtimeTalk = RealtimeMode.isEnabled
-
     var body: some View {
         NavigationStack {
             List {
@@ -113,7 +109,7 @@ struct MeTab: View {
                         planPage
                     } label: {
                         row(icon: "bolt.fill",
-                            title: explain("Talk time"),
+                            title: explain("Usage"),
                             subtitle: account.talkTimeLabel)
                     }
                     // Sits under the plan row because both are about how much
@@ -136,6 +132,11 @@ struct MeTab: View {
                 // Learning stays expanded — languages, level, goal and app
                 // language are the settings people actually return to.
                 learningLanguagesSection
+
+                // NOTE (2026-09-05): the "Realtime calls" toggle that stood
+                // here is gone — see `RealtimeMode`. Every call now runs on
+                // the gateway, so there is nothing to choose and no row to
+                // explain a choice nobody has.
 
                 Section {
                     NavigationLink {
@@ -214,26 +215,6 @@ struct MeTab: View {
                     .disabled(deletingAccount)
                 } footer: {
                     Text(explain("Deleting your account permanently removes your voice clone, talk time, and account data. Practice data on this device is erased too."))
-                }
-
-                // Talk on the realtime gateway (`gateway/`) instead of the
-                // per-turn HTTP pipeline: measured 2–3 s speech→voice against
-                // ~4.5 s, and it can be talked over mid-sentence. Off by
-                // default — the old path is the one every learner has used so
-                // far, and it stays one toggle away.
-                Section {
-                    Toggle(isOn: Binding(
-                        get: { realtimeTalk },
-                        set: { realtimeTalk = $0; RealtimeMode.isEnabled = $0 }
-                    )) {
-                        row(icon: "waveform.circle",
-                            title: explain("Faster calls"),
-                            subtitle: explain("Answers in about two seconds — and you can talk over it"))
-                    }
-                } header: {
-                    Text("Speed test")
-                } footer: {
-                    Text(explain("A new way of running the call. Everything else is the same: your talks, review material and talk time all work as usual."))
                 }
 
                 #if DEBUG

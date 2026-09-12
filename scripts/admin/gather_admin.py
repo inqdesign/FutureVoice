@@ -268,6 +268,20 @@ select provider, model, unit, rows::int, units::float8 from public.unpriced_usag
 """, "unpriced")
 cost["builds"] = builds
 
+# Who crossed the fair-use line on an uncapped plan this period. NOT a wall —
+# talking is only stopped far above it (`subscription_plans.abuse_seconds`) —
+# so this list is the whole enforcement mechanism: a person looks at it.
+fair_use = q("""
+select f.user_id::text as id, f.period_start::text as since,
+       f.seconds::int as secs, f.updated_at::text as at,
+       s.plan_id as plan, p.monthly_seconds::int as line,
+       p.abuse_seconds::int as stop
+from public.fair_use_flags f
+join public.user_subscriptions s on s.user_id = f.user_id
+join public.subscription_plans p on p.id = s.plan_id
+order by f.seconds desc
+""", "fair_use")
+
 DATA = {
     "asOf": today.isoformat(),
     "windowStart": WINDOW_START,
@@ -281,6 +295,9 @@ DATA = {
     "waitlist": {"total": wl["total"], "wantsBeta": wl["wants_beta"],
                  "converted": wl["converted"], "channels": channels},
     "cost": cost,
+    # The table arrives with the fair-use migration; until it is applied the
+    # query errors and this stays empty rather than breaking the whole page.
+    "fairUse": fair_use if isinstance(fair_use, list) else [],
 }
 out = str(OUT / "admin_data.json")
 json.dump(DATA, open(out, "w"), separators=(",", ":"), default=str)

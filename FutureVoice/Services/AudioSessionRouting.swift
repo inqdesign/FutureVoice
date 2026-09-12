@@ -27,9 +27,11 @@ enum AudioSessionRouting {
     /// the same attempt captured at the mouth, and the learner reads that as
     /// the app misjudging them.
     ///
-    /// Note what we DON'T do: no `setPreferredInput`. With HFP allowed, iOS
-    /// picks the connected earphone mic on its own and falls back to the
-    /// built-in when nothing is connected — the exact rule we want, for free.
+    /// Allowing HFP is necessary but NOT sufficient: iOS lists the earphone
+    /// mic and then keeps recording on the built-in one (measured, see
+    /// `engageWornMic`). Every surface on these options asks for the worn
+    /// mic explicitly right after activating; with nothing connected that
+    /// ask is a no-op and the built-in mic is used as before.
     ///
     /// The cost is real but bounded: HFP narrows the link to telephone
     /// bandwidth (~16 kHz mSBC on modern earphones — fine for ASR, it's Siri's
@@ -65,6 +67,54 @@ enum AudioSessionRouting {
         if let builtIn = session.availableInputs?.first(where: { $0.portType == .builtInMic }) {
             try? session.setPreferredInput(builtIn)
         }
+    }
+
+    /// Put a live-mic session on the WORN earphone's mic, explicitly. Returns
+    /// whether the HFP mic is on the route afterwards.
+    ///
+    /// `recordOptions` allows HFP and the comment above it trusted iOS to
+    /// pick the earphone mic on its own. It doesn't: the realtime Talk
+    /// client saw it on device on 2026-09-01 — with earphones connected,
+    /// input stayed on the built-in array until it was ASKED for — and
+    /// every turn the classic per-turn call ever logged (`talk_asr_upgrade
+    /// .input`, 2026-08-18 → 09-09, 241 turns) came through
+    /// `MicrophoneBuiltIn`. Realtime Talk asks for itself (`RealtimeTalkClient
+    /// .startAudio`); this is the same ask for every OTHER surface on
+    /// `recordOptions` — shadowing today, and the classic call path should it
+    /// ever come back.
+    ///
+    /// The three steps mirror `RealtimeTalkClient`: prefer the HFP input; if
+    /// the route doesn't move onto it, cycle the session once (an in-ear
+    /// reattach lists the mic while the live session refuses to re-form
+    /// around it); if it still refuses, clear the preference so the session
+    /// is exactly what it was before — never a dangling preferred input.
+    /// No-op with nothing connected, and never called when the learner chose
+    /// the phone mic (`builtInMicCaptureOptions` has no HFP, so nothing is
+    /// listed to prefer).
+    @discardableResult
+    static func engageWornMic(_ session: AVAudioSession = .sharedInstance()) -> Bool {
+        guard let mic = session.availableInputs?.first(where: { $0.portType == .bluetoothHFP }) else {
+            return false
+        }
+        try? session.setPreferredInput(mic)
+        if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
+            try? session.setActive(false, options: .notifyOthersOnDeactivation)
+            try? session.setActive(true, options: .notifyOthersOnDeactivation)
+            try? session.setPreferredInput(mic)
+        }
+        let engaged = session.currentRoute.inputs.first?.portType == .bluetoothHFP
+        if !engaged { try? session.setPreferredInput(nil) }
+        #if DEBUG
+        debugSnapshot("mic/worn engaged=\(engaged ? 1 : 0)")
+        #endif
+        return engaged
+    }
+
+    /// Whether an earphone mic is on offer at all — the missing dimension in
+    /// `talk_asr_upgrade.input`: a built-in-mic turn means nothing until you
+    /// know whether there was an earphone to use instead.
+    static func hasWornMicAvailable(_ session: AVAudioSession = .sharedInstance()) -> Bool {
+        session.availableInputs?.contains { $0.portType == .bluetoothHFP } ?? false
     }
 
     /// Output ports that mean "the user is listening through something other
@@ -108,6 +158,11 @@ enum AudioSessionRouting {
         try? session.setCategory(.playAndRecord, mode: .default,
                                  options: conversationOptions)
         try? session.setActive(true, options: .notifyOthersOnDeactivation)
+        // Land on the earphone mic HERE, before the opener plays: engaging
+        // HFP later (in `LiveTranscriber.start`) would move the route under
+        // the first turn — which is the same audible shift this warm-up
+        // exists to prevent.
+        if !MicPreferenceStore.forcesBuiltInMic { engageWornMic(session) }
         applyOutputRoute(session)
         #if DEBUG
         debugSnapshot("talk/warmup")
