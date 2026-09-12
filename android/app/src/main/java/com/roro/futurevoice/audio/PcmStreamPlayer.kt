@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
  * Format is fixed by the Edge Function: 16-bit LE mono PCM at 22.05 kHz
  * (`X-Audio-Format: pcm_22050`). See `docs/contracts/behavior.md` §1.
  */
-class PcmStreamPlayer(private val sampleRate: Int = 22_050) {
+class PcmStreamPlayer(val sampleRate: Int = 22_050) {
 
     private var track: AudioTrack? = null
     private var writtenFrames: Int = 0
