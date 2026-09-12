@@ -21,6 +21,14 @@ object Config {
         get() = supabaseUrl.isNotBlank() && supabaseAnonKey.isNotBlank()
 
     fun functionUrl(name: String): String = "${supabaseUrl.trimEnd('/')}/functions/v1/$name"
+
+    /**
+     * The realtime Talk gateway (`gateway/` in this repo — a Cloudflare
+     * Worker + Durable Object). ONE WebSocket per call; the gateway meters
+     * the call itself through `talk-tick` with the caller's own JWT, so the
+     * app never ticks on this path. Same URL iOS ships with.
+     */
+    const val gatewayUrl: String = "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call"
 }
 
 /**

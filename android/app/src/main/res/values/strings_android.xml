@@ -84,7 +84,6 @@
     <string name="noisy_background_try_quieter">Noisy background — try a quieter spot (a closet works great).</string>
     <string name="some_background_noise_quieter_better">Some background noise — quieter is better.</string>
     <string name="quiet_take_well_boost_it">Quiet take — we\'ll boost it, but closer to the mic helps.</string>
-    <string name="continue_with_google">Continue with Google</string>
     <string name="continue_with_apple">Continue with Apple</string>
     <string name="other_ways_to_say_it">Other ways to say it</string>
     <string name="show_me_more">Show me more</string>
@@ -138,7 +137,5 @@
     <string name="ring_exactly_on_time">Ring exactly on time</string>
     <string name="without_this_the_call_can_arrive_a_few_minutes_late">Without this the call can arrive a few minutes late.</string>
     <string name="keep_going">Keep going</string>
-    <string name="headline">Headline</string>
-    <string name="or_write_your_own">Or write your own</string>
     <string name="words_your_fluent_self_used_that_you_havent">Words your fluent self used and you haven\'t. Say one in a talk and it ticks itself.</string>
 </resources>

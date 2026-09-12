@@ -237,7 +237,7 @@ fun MeScreen(
                             "$tier · " + stringResource(
                                 R.string.lld_min_talked_this_month, acct.secondsUsedPeriod / 60)
                         }
-                        else -> stringResource(R.string.talking_needs_a_plan_19fb7a)
+                        else -> stringResource(R.string.talking_needs_a_plan)
                     },
                     onClick = onOpenPaywall)
             }

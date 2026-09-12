@@ -41,6 +41,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.GraphicEq
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BillingService
 import com.roro.futurevoice.ui.brand.AppSurfaces
@@ -107,6 +112,35 @@ fun PaywallScreen(onDismiss: () -> Unit) {
                 .padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            // The pitch, before the price — iOS order. Rows by importance:
+            // the call is the product, the daily call is what makes "every
+            // day" credible, then the rehearse/review halves, then measurement.
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.you_but_fluent),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.speak_every_day_and_keep_everything_it_teaches_you),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                PitchRow(Icons.Filled.Forum,
+                    stringResource(R.string.real_conversations_your_voice),
+                    stringResource(R.string.talk_with_your_fluent_self_like_a_live_phone_call_every_repl_d69f26))
+                PitchRow(Icons.Filled.Phone,
+                    stringResource(R.string.your_fluent_self_calls_first),
+                    stringResource(R.string.pick_a_time_and_the_phone_rings_miss_it_and_a_voicemail_with_b83e21))
+                PitchRow(Icons.Filled.PlayCircle,
+                    stringResource(R.string.rehearse_before_it_happens),
+                    stringResource(R.string.describe_what_s_coming_and_watch_your_fluent_self_handle_it_48f4b8))
+                PitchRow(Icons.Filled.Style,
+                    stringResource(R.string.corrections_that_stick),
+                    stringResource(R.string.inline_fixes_become_spaced_repetition_drills_tuned_to_your_m_00ebe4))
+                PitchRow(Icons.Filled.GraphicEq,
+                    stringResource(R.string.pronunciation_you_can_measure),
+                    stringResource(R.string.shadow_any_line_get_a_real_score_watch_the_weekly_trend))
+            }
+
             Text(stringResource(R.string.choose_your_plan),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold)
@@ -304,3 +338,18 @@ private fun priceOf(offers: List<BillingService.Offer>, tier: String, period: St
 
 private fun grouped(n: Int): String =
     NumberFormat.getIntegerInstance(Locale.getDefault()).format(n)
+
+/** One line of the pitch: a glyph, the promise, and what backs it. */
+@Composable
+private fun PitchRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, detail: String) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.Top) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp).padding(top = 2.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(detail, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}

@@ -948,7 +948,7 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 Text(label, style = DisplayFace.style(label,
                     MaterialTheme.typography.titleMedium))
                 Text(
-                    stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+                    (if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds) else stringResource(R.string.today_s_goal_lld_min, goalMinutes)),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -1034,7 +1034,7 @@ private fun TodayRow() {
     Column {
         Text(stringResource(R.string.today), style = MaterialTheme.typography.titleMedium)
         Text(
-            stringResource(R.string.lld_of_lld_min_today, seconds / 60, goalMinutes),
+            (if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds) else stringResource(R.string.today_s_goal_lld_min, goalMinutes)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
