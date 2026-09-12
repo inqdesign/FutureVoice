@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -107,6 +108,17 @@ class RealtimeTalkClient(private val context: Context) {
         private set(value) { field = value; onState?.invoke(value) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    /**
+     * Every touch of the player — start, write, drain, stop — runs here, one
+     * after another. Binary frames arrive on the socket thread faster than a
+     * blocking write drains them; launching a write per frame on a shared
+     * pool ran them CONCURRENTLY, and a stop() or a rate rebuild landing
+     * between two writes released the track under a write still in flight
+     * (AudioTrack::releaseBuffer null deref, reproduced on the emulator).
+     */
+    private val audioThread = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "rt-audio")
+    }.asCoroutineDispatcher()
     private val json = Json { ignoreUnknownKeys = true }
     private val http = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)   // a call has no read deadline
@@ -186,8 +198,7 @@ class RealtimeTalkClient(private val context: Context) {
                 // Binary frames are reply PCM at the announced rate.
                 val chunk = bytes.toByteArray()
                 replyPCM.write(chunk)
-                val p = player ?: return
-                scope.launch { p.write(chunk) }
+                scope.launch(audioThread) { player?.write(chunk) }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
@@ -229,7 +240,7 @@ class RealtimeTalkClient(private val context: Context) {
 
     private fun teardown() {
         stopMic()
-        runCatching { player?.stop() }; player = null
+        scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
         runCatching { socket?.close(1000, null) }; socket = null
     }
 
@@ -266,12 +277,15 @@ class RealtimeTalkClient(private val context: Context) {
                 replyContext = ctx
                 replyRate = msg["sampleRate"]?.jsonPrimitive?.content?.toIntOrNull() ?: DEFAULT_REPLY_RATE
                 replyPCM.reset()
-                // The rate can change between replies; a player is bound to
-                // one rate, so it is rebuilt when the announced one differs.
-                val p = player?.takeIf { it.sampleRate == replyRate }
-                    ?: PcmStreamPlayer(replyRate).also { player?.stop(); player = it }
-                p.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(context)
-                p.start()
+                val rate = replyRate
+                scope.launch(audioThread) {
+                    // The rate can change between replies; a player is bound
+                    // to one rate, so it is rebuilt when the announced differs.
+                    val p = player?.takeIf { it.sampleRate == rate }
+                        ?: PcmStreamPlayer(rate).also { player?.stop(); player = it }
+                    p.volume = com.roro.futurevoice.data.AudioPrefs.talkVoiceVolume(context)
+                    p.start()
+                }
                 ctx?.let { onReplyBegan?.invoke(it) }
                 state = State.SPEAKING
             }
@@ -285,16 +299,14 @@ class RealtimeTalkClient(private val context: Context) {
             }
             "audio_end" -> {
                 // Let the track drain what it holds, then hand the mic back.
-                val p = player
-                scope.launch {
-                    runCatching { p?.drain() }
+                scope.launch(audioThread) {
+                    runCatching { player?.drain() }
                     if (state == State.SPEAKING) state = State.LISTENING
                 }
             }
             "interrupted" -> {
                 // Stop local playback NOW and drop what was buffered.
-                runCatching { player?.stop() }
-                player = null
+                scope.launch(audioThread) { runCatching { player?.stop() }; player = null }
                 replyContext?.let { onInterrupted?.invoke(it) }
                 state = State.HEARING
             }
@@ -336,9 +348,10 @@ class RealtimeTalkClient(private val context: Context) {
         micJob = scope.launch {
             val buf = ShortArray(MIC_FRAMES)
             val bytes = ByteBuffer.allocate(MIC_FRAMES * 2).order(ByteOrder.LITTLE_ENDIAN)
+            try {
             while (micRunning) {
                 val n = rec.read(buf, 0, buf.size)
-                if (n <= 0) continue
+                if (n <= 0) { if (n < 0) break else continue }
                 var peak = 0f
                 bytes.clear()
                 for (i in 0 until n) {
@@ -354,18 +367,24 @@ class RealtimeTalkClient(private val context: Context) {
                 // which is what Gemini Live's own VAD wants.
                 socket?.send(frame.toByteString())
             }
+            } finally {
+                // Only this thread ever stops/releases the recorder — it is
+                // the one inside read(). Releasing from stopMic() while a
+                // read is blocked is a native crash, not an error.
+                runCatching { canceller?.release() }; canceller = null
+                runCatching { rec.stop() }
+                runCatching { rec.release() }
+                if (record === rec) record = null
+            }
         }
     }
 
     private fun stopMic() {
+        // Flip the flag and let the loop thread finish its read and release
+        // the recorder itself (see the finally above). Cancelling the job is
+        // not enough on its own: read() is a blocking native call.
         micRunning = false
-        micJob?.cancel(); micJob = null
-        runCatching { canceller?.release() }; canceller = null
-        record?.let { r ->
-            runCatching { r.stop() }
-            runCatching { r.release() }
-        }
-        record = null
+        micJob = null
         level = 0f
     }
 

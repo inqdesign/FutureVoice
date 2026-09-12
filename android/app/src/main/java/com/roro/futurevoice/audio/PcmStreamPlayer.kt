@@ -67,12 +67,14 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
 
     /** Blocking write — call from an IO context; back-pressure is the point. */
     suspend fun write(chunk: ByteArray) = withContext(Dispatchers.IO) {
-        val t = track ?: return@withContext
-        var offset = 0
-        while (offset < chunk.size) {
-            val written = t.write(chunk, offset, chunk.size - offset)
-            if (written <= 0) break
-            offset += written
+        synchronized(this@PcmStreamPlayer) {
+            val t = track ?: return@withContext
+            var offset = 0
+            while (offset < chunk.size) {
+                val written = t.write(chunk, offset, chunk.size - offset)
+                if (written <= 0) break
+                offset += written
+            }
         }
         writtenFrames += chunk.size / 2
     }
@@ -87,7 +89,7 @@ class PcmStreamPlayer(val sampleRate: Int = 22_050) {
         }
     }
 
-    fun stop() {
+    fun stop() = synchronized(this) {
         track?.let {
             runCatching { it.pause() }
             runCatching { it.flush() }
