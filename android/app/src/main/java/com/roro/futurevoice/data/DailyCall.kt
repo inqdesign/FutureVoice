@@ -45,6 +45,7 @@ object DailyCallStore {
     }
 
     fun set(c: Context, enabled: Boolean, hour: Int, minute: Int) {
+        if (enabled) com.roro.futurevoice.core.Analytics.capture("daily_call_scheduled")
         c.getSharedPreferences(PREFS, 0).edit()
             .putBoolean(ENABLED, enabled).putInt(HOUR, hour).putInt(MINUTE, minute).apply()
         if (enabled) DailyCallScheduler.schedule(c) else DailyCallScheduler.cancel(c)
