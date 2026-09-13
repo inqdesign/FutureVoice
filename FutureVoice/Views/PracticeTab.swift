@@ -116,9 +116,11 @@ struct PracticeTab: View {
         case studying, talk, watch
         var title: String {
             switch self {
-            case .studying:  return "Studying"
-            case .talk:      return "Talk"
-            case .watch:     return "Watch"
+            // A `String`, so it must go through explain() or it stays English
+            // in every app language (see "UI text has ONE language").
+            case .studying:  return explain("Studying")
+            case .talk:      return explain("Talk")
+            case .watch:     return explain("Watch")
             }
         }
         /// Category color for the selected-chip fill; nil = the cross-cutting
@@ -536,7 +538,7 @@ struct PracticeTab: View {
             return Row(
                 id: session.id,
                 title: session.displayTitle,
-                subtitle: "Talk",
+                subtitle: explain("Talk"),
                 icon: "bubble.left.and.bubble.right.fill",
                 itemCount: snap.totalCount,
                 finishedAt: snap.lastStudiedAt ?? session.endedAt ?? session.startedAt,
@@ -892,14 +894,14 @@ struct PracticeTab: View {
             // the other half of what made this page hard to read.
             todayCard
             if !talkRow.isEmpty {
-                bookRow(title: "Talk", shelf: .talk, count: talkRow.count) {
+                bookRow(title: explain("Talk"), shelf: .talk, count: talkRow.count) {
                     ForEach(talkRow) { session in
                         talkCard(session).frame(width: Self.rowCardWidth)
                     }
                 }
             }
             if !watchRow.isEmpty {
-                bookRow(title: "Watch", shelf: .watch, count: watchRow.count) {
+                bookRow(title: explain("Watch"), shelf: .watch, count: watchRow.count) {
                     ForEach(watchRow) { s in
                         scenarioCard(s).frame(width: Self.rowCardWidth)
                     }

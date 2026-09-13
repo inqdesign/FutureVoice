@@ -199,7 +199,10 @@ struct RootView: View {
     /// Page/navigation titles render in Geist Pixel (bundled). Falls back to
     /// SF Pro Rounded if the font ever fails to load, so titles never vanish.
     static func roundedNavFont(_ size: CGFloat, _ weight: UIFont.Weight) -> UIFont {
-        if let pixel = UIFont.appPixel(size) { return pixel }
+        // Same rule as `Font.geistPixel`: a chrome language the pixel cascade
+        // can't spell (Chinese) gets the system face for the WHOLE title
+        // rather than a title that is half pixel, half SF.
+        if UILanguage.pixelFaceCoversChrome, let pixel = UIFont.appPixel(size) { return pixel }
         let base = UIFont.systemFont(ofSize: size, weight: weight)
         guard let d = base.fontDescriptor.withDesign(.rounded) else { return base }
         return UIFont(descriptor: d, size: size)
@@ -217,6 +220,20 @@ extension Font {
     /// this Font alone renders as SF Rounded, not pixels. The View modifier
     /// pairs it with the required `.fontDesign(nil)` reset.
     static func geistPixel(_ size: CGFloat) -> Font {
+        // The pixel cascade covers Latin, Hangul and kana/kanji, but NOT the
+        // Traditional Chinese repertoire (Galmuri has 説/録/毎, not 說/錄/每),
+        // and a missing glyph falls to the system font PER CHARACTER — a title
+        // half pixel, half SF. For a chrome language the face can't spell,
+        // the whole title goes system so it at least reads as one voice.
+        // Exported pictures (the day card) stay pixel via `brandPixel`.
+        guard UILanguage.pixelFaceCoversChrome else { return .system(size: size, weight: .semibold) }
+        return brandPixel(size)
+    }
+
+    /// The pixel face regardless of chrome language — for surfaces whose
+    /// text is pinned to English (the day card) and for anything else that
+    /// draws only Latin/digits.
+    static func brandPixel(_ size: CGFloat) -> Font {
         guard let ui = UIFont.appPixel(size) else { return .custom("GeistPixel-Square", size: size) }
         return Font(ui)
     }
@@ -246,6 +263,11 @@ extension View {
     /// override the custom face and the text would fall back to SF Rounded.
     func geistPixel(_ size: CGFloat) -> some View {
         font(.geistPixel(size)).fontDesign(nil)
+    }
+
+    /// `geistPixel` for English-pinned exports — see `Font.brandPixel`.
+    func brandPixel(_ size: CGFloat) -> some View {
+        font(.brandPixel(size)).fontDesign(nil)
     }
 }
 

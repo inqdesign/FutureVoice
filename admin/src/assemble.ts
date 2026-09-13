@@ -42,6 +42,18 @@ function daysBetween(start: string, today: string): string[] {
   return out;
 }
 
+// One word for what a subscription is DOING. `status` alone can't tell a
+// trial that was cancelled an hour after it started from one still running
+// (both are "trialing"), and a comp is not a sale. Used by the launch tab's
+// funnel and by every plan chip on the page.
+function subStateOf(u: any): string {
+  if (!u.plan_id) return "none";
+  if (u.sub_source === "comp") return u.sub_status === "active" ? "comp" : u.sub_status;
+  if (u.sub_status === "trialing") return u.cancel_at_period_end ? "trial_cancelled" : "trial";
+  if (u.sub_status === "active") return u.cancel_at_period_end ? "cancelling" : "paid";
+  return u.sub_status;   // expired, past_due, … verbatim
+}
+
 const deviceOf = (ua: string | null) =>
   !ua ? null : ua.includes("iPhone") ? "iPhone" : ua.includes("iPad") ? "iPad" : null;
 
@@ -110,8 +122,35 @@ export function assemble(raw: any) {
       interests: u.interests, intro: u.intro,
       channel: u.channel, device: deviceOf(u.user_agent),
       waitlistAt: u.waitlist_at, reviews: rv,
+      // launch watch (2026-09-12) — timestamps, not dates, because on a
+      // launch day "when" is an hour, not a date
+      signedUpAt: u.signed_up_at ?? null,
+      provider: u.provider ?? null,
+      lastSignIn: u.last_sign_in_at ?? null,
+      cloneAt: u.clone_at ?? null,
+      firstTalkAt: u.first_talk_at ?? null,
+      lastTalkAt: u.last_talk_at ?? null,
+      subState: subStateOf(u),
+      subSource: u.sub_source ?? null,
+      subStartedAt: u.sub_started ?? null,
+      periodEnd: u.period_end ?? null,
+      trialEndsAt: u.trial_ends_at ?? null,
+      cancelAtPeriodEnd: !!u.cancel_at_period_end,
     };
   });
+
+  // ---------------------------------------------------------------- launch
+  // Everything here is keyed by user INDEX like the cells are, and every
+  // list is optional on the raw side so a Worker deployed ahead of the
+  // migration (or the offline snapshot, whose Python gather doesn't emit
+  // these) renders the tab empty instead of failing to render at all.
+  const withIdx = (rows: any[] | undefined) =>
+    (rows ?? []).filter((r: any) => uidx.has(r.id))
+      .map((r: any) => ({ ...r, u: uidx.get(r.id) }));
+  const subEvents = withIdx(raw.sub_events);
+  const recentSessions = withIdx(raw.recent_sessions);
+  const recentEvents = withIdx(raw.recent_events);
+  const freeRecent = withIdx(raw.free_recent);
 
   // ---------------------------------------------------------------- cost
   const m = raw.mech;
@@ -201,5 +240,6 @@ export function assemble(raw: any) {
     },
     cost,
     fairUse: raw.fair_use,
+    subEvents, recentSessions, recentEvents, freeRecent,
   };
 }

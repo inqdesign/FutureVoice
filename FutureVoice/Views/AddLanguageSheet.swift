@@ -16,7 +16,7 @@ struct AddLanguageSheet: View {
     /// not already enrolled.
     private var choices: [String] {
         LanguageCatalog.selectableTargets.map(\.code).filter {
-            $0 != appState.nativeLanguage && !appState.enrolledLanguages.contains($0)
+            !LanguageCatalog.sameLanguage($0, appState.nativeLanguage) && !appState.enrolledLanguages.contains($0)
         }
     }
 

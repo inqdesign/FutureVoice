@@ -37,7 +37,7 @@ struct SetupFlowView: View {
     /// Practice targets on offer — everything the app can deliver end to end
     /// (`LanguageCatalog.selectableTargets`) except the chosen native language.
     private var targetChoices: [String] {
-        LanguageCatalog.selectableTargets.map(\.code).filter { $0 != nativeLanguage }
+        LanguageCatalog.selectableTargets.map(\.code).filter { !LanguageCatalog.sameLanguage($0, nativeLanguage) }
     }
 
     /// Device-preferred languages first — see `LanguageCatalog.nativeChoices`.
@@ -74,7 +74,7 @@ struct SetupFlowView: View {
             // the native pick too (see advance()). The target moves, not the
             // native — the native seed came from the device and is the better
             // guess of the two.
-            if targetLanguage == nativeLanguage {
+            if LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
                 targetLanguage = targetChoices.first ?? "en"
             }
             #if DEBUG
@@ -254,8 +254,7 @@ struct SetupFlowView: View {
     /// Reads the step-one `@State`, not the stored setting, so tapping down
     /// the native list re-labels the whole screen as you go.
     private func ownName(_ code: String) -> String {
-        Locale(identifier: nativeLanguage).localizedString(forLanguageCode: code)?.capitalized
-            ?? LanguageCatalog.englishName(code)
+        LanguageCatalog.name(code, in: nativeLanguage)
     }
 
     // MARK: - Bottom bar
@@ -316,7 +315,7 @@ struct SetupFlowView: View {
     private func advance() {
         if step < Self.totalSteps - 1 {
             // The native pick may have collided with the pre-selected target.
-            if targetLanguage == nativeLanguage {
+            if LanguageCatalog.sameLanguage(targetLanguage, nativeLanguage) {
                 targetLanguage = targetChoices.first ?? "en"
             }
             step += 1

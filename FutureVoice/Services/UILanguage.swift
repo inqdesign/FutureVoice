@@ -42,6 +42,13 @@ enum UILanguage {
         LanguageCatalog.currentNative
     }
 
+    /// Whether the bundled pixel display face (Geist Pixel → Galmuri subset)
+    /// can spell the chrome language. Chinese can't be covered by the subset
+    /// we ship (see `Font.geistPixel`); everything else in the catalogs can.
+    static var pixelFaceCoversChrome: Bool {
+        !chromeLanguage.hasPrefix("zh")
+    }
+
     // `isOnboarding` lived here until 2026-08-17. It existed only to carve
     // onboarding out of the chrome-follows-target rule; with that rule gone
     // there is nothing to carve out — onboarding, the tabs and Settings all

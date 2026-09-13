@@ -38,7 +38,35 @@ enum LanguageCatalog {
     /// Current native language, for the non-UI callers that can't be handed one.
     /// Mirrors AppState's default so both agree before setup writes a choice.
     static var currentNative: String {
-        UserDefaults.standard.string(forKey: nativeLanguageDefaultsKey) ?? defaultNative
+        normalizedNative(UserDefaults.standard.string(forKey: nativeLanguageDefaultsKey) ?? defaultNative)
+    }
+
+    /// A bare "zh" was a valid native choice before 2026-09-12; it means
+    /// Simplified everywhere else in Foundation, so it maps there.
+    static func normalizedNative(_ code: String) -> String {
+        code == "zh" ? "zh-Hans" : code
+    }
+
+    /// The `nativeLanguages` entry a device/user locale identifier stands for:
+    /// script-qualified where the list is ("zh-Hant" for zh-TW / zh-HK), the
+    /// bare language code otherwise.
+    static func nativeCode(matching identifier: String) -> String? {
+        let locale = Locale(identifier: identifier)
+        guard let code = locale.language.languageCode?.identifier
+            ?? identifier.split(separator: "-").first.map(String.init) else { return nil }
+        if let script = locale.language.script?.identifier,
+           nativeLanguages.contains("\(code)-\(script)") { return "\(code)-\(script)" }
+        return nativeLanguages.contains(code) ? code : nil
+    }
+
+    /// True when two codes name the same language regardless of script or
+    /// region — "zh" and "zh-Hant", "pt" and "pt-BR".
+    static func sameLanguage(_ a: String, _ b: String) -> Bool {
+        base(a) == base(b)
+    }
+
+    private static func base(_ code: String) -> String {
+        code.split(separator: "-").first.map(String.init) ?? code
     }
 
     /// Best guess at the learner's native language from the device, used to
@@ -53,9 +81,7 @@ enum LanguageCatalog {
     /// read" instead of "a language I've never seen".
     static var defaultNative: String {
         for identifier in Locale.preferredLanguages {
-            let code = Locale(identifier: identifier).language.languageCode?.identifier
-                ?? identifier.split(separator: "-").first.map(String.init)
-            if let code, nativeLanguages.contains(code) { return code }
+            if let code = nativeCode(matching: identifier) { return code }
         }
         return "en"
     }
@@ -116,7 +142,11 @@ enum LanguageCatalog {
     /// Europe → Africa).
     static let nativeLanguages: [String] = [
         // East & Southeast Asia
-        "ko", "ja", "zh", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
+        // Chinese is listed by SCRIPT, not as a bare "zh": Traditional (Taiwan,
+        // Hong Kong, Macau) and Simplified are different vocabularies as well as
+        // different glyphs, and a bare "zh" resolves to Simplified everywhere in
+        // Foundation — which would have handed a Taiwanese learner the wrong one.
+        "ko", "ja", "zh-Hant", "zh-Hans", "vi", "th", "id", "ms", "fil", "km", "my", "lo", "mn",
         // South Asia
         "hi", "bn", "ur", "ta", "te", "mr", "gu", "kn", "ml", "pa", "ne", "si",
         // Middle East & Central Asia
@@ -139,8 +169,8 @@ enum LanguageCatalog {
     static var nativeChoices: [String] {
         var seen = Set<String>()
         let preferred = Locale.preferredLanguages
-            .compactMap { Locale(identifier: $0).language.languageCode?.identifier }
-            .filter { nativeLanguages.contains($0) && seen.insert($0).inserted }
+            .compactMap { nativeCode(matching: $0) }
+            .filter { seen.insert($0).inserted }
         return preferred + nativeLanguages.filter { !seen.contains($0) }
     }
 
@@ -154,9 +184,10 @@ enum LanguageCatalog {
     /// in the learner's own language (see the note above) — the picker groups
     /// on this so the difference is visible BEFORE they choose, not after.
     static var translatedLanguages: [String] {
-        let bundled = Set(Bundle.main.localizations.compactMap {
-            Locale(identifier: $0).language.languageCode?.identifier
-        })
+        // Bundle ids are what `.lproj` folders are called — "zh-Hant", never a
+        // bare "zh" — so a script-qualified native code matches only its own
+        // column, and a bare code matches only a bare column.
+        let bundled = Set(Bundle.main.localizations)
         return nativeLanguages.filter { bundled.contains($0) }
     }
 
@@ -181,8 +212,25 @@ enum LanguageCatalog {
     /// copy ("Your Korean"). Never feed a bare code into a prompt: models
     /// treat "en" and "English" differently.
     static func englishName(_ code: String) -> String {
-        Locale(identifier: "en").localizedString(forLanguageCode: code)?.capitalized
-            ?? code.uppercased()
+        // `forLanguageCode:` drops the script — "zh-Hant" comes back as plain
+        // "Chinese", and a prompt told "Chinese" writes Simplified.
+        switch Locale(identifier: code).language.script?.identifier {
+        case "Hant" where base(code) == "zh": return "Traditional Chinese"
+        case "Hans" where base(code) == "zh": return "Simplified Chinese"
+        default:
+            return Locale(identifier: "en").localizedString(forLanguageCode: code)?.capitalized
+                ?? code.uppercased()
+        }
+    }
+
+    /// The name of `code` as written in the language `locale` — the one
+    /// helper every on-screen language name goes through, because it keeps
+    /// the script: "繁體中文" / "Chinese (Traditional)", not "中文" / "Chinese".
+    static func name(_ code: String, in locale: String) -> String {
+        let l = Locale(identifier: locale)
+        if Locale(identifier: code).language.script != nil,
+           let full = l.localizedString(forIdentifier: code) { return full }
+        return l.localizedString(forLanguageCode: code)?.capitalized ?? englishName(code)
     }
 
     /// Name in the LEARNER's own language — "영어" for a Korean, "Englisch"
@@ -194,14 +242,12 @@ enum LanguageCatalog {
     /// not to have. Falls back to the English name for a locale iOS can't name
     /// the language in.
     static func learnerName(_ code: String) -> String {
-        Locale(identifier: currentNative).localizedString(forLanguageCode: code)?.capitalized
-            ?? englishName(code)
+        name(code, in: currentNative)
     }
 
     /// Name in its own language ("Deutsch", "한국어") — for pickers.
     static func endonym(_ code: String) -> String {
-        Locale(identifier: code).localizedString(forLanguageCode: code)?.capitalized
-            ?? code.uppercased()
+        name(code, in: code)
     }
 
     /// Concrete locale for SFSpeechRecognizer. Bare codes like "zh" don't
@@ -216,6 +262,10 @@ enum LanguageCatalog {
     /// target. Ask the system what it actually supports instead of keeping a
     /// second table that would drift.
     static func sttLocale(_ code: String) -> String {
+        // The script says which recognizer: Traditional dictation is zh-TW,
+        // and the bare-"zh" target entry would otherwise send it to zh-CN.
+        if code == "zh-Hant" { return "zh-TW" }
+        if code == "zh-Hans" { return "zh-CN" }
         if let known = language(code)?.sttLocale { return known }
         return systemRecognizerLocale(for: code) ?? code
     }

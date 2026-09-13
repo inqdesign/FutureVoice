@@ -393,7 +393,7 @@ final class AppState: ObservableObject {
     private static let onboardingStartedKey = "futurevoice.onboardingStarted"
 
     init() {
-        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey)
+        let storedNative = UserDefaults.standard.string(forKey: Self.nativeLanguageKey).map(LanguageCatalog.normalizedNative)
             ?? LanguageCatalog.defaultNative
         let storedTarget = UserDefaults.standard.string(forKey: Self.targetLanguageKey) ?? "en"
         let storedLevel = UserDefaults.standard.string(forKey: Self.proficiencyKey)
@@ -1331,7 +1331,7 @@ final class AppState: ObservableObject {
     /// finds them already equal and never saves over it.
     func adoptRestoredData() {
         let defaults = UserDefaults.standard
-        if let native = defaults.string(forKey: Self.nativeLanguageKey) { nativeLanguage = native }
+        if let native = defaults.string(forKey: Self.nativeLanguageKey) { nativeLanguage = LanguageCatalog.normalizedNative(native) }
         let enrolled = defaults.stringArray(forKey: LanguageScope.enrolledDefaultsKey) ?? []
         if !enrolled.isEmpty { enrolledLanguages = enrolled }
         if let target = defaults.string(forKey: Self.targetLanguageKey) { targetLanguage = target }
