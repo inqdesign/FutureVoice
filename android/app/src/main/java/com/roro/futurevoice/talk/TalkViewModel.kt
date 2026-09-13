@@ -304,7 +304,9 @@ class TalkViewModel(context: Context) : ViewModel() {
                         ).reply
                     }.getOrDefault("")
                 }
-                if (opener.isNotBlank()) appendFluentSelf(opener)
+                // NOT appended here: the gateway speaks the opener as a reply
+                // with its own context, and audio_start/reply_delta create the
+                // turn — appending it locally too printed it twice.
                 connectRealtime(config, opener, emptyList())
             } catch (e: Exception) {
                 fail(e)

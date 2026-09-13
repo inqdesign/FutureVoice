@@ -58,7 +58,7 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 **통화 경험**
 - [ ] `CallNowPlaying` — 잠금 화면에서 통화를 제어. 없으면 잠근 폰에서
       끊을 방법이 없다.
-- [ ] `RealtimeTalkClient` — **출시된 유일한 통화 경로.** 클라이언트 작성됨, TalkViewModel 통합·기기 검증 남음.
+- [x] `RealtimeTalkClient` — **출시된 유일한 통화 경로.** 2026-09-13 통합·에뮬레이터 검증(ready → 오프너 재생 → stats, 소켓 유지, 크래시 없음). 남은 것: **실기기 검증** — 진짜 마이크로 사용자 턴·끼어들기·에코 제거(VOICE_COMMUNICATION AEC)는 에뮬레이터로 볼 수 없다.
 
 **사람·복습 주변**
 - [ ] `CounterpartDetailView` / `CounterpartVoiceIntakeView` — 상대 상세와

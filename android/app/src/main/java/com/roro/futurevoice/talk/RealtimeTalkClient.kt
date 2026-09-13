@@ -207,7 +207,12 @@ class RealtimeTalkClient(private val context: Context) {
                 fail(t.message ?: "connection failed")
             }
 
+            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                Log.w(TAG, "socket closing: $code '$reason' tornDown=$tornDown")
+            }
+
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                Log.w(TAG, "socket closed: $code '$reason' tornDown=$tornDown")
                 if (tornDown) return
                 // A socket the gateway closed on its own, without an error
                 // event first, is a dropped call — say so rather than leaving
@@ -233,6 +238,7 @@ class RealtimeTalkClient(private val context: Context) {
     }
 
     private fun fail(message: String) {
+        Log.w(TAG, "fail: $message (state=$state)")
         teardown()
         state = State.FAILED
         onFailed?.invoke(message)
@@ -249,6 +255,7 @@ class RealtimeTalkClient(private val context: Context) {
 
     private fun handle(msg: JsonObject) {
         val type = msg["type"]?.jsonPrimitive?.content ?: return
+        if (type != "user_partial" && type != "reply_delta") Log.d(TAG, "event: $type")
         when (type) {
             "ready" -> {
                 // Auth + upstream sessions are up: open the mic and stream.
@@ -351,7 +358,7 @@ class RealtimeTalkClient(private val context: Context) {
             try {
             while (micRunning) {
                 val n = rec.read(buf, 0, buf.size)
-                if (n <= 0) { if (n < 0) break else continue }
+                if (n <= 0) { Log.w(TAG, "mic read returned $n"); if (n < 0) break else continue }
                 var peak = 0f
                 bytes.clear()
                 for (i in 0 until n) {
