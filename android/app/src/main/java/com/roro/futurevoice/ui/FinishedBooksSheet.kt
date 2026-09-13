@@ -49,11 +49,30 @@ fun FinishedBooksSheet(books: List<FinishedBook>, onOpen: (FinishedBook) -> Unit
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 12.dp))
             } else {
-                Text(stringResource(R.string.lld_words_and_lines_mastered_inside_them,
-                    books.sumOf { it.itemCount }),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 6.dp))
+                // The count IS the record, so it is said as a number and not
+                // as a sentence. Green, the same green mastery wears
+                // everywhere else in the app.
+                GroupedCard {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("${books.size}",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold, color = Color(0xFF34C759))
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(stringResource(
+                                if (books.size == 1) R.string.book_finished
+                                else R.string.books_finished),
+                                style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(
+                                R.string.lld_words_and_lines_mastered_inside_them,
+                                books.sumOf { it.itemCount }),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                GroupedSectionSpacer()
                 GroupedCard {
                     books.forEachIndexed { i, book ->
                         if (i > 0) GroupedRowDivider(inset = false)
@@ -66,8 +85,8 @@ fun FinishedBooksSheet(books: List<FinishedBook>, onOpen: (FinishedBook) -> Unit
                             Column(Modifier.weight(1f)) {
                                 Text(book.title, style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium, maxLines = 2)
-                                Text("${book.subtitle} · " + stringResource(
-                                    R.string.lld_of_lld_mastered, book.itemCount, book.itemCount),
+                                Text(stringResource(R.string.lld_mastered,
+                                    book.subtitle, book.itemCount, book.finishedLabel),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -91,4 +110,6 @@ data class FinishedBook(
     val icon: ImageVector,
     val itemCount: Int,
     val isTalk: Boolean,
+    /** The day it was finished, already written the way the row prints it. */
+    val finishedLabel: String = "",
 )

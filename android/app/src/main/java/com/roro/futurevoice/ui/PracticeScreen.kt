@@ -58,6 +58,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -160,15 +161,23 @@ fun PracticeBody(
             }.getOrNull()
             if (snap?.isMastered != true) null
             else FinishedBook(s.id, s.displayTitle ?: "", context.getString(R.string.talk),
-                Icons.Filled.Mic, snap.totalCount, isTalk = true)
+                Icons.AutoMirrored.Filled.Chat, snap.totalCount, isTalk = true,
+                finishedLabel = shelfDate(s.endedAt ?: s.startedAt))
         } + allScenarios.mapNotNull { sc ->
             val cur = sc.curriculum ?: return@mapNotNull null
             val total = cur.words.size + cur.expressions.size
             val done = cur.words.count { it.masteredAt != null } +
                 cur.expressions.count { it.masteredAt != null }
             if (total == 0 || done < total) null
-            else FinishedBook(sc.id, sc.cardTitle, context.getString(R.string.watch),
-                Icons.Filled.MenuBook, total, isTalk = false)
+            else FinishedBook(sc.id, sc.cardTitle,
+                // "Scene · with Sarah" — who it was with is part of what the
+                // book WAS, and the row is the only place it still shows.
+                listOfNotNull(context.getString(R.string.scene),
+                    sc.role.takeIf { it.isNotBlank() }
+                        ?.let { context.getString(R.string.with, it) })
+                    .joinToString(" · "),
+                Icons.Filled.Movie, total, isTalk = false,
+                finishedLabel = shelfDate(sc.createdAt))
         })
     }
 
@@ -956,3 +965,9 @@ private fun canDoAt(level: String): String = stringResource(
         "C1" -> R.string.fluent_flexible_and_precise_even_on_complex_topics
         else -> R.string.effortless_and_nuanced_close_to_native
     })
+
+/** The finished shelf's date: a day, abbreviated, in the learner's own
+ *  language. A finished book is a record, so it says WHEN, not how long ago. */
+private fun shelfDate(at: Long): String =
+    java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM)
+        .format(java.util.Date(at))
