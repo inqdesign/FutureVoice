@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material3.Button
 import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.ElevenLabsClient
@@ -110,6 +111,8 @@ fun DrillDeckScreen(
     var verdictFor by remember { mutableStateOf<DrillCard?>(null) }
     /** The card opened up — examples, variants, a hook to remember it by. */
     var enrichFor by remember { mutableStateOf<DrillCard?>(null) }
+    /** Due cards this hand didn't take. Short enough to finish in one sitting. */
+    var remainingDue by remember { mutableIntStateOf(0) }
     /** One line of the card, in the learner's own cloned voice. */
     var hearing by remember { mutableStateOf(false) }
     val player = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "drill") }
@@ -135,11 +138,15 @@ fun DrillDeckScreen(
             .eachCount()
     }
 
-    LaunchedEffect(language) {
-        deck = store.due(language)
+    suspend fun dealHand() {
+        val due = store.due(language)
+        deck = due.take(SESSION_CAP)
+        remainingDue = (due.size - deck.size).coerceAtLeast(0)
         dealt = true
         refreshFolders()
     }
+
+    LaunchedEffect(language) { dealHand() }
 
     val top = deck.firstOrNull()
     LaunchedEffect(top?.id) { revealed = false }
@@ -167,9 +174,14 @@ fun DrillDeckScreen(
                         Text(stringResource(R.string.review_cards),
                             style = MaterialTheme.typography.titleMedium)
                         if (deck.isNotEmpty() || resolved > 0) {
-                            Text(stringResource(R.string.lld_of_lld,
-                                (resolved + 1).coerceAtMost(resolved + deck.size),
-                                resolved + deck.size),
+                            Text(
+                                stringResource(R.string.lld_of_lld,
+                                    (resolved + 1).coerceAtMost(resolved + deck.size),
+                                    resolved + deck.size) +
+                                    // The rest of the due pile didn't vanish, it
+                                    // just isn't in this hand.
+                                    if (remainingDue > 0)
+                                        stringResource(R.string.lld_waiting, remainingDue) else "",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -201,6 +213,12 @@ fun DrillDeckScreen(
                         folders = DrillBin.entries.map { bin ->
                             bin to if (bin == DrillBin.GOT_IT) finished else (scheduled[bin] ?: 0)
                         },
+                        // Nothing due at all is a different day from a deck
+                        // just finished — one is "come back after a talk",
+                        // the other is "nice work".
+                        finishedCount = resolved,
+                        remainingDue = remainingDue,
+                        onNext = if (remainingDue > 0) ({ scope.launch { resolved = 0; dealHand() } }) else null,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -463,14 +481,39 @@ private fun VerdictRow(
 
 /** Keeps the folders after the last card — "where did all that go?". */
 @Composable
-private fun DeckDone(folders: List<Pair<DrillBin, Int>>, modifier: Modifier = Modifier) {
+private fun DeckDone(
+    folders: List<Pair<DrillBin, Int>>,
+    finishedCount: Int = 0,
+    remainingDue: Int = 0,
+    onNext: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier.fillMaxWidth().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(R.string.done_for_today),
+        Text(stringResource(
+            if (finishedCount == 0) R.string.no_drills_due else R.string.nice_work),
             style = MaterialTheme.typography.titleMedium)
+        Text(
+            when {
+                finishedCount == 0 -> stringResource(R.string.drills_appear_here_after_you_end_a_conversation)
+                remainingDue > 0 -> stringResource(
+                    R.string.you_finished_lld_cards_lld_more_are_waiting_when_you_re_read_985087,
+                    finishedCount, remainingDue)
+                else -> stringResource(
+                    R.string.you_finished_lld_card_they_ll_surface_again_on_the_leitner_s_38019a,
+                    finishedCount, "")
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        if (onNext != null) {
+            Button(onClick = onNext) {
+                Text(stringResource(R.string.next_lld, minOf(remainingDue, SESSION_CAP)))
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             folders.forEach { (bin, n) ->
                 Column(
@@ -492,3 +535,7 @@ private fun DeckDone(folders: List<Pair<DrillBin, Int>>, modifier: Modifier = Mo
         }
     }
 }
+
+/** One sitting's worth. A 399-card queue dealt in full is not a review, it
+ *  is a wall (iOS `DrillSheet.sessionCap`). */
+private const val SESSION_CAP = 20
