@@ -214,7 +214,11 @@ class TalkViewModel(context: Context) : ViewModel() {
         if (_state.value.phase == TalkPhase.ENDED || _state.value.phase == TalkPhase.IDLE) return
         // The gateway holds the mic and the sockets; putting the call down
         // has to reach it, or the room keeps streaming.
-        if (REALTIME) { realtime.hangUp(); flushRealtimeReply() }
+        if (REALTIME) {
+            realtime.hangUp(); flushRealtimeReply()
+            CallControls.handler = null
+            CallForegroundService.stop(appContext)
+        }
         meter.stop()
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
@@ -358,8 +362,29 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
     }
 
+    private fun callTitle(cfg: TalkConfig): String =
+        cfg.cast?.name ?: cfg.topic.ifBlank { appContext.getString(com.roro.futurevoice.R.string.talk) }
+
+    private fun updateCallNotification(cfg: TalkConfig, phase: TalkPhase) {
+        val hint = appContext.getString(when (phase) {
+            TalkPhase.PAUSED -> com.roro.futurevoice.R.string.paused
+            TalkPhase.SPEAKING -> com.roro.futurevoice.R.string.speaking
+            TalkPhase.THINKING -> com.roro.futurevoice.R.string.thinking
+            TalkPhase.CONNECTING -> com.roro.futurevoice.R.string.connecting
+            else -> com.roro.futurevoice.R.string.listening
+        })
+        CallForegroundService.start(appContext, callTitle(cfg), hint, phase == TalkPhase.PAUSED)
+    }
+
     private suspend fun connectRealtime(cfg: TalkConfig, opener: String?, history: List<Pair<String, String>>) {
         wireRealtime(cfg)
+        CallControls.handler = { a ->
+            when (a) {
+                CallControls.Action.TOGGLE_PAUSE -> togglePause()
+                CallControls.Action.END -> end()
+            }
+        }
+        updateCallNotification(cfg, TalkPhase.CONNECTING)
         val token = auth.accessToken()
         // A cast (Find people) speaks in its preset voice; the fluent self in
         // the learner's own clone. Ownership is enforced by the gateway.
@@ -385,6 +410,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             if (phase != null) {
                 lastActivityAt = System.currentTimeMillis()
                 _state.update { it.copy(phase = phase, level = realtime.level) }
+                updateCallNotification(cfg, phase)
             }
         }
         realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
@@ -507,6 +533,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> {
                     realtime.hangUp(); flushRealtimeReply()
                     _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f) }
+                    config?.let { updateCallNotification(it, TalkPhase.PAUSED) }
                 }
                 else -> Unit
             }
@@ -577,6 +604,10 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     override fun onCleared() {
+        // The screen is gone; so is anything that could answer the notification.
+        CallControls.handler = null
+        CallForegroundService.stop(appContext)
+        realtime.close()
         end()
         super.onCleared()
     }

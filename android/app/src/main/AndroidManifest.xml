@@ -4,6 +4,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- A live call holds the mic and a socket; without a foreground service
+         Android 14+ takes both the moment the screen locks. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- The daily call IS an alarm-clock use (Play declaration: alarm). -->
     <!-- SCHEDULE_EXACT_ALARM, not USE_EXACT_ALARM: Play restricts the latter
          to alarm-clock, timer and calendar apps, and a language app that
@@ -60,6 +65,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <service
+            android:name=".talk.CallForegroundService"
+            android:exported="false"
+            android:foregroundServiceType="microphone|mediaPlayback" />
 
         <receiver
             android:name=".data.DailyCallReceiver"

@@ -54,11 +54,14 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       이미 오디오 기반 전사다(Gemini Live). 클래식 경로 전용이었다.
 - [ ] `PracticeStats` — 스트릭과 통계 엔진.
 - [ ] `SavedLineStore` / `SavedLinesView` — 저장한 문장.
-- [ ] `LocalAlignment` — 샤도잉 리듬 점수.
+- [ ] `LocalAlignment` — 샤도잉 리듬 점수. **보류**: Apple 인식기의 단어별 타임스탬프에
+      기대는 구현이라 안드로이드 SpeechRecognizer로는 같은 값을 얻을 수 없다. 리듬
+      점수 없이도 매치 점수는 나온다.
 
 **통화 경험**
-- [ ] `CallNowPlaying` — 잠금 화면에서 통화를 제어. 없으면 잠근 폰에서
-      끊을 방법이 없다.
+- [x] `CallNowPlaying` → 포그라운드 서비스(`CallForegroundService`, 마이크·미디어 타입)
+      2026-09-13. 알림이 잠금화면 제어(일시정지/재개·끊기). 에뮬레이터 검증: 통화 중
+      화면을 꺼도 35초 뒤 게이트웨이 stats가 계속 도착.
 - [x] `RealtimeTalkClient` — **출시된 유일한 통화 경로.** 2026-09-13 통합, 에뮬레이터 검증:
       접속(`ready`) → 게이트웨이가 오프너 발화 → 세션 유지(stats) → 게이트웨이 유휴(3분, 전사
       인터림으로 재무장)는 PAUSED → 전사 탭·알약 탭 양쪽으로 재접속(`ready`) → End 정리.
