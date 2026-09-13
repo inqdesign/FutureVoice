@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.Recency
 import com.roro.futurevoice.data.StudyCollections
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -368,10 +369,7 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
         // WHEN it was last worked, said as recency — it keeps advancing as
         // the book is studied, which a fixed date does not.
-        detail = stringResource(R.string.studied,
-            android.text.format.DateUtils.getRelativeTimeSpanString(
-                t.endedAt ?: t.startedAt, System.currentTimeMillis(),
-                android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
+        detail = stringResource(R.string.studied, Recency.label(t.endedAt ?: t.startedAt)),
         score = t.summary?.scorecard?.overall,
         modifier = Modifier.padding(vertical = 4.dp)
             .combinedClickable(onClick = { onOpen(t.id) }, onLongClick = { menu = true }),

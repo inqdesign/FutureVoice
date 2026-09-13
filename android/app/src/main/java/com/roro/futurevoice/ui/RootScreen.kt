@@ -2269,11 +2269,8 @@ private fun ScenarioCard(
         // Who it is with, and when it last ran — the card's quiet footer.
         val footer = listOfNotNull(
             partner?.let { stringResource(R.string.with, it) },
-            sc.lastUsedAt?.let {
-                android.text.format.DateUtils.getRelativeTimeSpanString(
-                    it, System.currentTimeMillis(),
-                    android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
-            },
+            // Recency, not a calendar date — see `Recency`.
+            sc.lastUsedAt?.let { com.roro.futurevoice.data.Recency.label(it) },
         ).joinToString(" · ")
         if (footer.isNotEmpty()) {
             Text(footer, style = MaterialTheme.typography.labelSmall,
