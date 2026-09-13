@@ -170,6 +170,7 @@ fun RootScreen() {
         if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
     }
     var showPeople by remember { mutableStateOf(false) }
+    var personDetailId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
     var showMe by remember { mutableStateOf(false) }
@@ -381,8 +382,16 @@ fun RootScreen() {
             onBack = { studyDeckKind = null },
         )
 
+        personDetailId != null -> CounterpartDetailScreen(
+            counterpartId = personDetailId!!,
+            language = state.targetLanguage,
+            onOpenBook = { bookScenarioId = it },
+            onBack = { personDetailId = null },
+        )
+
         showPeople -> FindPeopleScreen(
             language = state.targetLanguage,
+            onOpenPerson = { personDetailId = it },
             onTalk = { p ->
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
                     name = p.display_name, intro = p.intro, location = p.location,

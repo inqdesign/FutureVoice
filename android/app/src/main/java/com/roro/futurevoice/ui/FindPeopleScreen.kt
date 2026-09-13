@@ -1,5 +1,15 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,9 +61,19 @@ import com.roro.futurevoice.ui.brand.DiscoverRow
 fun FindPeopleScreen(
     language: String,
     onTalk: (PublicPersonaClient.PublicPersona) -> Unit,
+    onOpenPerson: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
+    // Your own people, on top — the half that used to be its own sheet, so
+    // one page answers every "who can I talk to".
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val ownStore = remember { com.roro.futurevoice.data.CounterpartStore.shared(context) }
+    var own by remember { mutableStateOf<List<com.roro.futurevoice.data.Counterpart>>(emptyList()) }
+    var editing by remember { mutableStateOf<com.roro.futurevoice.data.Counterpart?>(null) }
+    suspend fun reloadOwn() { own = ownStore.load().filter { it.remoteId == null } }
+    LaunchedEffect(Unit) { reloadOwn() }
     var pool by remember { mutableStateOf<List<PublicPersonaClient.PublicPersona>>(emptyList()) }
     var query by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
@@ -98,10 +118,34 @@ fun FindPeopleScreen(
                 Text(it, style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
             }
-            Text(stringResource(R.string.strangers),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 8.dp))
             LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                item {
+                    Text(stringResource(R.string.your_people), style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp))
+                    GroupedCard {
+                        Text(stringResource(R.string.new_person), color = MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth().clickable { editing = com.roro.futurevoice.data.Counterpart() }.padding(16.dp))
+                        own.forEach { c ->
+                            GroupedRowDivider(inset = false)
+                            Row(Modifier.fillMaxWidth().clickable { onOpenPerson(c.id) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(40.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center) {
+                                    Text(initials(c.name), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                                }
+                                Spacer(Modifier.size(12.dp))
+                                Column {
+                                    Text(c.name, style = MaterialTheme.typography.bodyLarge)
+                                    if (c.relationship.isNotEmpty()) Text(c.relationship, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                    Text(stringResource(R.string.strangers), style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(top = 20.dp, bottom = 8.dp))
+                }
                 items(shown.size) { i ->
                     val p = shown[i]
                     DiscoverRow(
@@ -129,5 +173,12 @@ fun FindPeopleScreen(
                 }
             }
         }
+    }
+    editing?.let { draft ->
+        PersonEditor(
+            person = draft,
+            onSave = { scope.launch { ownStore.load(); ownStore.save(it); reloadOwn(); com.roro.futurevoice.data.StoreEvents.bump() }; editing = null },
+            onDismiss = { editing = null },
+        )
     }
 }

@@ -140,4 +140,10 @@
     <string name="words_your_fluent_self_used_that_you_havent">Words your fluent self used and you haven\'t. Say one in a talk and it ticks itself.</string>
     <string name="all">All</string>
     <string name="referral_joined_named">%1$s joined with your code</string>
+    <string name="person_common_topics">Common topics</string>
+    <string name="person_notes">Notes</string>
+    <string name="person_couldnt_refresh_scenarios">Couldn\'t refresh scenarios: %1$s</string>
+    <string name="person_scenes_with_person">Scenes with %1$s</string>
+    <string name="person_how_you_met">How you met</string>
+    <string name="person_style">Style</string>
 </resources>

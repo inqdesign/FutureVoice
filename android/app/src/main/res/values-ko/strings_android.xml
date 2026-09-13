@@ -140,4 +140,10 @@
     <string name="words_your_fluent_self_used_that_you_havent">미래의 내가 쓰고 나는 안 쓴 단어들. 통화에서 한 번 말하면 스스로 체크돼요.</string>
     <string name="all">전체</string>
     <string name="referral_joined_named">%1$s님이 내 코드로 들어왔어요</string>
+    <string name="person_common_topics">자주 하는 이야기</string>
+    <string name="person_notes">메모</string>
+    <string name="person_couldnt_refresh_scenarios">상황을 새로 만들지 못했어요: %1$s</string>
+    <string name="person_scenes_with_person">%1$s와의 장면</string>
+    <string name="person_how_you_met">어떻게 만났는지</string>
+    <string name="person_style">말투</string>
 </resources>

@@ -124,7 +124,7 @@ fun PeopleSheet(onDismiss: () -> Unit) {
 /** Name and relationship carry the scene; the rest only sharpens it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PersonEditor(
+internal fun PersonEditor(
     person: Counterpart,
     onSave: (Counterpart) -> Unit,
     onDismiss: () -> Unit,

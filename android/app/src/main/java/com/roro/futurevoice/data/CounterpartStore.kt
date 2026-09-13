@@ -60,7 +60,8 @@ data class Counterpart(
     /** "user" (a real learner) or "character" (an invented seed). */
     val personaKind: String? = null,
 
-    val scenariosByLanguage: Map<String, List<String>> = emptyMap(),
+    /** Situation ideas per target language — title + blurb, the blurb is the scene's seed. */
+    val scenariosByLanguage: Map<String, List<com.roro.futurevoice.talk.SuggestedTopic>> = emptyMap(),
 
     @Serializable(with = IsoDateMillisSerializer::class)
     val createdAt: Long = System.currentTimeMillis(),

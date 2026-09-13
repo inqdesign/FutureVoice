@@ -33,8 +33,8 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 
 | | 있음 | 전체 |
 |---|---|---|
-| 화면 | 62 | 75 |
-| 서비스·엔진 | 78 | 95 |
+| 화면 | 63 | 75 |
+| 서비스·엔진 | 79 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
 
@@ -72,7 +72,10 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       블루투스 경로, 잠금화면.
 
 **사람·복습 주변**
-- [ ] `CounterpartDetailView` / `CounterpartVoiceIntakeView` — 상대 상세와
+- [x] `CounterpartDetailView` / `CounterpartVoiceIntakeView` — 2026-09-13. 내 사람 카드(프로필 섹션·상황
+      아이디어(`CounterpartIdeas`, 프롬프트·폴백은 `gen-counterpart-ideas.py`로 리프트)·이 사람과의
+      장면·Edit). Find people 상단에 iOS처럼 "Your people" 섹션(새 사람·행→카드). 저장 시나리오
+      타입을 iOS와 같은 title+blurb로 교정. 음성 인테이크(받아쓰기 파싱)는 `PersonaParser` 쪽에 이미 있음.
       목소리 인테이크
 - [x] `ShadowBrowserSheet` — 2026-09-13. 통화별 미래의 나 문장 전부, 줄마다 북마크,
       탭하면 샤도잉. Practice 샤도잉 타일의 All로 진입(iOS allCount/all).
