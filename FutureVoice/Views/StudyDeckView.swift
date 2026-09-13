@@ -416,8 +416,12 @@ struct StudyDeckView: View {
                         }
                     } else {
                         ForEach(scheduled[bin] ?? []) { item in
+                            // Bare relative phrase: it already carries its
+                            // own preposition in every language, so a
+                            // "Back %@" shell doubled it ("13시간 후 뒤에 다시").
                             folderRow(item.text,
-                                      caption: Text("Back \(item.at, format: .relative(presentation: .named))")) {
+                                      caption: Text(item.at,
+                                                    format: .relative(presentation: .named))) {
                                 // The same four verdicts as the tray, so an item
                                 // can be pulled forward, pushed back, or finished
                                 // without waiting for it to come due.

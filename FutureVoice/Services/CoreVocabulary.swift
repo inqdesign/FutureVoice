@@ -49,6 +49,44 @@ enum CoreVocabulary {
 
     static func level(of word: String) -> CEFRLevel? { current.levelByWord[word.lowercased()] }
 
+    /// Words the graded list leaves out ON PURPOSE, as opposed to the ones it
+    /// simply doesn't carry.
+    ///
+    /// The pools are content-word profiles, so the commonest auxiliaries and
+    /// modals were never candidates for a level — and the spoken fillers the
+    /// fluent self writes ("gonna", "kinda", "hmm") were never words at all.
+    /// Absence therefore means two different things, and anything that treats
+    /// an off-list word as teachable material has to be able to tell them
+    /// apart: without this, "have" and "chore" are the same kind of missing.
+    ///
+    /// Deliberately tiny and hand-checked against each pool — it names only
+    /// what a part-of-speech tagger still calls a content word. A language
+    /// with no entry here loses nothing that was working before; its own
+    /// auxiliaries just ride along as candidates until someone lists them.
+    private static let ungradedByLanguage: [String: Set<String>] = [
+        "en": ["be", "have", "do", "go", "will", "would", "shall", "should",
+               "can", "could", "may", "might", "must", "other", "such",
+               "many", "much", "lot",
+               // Indefinite pronouns — a tagger calls every one of these a
+               // noun, so nothing else keeps them out.
+               "everything", "something", "anything", "nothing",
+               "everyone", "someone", "anyone", "none",
+               "everybody", "somebody", "anybody", "nobody",
+               "gonna", "wanna", "gotta", "kinda", "sorta", "dunno",
+               "lemme", "gimme", "yeah", "yep", "yup", "nope", "nah",
+               "hmm", "mmm", "uh", "um", "umm", "ah", "oh", "ooh", "huh",
+               "hey", "ok", "okay", "alright"],
+        "de": ["können", "müssen", "sollen", "dürfen", "mögen",
+               "alles", "etwas", "nichts", "jemand", "niemand", "jeder",
+               "halt", "eben", "ja", "nee", "naja", "ähm", "hmm", "okay"]
+    ]
+
+    /// True when the word's absence from the pool is a decision rather than a
+    /// gap — see `ungradedByLanguage`.
+    static func isUngraded(_ word: String) -> Bool {
+        ungradedByLanguage[LanguageScope.active]?.contains(word.lowercased()) ?? false
+    }
+
     /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
     /// is a direct lookup; Korean surface forms carry particles/conjugation,
     /// so they route through the KoreanMorph headword heuristic first.

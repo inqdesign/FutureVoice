@@ -89,10 +89,20 @@ struct DrillView: View {
     /// than a fumble. Below this the card springs home and nothing is graded.
     private static let commitThreshold: CGFloat = 64
     /// A due pile in the hundreds is a lost game before the first card. Deal
-    /// a hand this size instead; the empty state offers the next hand. Also
-    /// the Practice tab's Sentences challenge target, so a 150-card backlog
-    /// reads as "clear today's deck", not "do 150".
-    static let sessionCap = 20
+    /// a hand the size of the learner's OWN Sentences goal instead; the empty
+    /// state offers the next hand. It was a fixed 20 from before the goal was
+    /// settable, and the two then disagreed in the worst direction: a learner
+    /// who set 10 still got 20 cards, cleared them, and the Practice tile —
+    /// whose target can never be below what you already did — printed the
+    /// goal as 20. A goal of 0 turns the CHALLENGE off, not the deck, so it
+    /// falls back to the default hand.
+    @MainActor
+    static var sessionCap: Int {
+        let goal = GoalStore.shared.sentencesPerDay
+        return goal > 0 ? goal : defaultSessionCap
+    }
+    /// What the Sentences goal itself defaults to (`GoalStore`).
+    static let defaultSessionCap = 20
     /// A single talk's post-talk review run — short enough to finish in one
     /// sitting right after the call.
     private static let quickRunCap = 8
@@ -431,6 +441,16 @@ struct DrillView: View {
         .accessibilityLabel("\(bin.folderTitle): \(count)")
     }
 
+    /// When the card comes back — except in Known, which says it is known.
+    @ViewBuilder
+    private func folderCaption(_ bin: DrillBin, _ card: DrillCard) -> some View {
+        if bin == .gotIt {
+            Text(bin.dropHint)
+        } else {
+            Text(card.nextReviewAt, format: .relative(presentation: .named))
+        }
+    }
+
     private func folderSheet(_ bin: DrillBin) -> some View {
         NavigationStack {
             List {
@@ -443,7 +463,17 @@ struct DrillView: View {
                             Text(card.targetPhrase)
                                 .font(.subheadline)
                                 .lineLimit(2)
-                            Text("Back \(card.nextReviewAt, format: .relative(presentation: .named))")
+                            // The relative phrase carries its own preposition
+                            // in every language ("13시간 후", "in 13 hours"),
+                            // so wrapping it in a "Back %@" shell doubled it:
+                            // ko read "13시간 후 뒤에 다시", fr "Revient dans
+                            // dans 13 heures". It stands alone. And the Known
+                            // folder says it is KNOWN — a top-rung card is
+                            // scheduled 30 days out, so a countdown under a
+                            // folder called Known announced a return the
+                            // learner just said they didn't need. Same line
+                            // the study deck's Known folder shows.
+                            folderCaption(bin, card)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -459,7 +489,7 @@ struct DrillView: View {
                                 Button {
                                     resnooze(card, to: target)
                                 } label: {
-                                    Label(target.accessibilityTitle, systemImage: target.icon)
+                                    Label(target.title, systemImage: target.icon)
                                 }
                             }
                         }
@@ -642,12 +672,18 @@ enum DrillBin: String, CaseIterable, Identifiable {
     static let soonHint = "Back in 10 minutes"
     static let soonAccessibilityTitle = "Show again in 10 minutes"
 
+    /// Chrome, so it has to go through `chrome(…)` — a `String` never sees
+    /// the environment locale, which is why this deck's tray, folders and
+    /// menus stayed English in a Korean app while the study deck (which
+    /// mirrors these as `LocalizedStringKey`s) was translated.
+    /// `soonTitle` and friends stay English constants: they are the KEY, and
+    /// the catalog already carries them.
     var title: String {
         switch self {
-        case .tenMinutes: return Self.soonTitle
-        case .tomorrow:   return "Tomorrow"
-        case .threeDays:  return "3 days"
-        case .gotIt:      return "Got it"
+        case .tenMinutes: return chrome(String.LocalizationValue(Self.soonTitle))
+        case .tomorrow:   return chrome("Tomorrow")
+        case .threeDays:  return chrome("3 days")
+        case .gotIt:      return chrome("Got it")
         }
     }
 
@@ -687,10 +723,10 @@ enum DrillBin: String, CaseIterable, Identifiable {
     /// graduates collect under "Known".
     var folderTitle: String {
         switch self {
-        case .tenMinutes: return "Soon"
-        case .tomorrow:   return "Tomorrow"
-        case .threeDays:  return "Later"
-        case .gotIt:      return "Known"
+        case .tenMinutes: return chrome("Soon")
+        case .tomorrow:   return chrome("Tomorrow")
+        case .threeDays:  return chrome("Later")
+        case .gotIt:      return chrome("Known")
         }
     }
 
@@ -708,19 +744,19 @@ enum DrillBin: String, CaseIterable, Identifiable {
 
     var dropHint: String {
         switch self {
-        case .tenMinutes: return Self.soonHint
-        case .tomorrow:   return "Back tomorrow"
-        case .threeDays:  return "Back in 3 days"
+        case .tenMinutes: return explain(String.LocalizationValue(Self.soonHint))
+        case .tomorrow:   return explain("Back tomorrow")
+        case .threeDays:  return explain("Back in 3 days")
         case .gotIt:      return explain("Marked as known")
         }
     }
 
     var accessibilityTitle: String {
         switch self {
-        case .tenMinutes: return Self.soonAccessibilityTitle
-        case .tomorrow:   return "Show again tomorrow"
-        case .threeDays:  return "Show again in 3 days"
-        case .gotIt:      return "Got it"
+        case .tenMinutes: return chrome(String.LocalizationValue(Self.soonAccessibilityTitle))
+        case .tomorrow:   return chrome("Show again tomorrow")
+        case .threeDays:  return chrome("Show again in 3 days")
+        case .gotIt:      return chrome("Got it")
         }
     }
 }

@@ -44,14 +44,53 @@ final class DrillStore: LanguageScopedStore {
         // cards ingested before the one-sentence prompt rule carry whole-turn
         // rewrites. Read-time so the backlog is fixed everywhere at once
         // (card UI, TTS, shadow, widget) without a disk migration.
-        return cards
-            .filter { !Self.looksLikeMetaRule($0.targetPhrase) }
-            .map { card in
-                var c = card
-                c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
-                                                   pairedWith: c.sourcePhrase)
-                return c
+        // And collapse copies of the SAME sentence. `ingest` has always
+        // deduped on the normalized target, but `save` replaces by `id`
+        // only — so every mint path outside ingest could put the same line
+        // on file again. Read-time like the rest, so the duplicates already
+        // sitting in a learner's store disappear from the deck, the
+        // Sentences list and the widget at once; the next write persists it.
+        return Self.deduplicated(
+            cards
+                .filter { !Self.looksLikeMetaRule($0.targetPhrase) }
+                .map { card in
+                    var c = card
+                    c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
+                                                       pairedWith: c.sourcePhrase)
+                    return c
+                }
+        )
+    }
+
+    /// One card per sentence, keeping the copy the learner has actually
+    /// worked on. Order is preserved so every caller's own sort still
+    /// decides what it sees.
+    private static func deduplicated(_ cards: [DrillCard]) -> [DrillCard] {
+        var keepers: [String: DrillCard] = [:]
+        var order: [String] = []
+        for card in cards {
+            let key = matchKey(card.targetPhrase)
+            guard let rival = keepers[key] else {
+                keepers[key] = card
+                order.append(key)
+                continue
             }
+            keepers[key] = keeper(rival, card)
+        }
+        return order.compactMap { keepers[$0] }
+    }
+
+    /// Progress wins: a card carrying Leitner history must never be dropped
+    /// in favour of a fresh copy of the same line. Between two untouched
+    /// copies the older one survives, so `createdAt` keeps pointing at the
+    /// talk that first taught the sentence.
+    private static func keeper(_ a: DrillCard, _ b: DrillCard) -> DrillCard {
+        if a.box != b.box { return a.box > b.box ? a : b }
+        if (a.lastReviewedAt != nil) != (b.lastReviewedAt != nil) {
+            return a.lastReviewedAt != nil ? a : b
+        }
+        if a.timesSeen != b.timesSeen { return a.timesSeen > b.timesSeen ? a : b }
+        return a.createdAt <= b.createdAt ? a : b
     }
 
     func save(_ card: DrillCard) {
@@ -60,6 +99,40 @@ final class DrillStore: LanguageScopedStore {
         all.append(card)
         write(all)
     }
+
+    /// Mint a card unless the store already drills that sentence — returns
+    /// whatever is on file afterwards, so a caller that wants to open the
+    /// card gets one either way, and nil when the phrase can't be a card at
+    /// all. **Every mint path outside `ingest` goes through here.** `save`
+    /// replaces by `id`, so a fresh `DrillCard` always carried a fresh UUID
+    /// and always appended: tapping "Save phrase" on the same scene line in
+    /// two sittings, or re-running a debug seed, quietly stacked copies of
+    /// one sentence into the deck.
+    @discardableResult
+    func saveIfNew(_ card: DrillCard) -> DrillCard? {
+        let key = Self.matchKey(card.targetPhrase)
+        guard !key.isEmpty, Self.isDrillable(card.targetPhrase) else { return nil }
+        var all = load()
+        if let existing = all.first(where: { Self.matchKey($0.targetPhrase) == key }) {
+            return existing
+        }
+        all.append(card)
+        write(all)
+        return card
+    }
+
+    #if DEBUG
+    /// Debug seeding only: the sample card IS the truth, so a copy left by an
+    /// earlier capture run is replaced rather than kept — otherwise a
+    /// screenshot inherits last week's box and due date.
+    func seed(_ card: DrillCard) {
+        var all = load()
+        let key = Self.matchKey(card.targetPhrase)
+        all.removeAll { Self.matchKey($0.targetPhrase) == key }
+        all.append(card)
+        write(all)
+    }
+    #endif
 
     func upsertMany(_ cards: [DrillCard]) {
         guard !cards.isEmpty else { return }
@@ -389,6 +462,10 @@ final class DrillStore: LanguageScopedStore {
     private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
         Set(normalizedForMatch(sentence).split(separator: " ")).intersection(targetWords).count
     }
+
+    /// A card's content identity: two cards with the same key drill the same
+    /// sentence, whatever casing or punctuation the model wrote it with.
+    static func matchKey(_ phrase: String) -> String { normalizedForMatch(phrase) }
 
     private static func normalizedForMatch(_ text: String) -> String {
         let allowed = CharacterSet.alphanumerics.union(.whitespaces)

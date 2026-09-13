@@ -711,10 +711,9 @@ struct ConversationDetailView: View {
                              box: 0,
                              sourceSessionId: session.id,
                              sourceTurnId: item.sourceTurnId)
-        if DrillStore.isDrillable(target) {
-            DrillStore.shared.save(card)
-        }
-        enrichmentCard = card
+        // `saveIfNew` is the same guard plus the store's own dedupe, so a
+        // correction that matches a card minted by another talk reuses it.
+        enrichmentCard = DrillStore.shared.saveIfNew(card) ?? card
     }
 
     /// The drill chapter: the talk's grammar and expression fixes. The

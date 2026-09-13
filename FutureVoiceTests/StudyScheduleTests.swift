@@ -488,3 +488,192 @@ final class StudyFolderBucketTests: XCTestCase {
                        "soonest first, and the overdue one belongs to the deck")
     }
 }
+
+/// The graded pool is ~8k content words, so ordinary vocabulary is missing
+/// from it — and a word missing from it used to be invisible everywhere. A
+/// real talk spent on "chores" never mentioned the word once.
+@MainActor
+final class UngradedPickupTests: XCTestCase {
+
+    private let lines = [
+        "Honestly, chores are the worst part of living alone.",
+        "I batch my chores on Sunday so the weekdays stay clear.",
+        "Jenny and I went to Berlin, and everything about the hike was brutal.",
+        "Nobody told me anything, so I just did something about it."
+    ]
+
+    /// The ungraded path is NLTagger's, and the assertions name English
+    /// words, so the suite scopes itself to the English pool and puts the
+    /// simulator's own target language back afterwards.
+    private var previousLanguage: String?
+
+    override func setUp() {
+        super.setUp()
+        previousLanguage = UserDefaults.standard.string(forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        VocabStore.shared.languageScopeDidChange()
+    }
+
+    override func tearDown() {
+        if let previousLanguage {
+            UserDefaults.standard.set(previousLanguage, forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: LanguageCatalog.targetLanguageDefaultsKey)
+        }
+        VocabStore.shared.languageScopeDidChange()
+        super.tearDown()
+    }
+
+    private var isEnglish: Bool { LanguageScope.active == "en" }
+
+    func testAnUngradedWordTheFluentSelfSaidBecomesACandidate() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        XCTAssertNil(CoreVocabulary.level(of: "chore"),
+                     "this test is only meaningful while the pool lacks the word")
+        let candidates = VocabStore.shared.pickupCandidates(fromFluentTexts: lines, atOrAbove: .b1)
+        XCTAssertTrue(candidates.contains("chore"),
+                      "the call's own word never became material — got \(candidates)")
+    }
+
+    func testNamesAndFunctionWordsStayOut() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let words = VocabStore.offListContentWords(in: lines)
+        // Indefinite pronouns are the trap: a tagger calls every one of them
+        // a noun, so only `CoreVocabulary.isUngraded` keeps them out.
+        for junk in ["jenny", "berlin", "have", "the", "and",
+                     "everything", "nobody", "something", "anyone"] {
+            XCTAssertNil(words[junk], "\(junk) is not vocabulary")
+        }
+    }
+
+    func testAnUngradedWordIsCountedByTheTurnsItRanThrough() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        // Two of the three lines carry it; the third is the distractor.
+        XCTAssertEqual(VocabStore.offListContentWords(in: lines)["chore"], 2)
+        // Twice inside ONE turn is a tic, not a thread — still one turn.
+        XCTAssertEqual(
+            VocabStore.offListContentWords(in: ["Chores, chores, always more chores."])["chore"], 1)
+    }
+
+    /// A word the fluent self kept returning to leads the whole list — ahead
+    /// of the graded words, which is the only thing that gets it in front of
+    /// the learner at all.
+    func testARecurringUngradedWordLeads() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        XCTAssertEqual(
+            VocabStore.shared.pickupCandidates(fromFluentTexts: lines, atOrAbove: .b1).first,
+            "chore")
+    }
+
+    /// Nothing is dropped for being ungraded — there is no quota, and no
+    /// spelling tie-break deciding which ones die.
+    func testNoUngradedWordIsCutForSpace() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let found = VocabStore.offListContentWords(in: lines).keys
+        let candidates = Set(VocabStore.shared.pickupCandidates(fromFluentTexts: lines, atOrAbove: .b1))
+        for word in found {
+            XCTAssertTrue(candidates.contains(word), "\(word) was cut for space")
+        }
+    }
+
+    /// The transcript's own tokens have to resolve to the key the pickup list
+    /// carries, or the word is collected and still not highlighted where it
+    /// was said.
+    func testTheSurfaceFormResolvesToTheCollectedKey() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        XCTAssertEqual(VocabStore.lookupKey(for: "chores"), "chore")
+    }
+
+    /// A kept ungraded word must be markable as used, or the day's hand deals
+    /// it back forever.
+    func testSayingAKeptUngradedWordCreditsIt() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let store = VocabStore.shared
+        defer { store.unmark("chore"); store.removeStudying("chore") }
+        store.unmark("chore")
+        store.addStudying("chore")
+        store.ingest(sessionId: UUID(), userTexts: ["I did my chores yesterday."])
+        XCTAssertEqual(store.state(of: "chore"), .used)
+    }
+
+    /// The whole point, end to end: the word the call was ABOUT reaches the
+    /// talk book's word chapter. Books are derived at read time, so this is
+    /// also what makes the fix retroactive for talks already on disk.
+    func testTheCallsOwnWordReachesTheBook() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let talk = Session(
+            id: UUID(), userId: UUID(), targetLanguage: "en", mode: .conversation,
+            topic: "Free talk", startedAt: Date(), endedAt: Date(),
+            turns: lines.map {
+                Turn(id: UUID(), role: .fluentSelf, audioURL: nil, transcript: $0,
+                     durationMs: 0, timestamp: Date(), suggestion: nil)
+            })
+        let book = TalkCurriculum.build(session: talk, proficiency: .b1,
+                                        shadowAttempts: [], drillCards: [])
+        XCTAssertTrue(book.words.contains { $0.text == "chore" },
+                      "the word the talk was about is still missing — got \(book.words.map(\.text))")
+    }
+
+    // MARK: - The notebook fills itself
+
+    /// The point of the whole change: after a talk the word is IN the
+    /// notebook, with nobody having tapped anything.
+    func testATalksWordsEnterTheNotebookByThemselves() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let store = VocabStore.shared
+        defer { store.removeStudying("chore"); store.forgetRemovedByHand("chore") }
+        store.forgetRemovedByHand("chore")
+        store.removeStudying("chore")
+        store.forgetRemovedByHand("chore")
+
+        XCTAssertFalse(store.isStudying("chore"))
+        store.keepFromTalk(store.pickupCandidates(fromFluentTexts: lines, atOrAbove: .b1))
+        XCTAssertTrue(store.isStudying("chore"), "the talk's word never reached the notebook")
+    }
+
+    /// Auto-keeping is not the learner's effort, so it must not tick the
+    /// daily goal the way bookmarking by hand does.
+    func testAutoKeepingLogsNoPracticeRep() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let store = VocabStore.shared
+        defer { store.removeStudying("chore"); store.forgetRemovedByHand("chore") }
+        store.removeStudying("chore")
+        store.forgetRemovedByHand("chore")
+
+        let before = PracticeLog.shared.day(Date())?.wordReps ?? 0
+        store.keepFromTalk(["chore"])
+        XCTAssertEqual(PracticeLog.shared.day(Date())?.wordReps ?? 0, before,
+                       "auto-keeping counted as the learner's own practice")
+    }
+
+    /// Taking a word out of the notebook has to STICK. Putting it back on
+    /// every talk is the app overruling the learner.
+    func testAWordRemovedByHandIsNotPutBack() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let store = VocabStore.shared
+        defer { store.removeStudying("chore"); store.forgetRemovedByHand("chore") }
+        store.forgetRemovedByHand("chore")
+        store.addStudying("chore")
+        store.removeStudying("chore")          // the learner's verdict
+
+        store.keepFromTalk(["chore"])
+        XCTAssertFalse(store.isStudying("chore"), "the app put back a word they threw out")
+
+        // …until they change their mind, which clears the verdict.
+        store.addStudying("chore")
+        store.removeStudying("chore")
+        store.addStudying("chore")
+        XCTAssertTrue(store.isStudying("chore"))
+    }
+
+    /// …but only a word already in front of them. The learner's own speech
+    /// still can't mint an ungraded row out of a mishearing.
+    func testTheLearnerCannotMintAnUngradedWord() throws {
+        try XCTSkipUnless(isEnglish, "the ungraded path is NLTagger's, not Korean's")
+        let store = VocabStore.shared
+        defer { store.unmark("chore") }
+        store.unmark("chore")
+        store.ingest(sessionId: UUID(), userTexts: ["I did my chores yesterday."])
+        XCTAssertNil(store.state(of: "chore"))
+    }
+}

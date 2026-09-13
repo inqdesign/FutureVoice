@@ -21,6 +21,13 @@ final class VocabStore: ObservableObject {
     @Published private(set) var records: [String: Record] = [:]
     /// Words the user collected into their notebook to keep studying.
     @Published private(set) var studying: [String] = []
+    /// Words the learner took OUT of the notebook by hand.
+    ///
+    /// Only `keepFromTalk` reads it, and only to stay out of the way: a talk
+    /// that puts an unbookmarked word straight back every time is the app
+    /// overruling a decision the learner made. Bookmarking it again clears
+    /// the mark, so nothing is permanent.
+    @Published private(set) var removedByHand: Set<String> = []
     /// Multi-word expressions the user has used (lowercased key -> record).
     @Published private(set) var expressionRecords: [String: Record] = [:]
     /// Expressions the user bookmarked to keep studying — the phrase-level
@@ -29,8 +36,10 @@ final class VocabStore: ObservableObject {
     /// Expressions the learner threw OUT of the collection. Not "known" and
     /// not snoozed: not material at all.
     ///
-    /// A word can't get here by mistake — it has to be in `CoreVocabulary` to
-    /// be collected, so a mistranscription is filtered out by construction.
+    /// A word can't get here by mistake: a graded one is in `CoreVocabulary`
+    /// by definition, and an ungraded one is only ever collected from the
+    /// fluent self's own model-written turns — a mistranscription is filtered
+    /// out on both paths by construction.
     /// An expression has no such lexicon; its only guard is that the phrase
     /// appears verbatim in the learner's own turns, and a transcriber's error
     /// passes that check every time (it really is in the transcript, letter
@@ -61,6 +70,7 @@ final class VocabStore: ObservableObject {
     private var expressionsMetaURL: URL
     private var studyingExpressionsURL: URL
     private var dismissedExpressionsURL: URL
+    private var removedByHandURL: URL
 
     init() {
         let dir = LanguageScope.activeDirectory
@@ -71,6 +81,7 @@ final class VocabStore: ObservableObject {
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
         dismissedExpressionsURL = dir.appendingPathComponent("vocab_dismissed_expressions.json")
+        removedByHandURL = dir.appendingPathComponent("vocab_removed_by_hand.json")
         load()
     }
 
@@ -85,11 +96,13 @@ final class VocabStore: ObservableObject {
         expressionsMetaURL = dir.appendingPathComponent("vocab_expressions_ingested.json")
         studyingExpressionsURL = dir.appendingPathComponent("vocab_studying_expressions.json")
         dismissedExpressionsURL = dir.appendingPathComponent("vocab_dismissed_expressions.json")
+        removedByHandURL = dir.appendingPathComponent("vocab_removed_by_hand.json")
         records = [:]
         studying = []
         expressionRecords = [:]
         studyingExpressions = []
         dismissedExpressions = []
+        removedByHand = []
         ingestedTextCounts = [:]
         ingestedExpressionKeys = [:]
         legacyExpressionSessions = []
@@ -112,15 +125,64 @@ final class VocabStore: ObservableObject {
         }
         studying.insert(word, at: 0)   // newest first
         saveStudying()
+        // Bookmarking it again takes back the "I don't want this" — nothing
+        // about that verdict should outlive the learner changing their mind.
+        if removedByHand.remove(word.lowercased()) != nil { saveRemovedByHand() }
         // Effort, not a finished word: keeping it means you're still
         // studying it, so it must not tick the daily goal.
         PracticeLog.shared.record(.word)
         Analytics.capture("word_saved", ["cefr": VocabStore.coreLevelLabel(for: word)])
     }
 
+    /// Put the words a finished talk taught into the notebook, without the
+    /// learner having to find and tap each one.
+    ///
+    /// The fluent self says a word, the learner doesn't know it, and it used
+    /// to sit in the talk's book waiting to be noticed — so a word the whole
+    /// call was about only entered review if you went looking for it. It
+    /// enters by itself now. Returns what was actually added.
+    ///
+    /// Not `addStudying` in a loop, for one reason: that call logs a practice
+    /// rep and fires `word_saved`, because keeping a word by hand IS effort.
+    /// Nothing here was chosen by the learner, so counting it as their effort
+    /// would inflate the daily goal with work nobody did.
+    ///
+    /// Three kinds of word are skipped, all meaning "not new to them": one
+    /// they've already said or marked known, one already in the notebook, and
+    /// one they took out of it by hand — putting that last one back every
+    /// talk is the app overruling a decision they made.
+    @discardableResult
+    func keepFromTalk(_ words: [String]) -> [String] {
+        var added: [String] = []
+        for word in words {
+            let key = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard !key.isEmpty,
+                  records[key] == nil,
+                  !studying.contains(key),
+                  !removedByHand.contains(key) else { continue }
+            studying.insert(key, at: 0)
+            added.append(key)
+        }
+        guard !added.isEmpty else { return [] }
+        saveStudying()
+        StudyWidgetRefresher.schedule()
+        Analytics.capture("words_kept_from_talk", ["count": added.count])
+        return added
+    }
+
     func removeStudying(_ word: String) {
         studying.removeAll { $0 == word }
         saveStudying()
+        let key = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !key.isEmpty, removedByHand.insert(key).inserted { saveRemovedByHand() }
+    }
+
+    /// Clear the "they threw this out" mark without bookmarking the word —
+    /// for tests and for a full wipe. The learner's own way of clearing it is
+    /// simply to bookmark the word again.
+    func forgetRemovedByHand(_ word: String) {
+        let key = word.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if removedByHand.remove(key) != nil { saveRemovedByHand() }
     }
 
     // MARK: - Expression study state (bookmark + known), mirroring words
@@ -245,7 +307,17 @@ final class VocabStore: ObservableObject {
         guard userTexts.count > already else { return [] }
         ingestedTextCounts[sessionId.uuidString] = userTexts.count
         var newWords: [String] = []
-        for lemma in Self.lemmas(in: Array(userTexts.dropFirst(already))) where CoreVocabulary.set.contains(lemma) {
+        // The pool gate stays on the learner's side — a mistranscription must
+        // never MINT a word. It may still credit one the app put in front of
+        // them: an ungraded word the fluent self taught and they kept would
+        // otherwise never be markable as used, so the day's hand would deal it
+        // back forever however often they said it.
+        func tracked(_ lemma: String) -> Bool {
+            CoreVocabulary.set.contains(lemma)
+                || records[lemma] != nil
+                || studying.contains(lemma)
+        }
+        for lemma in Self.lemmas(in: Array(userTexts.dropFirst(already))) where tracked(lemma) {
             if var r = records[lemma] {
                 r.count += 1
                 r.lastAt = date
@@ -483,16 +555,108 @@ final class VocabStore: ObservableObject {
     /// it was there to show. The list has to stay put; only the checkmarks
     /// move.
     func pickupCandidates(fromFluentTexts texts: [String], atOrAbove minLevel: CEFRLevel?) -> [String] {
-        let minRank = minLevel.map(CoreVocabulary.levelRank)
-        return Self.lemmas(in: texts)
+        let minRank = minLevel.map(CoreVocabulary.levelRank) ?? 0
+        let graded = Self.lemmas(in: texts)
             .compactMap { w -> (word: String, rank: Int)? in
                 guard let lv = CoreVocabulary.level(of: w) else { return nil }
                 let rank = CoreVocabulary.levelRank(lv)
-                if let minRank, rank < minRank { return nil }
-                return (w, rank)
+                return rank >= minRank ? (w, rank) : nil
             }
             .sorted { $0.rank == $1.rank ? $0.word < $1.word : $0.rank < $1.rank }
             .map(\.word)
+
+        // Words the graded pool doesn't carry. The pool is ~8k content words,
+        // so an ordinary noun like "chore" isn't in it — and being absent used
+        // to mean being invisible: not in the book's word chapter, not in the
+        // day's hand, not even highlighted in the transcript it was said in.
+        // A word the whole call was about went unmentioned because a list
+        // didn't happen to grade it.
+        //
+        // They are NOT capped. A cap has to decide which ones die, and with
+        // most of them said once there is nothing to decide it by — the first
+        // version cut at 8 and let spelling break the tie, which is the very
+        // complaint this exists to answer, re-made one level down.
+        //
+        // What orders them instead is evidence, and there are only two grades
+        // of it. A word the fluent self came back to across several turns is
+        // what the call was ABOUT, and no graded list can see that, so those
+        // lead outright. A word said once is a weaker claim than a curated
+        // level match, so those fill whatever the graded words left. Nothing
+        // is dropped at either end; the prefix each caller takes does the
+        // cutting, over a list already in the right order.
+        let offList = Self.offListContentWords(in: texts)
+        let recurring = offList.filter { $0.value > 1 }
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .map(\.key)
+        let saidOnce = offList.filter { $0.value == 1 }.keys.sorted()
+
+        return recurring + graded + saidOnce
+    }
+
+    /// Content words in `texts` that the graded pool doesn't carry, with how
+    /// many of those turns each appeared in.
+    ///
+    /// TURNS, not occurrences: the question a caller asks of this number is
+    /// whether the fluent self kept coming back to the word, and a word said
+    /// three times inside one sentence is a verbal tic, not a thread.
+    ///
+    /// Safe here and nowhere else: this reads the FLUENT SELF's turns, which
+    /// are model-written, so no transcriber sits between the word and the
+    /// check — the same reason `expressions_offered` needs no lexicon to
+    /// stand behind it. The learner's own speech keeps the pool gate, where a
+    /// mishearing would otherwise mint a word.
+    ///
+    /// Four things have to hold, and between them they throw out everything
+    /// the pool's absence was protecting against:
+    ///
+    ///   • the tagger calls it a noun, verb, adjective or adverb — which
+    ///     drops articles, pronouns, prepositions and every "oh / wow / uh";
+    ///   • it isn't a name — Berlin, Jenny and Kakao are not vocabulary;
+    ///   • three letters or more, letters only — no "ux", no stray tokens;
+    ///   • the pool didn't leave it out on purpose (`CoreVocabulary.isUngraded`),
+    ///     which is what separates "have" from "chore".
+    ///
+    /// What still gets through is an irregular form the tagger fails to
+    /// reduce ("felt" for *feel*) — about one word in sixteen on real talk
+    /// text, and deliberately not chased: a stray past tense sitting in a
+    /// chapter of 24 costs less than the morphology table that would catch
+    /// it, and far less than the call's own subject going unmentioned.
+    ///
+    /// Empty for Korean by construction: `koreanLemmas` can only return
+    /// lexicon hits, because a dictionary form the wordlist can't confirm is
+    /// a guess rather than a word to track.
+    nonisolated static func offListContentWords(in texts: [String]) -> [String: Int] {
+        guard !Self.matchesKorean else { return [:] }
+        let language = Self.taggerLanguage
+        let content: Set<String> = [
+            NLTag.noun.rawValue, NLTag.verb.rawValue,
+            NLTag.adjective.rawValue, NLTag.adverb.rawValue
+        ]
+        var out: [String: Int] = [:]
+        let tagger = NLTagger(tagSchemes: [.lemma, .lexicalClass, .nameType])
+        for text in texts {
+            var seenHere = Set<String>()
+            tagger.string = text
+            tagger.setLanguage(language, range: text.startIndex..<text.endIndex)
+            tagger.enumerateTags(in: text.startIndex..<text.endIndex,
+                                 unit: .word, scheme: .lemma,
+                                 options: [.omitPunctuation, .omitWhitespace, .omitOther]) { tag, range in
+                let lemma = (tag?.rawValue ?? String(text[range])).lowercased()
+                guard lemma.count >= 3,
+                      lemma.unicodeScalars.allSatisfy({ CharacterSet.letters.contains($0) }),
+                      !CoreVocabulary.set.contains(lemma),
+                      !CoreVocabulary.isUngraded(lemma) else { return true }
+                guard let lexical = tagger.tag(at: range.lowerBound, unit: .word,
+                                               scheme: .lexicalClass).0?.rawValue,
+                      content.contains(lexical) else { return true }
+                let name = tagger.tag(at: range.lowerBound, unit: .word,
+                                      scheme: .nameType).0?.rawValue
+                guard name == nil || name == NLTag.otherWord.rawValue else { return true }
+                if seenHere.insert(lemma).inserted { out[lemma, default: 0] += 1 }
+                return true
+            }
+        }
+        return out
     }
 
     /// Best notebook key for a word the user tapped in a transcript: its lemma
@@ -508,7 +672,16 @@ final class VocabStore: ObservableObject {
         tagger.string = w
         tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
         let lemma = tagger.tag(at: w.startIndex, unit: .word, scheme: .lemma).0?.rawValue.lowercased()
-        if let lemma, CoreVocabulary.set.contains(lemma) { return lemma }
+        if let lemma, !lemma.isEmpty {
+            if CoreVocabulary.set.contains(lemma) { return lemma }
+            // Ungraded words are tracked by lemma too now, so "chores" has to
+            // resolve to "chore" or a transcript's own tokens would never line
+            // up with the pickup list built from them — the word would be
+            // collected and still not highlighted where it was said. Only when
+            // the surface form is itself ungraded: a graded one is already the
+            // key it should keep.
+            if !CoreVocabulary.set.contains(w) { return lemma }
+        }
         return w
     }
 
@@ -625,6 +798,10 @@ final class VocabStore: ObservableObject {
            let list = try? JSONDecoder().decode([String].self, from: data) {
             dismissedExpressions = Set(list)
         }
+        if let data = try? Data(contentsOf: removedByHandURL),
+           let list = try? JSONDecoder().decode([String].self, from: data) {
+            removedByHand = Set(list)
+        }
     }
 
     private func save() {
@@ -658,6 +835,12 @@ final class VocabStore: ObservableObject {
         }
         // A dismissed phrase may have been on the Expressions widget.
         StudyWidgetRefresher.schedule()
+    }
+
+    private func saveRemovedByHand() {
+        if let data = try? JSONEncoder().encode(Array(removedByHand)) {
+            try? data.write(to: removedByHandURL, options: [.atomic])
+        }
     }
 
     private func saveExpressions() {

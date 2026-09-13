@@ -272,6 +272,24 @@ enum SessionSummarizer {
         }
         report { $0.offered = computed.expressionsOffered.count }
 
+        // The words the fluent self taught go into the notebook BY
+        // THEMSELVES. They used to stop at the talk's book page and wait to
+        // be tapped, so a word the whole call was about only entered review
+        // if the learner went looking for it — which is the same "it was
+        // never mentioned" the ungraded-word fix answers, one step further
+        // along. `keepFromTalk` skips anything they already know, already
+        // keep, or took out by hand, and logs no practice rep: nothing here
+        // was their effort.
+        // EXACTLY the set the book's word chapter shows, so the page and the
+        // notebook can never disagree about what this talk taught — same
+        // order, same `TalkCurriculum.maxWords` ceiling, no second number
+        // invented here. `keepFromTalk` drops the ones already mastered,
+        // which is what the chapter draws as ticked.
+        VocabStore.shared.keepFromTalk(
+            Array(VocabStore.shared.pickupCandidates(
+                fromFluentTexts: turns.filter { $0.role == .fluentSelf }.map(\.transcript),
+                atOrAbove: appState.proficiency).prefix(TalkCurriculum.maxWords)))
+
         // Same guard for grammar evidence: a quote the user can't find in
         // their own words destroys trust in the whole list. Compare with
         // punctuation/casing stripped — STT and the LLM disagree on those

@@ -104,6 +104,45 @@ final class DrillStoreTests: XCTestCase {
         XCTAssertEqual(store.load().count, 1)
     }
 
+    /// `save` replaces by `id`, so every mint path outside `ingest` used to
+    /// append a fresh UUID for a sentence already on file — Watch's "Save
+    /// phrase" on a replayed scene, the book's correction tap, a debug seed.
+    func testSaveIfNewKeepsOneCardPerSentence() {
+        let make = { (target: String) in
+            DrillCard(sourcePhrase: "", targetPhrase: target, reason: "",
+                      createdAt: Date(), nextReviewAt: Date(), box: 0)
+        }
+        XCTAssertNotNil(store.saveIfNew(make("That works for me.")))
+        // Same sentence, different punctuation and casing — one card.
+        XCTAssertNotNil(store.saveIfNew(make("that works for me")))
+        XCTAssertEqual(store.load().count, 1)
+        // A phrase the read filter would drop is never minted at all: a card
+        // no lookup can find is what made every visit mint another one.
+        XCTAssertNil(store.saveIfNew(make("using articles correctly")))
+        XCTAssertEqual(store.load().count, 1)
+    }
+
+    /// Duplicates already sitting in a learner's store collapse on read, and
+    /// the copy carrying Leitner progress is the one that survives.
+    func testLoadCollapsesExistingDuplicatesKeepingProgress() {
+        let now = Date()
+        let fresh = DrillCard(sourcePhrase: "", targetPhrase: "It went really well.",
+                              reason: "", createdAt: now,
+                              nextReviewAt: now, box: 0)
+        var studied = fresh
+        studied.id = UUID()
+        studied.box = 3
+        studied.timesSeen = 4
+        studied.lastReviewedAt = now
+        studied.nextReviewAt = now.addingTimeInterval(7 * 24 * 60 * 60)
+        store.upsertMany([fresh, studied])
+
+        let cards = store.load()
+        XCTAssertEqual(cards.count, 1)
+        XCTAssertEqual(cards.first?.box, 3)
+        XCTAssertEqual(cards.first?.id, studied.id)
+    }
+
     func testIngestFiltersMetaRules() {
         let count = store.ingest(
             summary: summary(drills: ["using articles correctly", "Could you pass the salt?"]),

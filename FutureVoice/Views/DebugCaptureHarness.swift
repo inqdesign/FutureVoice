@@ -928,14 +928,14 @@ enum DebugCapture {
             ("That's a fair point.", 30 * day, 5),
         ]
         for (tgt, delay, box) in future {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: "", targetPhrase: tgt, reason: "",
                 createdAt: Date().addingTimeInterval(-day),
                 lastReviewedAt: Date(),
                 nextReviewAt: Date().addingTimeInterval(delay), box: box))
         }
         for i in 0..<22 {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: "I have went there \(i + 1) times",
                 targetPhrase: "I have been there \(i + 1) times",
                 reason: "past participle",
@@ -1001,14 +1001,14 @@ enum DebugCapture {
             ("more easy", "easier", "comparative form"),
         ]
         for (src, tgt, why) in due {
-            DrillStore.shared.save(DrillCard(
+            DrillStore.shared.seed(DrillCard(
                 sourcePhrase: src, targetPhrase: tgt, reason: why,
                 createdAt: Date(), lastReviewedAt: nil,
                 nextReviewAt: Date().addingTimeInterval(-3600), box: 0))
         }
         // One legacy-style card with a WHOLE rambling turn as its source, to
         // verify the render-time fragment trim keeps the card on screen.
-        DrillStore.shared.save(DrillCard(
+        DrillStore.shared.seed(DrillCard(
             sourcePhrase: """
             Hey I'm just wondering if there is any kind of Yeah, where people come and set \
             the same goal and Together towards to the door like English learning I see a lot of \

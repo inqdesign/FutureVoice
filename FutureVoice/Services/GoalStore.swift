@@ -36,8 +36,9 @@ final class GoalStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        // 20 = one deck (`DrillView.sessionCap`), which is what the tile
-        // asked for before this was settable.
+        // 20 = one deck (`DrillView.defaultSessionCap`), which is what the
+        // tile asked for before this was settable. The deck now deals THIS
+        // number, so the hand and the target can't disagree.
         sentencesPerDay   = defaults.object(forKey: Keys.sentences) as? Int ?? 20
         wordsPerDay       = defaults.object(forKey: Keys.words) as? Int ?? 10
         expressionsPerDay = defaults.object(forKey: Keys.expressions) as? Int ?? 3
