@@ -34,7 +34,7 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 | | 있음 | 전체 |
 |---|---|---|
 | 화면 | 65 | 75 |
-| 서비스·엔진 | 79 | 95 |
+| 서비스·엔진 | 80 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
 
@@ -80,7 +80,12 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [x] `ShadowBrowserSheet` — 2026-09-13. 통화별 미래의 나 문장 전부, 줄마다 북마크,
       탭하면 샤도잉. Practice 샤도잉 타일의 All로 진입(iOS allCount/all).
 - [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
-- [ ] `WatchDialogueStore`, `CommonGround`, `BookGlossary`, `LearnerAddress`
+- [x] `CommonGround` — 2026-09-13. 겹치는 지점을 코드로 먼저 계산(같은 도시·같은 관심사·같은
+      또래의 아이·둘 다 배우는 중)해서 통화(낯선 사람)와 장면 프롬프트에 넣는다. 장면은
+      서버가 메시지를 만드는 쪽이라 `common_ground` 필드를 **추가**로 받게 하고 배포함 — 안 보내면
+      예전 그대로라 iOS엔 영향 없음.
+- [ ] `WatchDialogueStore`, `BookGlossary`, `LearnerAddress`
+- [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [x] `FeedbackSheet` — 2026-09-13. 첫 통화 Done·첫 장면 완주 뒤 한 번, `beta_reviews`에 같은 행.
 - [x] `VoiceComparisonSheet` — 2026-09-13. Me → "Doesn't sound like you?"(녹음 vs 클론, 같은 문장, 클론
       쪽은 fidelity 모델로 한 번 합성해 디스크 캐시) + "Re-record voice" 행과 확인 → 같은 클론 플로우로

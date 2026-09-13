@@ -118,6 +118,10 @@ function userMessage(opts: {
   weakVocabAreas: string[]
   recurringMistakes: Array<{ mistake: string; correction: string }>
   avoidTitles: string[]
+  /** `CommonGround.block` for this pair, computed on the client (it has both
+   *  sides). Absent for a scene with no counterpart, and for iOS, which
+   *  sends its whole message already assembled. */
+  commonGround?: string
 }): string {
   const { scenario } = opts
   const lines: string[] = []
@@ -154,6 +158,14 @@ function userMessage(opts: {
     if (p.interests?.length) lines.push(`- interests: ${p.interests.join(", ")}`)
     if (p.situations?.length) lines.push(`- needs the language most for: ${p.situations.join(", ")}`)
     if (p.free_notes) lines.push(`- notes: ${p.free_notes}`)
+  }
+  // The learner and the counterpart went in as two separate blocks with
+  // nothing telling the model to cross them, so the scene's subject came off
+  // one side at random. What two people who just met actually talk about is
+  // the overlap.
+  if (opts.commonGround?.trim()) {
+    lines.push("")
+    lines.push(opts.commonGround.trim())
   }
   const weak = opts.weakVocabAreas.filter((w) => w.trim() !== "")
   const mistakes = opts.recurringMistakes.slice(0, 3).map((m) => `${m.mistake} → ${m.correction}`)
@@ -222,6 +234,7 @@ Deno.serve(async (req) => {
           .map((m) => ({ mistake: m.mistake!, correction: m.correction! }))
       : [],
     avoidTitles: strs(body.avoid_titles),
+    commonGround: typeof body.common_ground === "string" ? body.common_ground : undefined,
   })
 
   const geminiBody = {

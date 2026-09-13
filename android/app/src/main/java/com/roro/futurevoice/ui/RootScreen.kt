@@ -406,7 +406,8 @@ fun RootScreen() {
                 callCast = com.roro.futurevoice.talk.ConversationEngine.Cast(
                     name = p.display_name, intro = p.intro, location = p.location,
                     occupation = p.occupation, interests = p.interests,
-                    conversationStyle = p.conversation_style)
+                    conversationStyle = p.conversation_style,
+                    commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
                 gate {
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null

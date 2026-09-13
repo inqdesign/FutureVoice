@@ -46,6 +46,7 @@ class CurriculumClient(private val auth: AuthRepository) {
         proficiency: String,
         targetLanguage: String,
         avoidTitles: List<String> = emptyList(),
+        commonGround: String = "",
         runKey: String? = null,
     ): ScenarioCurriculum = withContext(Dispatchers.IO) {
         val body: JsonObject = buildJsonObject {
@@ -68,6 +69,7 @@ class CurriculumClient(private val auth: AuthRepository) {
             put("proficiency", proficiency)
             put("target_language", targetLanguage)
             putJsonArray("avoid_titles") { avoidTitles.forEach { add(it) } }
+            commonGround.takeIf { it.isNotBlank() }?.let { put("common_ground", it) }
         }
         val key = runKey?.let { "curriculum-v2:${scenario.id}:$it" } ?: "curriculum-v2:${scenario.id}"
         val request = Request.Builder()

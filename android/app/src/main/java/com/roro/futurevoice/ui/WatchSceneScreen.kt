@@ -85,6 +85,15 @@ fun WatchSceneScreen(
         val scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
             ?: run { onBack(); return@LaunchedEffect }
         val cast = StockPerson.by(scenario.voicePresetId)
+        // What the two actually share, worked out in code — a scene about a
+        // person has to open on the overlap, not on a fact plucked from one
+        // side. Builtin seeds have no real person behind them.
+        val withPerson = scenario.counterpartId?.let { id ->
+            com.roro.futurevoice.data.CounterpartStore.shared(context).load().firstOrNull { it.id == id }
+        }?.takeIf { it.remoteId?.startsWith("builtin:") != true }
+        val commonGround = withPerson?.let {
+            com.roro.futurevoice.talk.CommonGround.block(persona, com.roro.futurevoice.talk.CommonGround.of(it))
+        } ?: ""
         try {
             val auth = AuthRepository()
             val runKey = UUID.randomUUID().toString().take(8)
@@ -92,6 +101,7 @@ fun WatchSceneScreen(
                 scenario = scenario, persona = persona, castIdentity = cast.identity,
                 proficiency = proficiency, targetLanguage = targetLanguage,
                 avoidTitles = listOfNotNull(scenario.curriculum?.dialogueTitle),
+                commonGround = commonGround,
                 runKey = if (scenario.curriculum == null) null else runKey,
             )
             generating = false
