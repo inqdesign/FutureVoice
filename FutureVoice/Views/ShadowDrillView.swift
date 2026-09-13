@@ -524,9 +524,20 @@ struct ShadowDrillView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Label("\(fb.matchScore)", systemImage: "gauge.with.dots.needle.67percent")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(scoreColor(fb.matchScore))
+                // The headline is words AND beat (`overallScore`). When the
+                // take could not be timed it is words alone, and the badge
+                // says so — a number that quietly changes what it measures
+                // is worse than one that admits what it missed.
+                HStack(spacing: 6) {
+                    if fb.rhythmScore == nil {
+                        Text("words only")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Label("\(fb.overallScore)", systemImage: "gauge.with.dots.needle.67percent")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(scoreColor(fb.overallScore))
+                }
             }
 
             if !diffSteps.isEmpty {
@@ -578,9 +589,9 @@ struct ShadowDrillView: View {
     private func pastAttemptRow(_ a: ShadowAttempt) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(spacing: 2) {
-                Text("\(a.matchScore)")
+                Text("\(a.overallScore)")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(pastAttemptScoreColor(a.matchScore))
+                    .foregroundStyle(pastAttemptScoreColor(a.overallScore))
                     .monospacedDigit()
                 Text(a.createdAt, style: .relative)
                     .font(.caption2)
@@ -1234,37 +1245,38 @@ struct ShadowDrillView: View {
     }
 
     private func analyze(finalText: String) async {
-        // The live transcript is the recognizer's last PARTIAL hypothesis —
-        // stop() can't wait for the final pass, so it's systematically worse
-        // than what the learner actually said (soundalike words, truncated
-        // tails). We have the full attempt on disk: re-run recognition on the
-        // file, final result only, biased toward the target line. Falls back
-        // to the live text when the file pass fails (network, timeout).
-        var scoredText = finalText
-        var learnerTimings: [WordTiming] = []
-        usedRoughTranscript = true
-        if let url = recordingFileURL {
-            let rescored = await SpeechTranscriber.transcribeForScoring(
-                audioURL: url,
-                languageCode: targetLanguage,
-                contextualStrings: Self.recognitionHints(for: attemptTargetText)
-            )
-            if let rescored, !rescored.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                // No pre-roll to strip: the file starts on the go beat. Its
-                // only lead-in is the deliberate 350ms that catches a learner
-                // who speaks the moment "0" appears — that IS the attempt.
-                scoredText = rescored.text
-                prevTranscript = rescored.text
-                learnerTimings = rescored.wordTimings
-                usedRoughTranscript = false
-            }
-        }
-        // Scoring fell back to the live PARTIAL hypothesis — systematically
-        // worse than the file pass. Surface it in the result UI and count it,
-        // so "the score felt wrong" days are checkable against data.
+        // `finalText` is the live recognizer's last PARTIAL hypothesis —
+        // stop() can't wait for a final pass, so it is systematically worse
+        // than what the learner actually said. The whole attempt is on disk,
+        // and reading THAT is `ShadowTranscriber`'s job: levelled audio, the
+        // words from an audio-grounded model that is never shown the target,
+        // the times carried over from the on-device pass. No pre-roll to
+        // strip — the file starts on the go beat, and its only lead-in is the
+        // deliberate 350ms that catches a learner who speaks the moment "0"
+        // appears, which IS the attempt.
+        let reading = await ShadowTranscriber.read(
+            audioURL: recordingFileURL,
+            liveText: finalText,
+            targetLanguage: targetLanguage,
+            recognitionHints: Self.recognitionHints(for: attemptTargetText)
+        )
+        let scoredText = reading.text
+        let learnerTimings = reading.wordTimings
+        prevTranscript = scoredText
+        // Nothing read the file — the score is standing on a live partial.
+        // Surface it in the result UI and count it, so "the score felt wrong"
+        // days are checkable against data.
+        usedRoughTranscript = reading.source == .rough
         if usedRoughTranscript {
             Telemetry.log("shadow_rescore_failed")
         }
+        // How often the two readers describe different sentences is the only
+        // measure of how wrong the old single-reader path was.
+        Telemetry.log("shadow_transcript", [
+            "source": reading.source.rawValue,
+            "disagreed": reading.readersDisagreed ? "1" : "0",
+            "timed": learnerTimings.isEmpty ? "0" : "1",
+        ])
 
         let analysis = ShadowEngine.analyze(target: attemptTargetText, learner: scoredText,
                                             language: targetLanguage)
@@ -1308,8 +1320,14 @@ struct ShadowDrillView: View {
         // diff highlights already tell the story, and heavy shadowers repeat
         // lines many times — charging a call per near-perfect rep added cost
         // without adding signal.
+        // Coaching is gated on the number the learner is JUDGED by, not on
+        // the word half of it — a take that hit every word a beat late is
+        // exactly the one that needs a bullet, and under the old gate it was
+        // the one that never got one.
+        let overall = ShadowEngine.overallScore(match: analysis.score, rhythm: rhythm?.score)
+
         var payload: ShadowEngine.Payload?
-        if analysis.score < 90 {
+        if overall < 90 {
             do {
                 payload = try await GeminiClient.shared.sendJSON(
                     system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
@@ -1338,15 +1356,16 @@ struct ShadowDrillView: View {
 
         feedback = ShadowFeedback(
             pronunciation: payload?.pronunciation
-                ?? (analysis.score >= 90
-                    ? "Nailed it — matched the line almost word for word."
+                ?? (overall >= 90
+                    ? "Nailed it — matched the line almost word for word, on the beat."
                     : "Coach comments couldn't load — the score and highlighted words above are still accurate."),
             pacing: payload?.pacing ?? "",
             fix: payload?.fix ?? "",
-            matchScore: analysis.score
+            matchScore: analysis.score,
+            rhythmScore: rhythm?.score
         )
         phase = .result
-        HapticEngine.shadowComplete(score: analysis.score)
+        HapticEngine.shadowComplete(score: overall)
 
         // Persist this attempt so the user can revisit / hear it later —
         // even when the coach bullets failed to generate.

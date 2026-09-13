@@ -1213,6 +1213,16 @@ struct ShadowAttempt: Codable, Identifiable, Hashable {
     var pacing: String
     var fix: String
     var createdAt: Date = Date()
+
+    /// The number this attempt is JUDGED by, everywhere. `matchScore` alone
+    /// answers "did you say the right words", which is reading aloud;
+    /// shadowing is the beat as well, so rhythm is folded in whenever it
+    /// could be measured. Attempts saved before 2026-09-13 carry no
+    /// `rhythmScore`, so their number is unchanged — the blend can only ever
+    /// apply to takes that were actually measured for it.
+    var overallScore: Int {
+        ShadowEngine.overallScore(match: matchScore, rhythm: rhythmScore)
+    }
 }
 
 // MARK: - Shadow Feedback
@@ -1224,7 +1234,14 @@ struct ShadowFeedback: Codable, Hashable {
     var pronunciation: String   // one line on accuracy / pronunciation match
     var pacing: String          // one line on intonation + speed delta
     var fix: String             // one concrete thing to try next attempt
-    var matchScore: Int         // 0–100 rough overall match
+    var matchScore: Int         // 0–100 word match alone
+    /// nil = the attempt could not be timed, which the score card says out
+    /// loud rather than quietly reverting to a words-only number.
+    var rhythmScore: Int? = nil
+
+    var overallScore: Int {
+        ShadowEngine.overallScore(match: matchScore, rhythm: rhythmScore)
+    }
 }
 
 // MARK: - Drill Card (SRS)

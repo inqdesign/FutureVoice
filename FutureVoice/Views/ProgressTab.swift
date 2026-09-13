@@ -1990,7 +1990,7 @@ struct ProgressTab: View {
         out.shadowTrend = PracticeStats.shadowTrend(attempts: input.shadowAttempts, now: effortNow)
         let recentScores = input.shadowAttempts
             .sorted { $0.createdAt > $1.createdAt }
-            .prefix(10).map(\.matchScore)
+            .prefix(10).map(\.overallScore)
         out.avgShadowScore = recentScores.isEmpty ? 0 : recentScores.reduce(0, +) / recentScores.count
 
         // --- Objective vocabulary CEFR estimate (from words actually used) ---

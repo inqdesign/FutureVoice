@@ -233,7 +233,7 @@ enum TalkCurriculum {
                 note: s.reason
             )
             item.masteredAt = shadowAttempts
-                .filter { $0.turnId == item.id && $0.matchScore >= ScenarioCurriculum.shadowMasteryScore }
+                .filter { $0.turnId == item.id && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore }
                 .map(\.createdAt).max()
             // The book page studies corrections as drill CARDS, not shadowing
             // — a card graduated to the top box (Got it / produced live in a

@@ -120,6 +120,41 @@ enum ShadowEngine {
         let targetSpanMs: Int
     }
 
+    // MARK: - The headline number
+
+    /// How much of the grade each half carries. Words lead — a take with the
+    /// wrong words is wrong however beautifully it was timed — but not by so
+    /// much that the beat is decoration.
+    static let matchWeight = 0.65
+    static let rhythmWeight = 0.35
+
+    /// The ONE number a shadow attempt is judged by, on the result card, in
+    /// the attempt history, in the mastery threshold and in the retry picks.
+    ///
+    /// `analyze`'s match score alone answers "did you say the right words",
+    /// and that is reading aloud, not shadowing: a mid-sentence pause is
+    /// completely invisible to a token diff (the token stream is identical),
+    /// hesitation sounds are dropped by the transcriber before they can
+    /// count, and the `sqrt` curve then lifts 4-of-5 words to 89. So a take
+    /// that hit every word a beat late scored the same as one that landed on
+    /// it — reported 2026-09-13, and the rhythm number was sitting right
+    /// there on the card, measured and unused.
+    ///
+    /// **Rhythm counts only when it was MEASURED.** nil is not zero: it means
+    /// too few words anchored to a timestamp for a timeline to be trusted
+    /// (`ShadowTranscriber.realigned`), and grading a learner on a
+    /// measurement the app failed to take is the one thing worse than not
+    /// grading it. The card says "words only" in that case rather than
+    /// silently handing back a different kind of number — and since the
+    /// audio-grounded transcript landed the same day, that branch is rare.
+    /// It is also why every attempt saved before then keeps its old score:
+    /// no `rhythmScore`, no blend.
+    static func overallScore(match: Int, rhythm: Int?) -> Int {
+        guard let rhythm else { return match }
+        let blended = Double(match) * matchWeight + Double(rhythm) * rhythmWeight
+        return max(0, min(100, Int(blended.rounded())))
+    }
+
     /// Full-credit half-width: onsets within ±this of the beat score 1.0.
     private static let rhythmGraceMs = 60.0
     /// Deviations at/after grace+this score 0. Linear in between.

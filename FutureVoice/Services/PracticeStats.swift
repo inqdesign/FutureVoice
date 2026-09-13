@@ -142,7 +142,7 @@ enum PracticeStats {
 
         func avg(_ list: [ShadowAttempt]) -> Int {
             guard !list.isEmpty else { return 0 }
-            return Int((Double(list.reduce(0) { $0 + $1.matchScore }) / Double(list.count)).rounded())
+            return Int((Double(list.reduce(0) { $0 + $1.overallScore }) / Double(list.count)).rounded())
         }
 
         return ShadowTrend(
@@ -287,7 +287,7 @@ enum PracticeStats {
             .flatMap { $0.turns }
             .reduce(into: [:]) { $0[$1.id] = $1 }
         let retries: [ShadowPick] = latestByTurn.values
-            .filter { $0.matchScore < retryThreshold }
+            .filter { $0.overallScore < retryThreshold }
             .sorted { $0.createdAt > $1.createdAt }
             .map { a in
                 let turn = turnById[a.turnId] ?? Turn(
@@ -295,7 +295,7 @@ enum PracticeStats {
                     transcript: a.targetText, durationMs: 0,
                     timestamp: a.createdAt, suggestion: nil
                 )
-                return ShadowPick(turn: turn, reason: "Retry — last score \(a.matchScore)")
+                return ShadowPick(turn: turn, reason: "Retry — last score \(a.overallScore)")
             }
 
         var out = Array(fresh.prefix(max(0, limit - min(1, retries.count))))
