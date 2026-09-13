@@ -258,7 +258,7 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
 
     if (showCard) {
         val data = remember(selected, selectedSeconds, daySessions) {
-            DayCardStore.snapshot(context, selected) ?: DayCardData(
+            DayCardStore.resolve(context, selected) { DayCardData(
                 date = selected,
                 talkMinutes = selectedSeconds / 60,
                 // Never less than the talk figure: a call in a pocket is
@@ -272,7 +272,7 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
                 topics = daySessions.sortedByDescending { s ->
                     s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
                 }.mapNotNull { it.displayTitle }.distinct().take(4),
-            )
+            ) }
         }
         DayCardSheet(data) { showCard = false }
     }

@@ -58,9 +58,28 @@ object DayCardStore {
         }.getOrNull()
     }
 
+    /**
+     * A day still being lived cannot be settled, and the rule is enforced HERE
+     * so no call site can break it. iOS shipped this as a bug for three days:
+     * the share sheet froze the day on every OPEN, so a card looked at in the
+     * morning stopped there and read 7 min beside a home ring reading 11.
+     * Nothing a snapshot protects against — pruned logs, a changed streak
+     * rule — can reach today, so there was never anything to buy.
+     */
     fun freeze(context: Context, data: DayCardData) {
+        if (isToday(data.date)) return
         snapshotFile(context, data.date).writeText(StoreJson.json.encodeToString(
             Frozen.serializer(), Frozen(data.talkMinutes, data.studyMinutes, data.streakDays,
                 data.talks, data.reviews, data.shadowTakes, data.topics)))
     }
+
+    /**
+     * The day's card: the frozen record if there is one, else the day read
+     * live from the logs. TODAY is ALWAYS live — any snapshot for it is
+     * ignored rather than trusted.
+     */
+    fun resolve(context: Context, day: Long, live: () -> DayCardData): DayCardData =
+        if (isToday(day)) live() else snapshot(context, day) ?: live()
+
+    fun isToday(day: Long): Boolean = key(day) == key(System.currentTimeMillis())
 }
