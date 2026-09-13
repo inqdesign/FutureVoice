@@ -1,5 +1,8 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.WorkspacePremium
+import com.roro.futurevoice.data.TalkCurriculum
+import com.roro.futurevoice.data.ShadowAttemptStore
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MenuBook
@@ -108,6 +111,8 @@ fun PracticeBody(
     var today by remember { mutableStateOf(PracticeLog.Day()) }
     var streak by remember { mutableStateOf(0) }
     var dueBack by remember { mutableStateOf(0) }
+    var finished by remember { mutableStateOf<List<FinishedBook>>(emptyList()) }
+    var showFinished by remember { mutableStateOf(false) }
     /** Finished books. They keep their progress and can come back. */
     var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
     var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
@@ -130,9 +135,54 @@ fun PracticeBody(
         streak = GoalStore.streak(context, goals)
         // What the learner put away and asked to see again, now due.
         dueBack = StudyScheduleStore.shared(context).snapshot(language).dueItems().size
+        // Archiving is tidying; this is the achievement — so archived books
+        // count too, and both kinds land on the same shelf.
+        val vocabStore = VocabStore.shared(context)
+        val attempts = ShadowAttemptStore.shared(context).load(language)
+        val cards = DrillStore.shared(context).load(language)
+        finished = (allTalks.mapNotNull { s ->
+            val snap = runCatching {
+                TalkCurriculum.build(s, level, language, vocabStore, attempts, cards)
+            }.getOrNull()
+            if (snap?.isMastered != true) null
+            else FinishedBook(s.id, s.displayTitle ?: "", context.getString(R.string.talk),
+                Icons.Filled.Mic, snap.totalCount, isTalk = true)
+        } + allScenarios.mapNotNull { sc ->
+            val cur = sc.curriculum ?: return@mapNotNull null
+            val total = cur.words.size + cur.expressions.size
+            val done = cur.words.count { it.masteredAt != null } +
+                cur.expressions.count { it.masteredAt != null }
+            if (total == 0 || done < total) null
+            else FinishedBook(sc.id, sc.cardTitle, context.getString(R.string.watch),
+                Icons.Filled.MenuBook, total, isTalk = false)
+        })
     }
 
+    if (showFinished) {
+        FinishedBooksSheet(
+            books = finished,
+            onOpen = { book ->
+                showFinished = false
+                if (book.isTalk) onOpenTalk(book.id) else onOpenScenarioBook(book.id)
+            },
+            onDismiss = { showFinished = false })
+    }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Books where every word and line is mastered. Shown even at zero, so
+        // the shelf is something to fill rather than a surprise.
+        Row(Modifier.fillMaxWidth().clickable { showFinished = true },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Color(0xFF34C759))
+            Text(stringResource(R.string.finished), style = MaterialTheme.typography.labelLarge,
+                color = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Color(0xFF34C759))
+            if (finished.isNotEmpty()) {
+                Text("${finished.size}", style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold, color = Color(0xFF34C759))
+            }
+        }
         ShelfChips(
             selected = shelf,
             counts = { s ->
