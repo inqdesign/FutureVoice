@@ -1,3 +1,2 @@
 The app now speaks Japanese, Chinese (Traditional and Simplified), Spanish and French.
-Pick your app language on the very first screen.
-The voice recording script comes ready in your own language.
+Pick your app language when you start.
