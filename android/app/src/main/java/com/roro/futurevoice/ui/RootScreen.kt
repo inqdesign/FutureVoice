@@ -505,6 +505,7 @@ fun RootScreen() {
             enrolledLanguages = state.enrolledLanguages,
             onSwitchLanguage = app::switchLanguage,
             onAddLanguage = app::addLanguage,
+            onSetLevel = app::setLevel,
             hasVoice = state.voiceId != null,
             onRerecordVoice = { showMe = false; recloning = true },
             onPickAppLanguage = { code ->

@@ -246,6 +246,19 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * anyone asked for, and the number is an estimate — it moves both ways
      * for reasons that have nothing to do with the learner getting worse.
      */
+    /**
+     * A level the learner set BY HAND, for a language that may not be the
+     * active one. No level-up banner and no analytics: nothing rose, they
+     * corrected a setting. The write goes to [LanguageScope] like every
+     * other level, and the in-memory copy follows only when it is the
+     * language currently being practised — otherwise the app would run the
+     * next talk at another language's band.
+     */
+    fun setLevel(language: String, level: CefrLevel) {
+        LanguageScope.setLevel(appContext, language, level.code)
+        if (language == _state.value.targetLanguage) _state.update { it.copy(level = level) }
+    }
+
     fun applyMeasuredLevel(raw: String) {
         val measured = CefrLevel.from(raw)
         val current = _state.value.level
