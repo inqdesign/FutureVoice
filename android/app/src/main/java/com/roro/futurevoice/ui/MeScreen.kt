@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -110,6 +112,7 @@ fun MeScreen(
     voiceId: String? = null,
     voiceAccentId: String? = null,
     onAccentApplied: (voiceId: String, accentId: String) -> Unit = { _, _ -> },
+    onRerecordVoice: () -> Unit = {},
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -143,6 +146,8 @@ fun MeScreen(
     var pickingTheme by remember { mutableStateOf(false) }
     var managingBackup by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
+    var comparingVoice by remember { mutableStateOf(false) }
+    var confirmingRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the row says where it has got to.
     var backupStep by remember { mutableStateOf<BackupService.Step?>(null) }
@@ -373,6 +378,18 @@ fun MeScreen(
                     if (hasVoice) stringResource(R.string.your_cloned_voice)
                     else stringResource(R.string.not_set_up_yet),
                     onClick = null)
+                // "It doesn't sound like me" gets an answer, not a shrug: the
+                // recording and the clone on the same sentence.
+                if (hasVoice && voiceId != null && VoiceComparison.exists(context.filesDir)) {
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
+                        stringResource(R.string.hear_your_recording_and_your_clone_side_by_side), onClick = { comparingVoice = true })
+                }
+                if (hasVoice) {
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
+                        stringResource(R.string.replace_your_current_clone_with_a_new_one), onClick = { confirmingRerecord = true })
+                }
                 // A clone recorded in the learner's own language carries no
                 // target-language accent, so the model borrows a default.
                 // Only offered where the catalog has options — an empty
@@ -579,6 +596,19 @@ fun MeScreen(
         }
     }
 
+    if (comparingVoice && voiceId != null) {
+        VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
+            onRerecord = { confirmingRerecord = true }, onDismiss = { comparingVoice = false })
+    }
+    // Outside onboarding a re-record is the full destructive path, so it
+    // goes through a confirmation.
+    if (confirmingRerecord) {
+        AlertDialog(onDismissRequest = { confirmingRerecord = false },
+            title = { Text(stringResource(R.string.re_record_voice)) },
+            text = { Text(stringResource(R.string.replace_your_current_clone_with_a_new_one)) },
+            confirmButton = { TextButton(onClick = { confirmingRerecord = false; onRerecordVoice() }) { Text(stringResource(R.string.re_record_voice)) } },
+            dismissButton = { TextButton(onClick = { confirmingRerecord = false }) { Text(stringResource(R.string.cancel)) } })
+    }
     if (pickingAccent && voiceId != null) {
         VoiceAccentSheet(
             voiceId = voiceId,

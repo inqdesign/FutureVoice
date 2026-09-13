@@ -170,6 +170,7 @@ fun RootScreen() {
         if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
     }
     var showPeople by remember { mutableStateOf(false) }
+    var recloning by remember { mutableStateOf(false) }
     var personDetailId by remember { mutableStateOf<String?>(null) }
     var clonePreview by remember { mutableStateOf(false) }
     var welcomeDone by remember { mutableStateOf(false) }
@@ -267,6 +268,15 @@ fun RootScreen() {
         clonePreview -> CloneFlowScreen(
             targetLanguage = state.targetLanguage,
             onCloned = { clonePreview = false },
+        )
+
+        // Re-record from Me: the same flow as the first clone; the new voice
+        // replaces the old one only once it is kept.
+        recloning -> CloneFlowScreen(
+            targetLanguage = state.targetLanguage,
+            onCloned = { id -> app.onVoiceCloned(id); recloning = false },
+            signedIn = state.signedIn && !state.isAnonymous,
+            onSaveVoice = { pendingAccount = true },
         )
 
         state.resolvingSession -> Loading()
@@ -451,6 +461,7 @@ fun RootScreen() {
             onSwitchLanguage = app::switchLanguage,
             onAddLanguage = app::addLanguage,
             hasVoice = state.voiceId != null,
+            onRerecordVoice = { showMe = false; recloning = true },
             onOpenPeople = { showMe = false; showPeople = true },
             onOpenPublicIntro = { showPublicIntro = true },
             onOpenPlanPage = { showPlanPage = true },

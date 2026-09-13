@@ -33,7 +33,7 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 
 | | 있음 | 전체 |
 |---|---|---|
-| 화면 | 64 | 75 |
+| 화면 | 65 | 75 |
 | 서비스·엔진 | 79 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
@@ -82,7 +82,9 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [ ] `WatchDialogueStore`, `CommonGround`, `BookGlossary`, `LearnerAddress`
 - [x] `FeedbackSheet` — 2026-09-13. 첫 통화 Done·첫 장면 완주 뒤 한 번, `beta_reviews`에 같은 행.
-- [ ] `VoiceComparisonSheet` — 녹음 vs 클론 A/B(Me·온보딩).
+- [x] `VoiceComparisonSheet` — 2026-09-13. Me → "Doesn't sound like you?"(녹음 vs 클론, 같은 문장, 클론
+      쪽은 fidelity 모델로 한 번 합성해 디스크 캐시) + "Re-record voice" 행과 확인 → 같은 클론 플로우로
+      재녹음(`recloning`). 온보딩 Meet 단계 안의 비교 진입은 아직 없음.
 - [ ] ~~`HistorySheet`~~ — iOS에서 아무 데도 안 쓰임(죽은 파일), N/A.
 - [ ] ~~`LevelHeader`~~ — iOS에서 삭제됨, N/A.
 - [x] `ReferralJoinSheet` — 2026-09-13. 포그라운드에서 `referral_redemptions`를 폴링, 첫 실행은
