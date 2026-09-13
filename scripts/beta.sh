@@ -112,7 +112,31 @@ if [[ "$BUILD" != "$WIDGET_BUILD" ]]; then
 fi
 echo "▸ Shipping $VERSION ($BUILD)"
 
-# --- 1a. Release notes -----------------------------------------------------
+# --- 1a. The version TRAIN must be OPEN ------------------------------------
+# A marketing version App Review has already approved is CLOSED to new builds:
+# Apple refuses the upload with "Invalid Pre-Release Train", and it says so
+# only AFTER a full archive — twelve minutes to learn it (2026-09-13, 1.0.2).
+# The store's own lookup already knows, and `released` above already asks it.
+# A lookup that fails or lags can only report an OLDER version, and matching an
+# older live version still means the train is closed, so there is no false
+# positive here to guard against — only a missed catch, which costs what it
+# used to cost.
+live_version=$(curl -s --max-time 10 "https://itunes.apple.com/lookup?id=$APP_STORE_ID&t=$(date +%s)" \
+  | python3 -c 'import json,sys
+try:
+    r = json.load(sys.stdin)["results"]
+except Exception:
+    r = []
+print(r[0]["version"] if r else "")' 2>/dev/null || true)
+if [[ -n "$live_version" && "$live_version" == "$VERSION" ]]; then
+  echo "✗ $VERSION is already on the App Store, so its train is closed to new builds." >&2
+  echo "  Bump the marketing version in BOTH plists, then re-run with --no-bump:" >&2
+  echo "    /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString <next>' $APP_PLIST" >&2
+  echo "    /usr/libexec/PlistBuddy -c 'Set :CFBundleShortVersionString <next>' $WIDGET_PLIST" >&2
+  exit 1
+fi
+
+# --- 1b. Release notes -----------------------------------------------------
 # Shown to every install behind this build (UpdateAvailableSheet) and pasted
 # into App Store Connect. A placeholder here is a placeholder on both. Checked
 # BEFORE the ten-minute archive so a bad note costs seconds, not a rebuild.
@@ -147,7 +171,7 @@ if [[ -t 0 && "${YES:-}" != "1" ]]; then
   [[ "$ok" == "y" || "$ok" == "Y" ]] || { echo "  Stopped. Edit the notes and re-run."; exit 1; }
 fi
 
-# --- 1b. Upload credentials ------------------------------------------------
+# --- 1c. Upload credentials ------------------------------------------------
 # Uploading through the Apple ID signed into Xcode works right up until the
 # session token in the login keychain disappears — which is not a rare event
 # on this machine: an EAS/Expo build in another project inserts its own
@@ -286,23 +310,35 @@ cat > build/UploadOptions.plist <<PLIST
 </plist>
 PLIST
 
+UPLOAD_LOG=build/upload.log
 if xcodebuild -exportArchive \
      -archivePath "$ARCHIVE" \
      -exportOptionsPlist build/UploadOptions.plist \
-     -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} \
+     -allowProvisioningUpdates ${AUTH[@]+"${AUTH[@]}"} 2>&1 \
+     | tee "$UPLOAD_LOG" \
      | grep -E '^\*\* |Upload succeeded|error: ' ; then
   echo "✓ $VERSION ($BUILD) uploaded — it appears in TestFlight once Apple finishes processing."
   publish_release_row
   echo "  Commit the bumped build number:  git add $APP_PLIST $WIDGET_PLIST"
 else
+  # Apple usually names the cause exactly; printing a stock guess next to its
+  # message sends the reader after the wrong thing (2026-09-13: a closed
+  # version train was diagnosed as an expired Apple ID session).
+  if grep -q "Pre-Release Train\|must contain a higher version" "$UPLOAD_LOG" 2>/dev/null; then
+    WHY="  $VERSION is CLOSED to new builds — App Review already approved it.
+  Bump CFBundleShortVersionString in BOTH plists, then re-run with --no-bump."
+  elif grep -q "Failed to Use Accounts\|Unable to authenticate\|no valid session" "$UPLOAD_LOG" 2>/dev/null; then
+    WHY="  The Apple ID in Xcode needs re-authenticating:
+  Xcode → Settings → Accounts → sign in again, then re-run with --no-bump."
+  else
+    WHY="  Apple's reason is in the output above, and in full in $UPLOAD_LOG."
+  fi
   cat <<NOTE
 
 ✗ Upload failed, but $VERSION ($BUILD) is built and signed:
   → $IPA
 
-  Most likely the Apple ID in Xcode needs re-authenticating:
-  Xcode → Settings → Accounts → sign in again, then re-run:
-      ./scripts/beta.sh --no-bump
+$WHY
 
   Or upload by hand: open Transporter.app and drop that .ipa in.
 NOTE
