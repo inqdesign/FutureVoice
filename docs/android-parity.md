@@ -83,7 +83,11 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       또래의 아이·둘 다 배우는 중)해서 통화(낯선 사람)와 장면 프롬프트에 넣는다. 장면은
       서버가 메시지를 만드는 쪽이라 `common_ground` 필드를 **추가**로 받게 하고 배포함 — 안 보내면
       예전 그대로라 iOS엔 영향 없음.
-- [ ] `WatchDialogueStore`, `BookGlossary`, `LearnerAddress`
+- [x] `BookGlossary` — 2026-09-13. 내보낸 책 뒤에 용어집: 책이 가르치는 단어·표현마다 품사·뜻·예문
+      하나. 사전은 이미 공유 테이블에 있어(`WordLore`) 대개 캐시 읽기로 끝나고, 8초 예산과 40개
+      상한 안에서만 찾는다 — 느린 사전이 용어집을 잃을 수는 있어도 책을 막을 수는 없다.
+      에뮬레이터에서 마크다운 내보내기로 확인.
+- [ ] `WatchDialogueStore`, `LearnerAddress`
 - [x] `ScenarioBuilderSheet` / `ScenarioIdeaCache` — 2026-09-13. 컴포저가 카테고리 → 좁히기 → 구체적
       상황으로 내려간다. 1단계는 배송된 시드(왕복 0), 그 아래는 모델이 쓰고 `scenario-ideas.json`에
       30일 캐시(사람별·경로별). 프롬프트·시드·카테고리는 `gen-path-ideas.py`로 Swift에서 추출.

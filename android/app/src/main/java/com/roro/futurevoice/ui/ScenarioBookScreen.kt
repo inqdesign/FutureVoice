@@ -100,7 +100,10 @@ fun ScenarioBookScreen(
                 },
                 actions = {
                     TextButton(onClick = { onWatch(sc.id) }) { Text(stringResource(R.string.watch)) }
-                    BookExportMenu { BookDocument.make(context, sc, counterpartName = null) }
+                    BookExportMenu(
+                        document = { BookDocument.make(context, sc, counterpartName = null) },
+                        nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
+                        targetLanguage = language)
                 },
             )
         }

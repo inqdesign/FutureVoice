@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BookDocument
+import com.roro.futurevoice.data.BookGlossary
 import com.roro.futurevoice.data.BookExport
 import kotlinx.coroutines.launch
 
@@ -34,7 +35,7 @@ import kotlinx.coroutines.launch
  * the whole transcript, and a book page must not pay that to draw a toolbar.
  */
 @Composable
-fun BookExportMenu(document: () -> BookDocument) {
+fun BookExportMenu(document: () -> BookDocument, nativeLanguage: String = "en", targetLanguage: String = "en") {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var open by remember { mutableStateOf(false) }
@@ -52,7 +53,7 @@ fun BookExportMenu(document: () -> BookDocument) {
                 scope.launch {
                     // The print sheet IS the destination picker — nothing to
                     // share afterwards, because the sheet writes the file.
-                    runCatching { BookExport.printPdf(context, document()) }
+                    runCatching { BookExport.printPdf(context, withGlossary(context, document(), nativeLanguage, targetLanguage)) }
                     working = false
                 }
             },
@@ -63,11 +64,22 @@ fun BookExportMenu(document: () -> BookDocument) {
             onClick = {
                 open = false; working = true
                 scope.launch {
-                    runCatching { BookExport.writeMarkdown(context, document()) }
+                    runCatching { BookExport.writeMarkdown(context, withGlossary(context, document(), nativeLanguage, targetLanguage)) }
                         .onSuccess { BookExport.share(context, it, "text/markdown") }
                     working = false
                 }
             },
         )
     }
+}
+
+/**
+ * The glossary is looked up when a format is picked, never when the page
+ * draws: it is a network read, and it is bounded inside [BookGlossary] so a
+ * slow dictionary costs the glossary and not the export.
+ */
+private suspend fun withGlossary(context: android.content.Context, doc: BookDocument,
+                                 native: String, target: String): BookDocument {
+    val section = runCatching { BookGlossary.section(context, doc, native, target) }.getOrNull()
+    return if (section == null) doc else doc.copy(sections = doc.sections + section)
 }

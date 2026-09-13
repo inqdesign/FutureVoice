@@ -131,7 +131,12 @@ fun TalkDetailScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
                 },
-                actions = { BookExportMenu { BookDocument.make(context, s) } },
+                actions = {
+                    BookExportMenu(
+                        document = { BookDocument.make(context, s) },
+                        nativeLanguage = com.roro.futurevoice.core.UILanguage.current(context) ?: "en",
+                        targetLanguage = language)
+                },
             )
         }
     ) { padding ->

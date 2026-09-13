@@ -36,7 +36,19 @@ data class BookDocument(
     /** Date, progress, score — one short line each. */
     val meta: List<String> = emptyList(),
     val sections: List<Section> = emptyList(),
+    /**
+     * Terms this book teaches, in the order they appear. Carried separately
+     * from the sections because a glossary is built LATER and elsewhere:
+     * looking a word up is async (a shared server dictionary), and document
+     * building is synchronous by design so a page can render instantly.
+     */
+    val terms: List<Term> = emptyList(),
 ) {
+    /** Multi-word items get the "explain the whole thing" treatment rather
+     *  than a headword entry — asking for a phrase as a word is what produced
+     *  a dictionary entry for "hundred". */
+    data class Term(val text: String, val isExpression: Boolean)
+
     /** One line of a scene or transcript. */
     data class Line(
         val speaker: String,
@@ -288,6 +300,9 @@ data class BookDocument(
             }
 
             return BookDocument(
+                terms = c?.let { cur ->
+                    cur.words.map { Term(it.text, false) } + cur.expressions.map { Term(it.text, true) }
+                }.orEmpty(),
                 kind = context.getString(R.string.watch_book),
                 title = scenario.cardTitle,
                 subtitle = listOfNotNull(
@@ -320,6 +335,11 @@ data class BookDocument(
             }
 
             val firstTimeWords = sm?.newWordsUsed.orEmpty()
+            // What the glossary at the back will look up: words as words,
+            // phrases as phrases.
+            val talkTerms = firstTimeWords.map { Term(it, false) } +
+                sm?.expressionsOffered.orEmpty().map { Term(it, true) } +
+                sm?.expressionsUsed.orEmpty().map { Term(it, true) }
             if (firstTimeWords.isNotEmpty()) {
                 sections.add(Section(context.getString(R.string.words_d26d55),
                     entries = firstTimeWords.map {
@@ -375,6 +395,7 @@ data class BookDocument(
             }
 
             return BookDocument(
+                terms = talkTerms,
                 kind = context.getString(R.string.talk_book),
                 title = session.displayTitle ?: context.getString(R.string.conversation),
                 meta = meta,
