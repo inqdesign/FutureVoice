@@ -47,6 +47,24 @@ now says what the subscription is DOING (체험 취소 / 해지 예정 / 무료 
 
 `/data.json` returns the same blob without the page (session cookie required).
 
+## It is read on a phone
+
+Every SVG on the page was drawn at a hardcoded 980 px, which inside a
+`.scroll` card meant a phone showed the left third of each chart with no sign
+the rest existed. Charts now measure the card they sit in (`innerW`) and are
+redrawn by `redrawCharts()` on a tab switch — a hidden section measures 0, so
+that is the first moment its real width is knowable — and on resize/rotation.
+On a desktop the measured width IS ~980, so nothing about that rendering
+changed.
+
+Wide tables fold instead of scrolling: under 700 px each keeps only the
+columns that answer the question it exists for, and the rest is one tap away
+in the expandable detail row. The mobile block is the LAST thing in the
+stylesheet on purpose — spliced in at the top it lost on source order to every
+base rule below it. Grid overrides use `minmax(0,1fr)`, never a bare `1fr`,
+whose automatic minimum is min-content and would size a column to the widest
+table inside it.
+
 ## The shell is generated, not written
 
 `src/shell.html` is `scripts/admin/build/admin.html` with the data stripped

@@ -597,52 +597,6 @@ sub("localStorage.getItem('nawana.admin.tab')", "localStorage.getItem('nawana.ad
 sub("localStorage.setItem('nawana.admin.tab', name)", "localStorage.setItem('nawana.admin.tab2', name)", "tab key set")
 
 sub("/* ---- cost ---- */", """/* ---- launch ---- */
-@media (max-width: 700px){
-  .wrap{padding:24px 14px 60px}
-  header{gap:10px 14px}
-  h1{font-size:24px}
-  .tabs{gap:0; margin:16px 0 4px}
-  .tabs button{padding:9px 10px; font-size:13.5px}
-  .tiles{grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:8px}
-  .tile{padding:11px 12px}
-  .tile .v{font-size:22px}
-  .card{padding:14px}
-  .bars .lbl{width:96px; font-size:12px}
-  .bars .val{font-size:11.5px}
-  th, td{padding:8px 7px}
-  table{font-size:13px}
-  /* 최근 가입자: 유저 · 가입 · 구독 · 신호만 */
-  #signupTable th:nth-child(3), #signupTable td:nth-child(3),
-  #signupTable th:nth-child(4), #signupTable td:nth-child(4),
-  #signupTable th:nth-child(5), #signupTable td:nth-child(5),
-  #signupTable th:nth-child(6), #signupTable td:nth-child(6),
-  #signupTable th:nth-child(7), #signupTable td:nth-child(7),
-  #signupTable th:nth-child(9), #signupTable td:nth-child(9),
-  #signupTable th:nth-child(10), #signupTable td:nth-child(10){display:none}
-  #signupTable .chip{white-space:normal; word-break:keep-all}
-  /* 가입 열은 "몇 시간 전"만 — 정확한 시각은 상세에 있고, 여기서 아낀 폭이
-     구독 칩을 한 줄로 만들어요 */
-  #signupTable .abs{display:none}
-  #signupTable .rel{font-size:13px; color:var(--ink)}
-  #signupTable tr.detail td{display:table-cell}
-  /* 구독 이벤트: 금액은 대부분 "체험" */
-  #subEventTable th:nth-child(5), #subEventTable td:nth-child(5){display:none}
-  /* 오류: 빌드는 상세 안에 있어요 */
-  #recentErrTable th:nth-child(5), #recentErrTable td:nth-child(5){display:none}
-  /* 칩의 날짜 꼬리는 접어요 — 상태가 요점이고 날짜는 상세에 있어요 */
-  #signupTable .chip .tail{display:none}
-  /* 최근 통화: 언어는 거의 한 가지 */
-  #sessionTable th:nth-child(3), #sessionTable td:nth-child(3){display:none}
-  .dl{grid-template-columns:1fr; gap:14px}
-  /* One column on a phone. The split sections carry an inline
-     minmax(320px,1fr), whose 320 px floor is wider than a small phone's
-     content box and pushed the whole PAGE sideways.
-     minmax(0,…), never plain 1fr: a bare 1fr's automatic minimum is
-     min-content, and the widest table in there is ~500 px, so 1fr would set
-     a 500 px column and overflow far worse than the thing being fixed. */
-  section[data-tab][style*="grid"]{grid-template-columns:minmax(0,1fr) !important}
-  .costgrid{grid-template-columns:minmax(0,1fr)}
-}
 .xrow{cursor:pointer}
 .xrow:hover td{background:var(--chip)}
 .xrow[aria-expanded="true"] td{background:var(--chip)}
@@ -655,6 +609,7 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:12px 14px 14px}
 .ok{color:var(--good-text); font-weight:600}
 .bad{color:var(--crit); font-weight:600}
 .muted{color:var(--muted)}
+.dtl{max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
 /* ---- cost ---- */""", "launch css")
 
@@ -687,7 +642,8 @@ LAUNCH = """
   </div>
   <div>
     <h2>오류 · 재시도 (7일)</h2>
-    <p class="sub">client_events 중 턴 타이밍·전사 로그를 뺀 나머지를 유저×이벤트로 묶었어요.</p>
+    <p class="sub">client_events 중 턴 타이밍·전사 로그를 뺀 나머지를 유저×이벤트로 묶었어요.
+    <b>섀도잉 취소</b>는 실패가 아니라 사용자가 직접 그만둔 것이라 위 표의 오류 표시에는 안 들어가요.</p>
     <div class="card scroll"><table id="recentErrTable"></table></div>
   </div>
 </section>
@@ -746,6 +702,13 @@ const EVENT_KO = {
   shadow_attempt_cancelled:'섀도잉 취소', shadow_rescore_failed:'섀도잉 재채점 실패',
   voice_clone_id_repaired:'클론 ID 복구',
 };
+// client_events carries more than failures. A cancelled shadowing attempt is
+// someone tapping cancel — counting it as 오류 puts a red dot beside a healthy
+// account. It stays in the table (it is still worth seeing how often people
+// back out of a drill), but it never reaches the signal chip.
+const NOT_A_FAILURE = new Set(['shadow_attempt_cancelled']);
+const failuresOf = idx => forUser(DATA.recentEvents, idx)
+  .filter(e => !NOT_A_FAILURE.has(e.event)).reduce((a,e)=>a+e.n, 0);
 const ts = iso => iso ? new Date(iso) : null;
 const fmtTs = iso => { const d=ts(iso); return d ? d.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; };
 const ago = iso => { const d=ts(iso); if(!d) return '—'; const m=Math.round((Date.now()-d)/60000);
@@ -848,7 +811,7 @@ function renderSignups(users){
   if(!rows.length){ el.innerHTML = `<tbody><tr><td class="muted">${DATA.users.some(u=>u.signedUpAt)?'최근 30일 가입자가 없어요':'이 데이터는 라이브 콘솔에서만 보여요 (admin_raw 갱신 필요)'}</td></tr></tbody>`; return; }
   let html = `<thead><tr><th>유저</th><th>가입</th><th>로그인</th><th>클론</th><th>첫 통화</th><th class="num">통화</th><th class="num">장면</th><th>구독</th><th>마지막 활동</th><th>신호</th></tr></thead><tbody>`;
   for(const u of rows){
-    const errs = forUser(DATA.recentEvents, u.idx).reduce((a,e)=>a+e.n,0);
+    const errs = failuresOf(u.idx);
     const sig = [];
     if(u.reviewCount) sig.push(`<span class="chip">리뷰 ${u.reviewCount}</span>`);
     if(errs) sig.push(`<span class="chip"><span class="dot" style="background:var(--crit)"></span>오류 ${errs}</span>`);
@@ -913,9 +876,9 @@ function renderRecentErrors(users){
   let html = `<thead><tr><th>유저</th><th>이벤트</th><th class="num">횟수</th><th>마지막</th><th>빌드</th><th>상세</th></tr></thead><tbody>`;
   for(const e of rows){
     html += `<tr><td><span class="uname">${esc(nameOf(byIdx[e.u]))}</span></td>
-      <td style="white-space:nowrap">${EVENT_KO[e.event]||e.event}</td><td class="num">${e.n}</td>
+      <td style="white-space:nowrap"${NOT_A_FAILURE.has(e.event)?' class="muted"':''}>${EVENT_KO[e.event]||e.event}</td><td class="num">${e.n}</td>
       <td style="white-space:nowrap">${ago(e.last)}</td><td>${e.build||'—'}</td>
-      <td class="muted" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.detail||'')}">${esc(e.detail||'')}</td></tr>`;
+      <td class="muted dtl" title="${esc(e.detail||'')}">${esc(e.detail||'')}</td></tr>`;
   }
   el.innerHTML = html + '</tbody>';
 }
@@ -950,6 +913,178 @@ sub("""  renderErrors();
   renderCostTable(users);
   renderLaunch(users);""", "wire launch")
 
+
+# ---------------------------------------------------------------- 14) charts fit the screen
+# Every SVG on this page was drawn at a hardcoded 980 px (440 for the error
+# panel) because it was written for a 1060 px desktop. Inside a `.scroll` card
+# that does not break — it just means a phone shows the left third of every
+# chart and no indication the rest exists. On 2026-09-13 the console became
+# something you check from a phone during a launch, so the charts measure the
+# box they are in and are redrawn when that box changes (tab switch, rotation,
+# window resize). Nothing about the desktop rendering changes: on a wide
+# screen the measured width IS ~980.
+sub("""const tooltip = document.getElementById('tooltip');""",
+    """/* The content width of a card, so an SVG can be drawn to fit it. A hidden
+   section measures 0 — hence the floor, and hence redrawCharts() on tab
+   switch, which is when the real width first becomes knowable. */
+function innerW(el, min){
+  if(!el) return 980;
+  const cs = getComputedStyle(el);
+  const w = el.clientWidth - parseFloat(cs.paddingLeft||0) - parseFloat(cs.paddingRight||0);
+  return Math.max(min||230, Math.round(w) || 980);
+}
+const isNarrow = () => innerHeight && innerWidth <= 700;
+
+const tooltip = document.getElementById('tooltip');""", "innerW helper")
+
+# --- daily small multiples
+sub("  const W=980, LEFT=34, RIGHT=8, plotW=W-LEFT-RIGHT, bw=plotW/n;",
+    "  const W=innerW(document.getElementById('dailyCard')), LEFT=34, RIGHT=8,\n"
+    "        plotW=W-LEFT-RIGHT, bw=plotW/n;", "daily width")
+
+# --- error panel
+sub("  const n=DATA.days.length, W=440, H=90, LEFT=26, top=6, bh=H-top-14, bw=(W-LEFT-6)/n;",
+    "  const n=DATA.days.length, W=innerW(document.getElementById('errChart'), 230),\n"
+    "        H=90, LEFT=26, top=6, bh=H-top-14, bw=(W-LEFT-6)/n;", "error width")
+
+# --- streak lanes: the name and stat gutters are half the width on a phone,
+#     and the stat drops its tail rather than being clipped by it.
+sub("  const NAME=118, STAT=132, PAD=8;\n"
+    "  const cw=Math.min(26, Math.max(6, (980-NAME-STAT-PAD*2)/maxSpan));",
+    "  const AVAIL=innerW(document.getElementById('lanes')), narrow=AVAIL<620;\n"
+    "  const NAME=narrow?70:118, STAT=narrow?62:132, PAD=narrow?4:8;\n"
+    "  const cw=Math.min(26, Math.max(narrow?2.6:6, (AVAIL-NAME-STAT-PAD*2)/maxSpan));", "lanes width")
+sub("""    const tail = s.current ? `현재 ${s.current}일째` : `${s.sinceLast}일째 조용`;
+    svg+=`<text x="${statX}" y="${y+13}" class="lane-stat">최장 <tspan style="fill:var(--ink);font-weight:600">${s.longest}일</tspan> · ${tail}</text>`;""",
+    """    const tail = s.current ? `현재 ${s.current}일째` : `${s.sinceLast}일째 조용`;
+    svg+=`<text x="${statX}" y="${y+13}" class="lane-stat">최장 <tspan style="fill:var(--ink);font-weight:600">${s.longest}일</tspan>${narrow?'':` · ${tail}`}</text>`;""",
+    "lanes stat tail")
+sub("  svg+=`<text x=\"${NAME-6}\" y=\"${y+13}\" text-anchor=\"end\" class=\"lane-name\">${esc(nameOf(u).slice(0,12))}</text>`;",
+    "  svg+=`<text x=\"${NAME-6}\" y=\"${y+13}\" text-anchor=\"end\" class=\"lane-name\">${esc(nameOf(u).slice(0, narrow?8:12))}</text>`;",
+    "lanes name length")
+
+# --- heatmap: the cell shrinks to fit the month instead of scrolling it away
+sub("  const n=DATA.days.length, cs=10, gap=1.5;",
+    "  const n=DATA.days.length, gap=1.5;\n"
+    "  const nameW=isNarrow()?66:150;\n"
+    "  const cs=Math.max(3.5, Math.min(10, (innerW(document.getElementById('heatmap'))-nameW-10)/n - gap));",
+    "heatmap cell")
+sub("""  let ruler=`<div class="hm-row"><div class="hm-name"></div><svg width="${width}" height="16">`;""",
+    """  let ruler=`<div class="hm-row"><div class="hm-name" style="width:${nameW}px"></div><svg width="${width}" height="16">`;""",
+    "heatmap ruler name")
+sub("""    let svg=`<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">${esc(nameOf(u))}</div><svg width="${width}" height="${cs}">`;""",
+    """    let svg=`<div class="hm-row"><div class="hm-name" style="width:${nameW}px" title="${esc(u.realEmail||u.email||u.label)}">${esc(nameOf(u))}</div><svg width="${width}" height="${cs}">`;""",
+    "heatmap row name")
+
+# --- cost daily
+sub("  const W=980, LEFT=40, RIGHT=8, plotW=W-LEFT-RIGHT, bw=plotW/n, H=110, top=8, bh=H-top-16;",
+    "  const W=innerW(document.getElementById('costDaily'), 230), LEFT=40, RIGHT=8,\n"
+    "        plotW=W-LEFT-RIGHT, bw=plotW/n, H=110, top=8, bh=H-top-16;", "cost daily width")
+
+# --- redraw when the box changes: a tab becomes visible, or the window resizes
+sub("""  try{ localStorage.setItem('nawana.admin.tab2', name); }catch(e){}
+  hideTip();
+}""",
+    """  try{ localStorage.setItem('nawana.admin.tab2', name); }catch(e){}
+  hideTip();
+  redrawCharts();   // a hidden section measures 0 — now it can be measured
+}
+
+/* Only the width-dependent drawings. Cheap enough to run on every resize
+   frame we let through, and it is the same code path as the first paint, so
+   a redraw can never disagree with it. */
+function redrawCharts(){
+  const users = visibleUsers();
+  renderDaily(new Set(users.map(u=>u.idx)));
+  renderLanes(users);
+  renderHeatmap(users);
+  renderErrors();
+  renderCostDaily();
+}
+let redrawTimer;
+addEventListener('resize', ()=>{
+  clearTimeout(redrawTimer);
+  redrawTimer = setTimeout(redrawCharts, 150);
+});""", "redraw on tab/resize")
+
+
+# The mobile block goes LAST in the stylesheet. Spliced in at the top (next to
+# the tab CSS) every base rule below it won on source order — `.cards`' 310 px
+# floor beat the override and the people cards pushed a 320 px phone sideways.
+sub("""</style>""", """@media (max-width: 700px){
+  .wrap{padding:24px 14px 60px}
+  header{gap:10px 14px}
+  h1{font-size:24px}
+  .tabs{gap:0; margin:16px 0 4px}
+  .tabs button{padding:9px 10px; font-size:13.5px}
+  .tiles{grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:8px}
+  .tile{padding:11px 12px}
+  .tile .v{font-size:22px}
+  .card{padding:14px}
+  .bars .lbl{width:96px; font-size:12px}
+  .bars .val{font-size:11.5px}
+  th, td{padding:8px 7px}
+  table{font-size:13px}
+  /* 최근 가입자: 유저 · 가입 · 구독 · 신호만 */
+  #signupTable th:nth-child(3), #signupTable td:nth-child(3),
+  #signupTable th:nth-child(4), #signupTable td:nth-child(4),
+  #signupTable th:nth-child(5), #signupTable td:nth-child(5),
+  #signupTable th:nth-child(6), #signupTable td:nth-child(6),
+  #signupTable th:nth-child(7), #signupTable td:nth-child(7),
+  #signupTable th:nth-child(9), #signupTable td:nth-child(9),
+  #signupTable th:nth-child(10), #signupTable td:nth-child(10){display:none}
+  #signupTable .chip{white-space:normal; word-break:keep-all}
+  /* 가입 열은 "몇 시간 전"만 — 정확한 시각은 상세에 있고, 여기서 아낀 폭이
+     구독 칩을 한 줄로 만들어요 */
+  #signupTable .abs{display:none}
+  #signupTable .rel{font-size:13px; color:var(--ink)}
+  #signupTable tr.detail td{display:table-cell}
+  /* 구독 이벤트: 금액은 대부분 "체험" */
+  #subEventTable th:nth-child(5), #subEventTable td:nth-child(5){display:none}
+  /* 오류: 빌드는 상세 안에 있어요 */
+  #recentErrTable th:nth-child(5), #recentErrTable td:nth-child(5){display:none}
+  /* 칩의 날짜 꼬리는 접어요 — 상태가 요점이고 날짜는 상세에 있어요 */
+  #signupTable .chip .tail{display:none}
+  /* 유저별 현황(13열) → 유저 · 플랜 · 활동일 · 통화 */
+  #userTable th:nth-child(2), #userTable td:nth-child(2),
+  #userTable th:nth-child(5), #userTable td:nth-child(5),
+  #userTable th:nth-child(6), #userTable td:nth-child(6),
+  #userTable th:nth-child(7), #userTable td:nth-child(7),
+  #userTable th:nth-child(8), #userTable td:nth-child(8),
+  #userTable th:nth-child(10), #userTable td:nth-child(10),
+  #userTable th:nth-child(11), #userTable td:nth-child(11),
+  #userTable th:nth-child(12), #userTable td:nth-child(12),
+  #userTable th:nth-child(13), #userTable td:nth-child(13){display:none}
+  #userTable .chip{white-space:normal; word-break:keep-all}
+  /* 유저별 비용(8열) → 유저 · 통화 · 합계 */
+  #costTable th:nth-child(2), #costTable td:nth-child(2),
+  #costTable th:nth-child(4), #costTable td:nth-child(4),
+  #costTable th:nth-child(5), #costTable td:nth-child(5),
+  #costTable th:nth-child(6), #costTable td:nth-child(6),
+  #costTable th:nth-child(7), #costTable td:nth-child(7){display:none}
+  /* 이상 사용(6열) → 유저 · 이번 주기 통화 · 공정사용 선 */
+  #fairUseTable th:nth-child(2), #fairUseTable td:nth-child(2),
+  #fairUseTable th:nth-child(5), #fairUseTable td:nth-child(5),
+  #fairUseTable th:nth-child(6), #fairUseTable td:nth-child(6){display:none}
+  /* 사람 카드는 310px 바닥을 못 지켜요 */
+  .cards{grid-template-columns:minmax(0,1fr)}
+  .mechrow{grid-template-columns:84px 1fr auto; gap:8px}
+  .bars .lbl{white-space:normal; line-height:1.25; text-align:left}
+  .dtl{max-width:118px}
+  code{overflow-wrap:anywhere}
+  /* 최근 통화: 언어는 거의 한 가지 */
+  #sessionTable th:nth-child(3), #sessionTable td:nth-child(3){display:none}
+  .dl{grid-template-columns:1fr; gap:14px}
+  /* One column on a phone. The split sections carry an inline
+     minmax(320px,1fr), whose 320 px floor is wider than a small phone's
+     content box and pushed the whole PAGE sideways.
+     minmax(0,…), never plain 1fr: a bare 1fr's automatic minimum is
+     min-content, and the widest table in there is ~500 px, so 1fr would set
+     a 500 px column and overflow far worse than the thing being fixed. */
+  section[data-tab][style*="grid"]{grid-template-columns:minmax(0,1fr) !important}
+  .costgrid{grid-template-columns:minmax(0,1fr)}
+}
+</style>""", "mobile css last")
 
 # ---------------------------------------------------------------- 9) data
 data = open(f"{SP}/admin_data.json").read()
