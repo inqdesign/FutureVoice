@@ -50,7 +50,9 @@ import com.roro.futurevoice.ui.brand.DrillBin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudyDeckHost(
-    kind: StudyScheduleStore.Kind,
+    /** null = the DUE queue: everything snoozed whose time has come, both
+     *  kinds together. A per-kind deck deals today's hand instead. */
+    kind: StudyScheduleStore.Kind?,
     language: String,
     nativeLanguage: String,
     level: CefrLevel,
@@ -63,6 +65,8 @@ fun StudyDeckHost(
     LaunchedEffect(kind, language) {
         val goal = 10
         items = when (kind) {
+            null -> StudyScheduleStore.shared(context).snapshot(language).dueItems()
+                .map { StudyDeckItem(it.kind, it.text) }
             StudyScheduleStore.Kind.WORD ->
                 DailyStudyPick.words(context, goal, language, level).map(StudyDeckItem::word)
             StudyScheduleStore.Kind.EXPRESSION ->
@@ -78,8 +82,11 @@ fun StudyDeckHost(
     }
 
     StudyDeckScreen(
-        title = stringResource(
-            if (kind == StudyScheduleStore.Kind.WORD) R.string.words else R.string.expressions),
+        title = stringResource(when (kind) {
+            null -> R.string.back_from_earlier
+            StudyScheduleStore.Kind.WORD -> R.string.words
+            else -> R.string.expressions
+        }),
         items = dealt,
         language = language,
         nativeLanguage = nativeLanguage,
@@ -117,7 +124,7 @@ fun StudyDeckHost(
 /** Where the material comes from — the deck can't be stocked from this screen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmptyDeck(kind: StudyScheduleStore.Kind, onBack: () -> Unit) {
+private fun EmptyDeck(kind: StudyScheduleStore.Kind?, onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
@@ -125,7 +132,8 @@ private fun EmptyDeck(kind: StudyScheduleStore.Kind, onBack: () -> Unit) {
                 colors = AppSurfaces.topBarColors(),
                 title = {
                     Text(stringResource(
-                        if (kind == StudyScheduleStore.Kind.WORD) R.string.words
+                        if (kind == null) R.string.back_from_earlier
+                        else if (kind == StudyScheduleStore.Kind.WORD) R.string.words
                         else R.string.expressions))
                 },
                 navigationIcon = {

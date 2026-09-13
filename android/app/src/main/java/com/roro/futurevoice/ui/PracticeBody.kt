@@ -1,5 +1,9 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
@@ -89,6 +93,9 @@ fun TodayCard(
     /** The full dictionaries behind the day's hand — iOS's "all" on each tile.
      *  Without them the library is reachable only from a widget. */
     onWordsAll: () -> Unit = {},
+    /** Snoozed items whose time has come — what the learner asked to see again. */
+    dueBack: Int = 0,
+    onDueBack: () -> Unit = {},
     onExpressionsAll: () -> Unit = {},
     onEditGoals: () -> Unit,
 ) {
@@ -115,6 +122,29 @@ fun TodayCard(
                     Text("$streak", style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9500))
                 }
+            }
+        }
+
+        // Above the tiles, because it is a promise already made: these came
+        // back because the learner put them away for exactly this long.
+        if (dueBack > 0) {
+            Row(Modifier.fillMaxWidth().clickable(onClick = onDueBack)
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Filled.History, contentDescription = null,
+                    tint = Color(0xFFFF9500), modifier = Modifier.size(20.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.back_from_earlier),
+                        style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.you_asked_to_see_these_again),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("$dueBack", style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9500))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -173,6 +203,40 @@ fun TodayCard(
                         onAll = onShadowAll,
                         modifier = Modifier.weight(1f),
                     )
+                }
+            }
+        }
+
+        // The last seven days: what the streak is actually made of. Drawn only
+        // where a day CAN be met — with every goal at zero there is nothing to
+        // tick, and a row of empty circles reads as a week of failure.
+        if (goals.anyEnabled) {
+            val context = LocalContext.current
+            val days = remember(goals, today) {
+                (6 downTo 0).map { back ->
+                    val at = System.currentTimeMillis() - back * 86_400_000L
+                    at to GoalStore.met(context, goals, at)
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp)) {
+                days.forEachIndexed { i, (at, met) ->
+                    val isToday = i == days.lastIndex
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(java.text.SimpleDateFormat("EEEEE", java.util.Locale.getDefault())
+                            .format(java.util.Date(at)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (isToday) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            if (met) Icons.Filled.CheckCircle else Icons.Outlined.Circle,
+                            contentDescription = null, modifier = Modifier.size(18.dp),
+                            tint = when {
+                                met -> Color(0xFF34C759)
+                                isToday -> MaterialTheme.colorScheme.primary
+                                else -> MaterialTheme.colorScheme.outlineVariant
+                            })
+                    }
                 }
             }
         }

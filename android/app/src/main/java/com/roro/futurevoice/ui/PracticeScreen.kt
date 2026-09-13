@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.CefrLevel
@@ -81,6 +82,7 @@ fun PracticeBody(
     onShadowAll: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
+    onOpenDueReview: () -> Unit = {},
 ) {
     var editingGoals by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -95,6 +97,7 @@ fun PracticeBody(
     var goals by remember { mutableStateOf(GoalStore.Goals()) }
     var today by remember { mutableStateOf(PracticeLog.Day()) }
     var streak by remember { mutableStateOf(0) }
+    var dueBack by remember { mutableStateOf(0) }
 
     LaunchedEffect(language, revision) {
         due = DrillStore.shared(context).dueCount(language)
@@ -109,6 +112,8 @@ fun PracticeBody(
         goals = GoalStore.load(context)
         today = PracticeLog.day(context) ?: PracticeLog.Day()
         streak = GoalStore.streak(context, goals)
+        // What the learner put away and asked to see again, now due.
+        dueBack = StudyScheduleStore.shared(context).snapshot(language).dueItems().size
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -136,6 +141,8 @@ fun PracticeBody(
                     // Shadowing is reached through a book's line, so the tile
                     // sends them to the shelf that has the lines in it.
                     onShadowAll = onShadowAll,
+                    dueBack = dueBack,
+                    onDueBack = onOpenDueReview,
                     onWordsAll = onOpenWordsAll,
                     onExpressionsAll = onOpenExpressionsAll,
                     onShadowing = {

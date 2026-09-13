@@ -166,6 +166,7 @@ fun RootScreen() {
     var showPublicIntro by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
     var showShadowBrowser by remember { mutableStateOf(false) }
+    var showDueReview by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
     var showPlanPage by remember { mutableStateOf(false) }
     // Existing learners appear in Find people automatically. Gated on a real
@@ -394,6 +395,16 @@ fun RootScreen() {
             onBack = { showDeck = false },
         )
 
+        // Everything snoozed whose time has come, both kinds together — the
+        // promise the learner made to themselves, kept.
+        showDueReview -> StudyDeckHost(
+            kind = null,
+            language = state.targetLanguage,
+            nativeLanguage = state.nativeLanguage,
+            level = state.level,
+            onBack = { showDueReview = false },
+        )
+
         studyDeckKind != null -> StudyDeckHost(
             kind = studyDeckKind!!,
             language = state.targetLanguage,
@@ -599,6 +610,7 @@ fun RootScreen() {
             // at all — only the widget's deep link reached it.
             onOpenWordsAll = { library = LibraryKind.WORDS },
             onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
+            onOpenDueReview = { showDueReview = true },
         )
     }
 }
@@ -748,6 +760,7 @@ private fun HomeScreen(
     onShadowAll: () -> Unit = {},
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
+    onOpenDueReview: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -935,6 +948,7 @@ private fun HomeScreen(
                     onShadowAll = onShadowAll,
                     onOpenWordsAll = onOpenWordsAll,
                     onOpenExpressionsAll = onOpenExpressionsAll,
+                    onOpenDueReview = onOpenDueReview,
                 )
 
                 HomeTab.PROGRESS -> ProgressBody(
