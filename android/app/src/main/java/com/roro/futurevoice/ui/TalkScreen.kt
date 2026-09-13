@@ -105,6 +105,8 @@ fun TalkScreen(
     initialOpener: String = "",
     cast: com.roro.futurevoice.talk.ConversationEngine.Cast? = null,
     castVoiceId: String? = null,
+    /** The stranger's local row, so the talk lands on their card. */
+    counterpartId: String? = null,
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -184,6 +186,7 @@ fun TalkScreen(
                 initialOpener = initialOpener,
                 cast = cast,
                 castVoiceId = castVoiceId,
+                counterpartId = counterpartId,
             )
         )
     }

@@ -55,6 +55,13 @@ data class TalkConfig(
      */
     val cast: ConversationEngine.Cast? = null,
     val castVoiceId: String? = null,
+    /**
+     * The local `Counterpart` row for that stranger. The talk saves as an
+     * ordinary Session carrying it, which is what puts the call on the
+     * person's own card — and what lets every existing review, transcript
+     * and book mechanism work on it for free.
+     */
+    val counterpartId: String? = null,
 )
 
 /**
@@ -298,6 +305,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 else -> null
             },
             originScenarioId = cfg.scenarioId,
+            counterpartId = cfg.counterpartId,
         )
         // Saved from the app scope on purpose: the ViewModel may be cleared
         // (screen left) before a viewModelScope job gets to run. The summary

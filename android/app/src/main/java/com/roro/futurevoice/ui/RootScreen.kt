@@ -177,6 +177,8 @@ fun RootScreen() {
     var callOpener by remember { mutableStateOf("") }
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
+    /** Who the call is with, so the saved talk lands on their card. */
+    var callCounterpartId by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
     val referralJoin by com.roro.futurevoice.data.ReferralJoins.pending.collectAsStateWithLifecycle()
     referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
@@ -377,12 +379,23 @@ fun RootScreen() {
             level = state.level,
             onBack = { detailSessionId = null },
             onShadow = { shadowLine = it },
+            // Picking a talk back up is a metered call, so it goes through
+            // the same gate every other launcher does.
+            onContinue = { topic ->
+                gate {
+                    detailSessionId = null
+                    callTopic = topic; callFacts = emptyList(); callScenarioId = null
+                    inCall = true
+                }
+            },
         )
 
         bookScenarioId != null -> ScenarioBookScreen(
             scenarioId = bookScenarioId!!,
             language = state.targetLanguage,
-            onWatch = { watchScenarioId = it },
+            // A fresh take costs a scene count, so the wall is asked at the
+            // tap here exactly as it is on the Watch tab.
+            onWatch = { id -> gate { watchScenarioId = id } },
             onShadow = { shadowLine = it },
             onBack = { bookScenarioId = null },
         )
@@ -453,6 +466,10 @@ fun RootScreen() {
                     conversationStyle = p.conversation_style,
                     commonGround = com.roro.futurevoice.talk.CommonGround.block(state.persona, com.roro.futurevoice.talk.CommonGround.of(p)))
                 callCastVoice = p.voice_preset_id.takeIf { it.isNotBlank() }
+                // The talk saves as an ordinary Session carrying this, so the
+                // person's card lists it and every review mechanism works on
+                // it for free. The local row's id IS the remote persona's.
+                callCounterpartId = p.id
                 gate {
                     callTopic = ""; callFacts = emptyList(); callScenarioId = null
                     showPeople = false; inCall = true
@@ -597,8 +614,10 @@ fun RootScreen() {
                 initialOpener = callOpener,
                 cast = callCast,
                 castVoiceId = callCastVoice,
+                counterpartId = callCounterpartId,
                 onExit = { inCall = false; callTopic = ""; callFacts = emptyList()
-                    callScenarioId = null; callOpener = ""; callCast = null; callCastVoice = null },
+                    callScenarioId = null; callOpener = ""; callCast = null
+                    callCastVoice = null; callCounterpartId = null },
             )
 
         else -> HomeScreen(

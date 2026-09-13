@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Abc
@@ -36,6 +37,7 @@ import androidx.compose.material.icons.filled.Style
 import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -73,6 +75,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BookDocument
+import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
 import com.roro.futurevoice.talk.AxisScore
@@ -113,9 +116,12 @@ fun TalkDetailScreen(
     level: com.roro.futurevoice.data.CefrLevel = com.roro.futurevoice.data.CefrLevel.B1,
     onBack: () -> Unit,
     onShadow: (String) -> Unit = {},
+    /** Pick the talk back up — a metered call, so the host gates it. */
+    onContinue: ((String) -> Unit)? = null,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var session by remember { mutableStateOf<Session?>(null) }
     var chapter by remember { mutableStateOf(TalkChapter.INTRO) }
@@ -220,8 +226,18 @@ fun TalkDetailScreen(
                             progressLabel = stringResource(R.string.lld_of_lld_mastered,
                                 curriculum.masteredCount, curriculum.totalCount),
                             mastered = curriculum.isMastered,
-                            onReplay = { showingTranscript = !showingTranscript })
-                        if (curriculum.isMastered && s.archivedAt == null) MasteredBanner()
+                            onReplay = { showingTranscript = !showingTranscript },
+                            onContinue = onContinue?.let { go ->
+                                { go(s.topic ?: s.displayTitle.orEmpty()) }
+                            })
+                        if (curriculum.isMastered && s.archivedAt == null) {
+                            MasteredBanner(onArchive = {
+                                scope.launch {
+                                    SessionStore.shared(context).setArchived(s.id, true, language)
+                                    StoreEvents.bump()
+                                }
+                            })
+                        }
                         sm?.scorecard?.let { card ->
                             HorizontalDivider(Modifier.padding(start = 20.dp))
                             ScoreBlock(
@@ -386,6 +402,10 @@ private fun CoverBlock(
     progressLabel: String,
     mastered: Boolean,
     onReplay: () -> Unit,
+    /** Pick the talk back up. Null when the host has nowhere to start a
+     *  call from, in which case Replay stands alone rather than beside a
+     *  dead button. */
+    onContinue: (() -> Unit)?,
 ) {
     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
@@ -427,37 +447,55 @@ private fun CoverBlock(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        FilledTonalButton(
-            onClick = onReplay,
-            modifier = Modifier.fillMaxWidth(),
-            // The accent wash iOS's `.bordered` button carries — derived from
-            // the theme's primary, never a colour of its own.
-            colors = ButtonDefaults.filledTonalButtonColors(
-                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                contentColor = MaterialTheme.colorScheme.primary),
-        ) {
-            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.replay))
+        // Continue leads — picking the talk back up is what this page is
+        // for; Replay is the quieter half of the pair, as on iOS.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (onContinue != null) {
+                Button(onClick = onContinue, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null,
+                        modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.continue_))
+                }
+            }
+            FilledTonalButton(
+                onClick = onReplay,
+                modifier = Modifier.weight(1f),
+                // The accent wash iOS's `.bordered` button carries — derived
+                // from the theme's primary, never a colour of its own.
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    contentColor = MaterialTheme.colorScheme.primary),
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null,
+                    modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.replay))
+            }
         }
     }
 }
 
-/** Everything this talk had to teach is mastered. iOS offers Archive here;
- *  Android has no archive action on this page yet, so it only says so. */
+/** Everything this talk had to teach is mastered — and the one thing left to
+ *  do with it, filing it away, is offered right here as on iOS. Archiving is
+ *  tidying, so it is never the achievement itself. */
 @Composable
-private fun MasteredBanner() {
+private fun MasteredBanner(onArchive: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
             tint = Books.mastery, modifier = Modifier.size(26.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(stringResource(R.string.talk_mastered),
                 style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
             Text(stringResource(R.string.everything_this_conversation_had_to_teach_is_yours),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Button(onClick = onArchive,
+            colors = ButtonDefaults.buttonColors(containerColor = Books.mastery)) {
+            Text(stringResource(R.string.archive))
         }
     }
 }
