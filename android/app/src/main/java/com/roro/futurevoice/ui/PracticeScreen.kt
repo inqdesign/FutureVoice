@@ -1,5 +1,10 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.roro.futurevoice.ui.brand.Symbols
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.WorkspacePremium
 import com.roro.futurevoice.data.TalkCurriculum
 import com.roro.futurevoice.data.ShadowAttemptStore
@@ -168,32 +173,38 @@ fun PracticeBody(
             onDismiss = { showFinished = false })
     }
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // Books where every word and line is mastered. Shown even at zero, so
-        // the shelf is something to fill rather than a surprise.
-        Row(Modifier.fillMaxWidth().clickable { showFinished = true },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Color(0xFF34C759))
-            Text(stringResource(R.string.finished), style = MaterialTheme.typography.labelLarge,
-                color = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Color(0xFF34C759))
-            if (finished.isNotEmpty()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) {
+                ShelfChips(
+                    selected = shelf,
+                    counts = { s ->
+                        when (s) {
+                            Shelf.STUDYING -> null
+                            Shelf.TALK -> talks.size.takeIf { it > 0 }
+                            Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
+                        }
+                    },
+                    onSelect = { shelf = it },
+                )
+            }
+            // Books where every word and line is mastered. A pill, shown even
+            // at zero, so the shelf is something to fill rather than a
+            // surprise the first time it appears.
+            Row(Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(MaterialTheme.colorScheme.surface)
+                .clickable { showFinished = true }
+                .padding(horizontal = 12.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
+                    modifier = Modifier.size(17.dp),
+                    tint = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Books.mastery)
                 Text("${finished.size}", style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold, color = Color(0xFF34C759))
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (finished.isEmpty()) MaterialTheme.colorScheme.outline else Books.mastery)
             }
         }
-        ShelfChips(
-            selected = shelf,
-            counts = { s ->
-                when (s) {
-                    Shelf.STUDYING -> null
-                    Shelf.TALK -> talks.size.takeIf { it > 0 }
-                    Shelf.WATCH -> scenarios.size.takeIf { it > 0 }
-                }
-            },
-            onSelect = { shelf = it },
-        )
 
         when (shelf) {
             // The cross-cutting page: what today asks for, then the books
@@ -337,15 +348,20 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit,
         ))
     BookCard(
         title = t.displayTitle ?: stringResource(R.string.conversation),
+        icon = Icons.AutoMirrored.Filled.Chat,
         origin = when (t.origin?.name?.lowercase()) {
             "news" -> stringResource(R.string.news)
             "scenario" -> stringResource(R.string.scenarios)
             else -> stringResource(R.string.free_talk)
         },
         accent = if (t.origin?.name?.lowercase() == "news") Books.topics else Books.talks,
-        detail = t.summary?.scorecard?.let {
-            "${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}"
-        },
+        // WHEN it was last worked, said as recency — it keeps advancing as
+        // the book is studied, which a fixed date does not.
+        detail = stringResource(R.string.studied,
+            android.text.format.DateUtils.getRelativeTimeSpanString(
+                t.endedAt ?: t.startedAt, System.currentTimeMillis(),
+                android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()),
+        score = t.summary?.scorecard?.overall,
         modifier = Modifier.padding(vertical = 4.dp)
             .combinedClickable(onClick = { onOpen(t.id) }, onLongClick = { menu = true }),
     )
@@ -367,10 +383,15 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
     } ?: 0
     BookCard(
         title = sc.cardTitle,
-        origin = sc.category,
+        icon = Symbols.icon(sc.categoryIcon),
+        // WHO the scene is with — a category names the shelf, not the scene.
+        origin = sc.role?.takeIf { it.isNotBlank() } ?: sc.category,
         accent = Books.scenarios,
-        detail = if (cur == null) stringResource(R.string.watch_the_scene_first)
+        detail = null,
+        progressLabel = if (cur == null) stringResource(R.string.watch_the_scene_first)
+        else if (total > 0 && done == total) stringResource(R.string.mastered_550ec5)
         else stringResource(R.string.lld_of_lld_mastered, done, total),
+        mastered = total > 0 && done == total,
         progress = if (total == 0) null else done / total.toFloat(),
         modifier = Modifier.padding(vertical = 4.dp)
             .combinedClickable(onClick = { onOpen(sc.id) }, onLongClick = { menu = true }),

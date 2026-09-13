@@ -1,5 +1,11 @@
 package com.roro.futurevoice.ui.brand
 
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.border
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -38,59 +44,103 @@ object Books {
 }
 
 /**
- * One book / topic / talk card: a source dot, the title, a quiet origin tag,
- * and (for books) the mastery bar. The origin tag is plain secondary text —
- * it names the source without pulling the eye off the title.
+ * One book / topic / talk card — the iOS `TalkBookCard` / `ScenarioBookCard`
+ * anatomy: the source icon up top with its verdicts beside it, the title
+ * block at the bottom, and the mastery strip under that.
+ *
+ * A card is TALL on purpose. It is the thing the learner returns to, and the
+ * old horizontal row (dot, title, detail) read as a list item — the same
+ * weight as a settings row.
  */
 @Composable
 fun BookCard(
     title: String,
     modifier: Modifier = Modifier,
+    /** The source's own glyph — talks share one, a scenario keeps its category's. */
+    icon: ImageVector? = null,
     origin: String? = null,
     accent: Color = Books.talks,
+    /** When this book was last WORKED, said as recency ("2일 전 학습함"). */
     detail: String? = null,
     progress: Float? = null,
+    /** "3/12 mastered", or the hint for a book with nothing in it yet. */
+    progressLabel: String? = null,
+    mastered: Boolean = false,
+    /** The talk's own score, as a ring — how the conversation went. */
+    score: Int? = null,
+    /** A caller's own accessory, beside the verdicts (the recent-talks row
+     *  puts its level there). */
+    trailing: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
-    trailing: @Composable (() -> Unit)? = null,
 ) {
     Card(
-        modifier = modifier.fillMaxWidth().then(
+        modifier = modifier.fillMaxWidth().heightIn(min = 150.dp).then(
             if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                icon?.let {
+                    Icon(it, contentDescription = null, tint = accent,
+                        modifier = Modifier.size(26.dp))
+                }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                if (mastered) {
+                    Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
+                        tint = Books.mastery, modifier = Modifier.size(22.dp))
+                }
+                score?.let { ScoreRing(it) }
+                trailing?.invoke()
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 origin?.let {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        androidx.compose.foundation.layout.Box(
-                            Modifier.size(6.dp).clip(CircleShape).background(accent))
-                        Text(it, style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                    }
+                    Text(it, style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
                 Text(title, style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 detail?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+            }
+            Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 progress?.let {
                     LinearProgressIndicator(
                         progress = { it.coerceIn(0f, 1f) },
-                        color = if (it >= 1f) Books.mastery else accent,
-                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp))
+                        color = if (mastered) Books.mastery else accent,
+                        modifier = Modifier.fillMaxWidth())
+                }
+                progressLabel?.let {
+                    Text(it, style = MaterialTheme.typography.labelSmall,
+                        color = if (mastered) Books.mastery
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            trailing?.let {
-                Column(Modifier.padding(start = 10.dp)) { it() }
-            }
         }
+    }
+}
+
+/** The talk's overall score as a small ring — quiet, but present. */
+@Composable
+private fun ScoreRing(score: Int) {
+    val band = when {
+        score < 50 -> Color(0xFFFF3B30)
+        score < 70 -> Color(0xFFFF9500)
+        score < 85 -> MaterialTheme.colorScheme.primary
+        else -> Books.mastery
+    }
+    androidx.compose.foundation.layout.Box(
+        Modifier.size(30.dp)
+            .border(2.dp, band.copy(alpha = 0.35f), CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$score", style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold, color = band)
     }
 }
