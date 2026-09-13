@@ -65,6 +65,12 @@ fun LibraryScreen(kind: LibraryKind, language: String, onBack: () -> Unit) {
     val vocab = remember { VocabStore.shared(context) }
     var rows by remember { mutableStateOf<List<Row>>(emptyList()) }
     var showKnown by remember { mutableStateOf(false) }
+    /** The term whose card is open. A verdict taken on the card rewrites
+     *  [rows] underneath it, so the card walks a SNAPSHOT of the list it was
+     *  opened from — otherwise marking something known would drop the row and
+     *  slide the next/previous terms out from under the thumb. */
+    var openTerm by remember { mutableStateOf<String?>(null) }
+    var openList by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(kind, language, revision, showKnown) {
         val schedule = StudyScheduleStore.shared(context).snapshot(language)

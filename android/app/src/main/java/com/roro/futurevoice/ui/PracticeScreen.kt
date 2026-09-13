@@ -80,6 +80,7 @@ fun PracticeBody(
     /** Everything shadowable, not today's hand. */
     onShadowAll: () -> Unit = {},
 ) {
+    var editingGoals by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var shelf by remember { mutableStateOf(Shelf.STUDYING) }
@@ -149,8 +150,16 @@ fun PracticeBody(
                             if (picks.isEmpty()) shelf = Shelf.TALK else onShadowHand(picks)
                         }
                     },
-                    onEditGoals = {},
+                    onEditGoals = { editingGoals = true },
                 )
+                if (editingGoals) {
+                    StudyGoalsSheet(onDismiss = {
+                        editingGoals = false
+                        // The card reads the goals it was handed, so the
+                        // change has to travel the same way every write does.
+                        StoreEvents.bump()
+                    })
+                }
                 if (talks.isNotEmpty()) {
                     BookRow(stringResource(R.string.talk), talks.size, talks.take(6),
                         onOpenShelf = { shelf = Shelf.TALK }) { TalkCard(it, onOpenTalk) }

@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -64,9 +65,30 @@ fun GroupedRowDivider(inset: Boolean = true) {
 @Composable
 fun GroupedFooter(text: String) {
     Text(
-        text,
+        // One translated footer carries **bold** from the iOS catalog, which
+        // SwiftUI renders and Compose does not. Parse it rather than shipping
+        // asterisks — the catalog is generated, so it can't be edited here.
+        markdownBold(text),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 6.dp),
     )
 }
+
+/** `**bold**` as a span. Deliberately tiny: the catalog uses nothing else. */
+@Composable
+fun markdownBold(text: String): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        var rest = text
+        while (true) {
+            val open = rest.indexOf("**")
+            val close = if (open < 0) -1 else rest.indexOf("**", open + 2)
+            if (open < 0 || close < 0) { append(rest); return@buildAnnotatedString }
+            append(rest.substring(0, open))
+            withStyle(androidx.compose.ui.text.SpanStyle(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)) {
+                append(rest.substring(open + 2, close))
+            }
+            rest = rest.substring(close + 2)
+        }
+    }

@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -97,6 +99,10 @@ fun TodayCard(
         ) {
             Text(stringResource(R.string.today), style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.weight(1f))
+            IconButton(onClick = onEditGoals, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.edit_daily_goals),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
             if (streak > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(3.dp)) {
