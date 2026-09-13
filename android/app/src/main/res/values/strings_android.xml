@@ -154,4 +154,12 @@
     <string name="reminders_cant_reach_you">Reviews and the daily call can\'t reach you. Turn them on in settings.</string>
     <string name="axis_vocab">Vocab</string>
     <string name="axis_express">Express</string>
+    <string name="keep">Keep</string>
+    <string name="i_know">I know</string>
+    <string name="common_phrases">Common phrases</string>
+    <string name="another_way_to_say_it">Another way to say it</string>
+    <string name="as_a_name">As a name</string>
+    <string name="from_your_talks">From your talks</string>
+    <string name="previous_item">Previous</string>
+    <string name="next_item">Next</string>
 </resources>

@@ -154,4 +154,12 @@
     <string name="reminders_cant_reach_you">復習と毎日の電話が届きません。設定でオンにしてください。</string>
     <string name="axis_vocab">語彙</string>
     <string name="axis_express">表現</string>
+    <string name="keep">学習する</string>
+    <string name="i_know">知ってる</string>
+    <string name="common_phrases">よく使う言い回し</string>
+    <string name="another_way_to_say_it">こんな言い方も</string>
+    <string name="as_a_name">名前として使うとき</string>
+    <string name="from_your_talks">これまでのトークから</string>
+    <string name="previous_item">前へ</string>
+    <string name="next_item">次へ</string>
 </resources>

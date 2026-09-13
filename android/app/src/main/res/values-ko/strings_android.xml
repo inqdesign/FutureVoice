@@ -154,4 +154,12 @@
     <string name="reminders_cant_reach_you">복습과 매일 전화가 닿지 못해요. 설정에서 켜 주세요.</string>
     <string name="axis_vocab">어휘</string>
     <string name="axis_express">표현</string>
+    <string name="keep">계속 학습</string>
+    <string name="i_know">알아요</string>
+    <string name="common_phrases">자주 쓰는 표현</string>
+    <string name="another_way_to_say_it">이렇게도 말해요</string>
+    <string name="as_a_name">이름으로 쓸 때</string>
+    <string name="from_your_talks">내 대화에서</string>
+    <string name="previous_item">이전</string>
+    <string name="next_item">다음</string>
 </resources>

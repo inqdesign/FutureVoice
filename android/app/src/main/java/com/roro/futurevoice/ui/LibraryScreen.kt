@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -158,9 +159,22 @@ fun LibraryScreen(kind: LibraryKind, language: String, onBack: () -> Unit) {
             }
 
             items(rows, key = { it.text }) { row ->
-                LibraryRow(row)
+                LibraryRow(row, onOpen = {
+                    openList = rows.map { it.text }
+                    openTerm = row.text
+                })
             }
         }
+    }
+
+    openTerm?.let { term ->
+        WordCardSheet(
+            terms = openList,
+            initialTerm = term,
+            kind = kind,
+            language = language,
+            onDismiss = { openTerm = null },
+        )
     }
 }
 
@@ -174,9 +188,9 @@ private data class Row(
 )
 
 @Composable
-private fun LibraryRow(row: Row) {
+private fun LibraryRow(row: Row, onOpen: () -> Unit) {
     androidx.compose.foundation.layout.Row(
-        Modifier.fillMaxWidth().padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -191,5 +205,12 @@ private fun LibraryRow(row: Row) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        // The row opens a card now, and a list of bare words gives no sign of
+        // it — the chevron is the only thing saying the tap does anything.
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

@@ -154,4 +154,12 @@
     <string name="reminders_cant_reach_you">複習和每日來電無法送達。請到設定開啟。</string>
     <string name="axis_vocab">詞彙</string>
     <string name="axis_express">表達</string>
+    <string name="keep">繼續學</string>
+    <string name="i_know">我會了</string>
+    <string name="common_phrases">常用說法</string>
+    <string name="another_way_to_say_it">也可以這樣說</string>
+    <string name="as_a_name">當作名字時</string>
+    <string name="from_your_talks">在你的對話中</string>
+    <string name="previous_item">上一個</string>
+    <string name="next_item">下一個</string>
 </resources>

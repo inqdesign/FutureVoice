@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Newspaper
 import com.roro.futurevoice.talk.PathIdeasContent
 import com.roro.futurevoice.talk.PathIdeas
 import com.roro.futurevoice.data.PersonaStore
@@ -1151,6 +1152,7 @@ private fun DiscoverSection(
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
 ) {
     var editingInterests by remember { mutableStateOf(false) }
+    var newsFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -1182,6 +1184,7 @@ private fun DiscoverSection(
 
     suspend fun fetchNews(refresh: Boolean) {
         loading = true
+        newsFailed = false
         try {
             val client = NewsClient(AuthRepository())
             var pool = client.fetch(interests, language, refresh)
@@ -1200,6 +1203,9 @@ private fun DiscoverSection(
             }
         } catch (_: kotlinx.coroutines.CancellationException) {
         } catch (_: Exception) {
+            // Said out loud rather than left as an empty section: the learner
+            // is looking at a list that just refused to arrive.
+            newsFailed = true
         } finally { loading = false }
     }
 
@@ -1209,7 +1215,12 @@ private fun DiscoverSection(
         // within the same day.
         if (interests.isNotEmpty()) {
             val cached = store.valid(interests, language)
-            if (cached != null) topics = displaySelection(cached) else fetchNews(false)
+            if (cached != null) topics = displaySelection(cached) else {
+                // No fresh cache: paint whatever was saved last (however old)
+                // so the section is never empty on open, then fetch behind it.
+                store.lastKnown(interests, language)?.let { topics = displaySelection(it) }
+                fetchNews(false)
+            }
         }
     }
     LaunchedEffect(language, revision) { scenarios = scenarioStore.load(language) }
@@ -1251,6 +1262,36 @@ private fun DiscoverSection(
             }
         }
 
+        if (newsTab && interests.isEmpty()) {
+            // Nothing to build stories from yet — the fix is one tap, so
+            // offer it instead of an empty section.
+            DiscoverRow(
+                title = stringResource(R.string.add_interests),
+                icon = Icons.Filled.Add,
+                accent = Books.topics,
+                onClick = { editingInterests = true },
+            )
+        } else if (newsTab && topics.isEmpty()) {
+            if (loading) {
+                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.finding_stories),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                // Auto-load happens on open; this is the retry path when that
+                // failed or came back empty.
+                DiscoverRow(
+                    title = stringResource(R.string.load_stories),
+                    icon = Icons.Filled.Newspaper,
+                    accent = Books.topics,
+                    onClick = { scope.launch { fetchNews(true) } },
+                )
+            }
+        }
         if (newsTab) {
             topics.forEach { topic ->
                 DiscoverRow(
@@ -1260,6 +1301,13 @@ private fun DiscoverSection(
                     accent = Books.topics,
                     onClick = if (enabled) ({ onPickNews(topic) }) else null,
                 )
+            }
+            if (newsFailed) {
+                Text(stringResource(
+                    if (topics.isEmpty()) R.string.couldn_t_load_stories
+                    else R.string.showing_earlier_stories),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             scenarios.filter { it.archivedAt == null && it.isMeeting != true }.forEach { sc ->

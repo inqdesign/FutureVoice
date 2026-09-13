@@ -53,6 +53,14 @@ class NewsTopicStore private constructor(context: Context) {
         write(language, Cached(key(interests), now, topics, carried))
     }
 
+    /**
+     * Whatever was saved last, however old. Painted on open so the section is
+     * never blank, with today's fetch running behind it — and a failed fetch
+     * then leaves the old list standing instead of an empty space.
+     */
+    fun lastKnown(interests: List<String>, language: String): List<SuggestedTopic>? =
+        load(language)?.takeIf { it.interestsKey == key(interests) }?.topics?.takeIf { it.isNotEmpty() }
+
     fun seenTitles(interests: List<String>, language: String): List<String> =
         load(language)?.takeIf { it.interestsKey == key(interests) }?.seenTitles ?: emptyList()
 
