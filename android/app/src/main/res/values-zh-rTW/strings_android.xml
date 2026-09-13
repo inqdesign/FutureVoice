@@ -162,4 +162,9 @@
     <string name="from_your_talks">在你的對話中</string>
     <string name="previous_item">上一個</string>
     <string name="next_item">下一個</string>
+    <string name="you_said">你說的</string>
+    <string name="why_label">為什麼</string>
+    <string name="lld_h_lld_m">%1$d小時%2$d分</string>
+    <string name="lld_m">%1$d分鐘</string>
+    <string name="talk_time_is_kept_for_lld_days">通話時間只保留 %1$d 天。</string>
 </resources>

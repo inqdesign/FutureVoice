@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.DrillIngest
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.net.ElevenLabsClient
 import androidx.compose.material.icons.filled.MenuBook
@@ -382,17 +383,29 @@ private fun DrillCardFace(card: DrillCard, revealed: Boolean, modifier: Modifier
             style = MaterialTheme.typography.labelMedium, color = onCardSecondary,
         )
         if (card.sourcePhrase.isNotBlank()) {
-            Text(card.sourcePhrase, style = MaterialTheme.typography.titleMedium,
-                color = if (revealed) onCardSecondary else onCard,
-                textDecoration = if (revealed) TextDecoration.LineThrough else null)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.you_said), style = MaterialTheme.typography.labelSmall,
+                    color = onCardSecondary)
+                // Cards minted before the fragment trim carry the WHOLE turn,
+                // so trim at render too — a minute-long transcript struck
+                // through reads as "everything you said was wrong".
+                Text(DrillIngest.relevantFragment(card.sourcePhrase, card.targetPhrase),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (revealed) onCardSecondary else onCard,
+                    textDecoration = if (revealed) TextDecoration.LineThrough else null)
+            }
         }
 
         if (revealed) {
             Column(Modifier.weight(1f, fill = false).clipToBounds(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.try_saying), style = MaterialTheme.typography.labelSmall,
+                    color = onCardSecondary)
                 Text(card.targetPhrase, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold, color = onCard)
                 if (card.reason.isNotBlank()) {
+                    Text(stringResource(R.string.why_label), style = MaterialTheme.typography.labelSmall,
+                        color = onCardSecondary, modifier = Modifier.padding(top = 4.dp))
                     Text(card.reason, style = MaterialTheme.typography.bodyMedium,
                         color = onCardSecondary)
                 }

@@ -162,4 +162,9 @@
     <string name="from_your_talks">From your talks</string>
     <string name="previous_item">Previous</string>
     <string name="next_item">Next</string>
+    <string name="you_said">You said</string>
+    <string name="why_label">Why</string>
+    <string name="lld_h_lld_m">%1$dh %2$dm</string>
+    <string name="lld_m">%1$dm</string>
+    <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
 </resources>

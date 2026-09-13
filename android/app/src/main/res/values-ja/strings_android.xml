@@ -162,4 +162,9 @@
     <string name="from_your_talks">これまでのトークから</string>
     <string name="previous_item">前へ</string>
     <string name="next_item">次へ</string>
+    <string name="you_said">自分が言ったこと</string>
+    <string name="why_label">なぜ</string>
+    <string name="lld_h_lld_m">%1$d時間%2$d分</string>
+    <string name="lld_m">%1$d分</string>
+    <string name="talk_time_is_kept_for_lld_days">トーク時間は%1$d日分まで残ります。</string>
 </resources>

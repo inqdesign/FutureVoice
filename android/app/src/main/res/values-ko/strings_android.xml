@@ -162,4 +162,9 @@
     <string name="from_your_talks">내 대화에서</string>
     <string name="previous_item">이전</string>
     <string name="next_item">다음</string>
+    <string name="you_said">내가 한 말</string>
+    <string name="why_label">왜</string>
+    <string name="lld_h_lld_m">%1$d시간 %2$d분</string>
+    <string name="lld_m">%1$d분</string>
+    <string name="talk_time_is_kept_for_lld_days">통화 시간은 %1$d일까지 남아요.</string>
 </resources>
