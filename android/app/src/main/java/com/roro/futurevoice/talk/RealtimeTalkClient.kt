@@ -143,6 +143,10 @@ class RealtimeTalkClient(private val context: Context) {
     /** Set when the gateway named a wall; read by the view after failure. */
     @Volatile var wallCode: String? = null
         private set
+    /** The gateway's code for the last error, e.g. "idle" — nobody talked
+     *  and it put the call down. Read alongside [onFailed]. */
+    @Volatile var lastErrorCode: String? = null
+        private set
 
     // ------------------------------------------------------------------
     // Lifecycle
@@ -165,6 +169,7 @@ class RealtimeTalkClient(private val context: Context) {
         if (state != State.IDLE && state != State.FAILED) return
         tornDown = false
         wallCode = null
+        lastErrorCode = null
         replyPCM.reset(); userPCM.reset()
         state = State.CONNECTING
 
@@ -320,6 +325,7 @@ class RealtimeTalkClient(private val context: Context) {
             "stats", "rotating" -> Unit   // the gateway reconnects upstream itself
             "error" -> {
                 val code = msg["code"]?.jsonPrimitive?.content.orEmpty()
+                lastErrorCode = code
                 val message = msg["message"]?.jsonPrimitive?.content ?: "gateway error"
                 if (code == "insufficient_credits" || code == "daily_cap_reached" || code == "fair_use_limit") {
                     wallCode = code

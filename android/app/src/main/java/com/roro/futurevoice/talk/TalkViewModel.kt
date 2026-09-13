@@ -387,11 +387,24 @@ class TalkViewModel(context: Context) : ViewModel() {
             persist()
         }
         realtime.onFailed = { message ->
-            // A wall already ended the call with its own sheet; anything
-            // else is a failure the learner can retry from.
-            if (realtime.wallCode == null) {
-                _state.update { it.copy(phase = TalkPhase.ENDED, error = message, partial = "") }
-                persist()
+            when {
+                // A wall already ended the call with its own sheet.
+                realtime.wallCode != null -> Unit
+                // Nobody talked and the gateway put the call down. That is a
+                // PAUSE, not an end: ending has consequences (a summary, a
+                // book), pausing has none — the transcript stays and one tap
+                // reconnects with the history. Same rule as the classic path's
+                // idle watchdog.
+                realtime.lastErrorCode == "idle" -> {
+                    flushRealtimeReply()
+                    _state.update { it.copy(phase = TalkPhase.PAUSED, pausedForIdle = true,
+                        partial = "", level = 0f) }
+                }
+                // Anything else is a failure the learner can retry from.
+                else -> {
+                    _state.update { it.copy(phase = TalkPhase.ENDED, error = message, partial = "") }
+                    persist()
+                }
             }
         }
     }
