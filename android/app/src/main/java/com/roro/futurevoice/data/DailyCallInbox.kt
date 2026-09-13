@@ -12,6 +12,7 @@ object DailyCallInbox {
     fun deliver(intent: Intent?) {
         if (intent?.getBooleanExtra(DailyCallScheduler.ANSWER_EXTRA, false) == true) {
             intent.removeExtra(DailyCallScheduler.ANSWER_EXTRA)
+            com.roro.futurevoice.core.Analytics.capture("daily_call_answered", mapOf("callbacks" to 0))
             _answered.value += 1
         }
     }

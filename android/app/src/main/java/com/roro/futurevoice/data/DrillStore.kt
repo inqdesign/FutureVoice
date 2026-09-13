@@ -1,5 +1,6 @@
 package com.roro.futurevoice.data
 
+import com.roro.futurevoice.core.Analytics
 import android.content.Context
 import com.roro.futurevoice.talk.DrillCard
 import com.roro.futurevoice.talk.SessionSummary
@@ -194,6 +195,7 @@ class DrillStore private constructor(context: Context) {
                 if (card.id !in wanted) return@map card
                 val promoted = minOf(maxOf(card.box + 2, 3), DrillIngest.MAX_BOX)
                 if (promoted <= card.box) return@map card
+                Analytics.capture("drill_used_in_conversation", mapOf("box" to promoted))
                 touched = true
                 card.copy(box = promoted, lastReviewedAt = now,
                     nextReviewAt = now + DrillIngest.intervalMs(promoted))

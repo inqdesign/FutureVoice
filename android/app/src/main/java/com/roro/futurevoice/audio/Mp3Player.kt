@@ -1,5 +1,6 @@
 package com.roro.futurevoice.audio
 
+import com.roro.futurevoice.core.Analytics
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +13,8 @@ import kotlin.coroutines.resume
  * Buffered playback path — used when the Edge Function returns a whole MP3
  * (older deploy that ignored `stream`), and for cached lines.
  */
-class Mp3Player(private val cacheDir: File) {
+/** [source] names the surface for `audio_played`; null (the live call) logs nothing, as on iOS. */
+class Mp3Player(private val cacheDir: File, private val source: String? = null) {
 
     /**
      * Playback gain, 0…1. Unity everywhere EXCEPT the live call, which is the
@@ -40,6 +42,7 @@ class Mp3Player(private val cacheDir: File) {
         get() = player?.let { runCatching { it.isPlaying }.getOrDefault(false) } ?: false
 
     suspend fun play(mp3: ByteArray) {
+        source?.let { Analytics.capture("audio_played", mapOf("source" to it)) }
         val file = withContext(Dispatchers.IO) {
             File.createTempFile("tts-", ".mp3", cacheDir).apply { writeBytes(mp3) }
         }

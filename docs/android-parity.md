@@ -90,8 +90,11 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       setup_completed, level_up, shadow_attempted. 2차: voice_clone_started/succeeded/failed, screen_viewed, word_saved/known,
       drill_reviewed, expression_bookmarked, daily_call_scheduled, voice_accent_applied,
       voice_consent_given, language_added/switched, onboarding_started. **남은 것**:
-      daily_call_answered/declined/missed, drill_snoozed/used_in_conversation,
-      expression_dismissed, voice_accent_previews/removed, widget_opened, audio_played.
+      daily_call_answered, drill_used_in_conversation, voice_accent_previews_requested,
+      audio_played(출처별, 통화는 iOS처럼 제외). 남은 것과 이유: daily_call_declined/missed는
+      데일리 콜 v2(결과·콜백)가 없어 붙일 상태가 없음; drill_snoozed는 안드로이드에선
+      `fileInBin`이 그 동작이라 drill_reviewed에 포함; expression_dismissed·
+      voice_accent_removed는 그 동작 자체가 아직 없음; widget_opened는 위젯 없음(N/A).
 - [ ] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications`
 - [ ] `UILanguage` — 앱 언어 해석
 - [ ] `AvatarStore`, `VoiceSampleStore`, `MicChoiceSheet`, `UsageDetailView`

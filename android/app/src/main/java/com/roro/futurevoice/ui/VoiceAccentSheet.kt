@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.core.Analytics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,7 +72,7 @@ fun VoiceAccentSheet(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val client = remember { VoiceRemixClient(AuthRepository()) }
-    val player = remember { Mp3Player(context.cacheDir) }
+    val player = remember { Mp3Player(context.cacheDir, source = "accent_preview") }
 
     val options = remember(targetLanguage) { VoiceAccentCatalog.options(targetLanguage) }
     var accent by remember { mutableStateOf<VoiceAccent?>(null) }
@@ -118,6 +119,7 @@ fun VoiceAccentSheet(
                 Button(
                     onClick = {
                         generating = true; error = null
+                        Analytics.capture("voice_accent_previews_requested", mapOf("accent" to chosen.id))
                         scope.launch {
                             runCatching {
                                 client.previews(voiceId, chosen.prompt,

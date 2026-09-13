@@ -68,7 +68,7 @@ fun WatchSceneScreen(
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
-    val mp3 = remember { Mp3Player(context.cacheDir) }
+    val mp3 = remember { Mp3Player(context.cacheDir, source = "scene") }
     var title by remember { mutableStateOf<String?>(null) }
     var shown by remember { mutableStateOf<List<Turn>>(emptyList()) }
     var playingIndex by remember { mutableIntStateOf(-1) }

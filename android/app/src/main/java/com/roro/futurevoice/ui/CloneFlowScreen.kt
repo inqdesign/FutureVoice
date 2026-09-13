@@ -131,7 +131,7 @@ fun CloneFlowScreen(
     var greeting by remember { mutableStateOf<ByteArray?>(null) }
     var clonedVoiceId by remember { mutableStateOf<String?>(null) }
     val listenPlayer = remember { MediaPlayer() }
-    val mp3 = remember { Mp3Player(context.cacheDir) }
+    val mp3 = remember { Mp3Player(context.cacheDir, source = "greeting") }
 
     // The room is listened to ONLY on the spot step — an open mic on every
     // screen of onboarding is both a battery cost and a thing to explain.

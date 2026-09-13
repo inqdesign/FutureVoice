@@ -75,7 +75,7 @@ fun ShadowScreen(
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val mp3 = remember { Mp3Player(context.cacheDir) }
+    val mp3 = remember { Mp3Player(context.cacheDir, source = "shadow") }
     val live = remember { LiveTranscriber(context) }
     var recording by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
