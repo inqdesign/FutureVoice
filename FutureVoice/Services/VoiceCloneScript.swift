@@ -23,13 +23,23 @@ import Foundation
 enum VoiceCloneScript {
 
     static func paragraphs(for language: String) -> [String] {
-        let code = LanguageCatalog.language(language)?.code ?? "en"
-        return byLanguage[code] ?? byLanguage["en"]!
+        handAuthored(language) ?? byLanguage["en"]!
+    }
+
+    /// The script for a language, or nil when there isn't one. The EXACT code
+    /// is tried first so a script-qualified language can carry its own text —
+    /// `zh-Hant` must not be handed the Simplified script, which is the same
+    /// language and the wrong writing system to read aloud from.
+    static func handAuthored(_ language: String) -> [String]? {
+        if let exact = byLanguage[language] { return exact }
+        guard let base = LanguageCatalog.language(language)?.code else { return nil }
+        return byLanguage[base]
     }
 
     /// The clone's first words, spoken back in the user's own voice the moment
     /// it exists. Short on purpose — one TTS call per onboarding.
     static func greeting(for language: String) -> String {
+        if let exact = greetings[language] { return exact }
         let code = LanguageCatalog.language(language)?.code ?? "en"
         return greetings[code] ?? greetings["en"]!
     }
@@ -139,6 +149,14 @@ enum VoiceCloneScript {
             "再来一段，这次慢一点。等一年以后我说这门语言的时候，我希望它是轻松的。不用完美 — 轻松就好。就像我不再翻译了，只是在说话。",
             "好了。我的声音大概就录到这里。如果一切顺利，你接下来听到的声音应该会很像我。我们很快再聊。",
         ],
+        "zh-Hant": [
+            "你好。我正在錄這段話，好讓流利的我聽起來像我自己。我很好奇，也很有耐心。我希望它聽起來像我 — 只是更自信的那個版本。",
+            "我來說說這週的一個片刻。天氣比我預想的要涼。我走在路上，忽然發現自己在同時用兩種語言思考 — 一種用來描述看見的，一種用來描述感受到的。挺有意思的。",
+            "我讀一個簡單的清單，把各種音都帶一帶：週一早上，週三下午，週五晚上。三，十三，三十三。一杯雙份濃縮，一杯水，如果有靠窗的位子，麻煩給我留一個。",
+            "現在換幾種不同的語氣：「可以再說一遍嗎？」「等一下 — 好像不太對。」「老實說我還不確定，不過我是這麼想的。」「哦，這個真好 — 再多講一點。」",
+            "再來一段，這次慢一點。等一年以後我說這門語言的時候，我希望它是輕鬆的。不用完美 — 輕鬆就好。就像我不再翻譯了，只是在說話。",
+            "好了。我的聲音大概就錄到這裡。如果一切順利，你接下來聽到的聲音應該會很像我。我們很快再聊。",
+        ],
     ]
 
     private static let greetings: [String: String] = [
@@ -151,5 +169,6 @@ enum VoiceCloneScript {
         "it": "Ehi — sei tu. Solo più fluente. Scegli un colore che ci somigli.",
         "pt": "Ei — é você. Só que mais fluente. Escolha uma cor com a nossa cara.",
         "zh": "嘿 — 是你。只是更流利了。挑一个像我们的颜色吧。",
+        "zh-Hant": "嘿 — 是你。只是更流利了。挑一個像我們的顏色吧。",
     ]
 }

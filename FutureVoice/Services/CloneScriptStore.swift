@@ -13,7 +13,9 @@ import Foundation
 /// offers both and defaults by the learner's self-rated level.
 ///
 /// Sources, in order:
-///   1. hand-authored — English (the target) and Korean (the main market);
+///   1. hand-authored — English and Korean here, plus every language
+///      `VoiceCloneScript` already carries (de, ja, es, fr, it, pt, zh,
+///      zh-Hant);
 ///   2. one cached Gemini generation per native language, written to the same
 ///      brief (kept on disk forever, so it's a once-per-device call);
 ///   3. English, as the floor — a generation that never lands must never
@@ -93,11 +95,20 @@ final class CloneScriptStore {
         return entry.paragraphs
     }
 
+    /// Hand-written scripts, for the NATIVE-language option.
+    ///
+    /// English and Korean are authored here (the target script and the main
+    /// market). Everything else comes from `VoiceCloneScript`, which already
+    /// holds a hand-written script per language for the TARGET side — the two
+    /// sides want the same six beats and the same 75–80s length, so a
+    /// Japanese learner of English should read the hand-written Japanese one
+    /// rather than pay for a generation of the same thing. Only a language
+    /// with no script anywhere falls through to `ensure`.
     static func handAuthored(_ code: String) -> [String]? {
         switch code {
         case "en": return english
         case "ko": return korean
-        default:   return nil
+        default:   return VoiceCloneScript.handAuthored(code)
         }
     }
 
