@@ -37,6 +37,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.alpha
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.roro.futurevoice.R
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
@@ -90,6 +92,19 @@ fun TalkScreen(
     onExit: () -> Unit,
 ) {
     val context = LocalContext.current
+    // The live call's notification is the only control a locked phone has,
+    // and Android 13+ shows none of it without this permission. Ask once,
+    // here, where the reason is on screen — the daily call toggle also asks,
+    // but a learner who never turns that on would never be asked at all.
+    val notifPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     val vm: TalkViewModel = viewModel(
         factory = viewModelFactory {
             initializer { TalkViewModel(context) }
