@@ -11332,6 +11332,52 @@
         }
       }
     },
+    "Both at once" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beides gleichzeitig anhören"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escuchar a la vez"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écouter en même temps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重ねて聞く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "겹쳐 듣기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "叠在一起听"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "疊在一起聽"
+          }
+        }
+      }
+    },
     "Both refill at the start of each billing period." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -68145,6 +68191,52 @@
         }
       }
     },
+    "words only" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nur Wörter"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "solo palabras"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "mots seuls"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単語のみ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단어만"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅单词"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅單字"
+          }
+        }
+      }
+    },
     "Words per minute of voiced speech — pauses and think-time don't drag it down." : {
       "localizations" : {
         "es" : {
@@ -75047,6 +75139,52 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "訂閱開始。在那之前，隨時可以在 App Store 取消。"
+          }
+        }
+      }
+    },
+    "Your take over the line, both starting on their first word — hear where you drift." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Aufnahme über dem Original, beide ab ihrem ersten Wort — hör, wo du abdriftest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu grabación sobre el modelo, las dos desde su primera palabra. Escucha dónde te desfasas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta prise par-dessus le modèle, les deux à partir de leur premier mot. Écoute où tu décroches."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お手本に自分の録音を重ねて、どちらも最初の単語から再生します。どこからずれるか聞いてみてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "원본 위에 내 녹음을 겹쳐서, 둘 다 첫 단어에서 시작해요. 어디서부터 밀리는지 들어보세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把你的录音叠在范本上，两边都从第一个词开始。听听看你是从哪里开始落后的。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把你的錄音疊在範本上，兩邊都從第一個字開始。聽聽看你是從哪裡開始落後的。"
           }
         }
       }

@@ -43,6 +43,9 @@ struct ShadowDrillView: View {
     /// Word-onset timing comparison for the last attempt — nil whenever the
     /// timing data wasn't trustworthy (see ShadowEngine.analyzeRhythm guards).
     @State private var rhythm: ShadowEngine.RhythmAnalysis?
+    /// Word onsets of the SCORED attempt, kept past `analyze` so the duet can
+    /// line the take up on its first word instead of on the file's start.
+    @State private var attemptWordTimings: [WordTiming] = []
     @State private var error: String?
     /// The last failure was the 402 credit gate — the error alert then leads
     /// with the paywall instead of a dead-end OK.
@@ -656,24 +659,40 @@ struct ShadowDrillView: View {
     }
 
     private var playbackRow: some View {
-        // lineLimit(1) + scale-down keeps both labels single-line so the two
-        // bordered buttons render the same height ("Hear my attempt" used to
-        // wrap to two lines and grow taller than its sibling).
-        HStack(spacing: 10) {
-            Button { Task { await previewTarget() } } label: {
-                Label("Hear target", systemImage: "play.circle")
+        VStack(spacing: 8) {
+            // lineLimit(1) + scale-down keeps both labels single-line so the
+            // two bordered buttons render the same height ("Hear my attempt"
+            // used to wrap to two lines and grow taller than its sibling).
+            HStack(spacing: 10) {
+                Button { Task { await previewTarget() } } label: {
+                    Label("Hear target", systemImage: "play.circle")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                Button { Task { await playMyAttempt() } } label: {
+                    Label("Hear my attempt", systemImage: "person.wave.2")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            // Its own row, not a third of the one above: hearing the two takes
+            // over each other is the thing worth doing here, and it does not
+            // belong squeezed beside the two halves it is made of.
+            Button { Task { await playTogether() } } label: {
+                Label("Both at once", systemImage: "person.2.wave.2")
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
-            Button { Task { await playMyAttempt() } } label: {
-                Label("Hear my attempt", systemImage: "person.wave.2")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
+            Text("Your take over the line, both starting on their first word — hear where you drift.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .controlSize(.regular)
     }
@@ -961,6 +980,70 @@ struct ShadowDrillView: View {
         }
     }
 
+    // MARK: - Both at once
+
+    /// How far back the model line sits, and how wide the two voices are
+    /// panned. The learner's own take stays at full level and slightly to the
+    /// right; the model is quieter and slightly left, so the pair separates on
+    /// earphones without either becoming a background texture.
+    private static let duetTargetVolume: Float = 0.4
+    private static let duetPan: Float = 0.35
+
+    /// Play the model line and the learner's take AT ONCE, each trimmed to its
+    /// own first word so they start together.
+    ///
+    /// This is the rhythm card with the screen turned off: a learner who ran
+    /// late hears themselves drift behind, which no two-row diagram conveys as
+    /// directly. Speed is not matched — see `AudioPlayer.armDuet`.
+    ///
+    /// Honest limit: the takes are different lengths, so the further in you
+    /// get the wider the gap. On a short line that gap IS the lesson; on a
+    /// long one it degrades into two people talking at once, which is what the
+    /// timeline's range selection is for.
+    private func playTogether() async {
+        error = nil
+        player.stop()
+        attemptPlayer.stop()
+
+        guard let attemptURL = recordingFileURL,
+              let attemptData = try? Data(contentsOf: attemptURL) else {
+            self.error = "Recording isn't available."
+            return
+        }
+        if cachedAudioURL == nil || !FileManager.default
+            .fileExists(atPath: cachedAudioURL?.path ?? "") {
+            await prepareAudio()
+        }
+        guard let targetURL = cachedAudioURL,
+              let targetData = try? Data(contentsOf: targetURL) else {
+            if error == nil { self.error = "Couldn't load audio for this line." }
+            return
+        }
+
+        // Both takes open on silence — the model line on its own lead-in, the
+        // attempt on the 350 ms the recorder deliberately keeps in front of
+        // the go beat. Skipping to each first word is what makes "together"
+        // mean together.
+        let targetSlice = activeRange.map { Array(timings[$0]) } ?? timings
+        let targetLead = Double(targetSlice.first?.startMs ?? 0) / 1000
+        let attemptLead = Double(attemptWordTimings.first?.startMs ?? 0) / 1000
+
+        guard player.armDuet(targetData, skipping: targetLead,
+                             volume: Self.duetTargetVolume, pan: -Self.duetPan,
+                             configureSession: true),
+              attemptPlayer.armDuet(attemptData, skipping: attemptLead,
+                                    volume: 1.0, pan: Self.duetPan,
+                                    configureSession: false) else {
+            self.error = "Couldn't play the two takes together."
+            return
+        }
+        // One clock reading, one start time, both halves. Enough lead for the
+        // second `play(atTime:)` call to be made before the moment arrives.
+        let go = player.deviceTimeNow + 0.2
+        player.startDuet(at: go)
+        attemptPlayer.startDuet(at: go)
+    }
+
     private func handleSyncTap() async {
         switch phase {
         case .idle, .result:
@@ -1060,6 +1143,7 @@ struct ShadowDrillView: View {
         feedback = nil
         diffSteps = []
         rhythm = nil
+        attemptWordTimings = []
         userWordTimings = []
         prevTranscript = ""
 
@@ -1221,6 +1305,7 @@ struct ShadowDrillView: View {
         feedback = nil
         diffSteps = []
         rhythm = nil
+        attemptWordTimings = []
         phase = .idle
         HapticEngine.selection()
         Telemetry.log("shadow_attempt_cancelled")
@@ -1262,6 +1347,7 @@ struct ShadowDrillView: View {
         )
         let scoredText = reading.text
         let learnerTimings = reading.wordTimings
+        attemptWordTimings = learnerTimings
         prevTranscript = scoredText
         // Nothing read the file — the score is standing on a live partial.
         // Surface it in the result UI and count it, so "the score felt wrong"
