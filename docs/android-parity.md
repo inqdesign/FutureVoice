@@ -50,8 +50,8 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [x] `FreeTalkOpeners` — 2026-09-13. 소개(9개 언어)·회전 풀·폴백 + FIRST CALL 블록,
       전부 Swift에서 추출. 요약기가 `about_user`를 흡수하고 자유 통화면 `metAt`을
       찍는다(전에는 둘 다 없어 첫 통화 소개가 영원히 반복될 구조였다).
-- [ ] `UtteranceTranscriber` — 턴당 두 번째 호출(오디오 기반 전사).
-      지금은 인식기 결과만 쓴다.
+- [x] `UtteranceTranscriber` — 리얼타임에선 해당 없음: 게이트웨이의 `user_turn`이
+      이미 오디오 기반 전사다(Gemini Live). 클래식 경로 전용이었다.
 - [ ] `PracticeStats` — 스트릭과 통계 엔진.
 - [ ] `SavedLineStore` / `SavedLinesView` — 저장한 문장.
 - [ ] `LocalAlignment` — 샤도잉 리듬 점수.
