@@ -157,6 +157,7 @@ fun RootScreen() {
     }
     var showPublicIntro by remember { mutableStateOf(false) }
     var showInvite by remember { mutableStateOf(false) }
+    var showShadowBrowser by remember { mutableStateOf(false) }
     var showCreditGuide by remember { mutableStateOf(false) }
     var showPlanPage by remember { mutableStateOf(false) }
     // Existing learners appear in Find people automatically. Gated on a real
@@ -405,6 +406,15 @@ fun RootScreen() {
 
         showInvite -> InviteScreen(onBack = { showInvite = false })
 
+        showShadowBrowser -> ShadowBrowserScreen(
+            language = state.targetLanguage,
+            onShadow = { turn ->
+                showShadowBrowser = false
+                shadowHand = listOf(com.roro.futurevoice.data.ShadowPicks.Pick(turn, "")); shadowAt = 0
+            },
+            onBack = { showShadowBrowser = false },
+        )
+
         showPublicIntro -> PublicIntroScreen(
             persona = state.persona,
             targetLanguage = state.targetLanguage,
@@ -545,6 +555,7 @@ fun RootScreen() {
             onSavePersona = app::savePersona,
             onMeasuredLevel = app::applyMeasuredLevel,
             onShadowHand = { shadowHand = it; shadowAt = 0 },
+            onShadowAll = { showShadowBrowser = true },
         )
     }
 }
@@ -691,6 +702,7 @@ private fun HomeScreen(
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
     onMeasuredLevel: (String) -> Unit = {},
     onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
+    onShadowAll: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -848,6 +860,7 @@ private fun HomeScreen(
                     onOpenScenarioBook = onOpenBook,
                     onOpenTalk = onOpenTalk,
                     onShadowHand = onShadowHand,
+                    onShadowAll = onShadowAll,
                 )
 
                 HomeTab.PROGRESS -> ProgressBody(

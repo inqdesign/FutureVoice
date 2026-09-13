@@ -33,8 +33,8 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 
 | | 있음 | 전체 |
 |---|---|---|
-| 화면 | 59 | 75 |
-| 서비스·엔진 | 77 | 95 |
+| 화면 | 61 | 75 |
+| 서비스·엔진 | 78 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
 
@@ -53,7 +53,8 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [x] `UtteranceTranscriber` — 리얼타임에선 해당 없음: 게이트웨이의 `user_turn`이
       이미 오디오 기반 전사다(Gemini Live). 클래식 경로 전용이었다.
 - [ ] `PracticeStats` — 스트릭과 통계 엔진.
-- [ ] `SavedLineStore` / `SavedLinesView` — 저장한 문장.
+- [x] `SavedLineStore` — 2026-09-13. iOS 같은 파일·형태. 저장 목록은 브라우저 상단
+      SAVED 섹션으로(iOS의 SavedLinesView는 진입점이 없었다).
 - [ ] `LocalAlignment` — 샤도잉 리듬 점수. **보류**: Apple 인식기의 단어별 타임스탬프에
       기대는 구현이라 안드로이드 SpeechRecognizer로는 같은 값을 얻을 수 없다. 리듬
       점수 없이도 매치 점수는 나온다.
@@ -73,7 +74,8 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 **사람·복습 주변**
 - [ ] `CounterpartDetailView` / `CounterpartVoiceIntakeView` — 상대 상세와
       목소리 인테이크
-- [ ] `ShadowBrowserSheet` — 전체 샤도잉 목록(손패의 대안)
+- [x] `ShadowBrowserSheet` — 2026-09-13. 통화별 미래의 나 문장 전부, 줄마다 북마크,
+      탭하면 샤도잉. Practice 샤도잉 타일의 All로 진입(iOS allCount/all).
 - [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [ ] `WatchDialogueStore`, `CommonGround`, `BookGlossary`, `LearnerAddress`
 - [ ] `HistorySheet`, `FeedbackSheet`, `VoiceComparisonSheet`

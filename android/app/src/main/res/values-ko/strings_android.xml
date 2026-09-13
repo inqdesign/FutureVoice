@@ -138,4 +138,5 @@
     <string name="without_this_the_call_can_arrive_a_few_minutes_late">이걸 켜지 않으면 통화가 몇 분 늦게 올 수 있어요.</string>
     <string name="keep_going">계속하기</string>
     <string name="words_your_fluent_self_used_that_you_havent">미래의 내가 쓰고 나는 안 쓴 단어들. 통화에서 한 번 말하면 스스로 체크돼요.</string>
+    <string name="all">전체</string>
 </resources>

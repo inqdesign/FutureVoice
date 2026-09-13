@@ -82,6 +82,8 @@ fun TodayCard(
     onWords: () -> Unit,
     onExpressions: () -> Unit,
     onShadowing: () -> Unit,
+    /** The browser behind the dealt hand — iOS's `all` on the tile. */
+    onShadowAll: () -> Unit = {},
     onEditGoals: () -> Unit,
 ) {
     Column(
@@ -156,6 +158,7 @@ fun TodayCard(
                         done = today.shadowDone,
                         goal = goals.shadows,
                         onClick = onShadowing,
+                        onAll = onShadowAll,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -175,6 +178,8 @@ private fun ChallengeTile(
     done: Int,
     goal: Int,
     onClick: () -> Unit,
+    /** Opens everything behind the tile, not just today's hand. */
+    onAll: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val complete = done >= goal && goal > 0
@@ -207,6 +212,11 @@ private fun ChallengeTile(
             color = if (complete) green else MaterialTheme.colorScheme.primary,
             modifier = Modifier.fillMaxWidth(),
         )
+        onAll?.let {
+            Text(stringResource(R.string.all), style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable(onClick = it).padding(top = 2.dp))
+        }
     }
 }
 
