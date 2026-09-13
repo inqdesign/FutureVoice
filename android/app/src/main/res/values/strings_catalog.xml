@@ -981,6 +981,7 @@
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"Rough transcript — the final recognition pass didn't finish (network). The score may be off this time."</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100 seats · 30 days in a row to enter"</string>
+    <string name="s_10_14_turns_1_3_sentences_follow_up_questions">"10–14 turns, 1–3 sentences, follow-up questions"</string>
     <string name="s_1_book_finished">"1 book finished"</string>
     <string name="s_1_min">"~1 min"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1 minute. Vary your pitch a little."</string>
@@ -988,6 +989,8 @@
     <string name="s_1_scene">"1 scene"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"1 word, phrase or line is waiting."</string>
     <string name="s_3_days">"3 days"</string>
+    <string name="s_8_10_turns_one_short_sentence_each">"8–10 turns, one short sentence each"</string>
+    <string name="s_8_12_turns_1_2_sentences_each">"8–12 turns, 1–2 sentences each"</string>
     <string name="said_lld">"Said %d×"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"Same bands as “How this is assessed” — tap a skill for its measured numbers."</string>
@@ -1550,6 +1553,8 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"Your friend enters this code when they sign up, and you both get %1$d minutes. You're rewarded for your first %2$d friends."</string>
     <string name="your_future_self">"Your future self"</string>
+    <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->
+    <string name="your_future_self_speaks_mostly_at_your_level_and_lets_a_word_2bb6d2">"Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up."</string>
     <!-- 'Your goal, your call — the ring on the Talk screen fills toward it. You can change it any time in settings.' -->
     <string name="your_goal_your_call_the_ring_on_the_talk_screen_fills_toward_377ab2">"Your goal, your call — the ring on the Talk screen fills toward it. You can change it any time in settings."</string>
     <!-- 'Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.' -->
@@ -1573,6 +1578,8 @@
     <string name="your_level_is_read_from_the_words_you_actually_used_in_a_tal_b61ee0">"Your level is read from the words you actually used in a talk. No quiz, no self-rating."</string>
     <!-- 'Your level, one point per assessment — this line is what growing looks like.' -->
     <string name="your_level_one_point_per_assessment_this_line_is_what_growin_5b1e84">"Your level, one point per assessment — this line is what growing looks like."</string>
+    <!-- "Your level sets how long the scene is and how full its sentences are. Vocabulary is picked from just above it — words a learner at your level plausibly doesn't own yet." -->
+    <string name="your_level_sets_how_long_the_scene_is_and_how_full_its_sente_aac1e9">"Your level sets how long the scene is and how full its sentences are. Vocabulary is picked from just above it — words a learner at your level plausibly doesn't own yet."</string>
     <string name="your_life">"Your life"</string>
     <string name="your_lines">"Your lines"</string>
     <string name="your_match">"Your match"</string>

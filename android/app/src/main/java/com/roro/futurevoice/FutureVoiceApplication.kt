@@ -6,6 +6,11 @@ import com.roro.futurevoice.data.BillingService
 import com.roro.futurevoice.data.CoreVocabulary
 
 class FutureVoiceApplication : Application() {
+
+    // Notifications and any other app-context string resolve here too.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.roro.futurevoice.core.UILanguage.wrap(base))
+    }
     override fun onCreate() {
         super.onCreate()
         com.roro.futurevoice.core.Analytics.start(this)

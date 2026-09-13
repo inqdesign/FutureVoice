@@ -112,7 +112,12 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       `fileInBin`이 그 동작이라 drill_reviewed에 포함; expression_dismissed·
       voice_accent_removed는 그 동작 자체가 아직 없음; widget_opened는 위젯 없음(N/A).
 - [ ] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications`
-- [ ] `UILanguage` — 앱 언어 해석
+- [x] `UILanguage` — 2026-09-13. 앱 화면이 학습자가 고른 자기 언어를 따른다(en·ko·ja·zh-Hant).
+      Activity와 Application의 base context를 감싸서 적용 — 알림도 앱 컨텍스트에서 문자열을 읽는다.
+      Me → 앱 언어 행 → 시트에서 고르면 액티비티를 새로 만든다. iOS 카탈로그의 ja·zh-Hant 열을
+      `gen-strings.py --languages en,ko,ja,zh-Hant`로 가져오고(1347개), 안드로이드 전용 149개는
+      새로 번역했다(ja는 기존 iOS ja 열의 용어를 따름, zh-Hant는 대만 중국어·간체 0자 검증).
+      에뮬레이터에서 ko → ja → ko 전환 확인.
 - [ ] `AvatarStore`, `VoiceSampleStore`, `MicChoiceSheet`, `UsageDetailView`
 - [ ] `UpdateAvailableSheet` — iOS 전용 개념(Play는 인앱 업데이트가 따로)
 

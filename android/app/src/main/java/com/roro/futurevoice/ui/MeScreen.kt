@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.foundation.clickable
@@ -113,6 +114,7 @@ fun MeScreen(
     voiceAccentId: String? = null,
     onAccentApplied: (voiceId: String, accentId: String) -> Unit = { _, _ -> },
     onRerecordVoice: () -> Unit = {},
+    onPickAppLanguage: (String) -> Unit = {},
     onEditProfile: () -> Unit,
     onOpenPaywall: () -> Unit,
     onSignOut: () -> Unit,
@@ -147,6 +149,7 @@ fun MeScreen(
     var managingBackup by remember { mutableStateOf(false) }
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
+    var pickingAppLanguage by remember { mutableStateOf(false) }
     var confirmingRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the row says where it has got to.
@@ -309,6 +312,13 @@ fun MeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                GroupedRowDivider()
+                // The app's own screens, and the language corrections come
+                // back in — one choice, because a learner has one language
+                // they think in.
+                MeRow(Icons.Filled.Translate, stringResource(R.string.app_language),
+                    AppLanguageNames.of(nativeLanguage),
+                    onClick = { pickingAppLanguage = true })
             }
 
             // ── Call — the habit anchor. Answering opens the talk. ──
@@ -596,6 +606,12 @@ fun MeScreen(
         }
     }
 
+    if (pickingAppLanguage) {
+        AppLanguageSheet(current = nativeLanguage, onPick = { code ->
+            pickingAppLanguage = false
+            onPickAppLanguage(code)
+        }, onDismiss = { pickingAppLanguage = false })
+    }
     if (comparingVoice && voiceId != null) {
         VoiceComparisonSheet(voiceId = voiceId, targetLanguage = targetLanguage,
             onRerecord = { confirmingRerecord = true }, onDismiss = { comparingVoice = false })
@@ -794,3 +810,45 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
 @Composable
 private fun coreFooter(core: CoreClubClient.Progress): String =
     stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter)
+
+
+/**
+ * The app's language, named in itself. Foundation drops the SCRIPT from a
+ * display name, so both Chinese scripts come back as plain 中文 — the one
+ * that ships is Traditional, and it says so.
+ */
+object AppLanguageNames {
+    fun of(code: String?): String = when (com.roro.futurevoice.core.UILanguage.normalize(code)) {
+        "ko" -> "한국어"
+        "ja" -> "日本語"
+        "zh-Hant" -> "繁體中文"
+        else -> "English"
+    }
+}
+
+/** Picking pops the sheet, the way a pushed settings list does. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppLanguageSheet(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+            Text(stringResource(R.string.app_language), style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(bottom = 8.dp))
+            com.roro.futurevoice.core.UILanguage.translated.forEach { code ->
+                Row(Modifier.fillMaxWidth().clickable { onPick(code) }.padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Text(AppLanguageNames.of(code), Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge)
+                    if (com.roro.futurevoice.core.UILanguage.normalize(current) == code
+                        || (com.roro.futurevoice.core.UILanguage.normalize(current) == null && code == "en")) {
+                        Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            Text(stringResource(R.string.corrections_and_notes_only),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp))
+        }
+    }
+}

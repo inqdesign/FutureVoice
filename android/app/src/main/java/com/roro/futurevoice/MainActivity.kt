@@ -20,6 +20,11 @@ import io.github.jan.supabase.auth.handleDeeplinks
 
 class MainActivity : ComponentActivity() {
 
+    // The app's own screens follow the language the learner named as theirs.
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(com.roro.futurevoice.core.UILanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

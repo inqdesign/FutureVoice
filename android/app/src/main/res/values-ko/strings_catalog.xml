@@ -980,6 +980,7 @@
     <!-- "Rough transcript — the final recognition pass didn't finish (network). The score may be off this time." -->
     <string name="rough_transcript_the_final_recognition_pass_didn_t_finish_ne_ac415f">"받아쓰기가 거칠어요. 네트워크 때문에 최종 인식이 끝나지 못했거든요. 이번 점수는 정확하지 않을 수 있어요."</string>
     <string name="s_100_seats_30_days_in_a_row_to_enter">"100자리 · 들어가려면 30일 연속"</string>
+    <string name="s_10_14_turns_1_3_sentences_follow_up_questions">"10–14턴, 1–3문장, 이어지는 질문까지"</string>
     <string name="s_1_book_finished">"끝낸 책 1권"</string>
     <string name="s_1_min">"약 1분"</string>
     <string name="s_1_minute_vary_your_pitch_a_little">"1분이면 돼요. 억양을 조금씩 바꿔가며 읽어 주세요."</string>
@@ -987,6 +988,8 @@
     <string name="s_1_scene">"상황연습 1개"</string>
     <string name="s_1_word_phrase_or_line_is_waiting">"단어·표현·문장 1개가 기다리고 있어요."</string>
     <string name="s_3_days">"3일"</string>
+    <string name="s_8_10_turns_one_short_sentence_each">"8–10턴, 한 턴에 짧은 문장 하나"</string>
+    <string name="s_8_12_turns_1_2_sentences_each">"8–12턴, 한 턴에 1–2문장"</string>
     <string name="said_lld">"말한 횟수 %d번"</string>
     <!-- 'Same bands as “How this is assessed” — tap a skill for its measured numbers.' -->
     <string name="same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d">"“How this is assessed”와 같은 기준이에요. 항목을 누르면 실제로 잰 수치를 볼 수 있어요."</string>
@@ -1548,6 +1551,8 @@
     <!-- "Your friend enters this code when they sign up, and you both get %lld minutes. You're rewarded for your first %lld friends." -->
     <string name="your_friend_enters_this_code_when_they_sign_up_and_you_both_e0ffad">"친구가 가입할 때 이 코드를 넣으면 둘 다 %1$d분을 받아요. 내 몫은 처음 %2$d명까지고요."</string>
     <string name="your_future_self">"유창해진 나"</string>
+    <!-- 'Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.' -->
+    <string name="your_future_self_speaks_mostly_at_your_level_and_lets_a_word_2bb6d2">"유창해진 나는 대부분 내 레벨로 말하고, 가끔 한 단계 위의 단어나 표현을 슬쩍 섞어요. 그 작은 차이가 실력이 느는 지점이에요. 두 단계 위로는 절대 가지 않아요."</string>
     <!-- 'Your goal, your call — the ring on the Talk screen fills toward it. You can change it any time in settings.' -->
     <string name="your_goal_your_call_the_ring_on_the_talk_screen_fills_toward_377ab2">"목표는 직접 정해요. 대화 화면의 링이 그만큼 채워져요. 설정에서 언제든 바꿀 수 있고요."</string>
     <!-- 'Your growth curve starts at your second assessment — every assessment adds a point here, and only assessments move your level.' -->
@@ -1571,6 +1576,8 @@
     <string name="your_level_is_read_from_the_words_you_actually_used_in_a_tal_b61ee0">"대화에서 실제로 쓴 단어로 레벨을 읽어요. 시험도, 자가 평가도 없어요."</string>
     <!-- 'Your level, one point per assessment — this line is what growing looks like.' -->
     <string name="your_level_one_point_per_assessment_this_line_is_what_growin_5b1e84">"평가할 때마다 레벨이 점으로 하나씩 찍혀요. 이 선이 늘어가는 모습이에요."</string>
+    <!-- "Your level sets how long the scene is and how full its sentences are. Vocabulary is picked from just above it — words a learner at your level plausibly doesn't own yet." -->
+    <string name="your_level_sets_how_long_the_scene_is_and_how_full_its_sente_aac1e9">"레벨이 장면의 길이와 문장의 밀도를 정해요. 어휘는 그보다 한 단계 위에서 골라요. 내 레벨의 학습자가 아직 모를 법한 단어들이에요."</string>
     <string name="your_life">"일상"</string>
     <string name="your_lines">"내 대사"</string>
     <string name="your_match">"일치도"</string>

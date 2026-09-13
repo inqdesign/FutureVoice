@@ -34,7 +34,13 @@ ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "FutureVoice/Resources/Localizable.xcstrings"
 RES = ROOT / "android/app/src/main/res"
 FILE_NAME = "strings_catalog.xml"
-DEFAULT_LANGUAGES = ["en", "ko"]   # ko/en are the launch languages; de UI is not
+# A resource folder can't carry a script tag the way a .lproj can: Android
+# reads a REGION. Traditional Chinese ships for Taiwan (mainland China needs
+# an ICP registration a German entity can't get), so zh-Hant lands in
+# values-zh-rTW.
+RES_QUALIFIER = {"zh-Hant": "zh-rTW"}
+
+DEFAULT_LANGUAGES = ["en", "ko", "ja", "zh-Hant"]   # the iOS catalog's translated columns; de UI is not
 
 JAVA_KEYWORDS = {
     "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class",
@@ -163,7 +169,7 @@ def main() -> int:
     source, entries, names, skipped = load_entries()
     stale = []
     for lang in args.languages.split(","):
-        folder = RES / ("values" if lang == source else f"values-{lang}")
+        folder = RES / ("values" if lang == source else f"values-{RES_QUALIFIER.get(lang, lang)}")
         text, count = render(lang, source, entries, names)
         path = folder / FILE_NAME
         if args.check:

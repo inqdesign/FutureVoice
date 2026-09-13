@@ -295,6 +295,18 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * read: `LanguageScope` resolves directories from the target key) and the
      * gate opens. Server-profile sync arrives with the account work.
      */
+    /**
+     * The learner's own language, changed after setup. It decides the app's
+     * screens AND the language coaching comes back in, so the activity is
+     * recreated by the caller — resources are resolved from a context that
+     * was built when it was attached.
+     */
+    fun setNativeLanguage(code: String) {
+        prefs.edit().putString(NATIVE_KEY, code).apply()
+        _state.update { it.copy(nativeLanguage = code) }
+        com.roro.futurevoice.core.Analytics.capture("app_language_changed", mapOf("language" to code))
+    }
+
     fun completeSetup(native: String, target: String, level: CefrLevel, goalMinutes: Int) {
         prefs.edit()
             .putBoolean(SETUP_COMPLETE_KEY, true)

@@ -174,6 +174,7 @@ fun RootScreen() {
     LaunchedEffect(state.signedIn, state.isAnonymous, state.persona, state.targetLanguage) {
         if (state.signedIn && !state.isAnonymous) app.syncPublicPersona()
     }
+    val localActivity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
     var showPeople by remember { mutableStateOf(false) }
     var recloning by remember { mutableStateOf(false) }
     var personDetailId by remember { mutableStateOf<String?>(null) }
@@ -468,6 +469,12 @@ fun RootScreen() {
             onAddLanguage = app::addLanguage,
             hasVoice = state.voiceId != null,
             onRerecordVoice = { showMe = false; recloning = true },
+            onPickAppLanguage = { code ->
+                app.setNativeLanguage(code)
+                // Every string on screen was resolved from a context built at
+                // attach time; only a fresh one speaks the new language.
+                (localActivity as? android.app.Activity)?.recreate()
+            },
             onOpenPeople = { showMe = false; showPeople = true },
             onOpenPublicIntro = { showPublicIntro = true },
             onOpenPlanPage = { showPlanPage = true },
