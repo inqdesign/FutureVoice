@@ -81,7 +81,11 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [ ] `LevelEqualizer`, `LevelHeader`
 
 **알림·계측**
-- [ ] `Analytics` — 계측이 전혀 없다. 출시 후 무슨 일이 일어나는지 모른다.
+- [x] `Analytics` — 2026-09-13. SDK 없이 PostHog capture API, iOS와 같은 프로젝트·이벤트
+      이름·대문자 UUID distinct_id, DEBUG 옵트아웃. 1차: conversation_started/ended,
+      setup_completed, level_up, shadow_attempted. **남은 이벤트**: voice_clone_*,
+      screen_viewed, daily_call_*, drill_*, word_*, expression_*, voice_accent_*,
+      voice_consent_*, language_*, onboarding_started, widget_opened.
 - [ ] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications`
 - [ ] `UILanguage` — 앱 언어 해석
 - [ ] `AvatarStore`, `VoiceSampleStore`, `MicChoiceSheet`, `UsageDetailView`

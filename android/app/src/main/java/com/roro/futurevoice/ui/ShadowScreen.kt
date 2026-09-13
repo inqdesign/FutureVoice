@@ -212,6 +212,7 @@ fun ShadowScreen(
                     said = text
                     val a = ShadowScore.analyze(line, text, targetLanguage)
                     attempt = a
+                    com.roro.futurevoice.core.Analytics.capture("shadow_attempted", mapOf("score" to a.score))
                     // File it: the score decides whether this line comes back,
                     // and the rep is what the day's Shadowing goal counts.
                     scope.launch {

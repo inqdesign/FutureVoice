@@ -59,6 +59,7 @@ object AccountEraser {
             }
         }
         AuthRepository().signOut()
+        com.roro.futurevoice.core.Analytics.reset()   // drop identity on account deletion
         wipeLocalData(context)
     }
 

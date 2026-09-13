@@ -264,6 +264,9 @@ class TalkViewModel(context: Context) : ViewModel() {
         // (screen left) before a viewModelScope job gets to run. The summary
         // follows on the same scope and writes onto the same row.
         _state.update { it.copy(endedSessionId = session.id) }
+        com.roro.futurevoice.core.Analytics.capture("conversation_ended", mapOf(
+            "turns" to turns.count { it.role == TurnRole.USER },
+            "seconds" to ((session.endedAt ?: startedAt) - startedAt) / 1000))
         CoroutineScope(Dispatchers.Main).launch {
             runCatching { sessions.save(session) }
             StoreEvents.bump()
@@ -276,6 +279,9 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private fun startRealtime(config: TalkConfig) {
         lastActivityAt = System.currentTimeMillis()
+        com.roro.futurevoice.core.Analytics.capture("conversation_started", mapOf(
+            "origin" to when { config.scenarioId != null -> "scenario"; config.newsFacts.isNotEmpty() -> "news"; config.cast != null -> "person"; else -> "free" },
+            "language" to config.targetLanguage, "realtime" to true))
         val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
             try {
