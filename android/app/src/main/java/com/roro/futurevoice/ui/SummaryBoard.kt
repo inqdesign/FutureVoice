@@ -23,7 +23,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
 import com.roro.futurevoice.talk.SessionSummarizer
@@ -57,7 +59,8 @@ fun SummaryBoard(progress: SessionSummarizer.Progress, facts: String? = null) {
 
     Column(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.building_your_review_material),
-            style = MaterialTheme.typography.titleSmall)
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold)
         LinearProgressIndicator(
             progress = { shown / steps.size.toFloat() },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -67,8 +70,10 @@ fun SummaryBoard(progress: SessionSummarizer.Progress, facts: String? = null) {
             val isCurrent = index == shown
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 when {
+                    // Green, like every other "this is finished" mark in the
+                    // app — the bar carries the accent, the ticks carry done.
                     done -> Icon(Icons.Filled.CheckCircle, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                        tint = Color(0xFF34C759), modifier = Modifier.size(18.dp))
                     isCurrent -> CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     else -> Icon(Icons.Outlined.Circle, contentDescription = null,
                         tint = MaterialTheme.colorScheme.outlineVariant, modifier = Modifier.size(18.dp))

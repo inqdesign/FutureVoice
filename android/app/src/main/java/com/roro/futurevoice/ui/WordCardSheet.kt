@@ -2,12 +2,14 @@ package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -33,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -46,8 +49,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.roro.futurevoice.R
@@ -221,11 +227,30 @@ fun WordCardSheet(
         }
     }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Full height from the start: the entry is the page, and a half sheet
+    // opens on the meanings with the verdicts below the fold.
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+      Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+        // Where you are in the list you came from. A dealt hand titles by
+        // POSITION — that list isn't the notebook, so its count would be a
+        // lie there; browsing the notebook keeps the count.
+        Text(
+            stringResource(R.string.lld_of_lld, index + 1, terms.size),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp))
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding()
+            // Bounded, so the pinned bar below always has room. A bottom
+            // sheet measures its content with an UNBOUNDED height, where a
+            // weight buys nothing and the bar is pushed off the screen.
+            Modifier.fillMaxWidth()
+                .heightIn(max = (LocalConfiguration.current.screenHeightDp * 0.68f).dp)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp).padding(bottom = 28.dp),
+                .padding(horizontal = 20.dp).padding(bottom = 12.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -252,38 +277,6 @@ fun WordCardSheet(
                                 contentDescription = stringResource(R.string.play))
                         }
                     }
-                }
-            }
-
-            // The two verdicts, then walking the list — you decide, then move
-            // on, and both halves stay under the same thumb.
-            Row(
-                Modifier.fillMaxWidth().padding(top = 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                VerdictButton(
-                    label = stringResource(R.string.keep),
-                    icon = if (kept) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                    on = kept, onColor = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.weight(1f), onClick = { toggleKeep() })
-                VerdictButton(
-                    label = stringResource(R.string.i_know),
-                    icon = if (known) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
-                    on = known, onColor = Color(0xFF34C759),
-                    modifier = Modifier.weight(1f), onClick = { toggleKnown() })
-                // Saying it is the point of keeping it — the same screen the
-                // book pages open, one line long.
-                IconButton(onClick = { onShadow(term) }) {
-                    Icon(Icons.Filled.GraphicEq, contentDescription = stringResource(R.string.shadow))
-                }
-                IconButton(onClick = { index -= 1 }, enabled = index > 0) {
-                    Icon(Icons.Filled.KeyboardArrowUp,
-                        contentDescription = stringResource(R.string.previous_item))
-                }
-                IconButton(onClick = { index += 1 }, enabled = index + 1 < terms.size) {
-                    Icon(Icons.Filled.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.next_item))
                 }
             }
 
@@ -341,6 +334,42 @@ fun WordCardSheet(
                 }
             }
         }
+
+        // The action bar is PINNED, as on iOS: the verdicts are why the card
+        // was opened, and a long entry must never scroll them out of reach.
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                .padding(top = 6.dp, bottom = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            VerdictButton(
+                label = stringResource(R.string.keep),
+                icon = if (kept) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                on = kept, onColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f), onClick = { toggleKeep() })
+            VerdictButton(
+                label = stringResource(R.string.i_know),
+                icon = if (known) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
+                on = known, onColor = Color(0xFF34C759),
+                modifier = Modifier.weight(1f), onClick = { toggleKnown() })
+            // Saying it is the point of keeping it — the same screen the book
+            // pages open, one line long.
+            IconButton(onClick = { onShadow(term) }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.GraphicEq, contentDescription = stringResource(R.string.shadow))
+            }
+            IconButton(onClick = { index -= 1 }, enabled = index > 0,
+                modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.KeyboardArrowUp,
+                    contentDescription = stringResource(R.string.previous_item))
+            }
+            IconButton(onClick = { index += 1 }, enabled = index + 1 < terms.size,
+                modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.KeyboardArrowDown,
+                    contentDescription = stringResource(R.string.next_item))
+            }
+        }
+      }
     }
 }
 
@@ -518,6 +547,7 @@ private fun VerdictButton(
     Button(
         onClick = onClick,
         modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (on) onColor.copy(alpha = 0.16f)
             else MaterialTheme.colorScheme.surfaceVariant,
@@ -525,7 +555,10 @@ private fun VerdictButton(
         ),
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        // One line. The verdict's name is the only thing that says which
+        // button this is, so it never wraps and never gets cut.
         Text(label, style = MaterialTheme.typography.labelLarge,
+            maxLines = 1, softWrap = false, overflow = TextOverflow.Visible,
             modifier = Modifier.padding(start = 6.dp))
     }
 }
