@@ -597,6 +597,31 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         ]
     }
 
+    /// Speak the call's FIRST line, arriving after the call is already up.
+    ///
+    /// A scenario or a Find-people call has no greeting when it dials: Gemini
+    /// writes it. Waiting for that before connecting put the model's 2–4 s in
+    /// front of the gateway's own start-up rather than alongside it — 6–8 s of
+    /// silence after the tap (measured 2026-09-13). The call opens without an
+    /// opener now, and this is how the line gets said when it lands.
+    ///
+    /// Cached audio wins, exactly as `start.opener` does: the app plays its own
+    /// take and tells the gateway to record it without speaking. Otherwise the
+    /// gateway says it.
+    func say(_ text: String, audio: URL? = nil) {
+        let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !isTornDown, !line.isEmpty, linesStarted == 0 else { return }
+        if let audio, let decoded = Self.decodeOpener(audio) {
+            localOpener = (line, decoded.buffer, decoded.rate)
+            // `ready` may have been and gone already — then play it now; if the
+            // call is still connecting, `ready` will.
+            if case .connecting = state {} else { playLocalOpener() }
+            sendControl(["type": "say", "text": line, "alreadySpoken": true])
+            return
+        }
+        sendControl(["type": "say", "text": line])
+    }
+
     /// Hang up: tells the gateway, then tears the local side down.
     func hangUp() {
         guard !isTornDown else { return }

@@ -26,6 +26,10 @@ struct ConversationView: View {
     @State private var topicBlurb = ""
     @State private var turns: [Turn] = []
     @State private var phase: Phase = .idle
+    /// The written greeting is taking too long — the call is up and the screen
+    /// says so rather than sitting in an unexplained silence. See the branch
+    /// in `openConversation` that opens the line before the opener exists.
+    @State private var openerIsLate = false
     @State private var error: String?
     @State private var summary: SessionSummary?
     @State private var showTopicPicker = false
@@ -1316,6 +1320,12 @@ struct ConversationView: View {
     /// that says tapping hangs up — every in-call state must name it.
     private var micHint: String {
         if phoneCallActive {
+            // The written greeting is late and the line is open: say so, or
+            // the call reads as dead (2026-09-13 — a scenario opener that
+            // never came back left 37 seconds of unexplained silence).
+            if openerIsLate, turns.isEmpty, phase == .listening {
+                return explain("You can start — go ahead")
+            }
             switch phase {
             case .listening: return explain("Listening · pause to send · tap to stop")
             case .thinking:  return explain("Thinking… · tap to stop")
@@ -2034,6 +2044,48 @@ struct ConversationView: View {
                 // start, no Gemini call, and the line's TTS is already in the
                 // phrase cache after its first play.
                 opener = stored
+            } else if RealtimeMode.isEnabled {
+                // No line in hand: a scenario without a stored pool, or a
+                // Find-people call — Gemini WRITES the greeting. Nothing about
+                // the call needs it, so the line is opened first and the
+                // greeting is said when it lands (`RealtimeTalkClient.say`).
+                // Awaiting it here put the model's 2–4 s in front of the audio
+                // stack, the socket and the gateway's own start-up instead of
+                // alongside them: 6–8 s of silence after the tap, measured
+                // 2026-09-13. A greeting that never arrives now costs the call
+                // nothing — the learner simply speaks first.
+                let askedAt = Date()
+                async let written = generateOpener()
+                await startRealtimeCall(opener: nil)
+                guard !isTornDown else { return }
+                // The greeting can be pathologically slow — measured on device
+                // 2026-09-13, a scenario opener that had not returned after 37
+                // seconds (the request reached the server; the model didn't
+                // come back). Nothing can be done about that from here, but a
+                // call where nobody speaks and nothing says why is the worst
+                // possible shape for it, so the screen asks the learner to
+                // start after `openerPatience`.
+                let late = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(Self.openerPatience * 1_000_000_000))
+                    guard !Task.isCancelled, !isTornDown else { return }
+                    openerIsLate = true
+                }
+                let line = try? await written
+                late.cancel()
+                openerIsLate = false
+                let ms = Int(Date().timeIntervalSince(askedAt) * 1000)
+                Self.step("opener: written in \(ms)ms (\(line == nil ? "FAILED" : "ok"))")
+                Telemetry.log("talk_opener", [
+                    "ms": String(ms),
+                    "ok": line == nil ? "0" : "1",
+                    "kind": sessionScenarioId != nil ? "scenario" : (counterpart != nil ? "person" : "topic"),
+                ])
+                if let line, !isTornDown {
+                    realtime.say(line, audio: activeVoiceId.flatMap {
+                        PhraseAudioStore.shared.url(text: line, voiceId: $0)
+                    })
+                }
+                return
             } else {
                 opener = try await generateOpener()
             }
@@ -2107,6 +2159,16 @@ struct ConversationView: View {
     /// already hangs off `turns`, `sessionId` and `endSession`, so the only
     /// job here is to produce the same turns from a different transport —
     /// with their audio, so Practice keeps listen-back, replay and shadowing.
+    /// How long the screen waits for a written greeting before telling the
+    /// learner to start. Long enough that a normal 2–4 s generation is never
+    /// interrupted by it.
+    private static let openerPatience: TimeInterval = 7
+
+    /// DEBUG console line, same stream as the realtime client's.
+    private static func step(_ message: String) {
+        RealtimeTalkClient.step(message)
+    }
+
     private func startRealtimeCall(opener: String?) async {
         guard let voiceId = activeVoiceId else {
             error = explain("Your voice isn't ready yet.")

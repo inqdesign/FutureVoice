@@ -139,6 +139,10 @@ export class ElevenTTS {
       this.callbacks.onAudio(contextId, base64Decode(msg.audio))
     }
     if (msg.isFinal === true || msg.is_final === true) {
+      // ElevenLabs closes a context itself once it is final, so drop it here
+      // — `closeContext` then has nothing to do for this one and can't send
+      // a close for a context that no longer exists.
+      this.openContexts.delete(contextId)
       this.callbacks.onContextDone(contextId)
     }
     if (msg.error) this.callbacks.onError(String(msg.message ?? msg.error))
@@ -177,8 +181,21 @@ export class ElevenTTS {
     })
   }
 
-  /** Barge-in: kill this context's generation; audio stops arriving. */
+  /** Close a context: a barge-in killing its generation, or a finished line
+   *  letting go of its slot.
+   *
+   *  **The slot is the point.** One socket allows FIVE simultaneous contexts,
+   *  and a context lives until it is closed or goes final. `isFinal` is not
+   *  reliable — the play-out fallback in `CallSession` exists precisely
+   *  because it often never arrives — so a call that only ever ended lines
+   *  locally leaked one context per line and died at the sixth:
+   *  "Maximum simultaneous contexts per WebSocket connection exceeded (5)",
+   *  then socket error, then no voice at all for the rest of the call
+   *  (prod log, 2026-09-13, turn 13). Idempotent: a context already gone —
+   *  finalized, or closed once — is not closed twice.
+   */
   closeContext(contextId: string): void {
+    if (!this.openContexts.has(contextId)) return
     this.openContexts.delete(contextId)
     void this.enqueue(() => {
       this.ws?.send(JSON.stringify({ context_id: contextId, close_context: true }))

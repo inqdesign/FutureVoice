@@ -361,7 +361,26 @@ conversation → summary (+ scorecard metrics) → DrillStore.ingest (SRS cards)
             ↘ WeeklyReportEngine (unlocks on accumulated speaking time)
 ```
 
+**One card per sentence, enforced by the STORE** (2026-09-13). `ingest` had
+deduped on the normalized target since the beginning, so the loop above could
+not repeat itself — but `DrillStore.save` replaces by `id` only, and every
+mint path outside ingest hands it a freshly minted `DrillCard` with a fresh
+UUID: Watch's "Save phrase" on a scene played twice, the book page's
+correction tap, the debug seeds a capture run re-plants (which is where it was
+caught — one sample sentence sitting in the deck twelve times). `saveIfNew` is
+now the one door for those paths: same `matchKey` ingest uses, plus the
+`isDrillable` check, returning whatever is on file so a caller can still open
+the card. `load()` collapses the copies already on learners' phones, keeping
+the one with Leitner progress on it (read-time like the store's other repairs,
+so deck, Sentences list and widget agree at once and the next write persists
+it). A card the read filter would drop is never minted at all — a card no
+lookup can find is what made every visit mint another one.
+
 **A call's expressions come from BOTH mouths** (`expressions_offered`, 2026-08-19). `expressions_used` is what the learner said, verified verbatim against their own turns — that is EVIDENCE. For a long time it was the only expression a talk produced, so the whole class of "the fluent self said something good and I want it" was dropped: the only survivors were single lemmas (`TalkCurriculum.pickupCandidates`, which needs the word to be in `CoreVocabulary` at or above the learner's level, so phrasal verbs built from A1 words — `push back`, `end up -ing` — were filtered out by construction) and four shadow lines. The reusable chunk in between, which is the unit people actually learn, had no home. The summary call now also returns `expressions_offered` — up to 6 reusable phrases the FLUENT SELF used and the learner didn't — in the SAME call (no new request, no new spend), verified against the fluent-self turns and de-duped against `expressions_used` and against the learner's own words. It is MATERIAL, so it lives on `SessionSummary` and is merged at read time by `ExpressionCatalog` as `Origin.heard`, exactly as scene expressions are: never copied into `VocabStore`, whose rows count times SAID and would have to lie about a phrase nobody has spoken yet. Everything downstream is that merge — the Expressions library, the Practice tile, the talk book's Expressions chapter (offered above used), the book export, and the daily deck, which deals heard-in-a-call BEFORE said-it because a deck exists to teach what you can't say yet. The verbatim check is cheaper on this side than on the other: fluent-self text is model-written, so no transcriber sits between the phrase and the check.
+
+**A word the graded list doesn't carry is still a word** (2026-09-13). The same gap, one size down. The pools are content-word CEFR profiles and small — English is 8,424 entries — so ordinary vocabulary simply isn't in them, and `pickupCandidates` dropped anything `CoreVocabulary.level(of:)` couldn't grade. Reported from a real talk: *chore* was said four times and was what the call was ABOUT, and the app never mentioned it once — not in the book's word chapter, not in the day's hand, not even highlighted in the transcript it was said in. `VocabStore.offListContentWords` now admits them from the FLUENT SELF's turns, which is the one place it is safe: that text is model-written, so no transcriber sits between the word and the check — the identical argument `expressions_offered` rests on. Four filters stand in for the pool (NLTagger content class, so no articles or "oh/wow"; not a name, so not Berlin or Jenny; ≥3 letters; and `CoreVocabulary.isUngraded`, a small hand-checked set that separates a word the list OMITS ON PURPOSE — auxiliaries, modals, indefinite pronouns, spoken fillers — from one it merely lacks, because without it "have" and "chore" are the same kind of missing). **They are NOT capped, and the first version's cap of 8 is the mistake worth remembering.** Its stated reason was that the graded half would otherwise be pushed out of the 24-item chapter — which never said why graded words deserve reserved slots, and they don't: both halves are words the fluent self chose. Worse, a cap has to decide which ones die, and with most of them said once there was nothing to decide it by, so spelling broke the tie and `sublet` lost to `boiler`. That is this section's own complaint re-made one level down. What orders them instead is evidence, in two grades: a word the fluent self came back to across SEVERAL TURNS is what the call was about and no graded list can see it, so those lead outright; a word said once is a weaker claim than a curated level match, so those fill whatever the graded words left. `offListContentWords` therefore counts TURNS, not occurrences — three times in one sentence is a verbal tic, not a thread. The mix balances itself with no quota: at A2 the graded words are plentiful and the singletons wait past the prefix, at B2 there are few and the singletons fill in. Three consequences to keep: `lookupKey` now resolves an ungraded surface form to its lemma ("chores" → *chore*) or the pickup list and the transcript's own tokens never line up and the word is collected without being highlighted where it was said; `ingest` keeps the pool gate on the LEARNER's side but lets their speech credit an ungraded word already in `studying` or `records`, so a kept word can leave the deck instead of being dealt back forever, while a mishearing still cannot MINT one; and Korean is empty by construction, since `koreanLemmas` can only return lexicon hits and an unconfirmable dictionary form is a guess, not a word to track. The fix is RETROACTIVE — talk books are derived at read time, never persisted — so the talk that prompted this shows *chore* without re-summarizing. `shadowPicks`' `teachScore` was deliberately left alone: re-scoring would reshuffle the shadow chapter of every existing book to fix a complaint about a different surface.
+
+**And the notebook fills itself** (`VocabStore.keepFromTalk`, same day). Admitting the word was only half of it: the words a talk taught still stopped at the book page waiting to be tapped, so a word the whole call was about entered review only if the learner went looking for it — the same "it was never mentioned", one step further along. `SessionSummarizer` now keeps them automatically. Four rules hold it: it keeps **exactly the set the book's word chapter shows** (`pickupCandidates` under `TalkCurriculum.maxWords`), so the page and the notebook can never disagree about what a talk taught and no second ceiling is invented; it is **not `addStudying` in a loop**, because that logs a practice rep and fires `word_saved` — keeping a word by hand IS effort, and counting a machine's pick as the learner's would inflate the daily goal with work nobody did; it skips anything already known, used or kept; and it obeys `removedByHand`, a new persisted set written by `removeStudying`, because a talk that puts an unbookmarked word straight back every time is the app overruling a decision the learner made. Bookmarking the word again clears that verdict, so nothing about it is permanent.
 
 **The notebook is spent in the call** (`TalkGoalChips.swift`, 2026-08-19). A talk is the only place a saved word can actually be used, and nobody remembers mid-sentence what they saved on Tuesday — so today's due studying items ride along the call as one pinned line of chips above the transcript, and a chip ticks the moment the learner says it. Three rules hold it together: the judge is `CarryoverDetector` and nothing else (the same matcher writes the wrap-up's carryovers, so the live tick and the summary can never disagree); ticks are ADDITIVE — every version of a user turn's text is checked, from the recognizer's first line to Gemini's audio-grounded rewrite, and a tick is never taken back; and the row writes nothing to disk, because `VocabStore.ingest` + `CarryoverDetector.detect` already credit the word for real at session end. Items come from `StudyScheduleStore` due-ness, the same schedule the daily words/expressions sessions deal from, so the app never asks for the same thing twice in one day — and a phrase that can't clear `CarryoverDetector.isCreditable` is never offered, since a checkbox that cannot tick teaches the learner the whole row is decorative. **Tapping a chip opens `TalkGoalSheet`** — "Use this in the call", the word, ONE sense, ONE example. The header is an instruction to SPEND the word, not to repeat a line after the app: it's material the learner chose to study, and the call is the only place it gets used. A chip that couldn't be tapped was demanding a word the learner may no longer remember the meaning of. It stays thin on purpose: the full entry belongs to the notebook, and the call is still running underneath (nothing pauses, and `WordLore` is free + globally cached, so a mid-call tap costs nothing metered).
 
@@ -452,6 +471,29 @@ door every client-side failure goes through, and it writes
 admin console's 통화가 어떻게 끝났나 panel reads it from (`rt_sessions` /
 `rt_reasons` in `admin_raw()`, `20260913080000`). An older client ignores the
 new messages, so the gateway can deploy ahead of an app build.
+
+**A finished line must give its ElevenLabs CONTEXT back** (2026-09-13,
+`gateway/src/eleven-tts.ts`). One multi-context socket allows FIVE at a time,
+a line is one context, and a context lives until it is closed or goes final.
+`isFinal` is not reliable — the play-out fallback exists precisely because it
+usually never arrives — so a call that only ever ended lines locally leaked one
+context per line: the SIXTH line was refused
+(`Maximum simultaneous contexts per WebSocket connection exceeded (5)`), the
+socket errored, and the rest of the call had no voice at all while the text
+kept appearing. Prod log 2026-09-13 shows it at turn 7 of a real call, and it
+is the likeliest reading of launch week's "좋은데 중간에 끊긴다". `endLine` now
+closes the context; `closeContext` is idempotent and a context that went final
+on its own is dropped from `openContexts` when the final lands, so nothing is
+closed twice.
+
+**The app's first line can arrive before the gateway has finished starting,
+and must be HELD, not dropped** (2026-09-13). `say` exists so a written
+greeting (a scenario, a Find-people call) can be generated while the call
+opens — which means the two race, and on the first device test the app won by
+0.7 s: the message hit a `!this.started` guard, was dropped, and the call sat
+silent. `pendingSay` holds it and `applySay` runs the moment `ready` goes out.
+A `say` is only ever the FIRST line: it is ignored once a turn has happened, so
+a late greeting can never talk over a conversation already under way.
 
 **The greeting is played from the phrase cache, and the gateway is never
 asked for it** (2026-09-13). The Talk launcher already synthesizes every pool

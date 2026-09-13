@@ -129,6 +129,9 @@ export class CallSession implements DurableObject {
    *  is spoken as an apology instead of ending the call. */
   private replyRetried = new Set<string>()
   private watchSeenContext: { context: string; at: number } | null = null
+  /** A `say` that arrived before the session finished starting — see the
+   *  handler. Spoken the moment `ready` goes out. */
+  private pendingSay: { text: string; alreadySpoken: boolean } | null = null
 
   /** Sliding window of what the fluent self RECENTLY said out loud — the
    *  reference the echo judgement compares against. The server is the one
@@ -323,12 +326,26 @@ export class CallSession implements DurableObject {
       this.teardown()
       return
     }
+    if (msg.type === "say") {
+      const text = (msg.text ?? "").trim()
+      if (this.ended || text.length === 0) return
+      // It can arrive BEFORE the session has finished starting — that is the
+      // whole point of overlapping the two, and on 2026-09-13 the app wrote
+      // its greeting 0.7 s faster than this side could open the call, so the
+      // line was dropped by a guard and the call sat silent. Hold it and say
+      // it as soon as the session is up.
+      if (!this.started) {
+        this.pendingSay = { text, alreadySpoken: msg.alreadySpoken === true }
+        return
+      }
+      this.applySay({ text, alreadySpoken: msg.alreadySpoken === true })
+      return
+    }
     if (msg.type !== "start" || this.started) return
 
     // --- Session-start gate: the ONE place auth and ownership are paid. ---
+    const startAt = Date.now()
     if (this.env.DEV_ALLOW_ANON !== "1") {
-      const userId = msg.token ? await verifyUser(this.env, msg.token) : null
-      if (!userId) return this.fail("unauthorized", "invalid session token")
       // The gateway meters the call itself — a client that never ticks
       // still pays (the classic path's talk-tick is client-driven, which
       // was the one bypass left on this path). Same billable rule as
@@ -359,15 +376,28 @@ export class CallSession implements DurableObject {
           this.teardown()
         },
       )
-      // Preflight 1 s — an empty allowance must surface BEFORE the greeting
+      // Preflight — an empty allowance must surface BEFORE the greeting
       // speaks, not a free minute later (same rule as the classic path). It
-      // is asked CONCURRENTLY with the voice-ownership check: the two are
-      // independent round trips and the learner waits for both before hearing
-      // a word. Everything on this path is in front of the greeting, so every
-      // serial hop here is a second of silence after the tap.
+      // is the single longest hop in front of the first word (measured on
+      // prod 2026-09-13: 0.5–1.2 s, against 0.5 s for the token and 0–0.5 s
+      // for the voice), so it is fired FIRST and awaited last — it needs
+      // nothing but the token it carries, and `talk-tick` authenticates that
+      // itself, so an unverified token can only ever be refused there.
+      // Everything on this path is in front of the greeting, and every serial
+      // hop here is a second of silence after the tap.
+      const gateAt = Date.now()
+      const preflight = this.billing.preflight()
+        .then((r) => { console.log(`start: preflight ${Date.now() - gateAt}ms`); return r })
+      const userId = msg.token ? await verifyUser(this.env, msg.token) : null
+      console.log(`start: verify ${Date.now() - gateAt}ms`)
+      if (!userId) {
+        void preflight.catch(() => null)
+        return this.fail("unauthorized", "invalid session token")
+      }
       const [owns, wall] = await Promise.all([
-        ownsVoice(this.env, userId, msg.voiceId),
-        this.billing.preflight(),
+        ownsVoice(this.env, userId, msg.voiceId)
+          .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
+        preflight,
       ])
       if (!owns) {
         return this.fail("voice_forbidden", "voice_id not permitted")
@@ -494,7 +524,9 @@ export class CallSession implements DurableObject {
     // and the greeting does not need it — nobody can answer a question that
     // has not been asked yet, and the line takes seconds to play. So it
     // handshakes while ElevenLabs is rendering the opener.
+    const transcriberAt = Date.now()
     const transcriberReady = this.transcriber.connect()
+      .then(() => console.log(`start: transcriber ${Date.now() - transcriberAt}ms`))
     // The first reply's TTS must not pay the ElevenLabs TLS + WS handshake
     // mid-turn — open the socket now, while the learner is still greeting.
     this.eleven.warm()
@@ -509,8 +541,15 @@ export class CallSession implements DurableObject {
     // The fluent self speaks first, exactly as a phone call does. Sent
     // through the normal reply path so the client needs no special case,
     // and recorded in history so the model knows what it just said.
+    console.log(`start: ready at ${Date.now() - startAt}ms (opener=${msg.opener ? "gateway" : "client"})`)
     if (msg.opener && msg.opener.trim().length > 0) {
       this.speakOpener(msg.opener.trim())
+    }
+    // A greeting that landed while this was still starting up.
+    if (this.pendingSay) {
+      const held = this.pendingSay
+      this.pendingSay = null
+      this.applySay(held)
     }
     // Mic audio arriving before this resolves is BUFFERED by the transcriber
     // (`pendingAudio`, 50 chunks ≈ 5 s) and flushed when its setup lands, so
@@ -524,6 +563,19 @@ export class CallSession implements DurableObject {
         turns: this.turnCount,
       })
     }, 15000) as unknown as number
+  }
+
+  /** The app's own first line (see `SayMessage`). `alreadySpoken` means the
+   *  app played its cached take: record it, say nothing. Otherwise speak it —
+   *  but never on top of a conversation already under way, since this is only
+   *  ever the FIRST line. */
+  private applySay(say: { text: string; alreadySpoken: boolean }): void {
+    if (say.alreadySpoken) {
+      this.history.push({ role: "model", text: say.text })
+      return
+    }
+    if (this.activeContext !== null || this.turnCount > 0) return
+    this.speakOpener(say.text)
   }
 
   /** Speak a line the app chose, with no model call at all. */
@@ -844,6 +896,13 @@ export class CallSession implements DurableObject {
   private endLine(context: string): void {
     if (context !== this.activeContext) return
     if (this.lineEndTimer !== null) { clearInterval(this.lineEndTimer); this.lineEndTimer = null }
+    // Give the context's SLOT back. One socket holds five at a time, and a
+    // line ended locally (the play-out fallback, which is the usual case —
+    // ElevenLabs' `isFinal` frequently never comes) used to leave its context
+    // open forever: the sixth line of a call was refused, the socket errored,
+    // and the rest of the call had no voice at all (prod, 2026-09-13).
+    // No-op for a context that went final on its own.
+    this.eleven?.closeContext(context)
     this.emit({ type: "audio_end", context })
     this.activeContext = null
   }

@@ -38,12 +38,29 @@ export interface StartMessage {
   opener?: string
 }
 
+/** Speak a line the app chose, after the call is already up.
+ *
+ *  `start.opener` covers the line the app HAS when it dials. A scenario or a
+ *  Find-people call doesn't have one: its greeting is written by Gemini, and
+ *  waiting for that before dialling put the model's 2–4 s in front of the
+ *  gateway's own start-up instead of alongside it (measured 2026-09-13 —
+ *  6–8 s of silence after the tap). So the call opens with no opener and the
+ *  line arrives here when it is written.
+ *
+ *  `alreadySpoken` means the app played the line itself from its phrase
+ *  cache: record it in history, say nothing. */
+export interface SayMessage {
+  type: "say"
+  text: string
+  alreadySpoken?: boolean
+}
+
 /** Polite hang-up; the gateway closes upstream sessions and then the socket. */
 export interface EndMessage {
   type: "end"
 }
 
-export type ClientMessage = StartMessage | EndMessage
+export type ClientMessage = StartMessage | SayMessage | EndMessage
 
 // ---------------------------------------------------------------------------
 // Gateway -> client events.
