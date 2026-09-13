@@ -1,5 +1,21 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.Row
+import com.roro.futurevoice.data.VocabStore
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -60,6 +76,10 @@ import java.util.UUID
 @Composable
 fun WatchSceneScreen(
     scenarioId: String,
+    /** Say this line after the fluent self — the same screen the books open. */
+    onShadow: (String) -> Unit = {},
+    /** Take the scene to its book, where its words and lines are studied. */
+    onStudy: (String) -> Unit = {},
     voiceId: String,
     persona: UserPersona?,
     targetLanguage: String,
@@ -73,16 +93,22 @@ fun WatchSceneScreen(
     val mp3 = remember { Mp3Player(context.cacheDir, source = "scene") }
     var title by remember { mutableStateOf<String?>(null) }
     var shown by remember { mutableStateOf<List<Turn>>(emptyList()) }
+    val scope = rememberCoroutineScope()
+    /** Bumped to play the same take again without writing a new one. */
+    var replayKey by remember { mutableIntStateOf(0) }
     var playingIndex by remember { mutableIntStateOf(-1) }
+    /** The scenario this scene belongs to — its who/where/what heads the page. */
+    var scene by remember { mutableStateOf<com.roro.futurevoice.talk.Scenario?>(null) }
     var generating by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     /** A spent pool: a sheet, never an error line and never a bare paywall. */
     var spent by remember { mutableStateOf<SpentPool?>(null) }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(scenarioId) {
+    LaunchedEffect(scenarioId, replayKey) {
         val store = ScenarioStore.shared(context)
         val scenario = store.load(targetLanguage).firstOrNull { it.id == scenarioId }
+            ?.also { scene = it }
             ?: run { onBack(); return@LaunchedEffect }
         val cast = StockPerson.by(scenario.voicePresetId)
         // What the two actually share, worked out in code — a scene about a
@@ -171,7 +197,14 @@ fun WatchSceneScreen(
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(title ?: stringResource(R.string.watch)) },
+                title = {
+                    Column {
+                        Text(stringResource(R.string.watching),
+                            style = MaterialTheme.typography.titleMedium)
+                        Text(proficiency.uppercase(), style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { mp3.stop(); onBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -193,12 +226,72 @@ fun WatchSceneScreen(
                     color = MaterialTheme.colorScheme.error)
             }
             LazyColumn(state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item {
+                    Column(Modifier.padding(bottom = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        val who = listOfNotNull(
+                            scene?.role?.takeIf { it.isNotBlank() },
+                            scene?.environment?.takeIf { it.isNotBlank() },
+                        ).joinToString(" · ")
+                        if (who.isNotEmpty()) {
+                            Text(who, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        title?.let {
+                            Text(it, style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.SemiBold)
+                        }
+                        scene?.notes?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
                 items(shown.size, key = { shown[it].id }) { i ->
-                    DialogueLine(shown[i], isCurrent = i == playingIndex)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        DialogueLine(
+                            shown[i], isCurrent = i == playingIndex,
+                            otherName = scene?.role?.takeIf { it.isNotBlank() }
+                                ?.substringBefore(" —")?.trim(),
+                            selfName = stringResource(R.string.future_self_1384d5))
+                        // Every line is material: say it after them, or keep
+                        // it. Offered per LINE, as on iOS — a bar at the
+                        // bottom would ask which line it meant.
+                        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            SceneLineAction(Icons.Filled.GraphicEq,
+                                stringResource(R.string.shadow_this_line)) { onShadow(shown[i].transcript) }
+                            SceneLineAction(Icons.Filled.AddCircleOutline,
+                                stringResource(R.string.save_expression)) {
+                                scope.launch {
+                                    VocabStore.shared(context)
+                                        .setStudyingExpression(shown[i].transcript, true, targetLanguage)
+                                    StoreEvents.bump()
+                                }
+                            }
+                        }
+                    }
                 }
             }
             LaunchedEffect(shown.size) {
                 if (shown.isNotEmpty()) listState.animateScrollToItem(shown.lastIndex)
+            }
+            // Once the scene has played itself out: hear it again, or go
+            // study what it taught. Nothing else belongs at the end of a
+            // scene — the book is where the material lives.
+            if (!generating && playingIndex < 0 && shown.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedButton(onClick = { replayKey += 1 }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.Refresh, contentDescription = null,
+                            modifier = Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.watch_again))
+                    }
+                    Button(onClick = { onStudy(scenarioId) }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.MenuBook, contentDescription = null,
+                            modifier = Modifier.size(18.dp))
+                        Text("  " + stringResource(R.string.study_this))
+                    }
+                }
             }
         }
     }
@@ -216,5 +309,26 @@ fun WatchSceneScreen(
             onUpgrade = { spent = null; BillingGate.showPaywall.value = true },
             onDismiss = { spent = null },
         )
+    }
+}
+
+/** One line's offer: a glyph and a word, in the accent — never a button, or
+ *  every line would carry two of them. */
+@Composable
+private fun SceneLineAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier.clip(RoundedCornerShape(999.dp)).clickable(onClick = onClick)
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary)
     }
 }

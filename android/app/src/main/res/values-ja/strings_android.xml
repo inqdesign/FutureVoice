@@ -169,4 +169,14 @@
     <string name="talk_time_is_kept_for_lld_days">トーク時間は%1$d日分まで残ります。</string>
     <string name="back_in_10_minutes">10分後にもう一度</string>
     <string name="how_would_a_fluent_speaker_say_it">流暢な人ならどう言う？</string>
+    <string name="save_expression">表現を保存</string>
+    <string name="study_this">これで学ぶ</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">サブスクリプションが始まります。それまではGoogle Playでいつでも解約できます。</string>
+
+    <string name="fluency_pace">流暢さとテンポ</string>
+    <string name="slip">ポイント</string>
+    <string name="slips">ポイント</string>
+    <string name="your_books">マイ教材</string>
+    <string name="expression_notebook">表現ノート</string>
+    <string name="in_call_suggestions">通話中の提案</string>
 </resources>

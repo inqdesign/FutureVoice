@@ -532,13 +532,14 @@ fun DialogueLine(turn: Turn) {
 @Composable
 fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
                  scale: DialogueScale = DialogueScale.STANDARD,
-                 otherName: String? = null) {
+                 otherName: String? = null,
+                 selfName: String? = null) {
     val isUser = turn.role == TurnRole.USER
     DialogueLine(
         speaker = if (isUser) DialogueSpeaker.USER else DialogueSpeaker.OTHER,
         // The other side is the fluent self — unless the call was cast as a
         // person, in which case it is THEM.
-        name = if (isUser) stringResource(R.string.you)
+        name = if (isUser) selfName ?: stringResource(R.string.you)
         else otherName ?: stringResource(R.string.future_self_1384d5),
         scale = scale,
         isCurrent = isCurrent,

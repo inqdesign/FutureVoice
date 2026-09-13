@@ -169,4 +169,14 @@
     <string name="talk_time_is_kept_for_lld_days">통화 시간은 %1$d일까지 남아요.</string>
     <string name="back_in_10_minutes">10분 뒤에 다시</string>
     <string name="how_would_a_fluent_speaker_say_it">유창한 사람은 어떻게 말할까요?</string>
+    <string name="save_expression">표현 저장</string>
+    <string name="study_this">이걸로 공부하기</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">구독이 시작돼요. 그 전까지는 Google Play에서 언제든 해지할 수 있어요.</string>
+
+    <string name="fluency_pace">유창성과 속도</string>
+    <string name="slip">문법 포인트</string>
+    <string name="slips">문법 포인트</string>
+    <string name="your_books">내 교재</string>
+    <string name="expression_notebook">표현 노트</string>
+    <string name="in_call_suggestions">통화 중 제안</string>
 </resources>

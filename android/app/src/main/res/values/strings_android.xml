@@ -169,4 +169,23 @@
     <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
     <string name="back_in_10_minutes">Back in 10 minutes</string>
     <string name="how_would_a_fluent_speaker_say_it">How would a fluent speaker say it?</string>
+    <string name="save_expression">Save expression</string>
+    <string name="study_this">Study this</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">Your subscription starts. Cancel any time before then in Google Play.</string>
+    <!-- A price and its billing cycle. Punctuation only —
+         nothing here is language, so it is never translated. -->
+    <string name="price_per_cycle" translatable="false">%1$s / %2$s</string>
+
+    <!-- Talk book: the scorecard's fourth axis. "Fluency" alone is already a
+         key elsewhere and means something narrower. -->
+    <string name="fluency_pace">Fluency &amp; pace</string>
+    <!-- The plural word inside "Review %1$d grammar %2$s from this talk".
+         Korean/Japanese/Chinese drop the argument, so it only surfaces in
+         English. -->
+    <string name="slip">slip</string>
+    <string name="slips">slips</string>
+    <!-- Where a carryover was studied before it was said out loud. -->
+    <string name="your_books">Your books</string>
+    <string name="expression_notebook">Expression notebook</string>
+    <string name="in_call_suggestions">In-call suggestions</string>
 </resources>

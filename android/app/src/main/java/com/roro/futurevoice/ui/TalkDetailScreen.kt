@@ -3,23 +3,48 @@ package com.roro.futurevoice.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Abc
+import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Comment
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Style
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -31,8 +56,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.filled.CheckCircle
@@ -43,21 +75,34 @@ import com.roro.futurevoice.R
 import com.roro.futurevoice.data.BookDocument
 import com.roro.futurevoice.data.SessionStore
 import com.roro.futurevoice.data.StoreEvents
+import com.roro.futurevoice.talk.AxisScore
+import com.roro.futurevoice.talk.Carryover
+import com.roro.futurevoice.talk.GrammarIssue
 import com.roro.futurevoice.talk.Session
+import com.roro.futurevoice.talk.SessionScorecard
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.brand.AppSurfaces
 import com.roro.futurevoice.ui.brand.BookmarkTab
 import com.roro.futurevoice.ui.brand.BookmarkedPage
+import com.roro.futurevoice.ui.brand.Books
 import com.roro.futurevoice.ui.brand.DialogueLine
+import com.roro.futurevoice.ui.brand.DialogueScale
 import com.roro.futurevoice.ui.brand.DisplayFace
+import java.text.DateFormat
+import java.util.Date
+import java.util.Locale
 
 /** The Talk book's chapters — the same set iOS opens (`ConversationDetailView`). */
 private enum class TalkChapter { INTRO, WORDS, EXPRESSIONS, LINES, CARDS }
 
 /**
  * A finished talk's BOOK. Same object as the Watch book: one ribbon page,
- * chapters named by what you do in them. The overview is the cover — the
- * score, the note, and the transcript underneath.
+ * chapters named by what you do in them. The intro is the COVER and the
+ * report in one — title, how far its material is mastered, the score with
+ * its per-axis notes, the coach's note, and what carried over from practice.
+ *
+ * The raw conversation sits behind Replay, as it does on iOS — a book opens
+ * on what there is to learn, not on the log of the call.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,12 +144,21 @@ fun TalkDetailScreen(
     }
     val corrections = sm?.phrasesUsed.orEmpty()
     val grammar = sm?.grammarIssues.orEmpty()
+    // The transcript is the book's "scene": one tap away behind Replay, never
+    // the first thing the cover shows. Android has no separate transcript
+    // destination, so the page opens it in place.
+    var showingTranscript by remember(sessionId) { mutableStateOf(false) }
+    var showingGrammarReview by remember(sessionId) { mutableStateOf(false) }
 
     val tabs = buildList {
         add(BookmarkTab(TalkChapter.INTRO, Icons.Filled.MenuBook, stringResource(R.string.overview)))
         if (curriculum.words.isNotEmpty()) {
+            // Words carry MASTERY, not a bare count — the ribbon is the
+            // book's progress, the same way the Watch book's does it.
             add(BookmarkTab(TalkChapter.WORDS, Icons.Filled.Abc,
-                stringResource(R.string.words_d26d55), count = curriculum.words.size))
+                stringResource(R.string.words_d26d55),
+                done = curriculum.words.count { it.masteredAt != null },
+                total = curriculum.words.size))
         }
         val expressions = sm?.expressionsOffered.orEmpty() + sm?.expressionsUsed.orEmpty()
         if (expressions.isNotEmpty()) {
@@ -119,6 +173,13 @@ fun TalkDetailScreen(
             add(BookmarkTab(TalkChapter.CARDS, Icons.Filled.Style,
                 stringResource(R.string.drill), count = corrections.size + grammar.size))
         }
+    }
+
+    if (showingGrammarReview) {
+        GrammarReviewSheet(
+            axis = sm?.scorecard?.grammar,
+            issues = grammar,
+            onDismiss = { showingGrammarReview = false })
     }
 
     Scaffold(
@@ -150,30 +211,55 @@ fun TalkDetailScreen(
             Column(Modifier.fillMaxWidth()) {
                 when (if (tabs.any { it.id == chapter }) chapter else TalkChapter.INTRO) {
                     TalkChapter.INTRO -> {
-                        Column(Modifier.padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            sm?.scorecard?.let { card ->
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    val overall = "${card.overall}"
-                                    Text(overall,
-                                        style = DisplayFace.style(overall,
-                                            MaterialTheme.typography.displaySmall),
-                                        color = MaterialTheme.colorScheme.primary)
-                                    Text("  ${card.cefrLevel?.uppercase().orEmpty()}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                if (card.topLine.isNotBlank()) Text(card.topLine)
-                            }
-                            sm?.overallNote?.takeIf { it.isNotBlank() }?.let {
-                                Text(it, style = MaterialTheme.typography.bodyMedium)
-                            }
-                            HorizontalDivider(Modifier.padding(vertical = 6.dp))
-                            PageTitle(stringResource(R.string.transcript))
+                        CoverBlock(
+                            title = s.displayTitle ?: stringResource(R.string.conversation),
+                            subtitle = coverSubtitle(s),
+                            archived = s.archivedAt != null,
+                            progress = curriculum.progress.toFloat()
+                                .takeIf { curriculum.totalCount > 0 },
+                            progressLabel = stringResource(R.string.lld_of_lld_mastered,
+                                curriculum.masteredCount, curriculum.totalCount),
+                            mastered = curriculum.isMastered,
+                            onReplay = { showingTranscript = !showingTranscript })
+                        if (curriculum.isMastered && s.archivedAt == null) MasteredBanner()
+                        sm?.scorecard?.let { card ->
+                            HorizontalDivider(Modifier.padding(start = 20.dp))
+                            ScoreBlock(
+                                card = card,
+                                // The scores grade THIS talk against the
+                                // learner's level SETTING — say which, or the
+                                // number reads as a level claim.
+                                contextLine = card.cefrLevel?.uppercase()?.let {
+                                    stringResource(
+                                        R.string.scored_against_your_level_setting_this_talk_itself_read_as,
+                                        level.code.uppercase(), it)
+                                } ?: stringResource(
+                                    R.string.scored_against_your_level_setting_how_this_talk_went_not_a_l_4b7213,
+                                    level.code.uppercase()),
+                                grammarIssueCount = grammar.size,
+                                onGrammarReview = { showingGrammarReview = true })
                         }
-                        Column(Modifier.padding(horizontal = 20.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            s.turns.forEach { DialogueLine(it) }
+                        sm?.overallNote?.takeIf { it.isNotBlank() }?.let {
+                            HorizontalDivider(Modifier.padding(start = 20.dp, top = 8.dp))
+                            GroupLabel(Icons.Filled.Comment, stringResource(R.string.coach_s_note))
+                            Text(it, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                                    .padding(top = 2.dp, bottom = 8.dp))
+                        }
+                        CarryoverBlock(sm?.carryovers.orEmpty())
+                        if (showingTranscript) {
+                            PageTitle(stringResource(R.string.transcript))
+                            Column(Modifier.padding(horizontal = 20.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                // The BRANDED line (bubbles, speaker sides) —
+                                // the one dialogue surface, same as the live
+                                // call and the Watch scene. The flat overload
+                                // this used to call is the legacy one.
+                                s.turns.forEach {
+                                    DialogueLine(turn = it, scale = DialogueScale.STANDARD)
+                                }
+                            }
                         }
                     }
 
@@ -267,6 +353,417 @@ fun TalkDetailScreen(
                 }
             }
         }
+    }
+}
+
+/** "13 Sep 2026, 22:26 · 2 turns spoken" — when it happened, and how much of
+ *  it was the learner. Turns SPOKEN, not turns: the fluent self's half is not
+ *  what the learner did. */
+@Composable
+private fun coverSubtitle(s: Session): String {
+    val at = s.endedAt ?: s.startedAt
+    val when_ = DateFormat
+        .getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, Locale.getDefault())
+        .format(Date(at))
+    val spoken = s.turns.count { it.role == TurnRole.USER }
+    return "$when_ · " + stringResource(R.string.lld_turns_spoken_38ecf5, spoken)
+}
+
+/**
+ * The book's cover — the round mark, what the talk was, how far its material
+ * is mastered, and the one action.
+ *
+ * iOS pairs Replay with Continue. Android has no way back into a live call
+ * from this page yet, so the row carries Replay alone: a button that cannot
+ * do its job teaches the learner the whole row is decorative.
+ */
+@Composable
+private fun CoverBlock(
+    title: String,
+    subtitle: String,
+    archived: Boolean,
+    progress: Float?,
+    progressLabel: String,
+    mastered: Boolean,
+    onReplay: () -> Unit,
+) {
+    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Box(
+                Modifier.size(56.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.Forum, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold, maxLines = 2,
+                    overflow = TextOverflow.Ellipsis)
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (archived) {
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Filled.Archive, contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.archived),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+        if (progress != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (mastered) Books.mastery else MaterialTheme.colorScheme.primary)
+                Text(progressLabel, style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        FilledTonalButton(
+            onClick = onReplay,
+            modifier = Modifier.fillMaxWidth(),
+            // The accent wash iOS's `.bordered` button carries — derived from
+            // the theme's primary, never a colour of its own.
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                contentColor = MaterialTheme.colorScheme.primary),
+        ) {
+            Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.replay))
+        }
+    }
+}
+
+/** Everything this talk had to teach is mastered. iOS offers Archive here;
+ *  Android has no archive action on this page yet, so it only says so. */
+@Composable
+private fun MasteredBanner() {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(Icons.Filled.WorkspacePremium, contentDescription = null,
+            tint = Books.mastery, modifier = Modifier.size(26.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(stringResource(R.string.talk_mastered),
+                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.everything_this_conversation_had_to_teach_is_yours),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * The scorecard: the headline number and what it was graded against, the
+ * coach's one-line verdict, then the axes — each a number, a bar and a line
+ * saying what the number means.
+ *
+ * Pronunciation is drawn only when the analyzer produced it. It never does on
+ * Android today, and an axis row reading "—" forever is a promise the app
+ * can't keep.
+ */
+@Composable
+private fun ScoreBlock(
+    card: SessionScorecard,
+    contextLine: String,
+    grammarIssueCount: Int,
+    onGrammarReview: () -> Unit,
+) {
+    GroupLabel(Icons.Filled.BarChart, stringResource(R.string.score))
+    Column(
+        Modifier.padding(horizontal = 20.dp).padding(top = 2.dp, bottom = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.overall), style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.weight(1f))
+            val overall = "${card.overall}"
+            Text(overall,
+                style = DisplayFace.style(overall, MaterialTheme.typography.headlineSmall),
+                color = scoreColor(card.overall))
+        }
+        Text(contextLine, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (card.topLine.isNotBlank()) {
+            Text(card.topLine, style = MaterialTheme.typography.titleMedium)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            AxisRow(card.vocabulary, stringResource(R.string.vocabulary), Icons.Filled.Abc)
+            AxisRow(card.grammar, stringResource(R.string.grammar), Icons.Filled.Verified,
+                // A low score must never be a number the learner can't
+                // interrogate — the slips behind it are one tap away.
+                detailCount = grammarIssueCount.takeIf { it > 0 },
+                onClick = onGrammarReview.takeIf { grammarIssueCount > 0 })
+            AxisRow(card.expressiveness, stringResource(R.string.expressiveness),
+                Icons.Filled.FormatQuote)
+            AxisRow(card.fluency, stringResource(R.string.fluency_pace), Icons.Filled.Speed)
+            card.pronunciation?.let {
+                AxisRow(it, stringResource(R.string.pronunciation), Icons.Filled.GraphicEq)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AxisRow(
+    axis: AxisScore,
+    label: String,
+    icon: ImageVector,
+    detailCount: Int? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    Column(
+        Modifier.fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            Text("${axis.score}", style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, color = scoreColor(axis.score))
+            if (detailCount != null) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.outline)
+            }
+        }
+        LinearProgressIndicator(
+            progress = { axis.score / 100f },
+            modifier = Modifier.fillMaxWidth(),
+            color = scoreColor(axis.score))
+        if (axis.note.isNotBlank()) {
+            Text(axis.note, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (detailCount != null) {
+            Text(
+                stringResource(R.string.review_lld_grammar_from_this_talk, detailCount,
+                    stringResource(if (detailCount == 1) R.string.slip else R.string.slips)),
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
+/**
+ * Studied, then SAID — the loop closing. No prompt was on screen when these
+ * came out, which is why they get their own block rather than a line in the
+ * score.
+ */
+@Composable
+private fun CarryoverBlock(carryovers: List<Carryover>) {
+    if (carryovers.isEmpty()) return
+    GroupLabel(Icons.Filled.TrackChanges, stringResource(R.string.you_used_what_you_practiced))
+    carryovers.forEach { c ->
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                    tint = Books.mastery, modifier = Modifier.size(18.dp))
+                Text(c.item, style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium)
+            }
+            Text("“${c.quote}”", style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 26.dp))
+            Row(Modifier.padding(start = 26.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(c.source.icon(), contentDescription = null, modifier = Modifier.size(13.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(c.source.labelRes()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+    PageFooter(stringResource(
+        R.string.no_prompt_no_card_on_screen_you_reached_for_these_yourself_c_747561))
+}
+
+/** Where the learner met the item, in their words — the same five names the
+ *  wrap-up and Progress use, so no surface describes a source differently. */
+private fun Carryover.Source.labelRes(): Int = when (this) {
+    Carryover.Source.DRILL_CARD -> R.string.review_cards
+    Carryover.Source.CURRICULUM_ITEM -> R.string.your_books
+    Carryover.Source.STUDYING_EXPRESSION -> R.string.expression_notebook
+    Carryover.Source.STUDYING_WORD -> R.string.word_notebook
+    Carryover.Source.SUGGESTION -> R.string.in_call_suggestions
+}
+
+private fun Carryover.Source.icon(): ImageVector = when (this) {
+    Carryover.Source.DRILL_CARD -> Icons.Filled.Style
+    Carryover.Source.CURRICULUM_ITEM -> Icons.Filled.MenuBook
+    Carryover.Source.STUDYING_EXPRESSION -> Icons.Filled.Bookmark
+    Carryover.Source.STUDYING_WORD -> Icons.Filled.Book
+    Carryover.Source.SUGGESTION -> Icons.Filled.Lightbulb
+}
+
+/**
+ * Every verified grammar slip behind the grammar score: what the learner
+ * literally said, the grammar-only fix, and the point involved. Quotes are
+ * hallucination-guarded upstream — all of it appeared in their own turns.
+ *
+ * iOS also lets a slip be flagged as misheard, which rescales the score.
+ * Android has no exclusion API yet, so this page reads only.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun GrammarReviewSheet(
+    axis: AxisScore?,
+    issues: List<GrammarIssue>,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal = 20.dp).padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.Verified, contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.grammar_review),
+                    style = MaterialTheme.typography.titleLarge)
+                Spacer(Modifier.weight(1f))
+                axis?.let {
+                    Text("${it.score}", style = MaterialTheme.typography.titleLarge,
+                        color = scoreColor(it.score))
+                }
+            }
+            axis?.note?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Text(
+                stringResource(R.string.lld_this_session, issues.size,
+                    stringResource(if (issues.size == 1) R.string.slip else R.string.slips)),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            issues.forEach { issue ->
+                val diff = remember(issue.id) { GrammarDiff(issue.quote, issue.correction) }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Close, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = Color(0xFFFF3B30))
+                        Text(diff.quote, style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Filled.Check, contentDescription = null,
+                            modifier = Modifier.size(16.dp), tint = Books.mastery)
+                        Text(diff.correction, style = MaterialTheme.typography.bodyLarge)
+                    }
+                    if (issue.note.isNotBlank()) {
+                        Text(issue.note, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 24.dp))
+                    }
+                }
+            }
+            Text(stringResource(
+                R.string.every_slip_below_is_quoted_from_what_you_actually_said_this_8d3781),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * Word-level diff between a quote and its correction, so the review shows
+ * WHICH words were wrong instead of making the learner spot the difference.
+ * Computed in code — a score's evidence is never something the LLM re-writes.
+ */
+private class GrammarDiff(quote: String, correction: String) {
+    val quote: androidx.compose.ui.text.AnnotatedString
+    val correction: androidx.compose.ui.text.AnnotatedString
+
+    init {
+        val q = quote.split(' ').filter { it.isNotEmpty() }
+        val c = correction.split(' ').filter { it.isNotEmpty() }
+        val (keepQ, keepC) = commonIndices(q.map(::norm), c.map(::norm))
+        this.quote = render(q, keepQ,
+            SpanStyle(color = Color(0xFFFF3B30), textDecoration = TextDecoration.LineThrough))
+        this.correction = render(c, keepC,
+            SpanStyle(color = Books.mastery, fontWeight = FontWeight.Bold))
+    }
+
+    private fun render(
+        words: List<String>, keep: Set<Int>, changed: SpanStyle,
+    ) = buildAnnotatedString {
+        words.forEachIndexed { i, w ->
+            if (i > 0) append(" ")
+            if (i in keep) append(w) else withStyle(changed) { append(w) }
+        }
+    }
+
+    private companion object {
+        /** Punctuation and casing come from the transcriber, never from the
+         *  learner's mouth — "bank," vs "bank" must not light up as a change. */
+        fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() || it == '\'' }
+
+        /** Longest common subsequence; returns the UNCHANGED indices on each
+         *  side. Sentences are short, so the O(n·m) table is trivial. */
+        fun commonIndices(a: List<String>, b: List<String>): Pair<Set<Int>, Set<Int>> {
+            val dp = Array(a.size + 1) { IntArray(b.size + 1) }
+            for (i in a.indices.reversed()) for (j in b.indices.reversed()) {
+                dp[i][j] = if (a[i] == b[j]) dp[i + 1][j + 1] + 1
+                else maxOf(dp[i + 1][j], dp[i][j + 1])
+            }
+            val keepA = HashSet<Int>(); val keepB = HashSet<Int>()
+            var i = 0; var j = 0
+            while (i < a.size && j < b.size) {
+                when {
+                    a[i] == b[j] -> { keepA.add(i); keepB.add(j); i++; j++ }
+                    dp[i + 1][j] >= dp[i][j + 1] -> i++
+                    else -> j++
+                }
+            }
+            return keepA to keepB
+        }
+    }
+}
+
+/** iOS's three score bands, unchanged: 80+ is mastery green, the middle is
+ *  the theme's own accent, below 50 is the warning orange. */
+@Composable
+private fun scoreColor(score: Int): Color = when {
+    score >= 80 -> Books.mastery
+    score >= 50 -> MaterialTheme.colorScheme.primary
+    else -> Color(0xFFFF9500)
+}
+
+/** A small label above a group inside a page that stacks more than one kind
+ *  of material. */
+@Composable
+private fun GroupLabel(icon: ImageVector, title: String) {
+    Row(
+        Modifier.padding(horizontal = 20.dp).padding(top = 16.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

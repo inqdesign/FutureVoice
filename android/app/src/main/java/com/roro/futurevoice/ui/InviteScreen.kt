@@ -238,7 +238,7 @@ fun InviteScreen(onBack: () -> Unit) {
                                             message = if (r.isComp)
                                                 context.getString(
                                                     R.string.redeemed_is_on_your_account,
-                                                    tierName(r.compPlanId))
+                                                    tierName(context, r.compPlanId))
                                             else context.getString(
                                                 R.string.redeemed_lld_minutes_added, bonus)
                                             codeInput = ""
@@ -319,8 +319,8 @@ private fun Footer(text: String) {
  * never grade the buyer, and the Apple/Play product ids deliberately still
  * carry the old words — so the id is a lookup key, never a label.
  */
-private fun tierName(planId: String?): String = when {
-    planId == null -> "Plus"
-    planId.startsWith("light") || planId.contains("daily") -> "Light"
-    else -> "Plus"
+private fun tierName(context: android.content.Context, planId: String?): String = when {
+    planId != null && (planId.startsWith("light") || planId.contains("daily")) ->
+        context.getString(R.string.plan_tier_light)
+    else -> context.getString(R.string.plan_tier_plus)
 }

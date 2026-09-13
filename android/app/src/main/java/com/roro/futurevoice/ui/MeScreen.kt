@@ -263,8 +263,8 @@ fun MeScreen(
                     when {
                         acct == null -> stringResource(R.string.checking)
                         acct.isEntitled -> {
-                            val tier = if (acct.isPlusPlan) stringResource(R.string.plus)
-                            else stringResource(R.string.light)
+                            val tier = if (acct.isPlusPlan) stringResource(R.string.plan_tier_plus)
+                            else stringResource(R.string.plan_tier_light)
                             "$tier · " + stringResource(
                                 R.string.lld_min_talked_this_month, acct.secondsUsedPeriod / 60)
                         }

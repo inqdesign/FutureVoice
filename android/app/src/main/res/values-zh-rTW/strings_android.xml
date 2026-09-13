@@ -169,4 +169,14 @@
     <string name="talk_time_is_kept_for_lld_days">通話時間只保留 %1$d 天。</string>
     <string name="back_in_10_minutes">10 分鐘後再來</string>
     <string name="how_would_a_fluent_speaker_say_it">流暢的人會怎麼說？</string>
+    <string name="save_expression">儲存表達</string>
+    <string name="study_this">用這個學習</string>
+    <string name="your_subscription_starts_cancel_any_time_before_then_in_google_play">訂閱開始。在那之前，隨時可以在 Google Play 取消。</string>
+
+    <string name="fluency_pace">流暢度與節奏</string>
+    <string name="slip">重點</string>
+    <string name="slips">重點</string>
+    <string name="your_books">我的教材</string>
+    <string name="expression_notebook">用語筆記</string>
+    <string name="in_call_suggestions">通話中的建議</string>
 </resources>

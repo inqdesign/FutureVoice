@@ -362,6 +362,8 @@ fun RootScreen() {
 
         watchScenarioId != null -> WatchSceneScreen(
             scenarioId = watchScenarioId!!,
+            onShadow = { watchScenarioId = null; shadowLine = it },
+            onStudy = { id -> watchScenarioId = null; bookScenarioId = id },
             voiceId = state.voiceId ?: "",
             persona = state.persona,
             targetLanguage = state.targetLanguage,
