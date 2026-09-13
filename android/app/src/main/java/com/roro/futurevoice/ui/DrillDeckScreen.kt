@@ -119,8 +119,15 @@ fun DrillDeckScreen(
     var cardOrigin by remember { mutableStateOf(0f to 0f) }
     var pointer by remember { mutableStateOf(0f to 0f) }
 
+    /** The cards themselves, so a folder can be opened and not just counted. */
+    var folderCards by remember { mutableStateOf<Map<DrillBin, List<DrillCard>>>(emptyMap()) }
+    var openFolder by remember { mutableStateOf<DrillBin?>(null) }
+
     suspend fun refreshFolders() {
         val now = System.currentTimeMillis()
+        folderCards = store.load(language)
+            .filter { it.nextReviewAt > now && it.box < com.roro.futurevoice.data.DrillIngest.MAX_BOX }
+            .groupBy { DrillBin.folder(it.nextReviewAt - now) }
         scheduled = store.load(language)
             .filter { it.nextReviewAt > now && it.box < com.roro.futurevoice.data.DrillIngest.MAX_BOX }
             .groupingBy { DrillBin.folder(it.nextReviewAt - now) }
@@ -289,11 +296,31 @@ fun DrillDeckScreen(
                     counts = { bin ->
                         if (bin == DrillBin.GOT_IT) finished else (scheduled[bin] ?: 0)
                     },
+                    // "Got it" has nothing to list: marking a card known
+                    // CLEARS its return date, so there is no waiting to show.
+                    onOpen = { bin -> if (bin != DrillBin.GOT_IT) openFolder = bin },
                     onBounds = { bin, rect -> binBounds = binBounds + (bin to rect) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
         }
+    }
+
+    openFolder?.let { bin ->
+        DrillFolderSheet(
+            bin = bin,
+            cards = folderCards[bin].orEmpty(),
+            onRefile = { card, target ->
+                scope.launch {
+                    val manual = target.manual
+                    if (manual == null) store.markKnown(card, language)
+                    else store.fileInBin(card, manual.first, manual.second, language)
+                    refreshFolders()
+                    StoreEvents.bump()
+                }
+                openFolder = null
+            },
+            onDismiss = { openFolder = null })
     }
 
     enrichFor?.let { card ->
@@ -389,6 +416,7 @@ private fun VerdictRow(
     dragging: Boolean,
     counts: (DrillBin) -> Int,
     onBounds: (DrillBin, Rect) -> Unit,
+    onOpen: ((DrillBin) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -396,6 +424,8 @@ private fun VerdictRow(
             Column(
                 Modifier.weight(1f)
                     .onGloballyPositioned { onBounds(bin, it.boundsInWindow()) }
+                    .then(if (onOpen != null && !dragging && counts(bin) > 0)
+                        Modifier.clickable { onOpen(bin) } else Modifier)
                     .background(
                         bin.tint.copy(alpha = if (dragging) 0.28f else 0.12f),
                         RoundedCornerShape(12.dp))
