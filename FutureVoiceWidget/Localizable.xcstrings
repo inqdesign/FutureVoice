@@ -21,6 +21,12 @@
             "value" : "/ %lld분"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld分"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -44,6 +50,12 @@
           }
         },
         "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld"
@@ -94,6 +106,12 @@
             "value" : "%1$lld/%2$lld"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -128,6 +146,12 @@
             "value" : "여기서 공부할 문장을 북마크하세요"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把想在这里学的句子加入书签"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -156,6 +180,12 @@
             "value" : "이어서 공부하기"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续学习"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -182,6 +212,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "일 연속"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "天连续"
           }
         },
         "zh-Hant" : {
@@ -215,6 +251,12 @@
             "value" : "오늘은 여기까지"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天到这里"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -241,6 +283,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "표현"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用语"
           }
         },
         "zh-Hant" : {
@@ -271,6 +319,12 @@
             "value" : "자유 대화"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由聊天"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -297,6 +351,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "보고 있던 책으로 바로 돌아가요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接回到正在看的复习本。"
           }
         },
         "zh-Hant" : {
@@ -327,6 +387,12 @@
             "value" : "매일 말하기 연속 기록을 이어가세요."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每天说一说，让连续天数延续下去。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -353,6 +419,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "남음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩下"
           }
         },
         "zh-Hant" : {
@@ -383,6 +455,12 @@
             "value" : "대화하기"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始说"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -409,6 +487,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "완료"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
           }
         },
         "zh-Hant" : {
@@ -442,6 +526,12 @@
             "value" : "진행 중인 게 없어요"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有进行中的项目"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -468,6 +558,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "한 번 눌러 유창한 나에게 전화하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "点击，打给流利的自己。"
           }
         },
         "zh-Hant" : {
@@ -498,6 +594,12 @@
             "value" : "표현"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用语"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -524,6 +626,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "문장"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "句子"
           }
         },
         "zh-Hant" : {
@@ -554,6 +662,12 @@
             "value" : "대화에서 주워 온 문장들."
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从通话里捡来的句子。"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -582,6 +696,12 @@
             "value" : "성장"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成长"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -608,6 +728,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "여기서 공부할 단어를 저장하세요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把想在这里学的单词存下来"
           }
         },
         "zh-Hant" : {
@@ -641,6 +767,12 @@
             "value" : "연속 기록을 시작하세요"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始累积连续天数"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -667,6 +799,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "연속 기록"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连续天数"
           }
         },
         "zh-Hant" : {
@@ -697,6 +835,12 @@
             "value" : "학습 중"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学习中"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -723,6 +867,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "오늘 목표와 연속 기록, 남은 학습량이 한눈에."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今天的目标、连续天数和剩下的学习量，一目了然。"
           }
         },
         "zh-Hant" : {
@@ -753,6 +903,12 @@
             "value" : "어휘"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "词汇"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -779,6 +935,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "단어"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词"
           }
         },
         "zh-Hant" : {
@@ -809,6 +971,12 @@
             "value" : "단어"
           }
         },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单词"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -835,6 +1003,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "노트에 모아 둔, 계속 공부할 단어들."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收在笔记里、要继续学的单词。"
           }
         },
         "zh-Hant" : {
