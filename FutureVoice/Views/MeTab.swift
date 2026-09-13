@@ -1217,7 +1217,10 @@ private struct AppLanguagePage: View {
             } header: {
                 Text(explain("Fully translated"))
             } footer: {
-                Text(explain("Settings, explanations, corrections and notes all come in this language. Tabs and the buttons inside practice stay in the language you're learning."))
+                // The old copy promised tabs stayed in the TARGET language. That rule
+                // was retired 2026-08-17 — the app has ONE UI language now — so the
+                // screen was describing behaviour it no longer has.
+                Text(explain("Everything you read in the app — menus, buttons, corrections, notes — is in this language."))
             }
             Section {
                 ForEach(groups.coachingOnly, id: \.self, content: choice)

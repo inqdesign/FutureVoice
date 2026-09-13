@@ -193,19 +193,47 @@ struct SetupFlowView: View {
     /// language", correction explanations, and word-card translations — a
     /// Japanese learner should read those in Japanese, not English.
     private var nativeStep: some View {
-        Section {
-            ForEach(Self.nativeChoices, id: \.self) { code in
-                pickRow(
-                    title: Self.endonym(code),
-                    subtitle: ownName(code),
-                    selected: nativeLanguage == code
-                ) { nativeLanguage = code }
+        // Split exactly like Me → App language: a handful of languages are
+        // translated end to end, the other 60-odd only get LLM coaching text.
+        // Onboarding used to show one flat list of 66, so someone picking
+        // Vietnamese chose an English app without being told — the caveat has
+        // to be readable BEFORE the tap, which is what the footers are for.
+        Group {
+            Section {
+                ForEach(nativeGroups.translated, id: \.self) { code in
+                    pickRow(
+                        title: Self.endonym(code),
+                        subtitle: ownName(code),
+                        selected: nativeLanguage == code
+                    ) { nativeLanguage = code }
+                }
+            } header: {
+                Text(explain("What's your native language?"))
+            } footer: {
+                Text(explain("Everything you read in the app — menus, buttons, corrections, notes — is in this language."))
             }
-        } header: {
-            Text(explain("What's your native language?"))
-        } footer: {
-            Text(explain("Explanations and translations come in this language."))
+
+            Section {
+                ForEach(nativeGroups.coachingOnly, id: \.self) { code in
+                    pickRow(
+                        title: Self.endonym(code),
+                        subtitle: ownName(code),
+                        selected: nativeLanguage == code
+                    ) { nativeLanguage = code }
+                }
+            } header: {
+                Text(explain("Corrections and notes only"))
+            } footer: {
+                Text(explain("Your corrections, notes and word meanings come back in this language. The app's own screens stay English."))
+            }
         }
+    }
+
+    /// `nativeChoices`, split by whether the app itself is translated into it.
+    private var nativeGroups: (translated: [String], coachingOnly: [String]) {
+        let translated = Set(LanguageCatalog.translatedLanguages)
+        return (Self.nativeChoices.filter { translated.contains($0) },
+                Self.nativeChoices.filter { !translated.contains($0) })
     }
 
     // MARK: - Shared pick row

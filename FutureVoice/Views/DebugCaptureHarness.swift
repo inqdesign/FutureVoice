@@ -256,6 +256,12 @@ enum DebugCapture {
                 }
             }
             return AnyView(NavigationStack { ActivityView().environmentObject(appState) })
+        case "setup":
+            // The first-run picker steps (native language, target, level,
+            // goal) — the only screen where the app-language choice is made
+            // before anything else exists.
+            return AnyView(SetupFlowView().environmentObject(appState)
+                .environmentObject(AuthService()))
         case "welcome":
             // The first screen, primary path (Get started).
             return AnyView(WelcomeView().environmentObject(appState)
