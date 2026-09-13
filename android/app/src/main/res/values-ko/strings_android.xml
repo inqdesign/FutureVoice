@@ -183,4 +183,10 @@
 
     <string name="composer_placeholder">상황을 적어 보세요 — 마이크를 눌러 말해도 돼요</string>
     <string name="cloud_words_total">단어 %1$d / %2$d</string>
+
+    <!-- Me → Usage: the subscription section. Android's store is Google
+         Play, so the catalog's App Store wording cannot be reused. -->
+    <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
+    <string name="cancel_any_time_before_then_in_google_play">그전까지 Google Play에서 언제든 해지할 수 있어요</string>
+    <string name="manage_in_google_play">Google Play에서 관리</string>
 </resources>

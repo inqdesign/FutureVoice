@@ -196,4 +196,11 @@
          about their life in a language they may still be practising. -->
     <string name="composer_placeholder">Describe the scenario — or tap the mic and say it</string>
     <string name="cloud_words_total">%1$d / %2$d words</string>
+
+    <!-- Me → Usage: the subscription section. Android's store is Google
+         Play, so the catalog's App Store wording cannot be reused. -->
+    <!-- A used/total count. Punctuation only — nothing here is language. -->
+    <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
+    <string name="cancel_any_time_before_then_in_google_play">Cancel any time before then in Google Play</string>
+    <string name="manage_in_google_play">Manage in Google Play</string>
 </resources>

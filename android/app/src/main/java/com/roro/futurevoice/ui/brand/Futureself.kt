@@ -9,6 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -162,6 +163,11 @@ fun Futureself(
 ) {
     val dark = isSystemInDarkTheme()
     val smoother = remember { LevelSmoother() }
+    // The frame loop below is started ONCE, so it closes over whatever `level`
+    // was at first composition — which is zero, always. Without this the
+    // surface never ignites: it sat at its idle ramp on every screen, and the
+    // mosaic read as a pale grid instead of the brand mark.
+    val liveLevel by rememberUpdatedState(level)
     var time by remember { mutableFloatStateOf(0f) }
     var display by remember { mutableFloatStateOf(0f) }
     // One frame loop drives both the clock and the smoother: the level
@@ -175,7 +181,7 @@ fun Futureself(
                 last = now
                 // Modulo keeps the float precise enough for the sin() phases.
                 time = (time + dt) % 1000f
-                display = smoother.step(level, dt)
+                display = smoother.step(liveLevel, dt)
             }
         }
     }

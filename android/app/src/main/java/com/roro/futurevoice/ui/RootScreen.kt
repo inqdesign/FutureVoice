@@ -314,12 +314,22 @@ fun RootScreen() {
         // The pitch before the ask — the five beats a first-time user must
         // agree with before an account means anything. Returning users
         // (stored session) never see it.
-        !state.signedIn && !welcomeDone -> WelcomeScreen(onGetStarted = {
-            welcomeDone = true
-            // Account-free entry (iOS order): the server needs a session, not
-            // an account — the sign-up asks to KEEP the voice, after Meet.
-            app.startAnonymous()
-        })
+        !state.signedIn && !welcomeDone -> WelcomeScreen(
+            onGetStarted = {
+                welcomeDone = true
+                // Account-free entry (iOS order): the server needs a session,
+                // not an account — the sign-up asks to KEEP the voice, after
+                // Meet.
+                app.startAnonymous()
+            },
+            // A returning learner goes to the real sign-in instead, so their
+            // voice and progress come back with them.
+            onSignIn = { welcomeDone = true },
+            // No invite link yet: redeeming needs an account, and iOS's
+            // "capture the code, then sign in" path has no Android half. A
+            // button that can only land on the sign-in screen would be the
+            // sign-in link wearing a second name.
+        )
         !state.signedIn -> SignInScreen(
             state,
             googleAvailable = app.isGoogleConfigured,

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -40,7 +41,14 @@ import kotlinx.coroutines.delay
  * illustrated.
  */
 @Composable
-fun WelcomeScreen(onGetStarted: () -> Unit) {
+fun WelcomeScreen(
+    onGetStarted: () -> Unit,
+    /** A returning learner: skip the account-free entry and go straight to
+     *  sign-in, so their voice and progress come back with them. */
+    onSignIn: (() -> Unit)? = null,
+    /** An invite is redeemed at the sign-in moment, so it is asked here. */
+    onInviteCode: (() -> Unit)? = null,
+) {
     data class Slide(val title: Int, val subtitle: Int)
     val slides = listOf(
         Slide(R.string.learn_the_language_with_the_fluent_you,
@@ -103,6 +111,18 @@ fun WelcomeScreen(onGetStarted: () -> Unit) {
         }
         Button(onClick = onGetStarted, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.get_started))
+        }
+        // Under the primary button, as on iOS: the two ways in that aren't
+        // "start fresh". Absent rather than dead when the host has no path.
+        if (onSignIn != null) {
+            TextButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.already_have_an_account_sign_in))
+            }
+        }
+        if (onInviteCode != null) {
+            TextButton(onClick = onInviteCode, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.have_an_invite_code))
+            }
         }
     }
 }

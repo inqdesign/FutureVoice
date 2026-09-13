@@ -39,6 +39,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.roro.futurevoice.R
 import com.roro.futurevoice.talk.ShadowScore
 import kotlinx.coroutines.delay
 
@@ -119,12 +121,14 @@ fun FutureselfHero(modifier: Modifier = Modifier) {
                 .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
         )
         Text(
-            when (mode) {
-                FutureselfMode.IDLE -> "Tap to talk"
-                FutureselfMode.LISTENING -> "Listening…"
-                FutureselfMode.THINKING -> "Thinking…"
-                FutureselfMode.SPEAKING -> "Speaking…"
-            },
+            // Chrome, so it follows the learner's app language — these were
+            // frozen English literals under a Korean screen.
+            stringResource(when (mode) {
+                FutureselfMode.IDLE -> R.string.tap_to_talk
+                FutureselfMode.LISTENING -> R.string.listening
+                FutureselfMode.THINKING -> R.string.thinking
+                FutureselfMode.SPEAKING -> R.string.speaking
+            }),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

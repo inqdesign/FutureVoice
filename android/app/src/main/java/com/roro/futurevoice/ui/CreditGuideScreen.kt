@@ -98,16 +98,24 @@ fun CreditGuideScreen(onBack: () -> Unit) {
             account?.takeIf { it.monthlyScenesCap != null }?.let { a ->
                 GroupedSectionHeader(stringResource(R.string.what_your_plan_holds))
                 GroupedCard {
+                    // Uncapped reads off the TIER, never off the cap the
+                    // server reports. `talk_allowance` without its unlimited
+                    // branch hands every plan its `monthly_seconds`, and that
+                    // figure on Plus is the FAIR-USE line — a number nothing
+                    // enforces and the one sentence a tier sold as "no limit"
+                    // must never be shown as its allowance.
+                    val uncapped = a.isUncappedTalk
                     PlainRow(
                         icon = Icons.Filled.CalendarMonth,
-                        title = a.monthlyCapSeconds?.let {
+                        title = if (uncapped) stringResource(R.string.talk_as_much_as_you_want)
+                        else a.monthlyCapSeconds?.let {
                             stringResource(R.string.lld_minutes_a_month, it / 60)
                         } ?: stringResource(R.string.talk_as_much_as_you_want),
                         // States the rule POSITIVELY and stops. Talking is
                         // genuinely uncapped on Plus, and the honest reason is
                         // worth saying out loud — speaking is its own limit,
                         // which is exactly what watching is not.
-                        detail = if (a.monthlyCapSeconds == null)
+                        detail = if (uncapped)
                             stringResource(R.string.no_limit_and_no_rationing_talking_takes_real_effort_so_there_9058ba)
                         else stringResource(R.string.use_them_however_you_like_all_in_one_call_today_or_spread_ov_1df811),
                     )

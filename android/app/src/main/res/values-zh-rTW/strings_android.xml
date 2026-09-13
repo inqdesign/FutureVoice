@@ -183,4 +183,10 @@
 
     <string name="composer_placeholder">寫下情境 — 或點一下麥克風說出來</string>
     <string name="cloud_words_total">單字 %1$d / %2$d</string>
+
+    <!-- Me → Usage: the subscription section. Android's store is Google
+         Play, so the catalog's App Store wording cannot be reused. -->
+    <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
+    <string name="cancel_any_time_before_then_in_google_play">在那之前，隨時可以到 Google Play 取消</string>
+    <string name="manage_in_google_play">在 Google Play 管理</string>
 </resources>
