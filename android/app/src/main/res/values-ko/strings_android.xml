@@ -147,4 +147,6 @@
     <string name="person_how_you_met">어떻게 만났는지</string>
     <string name="person_style">말투</string>
     <string name="feedback_couldnt_send">보내지 못했어요. 다시 시도해 주세요. (%1$s)</string>
+    <string name="composer_ideaserr">아이디어를 가져오지 못했어요. 직접 쓰거나 \'더\'를 눌러 다시 시도해요.</string>
+    <string name="composer_startcat">카테고리에서 시작하기</string>
 </resources>

@@ -1,5 +1,10 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.talk.PathIdeasContent
+import com.roro.futurevoice.talk.PathIdeas
+import com.roro.futurevoice.data.PersonaStore
+import com.roro.futurevoice.data.ScenarioIdeaCache
+import androidx.compose.foundation.horizontalScroll
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -1545,6 +1550,9 @@ private fun SituationDrillDown(
     }
 }
 
+/** One step of the composer's drill-down. */
+private data class Crumb(val label: String, val icon: String?)
+
 /**
  * "Make your own situation" — describe the real upcoming thing in your own
  * words. Categorizing is a nicety and never blocks a commit (iOS rule): a
@@ -1565,6 +1573,42 @@ private fun ScenarioComposer(
     val scope = rememberCoroutineScope()
     var draft by remember { mutableStateOf(prefill) }
     var committing by remember { mutableStateOf(false) }
+    // Build it by drilling down, or type it — the two are the same field.
+    // A crumb is a category, then up to two narrowings; past that the
+    // scenario is specific enough (iOS maxDepth 3).
+    var path by remember { mutableStateOf<List<Crumb>>(emptyList()) }
+    var options by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
+    var loadingOptions by remember { mutableStateOf(false) }
+    var optionsError by remember { mutableStateOf<String?>(null) }
+    /** Set while a chip writes the field, so the change handler doesn't read
+     *  our own write as the learner typing their own. */
+    var programmatic by remember { mutableStateOf(false) }
+
+    suspend fun refreshOptions(force: Boolean = false) {
+        val labels = path.map { it.label }
+        if (labels.isEmpty() || labels.size >= 3) { options = emptyList(); return }
+        val key = ScenarioIdeaCache.key(person?.id, labels)
+        if (!force) ScenarioIdeaCache.topics(context, key)?.let { options = it; return }
+        // Level 1 of a preset category: shipped seeds, zero round-trip. The
+        // sub-areas of "Cafe" are the same for everyone, and waiting on the
+        // model for them costs the learner the pause right after their first
+        // tap. "More" (force) asks the model here too.
+        if (!force && person == null && labels.size == 1) {
+            PathIdeasContent.seedSubAreas(labels[0])?.let { seed ->
+                options = seed.map { SuggestedTopic(title = it.title, blurb = it.blurb) }
+                return
+            }
+        }
+        loadingOptions = true; optionsError = null; options = emptyList()
+        runCatching {
+            PathIdeas.suggest(labels, PersonaStore.shared(context).load(), person, targetLanguage)
+        }.onSuccess { result ->
+            ScenarioIdeaCache.store(context, key, result)
+            // Guard against a stale response (they navigated during the await).
+            if (path.map { it.label } == labels) options = result
+        }.onFailure { optionsError = context.getString(R.string.composer_ideaserr) }
+        loadingOptions = false
+    }
     // A SHEET, not a dialog: non-primary content lives in sheets (iOS UI
     // rules), and a dialog over a full-width composer reads as an alert.
     ModalBottomSheet(onDismissRequest = { if (!committing) onDismiss() }) {
@@ -1579,8 +1623,79 @@ private fun ScenarioComposer(
             Text(stringResource(R.string.the_real_thing_coming_up_an_interview_a_call_a_visit_describ_a97c73),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            OutlinedTextField(value = draft, onValueChange = { draft = it },
-                minLines = 3, modifier = Modifier.fillMaxWidth())
+            if (path.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    path.forEachIndexed { i, crumb ->
+                        if (i > 0) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(16.dp))
+                        // Tapping a crumb backs up to that step; the first one
+                        // returns to the category grid.
+                        AssistChip(onClick = {
+                            path = path.take(i)
+                            scope.launch { refreshOptions() }
+                        }, label = { Text(crumb.label) })
+                    }
+                }
+            }
+            OutlinedTextField(value = draft, onValueChange = {
+                draft = it
+                if (programmatic) { programmatic = false } else {
+                    // A real keystroke means they're writing their own — drop
+                    // the path so a breadcrumb can't contradict the text.
+                    if (path.isNotEmpty()) { path = emptyList(); options = emptyList() }
+                }
+            }, minLines = 3, modifier = Modifier.fillMaxWidth())
+
+            if (path.isEmpty() && draft.isBlank()) {
+                Text(stringResource(R.string.composer_startcat), style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PathIdeasContent.categories.forEach { c ->
+                        AssistChip(
+                            onClick = {
+                                path = listOf(Crumb(c.title, c.icon))
+                                scope.launch { refreshOptions() }
+                            },
+                            leadingIcon = { Icon(Symbols.icon(c.icon), contentDescription = null,
+                                modifier = Modifier.size(18.dp)) },
+                            label = { Text(c.title) })
+                    }
+                }
+            } else if (path.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(if (path.size == 1) R.string.narrow_it_down else R.string.pick_a_scenario),
+                        style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (loadingOptions) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else TextButton(onClick = { scope.launch { refreshOptions(force = true) } }) {
+                        Text(stringResource(R.string.more))
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    options.forEach { o ->
+                        AssistChip(onClick = {
+                            // The blurb IS the scenario if they stop here; one
+                            // more step only narrows it further.
+                            programmatic = true
+                            draft = o.blurb.ifBlank { o.title }
+                            if (path.size < 3) {
+                                path = path + Crumb(o.title, null)
+                                scope.launch { refreshOptions() }
+                            } else options = emptyList()
+                        }, label = { Text(o.title) })
+                    }
+                }
+                optionsError?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                Text(stringResource(if (path.size == 1) R.string.pick_an_area_to_go_one_step_deeper_or_type_your_own_above else R.string.tap_one_to_fill_your_scenario_above_then_edit_it_freely),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Button(
                 enabled = draft.isNotBlank() && !committing,
                 modifier = Modifier.fillMaxWidth(),
@@ -1591,7 +1706,7 @@ private fun ScenarioComposer(
                         // Categorizing is a nicety and never blocks a commit
                         // (iOS rule): a failure leaves the free text as the
                         // scenario, with no breadcrumb.
-                        val result = runCatching {
+                        val result = if (path.isNotEmpty()) null else runCatching {
                             TopicClient(AuthRepository()).categorize(
                                 text = text, existing = existingCategories,
                                 iconOptions = TopicClient.ICON_PALETTE,
@@ -1599,8 +1714,9 @@ private fun ScenarioComposer(
                         }.getOrNull()
                         ScenarioStore.shared(context).save(Scenario(
                             environment = text,
-                            category = result?.category?.takeIf { it.isNotBlank() },
-                            categoryIcon = result?.icon,
+                            category = path.firstOrNull()?.label
+                                ?: result?.category?.takeIf { it.isNotBlank() },
+                            categoryIcon = path.firstOrNull()?.icon ?: result?.icon,
                             summary = result?.summary?.takeIf { it.isNotBlank() },
                             // Scoping to a person is what makes the scene
                             // theirs: the role names them, and the id links

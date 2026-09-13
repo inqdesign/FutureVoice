@@ -147,4 +147,6 @@
     <string name="person_how_you_met">How you met</string>
     <string name="person_style">Style</string>
     <string name="feedback_couldnt_send">Couldn\'t send — please try again. (%1$s)</string>
+    <string name="composer_ideaserr">Couldn\'t fetch ideas — type your own, or tap More to retry.</string>
+    <string name="composer_startcat">Start from a category</string>
 </resources>

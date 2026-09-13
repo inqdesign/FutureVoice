@@ -79,13 +79,16 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       목소리 인테이크
 - [x] `ShadowBrowserSheet` — 2026-09-13. 통화별 미래의 나 문장 전부, 줄마다 북마크,
       탭하면 샤도잉. Practice 샤도잉 타일의 All로 진입(iOS allCount/all).
-- [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [x] `CommonGround` — 2026-09-13. 겹치는 지점을 코드로 먼저 계산(같은 도시·같은 관심사·같은
       또래의 아이·둘 다 배우는 중)해서 통화(낯선 사람)와 장면 프롬프트에 넣는다. 장면은
       서버가 메시지를 만드는 쪽이라 `common_ground` 필드를 **추가**로 받게 하고 배포함 — 안 보내면
       예전 그대로라 iOS엔 영향 없음.
 - [ ] `WatchDialogueStore`, `BookGlossary`, `LearnerAddress`
-- [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
+- [x] `ScenarioBuilderSheet` / `ScenarioIdeaCache` — 2026-09-13. 컴포저가 카테고리 → 좁히기 → 구체적
+      상황으로 내려간다. 1단계는 배송된 시드(왕복 0), 그 아래는 모델이 쓰고 `scenario-ideas.json`에
+      30일 캐시(사람별·경로별). 프롬프트·시드·카테고리는 `gen-path-ideas.py`로 Swift에서 추출.
+      경로로 만든 시나리오는 카테고리가 이미 정해져 categorize 호출을 건너뛴다. **미검증**: 에뮬레이터
+      재시작 대기 중.
 - [x] `FeedbackSheet` — 2026-09-13. 첫 통화 Done·첫 장면 완주 뒤 한 번, `beta_reviews`에 같은 행.
 - [x] `VoiceComparisonSheet` — 2026-09-13. Me → "Doesn't sound like you?"(녹음 vs 클론, 같은 문장, 클론
       쪽은 fidelity 모델로 한 번 합성해 디스크 캐시) + "Re-record voice" 행과 확인 → 같은 클론 플로우로
