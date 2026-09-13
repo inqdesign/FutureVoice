@@ -36,10 +36,22 @@
             "value" : "nawana plant deinen täglichen Anruf als Wecker, damit dein fließendes Ich dich zur gewählten Zeit erreicht — auch wenn das Telefon stumm ist."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawanaは毎日の電話をアラームとして予約し、マナーモードでも流暢な自分が決まった時刻に連絡できるようにします。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "나와나는 매일 전화를 알람으로 예약해, 무음 모드에서도 유창한 내가 정해진 시각에 연락할 수 있게 합니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 會把每日來電排成鬧鐘，讓流利的自己在靜音模式下也能準時聯絡你。"
           }
         }
       }
@@ -60,10 +72,22 @@
             "value" : "nawana takes a photo of where you studied, for today's card."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawanaが、今日勉強した場所を撮影して今日のカードに使います。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "나와나가 오늘 공부한 자리를 찍어 오늘의 카드에 씁니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 會拍下今天讀書的地方，用在今日卡片上。"
           }
         }
       }
@@ -84,10 +108,22 @@
             "value" : "nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawanaが声を録音してクローンを作り、別の言語を流暢に話す自分の声を聞かせます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "나와나가 목소리를 녹음해 클론을 만들고, 다른 언어를 유창하게 말하는 내 목소리를 들려줍니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 會錄下你的聲音來複製，讓你聽見自己流利說另一種語言的樣子。"
           }
         }
       }
@@ -108,10 +144,22 @@
             "value" : "nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice."
           }
         },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawanaが話した内容を端末内で文字に起こし、流暢な自分の声と比べます。"
+          }
+        },
         "ko" : {
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "나와나가 말한 내용을 기기 안에서 텍스트로 옮겨, 유창한 내 목소리와 비교합니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana 會在裝置上把你說的話轉成文字，用來和流利版本的聲音比較。"
           }
         }
       }

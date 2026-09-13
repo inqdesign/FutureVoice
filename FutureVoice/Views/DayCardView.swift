@@ -182,7 +182,7 @@ struct DayCardView: View {
             VStack(alignment: .leading, spacing: isFeed ? 15 : 11) {
                 if let topic = data.title {
                     Text(topic)
-                        .geistPixel(isFeed ? 35 : 29)
+                        .brandPixel(isFeed ? 35 : 29)
                         .lineLimit(3)
                         .minimumScaleFactor(0.6)
                         .fixedSize(horizontal: false, vertical: true)
@@ -210,7 +210,7 @@ struct DayCardView: View {
         HStack(alignment: .top, spacing: 0) {
             ForEach(data.stats) { stat in
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(stat.value).geistPixel(isFeed ? 15 : 13)
+                    Text(stat.value).brandPixel(isFeed ? 15 : 13)
                     Text(stat.label)
                         .font(.system(size: isFeed ? 7.3 : 6.7, design: .monospaced))
                         .tracking(1)
@@ -237,7 +237,7 @@ struct DayCardView: View {
                              cell: 6.4, colourFalloff: 1.25, maxStep: 3, dark: true)
             ink.opacity(0.18)
             Text(data.date.formatted(.dateTime.month(.abbreviated).day().locale(Locale(identifier: "en"))))
-                .geistPixel(isFeed ? 10.7 : 9.7)
+                .brandPixel(isFeed ? 10.7 : 9.7)
         }
         .frame(width: isFeed ? 88 : 80, height: isFeed ? 32 : 29)
         .clipShape(Capsule())
@@ -250,7 +250,7 @@ struct DayCardView: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 3) {
                 Text("Learn a language from your fluent self.")
-                    .geistPixel(isFeed ? 8.7 : 8)
+                    .brandPixel(isFeed ? 8.7 : 8)
                 Text("nawana.app")
                     .font(.system(size: isFeed ? 8.7 : 8, design: .monospaced))
                     .tracking(1.2)

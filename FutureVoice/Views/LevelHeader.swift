@@ -122,17 +122,10 @@ struct LevelInfoSheet: View {
         var explains: String {
             switch self {
             case .talk:
-                return """
-                Your future self speaks mostly at your level, and lets a word \
-                or turn of phrase from just above it slip in now and then — \
-                that small stretch is where you grow. Never two levels up.
-                """
+                // Flows through a String, so explain() is what localizes it.
+                return explain("Your future self speaks mostly at your level, and lets a word or turn of phrase from just above it slip in now and then — that small stretch is where you grow. Never two levels up.")
             case .watch:
-                return """
-                Your level sets how long the scene is and how full its \
-                sentences are. Vocabulary is picked from just above it — \
-                words a learner at your level plausibly doesn't own yet.
-                """
+                return explain("Your level sets how long the scene is and how full its sentences are. Vocabulary is picked from just above it — words a learner at your level plausibly doesn't own yet.")
             }
         }
     }
@@ -150,9 +143,9 @@ struct LevelInfoSheet: View {
     /// The three bands Watch actually branches on, described with the values
     /// the generator really uses.
     private static let watchBands: [(band: String, levels: [CEFRLevel], detail: String)] = [
-        ("A1 · A2", [.a1, .a2], "8–10 turns, one short sentence each"),
-        ("B1 · B2", [.b1, .b2], "8–12 turns, 1–2 sentences each"),
-        ("C1 · C2", [.c1, .c2], "10–14 turns, 1–3 sentences, follow-up questions"),
+        ("A1 · A2", [.a1, .a2], explain("8–10 turns, one short sentence each")),
+        ("B1 · B2", [.b1, .b2], explain("8–12 turns, 1–2 sentences each")),
+        ("C1 · C2", [.c1, .c2], explain("10–14 turns, 1–3 sentences, follow-up questions")),
     ]
 
     var body: some View {
