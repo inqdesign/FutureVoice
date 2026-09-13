@@ -115,7 +115,21 @@ Deno.serve(async (req) => {
     }
 
     const isTrial = tx.offerDiscountType === "FREE_TRIAL"
-    const status = statusFor(payload.notificationType, payload.subtype, isTrial)
+    // `null` = this notification says nothing about standing (see statusFor).
+    // Keep whatever the row already says; with no row yet, read it off the
+    // transaction's own expiry rather than assuming the sale went through.
+    let status = statusFor(payload.notificationType, payload.subtype, isTrial)
+    if (status === null) {
+      const { data: current } = await db
+        .from("user_subscriptions")
+        .select("status")
+        .eq("user_id", userId)
+        .maybeSingle()
+      status = current?.status
+        ?? (tx.expiresDate && tx.expiresDate < Date.now()
+              ? "expired"
+              : isTrial ? "trialing" : "active")
+    }
 
     const { error: subErr } = await db.from("user_subscriptions").upsert({
       user_id: userId,
@@ -244,16 +258,29 @@ function peekUnverified(signedPayload: string) {
 
 /// Maps notification type (+subtype) to our status vocabulary:
 /// 'trialing' | 'active' | 'grace' | 'expired' | 'inactive'
-function statusFor(type?: string, subtype?: string, isTrial?: boolean): string {
+///
+/// `isTrial` is the FLOOR, never an afterthought: the signed transaction says
+/// the period was priced as a free trial, and no notification type can make a
+/// free week into a paid month. It used to be consulted only on the types
+/// listed here, so anything falling through `default` returned a flat
+/// "active" — which is how a PRICE_INCREASE/PENDING notification (Apple asking
+/// a subscriber to consent to a new price; nothing to do with entitlement)
+/// promoted a running 7-day Plus trial to a paid subscription on 2026-09-13.
+/// A trial metered as `active` is UNCAPPED on Plus
+/// (`consume_metered_seconds`: `status <> 'trialing' and talk_unlimited`), so
+/// the bug hands a week's sample the thing the month is sold for. See
+/// `docs/launch-billing.md`.
+function statusFor(type?: string, subtype?: string, isTrial?: boolean): string | null {
+  const entitled = isTrial ? "trialing" : "active"
   switch (type) {
     case "SUBSCRIBED":
     case "DID_RENEW":
     case "OFFER_REDEEMED":
     case "DID_CHANGE_RENEWAL_PREF":
-      return isTrial ? "trialing" : "active"
+      return entitled
     case "DID_CHANGE_RENEWAL_STATUS":
       // Auto-renew toggled; the sub itself is still whatever it was.
-      return isTrial ? "trialing" : "active"
+      return entitled
     case "DID_FAIL_TO_RENEW":
       return subtype === "GRACE_PERIOD" ? "grace" : "expired"
     case "GRACE_PERIOD_EXPIRED":
@@ -261,8 +288,21 @@ function statusFor(type?: string, subtype?: string, isTrial?: boolean): string {
     case "REFUND":
     case "REVOKE":
       return "expired"
+    // Informational — they carry a transaction so the row's dates and price
+    // stay current, but they say NOTHING about whether the subscription is
+    // running. `null` means "leave the status alone"; the caller keeps what
+    // the row already says. Named rather than left to `default` so the next
+    // unknown type is a decision somebody makes, not a silent promotion.
+    case "PRICE_INCREASE":          // consent prompt; PENDING or ACCEPTED
+    case "RENEWAL_EXTENDED":        // period pushed out, same standing
+    case "RENEWAL_EXTENSION":
+    case "CONSUMPTION_REQUEST":     // Apple asking us about a refund claim
+    case "REFUND_DECLINED":         // refund refused → nothing changed
+    case "REFUND_REVERSED":
+    case "TEST":
+      return null
     default:
-      return "active"
+      return null
   }
 }
 

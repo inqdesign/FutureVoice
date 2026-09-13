@@ -171,7 +171,10 @@ final class StoreKitService: ObservableObject {
         do {
             let res: ClaimResponse = try await SupabaseProvider.shared.functions.invoke(
                 "apple-claim",
-                options: FunctionInvokeOptions(body: ClaimBody(jws: result.jwsRepresentation))
+                options: FunctionInvokeOptions(
+                    headers: try await SupabaseProvider.authorizedHeaders(),
+                    body: ClaimBody(jws: result.jwsRepresentation)
+                )
             )
             claimed.insert(tag)
             // Keep the set small; an Apple ID holds a handful of these.
