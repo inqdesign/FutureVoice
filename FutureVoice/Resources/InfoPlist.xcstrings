@@ -36,6 +36,12 @@
             "value" : "nawana plant deinen täglichen Anruf als Wecker, damit dein fließendes Ich dich zur gewählten Zeit erreicht — auch wenn das Telefon stumm ist."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana programa la llamada diaria como una alarma, para que tu yo fluido pueda contactarte a la hora fijada incluso en modo silencio."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -76,6 +82,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "nawana takes a photo of where you studied, for today's card."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana toma una foto del lugar donde estudiaste, para la tarjeta de hoy."
           }
         },
         "ja" : {
@@ -120,6 +132,12 @@
             "value" : "nawana records your voice so it can clone it and let you hear yourself speaking fluently in another language."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana graba tu voz para clonarla y que puedas oírte hablando otro idioma con fluidez."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -160,6 +178,12 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "nawana transcribes what you say on-device so it can compare your speech with the fluent version of your voice."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "nawana transcribe en el dispositivo lo que dices, para comparar tu habla con la versión fluida de tu voz."
           }
         },
         "ja" : {

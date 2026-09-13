@@ -9,6 +9,12 @@
             "value" : "/ %lld Min."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "/ %lld min"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38,6 +44,12 @@
     "%lld" : {
       "localizations" : {
         "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
+          }
+        },
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld"
@@ -94,6 +106,12 @@
             "value" : "%1$lld/%2$lld"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -134,6 +152,12 @@
             "value" : "Markiere hier Sätze zum Lernen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda frases para estudiarlas aquí"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -168,6 +192,12 @@
             "value" : "Weiterlernen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir estudiando"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -200,6 +230,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tage-Serie"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "días de racha"
           }
         },
         "ja" : {
@@ -239,6 +275,12 @@
             "value" : "Für heute geschafft"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listo por hoy"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -271,6 +313,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wendungen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expresiones"
           }
         },
         "ja" : {
@@ -307,6 +355,12 @@
             "value" : "Freies Gespräch"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conversación libre"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -339,6 +393,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Spring zurück in das Buch, das du gerade durcharbeitest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve al cuaderno que tienes entre manos."
           }
         },
         "ja" : {
@@ -375,6 +435,12 @@
             "value" : "Halte deine tägliche Sprech-Serie am Leben."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mantén viva tu racha de hablar a diario."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -407,6 +473,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "übrig"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "restantes"
           }
         },
         "ja" : {
@@ -443,6 +515,12 @@
             "value" : "Sprechen wir"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hablemos"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -475,6 +553,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "gemeistert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "dominadas"
           }
         },
         "ja" : {
@@ -514,6 +598,12 @@
             "value" : "Nichts in Arbeit"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nada en curso"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -546,6 +636,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ein Tipp — und du rufst dein fließendes Ich an."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un toque para llamar a tu yo fluido."
           }
         },
         "ja" : {
@@ -582,6 +678,12 @@
             "value" : "Wendungen"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "expresiones"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -614,6 +716,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sätze"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frases"
           }
         },
         "ja" : {
@@ -650,6 +758,12 @@
             "value" : "Sätze, die du in deinen Gesprächen aufgeschnappt hast."
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frases que has recogido en tus llamadas."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -684,6 +798,12 @@
             "value" : "Fortschritt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Progreso"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -716,6 +836,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Speichere hier Wörter zum Lernen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guarda palabras para estudiarlas aquí"
           }
         },
         "ja" : {
@@ -755,6 +881,12 @@
             "value" : "Starte deine Serie"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Empieza tu racha"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -787,6 +919,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Serie"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Racha"
           }
         },
         "ja" : {
@@ -823,6 +961,12 @@
             "value" : "Wird gelernt"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En estudio"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -855,6 +999,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Heutiges Ziel, Serie und was noch zu lernen ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El objetivo de hoy, la racha y lo que queda por estudiar."
           }
         },
         "ja" : {
@@ -891,6 +1041,12 @@
             "value" : "Vokabeln"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vocabulario"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -923,6 +1079,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wörter"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "palabras"
           }
         },
         "ja" : {
@@ -959,6 +1121,12 @@
             "value" : "Wörter"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -991,6 +1159,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Wörter aus deinem Notizbuch zum Weiterlernen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Palabras de tu libreta para seguir estudiando."
           }
         },
         "ja" : {
