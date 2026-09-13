@@ -146,4 +146,5 @@
     <string name="person_scenes_with_person">%1$s와의 장면</string>
     <string name="person_how_you_met">어떻게 만났는지</string>
     <string name="person_style">말투</string>
+    <string name="feedback_couldnt_send">보내지 못했어요. 다시 시도해 주세요. (%1$s)</string>
 </resources>

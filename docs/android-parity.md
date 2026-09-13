@@ -33,7 +33,7 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 
 | | 있음 | 전체 |
 |---|---|---|
-| 화면 | 63 | 75 |
+| 화면 | 64 | 75 |
 | 서비스·엔진 | 79 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
@@ -81,7 +81,10 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       탭하면 샤도잉. Practice 샤도잉 타일의 All로 진입(iOS allCount/all).
 - [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [ ] `WatchDialogueStore`, `CommonGround`, `BookGlossary`, `LearnerAddress`
-- [ ] `HistorySheet`, `FeedbackSheet`, `VoiceComparisonSheet`
+- [x] `FeedbackSheet` — 2026-09-13. 첫 통화 Done·첫 장면 완주 뒤 한 번, `beta_reviews`에 같은 행.
+- [ ] `VoiceComparisonSheet` — 녹음 vs 클론 A/B(Me·온보딩).
+- [ ] ~~`HistorySheet`~~ — iOS에서 아무 데도 안 쓰임(죽은 파일), N/A.
+- [ ] ~~`LevelHeader`~~ — iOS에서 삭제됨, N/A.
 - [x] `ReferralJoinSheet` — 2026-09-13. 포그라운드에서 `referral_redemptions`를 폴링, 첫 실행은
       조용히 기준점만, 새 합류는 무음 로컬 알림 + 시트. **미검증**: 다른 계정이 코드를
       써야 흐름이 보인다.

@@ -113,8 +113,19 @@ fun TalkScreen(
     val state by vm.state.collectAsStateWithLifecycle()
     // System back = hang up and leave, same as End — never kill the activity
     // with a call still holding the mic.
+    // Leaving after the wrap-up: the first time, the feedback ask comes
+    // first and its dismissal completes the exit.
+    var feedback by remember { mutableStateOf<FeedbackContext?>(null) }
+    val appContext = LocalContext.current
+    fun leave() {
+        if (FeedbackPrompt.shouldShow(appContext, FeedbackContext.FIRST_TALK)) {
+            FeedbackPrompt.markShown(appContext, FeedbackContext.FIRST_TALK)
+            feedback = FeedbackContext.FIRST_TALK
+        } else onExit()
+    }
+    feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null; onExit() }) }
     androidx.activity.compose.BackHandler {
-        if (state.phase == TalkPhase.ENDED) onExit()
+        if (state.phase == TalkPhase.ENDED) leave()
         else { vm.end(); if (vm.state.value.endedSessionId == null) onExit() }
     }
     /** A spent allowance: a sheet, never an error and never a bare paywall. */
@@ -188,7 +199,7 @@ fun TalkScreen(
                     // minute the app spends, and leaving here skipped it
                     // entirely. Done is what leaves.
                     if (state.phase == TalkPhase.ENDED) {
-                        Button(onClick = onExit) { Text(stringResource(R.string.done)) }
+                        Button(onClick = { leave() }) { Text(stringResource(R.string.done)) }
                     } else {
                         Button(onClick = {
                             vm.end()

@@ -68,6 +68,8 @@ fun WatchSceneScreen(
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
+    var feedback by remember { mutableStateOf<FeedbackContext?>(null) }
+    feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null }) }
     val mp3 = remember { Mp3Player(context.cacheDir, source = "scene") }
     var title by remember { mutableStateOf<String?>(null) }
     var shown by remember { mutableStateOf<List<Turn>>(emptyList()) }
@@ -144,6 +146,11 @@ fun WatchSceneScreen(
                 audio?.let { mp3.play(it) }
             }
             playingIndex = -1
+            // Completed the whole dialogue for the first time → ask for feedback.
+            if (FeedbackPrompt.shouldShow(context, FeedbackContext.FIRST_WATCH)) {
+                FeedbackPrompt.markShown(context, FeedbackContext.FIRST_WATCH)
+                feedback = FeedbackContext.FIRST_WATCH
+            }
         } catch (e: Exception) {
             generating = false
             error = e.message
