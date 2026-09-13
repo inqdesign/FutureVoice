@@ -1,5 +1,7 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.data.MicPreference
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -136,6 +138,13 @@ fun TalkScreen(
         if (spent != null) canUpgrade = AccountStatus.load(AuthRepository()).isLightPlan
     }
     val listState = rememberLazyListState()
+    // A long silent turn must not lock the phone: a call is on screen, and
+    // the learner's hands are usually nowhere near it.
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
 
     // One-time "which mic?", asked here because the call is the first mic
     // surface most learners reach. The call waits for the answer; both
@@ -259,6 +268,36 @@ fun TalkScreen(
                 }
             }
 
+            // The first seconds of a call had nothing on them: an empty list
+            // and no bottom bar. Say what is happening instead.
+            if (state.phase == TalkPhase.CONNECTING && state.turns.isEmpty()) {
+                Row(Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Text(stringResource(
+                        if (topic.isBlank()) R.string.starting_your_conversation
+                        else R.string.setting_the_scene),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            // Whose turn it is, said out loud. A silent screen during a
+            // listening turn reads as a call that has stopped working.
+            if (state.phase == TalkPhase.LISTENING && state.partial.isBlank()) {
+                Text(stringResource(R.string.listening),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+            if (state.phase == TalkPhase.THINKING) {
+                Text(stringResource(R.string.future_self_is_thinking),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
             if (state.partial.isNotBlank()) {
                 Text(
                     state.partial,

@@ -767,11 +767,34 @@ private fun HomeScreen(
     }
 
     var pendingLaunch by remember { mutableStateOf<PendingLaunch?>(null) }
+    var micDenied by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) pendingLaunch?.let { onStartCall(it.topic, it.facts, it.scenarioId) }
+        // A refusal has to be answerable: the tap did nothing and nothing on
+        // screen said why, and the only route back is the system settings.
+        else micDenied = true
         pendingLaunch = null
+    }
+    if (micDenied) {
+        val ctx = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { micDenied = false },
+            title = { Text(stringResource(R.string.microphone_access_needed)) },
+            text = { Text(stringResource(R.string.nawana_needs_the_microphone_and_speech_recognition_to_hear_y_121253)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    micDenied = false
+                    ctx.startActivity(android.content.Intent(
+                        android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        android.net.Uri.fromParts("package", ctx.packageName, null))
+                        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                }) { Text(stringResource(R.string.open_settings)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { micDenied = false }) { Text(stringResource(R.string.not_now)) }
+            })
     }
     fun launch(topic: String, facts: List<String>, scenarioId: String? = null) {
         pendingLaunch = PendingLaunch(topic, facts, scenarioId)
@@ -1004,6 +1027,21 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+        // Before the first conversation the ring is an unexplained circle.
+        // Say what it is and what it leads to, once.
+        if (sessionCount == 0) {
+            Column(Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.your_fluent_self_is_ready),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_d9b4f5),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center)
             }
         }
         // Breathing room under the ring — close enough to invite the scroll,
