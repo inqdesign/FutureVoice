@@ -72,6 +72,7 @@ fun ShadowBrowserScreen(language: String, onShadow: (Turn) -> Unit, onBack: () -
     }
     val savedIds = saved.map { it.id }.toSet()
     val df = remember { DateFormat.getDateInstance(DateFormat.MEDIUM) }
+    val freeTalkLabel = stringResource(R.string.free_talk)
 
     Scaffold(
         topBar = {
@@ -107,7 +108,7 @@ fun ShadowBrowserScreen(language: String, onShadow: (Turn) -> Unit, onBack: () -
             sessions.forEach { s ->
                 val lines = s.turns.filter { it.role == TurnRole.FLUENT_SELF && it.transcript.isNotBlank() }
                 if (lines.isEmpty()) return@forEach
-                val title = s.topic?.takeIf { it.isNotBlank() } ?: stringResource(R.string.free_talk)
+                val title = s.topic?.takeIf { it.isNotBlank() } ?: freeTalkLabel
                 item { Header("$title · ${df.format(Date(s.endedAt ?: s.startedAt))}") }
                 items(lines.size) { i ->
                     val t = lines[i]
