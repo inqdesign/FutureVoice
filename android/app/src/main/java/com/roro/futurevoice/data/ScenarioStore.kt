@@ -43,6 +43,19 @@ class ScenarioStore private constructor(context: Context) {
             })
         }
 
+    /** A finished book leaves the shelf but keeps everything it taught. */
+    suspend fun setArchived(id: String, archived: Boolean,
+                            language: String = LanguageScope.active(appContext)) = mutex.withLock {
+        val all = loadLocked(language)
+        write(language, all.map {
+            if (it.id == id) it.copy(archivedAt = if (archived) System.currentTimeMillis() else null) else it
+        })
+    }
+
+    suspend fun delete(id: String, language: String = LanguageScope.active(appContext)) = mutex.withLock {
+        write(language, loadLocked(language).filterNot { it.id == id })
+    }
+
     private suspend fun loadLocked(language: String): List<Scenario> = withContext(Dispatchers.IO) {
         val f = file(language)
         if (!f.exists()) emptyList()

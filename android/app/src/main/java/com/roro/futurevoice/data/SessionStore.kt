@@ -60,6 +60,18 @@ class SessionStore private constructor(context: Context) {
         if (list.removeAll { it.id == id }) write(language, list)
     }
 
+    /** Archiving a talk keeps its book and its mastery; it only leaves the shelf. */
+    suspend fun setArchived(id: String, archived: Boolean,
+                            language: String = LanguageScope.active(appContext)) = mutex.withLock {
+        val sessions = all(language)
+        val i = sessions.indexOfFirst { it.id == id }
+        if (i >= 0) {
+            sessions[i] = sessions[i].copy(
+                archivedAt = if (archived) System.currentTimeMillis() else null)
+            write(language, sessions)
+        }
+    }
+
     private suspend fun all(language: String): MutableList<Session> {
         cache?.let { if (cachedLanguage == language) return it }
         val loaded = withContext(Dispatchers.IO) {

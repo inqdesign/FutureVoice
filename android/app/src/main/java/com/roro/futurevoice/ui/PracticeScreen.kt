@@ -1,5 +1,15 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.CoreVocabulary
@@ -98,6 +108,9 @@ fun PracticeBody(
     var today by remember { mutableStateOf(PracticeLog.Day()) }
     var streak by remember { mutableStateOf(0) }
     var dueBack by remember { mutableStateOf(0) }
+    /** Finished books. They keep their progress and can come back. */
+    var archivedTalks by remember { mutableStateOf<List<Session>>(emptyList()) }
+    var archivedScenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
 
     LaunchedEffect(language, revision) {
         due = DrillStore.shared(context).dueCount(language)
@@ -106,9 +119,12 @@ fun PracticeBody(
         // the row promises work the deck won't hand over.
         wordsDue = DailyStudyPick.words(context, DAILY_HAND, language, level).size
         expressionsDue = DailyStudyPick.expressions(context, DAILY_HAND, language).size
-        scenarios = ScenarioStore.shared(context).load(language)
-            .filter { it.archivedAt == null && it.isMeeting != true }
-        talks = SessionStore.shared(context).load(language).filter { it.summary != null }
+        val allScenarios = ScenarioStore.shared(context).load(language).filter { it.isMeeting != true }
+        scenarios = allScenarios.filter { it.archivedAt == null }
+        archivedScenarios = allScenarios.filter { it.archivedAt != null }
+        val allTalks = SessionStore.shared(context).load(language).filter { it.summary != null }
+        talks = allTalks.filter { it.archivedAt == null }
+        archivedTalks = allTalks.filter { it.archivedAt != null }
         goals = GoalStore.load(context)
         today = PracticeLog.day(context) ?: PracticeLog.Day()
         streak = GoalStore.streak(context, goals)
@@ -188,14 +204,87 @@ fun PracticeBody(
                 }
             }
 
-            Shelf.TALK -> talks.forEach { TalkCard(it, onOpenTalk) }
-            Shelf.WATCH -> scenarios.forEach { ScenarioCard(it, onOpenScenarioBook) }
+            Shelf.TALK -> {
+                talks.forEach {
+                    TalkCard(it, onOpenTalk,
+                        onArchive = { id, on -> scope.launch {
+                            SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                        onDelete = { id -> scope.launch {
+                            SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                }
+                ArchiveSection(archivedTalks.isNotEmpty()) {
+                    archivedTalks.forEach {
+                        TalkCard(it, onOpenTalk,
+                            onArchive = { id, on -> scope.launch {
+                                SessionStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                SessionStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                }
+            }
+            Shelf.WATCH -> {
+                scenarios.forEach {
+                    ScenarioCard(it, onOpenScenarioBook,
+                        onArchive = { id, on -> scope.launch {
+                            ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                        onDelete = { id -> scope.launch {
+                            ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                }
+                ArchiveSection(archivedScenarios.isNotEmpty()) {
+                    archivedScenarios.forEach {
+                        ScenarioCard(it, onOpenScenarioBook,
+                            onArchive = { id, on -> scope.launch {
+                                ScenarioStore.shared(context).setArchived(id, on, language); StoreEvents.bump() } },
+                            onDelete = { id -> scope.launch {
+                                ScenarioStore.shared(context).delete(id, language); StoreEvents.bump() } })
+                    }
+                }
+            }
         }
     }
 }
 
+/** A book's own actions. Long-press, because a tap is for opening it. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TalkCard(t: Session, onOpen: (String) -> Unit) {
+private fun BookMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    items: List<Triple<String, ImageVector, () -> Unit>>,
+    destructiveLast: Boolean = true,
+) {
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        items.forEachIndexed { i, (label, icon, action) ->
+            val destructive = destructiveLast && i == items.lastIndex
+            DropdownMenuItem(
+                text = {
+                    Text(label, color = if (destructive) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurface)
+                },
+                leadingIcon = {
+                    Icon(icon, contentDescription = null,
+                        tint = if (destructive) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant)
+                },
+                onClick = { onDismiss(); action() })
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun TalkCard(t: Session, onOpen: (String) -> Unit,
+                     onArchive: ((String, Boolean) -> Unit)? = null,
+                     onDelete: ((String) -> Unit)? = null) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        BookMenu(menu, { menu = false }, listOfNotNull(
+            onArchive?.let {
+                Triple(stringResource(if (t.archivedAt == null) R.string.archive else R.string.unarchive),
+                    Icons.Filled.Inventory2, { it(t.id, t.archivedAt == null) })
+            },
+            onDelete?.let { Triple(stringResource(R.string.delete), Icons.Filled.Delete, { it(t.id) }) },
+        ))
     BookCard(
         title = t.displayTitle ?: stringResource(R.string.conversation),
         origin = when (t.origin?.name?.lowercase()) {
@@ -207,13 +296,19 @@ private fun TalkCard(t: Session, onOpen: (String) -> Unit) {
         detail = t.summary?.scorecard?.let {
             "${it.overall} · ${it.cefrLevel?.uppercase().orEmpty()}"
         },
-        onClick = { onOpen(t.id) },
-        modifier = Modifier.padding(vertical = 4.dp),
+        modifier = Modifier.padding(vertical = 4.dp)
+            .combinedClickable(onClick = { onOpen(t.id) }, onLongClick = { menu = true }),
     )
+    }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit) {
+private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit,
+                         onTalk: ((Scenario) -> Unit)? = null,
+                         onArchive: ((String, Boolean) -> Unit)? = null,
+                         onDelete: ((String) -> Unit)? = null) {
+    var menu by remember { mutableStateOf(false) }
     val cur = sc.curriculum
     val total = cur?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
     val done = cur?.let {
@@ -227,9 +322,18 @@ private fun ScenarioCard(sc: Scenario, onOpen: (String) -> Unit) {
         detail = if (cur == null) stringResource(R.string.watch_the_scene_first)
         else stringResource(R.string.lld_of_lld_mastered, done, total),
         progress = if (total == 0) null else done / total.toFloat(),
-        onClick = { onOpen(sc.id) },
-        modifier = Modifier.padding(vertical = 4.dp),
+        modifier = Modifier.padding(vertical = 4.dp)
+            .combinedClickable(onClick = { onOpen(sc.id) }, onLongClick = { menu = true }),
     )
+    BookMenu(menu, { menu = false }, listOfNotNull(
+        Triple(stringResource(R.string.open), Icons.Filled.MenuBook, { onOpen(sc.id) }),
+        onTalk?.let { Triple(stringResource(R.string.talk_now), Icons.Filled.Mic, { it(sc) }) },
+        onArchive?.let {
+            Triple(stringResource(if (sc.archivedAt == null) R.string.archive else R.string.unarchive),
+                Icons.Filled.Inventory2, { it(sc.id, sc.archivedAt == null) })
+        },
+        onDelete?.let { Triple(stringResource(R.string.delete), Icons.Filled.Delete, { it(sc.id) }) },
+    ))
 }
 
 /**
@@ -724,5 +828,20 @@ private fun BigStat(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+}
+
+/** Finished books, under the shelf they left. Collapsed to a header so they
+ *  never compete with what is still in progress. */
+@Composable
+private fun ArchiveSection(hasAny: Boolean, content: @Composable () -> Unit) {
+    if (!hasAny) return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringResource(R.string.archive), style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(top = 12.dp))
+        content()
+        Text(stringResource(R.string.finished_books_they_keep_their_progress_unarchive_anytime),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
