@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -268,20 +269,27 @@ fun StudyDeckScreen(
                 // says the DRAG, always: the tap is already written on the
                 // card's own face, and saying it twice made the deck look
                 // like it was insisting.
-                Text(
-                    stringResource(R.string.drag_the_card_into_a_folder),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                )
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.TouchApp, contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                        tint = MaterialTheme.colorScheme.outline)
+                    Spacer(Modifier.size(6.dp))
+                    Text(stringResource(R.string.drag_the_card_into_a_folder),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
 
-                BinRow(
+                VerdictRow(
                     dragging = dragging,
+                    active = null,
+                    tappable = true,
                     counts = { bin ->
                         if (bin == DrillBin.GOT_IT) finished.size else (scheduled[bin]?.size ?: 0)
                     },
                     onBounds = { bin, rect -> binBounds = binBounds + (bin to rect) },
-                    onTap = { bin -> openFolder = bin },
+                    onOpen = { bin -> openFolder = bin },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -425,55 +433,15 @@ private fun StudyCard(
             }
         } else {
             Spacer(Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.TouchApp, contentDescription = null,
-                    tint = onCardSecondary, modifier = Modifier.size(16.dp))
+            // Centred on the floor of the card, like the sentence deck's: the
+            // one thing to do with a card whose answer is still hidden.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Visibility, contentDescription = null,
+                    tint = onCardSecondary, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
                 Text(stringResource(R.string.tap_to_check_the_meaning),
-                    style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
-            }
-        }
-    }
-}
-
-/**
- * The four verdicts. At rest they are quiet folder counters; mid-drag they
- * light up as the drop targets — the same row doing both jobs, so nothing on
- * the screen moves when a drag begins.
- */
-@Composable
-private fun BinRow(
-    dragging: Boolean,
-    counts: (DrillBin) -> Int,
-    onBounds: (DrillBin, Rect) -> Unit,
-    onTap: (DrillBin) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DrillBin.entries.forEach { bin ->
-            val emphasis by animateFloatAsState(if (dragging) 1f else 0f, label = "bin")
-            Column(
-                Modifier.weight(1f)
-                    .onGloballyPositioned { onBounds(bin, it.boundsInWindow()) }
-                    .background(
-                        bin.tint.copy(alpha = 0.12f + 0.16f * emphasis),
-                        RoundedCornerShape(12.dp))
-                    .clickable { onTap(bin) }
-                    .padding(vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Icon(bin.icon, contentDescription = null, tint = bin.tint,
-                    modifier = Modifier.size(18.dp))
-                Text(stringResource(if (dragging) bin.titleRes else bin.folderTitleRes),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface)
-                if (!dragging) {
-                    val n = counts(bin)
-                    Text(if (n == 0) "—" else "$n",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                    style = MaterialTheme.typography.bodyLarge, color = onCardSecondary)
             }
         }
     }

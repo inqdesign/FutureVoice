@@ -590,9 +590,11 @@ private fun DrillCardFace(
 }
 
 
-/** The four verdicts — folder counters at rest, drop targets mid-drag. */
+/** The four verdicts — folder counters at rest, drop targets mid-drag.
+ *  Shared with the word/expression deck: one drag must mean one thing, so
+ *  the two decks cannot draw their folders differently. */
 @Composable
-private fun VerdictRow(
+internal fun VerdictRow(
     dragging: Boolean,
     /** The folder the card is over. Only this one lights up. */
     active: DrillBin? = null,
