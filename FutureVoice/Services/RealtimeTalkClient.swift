@@ -303,12 +303,23 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Buffers scheduled but not yet played — non-zero means audio is pending,
     /// which is how playback end is noticed without a completion per chunk.
     private var pendingBuffers = 0
+    /// Reply buffers that have finished PLAYING on this call — see the
+    /// completion handler in `playReplyChunk`.
+    private var playedBuffers = 0
+    /// Reply audio bytes the gateway has sent on this call. Together with
+    /// `playedBuffers` this is "a line is in the air": one says the voice is
+    /// arriving, the other that it is being heard, and neither is the queue
+    /// depth, which a wedged engine keeps climbing forever.
+    private var replyBytesReceived = 0
     /// The server said the line is complete; the moment the local queue
     /// drains after this is when the learner's turn actually begins.
     private var serverAudioEnded = false
     /// Lines the fluent self has started on THIS call — the first one on the
     /// speaker is half-duplex (see `audio_start`).
     private var linesStarted = 0
+    /// The greeting, already synthesized and sitting in `PhraseAudioStore`,
+    /// decoded and waiting for `ready`. See `playLocalOpener`.
+    private var localOpener: (text: String, buffer: AVAudioPCMBuffer, rate: Double)?
 
     private var isTornDown = false
 
@@ -324,6 +335,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// spike testable instead of dead-ending on a deepfake guard doing its job.
     func connect(voiceId: String, language: String, system: String,
                  opener: String? = nil,
+                 openerAudio: URL? = nil,
                  history: [(role: String, text: String)] = [],
                  fallbackVoiceId: String? = nil) async {
         // A failed call is re-enterable (the view's Try again); a live one is
@@ -338,6 +350,10 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         warningsThisCall = 0
         state = .connecting
         linesStarted = 0
+        localOpener = nil
+        playedBuffers = 0
+        replyBytesReceived = 0
+        tapWatchdogStrikes = 0
         pendingRetry = fallbackVoiceId.map {
             Retry(voiceId: $0, language: language, system: system,
                   opener: opener, history: history)
@@ -368,10 +384,35 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 try startAudio()
             }
             Self.step("connect: audio up")
+            // The greeting the launcher already synthesized (see
+            // `FreeTalkOpeners.warmAudio`) is on disk in the learner's own
+            // voice. Play it from there and the gateway is never asked for
+            // it: the line starts when `ready` lands instead of a further
+            // ElevenLabs round trip later, and the pool warm-up finally pays
+            // for itself on this path too. The text still goes up as HISTORY,
+            // so the model knows what it just said.
+            var startOpener = opener
+            var startHistory = history
+            if let openerAudio, let opener, !opener.isEmpty,
+               let decoded = Self.decodeOpener(openerAudio) {
+                localOpener = (opener, decoded.buffer, decoded.rate)
+                startHistory.append((role: "model", text: opener))
+                startOpener = nil
+                Self.step("opener: playing the cached take locally")
+            }
             try openSocket(token: token, voiceId: voiceId,
                            language: language, system: system,
-                           opener: opener, history: history)
+                           opener: startOpener, history: startHistory)
             Self.step("connect: socket opened")
+            // CONCURRENTLY with the gateway's own start-up, never before it.
+            // The gateway spends 2.7–3.6 s on `start` → `ready` (verify, voice
+            // ownership, allowance pre-flight, the transcriber's handshake)
+            // and the opener cannot be spoken before that — so the mic's own
+            // pre-flight is free as long as it runs inside that window, and
+            // pure added wait if it runs in front of it. Measured 2026-09-13:
+            // in front, tap → first word was 8.0 s; inside, the same repair
+            // costs nothing.
+            Task { await self.waitForLiveMic() }
             startMicWatchdog()
         } catch {
             Self.step("connect FAILED: \(error)")
@@ -394,28 +435,101 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
     }
 
-    /// A tap that never fires is invisible: the engine reports running,
-    /// the socket is up, and the call simply never hears anything (device,
-    /// 2026-09-01). Re-install once with the CURRENT format before giving
-    /// up, then say so out loud rather than sitting there looking healthy.
-    private func startMicWatchdog() {
-        Task { @MainActor [weak self] in
-            for attempt in 1...2 {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                guard let self, !self.isTornDown, self.engineRunning else { return }
-                if self.micBytesSent > 0 { return }
-                // A live engine cannot be re-tapped (see `startAudio`), so the
-                // only recovery is to tear the audio stack down and build it
-                // again — which also releases a session another process (or a
-                // SIGKILLed previous run) may still be holding.
-                Self.step("watchdog: no mic buffers (attempt \(attempt)) — restarting audio")
-                self.stopAudio()
-                do { try self.startAudio() } catch {
-                    Self.step("watchdog: restart failed \(error)")
+    /// Don't ask the gateway to speak until the microphone is proven alive.
+    ///
+    /// Measured on device 2026-09-13, earphones connecting as the call opened:
+    /// the audio stack was built three times in the first five seconds, and
+    /// the build the OPENER landed on had a tap that never fired. The only
+    /// cure for that build was another rebuild — which happened, 2.1 s into
+    /// the greeting, and took the greeting with it (a reply chunk arriving
+    /// while the engine is down is dropped from playback). The learner heard
+    /// nothing at all, twice in a row.
+    ///
+    /// A rebuild HERE costs silence nobody is listening to: it runs inside the
+    /// gateway's own 2.7–3.6 s start-up, before the opener can be spoken. It
+    /// is deliberately started and NOT awaited for that reason — in front of
+    /// the socket it was 2.7 s of pure wait on the first word (measured
+    /// 2026-09-13, tap → voice 8.0 s). Bounded at roughly 2.5 s; past that
+    /// the call runs on and the watchdogs take over, because a call that
+    /// never starts is worse than one whose first line is deaf.
+    private func waitForLiveMic() async {
+        for attempt in 1...2 {
+            for _ in 0..<12 {
+                if Self.buffersSinceBuild > 0 {
+                    if attempt > 1 { Self.step("pre-flight: mic alive after rebuild") }
                     return
                 }
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                if isTornDown { return }
             }
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard attempt == 1 else { break }
+            // A line is already in the air — the gateway was faster than this
+            // repair. Rebuilding now would drop the greeting's audio, which is
+            // the very thing this exists to protect; hand it to the tap
+            // watchdog, which waits the line out and then rebuilds in silence.
+            guard state != .speaking, replyBytesReceived == 0 else {
+                Self.step("pre-flight: a line is already playing — leaving it to the watchdog")
+                return
+            }
+            Self.step("pre-flight: no mic buffers — rebuilding before the call opens")
+            stopAudio()
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !isTornDown else { return }
+            do { try startAudio() } catch {
+                Self.step("pre-flight: rebuild failed \(error)")
+                return
+            }
+        }
+        Self.step("pre-flight: opening the call with a silent tap — watchdog owns it now")
+    }
+
+    /// How long a call may go without putting ONE mic byte on the wire
+    /// before it is called deaf. Generous on purpose: this is the last word,
+    /// not the recovery — `armTapWatchdog` has already rebuilt the stack up
+    /// to three times by the time it runs out.
+    private static let micDeadlineSeconds: TimeInterval = 12
+
+    /// A tap that never fires is invisible: the engine reports running, the
+    /// socket is up, and the call simply never hears anything (device,
+    /// 2026-09-01). This is the CALL-level deadline for exactly that — one
+    /// number, and NO recovery of its own.
+    ///
+    /// It used to restart the whole audio stack twice, at 1.5 s and at 3 s,
+    /// and that is what a learner met on 2026-09-13: the opener's text on
+    /// screen, no voice at all, then "the call dropped" five seconds in
+    /// (three times on build 45, every one of them `mic_bytes=0`). Each
+    /// restart tears the session down, and a reply chunk that arrives while
+    /// the engine is down is DROPPED from playback (`playReplyChunk`) — so
+    /// the churn ate precisely the line the call opens with, while a cold
+    /// voice-processing unit that needed more than 1.5 s to deliver its
+    /// first buffer was killed twice before it could. Two watchdogs restarting
+    /// the same stack on two different clocks could also interleave, each
+    /// undoing the other's build.
+    ///
+    /// Recovery now belongs to `armTapWatchdog` alone: one owner, per build,
+    /// and never while the fluent self is audible.
+    private func startMicWatchdog() {
+        Task { @MainActor [weak self] in
+            var waited: TimeInterval = 0
+            var lastPlayed = 0
+            var lastBytes = 0
+            while waited < Self.micDeadlineSeconds {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                waited += 1
+                guard let self, !self.isTornDown else { return }
+                if self.micBytesSent > 0 { return }
+                // A line in the air is not a deaf call: the first one is
+                // half-duplex by design (see `audio_start`), so an empty
+                // uplink is expected for as long as it plays. Don't spend the
+                // deadline on the greeting — measured as audio ARRIVING or
+                // being HEARD, never as queue depth, which a wedged engine
+                // keeps climbing forever.
+                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes {
+                    lastPlayed = self.playedBuffers
+                    lastBytes = self.replyBytesReceived
+                    waited = 0
+                }
+            }
             guard let self, !self.isTornDown, self.micBytesSent == 0 else { return }
             self.fail("mic_silent", "The microphone isn't sending any audio. Close and reopen the call.")
         }
@@ -449,13 +563,38 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// is the launch-week bug in one sentence.
     private func fail(_ code: String, _ message: String) {
         lastFailureCode = code
-        Telemetry.log("talk_rt_failed", [
-            "code": code,
-            "message": String(message.prefix(200)),
-            "turns": String(lines.count),
-            "mic_bytes": String(micBytesSent),
-        ])
+        var props = audioFacts()
+        props["code"] = code
+        props["message"] = String(message.prefix(200))
+        props["turns"] = String(lines.count)
+        props["mic_bytes"] = String(micBytesSent)
+        Telemetry.log("talk_rt_failed", props)
         state = .failed(message)
+    }
+
+    /// What the audio stack looked like at the moment it gave up.
+    ///
+    /// A call that ends deaf leaves nothing else behind: the `step` trace is
+    /// DEBUG-only, so the three `mic_silent` rows of 2026-09-13 could say
+    /// that no byte went upstream and not one thing about WHY — whether the
+    /// tap fired at all, which mic the route was on, or whether anything was
+    /// even playing. Every field here is free to read and is the difference
+    /// between a diagnosis and another guess.
+    private func audioFacts() -> [String: String] {
+        let session = AVAudioSession.sharedInstance()
+        return [
+            "engine_up": engineRunning ? "1" : "0",
+            "engine_running": engine.isRunning ? "1" : "0",
+            "tap_buffers": String(Self.buffersSinceBuild),
+            "builds": String(buildEpoch),
+            "route_in": session.currentRoute.inputs.first?.portType.rawValue ?? "none",
+            "route_out": session.currentRoute.outputs.first?.portType.rawValue ?? "none",
+            "in_ch": String(session.inputNumberOfChannels),
+            "sample_rate": String(Int(session.sampleRate)),
+            "other_audio": session.isOtherAudioPlaying ? "1" : "0",
+            "queued_buffers": String(pendingBuffers),
+            "played_buffers": String(playedBuffers),
+        ]
     }
 
     /// Hang up: tells the gateway, then tears the local side down.
@@ -838,14 +977,46 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // once and stood down forever — the very next freeze sailed past
             // it (2026-09-01). Progress since the LAST check is the test.
             var lastCount = 0
+            var lastPlayed = 0
+            var lastBytes = 0
+            // The FIRST check gets longer. A cold voice-processing unit —
+            // every call's first build since the classic warm-up stopped
+            // pre-arming the session — can take over two seconds to hand out
+            // its first buffer, and rebuilding it then is how a healthy call
+            // was turned into a silent one (2026-09-13).
+            var due: UInt64 = 3_000_000_000
             while true {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                try? await Task.sleep(nanoseconds: due)
                 guard !Task.isCancelled, let self, !self.isTornDown,
                       self.buildEpoch == epoch, self.engineRunning else { return }
                 let count = Self.buffersSinceBuild
+                // A build that has never produced a buffer is the dangerous
+                // state, and the rebuild that cures it has to wait out the
+                // line playing over it — so once a line ends, take the next
+                // look quickly rather than leaving the call deaf for another
+                // two seconds.
+                due = count == 0 ? 1_000_000_000 : 2_000_000_000
                 if count > lastCount {
                     lastCount = count
                     self.tapWatchdogStrikes = 0
+                    continue
+                }
+                // NEVER tear the stack down while a line is in the air. A
+                // rebuild drops every reply chunk that lands while the engine
+                // is down, so a mic problem would be paid for with the one
+                // thing that IS working — and the call's first line is
+                // half-duplex anyway, so there is nothing upstream to lose by
+                // waiting for it to finish. Measured on device 2026-09-13:
+                // this watchdog fired 2.1 s into the opener, rebuilt the
+                // stack, and the learner heard no greeting at all.
+                //
+                // "In the air" is audio ARRIVING or being HEARD since the last
+                // check — never the queue depth, which a wedged engine keeps
+                // climbing forever. Both stop when the line does, so the
+                // rebuild this defers happens a beat later, in silence.
+                if self.playedBuffers > lastPlayed || self.replyBytesReceived > lastBytes {
+                    lastPlayed = self.playedBuffers
+                    lastBytes = self.replyBytesReceived
                     continue
                 }
                 guard self.tapWatchdogStrikes < 3 else {
@@ -985,6 +1156,104 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         return format
     }
 
+    /// Decode a cached greeting into one PCM buffer the player can take.
+    ///
+    /// `AVAudioFile.processingFormat` is float32, deinterleaved, at the file's
+    /// own rate — the same shape `connectPlayer` uses — so a mono take needs
+    /// no conversion. Anything else (a stereo file, an unreadable one) returns
+    /// nil and the caller simply lets the gateway speak the line as before.
+    private static func decodeOpener(_ url: URL) -> (buffer: AVAudioPCMBuffer, rate: Double)? {
+        guard let file = try? AVAudioFile(forReading: url) else { return nil }
+        let format = file.processingFormat
+        guard format.channelCount == 1, format.commonFormat == .pcmFormatFloat32,
+              file.length > 0, file.length < 48000 * 60,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format,
+                                            frameCapacity: AVAudioFrameCount(file.length))
+        else { return nil }
+        do { try file.read(into: buffer) } catch { return nil }
+        guard buffer.frameLength > 0 else { return nil }
+        return (buffer, format.sampleRate)
+    }
+
+    /// Speak the greeting from the phrase cache, the moment the gateway says
+    /// the call is up.
+    ///
+    /// Measured 2026-09-13: tap → first word was 4.4 s on a healthy call, of
+    /// which ~1 s was the gateway asking ElevenLabs for a line the phone had
+    /// already had on disk since the Talk tab was opened. The allowance
+    /// pre-flight still runs in front of this — `ready` is what triggers it —
+    /// so a spent month is still told before the fluent self says a word.
+    ///
+    /// Everything else about the line is identical to a streamed one: the same
+    /// echo gate, the same loudness law, the same hand-off to the call screen
+    /// with its audio, so Replay and the book see no difference.
+    private func playLocalOpener() {
+        guard let opener = localOpener, engineRunning else { return }
+        localOpener = nil
+        let buffer = opener.buffer
+        guard let samples = buffer.floatChannelData?[0] else { return }
+        let frames = Int(buffer.frameLength)
+
+        linesStarted += 1
+        let context = "opener-\(UUID().uuidString)"
+        replyContext = context
+        replyText = opener.text
+        replyPCM = Data()
+        onReplyBegan?(context)
+        onReplyDelta?(context, "\u{0}" + opener.text)
+
+        // Same rule as `audio_start`: the call's first line on the open
+        // speaker is half-duplex, because the echo canceller has not heard
+        // the voice yet and cannot cancel what it has never heard.
+        let halfDuplex = builtOutput == AVAudioSession.Port.builtInSpeaker.rawValue
+        mic.setEchoGate(active: true, halfDuplex: halfDuplex)
+        state = .speaking
+        replySampleRate = opener.rate
+        ensurePlaybackFormat(rate: opener.rate)
+
+        // The same loudness law every streamed line goes through — without it
+        // the greeting plays at whatever level ElevenLabs rendered it, next to
+        // replies that are levelled ("인사말만 크고 나머지는 안 들리던" in reverse).
+        updateStreamGain(samples: samples, count: frames)
+        if streamGain != 1 {
+            for i in 0..<frames {
+                samples[i] = max(-0.985, min(0.985, samples[i] * streamGain))
+            }
+        }
+        // Keep the take for Replay, in the Int16 form `handOverReply` expects.
+        var ints = [Int16](repeating: 0, count: frames)
+        for i in 0..<frames {
+            ints[i] = Int16(max(-32768, min(32767, samples[i] * 32767))).littleEndian
+        }
+        replyPCM = ints.withUnsafeBufferPointer { Data(buffer: $0) }
+
+        pendingBuffers += 1
+        mic.markPlaybackStarted()
+        serverAudioEnded = true   // nothing more is coming for this line
+        let scheduled = Self.avGuard("scheduleOpener") {
+            self.player.scheduleBuffer(buffer, completionCallbackType: .dataPlayedBack) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    self.pendingBuffers = max(0, self.pendingBuffers - 1)
+                    self.playedBuffers += 1
+                    guard self.replyContext == context else { return }
+                    self.level = 0
+                    self.closeEchoGateAfterTail()
+                    if self.state == .speaking { self.state = .listening }
+                    self.handOverReply()
+                }
+            }
+        }
+        if !scheduled {
+            // The player refused it — fall back to the state the call would
+            // have been in, and let the learner speak first.
+            pendingBuffers = max(0, pendingBuffers - 1)
+            state = .listening
+            mic.setEchoGate(active: false)
+            handOverReply()
+        }
+    }
+
     /// Connect (or re-connect) the player node at `rate`. The engine resamples
     /// into the mixer, so any rate is playable — what matters is that the
     /// connection format and the scheduled buffers agree.
@@ -1031,6 +1300,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// so the wire write stays here too; only the meter — a single Float —
     /// crosses over.
     private nonisolated func handleMicBuffer(_ buffer: AVAudioPCMBuffer) {
+        // Counted FIRST, before the uplink is even required: this number
+        // answers "is the microphone alive", and `connect` asks it before the
+        // socket exists (see the pre-flight there). Counting it after the
+        // guard made a live tap indistinguishable from a dead one for the
+        // whole setup window.
+        Self.buffersSinceBuild += 1
+        if !Self.sawFirstBuffer {
+            Self.sawFirstBuffer = true
+            Self.step("tap: FIRST buffer \(buffer.frameLength)@\(Int(buffer.format.sampleRate))")
+        }
         guard let (converter, uplink, socket) = mic.current() else {
             Self.trace("tap: no uplink yet")
             return
@@ -1047,11 +1326,6 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 ints[i] = Int16(max(-32768, min(32767, floats[i] * 32767)))
             }
             nativeCopy = ints.withUnsafeBufferPointer { Data(buffer: $0) }
-        }
-        Self.buffersSinceBuild += 1
-        if !Self.sawFirstBuffer {
-            Self.sawFirstBuffer = true
-            Self.step("tap: FIRST buffer \(buffer.frameLength)@\(Int(buffer.format.sampleRate))")
         }
         Self.trace("tap: in=\(buffer.frameLength)@\(Int(buffer.format.sampleRate))")
         let ratio = uplink.sampleRate / buffer.format.sampleRate
@@ -1212,6 +1486,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         case "ready":
             Self.step("gateway: ready")
             state = .listening
+            playLocalOpener()
         case "user_partial":
             let text = json["text"] as? String ?? ""
             // Every interim, stamped: how far behind the mouth the on-screen
@@ -1525,6 +1800,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // back silent (reported 2026-09-01). Capture first, then play what
         // the graph can take.
         replyPCM.append(data)
+        replyBytesReceived += data.count
         guard engineRunning else { return }
         // Schedule in EXACTLY the format the node is connected with. A
         // mismatch is an uncatchable ObjC exception, so a chunk that arrives
@@ -1554,6 +1830,12 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     self.pendingBuffers = max(0, self.pendingBuffers - 1)
+                    // Monotonic, and the only honest proof that audio is
+                    // reaching the speaker: a wedged engine still accepts
+                    // scheduled buffers (`pendingBuffers` climbs) and plays
+                    // none of them, so the watchdogs below measure progress
+                    // here rather than in the queue depth.
+                    self.playedBuffers += 1
                     if self.pendingBuffers == 0, self.serverAudioEnded {
                         // The last scheduled audio has been HEARD — only now
                         // may the echo gate come down (plus the room's tail).

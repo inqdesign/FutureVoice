@@ -1,2 +1,2 @@
-The app now speaks Japanese, Chinese (Traditional and Simplified), Spanish and French.
-Pick your app language when you start.
+Calls start faster.
+Fixed the greeting sometimes not being heard.

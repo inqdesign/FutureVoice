@@ -445,6 +445,54 @@ admin console's 통화가 어떻게 끝났나 panel reads it from (`rt_sessions`
 `rt_reasons` in `admin_raw()`, `20260913080000`). An older client ignores the
 new messages, so the gateway can deploy ahead of an app build.
 
+**The greeting is played from the phrase cache, and the gateway is never
+asked for it** (2026-09-13). The Talk launcher already synthesizes every pool
+opener into `PhraseAudioStore` (`FreeTalkOpeners.warmAudio`) — and the realtime
+path ignored all of it, so the first word waited on the gateway's own
+ElevenLabs round trip for a line the phone had had on disk since the tab was
+opened. `connect(openerAudio:)` decodes that take and `playLocalOpener` speaks
+it the moment `ready` lands; the text goes up in `history` instead of
+`start.opener`, so the gateway records what was said and stays silent — no
+protocol change. A cache miss or an undecodable file is a nil and the gateway
+speaks it exactly as before. The line is otherwise identical to a streamed one
+(same echo gate, same `AudioLoudness` levelling, same hand-off with audio), so
+Replay and the book can't tell. **It waits for `ready` on purpose**: the
+allowance pre-flight runs in front of that, and a spent month must be told
+before the fluent self says a word. Measured on device: tap → first word 4.4 s
+→ 2.8 s, and the remaining wait is now almost entirely the gateway's
+`start` → `ready`.
+
+**Nothing in front of the first word may be serial if it doesn't have to be**
+(2026-09-13, `gateway/src/session.ts`). `start` ran verify → ownsVoice →
+allowance pre-flight (~1 s) → the transcriber's Gemini Live handshake → `ready`
+→ opener, and every hop of it was silence the learner sat through. The voice
+check and the pre-flight are independent round trips (`Promise.all`), and the
+transcriber's handshake is no longer awaited before the greeting — nobody can
+answer a question that hasn't been asked, mic audio arriving meanwhile is
+buffered (`pendingAudio`, ~5 s) and flushed on setup. `ready` still goes out
+BEFORE `audio_start`: the app reads it as connecting → listening and would
+otherwise overwrite the speaking state the opener just set, leaving the line
+with no hand-off.
+
+**The audio stack is never rebuilt while the fluent self is AUDIBLE, and
+exactly one thing may rebuild it** (2026-09-13). Two watchdogs were restarting
+it on two clocks — `startMicWatchdog` at 1.5 s and 3 s from connect, the
+per-build `armTapWatchdog` every 2 s — and a restart drops every reply chunk
+that lands while the engine is down (`playReplyChunk` guards on
+`engineRunning`; the bytes are kept for Replay, not for the speaker). So the
+churn ate the one line a call opens with: the learner got the opener's TEXT,
+no voice at all, then "the call dropped" five seconds in (three times on
+build 45, every one `mic_bytes=0`). A cold voice-processing unit needing more
+than 1.5 s for its first buffer was killed twice before it could deliver one.
+Now `armTapWatchdog` owns recovery alone (first check at 3 s, then 2 s, three
+restarts, then `mic_silent`), `startMicWatchdog` is a passive 12 s deadline,
+and both DEFER while audio is playing — measured as `playedBuffers`, buffers
+that finished playing, never as queue depth, because a wedged engine accepts
+buffers forever and plays none. `fail(_:_:)` now ships `audioFacts()` with
+every failure (route in/out, input channels, engine running, tap buffers,
+builds, played/queued) — the three `mic_silent` rows could say no byte went
+upstream and nothing whatsoever about why.
+
 **The end-of-talk summary gets its own URLSession** (`edgeFunctionsLong`, 240 s
 ceiling) and retries once on a timeout. `edgeFunctions` caps every attempt at
 60 s; on 2026-09-12 a summary finished server-side at **63 s**, the app called

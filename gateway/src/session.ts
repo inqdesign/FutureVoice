@@ -329,9 +329,6 @@ export class CallSession implements DurableObject {
     if (this.env.DEV_ALLOW_ANON !== "1") {
       const userId = msg.token ? await verifyUser(this.env, msg.token) : null
       if (!userId) return this.fail("unauthorized", "invalid session token")
-      if (!(await ownsVoice(this.env, userId, msg.voiceId))) {
-        return this.fail("voice_forbidden", "voice_id not permitted")
-      }
       // The gateway meters the call itself — a client that never ticks
       // still pays (the classic path's talk-tick is client-driven, which
       // was the one bypass left on this path). Same billable rule as
@@ -363,8 +360,18 @@ export class CallSession implements DurableObject {
         },
       )
       // Preflight 1 s — an empty allowance must surface BEFORE the greeting
-      // speaks, not a free minute later (same rule as the classic path).
-      const wall = await this.billing.preflight()
+      // speaks, not a free minute later (same rule as the classic path). It
+      // is asked CONCURRENTLY with the voice-ownership check: the two are
+      // independent round trips and the learner waits for both before hearing
+      // a word. Everything on this path is in front of the greeting, so every
+      // serial hop here is a second of silence after the tap.
+      const [owns, wall] = await Promise.all([
+        ownsVoice(this.env, userId, msg.voiceId),
+        this.billing.preflight(),
+      ])
+      if (!owns) {
+        return this.fail("voice_forbidden", "voice_id not permitted")
+      }
       if (wall) {
         this.endReason ??= wall
         this.emit({ type: "error", code: wall, message: "talk allowance spent" })
@@ -481,7 +488,13 @@ export class CallSession implements DurableObject {
       },
     )
 
-    await this.transcriber.connect()
+    // The transcriber's handshake is NOT awaited before the greeting. It is
+    // the last serial hop in front of the first word (measured from the app,
+    // 2026-09-13: `start` → `ready` was 2.7–3.6 s, and the opener follows it),
+    // and the greeting does not need it — nobody can answer a question that
+    // has not been asked yet, and the line takes seconds to play. So it
+    // handshakes while ElevenLabs is rendering the opener.
+    const transcriberReady = this.transcriber.connect()
     // The first reply's TTS must not pay the ElevenLabs TLS + WS handshake
     // mid-turn — open the socket now, while the learner is still greeting.
     this.eleven.warm()
@@ -489,6 +502,9 @@ export class CallSession implements DurableObject {
     this.sessionStartedAt = Date.now()
     this.armIdleHangUp()
     this.startWatchdog()
+    // `ready` still goes out BEFORE `audio_start`: the app reads it as
+    // "connecting → listening" and would otherwise overwrite the speaking
+    // state the opener just set, leaving the line with no hand-off.
     this.emit({ type: "ready" })
     // The fluent self speaks first, exactly as a phone call does. Sent
     // through the normal reply path so the client needs no special case,
@@ -496,6 +512,10 @@ export class CallSession implements DurableObject {
     if (msg.opener && msg.opener.trim().length > 0) {
       this.speakOpener(msg.opener.trim())
     }
+    // Mic audio arriving before this resolves is BUFFERED by the transcriber
+    // (`pendingAudio`, 50 chunks ≈ 5 s) and flushed when its setup lands, so
+    // nothing the learner says over the greeting is lost.
+    await transcriberReady
 
     this.statsTimer = setInterval(() => {
       this.emit({

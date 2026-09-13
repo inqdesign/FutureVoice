@@ -2172,6 +2172,15 @@ struct ConversationView: View {
             language: appState.targetLanguage,
             system: systemPrompt() + Self.realtimeStyleRules,
             opener: opener,
+            // The launcher warms every pool greeting's TTS into the phrase
+            // cache (`FreeTalkOpeners.warmAudio`), so the line is usually
+            // already here in the learner's own voice — the client plays it
+            // the moment the call is up instead of waiting on the gateway's
+            // own round trip for a line the phone already has. A miss is a
+            // nil and the gateway speaks it exactly as before.
+            openerAudio: opener.flatMap {
+                PhraseAudioStore.shared.url(text: $0, voiceId: voiceId)
+            },
             // A resumed talk carries its history so the fluent self knows what
             // was already said.
             history: turns.map { (role: $0.role == .user ? "user" : "model",
