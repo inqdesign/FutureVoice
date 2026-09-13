@@ -1,5 +1,21 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -71,7 +87,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Phone
@@ -93,7 +108,6 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Science
@@ -839,28 +853,29 @@ private fun HomeScreen(
 
     Scaffold(
         topBar = {
-            // CENTER-aligned: the streak is the one Today stat that lives up
-            // here and it holds the MIDDLE (iOS puts it in `.principal`). A
-            // plain TopAppBar left-aligns its title, which clustered the
-            // streak against the language chip and left the bar lopsided.
-            CenterAlignedTopAppBar(
-                colors = AppSurfaces.topBarColors(),
-                // No title on Talk: the hero's time-of-day question IS the
-                // greeting, and a title above it doubled it (iOS). The bar
-                // carries just the controls — language · streak · account.
-                title = {
-                    if (tab == HomeTab.TALK) StreakChip(
-                        language = state.targetLanguage, onClick = onOpenActivity)
-                    else Text(stringResource(tab.label))
-                },
-                navigationIcon = {
-                    if (tab == HomeTab.TALK) {
+            if (tab == HomeTab.TALK) {
+                // CENTER-aligned on Talk only: the streak is the one Today
+                // stat that lives up here and it holds the MIDDLE (iOS puts it
+                // in `.principal`). A plain TopAppBar left-aligns its title,
+                // which clustered the streak against the language chip and
+                // left the bar lopsided.
+                CenterAlignedTopAppBar(
+                    colors = AppSurfaces.topBarColors(),
+                    // No title on Talk: the hero's time-of-day question IS the
+                    // greeting, and a title above it doubled it (iOS). The bar
+                    // carries just the controls — language · streak · account.
+                    title = { StreakChip(language = state.targetLanguage, onClick = onOpenActivity) },
+                    navigationIcon = {
                         // The language being practised, and the way to change
                         // it. It used to be a label that opened Me, which is
-                        // three taps from the thing it names.
+                        // three taps from the thing it names. The CODE, not the
+                        // endonym: iOS puts a globe and two letters here, and an
+                        // endonym ("English", "Deutsch") is as wide as the
+                        // streak chip it sits beside.
                         var languageMenu by remember { mutableStateOf(false) }
                         Box {
-                            HeaderButton(LanguageCatalog.endonym(state.targetLanguage),
+                            HeaderButton(state.targetLanguage.uppercase(),
+                                icon = Icons.Filled.Language,
                                 onClick = { languageMenu = true })
                             DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
                                 state.enrolledLanguages.forEach { code ->
@@ -881,25 +896,37 @@ private fun HomeScreen(
                                     onClick = { languageMenu = false; onAddLanguage() })
                             }
                         }
-                    }
-                },
-                actions = {
-                    // The people page opens from the WATCH header, as on iOS.
-                    if (tab == HomeTab.WATCH) {
-                        IconButton(onClick = onOpenPeople) {
-                            Icon(Symbols.icon("person.2"),
-                                contentDescription = stringResource(R.string.people))
-                        }
-                    }
-                    if (tab == HomeTab.TALK) {
+                    },
+                    actions = {
                         // The learner's own face opens their own page — iOS's
                         // header control, not a text label.
-                        IconButton(onClick = onOpenMe) {
-                            ProfileAvatar(initials = state.persona?.displayName.orEmpty(), size = 30.dp)
+                        HeaderAvatar(initials = state.persona?.displayName.orEmpty(),
+                            onClick = onOpenMe)
+                    },
+                )
+            } else {
+                // Every other tab carries iOS's `.inlineLarge` title: big,
+                // LEFT-aligned, in the display face. Centred and at label size
+                // it read as a toolbar caption rather than the page's name.
+                TopAppBar(
+                    colors = AppSurfaces.topBarColors(),
+                    title = {
+                        val title = stringResource(tab.label)
+                        Text(title, style = DisplayFace.style(title,
+                            MaterialTheme.typography.headlineMedium))
+                    },
+                    actions = {
+                        // The people page opens from the WATCH header, as on iOS.
+                        if (tab == HomeTab.WATCH) {
+                            IconButton(onClick = onOpenPeople) {
+                                Icon(Symbols.icon("person.2"),
+                                    contentDescription = stringResource(R.string.people),
+                                    tint = MaterialTheme.colorScheme.primary)
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            }
         },
         bottomBar = {
             NavigationBar {
@@ -938,7 +965,18 @@ private fun HomeScreen(
                         onTap = { launch("", emptyList()) },
                         onOpenActivity = onOpenActivity,
                     )
-                    if (personaNeedsDepth(state.persona)) {
+                    // Before the first talk the page explains itself; after it,
+                    // the only card above Discover is the one asking for the
+                    // learner's life. Never both — iOS's `else if`.
+                    val revision by StoreEvents.revision.collectAsStateWithLifecycle()
+                    var talkCount by remember { mutableStateOf(-1) }
+                    LaunchedEffect(state.targetLanguage, revision) {
+                        talkCount = com.roro.futurevoice.data.SessionStore.shared(context)
+                            .load(state.targetLanguage).count { it.endedAt != null }
+                    }
+                    if (talkCount == 0) {
+                        FirstRunCard()
+                    } else if (personaNeedsDepth(state.persona)) {
                         DeepenRow(onClick = { showDeepen = true })
                     }
                     // One Discover section, two chips — what to talk about
@@ -1062,8 +1100,10 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
         ))
         Text(
             line,
-            // The display face — the brand's voice, not the reading font.
-            style = DisplayFace.style(line, MaterialTheme.typography.headlineSmall),
+            // The display face — the brand's voice, not the reading font. Big
+            // (iOS draws it at 28pt): it is the page's only greeting, and the
+            // ring under it is the only other thing in the first viewport.
+            style = DisplayFace.style(line, MaterialTheme.typography.headlineMedium),
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.weight(1f))
@@ -1084,9 +1124,12 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
             // left the ring an unlabelled ornament and the number homeless.
             Column(horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                val label = stringResource(R.string.lets_talk)
+                // `let_s_talk` (the shared catalog), not the Android-only
+                // `lets_talk`: the two had drifted into different Korean, and
+                // this string is the one word both platforms print.
+                val label = stringResource(R.string.let_s_talk)
                 Text(label, style = DisplayFace.style(label,
-                    MaterialTheme.typography.titleMedium))
+                    MaterialTheme.typography.titleLarge))
                 Text(
                     (if (seconds > 0) com.roro.futurevoice.data.TalkTime.clock(seconds) else stringResource(R.string.today_s_goal_lld_min, goalMinutes)),
                     style = MaterialTheme.typography.labelMedium,
@@ -1094,24 +1137,39 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
                 )
             }
         }
-        // Before the first conversation the ring is an unexplained circle.
-        // Say what it is and what it leads to, once.
-        if (sessionCount == 0) {
-            Column(Modifier.padding(horizontal = 32.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.your_fluent_self_is_ready),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_d9b4f5),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center)
-            }
-        }
         // Breathing room under the ring — close enough to invite the scroll,
         // far enough not to crowd it.
         Spacer(Modifier.height(RING_TAIL))
+    }
+}
+
+/**
+ * Under the hero before the first conversation — what the ring is, and that
+ * everything below it is a way in (iOS `firstRunCard`).
+ *
+ * A CARD on the page grid, not centred prose inside the hero: it belongs to
+ * the list it explains, and floating loose under the ring it read as a
+ * caption on the ring itself.
+ */
+@Composable
+private fun FirstRunCard() {
+    Column(
+        Modifier.fillMaxWidth()
+            .background(AppSurfaces.card, RoundedCornerShape(20.dp))
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Filled.GraphicEq, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+            Text(stringResource(R.string.your_fluent_self_is_ready),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold)
+        }
+        Text(stringResource(R.string.tap_let_s_talk_or_a_scenario_or_story_below_to_have_your_fir_d9b4f5),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -1304,6 +1362,13 @@ private fun DiscoverSection(
             SegmentChip(stringResource(R.string.scenarios), !newsTab) { newsTab = false }
             Spacer(Modifier.weight(1f))
             if (newsTab) {
+                // Interests FIRST, then refresh — iOS's order, and the one that
+                // reads left to right: what the stories are about, then get
+                // more of them.
+                IconButton(onClick = { editingInterests = true }) {
+                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.edit_interests),
+                        tint = MaterialTheme.colorScheme.primary)
+                }
                 if (loading) {
                     CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else if (topics.isNotEmpty()) {
@@ -1322,14 +1387,17 @@ private fun DiscoverSection(
                             store.markSeen(topics.map { it.title }, interests, language)
                             fetchNews(true)
                         }
-                    }) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.refresh)) }
-                }
-                IconButton(onClick = { editingInterests = true }) {
-                    Icon(Icons.Filled.Tune, contentDescription = stringResource(R.string.interests))
+                    }) {
+                        Icon(Icons.Filled.Refresh,
+                            contentDescription = stringResource(R.string.refresh_stories),
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
             } else {
                 IconButton(onClick = { composing = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.make_your_own_situation))
+                    Icon(Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.make_your_own_situation),
+                        tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -1340,7 +1408,6 @@ private fun DiscoverSection(
             DiscoverRow(
                 title = stringResource(R.string.add_interests),
                 icon = Icons.Filled.Add,
-                accent = Books.topics,
                 onClick = { editingInterests = true },
             )
         } else if (newsTab && topics.isEmpty()) {
@@ -1359,7 +1426,6 @@ private fun DiscoverSection(
                 DiscoverRow(
                     title = stringResource(R.string.load_stories),
                     icon = Icons.Filled.Newspaper,
-                    accent = Books.topics,
                     onClick = { scope.launch { fetchNews(true) } },
                 )
             }
@@ -1368,9 +1434,11 @@ private fun DiscoverSection(
             topics.forEach { topic ->
                 DiscoverRow(
                     title = topic.title,
-                    caption = topic.category,
+                    // Capitalized, like iOS: the pool writes categories in
+                    // lower case ("ai / tech") and a caption is a label.
+                    caption = topic.category
+                        ?.replaceFirstChar { it.titlecase(java.util.Locale.getDefault()) },
                     icon = categoryIcon(topic.category),
-                    accent = Books.topics,
                     onClick = if (enabled) ({ onPickNews(topic) }) else null,
                 )
             }
@@ -1396,7 +1464,6 @@ private fun DiscoverSection(
                         // The icon the categorizer picked for this scenario —
                         // a fixed pin made every scenario look like a place.
                         icon = Symbols.icon(sc.categoryIcon),
-                        accent = Books.scenarios,
                         onClick = null,
                         modifier = Modifier.combinedClickable(
                             onClick = {
@@ -1432,7 +1499,6 @@ private fun DiscoverSection(
                     title = stringResource(R.string.all_scenarios),
                     caption = "${live.size}",
                     icon = Icons.Filled.Layers,
-                    accent = Books.scenarios,
                     onClick = onAllScenarios,
                 )
             }
@@ -1440,7 +1506,6 @@ private fun DiscoverSection(
                 DiscoverRow(
                     title = stringResource(R.string.make_your_own_situation),
                     icon = Icons.Filled.Add,
-                    accent = Books.scenarios,
                     onClick = { composing = true },
                 )
             }
@@ -1478,14 +1543,22 @@ private fun categoryIcon(category: String?): androidx.compose.ui.graphics.vector
     }
 }
 
-/** Days in a row with metered talk — the one Today stat that lives up here. */
+/**
+ * Days in a row with metered talk — the one Today stat that lives up here,
+ * and the ONLY way into the activity calendar.
+ *
+ * It used to hide itself entirely until a streak existed, to avoid printing a
+ * zero at someone. That was right about the number and wrong about the button:
+ * the chip is also the navigation, so the learner most likely to be looking
+ * for where they stand had no route to the page at all. It is always here now
+ * and only its CONTENTS change; no zero is ever shown.
+ */
 @Composable
 private fun StreakChip(language: String, onClick: () -> Unit) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var days by remember { mutableStateOf(0) }
     LaunchedEffect(revision) { days = TalkTimeLog.streakDays(context) }
-    if (days <= 0) return
     // A capsule, and tappable: the streak is a claim about a history, so it
     // opens the record rather than asking to be taken on trust.
     Row(
@@ -1497,11 +1570,80 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Icon(Icons.Filled.LocalFireDepartment, contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-        Text("$days", style = MaterialTheme.typography.labelLarge)
+        Icon(
+            if (days > 0) Icons.Filled.LocalFireDepartment else Icons.Filled.CalendarMonth,
+            contentDescription = null,
+            tint = if (days > 0) MaterialTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp))
+        Text(
+            if (days > 0) stringResource(R.string.lld_day_streak_94de2a, days)
+            else stringResource(R.string.activity),
+            style = MaterialTheme.typography.labelLarge)
     }
 }
+
+/**
+ * The learner's face, with what's left of the month's talk pool drawn around
+ * it (iOS `headerControl`): full pool = empty ring, the arc growing clockwise
+ * from 12 o'clock as minutes are spent. No digits — a month-long balance must
+ * not become a meter, and the exact figures live one tap away in Me.
+ *
+ * NOT drawn on Plus: an hour a day is a pool that tier will almost never
+ * approach, so the arc would sit near-empty all month, and a gauge that never
+ * moves is decoration on the one tier that paid its way out of counting.
+ */
+@Composable
+private fun HeaderAvatar(initials: String, onClick: () -> Unit) {
+    var account by remember { mutableStateOf<AccountStatus?>(null) }
+    LaunchedEffect(Unit) {
+        runCatching { AccountStatus.load(AuthRepository()) }.getOrNull()?.let {
+            BillingGate.remember(it)
+            account = it
+        }
+    }
+    IconButton(onClick = onClick) {
+        val a = account
+        if (a != null && !a.isPlusPlan && (a.monthlyCapSeconds != null || !a.isEntitled)) {
+            // The full tank is this account's own pool, never a constant: the
+            // period's cap for a subscriber, the signup grant otherwise.
+            val cap = a.monthlyCapSeconds?.takeIf { a.isEntitled }
+            val tank = cap ?: FREE_GRANT_SECONDS
+            val left = if (cap != null) (cap - a.secondsUsedPeriod).coerceAtLeast(0)
+            else a.secondsBalance.coerceAtLeast(0)
+            val used = 1f - (left.toFloat() / tank.coerceAtLeast(1)).coerceIn(0f, 1f)
+            // The track is a GROOVE for the arc to sit in — at full strength it
+            // read as a second ring competing with the accent one.
+            val track = MaterialTheme.colorScheme.surfaceVariant
+            val arc = MaterialTheme.colorScheme.primary
+            Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val w = 3.dp.toPx()
+                    // Inset by half the stroke so the ring stays INSIDE the
+                    // 30dp slot — a centred stroke overhangs it and the header
+                    // clips the arc's caps flat.
+                    val box = Size(size.width - w, size.height - w)
+                    drawArc(color = track, startAngle = 0f, sweepAngle = 360f,
+                        useCenter = false, topLeft = Offset(w / 2f, w / 2f), size = box,
+                        style = Stroke(width = w))
+                    if (used > 0.005f) {
+                        drawArc(color = arc, startAngle = -90f, sweepAngle = 360f * used,
+                            useCenter = false, topLeft = Offset(w / 2f, w / 2f), size = box,
+                            style = Stroke(width = w, cap = StrokeCap.Round))
+                    }
+                }
+                // 20dp inside a 24dp hole: flush against the ring, the arc
+                // reads as drawn ON the picture rather than around it.
+                ProfileAvatar(initials = initials, size = 20.dp)
+            }
+        } else {
+            ProfileAvatar(initials = initials, size = 30.dp)
+        }
+    }
+}
+
+/** The free tier's full tank — the signup grant (3960 s = 66 min). */
+private const val FREE_GRANT_SECONDS = 3960
 
 /**
  * A header control that looks like one.
@@ -1512,18 +1654,28 @@ private fun StreakChip(language: String, onClick: () -> Unit) {
  * of controls rather than three unrelated bits of text.
  */
 @Composable
-private fun HeaderButton(label: String, onClick: () -> Unit) {
-    Text(
-        label,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier
+private fun HeaderButton(
+    label: String,
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
+) {
+    Row(
+        Modifier
             .padding(horizontal = 8.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 6.dp),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        icon?.let {
+            Icon(it, contentDescription = null, modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.primary)
+        }
+        Text(label, style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary)
+    }
 }
 
 /**
@@ -1561,94 +1713,135 @@ private fun WatchBody(
     }
     val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // 28dp between sections, as on iOS: each one is its own kind of thing
+    // (who, make, saved, likely) and at 10 they read as one long list.
+    Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
         // The people you actually talk to. Tapping one scopes the composer to
         // them, so the scene is grounded in a real relationship rather than a
         // generic "the other person".
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(people, key = { it.id }) { person ->
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            SectionHeader(stringResource(R.string.people))
+            // Making a person is pinned to the LEFT, outside the scroller — as
+            // the last bubble it slid off the row the moment the learner had a
+            // few people, which is the one control that must never be hidden.
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top) {
                 PersonBubble(
-                    name = person.name,
-                    onClick = { withPerson = person; composing = true },
-                )
-            }
-            // Always last: the way in when the row is empty, and the way to
-            // edit when it isn't.
-            item {
-                PersonBubble(
-                    name = stringResource(R.string.people),
+                    name = stringResource(R.string.create),
                     isAction = true,
                     onClick = { managingPeople = true },
                 )
-            }
-        }
-
-        DiscoverRow(
-            title = stringResource(R.string.make_your_own_situation),
-            icon = Icons.Filled.Add,
-            accent = Books.scenarios,
-            onClick = { composing = true },
-        )
-        if (live.isNotEmpty()) {
-            Text(stringResource(R.string.your_scenarios),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp))
-            // A two-column grid of cards, like iOS. And no Talk button:
-            // starting a call is the TALK tab's job, and a scenario that can
-            // be called from here makes the two tabs the same tab. Watch is
-            // where a fresh take gets written; past takes live in Practice.
-            live.chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEach { sc ->
-                        ScenarioCard(sc, Modifier.weight(1f),
-                            onClick = if (enabled) ({ onWatch(sc.id) }) else null)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(people, key = { it.id }) { person ->
+                        PersonBubble(
+                            name = person.name,
+                            onClick = { withPerson = person; composing = true },
+                        )
                     }
-                    // Keep a lone card half-width rather than letting it
-                    // stretch across — a full-width card in a grid reads as a
-                    // different kind of row.
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            Text(stringResource(R.string.tap_a_card_to_review_or_tweak_it_then_watch_every_watch_writ_1b78a6),
+            Text(stringResource(R.string.your_own_people_plus_anyone_you_bookmarked_from_the_people_p_341fd4),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        // Deliberately LIGHTER than the scenario rows above: these are
-        // starting points that open the composer, not saved content that
-        // plays. Chips keep the two tap behaviours visually distinct.
-        Text(stringResource(R.string.likely_situations),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = 12.dp))
-        // Deliberately LIGHTER than the scenario rows above — these open the
-        // composer, they are not saved content that plays. A filled tile with
-        // its own icon, not an outlined filter chip: a chip reads as "narrow
-        // the list", and nothing here is a filter.
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        // The DEFAULT way in: describe the real upcoming thing. A card of its
+        // own with its own sentence, not a one-line list row — it is the
+        // instruction for the whole tab.
+        Row(
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(AppSurfaces.card)
+                .clickable { composing = true }
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SituationTree.roots.forEach { root ->
-                Row(
-                    Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                        .clickable { branch = root }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(Symbols.icon(root.icon), contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp))
-                    Text(root.label, style = MaterialTheme.typography.bodyMedium)
+            Icon(Icons.Filled.EditNote, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.make_your_own_situation),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.the_real_thing_coming_up_an_interview_a_call_a_visit_describ_a97c73),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                tint = MaterialTheme.colorScheme.outline)
+        }
+
+        if (live.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader(stringResource(R.string.your_scenarios))
+                // A two-column grid of cards, like iOS. And no Talk button:
+                // starting a call is the TALK tab's job, and a scenario that
+                // can be called from here makes the two tabs the same tab.
+                // Watch is where a fresh take gets written; past takes live in
+                // Practice.
+                live.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        pair.forEach { sc ->
+                            ScenarioCard(sc,
+                                // Fill the row's height so a short card matches
+                                // its taller sibling, as a grid row does.
+                                Modifier.weight(1f).fillMaxHeight(),
+                                personName = sc.counterpartId?.let { id ->
+                                    people.firstOrNull { it.id == id }?.name
+                                },
+                                onClick = if (enabled) ({ onWatch(sc.id) }) else null)
+                        }
+                        // Keep a lone card half-width rather than letting it
+                        // stretch across — a full-width card in a grid reads as
+                        // a different kind of row.
+                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                    }
                 }
+                Text(stringResource(R.string.tap_a_card_to_review_or_tweak_it_then_watch_every_watch_writ_1b78a6),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        Text(stringResource(R.string.tap_a_category_the_composer_suggests_specific_scenarios),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SectionHeader(stringResource(R.string.likely_situations))
+            // Deliberately LIGHTER than the scenario cards above — these open
+            // the composer, they are not saved content that plays. A filled
+            // tile with its own icon, not an outlined filter chip: a chip reads
+            // as "narrow the list", and nothing here is a filter.
+            //
+            // TWO EQUAL COLUMNS, not wrap-to-fit: iOS lays them out on an
+            // adaptive grid, so the tiles line up down the page instead of
+            // stepping in and out with the length of each word.
+            SituationTree.roots.chunked(2).forEach { pair ->
+                Row(Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { root ->
+                        Row(
+                            Modifier.weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .clickable { branch = root }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(Symbols.icon(root.icon), contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp))
+                            Text(root.label, style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+            Text(stringResource(R.string.tap_a_category_the_composer_suggests_specific_scenarios),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 
     branch?.let { root ->
@@ -1679,22 +1872,47 @@ private fun WatchBody(
 }
 
 /**
- * One face in the stories row. There is no photo of these people and there
- * should not be — the app never asks for one — so the bubble is an initial on
- * the book accent, which is enough to pick a name out of five.
+ * A grouped-list section title, hand-rolled since these pages are a
+ * ScrollView rather than a List (iOS `WatchTab.sectionHeader`). Big and
+ * QUIET: it names the group without competing with the cards under it.
+ */
+@Composable
+private fun SectionHeader(title: String) {
+    Text(title, style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/**
+ * One face in the stories row (iOS `PersonBubble`). There is no photo of
+ * these people and there should not be — the app never asks for one — so the
+ * bubble is an initial on the accent, which is enough to pick a name out of
+ * five. The ACTION bubble is a dashed outline instead: an empty slot asking
+ * to be filled, not a person.
  */
 @Composable
 private fun PersonBubble(name: String, isAction: Boolean = false, onClick: () -> Unit) {
     Column(
         Modifier.width(72.dp).clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        val accent = MaterialTheme.colorScheme.primary
+        val outline = MaterialTheme.colorScheme.outline
         Box(
-            Modifier.size(56.dp).background(
-                if (isAction) MaterialTheme.colorScheme.surfaceVariant
-                else Books.scenarios.copy(alpha = 0.18f),
-                CircleShape),
+            Modifier.size(64.dp).then(
+                if (isAction) Modifier.drawBehind {
+                    drawCircle(
+                        color = outline,
+                        radius = size.minDimension / 2f - 1.dp.toPx(),
+                        style = Stroke(width = 1.5.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(
+                                floatArrayOf(5.dp.toPx(), 5.dp.toPx()))),
+                    )
+                }
+                else Modifier
+                    .background(accent.copy(alpha = 0.15f), CircleShape)
+                    .border(1.5.dp, accent.copy(alpha = 0.35f), CircleShape)),
             contentAlignment = Alignment.Center,
         ) {
             if (isAction) {
@@ -1703,10 +1921,13 @@ private fun PersonBubble(name: String, isAction: Boolean = false, onClick: () ->
             } else {
                 Text(name.take(1).uppercase(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = Books.scenarios)
+                    fontWeight = FontWeight.Bold,
+                    color = accent)
             }
         }
-        Text(name, style = MaterialTheme.typography.labelSmall,
+        Text(name, style = MaterialTheme.typography.labelMedium,
+            color = if (isAction) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -1994,29 +2215,70 @@ private fun DeepenRow(onClick: () -> Unit) {
 private fun ScenarioCard(
     sc: com.roro.futurevoice.talk.Scenario,
     modifier: Modifier = Modifier,
+    personName: String? = null,
     onClick: (() -> Unit)?,
 ) {
+    val partner = personName ?: sc.role.trim().takeIf { it.isNotEmpty() }
+    // The concrete situation under the tidy title — dropped when the title
+    // already IS that text, or the card says the same thing twice.
+    val env = sc.environment.trim()
+    val blurb = env.takeIf { it.isNotEmpty() && !it.equals(sc.cardTitle.trim(), ignoreCase = true) }
     Column(
         modifier
             .clip(RoundedCornerShape(16.dp))
             .background(AppSurfaces.card)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Icon(Symbols.icon(sc.categoryIcon), contentDescription = null,
-            tint = Books.scenarios, modifier = Modifier.size(22.dp))
-        Text(sc.cardTitle, style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold, maxLines = 3,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-        // The concrete situation under the tidy title — skipped when the
-        // title already IS that text, or the card says the same thing twice.
-        val partner = sc.role?.trim()?.takeIf { it.isNotEmpty() }
-        val blurb = partner ?: sc.category?.takeIf { it.isNotBlank() }
-        blurb?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            if (personName != null) {
+                Text(personName.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary)
+            } else {
+                Icon(Symbols.icon(sc.categoryIcon), contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.weight(1f))
+            // The tap opens the settings sheet; Watch (a fresh take) is its
+            // end action, so the play glyph names it on the card.
+            Icon(Icons.Filled.PlayCircleFilled, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            // The shelf it sits on, above the title — but never beside a
+            // person, whose name already says what kind of scene this is.
+            if (personName == null) sc.category?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Text(sc.cardTitle, style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold, maxLines = 2,
+                overflow = TextOverflow.Ellipsis)
+            blurb?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        // Who it is with, and when it last ran — the card's quiet footer.
+        val footer = listOfNotNull(
+            partner?.let { stringResource(R.string.with, it) },
+            sc.lastUsedAt?.let {
+                android.text.format.DateUtils.getRelativeTimeSpanString(
+                    it, System.currentTimeMillis(),
+                    android.text.format.DateUtils.MINUTE_IN_MILLIS).toString()
+            },
+        ).joinToString(" · ")
+        if (footer.isNotEmpty()) {
+            Text(footer, style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

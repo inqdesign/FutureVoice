@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
@@ -207,11 +208,30 @@ fun MeScreen(
         ) {
             // ── Profile ──
             GroupedCard {
-                MeRow(Icons.Filled.Person, stringResource(R.string.profile),
-                    listOfNotNull(persona?.displayName?.takeIf { it.isNotBlank() },
-                        persona?.city?.takeIf { it.isNotBlank() }).joinToString(" · ")
-                        .ifEmpty { email.orEmpty() },
-                    onClick = onEditProfile)
+                Row(
+                    Modifier.fillMaxWidth().clickable(onClick = onEditProfile)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    ProfileAvatar(initials = persona?.displayName.orEmpty(), size = 52.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            persona?.displayName?.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.profile),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            listOfNotNull(persona?.city?.takeIf { it.isNotBlank() }, email)
+                                .joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1)
+                    }
+                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline)
+                }
                 // What the future self has learned — the other half of the
                 // profile. Each note removable; the learner can always
                 // correct the memory.

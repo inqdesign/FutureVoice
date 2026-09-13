@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.StudyCollections
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.clip
@@ -116,6 +117,10 @@ fun PracticeBody(
     var today by remember { mutableStateOf(PracticeLog.Day()) }
     var streak by remember { mutableStateOf(0) }
     var dueBack by remember { mutableStateOf(0) }
+    /** How big the collection behind each tile's footer is. */
+    var wordsAll by remember { mutableStateOf<Int?>(null) }
+    var expressionsAll by remember { mutableStateOf<Int?>(null) }
+    var shadowAll by remember { mutableStateOf<Int?>(null) }
     var finished by remember { mutableStateOf<List<FinishedBook>>(emptyList()) }
     var showFinished by remember { mutableStateOf(false) }
     /** Finished books. They keep their progress and can come back. */
@@ -140,6 +145,9 @@ fun PracticeBody(
         streak = GoalStore.streak(context, goals)
         // What the learner put away and asked to see again, now due.
         dueBack = StudyScheduleStore.shared(context).snapshot(language).dueItems().size
+        wordsAll = StudyCollections.wordsToStudy(context, language)
+        expressionsAll = StudyCollections.expressionsToStudy(context, language)
+        shadowAll = StudyCollections.shadowToStudy(context, language)
         // Archiving is tidying; this is the achievement — so archived books
         // count too, and both kinds land on the same shelf.
         val vocabStore = VocabStore.shared(context)
@@ -219,6 +227,9 @@ fun PracticeBody(
                     // sends them to the shelf that has the lines in it.
                     onShadowAll = onShadowAll,
                     dueBack = dueBack,
+                    wordsToStudy = wordsAll,
+                    expressionsToStudy = expressionsAll,
+                    shadowToStudy = shadowAll,
                     onDueBack = onOpenDueReview,
                     onWordsAll = onOpenWordsAll,
                     onExpressionsAll = onOpenExpressionsAll,
@@ -515,28 +526,38 @@ fun ProgressBody(language: String, nativeLanguage: String,
         val headline = report?.cefrLevel?.uppercase()
             ?: scored.firstOrNull()?.cefrLevel?.uppercase()
         headline?.takeIf { it.isNotEmpty() }?.let { level ->
-            Column {
-                Text(level,
-                    style = com.roro.futurevoice.ui.brand.DisplayFace
-                        .style(level, MaterialTheme.typography.displaySmall),
-                    color = MaterialTheme.colorScheme.primary)
-                Text(stringResource(R.string.a_level_measured_not_guessed),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // Never an unexplainable verdict: the judge's own rationale
-                // names the evidence it decided from.
-                report?.levelRationale?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp))
+            GroupedCard {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.estimated_level),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(level,
+                        style = com.roro.futurevoice.ui.brand.DisplayFace
+                            .style(level, MaterialTheme.typography.displayMedium),
+                        color = MaterialTheme.colorScheme.primary)
+                    // What the level MEANS, before where it came from: a bare
+                    // letter is a grade, and this is a measurement.
+                    Text(canDoAt(level), style = MaterialTheme.typography.bodyMedium)
+                    // Never an unexplainable verdict: the judge's own
+                    // rationale names the evidence it decided from.
+                    (report?.levelRationale?.takeIf { it.isNotBlank() }
+                        ?: stringResource(R.string.a_level_measured_not_guessed)).let {
+                        Text(it, style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            Stat(stringResource(R.string.today), "${todaySeconds / 60}")
-            Stat(stringResource(R.string.talks), "${talks.count { it.endedAt != null }}")
-            if (scored.isNotEmpty()) {
-                Stat(stringResource(R.string.overall), "${scored.map { it.overall }.average().toInt()}")
+        GroupedCard {
+            Row(Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Stat(stringResource(R.string.today), "${todaySeconds / 60}")
+                Stat(stringResource(R.string.talks), "${talks.count { it.endedAt != null }}")
+                if (scored.isNotEmpty()) {
+                    Stat(stringResource(R.string.overall),
+                        "${scored.map { it.overall }.average().toInt()}")
+                }
             }
         }
 
@@ -581,20 +602,23 @@ fun ProgressBody(language: String, nativeLanguage: String,
 
         if (scored.isNotEmpty()) {
             val card = scored.first()
-            Text(stringResource(R.string.across_skills),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp))
+            GroupedSectionHeader(stringResource(R.string.across_skills))
+            GroupedCard {
             SkillRow(stringResource(R.string.vocabulary), card.vocabulary.score) {
                 dim = Dim.VOCABULARY
             }
+            GroupedRowDivider(inset = false)
             SkillRow(stringResource(R.string.fluency), card.fluency.score) {
                 dim = Dim.FLUENCY
             }
+            GroupedRowDivider(inset = false)
             SkillRow(stringResource(R.string.grammar), card.grammar.score) {
                 dim = Dim.GRAMMAR
             }
+            GroupedRowDivider(inset = false)
             SkillRow(stringResource(R.string.expressiveness), card.expressiveness.score) {
                 dim = Dim.EXPRESSIVENESS
+            }
             }
         }
 
@@ -822,12 +846,20 @@ private fun AssessmentPanel(
 @Composable
 private fun SkillRow(title: String, score: Int, onOpen: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onOpen)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Text("$score", style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.primary)
+        // The band, not the 0-100 score: the number is calibrated to the
+        // learner's own level setting, so beside a CEFR letter it reads as a
+        // second, contradicting scale. The score lives on the skill's page.
+        Text(LevelBands.grammarBand(score)?.let { "≈" + it.code.uppercase() } ?: "—",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
+            tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
     }
 }
 
@@ -916,3 +948,15 @@ private fun ArchiveSection(hasAny: Boolean, content: @Composable () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
+
+/** What a level can actually DO, in one line (iOS `canDo`). */
+@Composable
+private fun canDoAt(level: String): String = stringResource(
+    when (level.uppercase()) {
+        "A1" -> R.string.simple_words_and_phrases_about_immediate_familiar_things
+        "A2" -> R.string.everyday_topics_in_simple_terms_routines_plans_basic_needs
+        "B1" -> R.string.familiar_topics_fluently_enough_to_get_by_and_tell_a_simple_fa6cea
+        "B2" -> R.string.clear_detailed_talk_on_many_topics_including_some_abstract_o_933630
+        "C1" -> R.string.fluent_flexible_and_precise_even_on_complex_topics
+        else -> R.string.effortless_and_nuanced_close_to_native
+    })
