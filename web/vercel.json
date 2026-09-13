@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "https://nawana-admin.futurevoice-gateway.workers.dev/admin"
+    },
+    {
+      "source": "/admin/",
+      "destination": "https://nawana-admin.futurevoice-gateway.workers.dev/admin"
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://nawana-admin.futurevoice-gateway.workers.dev/admin/:path*"
+    }
+  ]
+}
