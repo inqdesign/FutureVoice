@@ -544,13 +544,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "restantes"
+            "value" : "restante"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "restants"
+            "value" : "restant"
           }
         },
         "ja" : {
@@ -568,13 +568,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剩下"
+            "value" : "剩余"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "剩下"
+            "value" : "剩餘"
           }
         }
       }
@@ -636,13 +636,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "dominadas"
+            "value" : "completado"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "acquis"
+            "value" : "terminé"
           }
         },
         "ja" : {
@@ -875,7 +875,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Des phrases récoltées dans tes appels."
+            "value" : "Les phrases que tu as récoltées dans tes appels."
           }
         },
         "ja" : {

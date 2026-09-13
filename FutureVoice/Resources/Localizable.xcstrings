@@ -289,19 +289,19 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · %2$lld dominados · %3$@"
+            "value" : "%1$@ · %2$lld completados · %3$@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · %2$lld maîtrisés · %3$@"
+            "value" : "%1$@ · %2$lld terminés · %3$@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · 習得%2$lld · %3$@"
+            "value" : "%1$@ · 完了%2$lld · %3$@"
           }
         },
         "ko" : {
@@ -313,13 +313,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · 已掌握%2$lld · %3$@"
+            "value" : "%1$@ · 完成%2$lld · %3$@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ · 已掌握%2$lld · %3$@"
+            "value" : "%1$@ · 完成%2$lld · %3$@"
           }
         }
       }
@@ -3330,19 +3330,19 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld dominados"
+            "value" : "%1$lld / %2$lld completados"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld maîtrisés"
+            "value" : "%1$lld / %2$lld terminés"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld 習得"
+            "value" : "%1$lld / %2$lld 完了"
           }
         },
         "ko" : {
@@ -3354,13 +3354,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已掌握%1$lld / %2$lld"
+            "value" : "完成%1$lld / %2$lld"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已掌握%1$lld / %2$lld"
+            "value" : "完成%1$lld / %2$lld"
           }
         }
       }
@@ -3383,19 +3383,19 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld dominados · todo lo que sale de tus llamadas y escenas"
+            "value" : "%1$lld / %2$lld completados · todo lo que sale de tus llamadas y escenas"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld maîtrisés · tout ce qui vient de tes appels et de tes scènes"
+            "value" : "%1$lld / %2$lld terminés · tout ce qui vient de tes appels et de tes scènes"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld / %2$lld 習得 · トークとシーン練習で集めたすべて"
+            "value" : "%1$lld / %2$lld 完了 · トークとシーン練習で集めたすべて"
           }
         },
         "ko" : {
@@ -3407,13 +3407,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已掌握%1$lld / %2$lld · 对话和情境练习里收集的全部"
+            "value" : "完成%1$lld / %2$lld · 对话和情境练习里收集的全部"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已掌握%1$lld / %2$lld · 對話和情境練習裡收集的全部"
+            "value" : "完成%1$lld / %2$lld · 對話和情境練習裡收集的全部"
           }
         }
       }
@@ -4753,19 +4753,19 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld dominados"
+            "value" : "%1$lld/%2$lld completados"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld maîtrisés"
+            "value" : "%1$lld/%2$lld terminés"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld 習得"
+            "value" : "%1$lld/%2$lld 完了"
           }
         },
         "ko" : {
@@ -4777,13 +4777,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld已掌握"
+            "value" : "%1$lld/%2$lld完成"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$lld/%2$lld已掌握"
+            "value" : "%1$lld/%2$lld完成"
           }
         }
       }
@@ -11119,7 +11119,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Carnet complété"
+            "value" : "Carnet terminé"
           }
         },
         "ja" : {
@@ -15949,7 +15949,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Les crédits servent à la synthèse vocale et aux réponses de l’IA. Pas d’abonnement pendant la beta — invite des amis pour en gagner plus."
+            "value" : "Les crédits servent à la synthèse vocale et aux réponses de l’IA. Pas d’abonnement pendant la bêta — invite des amis pour en gagner plus."
           }
         },
         "ja" : {
@@ -18250,13 +18250,13 @@
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hoy ya está"
+            "value" : "Listo por hoy"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "C’est bon pour aujourd’hui"
+            "value" : "Fini pour aujourd’hui"
           }
         },
         "ja" : {
@@ -38318,13 +38318,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有进行中的"
+            "value" : "没有进行中的项目"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沒有進行中的"
+            "value" : "沒有進行中的項目"
           }
         }
       }
@@ -56077,7 +56077,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Touche End session après une conversation et elle apparaîtra ici."
+            "value" : "Touche Enregistrer la conversation après un appel et elle apparaîtra ici."
           }
         },
         "ja" : {
@@ -58212,7 +58212,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tes propres phrases de cet appel, réécrites plus naturellement. Fais-en le shadowing avec ta voix : dépasse %lld points et c’est maîtrisé."
+            "value" : "Tes propres phrases de cet appel, réécrites plus naturellement. Fais-en le shadowing avec ta voix : dépasse %lld points et c’est acquis."
           }
         },
         "ja" : {
@@ -59618,7 +59618,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ces 300 crédits sont tout ton quota pour la beta. Une fois épuisés, réviser les mots enregistrés, les exercices et les appels passés reste gratuit. Après le lancement, tu choisiras Pro ou Premium — d’ici là, pratique, tout simplement."
+            "value" : "Ces 300 crédits sont tout ton quota pour la bêta. Une fois épuisés, réviser les mots enregistrés, les exercices et les appels passés reste gratuit. Après le lancement, tu choisiras Pro ou Premium — d’ici là, pratique, tout simplement."
           }
         },
         "ja" : {
@@ -65245,7 +65245,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bienvenue dans la beta"
+            "value" : "Bienvenue dans la bêta"
           }
         },
         "ja" : {
@@ -70707,7 +70707,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu es dans la beta — les abonnements ne sont pas encore ouverts. Les crédits du départ sont tout ce qu’il y a, mais réviser reste toujours gratuit. Dis-nous à l’étape suivante ce que tu voudrais au lancement."
+            "value" : "Tu es dans la bêta — les abonnements ne sont pas encore ouverts. Les crédits du départ sont tout ce qu’il y a, mais réviser reste toujours gratuit. Dis-nous à l’étape suivante ce que tu voudrais au lancement."
           }
         },
         "ja" : {
@@ -70748,7 +70748,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tu es dans la beta — les abonnements ne sont pas encore ouverts. Le temps de conversation du départ est tout ce qu’il y a, mais réviser reste toujours gratuit. Dis-nous à l’étape suivante ce que tu voudrais au lancement."
+            "value" : "Tu es dans la bêta — les abonnements ne sont pas encore ouverts. Le temps de conversation du départ est tout ce qu’il y a, mais réviser reste toujours gratuit. Dis-nous à l’étape suivante ce que tu voudrais au lancement."
           }
         },
         "ja" : {
@@ -71052,6 +71052,12 @@
     },
     "You're signed out. Sign in again, then try once more." : {
       "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se cerró tu sesión. Vuelve a iniciar sesión e inténtalo otra vez."
+          }
+        },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",

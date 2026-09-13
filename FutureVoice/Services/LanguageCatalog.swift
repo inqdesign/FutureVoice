@@ -188,8 +188,16 @@ enum LanguageCatalog {
         // bare "zh" — so a script-qualified native code matches only its own
         // column, and a bare code matches only a bare column.
         let bundled = Set(Bundle.main.localizations)
-        return nativeLanguages.filter { bundled.contains($0) }
+        return nativeLanguages.filter { bundled.contains($0) && !partialUILanguages.contains($0) }
     }
+
+    /// Bundled but NOT finished. A `.lproj` exists so the bundle answers yes,
+    /// yet roughly a third of `de` is still English — it is a TARGET language
+    /// here, never a launch native one, and its column has been knowingly
+    /// deferred. Sitting it under "Fully translated" was a promise the screen
+    /// could not keep; from the lower group it under-promises instead, which is
+    /// the right direction. Empty this set as a column is finished.
+    private static let partialUILanguages: Set<String> = ["de"]
 
     static func language(_ code: String) -> Language? {
         let base = code.split(separator: "-").first.map(String.init) ?? code
