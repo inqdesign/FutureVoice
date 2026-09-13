@@ -381,6 +381,24 @@ sub("""<div class="top"><span class="nm">${esc(nameOf(u))}</span>${u.dev?'<span 
     """<div class="top"><span class="nm">${esc(nameOf(u))}</span>${badge(u)}</div>""", "card badge")
 sub("""<span class="uname">${esc(nameOf(u))}</span>${u.dev?'<span class="devchip">DEV</span>':''}""",
     """<span class="uname">${esc(nameOf(u))}</span>${badge(u)}""", "table badge")
+
+# The user id, under the name. This table is the one people read beside a SQL
+# prompt, and until now it gave only a display name — which is not what any
+# query takes. `user-select:all` so one click grabs the whole UUID; hidden on
+# a phone, where the column is 110 px wide and nobody is pasting into psql.
+sub('''.usub{font-size:11.5px; color:var(--muted); margin-top:1px}''',
+    '''.usub{font-size:11.5px; color:var(--muted); margin-top:1px}
+/* On one line the UUID pushed the table to 1053 px inside a 1010 px card,
+   which put 비용 and 리뷰 behind a horizontal scroll — worse than a taller
+   row. Left to wrap it breaks at the UUID's own hyphens, so both halves stay
+   readable, and `user-select:all` still grabs the whole thing in one click. */
+.uid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px;
+  color:var(--muted); margin-top:2px; user-select:all; line-height:1.35}''',
+    "uid css")
+sub('''        <div class="usub">${langs||''}${u.clone?(langs?' · ':'')+'클론 완료':''}</div></td>''',
+    '''        <div class="usub">${langs||''}${u.clone?(langs?' · ':'')+'클론 완료':''}</div>
+        <div class="uid" title="클릭하면 전체가 선택돼요">${u.id}</div></td>''',
+    "uid cell")
 sub("""<span class="uname">${esc(nameOf(u))}</span>${u.dev?'<span class="devchip">DEV</span>':''}</td>""",
     """<span class="uname">${esc(nameOf(u))}</span>${badge(u)}</td>""", "cost table badge")
 
@@ -1107,6 +1125,7 @@ sub("""</style>""", """@media (max-width: 700px){
   #userTable th:nth-child(12), #userTable td:nth-child(12),
   #userTable th:nth-child(13), #userTable td:nth-child(13){display:none}
   #userTable .chip{white-space:normal; word-break:keep-all}
+  #userTable .uid{display:none}
   /* 유저별 비용(8열) → 유저 · 통화 · 합계 */
   #costTable th:nth-child(2), #costTable td:nth-child(2),
   #costTable th:nth-child(4), #costTable td:nth-child(4),
