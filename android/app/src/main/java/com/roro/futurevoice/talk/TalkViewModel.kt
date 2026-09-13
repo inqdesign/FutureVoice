@@ -503,6 +503,9 @@ class TalkViewModel(context: Context) : ViewModel() {
     }
 
     fun resume() {
+        // The transcript tap and the lock-screen play both land here; on the
+        // realtime path picking the call back up is a reconnect.
+        if (REALTIME) { if (_state.value.phase == TalkPhase.PAUSED) resumeRealtime(); return }
         if (_state.value.phase != TalkPhase.PAUSED) return
         lastActivityAt = System.currentTimeMillis()   // a tap is someone being here
         _state.update { it.copy(phase = TalkPhase.LISTENING, pausedForIdle = false) }
