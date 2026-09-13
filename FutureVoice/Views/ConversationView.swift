@@ -598,6 +598,15 @@ struct ConversationView: View {
     /// see `isBillableMoment`. Set where a user turn is made (both paths),
     /// cleared with the session.
     @State private var learnerSpokeThisCall = false
+    /// The live call died under the learner — socket gone, reply failed
+    /// past its retry, mic lost after a route change. Set from the realtime
+    /// state observer; presented as the one alert that offers a way BACK.
+    /// Until 2026-09-12 this case had no message at all: the screen went
+    /// quiet and the only move was to hang up.
+    @State private var callDropped: String?
+    /// Whether this call ever reached a live state — a failure before that
+    /// is a connect failure and keeps its own (existing) alert.
+    @State private var realtimeWasLive = false
 
     private func isBillableMoment() -> Bool {
         // Nothing counts until the learner has said something IN THIS CALL.
@@ -779,6 +788,19 @@ struct ConversationView: View {
                              onDone: endAndClose)
                     .environmentObject(appState)
             }
+            // The call dropped mid-talk. Two honest choices, and the
+            // transcript stays on screen behind them.
+            .alert(explain("The call dropped"), isPresented: callDroppedBinding) {
+                Button(explain("Reconnect")) {
+                    Telemetry.log("talk_rt_reconnect", ["turns": String(turns.count)])
+                    Task { await reconnectRealtimeCall() }
+                }
+                Button(explain("End the call"), role: .cancel) {
+                    Task { await endSession() }
+                }
+            } message: {
+                Text(explain("Everything said so far is saved. Reconnect to carry on from where you were."))
+            }
             .alert("Something went wrong", isPresented: errorBinding) {
                 if outOfCredits {
                     Button("See plans") { error = nil; showingPaywall = true }
@@ -875,9 +897,9 @@ struct ConversationView: View {
             .onChange(of: realtime.state) { _, state in
                 guard RealtimeMode.isEnabled, phoneCallActive else { return }
                 switch state {
-                case .listening, .hearing: phase = .listening
-                case .thinkingReply:       phase = .thinking
-                case .speaking:            phase = .speaking
+                case .listening, .hearing: phase = .listening; realtimeWasLive = true
+                case .thinkingReply:       phase = .thinking;  realtimeWasLive = true
+                case .speaking:            phase = .speaking;  realtimeWasLive = true
                 case .idle, .connecting, .failed: phase = .idle
                 }
                 // First learner speech starts the clock (realtime path).
@@ -888,7 +910,7 @@ struct ConversationView: View {
                 // wall code when the allowance is spent — the same two 402s
                 // the classic meter's tick returns, so they land on the same
                 // sheets: a subscriber's finished day is never a paywall.
-                if case .failed = state {
+                if case .failed(let message) = state {
                     if realtime.wallCode == "fair_use_limit" {
                         fairUseHalted = true
                     } else if realtime.wallCode == "daily_cap_reached" {
@@ -896,6 +918,18 @@ struct ConversationView: View {
                     } else if realtime.wallCode == "insufficient_credits" {
                         outOfCredits = true
                         error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                    } else if realtimeWasLive {
+                        // A LIVE call that failed — not a connect failure
+                        // (that one is reported where the connect happens).
+                        // The idle hang-up is the gateway's judgement that
+                        // nobody was talking, and it says so in its message;
+                        // everything else deserves the way back.
+                        if realtime.lastFailureCode == "idle" {
+                            error = message
+                        } else {
+                            callDropped = message
+                        }
+                        realtimeWasLive = false
                     }
                 }
             }
@@ -1305,6 +1339,10 @@ struct ConversationView: View {
 
     private var errorBinding: Binding<Bool> {
         Binding(get: { error != nil }, set: { if !$0 { error = nil } })
+    }
+
+    private var callDroppedBinding: Binding<Bool> {
+        Binding(get: { callDropped != nil }, set: { if !$0 { callDropped = nil } })
     }
 
     private var summaryBinding: Binding<SessionSummary?> {
@@ -2051,6 +2089,17 @@ struct ConversationView: View {
     }
 
     // MARK: - Realtime path (gateway)
+
+    /// Pick the dropped call back up: same wiring, same voice, the turns so
+    /// far as history, and NO opener — the learner speaks next, the fluent
+    /// self already knows what was said.
+    private func reconnectRealtimeCall() async {
+        guard !isTornDown else { return }
+        callDropped = nil
+        phoneCallActive = true
+        phase = .listening
+        await startRealtimeCall(opener: nil)
+    }
 
     /// Open the call on the realtime gateway and wire its turns into `turns`.
     ///

@@ -151,6 +151,10 @@ export function assemble(raw: any) {
   const recentSessions = withIdx(raw.recent_sessions);
   const recentEvents = withIdx(raw.recent_events);
   const freeRecent = withIdx(raw.free_recent);
+  // One row per finished realtime call. This is the only per-call record
+  // that path produces — its reply and voice never touch the usage ledger.
+  const rtSessions = withIdx(raw.rt_sessions);
+  const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
   const m = raw.mech;
@@ -241,5 +245,6 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
+    rtSessions, rtReasons,
   };
 }

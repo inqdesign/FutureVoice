@@ -406,6 +406,51 @@ Three consequences to preserve when touching this: the failure path in `requestR
 
 Any future work that improves the learner's line has the same obligation: improve what the MODEL gets, never what the SCREEN shows, until `voiceDidStart`.
 
+## A call does not die quietly (2026-09-13)
+
+Talk runs on the realtime gateway (`gateway/`, a Worker + Durable Object) —
+and until this date that path could end a call for nine different reasons
+without leaving a single record, on either side. The reply and the voice go
+straight to their providers, so `usage_ledger` sees only the meter's ticks;
+the app's `RealtimeTalkClient` wrote nothing at all; the gateway had
+`console.log`. On 2026-09-12 that produced an admin console reporting zero
+errors on a day when **25 of 42 real sessions ended before the learner
+finished a sentence**, and the day's two trial cancellations had to be found
+by joining `user_subscriptions` by hand. One of them cancelled two minutes
+after a summary timed out; the other wrote "좋은데 중간에 끊긴다" and re-dialled
+seventeen times.
+
+**Only being unable to HEAR is fatal.** Everything else the call survives:
+
+- **A failed reply is retried once, then apologised for out loud**
+  (`CallSession.recoverReply`). It used to emit `error`, which the client
+  turns into a teardown. The apology line is the learner's language,
+  informal, and is pushed into `history` — otherwise the next reply answers a
+  question it never heard the answer to.
+- **A refused or dropped ElevenLabs socket ends the LINE** (`warn("tts")` →
+  `endLine`): the text is already on screen and the socket reopens lazily.
+- **A transcriber failure stays fatal**, and the app answers it with
+  **Reconnect** (`ConversationView.reconnectRealtimeCall`) — same voice, the
+  turns so far as history, no opener. Before this a dropped call had no
+  message at all: the screen went quiet and the only move was to hang up.
+
+**Every failure now leaves a record, and that is the point.** The gateway
+sends two new messages (`gateway/src/protocol.ts`): `warning` (survived) and
+`ended` (the session's last word — reason, turns, speech seconds,
+commit→voice latencies, warnings). `RealtimeTalkClient.fail(_:_:)` is the ONE
+door every client-side failure goes through, and it writes
+`talk_rt_failed`; the two gateway messages become `talk_rt_warning` and
+`talk_rt_session`. All of it lands in `client_events`, which is where the
+admin console's 통화가 어떻게 끝났나 panel reads it from (`rt_sessions` /
+`rt_reasons` in `admin_raw()`, `20260913080000`). An older client ignores the
+new messages, so the gateway can deploy ahead of an app build.
+
+**The end-of-talk summary gets its own URLSession** (`edgeFunctionsLong`, 240 s
+ceiling) and retries once on a timeout. `edgeFunctions` caps every attempt at
+60 s; on 2026-09-12 a summary finished server-side at **63 s**, the app called
+it a failure, and that learner cancelled her trial two minutes later. The idle
+timeout stays 40 s — only the ceiling moved, and only for this one call.
+
 ## A call outlives the screen (2026-08-18)
 
 A phone call doesn't end because you looked at something else. Until now this

@@ -80,6 +80,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// "insufficient_credits" or "daily_cap_reached". The view reads it from
     /// the failed state to raise the right wall instead of an error alert.
     @Published private(set) var wallCode: String?
+    /// Why the last call failed, as a short code — "socket", "reply",
+    /// "route", "mic_silent", or the gateway's own code. Every failure goes
+    /// through `fail(_:_:)`, which also writes it to telemetry: until
+    /// 2026-09-12 a call on this path could end for any of nine reasons and
+    /// not one of them left a record anywhere.
+    @Published private(set) var lastFailureCode: String?
+    /// How many non-fatal `warning` events the gateway sent this call.
+    private(set) var warningsThisCall = 0
 
     // MARK: Turn hand-off
     //
@@ -326,6 +334,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         isTornDown = false
         wallCode = nil
+        lastFailureCode = nil
+        warningsThisCall = 0
         state = .connecting
         linesStarted = 0
         pendingRetry = fallbackVoiceId.map {
@@ -342,7 +352,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // already works on this phone" proves nothing.
             Self.step("connect: asking for mic")
             guard await Self.requestMicPermission() else {
-                state = .failed("Microphone access is off for this app. Settings → nawana → Microphone.")
+                fail("mic_permission", "Microphone access is off for this app. Settings → nawana → Microphone.")
                 return
             }
             Self.step("connect: mic granted")
@@ -365,7 +375,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             startMicWatchdog()
         } catch {
             Self.step("connect FAILED: \(error)")
-            state = .failed(error.localizedDescription)
+            fail("audio_start", error.localizedDescription)
             teardown()
         }
     }
@@ -407,7 +417,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             }
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             guard let self, !self.isTornDown, self.micBytesSent == 0 else { return }
-            self.state = .failed("The microphone isn't sending any audio. Close and reopen the call.")
+            self.fail("mic_silent", "The microphone isn't sending any audio. Close and reopen the call.")
         }
     }
 
@@ -432,6 +442,20 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             return existing.accessToken
         }
         return try await SupabaseProvider.shared.auth.signInAnonymously().accessToken
+    }
+
+    /// The one way a call fails. Sets the state the view reacts to AND
+    /// leaves the record the console reads — a failure nobody can see later
+    /// is the launch-week bug in one sentence.
+    private func fail(_ code: String, _ message: String) {
+        lastFailureCode = code
+        Telemetry.log("talk_rt_failed", [
+            "code": code,
+            "message": String(message.prefix(200)),
+            "turns": String(lines.count),
+            "mic_bytes": String(micBytesSent),
+        ])
+        state = .failed(message)
     }
 
     /// Hang up: tells the gateway, then tears the local side down.
@@ -790,7 +814,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
                         guard !self.isTornDown else { return }
                         do { try self.startAudio() } catch {
-                            self.state = .failed("The audio route changed and the call couldn't recover.")
+                            self.fail("route", "The audio route changed and the call couldn't recover.")
                             return
                         }
                     }
@@ -825,7 +849,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     continue
                 }
                 guard self.tapWatchdogStrikes < 3 else {
-                    self.state = .failed("The microphone isn't sending any audio. Close and reopen the call.")
+                    self.fail("mic_silent", "The microphone isn't sending any audio. Close and reopen the call.")
                     return
                 }
                 self.tapWatchdogStrikes += 1
@@ -834,7 +858,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 try? await Task.sleep(nanoseconds: 500_000_000)
                 guard !self.isTornDown else { return }
                 do { try self.startAudio() } catch {
-                    self.state = .failed("The microphone stopped after an audio route change.")
+                    self.fail("route", "The microphone stopped after an audio route change.")
                 }
                 return // the restart armed its own watchdog for the new epoch
             }
@@ -905,7 +929,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                     guard !self.isTornDown else { self.isRebuildingAudio = false; return }
                     do { try self.startAudio() } catch {
                         self.isRebuildingAudio = false
-                        self.state = .failed("The audio route changed and the call couldn't recover.")
+                        self.fail("route", "The audio route changed and the call couldn't recover.")
                         return
                     }
                 }
@@ -1158,7 +1182,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 guard let self, !self.isTornDown else { return }
                 switch result {
                 case .failure(let error):
-                    self.state = .failed(error.localizedDescription)
+                    self.fail("socket", error.localizedDescription)
                     self.teardown()
                 case .success(let message):
                     switch message {
@@ -1300,6 +1324,31 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             speechSeconds = json["speechSeconds"] as? Int ?? speechSeconds
         case "rotating":
             break   // the gateway reconnects upstream on its own
+        case "warning":
+            // The call survived something — a retried reply, a dropped TTS
+            // line. Nothing to show; everything to record.
+            warningsThisCall += 1
+            Telemetry.log("talk_rt_warning", [
+                "code": json["code"] as? String ?? "",
+                "message": String((json["message"] as? String ?? "").prefix(200)),
+            ])
+        case "ended":
+            // The gateway's last word. The only per-session record this path
+            // produces — the reply and the voice never touch the usage
+            // ledger — so it goes straight to client_events for the console.
+            let voice = (json["voiceFirstMs"] as? [Int] ?? []).sorted()
+            let p50 = voice.isEmpty ? nil : voice[voice.count / 2]
+            Telemetry.log("talk_rt_session", [
+                "reason": json["reason"] as? String ?? "",
+                "turns": String(json["turns"] as? Int ?? 0),
+                "speech_s": String(json["speechSeconds"] as? Int ?? 0),
+                "duration_ms": String(json["durationMs"] as? Int ?? 0),
+                "voice_first_p50_ms": p50.map(String.init) ?? "",
+                "voice_first_max_ms": voice.last.map(String.init) ?? "",
+                "voice_samples": String(voice.count),
+                "warnings": String(json["warnings"] as? Int ?? 0),
+                "lines": String(lines.count),
+            ])
         case "error":
             Self.step("gateway error: \(json)")
             let code = json["code"] as? String ?? ""
@@ -1321,7 +1370,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 || code == "fair_use_limit" {
                 wallCode = code
             }
-            state = .failed(message)
+            fail(code.isEmpty ? "gateway" : code, message)
             teardown()
         default:
             break

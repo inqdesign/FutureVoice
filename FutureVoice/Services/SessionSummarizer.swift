@@ -141,7 +141,10 @@ enum SessionSummarizer {
         // finishes at once. A deploy without SSE degrades to buffering, and
         // then `onPartial` simply never fires.
         func request() async throws -> ClaudeSummaryPayload {
-            try await GeminiClient.shared.sendJSONStreamAccumulating(
+            // `longRunning`, not `shared`: this is the one call allowed past
+            // the 60 s ceiling — a summary that finishes at 63 s is a summary,
+            // not a failure (2026-09-12, and the learner cancelled over it).
+            try await GeminiClient.longRunning.sendJSONStreamAccumulating(
                 system: systemP,
                 messages: [GeminiClient.Message(role: .user, content: userMessage)],
                 // The schema's worst case is big: up to 15 grammar_errors (quote +
@@ -169,6 +172,15 @@ enum SessionSummarizer {
 
         let payload: ClaudeSummaryPayload
         do {
+            payload = try await request()
+        } catch let error where error.isTimeout || error.isTransientNetworkError {
+            // The clock ran out or the connection dropped — nothing about the
+            // talk is wrong, and the idempotency key makes the second attempt
+            // free. Ask once more before the wrap-up becomes an error alert.
+            Telemetry.log("talk_summary_retry", [
+                "detail": error.isTimeout ? "timeout" : "network",
+                "turns": String(turns.count),
+            ])
             payload = try await request()
         } catch let error where error.isMalformedModelOutput {
             // The learner did nothing wrong and has nothing to fix — the model

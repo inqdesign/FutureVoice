@@ -101,6 +101,7 @@ export class CallSession implements DurableObject {
   /** Has the learner said anything yet in this call? The meter waits for
    *  it — see the billing predicate. */
   private learnerSpoke = false
+  private language = "en"
   private lastClientFrameAt = Date.now()
   /** Nothing from the phone for this long → the socket is dead; hang up. */
   private static readonly clientGoneMs = 45_000
@@ -114,6 +115,19 @@ export class CallSession implements DurableObject {
   private static readonly maxContextMs = 90_000
   private sessionStartedAt = Date.now()
   private watchTimer: number | null = null
+
+  /** Why the session ended — set by whoever ends it, reported in `ended`.
+   *  A session that closes without one was closed by the phone. */
+  private endReason: string | null = null
+  /** Non-fatal problems the call survived (see `warn`). */
+  private warnings = 0
+  /** Per turn: commit → first PCM byte sent for its context. The number the
+   *  learner feels as "the pause before it answers". */
+  private commitAtByContext = new Map<string, number>()
+  private voiceFirstMs: number[] = []
+  /** One retry per turn on a failed reply generation; the second failure
+   *  is spoken as an apology instead of ending the call. */
+  private replyRetried = new Set<string>()
   private watchSeenContext: { context: string; at: number } | null = null
 
   /** Sliding window of what the fluent self RECENTLY said out loud — the
@@ -305,6 +319,7 @@ export class CallSession implements DurableObject {
     try { msg = JSON.parse(ev.data) } catch { return this.fail("bad_json", "unparseable control message") }
 
     if (msg.type === "end") {
+      this.endReason ??= "hangup"
       this.teardown()
       return
     }
@@ -342,6 +357,7 @@ export class CallSession implements DurableObject {
           // a spent free pool, "see you tomorrow" for a subscriber's day)
           // and put the call down. Mid-sentence audio is allowed to finish
           // client-side; nothing new is generated.
+          this.endReason ??= code
           this.emit({ type: "error", code, message: "talk allowance spent" })
           this.teardown()
         },
@@ -350,6 +366,7 @@ export class CallSession implements DurableObject {
       // speaks, not a free minute later (same rule as the classic path).
       const wall = await this.billing.preflight()
       if (wall) {
+        this.endReason ??= wall
         this.emit({ type: "error", code: wall, message: "talk allowance spent" })
         return this.teardown()
       }
@@ -357,9 +374,14 @@ export class CallSession implements DurableObject {
     }
 
     this.history = msg.history ? [...msg.history] : []
+    this.language = msg.language || "en"
     this.replyEngine = new ReplyEngine({
       apiKey: this.env.GEMINI_API_KEY,
-      model: DEFAULT_REPLY_MODEL,
+      // An env var, so a bad model release can be rolled back without a
+      // deploy — and so the reply-failure path can be exercised on purpose
+      // (point it at a model that does not exist and every generation
+      // fails while the transcriber keeps working).
+      model: this.env.GEMINI_REPLY_MODEL ?? DEFAULT_REPLY_MODEL,
       system: msg.system,
     })
 
@@ -386,13 +408,26 @@ export class CallSession implements DurableObject {
           // playback by its own duration.
           const ms = pcm.byteLength / 2 / (this.eleven?.sampleRate ?? 22050) * 1000
           this.playoutEndAt = Math.max(this.playoutEndAt, Date.now()) + ms
+          const committedAt = this.commitAtByContext.get(contextId)
+          if (committedAt !== undefined) {
+            this.commitAtByContext.delete(contextId)
+            this.voiceFirstMs.push(Date.now() - committedAt)
+          }
           this.client.send(pcm)
         },
         onContextDone: (contextId) => {
           console.log(`tts: context ${contextId} final (active=${this.activeContext})`)
           this.endLine(contextId)
         },
-        onError: (message) => this.emit({ type: "error", code: "tts", message }),
+        // One line's voice failing is not the end of the call: the text is
+        // already on the learner's screen, the socket reopens lazily on the
+        // next line, and the line is ended here so the client's turn comes
+        // back to the learner instead of waiting on audio that never comes.
+        onError: (message) => {
+          this.warn("tts", message)
+          const context = this.activeContext
+          if (context !== null) this.endLine(context)
+        },
       },
     )
 
@@ -440,6 +475,8 @@ export class CallSession implements DurableObject {
         },
         onUtterance: (text) => this.handleUtterance(text),
         onRotating: () => this.emit({ type: "rotating" }),
+        // Fatal: with no transcriber the call is deaf. The client offers a
+        // reconnect that carries the history, so the talk itself survives.
         onError: (message) => this.fail("transcriber", message),
       },
     )
@@ -515,10 +552,9 @@ export class CallSession implements DurableObject {
     }).catch((e) => {
       if (abort.signal.aborted || this.ended) return
       if (spec.context) {
-        // Already adopted and partially voiced — same surface as a live
-        // reply failure.
-        this.activeContext = null
-        this.emit({ type: "error", code: "reply", message: String(e) })
+        // Already adopted and partially voiced — same recovery as a live
+        // reply failure: retry the generation once, then apologise aloud.
+        this.recoverReply(spec.context, String(e))
       } else if (this.spec === spec) {
         // Died while still speculative: forget it, the utterance path will
         // simply run a fresh generation.
@@ -621,6 +657,10 @@ export class CallSession implements DurableObject {
       this.spec = null
       this.turnCount += 1
       const context = `t${this.turnCount}`
+      // Same clock as the non-speculative path — an adopted speculation is
+      // the COMMON case (it is the whole point of speculating), so leaving
+      // it out meant the latency sample was empty on almost every turn.
+      this.commitAtByContext.set(context, Date.now())
       this.activeContext = context
       this.activeReplyAbort = spec.abort
       this.emit({
@@ -639,6 +679,13 @@ export class CallSession implements DurableObject {
 
     this.turnCount += 1
     const context = `t${this.turnCount}`
+    this.commitAtByContext.set(context, Date.now())
+    this.generateReply(context)
+  }
+
+  /** Write and voice the reply for the history as it stands. Separate from
+   *  `commitTurn` so a failed generation can run again for the SAME turn. */
+  private generateReply(context: string): void {
     const abort = new AbortController()
     this.activeReplyAbort = abort
     this.activeContext = context
@@ -660,9 +707,72 @@ export class CallSession implements DurableObject {
       this.finishReply(context, full)
     }).catch((e) => {
       if (abort.signal.aborted || this.ended) return
-      this.activeContext = null
-      this.emit({ type: "error", code: "reply", message: String(e) })
+      this.recoverReply(context, String(e))
     })
+  }
+
+  /** A reply generation failed for a committed turn. Until 2026-09-12 this
+   *  was `error` → the client tore the call down, silently: the learner had
+   *  just said something and the fluent self went quiet for good. That was
+   *  the single most common way a launch-week call ended. Now: one fresh
+   *  generation for the same turn; if that fails too, the fluent self SAYS
+   *  so, in the learner's language, and the call goes on. */
+  private recoverReply(context: string, message: string): void {
+    if (this.ended) return
+    if (!this.replyRetried.has(context)) {
+      this.replyRetried.add(context)
+      this.warn("reply", `retrying: ${message}`)
+      // Whatever was voiced of the failed attempt is gone from the learner's
+      // point of view; close its context so the retry starts a clean line.
+      this.voiceBuffer.delete(context)
+      this.eleven?.closeContext(context)
+      this.generateReply(context)
+      return
+    }
+    this.warn("reply", `gave up: ${message}`)
+    this.voiceBuffer.delete(context)
+    this.eleven?.closeContext(context)
+    const line = CallSession.apologyLine(this.language)
+    // The apology becomes the model's turn so the next reply knows it
+    // asked the learner to repeat — otherwise it answers a question it
+    // never heard the answer to.
+    this.history.push({ role: "model", text: line })
+    const retryContext = `${context}r`
+    this.activeContext = retryContext
+    this.commitAtByContext.set(retryContext, Date.now())
+    this.emit({
+      type: "audio_start",
+      context: retryContext,
+      sampleRate: this.eleven?.sampleRate ?? 22050,
+    })
+    this.routeDelta(retryContext, line)
+    this.finishVoice(retryContext)
+    this.emit({ type: "reply", context: retryContext, text: line })
+  }
+
+  /** What the fluent self says when it could not answer. Informal — it is
+   *  the learner's own future self, and the app's rule is that it never
+   *  speaks to them formally (CLAUDE.md, hero-greeting-banmal). */
+  private static apologyLine(language: string): string {
+    const lines: Record<string, string> = {
+      en: "Sorry, I lost you for a second. Could you say that again?",
+      de: "Sorry, ich hab dich kurz verloren. Sagst du das noch mal?",
+      ko: "미안, 잠깐 놓쳤어. 다시 한 번 말해 줄래?",
+      ja: "ごめん、ちょっと聞き逃した。もう一回言ってくれる？",
+      es: "Perdona, te perdí un segundo. ¿Me lo repites?",
+      fr: "Pardon, je t'ai perdu une seconde. Tu peux répéter ?",
+      zh: "抱歉，我刚才没跟上。你能再说一遍吗？",
+    }
+    return lines[language.toLowerCase().split("-")[0]] ?? lines.en
+  }
+
+  /** A problem the call survives. Counted and forwarded; the client writes
+   *  it to telemetry so the console can see what a "fine" call went
+   *  through. */
+  private warn(code: string, message: string): void {
+    this.warnings += 1
+    console.log(`warning ${code}: ${message.slice(0, 200)}`)
+    this.emit({ type: "warning", code, message: message.slice(0, 300) })
   }
 
   private routeDelta(context: string, delta: string): void {
@@ -683,7 +793,19 @@ export class CallSession implements DurableObject {
     const chunk = text.replace(/\s+$/, "") + " "
     if (chunk.trim().length === 0) return
     this.eleven?.sendText(context, chunk)
-      .catch((e) => this.emit({ type: "error", code: "tts", message: String(e) }))
+      .catch((e) => {
+        // The voice could not be reached for this line — the socket
+        // upgrade was refused (a 429 on the plan's concurrency, a 5xx), or
+        // it dropped mid-line. This used to be `error`, and the client
+        // tore the call down on it: the greeting's text appeared, no voice
+        // came, and the call was over before the learner said a word —
+        // the shape of 25 of the 42 launch-week sessions. Now the line is
+        // ended without audio (its text is on screen), the connection
+        // handle is dropped so the NEXT line reconnects, and the call goes
+        // on. `warn` records it so the console can count how often.
+        this.warn("tts", String(e))
+        if (this.activeContext === context) this.endLine(context)
+      })
   }
 
   /** The reply is fully written: voice whatever sentence tail is still
@@ -785,6 +907,7 @@ export class CallSession implements DurableObject {
   private armIdleHangUp(): void {
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
     this.idleTimer = setTimeout(() => {
+      this.endReason ??= "idle"
       this.emit({ type: "error", code: "idle", message: "Call ended — no one was talking." })
       this.teardown()
     }, CallSession.idleHangUpMs) as unknown as number
@@ -803,11 +926,13 @@ export class CallSession implements DurableObject {
       if (this.ended) return
       if (!this.clientPresent(CallSession.clientGoneMs)) {
         console.log("watchdog: no client frames — hanging up")
+        this.endReason ??= "client_gone"
         this.teardown()
         return
       }
       if (Date.now() - this.sessionStartedAt > CallSession.maxSessionMs) {
         console.log("watchdog: session ceiling reached — hanging up")
+        this.endReason ??= "session_ceiling"
         this.emit({ type: "error", code: "idle", message: "Call ended." })
         this.teardown()
         return
@@ -831,12 +956,26 @@ export class CallSession implements DurableObject {
   }
 
   private fail(code: string, message: string): void {
+    console.log(`fail ${code}: ${message.slice(0, 200)}`)
+    this.endReason ??= code
     this.emit({ type: "error", code, message })
     this.teardown()
   }
 
   private teardown(): void {
     if (this.ended) return
+    // The session's last word goes out BEFORE `ended` flips, on the socket
+    // as it still is. A close initiated by the phone reaches here with no
+    // reason set — that is its reason.
+    this.emit({
+      type: "ended",
+      reason: this.endReason ?? "socket_closed",
+      turns: this.turnCount,
+      speechSeconds: Math.round(this.speechSeconds),
+      durationMs: Date.now() - this.sessionStartedAt,
+      voiceFirstMs: this.voiceFirstMs.slice(0, 200),
+      warnings: this.warnings,
+    })
     this.ended = true
     this.billing?.stop()   // final flush — the last partial batch still bills
     if (this.statsTimer !== null) clearInterval(this.statsTimer)

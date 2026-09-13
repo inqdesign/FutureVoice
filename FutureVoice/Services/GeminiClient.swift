@@ -15,6 +15,9 @@ final class GeminiClient {
     /// `URLSession.edgeFunctionsBackground`. Its own connection pool, so a
     /// bulky upload here can't slow the turn reply down.
     static let background = GeminiClient(session: .edgeFunctionsBackground)
+    /// For the end-of-talk summary only: a ceiling that fits a slow model
+    /// instead of failing the review at 60 s (see `edgeFunctionsLong`).
+    static let longRunning = GeminiClient(session: .edgeFunctionsLong)
 
     private let session: URLSession
     init(session: URLSession = .edgeFunctions) {

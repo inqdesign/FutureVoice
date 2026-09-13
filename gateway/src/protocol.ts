@@ -72,6 +72,20 @@ export type ServerMessage =
   /** The upstream session is being rotated (Gemini Live ~15 min cap);
    *  momentary — the gateway reconnects with the resumption handle itself. */
   | { type: "rotating" }
+  /** Something went wrong and the call CONTINUES. A reply that failed and
+   *  was retried, a TTS socket that dropped one line, a transcriber rotation
+   *  that took longer than it should. The client logs it; nothing else. On
+   *  2026-09-12 every one of these ended the call (`error` → teardown) and
+   *  the learner saw the fluent self simply go quiet — no message, no way
+   *  back, and nothing in telemetry either. */
+  | { type: "warning"; code: string; message: string }
+  /** The session's last word, sent right before the socket closes — why it
+   *  ended and what happened in it. This is the ONLY per-session record
+   *  this path produces (the reply and the voice go straight to their
+   *  providers, so the usage ledger sees neither), which is why it exists:
+   *  the client writes it to client_events and the console reads it. */
+  | { type: "ended"; reason: string; turns: number; speechSeconds: number
+      durationMs: number; voiceFirstMs: number[]; warnings: number }
   | { type: "error"; code: string; message: string }
 
 export function send(ws: WebSocket, msg: ServerMessage): void {

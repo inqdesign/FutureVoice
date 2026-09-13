@@ -92,7 +92,13 @@ export class ElevenTTS {
       },
     })
     const ws = resp.webSocket
-    if (!ws) throw new Error(`elevenlabs upgrade refused: ${resp.status}`)
+    if (!ws) {
+      // Say WHY. A bare status told nobody whether this was the plan's
+      // concurrency cap (429), a voice the key may not use (403) or an
+      // outage (5xx) — three different fixes.
+      const body = await resp.text().catch(() => "")
+      throw new Error(`elevenlabs upgrade refused: ${resp.status} ${body.slice(0, 200)}`)
+    }
     ws.accept()
     this.ws = ws
 
