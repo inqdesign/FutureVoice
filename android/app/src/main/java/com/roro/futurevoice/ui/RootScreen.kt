@@ -1,5 +1,12 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Newspaper
 import com.roro.futurevoice.talk.PathIdeasContent
 import com.roro.futurevoice.talk.PathIdeas
@@ -611,6 +618,10 @@ fun RootScreen() {
             onOpenWordsAll = { library = LibraryKind.WORDS },
             onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
             onOpenDueReview = { showDueReview = true },
+            onSwitchLanguage = app::switchLanguage,
+            // Adding one asks for a level, which is Me's sheet — the home
+            // header is not the place for a form.
+            onAddLanguage = { showMe = true },
         )
     }
 }
@@ -761,6 +772,8 @@ private fun HomeScreen(
     onOpenWordsAll: () -> Unit = {},
     onOpenExpressionsAll: () -> Unit = {},
     onOpenDueReview: () -> Unit = {},
+    onSwitchLanguage: (String) -> Unit = {},
+    onAddLanguage: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -842,8 +855,32 @@ private fun HomeScreen(
                 },
                 navigationIcon = {
                     if (tab == HomeTab.TALK) {
-                        HeaderButton(LanguageCatalog.endonym(state.targetLanguage),
-                            onClick = onOpenMe)
+                        // The language being practised, and the way to change
+                        // it. It used to be a label that opened Me, which is
+                        // three taps from the thing it names.
+                        var languageMenu by remember { mutableStateOf(false) }
+                        Box {
+                            HeaderButton(LanguageCatalog.endonym(state.targetLanguage),
+                                onClick = { languageMenu = true })
+                            DropdownMenu(expanded = languageMenu, onDismissRequest = { languageMenu = false }) {
+                                state.enrolledLanguages.forEach { code ->
+                                    DropdownMenuItem(
+                                        text = { Text(LanguageCatalog.endonym(code)) },
+                                        leadingIcon = {
+                                            if (code == state.targetLanguage) {
+                                                Icon(Icons.Filled.Check, contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary)
+                                            }
+                                        },
+                                        onClick = { languageMenu = false; onSwitchLanguage(code) })
+                                }
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.add_a_language)) },
+                                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                                    onClick = { languageMenu = false; onAddLanguage() })
+                            }
+                        }
                     }
                 },
                 actions = {
@@ -913,6 +950,8 @@ private fun HomeScreen(
                         onPickNews = { topic -> launch(topic.title, topic.facts.orEmpty()) },
                         onPickScenario = { sc -> launch(sc.promptBlurb, emptyList(), sc.id) },
                         onWatch = onWatch,
+                        // They all live on Watch — that IS the collection.
+                        onAllScenarios = { onTabChange(HomeTab.WATCH) },
                     )
                     RecentTalks(language = state.targetLanguage,
                         nativeLanguage = state.nativeLanguage, level = state.level,
@@ -1168,6 +1207,7 @@ private fun TodayRow() {
  * as posters and this reads as a list.
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun DiscoverSection(
     state: AppState,
     enabled: Boolean,
@@ -1175,6 +1215,8 @@ private fun DiscoverSection(
     onPickScenario: (Scenario) -> Unit,
     onWatch: (String) -> Unit,
     onSavePersona: (com.roro.futurevoice.talk.UserPersona) -> Unit = {},
+    /** The full collection — the Watch tab, which is where they all live. */
+    onAllScenarios: () -> Unit = {},
 ) {
     var editingInterests by remember { mutableStateOf(false) }
     var newsFailed by remember { mutableStateOf(false) }
@@ -1196,6 +1238,8 @@ private fun DiscoverSection(
     val scenarioStore = remember { ScenarioStore.shared(context) }
     var topics by remember { mutableStateOf<List<SuggestedTopic>>(emptyList()) }
     var scenarios by remember { mutableStateOf<List<Scenario>>(emptyList()) }
+    /** Who a scene is with, for the row's caption and its initials. */
+    var people by remember { mutableStateOf<List<com.roro.futurevoice.data.Counterpart>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var composing by remember { mutableStateOf(false) }
 
@@ -1248,7 +1292,10 @@ private fun DiscoverSection(
             }
         }
     }
-    LaunchedEffect(language, revision) { scenarios = scenarioStore.load(language) }
+    LaunchedEffect(language, revision) {
+        scenarios = scenarioStore.load(language)
+        people = CounterpartStore.shared(context).load()
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
@@ -1335,23 +1382,58 @@ private fun DiscoverSection(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            scenarios.filter { it.archivedAt == null && it.isMeeting != true }.forEach { sc ->
+            val live = scenarios.filter { it.archivedAt == null && it.isMeeting != true }
+            live.take(5).forEach { sc ->
+                // WHO the scene is with, not what shelf it sits on — a
+                // category told the learner nothing they didn't already see.
+                val personName = sc.counterpartId?.let { id -> people.firstOrNull { it.id == id }?.name }
+                var rowMenu by remember(sc.id) { mutableStateOf(false) }
+                Box {
+                    DiscoverRow(
+                        title = sc.cardTitle,
+                        caption = (personName ?: sc.role?.takeIf { it.isNotBlank() })
+                            ?.let { stringResource(R.string.with, it) } ?: sc.category,
+                        // The icon the categorizer picked for this scenario —
+                        // a fixed pin made every scenario look like a place.
+                        icon = Symbols.icon(sc.categoryIcon),
+                        accent = Books.scenarios,
+                        onClick = null,
+                        modifier = Modifier.combinedClickable(
+                            onClick = {
+                                if (enabled) {
+                                    scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
+                                    onPickScenario(sc)
+                                }
+                            },
+                            onLongClick = { rowMenu = true }),
+                        trailing = {
+                            TextButton(onClick = { onWatch(sc.id) }) {
+                                Text(stringResource(R.string.watch))
+                            }
+                        },
+                    )
+                    DropdownMenu(expanded = rowMenu, onDismissRequest = { rowMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete),
+                                color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                rowMenu = false
+                                scope.launch { scenarioStore.delete(sc.id, language); StoreEvents.bump() }
+                            })
+                    }
+                }
+            }
+            // The door to the rest of them, rather than a list that grows
+            // until the home screen is a filing cabinet.
+            if (live.size > 5) {
                 DiscoverRow(
-                    title = sc.cardTitle,
-                    caption = sc.category,
-                    // The icon the categorizer picked for this scenario —
-                    // a fixed pin made every scenario look like a place.
-                    icon = Symbols.icon(sc.categoryIcon),
+                    title = stringResource(R.string.all_scenarios),
+                    caption = "${live.size}",
+                    icon = Icons.Filled.Layers,
                     accent = Books.scenarios,
-                    onClick = if (enabled) ({
-                        scope.launch { scenarioStore.touch(sc.id, language); StoreEvents.bump() }
-                        onPickScenario(sc)
-                    }) else null,
-                    trailing = {
-                        TextButton(onClick = { onWatch(sc.id) }) {
-                            Text(stringResource(R.string.watch))
-                        }
-                    },
+                    onClick = onAllScenarios,
                 )
             }
             if (scenarios.none { it.archivedAt == null && it.isMeeting != true }) {
