@@ -272,6 +272,7 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     private fun startRealtime(config: TalkConfig) {
         lastActivityAt = System.currentTimeMillis()
+        val freeTalk = config.topic.isBlank() && config.cast == null && config.scenarioId == null
         callJob = viewModelScope.launch {
             try {
                 val profile = ProfileStore.shared(appContext)
@@ -287,6 +288,11 @@ class TalkViewModel(context: Context) : ViewModel() {
                     weakVocabAreas = profile.weakVocabAreas,
                     topic = config.topic,
                     persona = config.persona,
+                    // Free talk only: a scenario casts the model as the
+                    // barista and a Find-people call as a stranger; neither
+                    // can run an introduction without breaking what it was
+                    // launched as.
+                    firstMeeting = freeTalk && config.persona?.metAt == null,
                     newsFacts = config.newsFacts,
                     cast = config.cast,
                 ) + REALTIME_STYLE_RULES
@@ -296,7 +302,29 @@ class TalkViewModel(context: Context) : ViewModel() {
                 // silent. Canned pools and voicemails arrive as initialOpener;
                 // otherwise one request writes it, as the classic path did.
                 val opener = config.initialOpener.ifBlank {
-                    runCatching {
+                    // A free talk opens on a bundled line, never on a request:
+                    // the INTRO line before the two have met (it introduces
+                    // itself first), then the rotating pool, then the fallback
+                    // while the pool is still being written.
+                    if (freeTalk) {
+                        val openers = FreeTalkOpeners(appContext)
+                        val name = config.persona?.displayName
+                        if (config.persona?.metAt == null) {
+                            if (!openers.hasPool(config.targetLanguage, name)) {
+                                viewModelScope.launch {
+                                    runCatching { openers.generatePool(config.targetLanguage, name, config.level) }
+                                }
+                            }
+                            FreeTalkOpeners.introOpener(config.targetLanguage)
+                        } else {
+                            openers.next(config.targetLanguage, name) ?: run {
+                                viewModelScope.launch {
+                                    runCatching { openers.generatePool(config.targetLanguage, name, config.level) }
+                                }
+                                FreeTalkOpeners.fallbackOpener(config.targetLanguage)
+                            }
+                        }
+                    } else runCatching {
                         GeminiClient(auth).sendJson(
                             system = realtimeSystem + ConversationEngine.turnOutputInstruction(
                                 config.targetLanguage, config.nativeLanguage),

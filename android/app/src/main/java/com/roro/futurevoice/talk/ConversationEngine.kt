@@ -41,6 +41,8 @@ object ConversationEngine {
         weakVocabAreas: List<String> = emptyList(),
         topic: String = "",
         persona: UserPersona? = null,
+        /** The first free talk ever: the fluent self meets the learner. */
+        firstMeeting: Boolean = false,
         newsFacts: List<String> = emptyList(),
         cast: Cast? = null,
     ): String {
@@ -86,7 +88,7 @@ object ConversationEngine {
         You're in a real-feeling SPOKEN $languageName conversation with the user. The point is for it to sound like two actual people talking — not a language-class exchange. Read everything below, then talk like a real person.
         $castBlock
 
-        ${personaBlock(persona, languageName)}
+        ${personaBlock(persona, languageName)}${if (firstMeeting && cast == null) FirstCallBlock.build(languageName) else ""}
 
         Language profile:
         - Native language: ${LanguageCatalog.englishName(nativeLanguage)}
