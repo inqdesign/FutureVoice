@@ -809,7 +809,11 @@ private fun HomeScreen(
                         }
                     }
                     if (tab == HomeTab.TALK) {
-                        HeaderButton(stringResource(R.string.me), onClick = onOpenMe)
+                        // The learner's own face opens their own page — iOS's
+                        // header control, not a text label.
+                        IconButton(onClick = onOpenMe) {
+                            ProfileAvatar(initials = state.persona?.displayName.orEmpty(), size = 30.dp)
+                        }
                     }
                 },
             )

@@ -129,7 +129,12 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       `gen-strings.py --languages en,ko,ja,zh-Hant`로 가져오고(1347개), 안드로이드 전용 149개는
       새로 번역했다(ja는 기존 iOS ja 열의 용어를 따름, zh-Hant는 대만 중국어·간체 0자 검증).
       에뮬레이터에서 ko → ja → ko 전환 확인.
-- [ ] `AvatarStore`, `VoiceSampleStore`, `MicChoiceSheet`, `UsageDetailView`
+- [x] `AvatarStore` — 2026-09-13. 프로필 사진(정사각 크롭·512·JPEG), Talk 헤더가 "Me" 글자 대신
+      얼굴을 달고, 프로필 편집 첫 단계에서 고른다. 사진이 없으면 이니셜, 그것도 없으면 사람 글리프.
+- [x] ~~`VoiceSampleStore`~~ — 클론 녹음은 이미 `voice/clone-sample.wav`에 남고 비교 시트가 읽는다.
+- [ ] `MicChoiceSheet` — 블루투스 이어폰이 연결됐을 때 어느 마이크로 녹음할지 한 번 묻기.
+      **실기기 필요**: 에뮬레이터에 블루투스 오디오 경로가 없다.
+- [ ] ~~`UsageDetailView`~~ — iOS에서 2026-09-04에 `PlanPageView`로 접혔음, N/A.
 - [ ] `UpdateAvailableSheet` — iOS 전용 개념(Play는 인앱 업데이트가 따로)
 
 ## iOS와 다른 것이 맞는 자리

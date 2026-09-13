@@ -1,5 +1,17 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.AvatarStore
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -99,6 +111,20 @@ fun PersonaIntakeScreen(
                 0 -> {
                     Header(stringResource(R.string.what_should_i_call_you),
                         stringResource(R.string.we_re_building_your_fluent_self_it_ll_speak_in_your_own_voic_e7ccbb))
+                    // The picture is the learner's to pick: neither sign-in
+                    // hands one over.
+                    val scope = rememberCoroutineScope()
+                    val context = LocalContext.current
+                    val pick = rememberLauncherForActivityResult(
+                        ActivityResultContracts.PickVisualMedia()) { uri ->
+                        uri?.let { scope.launch { AvatarStore.save(context, it) } }
+                    }
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Box(Modifier.clip(CircleShape).clickable {
+                            pick.launch(PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        }) { ProfileAvatar(initials = name, size = 88.dp) }
+                    }
                     OutlinedTextField(value = name, onValueChange = { name = it },
                         label = { Text(stringResource(R.string.your_name)) },
                         singleLine = true, modifier = Modifier.fillMaxWidth())
