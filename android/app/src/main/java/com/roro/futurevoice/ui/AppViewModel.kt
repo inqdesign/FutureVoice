@@ -163,6 +163,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
 
     /** "Get started": onboard account-free; sign-up comes after the clone. */
     fun startAnonymous() {
+        com.roro.futurevoice.core.Analytics.capture("onboarding_started")
         _state.update { it.copy(busy = true, error = null) }
         viewModelScope.launch {
             runCatching { auth.startAnonymousSession() }
@@ -272,6 +273,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * never a side effect of auditioning one.
      */
     fun adoptRemixedVoice(newId: String, accentId: String) {
+        com.roro.futurevoice.core.Analytics.capture("voice_accent_applied")
         val old = _state.value.voiceId
         if (newId == old) return
         _state.update { it.copy(voiceId = newId, voiceAccentId = accentId) }
@@ -320,6 +322,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * every reply and every scene at the wrong band from the first turn.
      */
     fun switchLanguage(code: String) {
+        com.roro.futurevoice.core.Analytics.capture("language_switched")
         LanguageScope.setActive(appContext, code)
         LanguageScope.enroll(appContext, code)
         val level = CefrLevel.from(LanguageScope.level(appContext, code, _state.value.level.code))
@@ -339,6 +342,7 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
      * own time, and the day's cap is what converts them.
      */
     fun addLanguage(code: String, level: CefrLevel) {
+        com.roro.futurevoice.core.Analytics.capture("language_added")
         LanguageScope.enroll(appContext, code)
         LanguageScope.setLevel(appContext, code, level.code)
         switchLanguage(code)

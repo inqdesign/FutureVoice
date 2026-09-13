@@ -171,6 +171,7 @@ fun CloneFlowScreen(
     fun performClone() {
         act = CloneAct.UPLOADING
         error = null
+        com.roro.futurevoice.core.Analytics.capture("voice_clone_started")
         scope.launch {
             try {
                 // Boost-only normalize; denoise only a take the quality gate
@@ -185,6 +186,7 @@ fun CloneFlowScreen(
                     removeBackgroundNoise = (snr ?: 0f) < 22f,
                 )
                 clonedVoiceId = voiceId
+                com.roro.futurevoice.core.Analytics.capture("voice_clone_succeeded")
                 // First words in the user's own voice. Fidelity model on
                 // purpose — fires once per user, and it's the moment they
                 // decide whether the clone sounds like them. Best-effort:
@@ -200,6 +202,7 @@ fun CloneFlowScreen(
                 act = CloneAct.MEET
                 greeting?.let { mp3.play(it) }
             } catch (e: Exception) {
+                com.roro.futurevoice.core.Analytics.capture("voice_clone_failed")
                 error = when {
                     e is VoiceCloneClient.VoiceLimitReached ->
                         "Our voice shelf is full right now — please try again in a bit."

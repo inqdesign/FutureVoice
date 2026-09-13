@@ -234,6 +234,7 @@ class DrillStore private constructor(context: Context) {
     suspend fun fileInBin(card: DrillCard, box: Int, delayMs: Long,
                           language: String = LanguageScope.active(appContext),
                           now: Long = System.currentTimeMillis()) {
+        com.roro.futurevoice.core.Analytics.capture("drill_reviewed")
         upsertMany(listOf(card.copy(
             timesSeen = card.timesSeen + 1, lastReviewedAt = now, box = box,
             nextReviewAt = now + delayMs)), language)

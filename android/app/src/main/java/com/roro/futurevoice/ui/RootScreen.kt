@@ -534,7 +534,7 @@ fun RootScreen() {
             onOpenActivity = { showActivity = true },
             onOpenAssessment = { showAssessment = true },
             tab = tab,
-            onTabChange = { tab = it },
+            onTabChange = { tab = it; com.roro.futurevoice.core.Analytics.capture("screen_viewed", mapOf("screen" to it.name.lowercase())) },
             onOpenDeck = { showDeck = true },
             onOpenWords = { studyDeckKind = StudyScheduleStore.Kind.WORD },
             onOpenExpressions = { studyDeckKind = StudyScheduleStore.Kind.EXPRESSION },

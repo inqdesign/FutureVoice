@@ -81,6 +81,7 @@ object ConsentStore {
      * unticked and Next never arms.
      */
     fun record(c: Context, now: Long = System.currentTimeMillis()) {
+        com.roro.futurevoice.core.Analytics.capture("voice_consent_given")
         val p = c.getSharedPreferences(PREFS, 0)
         val e = p.edit()
         if (p.getLong(AGE, 0L) <= 0) e.putLong(AGE, now)

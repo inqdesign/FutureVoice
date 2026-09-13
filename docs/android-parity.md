@@ -83,9 +83,11 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 **알림·계측**
 - [x] `Analytics` — 2026-09-13. SDK 없이 PostHog capture API, iOS와 같은 프로젝트·이벤트
       이름·대문자 UUID distinct_id, DEBUG 옵트아웃. 1차: conversation_started/ended,
-      setup_completed, level_up, shadow_attempted. **남은 이벤트**: voice_clone_*,
-      screen_viewed, daily_call_*, drill_*, word_*, expression_*, voice_accent_*,
-      voice_consent_*, language_*, onboarding_started, widget_opened.
+      setup_completed, level_up, shadow_attempted. 2차: voice_clone_started/succeeded/failed, screen_viewed, word_saved/known,
+      drill_reviewed, expression_bookmarked, daily_call_scheduled, voice_accent_applied,
+      voice_consent_given, language_added/switched, onboarding_started. **남은 것**:
+      daily_call_answered/declined/missed, drill_snoozed/used_in_conversation,
+      expression_dismissed, voice_accent_previews/removed, widget_opened, audio_played.
 - [ ] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications`
 - [ ] `UILanguage` — 앱 언어 해석
 - [ ] `AvatarStore`, `VoiceSampleStore`, `MicChoiceSheet`, `UsageDetailView`

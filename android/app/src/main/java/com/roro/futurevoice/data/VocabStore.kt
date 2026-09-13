@@ -156,6 +156,7 @@ class VocabStore private constructor(context: Context) {
      * it, so it logs a REP and must never tick the daily goal.
      */
     suspend fun addStudying(word: String, language: String) = mutex.withLock {
+        com.roro.futurevoice.core.Analytics.capture("word_saved")
         val f = file(language, "vocab_studying.json")
         val list = readList(f)
         if (list.contains(word)) return
@@ -190,6 +191,7 @@ class VocabStore private constructor(context: Context) {
      * own count, and that evidence outlives an opinion about it.
      */
     suspend fun markKnown(lemma: String, language: String, now: Long = System.currentTimeMillis()) {
+        com.roro.futurevoice.core.Analytics.capture("word_known")
         mutex.withLock {
             val f = file(language, "vocab_pool.json")
             val records = readRecords(f)
@@ -221,6 +223,7 @@ class VocabStore private constructor(context: Context) {
      */
     suspend fun setStudyingExpression(phrase: String, studying: Boolean, language: String,
                                       now: Long = System.currentTimeMillis()) = mutex.withLock {
+        if (studying) com.roro.futurevoice.core.Analytics.capture("expression_bookmarked")
         val k = exprKey(phrase)
         if (k.isEmpty()) return
         val f = file(language, "vocab_studying_expressions.json")
