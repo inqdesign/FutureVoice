@@ -172,6 +172,20 @@ class VocabStore private constructor(context: Context) {
     }
 
     /** "used" | "known" | null — null means the pool has never met the word. */
+    /**
+     * Distinct words the learner has actually PRODUCED, counted per CEFR
+     * band. "used" only — a word marked known was recognized, not spoken,
+     * and the vocabulary level is a claim about production.
+     */
+    suspend fun usedWordsByLevel(language: String): Map<CefrLevel, Int> = mutex.withLock {
+        val counts = mutableMapOf<CefrLevel, Int>()
+        readRecords(file(language, "vocab_pool.json")).forEach { (lemma, r) ->
+            if (r.state != "used") return@forEach
+            CoreVocabulary.level(lemma, language)?.let { counts[it] = (counts[it] ?: 0) + 1 }
+        }
+        counts
+    }
+
     suspend fun state(lemma: String, language: String): String? = mutex.withLock {
         readRecords(file(language, "vocab_pool.json"))[lemma]?.state
     }

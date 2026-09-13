@@ -152,4 +152,6 @@
     <string name="trial_becomes_paid_play">%1$d 天後會轉為付費訂閱。你隨時可以在 Google Play 取消。</string>
     <string name="notifications_are_off">通知已關閉</string>
     <string name="reminders_cant_reach_you">複習和每日來電無法送達。請到設定開啟。</string>
+    <string name="axis_vocab">詞彙</string>
+    <string name="axis_express">表達</string>
 </resources>

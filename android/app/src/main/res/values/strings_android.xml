@@ -152,4 +152,6 @@
     <string name="trial_becomes_paid_play">Your trial becomes a paid subscription in %1$d days. You can cancel any time in Google Play.</string>
     <string name="notifications_are_off">Notifications are off</string>
     <string name="reminders_cant_reach_you">Reviews and the daily call can\'t reach you. Turn them on in settings.</string>
+    <string name="axis_vocab">Vocab</string>
+    <string name="axis_express">Express</string>
 </resources>

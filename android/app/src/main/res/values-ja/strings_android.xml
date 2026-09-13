@@ -152,4 +152,6 @@
     <string name="trial_becomes_paid_play">%1$d日後に有料のサブスクリプションに切り替わります。Google Play からいつでも解約できます。</string>
     <string name="notifications_are_off">通知がオフになっています</string>
     <string name="reminders_cant_reach_you">復習と毎日の電話が届きません。設定でオンにしてください。</string>
+    <string name="axis_vocab">語彙</string>
+    <string name="axis_express">表現</string>
 </resources>

@@ -152,4 +152,6 @@
     <string name="trial_becomes_paid_play">%1$d일 뒤 유료 구독으로 바뀌어요. 구글 플레이에서 언제든 해지할 수 있어요.</string>
     <string name="notifications_are_off">알림이 꺼져 있어요</string>
     <string name="reminders_cant_reach_you">복습과 매일 전화가 닿지 못해요. 설정에서 켜 주세요.</string>
+    <string name="axis_vocab">어휘</string>
+    <string name="axis_express">표현</string>
 </resources>
