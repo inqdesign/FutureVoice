@@ -60,6 +60,16 @@ class TalkMeter(
     /** Fired once when the server says the talking is over (402). */
     var onWallHit: ((EdgeError) -> Unit)? = null
 
+    /**
+     * The GATEWAY is charging this call, so the ticker must not.
+     *
+     * The meter still runs: the day's numbers keep landing in [TalkTimeLog]
+     * (the home ring, the day card, the streak), it just stops calling
+     * `talk-tick` — two meters charging one call is a double bill. Walls
+     * arrive as gateway error events on that path instead of tick 402s.
+     */
+    var serverMetered = false
+
     private val _minutesRemaining = MutableStateFlow<Int?>(null)
     /**
      * Whole minutes this account can still speak (floor) — the allowance
@@ -124,6 +134,12 @@ class TalkMeter(
     )
 
     private suspend fun tick(seconds: Int, label: String) {
+        if (serverMetered) {
+            // Already charged upstream — record them locally and stop there,
+            // or the learner pays twice for one second of talking.
+            appContext?.let { TalkTimeLog.add(it, seconds, language) }
+            return
+        }
         val request = try {
             Request.Builder()
                 .url(Config.functionUrl("talk-tick"))

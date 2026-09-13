@@ -140,13 +140,30 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var startedAt: Long = 0L
 
     /**
+     * Has the learner said anything yet in this call? The meter and the
+     * elapsed clock both wait for it: the opener speaks whether or not it is
+     * answered, and a call that was opened, listened to and left behind is
+     * not a minute of theirs. Per CALL, not per transcript — Continue reopens
+     * a book whose turns were spoken on another day.
+     */
+    private var learnerSpokeThisCall = false
+
+    /** When the CALL clock started: the learner's first speech, not connect. */
+    private var callStartedAt: Long? = null
+
+    /** Talk time banked across pauses — a pause stops the clock. */
+    private var bankedElapsedMs: Long = 0
+
+    /**
      * How long this call has been up, phone-style. Zero before it starts and
      * once it is wrapped up; it keeps running while paused, because a call
      * you put down is still a call you are on.
      */
-    fun elapsedSeconds(): Long =
-        if (startedAt == 0L || _state.value.phase == TalkPhase.ENDED) 0L
-        else (System.currentTimeMillis() - startedAt) / 1000
+    fun elapsedSeconds(): Long {
+        if (_state.value.phase == TalkPhase.ENDED) return 0L
+        val start = callStartedAt ?: return bankedElapsedMs / 1000
+        return (bankedElapsedMs + (System.currentTimeMillis() - start)) / 1000
+    }
 
     /** Reconnect after a failed reply — the learner spoke and heard nothing. */
     fun retry() {
@@ -186,13 +203,19 @@ class TalkViewModel(context: Context) : ViewModel() {
         _state.value = TalkUiState(phase = TalkPhase.CONNECTING)
         sessionId = StoreJson.newId()
         startedAt = System.currentTimeMillis()
-        // On the realtime path the GATEWAY is the meter — nothing below arms.
-        if (REALTIME) { startRealtime(config); return }
+        // The meter runs on BOTH paths; on the realtime one the gateway does
+        // the charging and this only writes the day's seconds down.
+        meter.isBillable = { isBillableMoment() }
+        meter.serverMetered = REALTIME
+        if (REALTIME) {
+            meter.start(sessionId = sessionId, language = config.targetLanguage)
+            startRealtime(config)
+            return
+        }
 
         // Metering starts with the call, not with the first turn. Silence isn't
         // billed — see `isBillableMoment`; set before start(), the ticker polls
         // it from its first second.
-        meter.isBillable = { isBillableMoment() }
         meter.onWallHit = { wall -> hitWall(wall) }
         meter.start(sessionId = sessionId, language = config.targetLanguage)
         lastActivityAt = System.currentTimeMillis()   // the call starts occupied
@@ -429,6 +452,7 @@ class TalkViewModel(context: Context) : ViewModel() {
                 RealtimeTalkClient.State.SPEAKING -> TalkPhase.SPEAKING
                 RealtimeTalkClient.State.IDLE, RealtimeTalkClient.State.FAILED -> null
             }
+            if (st == RealtimeTalkClient.State.HEARING) markLearnerSpoke()
             if (phase != null) {
                 lastActivityAt = System.currentTimeMillis()
                 _state.update { it.copy(phase = phase, level = realtime.level) }
@@ -437,6 +461,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         }
         realtime.onPartial = { text -> _state.update { it.copy(partial = text, level = realtime.level) } }
         realtime.onUserTurn = { said, wav, ms ->
+            markLearnerSpoke()
             val turn = Turn(role = TurnRole.USER, transcript = said, durationMs = ms,
                 audioURL = wav?.let { keepTurnAudio(it) })
             _state.update { it.copy(turns = it.turns + turn, partial = "") }
@@ -553,6 +578,7 @@ class TalkViewModel(context: Context) : ViewModel() {
             when (_state.value.phase) {
                 TalkPhase.PAUSED -> resumeRealtime()
                 TalkPhase.LISTENING, TalkPhase.THINKING, TalkPhase.SPEAKING -> {
+                    bankCallClock()
                     realtime.hangUp(); flushRealtimeReply()
                     _state.update { it.copy(phase = TalkPhase.PAUSED, partial = "", level = 0f) }
                     config?.let { updateCallNotification(it, TalkPhase.PAUSED) }
@@ -575,6 +601,7 @@ class TalkViewModel(context: Context) : ViewModel() {
      * Every "stop" lands here: the tap and the idle watchdog.
      */
     private fun pauseCall(forIdle: Boolean) {
+        bankCallClock()
         cancelIdleWatch()
         endpointJob?.cancel(); endpointJob = null
         // Whatever the partial held is discarded, as on iOS — a half-sentence
@@ -588,6 +615,7 @@ class TalkViewModel(context: Context) : ViewModel() {
     fun resume() {
         // The transcript tap and the lock-screen play both land here; on the
         // realtime path picking the call back up is a reconnect.
+        unbankCallClock()
         if (REALTIME) { if (_state.value.phase == TalkPhase.PAUSED) resumeRealtime(); return }
         if (_state.value.phase != TalkPhase.PAUSED) return
         lastActivityAt = System.currentTimeMillis()   // a tap is someone being here
@@ -927,9 +955,41 @@ class TalkViewModel(context: Context) : ViewModel() {
      * speaking counts; otherwise only a learner demonstrably talking into the
      * mic does. Silence — a phone put down, a room's babble — bills nothing.
      */
+    /** A pause stops the clock; what it ran is kept for the resume. */
+    private fun bankCallClock() {
+        val start = callStartedAt ?: return
+        bankedElapsedMs += System.currentTimeMillis() - start
+        callStartedAt = null
+    }
+
+    /** Picking the call back up continues the clock where it stopped. */
+    private fun unbankCallClock() {
+        if (learnerSpokeThisCall && callStartedAt == null) callStartedAt = System.currentTimeMillis()
+    }
+
+    /** First speech of the call: starts the clock and opens the meter. */
+    private fun markLearnerSpoke() {
+        if (learnerSpokeThisCall) return
+        learnerSpokeThisCall = true
+        if (callStartedAt == null) callStartedAt = System.currentTimeMillis()
+    }
+
     private fun isBillableMoment(): Boolean {
         val phase = _state.value.phase
         if (phase == TalkPhase.PAUSED || phase == TalkPhase.ENDED) return false
+        // The opener speaks whether or not it is answered. A call that was
+        // opened, listened to and left behind is not a minute of theirs.
+        if (!learnerSpokeThisCall) return false
+        if (REALTIME) {
+            // Same rule, read off the gateway's state rather than a local VAD.
+            return when (realtime.state) {
+                RealtimeTalkClient.State.SPEAKING,
+                RealtimeTalkClient.State.HEARING,
+                RealtimeTalkClient.State.THINKING -> true
+                RealtimeTalkClient.State.LISTENING -> realtime.level > 0.25f
+                else -> false
+            }
+        }
         val billable = phase == TalkPhase.THINKING || phase == TalkPhase.SPEAKING ||
             pcm.isPlaying || mp3.isPlaying || someoneIsTalkingHere()
         if (BuildConfig.DEBUG) {
