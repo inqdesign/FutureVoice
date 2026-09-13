@@ -167,4 +167,5 @@
     <string name="lld_h_lld_m">%1$dh %2$dm</string>
     <string name="lld_m">%1$dm</string>
     <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
+    <string name="back_in_10_minutes">Back in 10 minutes</string>
 </resources>

@@ -167,4 +167,5 @@
     <string name="lld_h_lld_m">%1$d시간 %2$d분</string>
     <string name="lld_m">%1$d분</string>
     <string name="talk_time_is_kept_for_lld_days">통화 시간은 %1$d일까지 남아요.</string>
+    <string name="back_in_10_minutes">10분 뒤에 다시</string>
 </resources>

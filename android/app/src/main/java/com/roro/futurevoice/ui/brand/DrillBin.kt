@@ -43,6 +43,19 @@ enum class DrillBin(val raw: String) {
             GOT_IT -> R.string.known
         }
 
+    /**
+     * What happens if you let go HERE. Said while the card is over the
+     * target, so it is the consequence, not the label: "3 days" the action
+     * reads as "Back in 3 days" under a held card.
+     */
+    val dropHintRes: Int
+        get() = when (this) {
+            TEN_MINUTES -> R.string.back_in_10_minutes
+            TOMORROW -> R.string.back_tomorrow
+            THREE_DAYS -> R.string.back_in_3_days
+            GOT_IT -> R.string.marked_as_known
+        }
+
     val icon: ImageVector
         get() = when (this) {
             TEN_MINUTES -> Icons.Filled.Schedule
