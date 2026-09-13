@@ -149,4 +149,7 @@
     <string name="feedback_couldnt_send">送信できませんでした。もう一度お試しください。(%1$s)</string>
     <string name="composer_ideaserr">アイデアを取得できませんでした。自分で書くか、「もっと」をタップしてやり直してください。</string>
     <string name="composer_startcat">カテゴリから始める</string>
+    <string name="trial_becomes_paid_play">%1$d日後に有料のサブスクリプションに切り替わります。Google Play からいつでも解約できます。</string>
+    <string name="notifications_are_off">通知がオフになっています</string>
+    <string name="reminders_cant_reach_you">復習と毎日の電話が届きません。設定でオンにしてください。</string>
 </resources>

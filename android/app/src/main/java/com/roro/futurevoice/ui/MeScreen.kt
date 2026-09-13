@@ -67,6 +67,7 @@ import kotlinx.coroutines.launch
 import com.roro.futurevoice.data.AccountEraser
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Person
@@ -319,6 +320,22 @@ fun MeScreen(
                 MeRow(Icons.Filled.Translate, stringResource(R.string.app_language),
                     AppLanguageNames.of(nativeLanguage),
                     onClick = { pickingAppLanguage = true })
+            }
+
+            // A schedule the app can't ring is the worst failure here: the
+            // learner thinks they'll be reminded and they won't. Shown only
+            // when it's actually off.
+            if (!androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+                GroupedSectionSpacer()
+                GroupedCard {
+                    MeRow(Icons.Filled.NotificationsOff, stringResource(R.string.notifications_are_off),
+                        stringResource(R.string.reminders_cant_reach_you), onClick = {
+                            context.startActivity(
+                                android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                        })
+                }
             }
 
             // ── Call — the habit anchor. Answering opens the talk. ──

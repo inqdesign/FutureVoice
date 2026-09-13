@@ -111,7 +111,11 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
       데일리 콜 v2(결과·콜백)가 없어 붙일 상태가 없음; drill_snoozed는 안드로이드에선
       `fileInBin`이 그 동작이라 drill_reviewed에 포함; expression_dismissed·
       voice_accent_removed는 그 동작 자체가 아직 없음; widget_opened는 위젯 없음(N/A).
-- [ ] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications`
+- [x] `DrillReminder` / `ItemReminder` / `TrialReminder` / `ReviewNotifications` — 2026-09-13.
+      개별 항목 콜백은 이미 `ReviewQueue`에 있었고, 큐 전체를 부르는 알림(`DrillReminder`)을 붙였다:
+      한 번에 하나만, 현재 큐에서 다시 계산, 09–21시로 당겨 맞추고, 이미 밀린 게 있으면 내일 아침.
+      체험 종료 2일 전 알림(`TrialReminder`)은 무료 가격 단계가 있는 오퍼를 샀을 때 걸린다(문구는
+      App Store가 아니라 Google Play). 알림이 꺼져 있으면 Me에 그 사실과 설정으로 가는 행이 뜬다.
 - [x] `UILanguage` — 2026-09-13. 앱 화면이 학습자가 고른 자기 언어를 따른다(en·ko·ja·zh-Hant).
       Activity와 Application의 base context를 감싸서 적용 — 알림도 앱 컨텍스트에서 문자열을 읽는다.
       Me → 앱 언어 행 → 시트에서 고르면 액티비티를 새로 만든다. iOS 카탈로그의 ja·zh-Hant 열을

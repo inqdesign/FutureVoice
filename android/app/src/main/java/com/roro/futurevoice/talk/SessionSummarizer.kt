@@ -269,6 +269,8 @@ object SessionSummarizer {
         val minted = DrillIngest.mint(drills.load(language), computed, turns, session.id,
             System.currentTimeMillis())
         drills.upsertMany(minted, language)
+        // New cards have return times; something has to ring for them.
+        com.roro.futurevoice.data.DrillReminder.reschedule(context)
         report { it.copy(cards = minted.size) }
         drills.markUsedInConversation(
             carryovers.filter { it.source == Carryover.Source.DRILL_CARD }.mapNotNull { it.sourceId },

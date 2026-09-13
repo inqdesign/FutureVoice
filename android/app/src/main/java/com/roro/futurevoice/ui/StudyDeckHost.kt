@@ -99,6 +99,7 @@ fun StudyDeckHost(
                             PracticeLog.record(context, PracticeLog.Kind.EXPRESSION)
                         else vocab.setStudyingExpression(item.text, true, language)
                 }
+                com.roro.futurevoice.data.DrillReminder.reschedule(context)
                 ReviewQueue.snooze(context, item.kind, item.text, language, manual.second)
             } else {
                 when (item.kind) {

@@ -162,9 +162,30 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         }.getOrElse { emptyList() }
     }
 
+    /** How many free days the chosen offer carries, 0 if none. A trial is a
+     *  pricing phase priced at zero; Play states its length as ISO-8601. */
+    private fun trialDays(offer: Offer): Int {
+        val phase = offer.details.subscriptionOfferDetails?.firstOrNull()
+            ?.pricingPhases?.pricingPhaseList?.firstOrNull { it.priceAmountMicros == 0L } ?: return 0
+        val p = phase.billingPeriod
+        val n = p.filter { it.isDigit() }.toIntOrNull() ?: return 0
+        return when {
+            p.endsWith("D") -> n
+            p.endsWith("W") -> n * 7
+            p.endsWith("M") -> n * 30
+            p.endsWith("Y") -> n * 365
+            else -> 0
+        }
+    }
+
+    /** Set at the flow, read when the purchase lands — the callback carries
+     *  the purchase, never the offer it was bought on. */
+    private var pendingTrialDays = 0
+
     fun purchase(activity: Activity, offer: Offer) {
         val userId = auth.userId ?: return
         val offerToken = offer.details.subscriptionOfferDetails?.firstOrNull()?.offerToken ?: return
+        pendingTrialDays = trialDays(offer)
         val params = BillingFlowParams.newBuilder()
             .setProductDetailsParamsList(listOf(
                 BillingFlowParams.ProductDetailsParams.newBuilder()
@@ -181,6 +202,11 @@ class BillingService private constructor(context: Context) : PurchasesUpdatedLis
         if (result.responseCode != BillingClient.BillingResponseCode.OK || purchases == null) return
         for (purchase in purchases) {
             if (purchase.purchaseState != Purchase.PurchaseState.PURCHASED) continue
+            // The promise the paywall makes about a trial is kept here.
+            if (pendingTrialDays > 0) {
+                TrialReminder.schedule(appContext, pendingTrialDays)
+                pendingTrialDays = 0
+            }
             // Entitlement arrives via google-webhook; the client only
             // acknowledges (unacknowledged purchases refund in 3 days).
             if (!purchase.isAcknowledged) {

@@ -81,6 +81,14 @@
         <receiver
             android:name=".data.ReviewDueReceiver"
             android:exported="false" />
+<receiver
+            android:name=".data.DrillDueReceiver"
+            android:exported="false" />
+
+        <!-- The trial notice the paywall promises. -->
+        <receiver
+            android:name=".data.TrialEndingReceiver"
+            android:exported="false" />
 
         <!-- Two widgets, one per section — the app writes their snapshots,
              the widgets only read them. -->

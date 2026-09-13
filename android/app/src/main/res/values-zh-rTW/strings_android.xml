@@ -149,4 +149,7 @@
     <string name="feedback_couldnt_send">無法傳送，請再試一次。（%1$s）</string>
     <string name="composer_ideaserr">無法取得點子。自己寫寫看，或點一下「更多」再試一次。</string>
     <string name="composer_startcat">從分類開始</string>
+    <string name="trial_becomes_paid_play">%1$d 天後會轉為付費訂閱。你隨時可以在 Google Play 取消。</string>
+    <string name="notifications_are_off">通知已關閉</string>
+    <string name="reminders_cant_reach_you">複習和每日來電無法送達。請到設定開啟。</string>
 </resources>
