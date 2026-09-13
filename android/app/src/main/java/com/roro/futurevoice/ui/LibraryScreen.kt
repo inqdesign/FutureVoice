@@ -59,7 +59,10 @@ enum class LibraryKind { WORDS, EXPRESSIONS }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LibraryScreen(kind: LibraryKind, language: String, onBack: () -> Unit) {
+fun LibraryScreen(kind: LibraryKind, language: String,
+                  /** Shadowing runs its own screen; the card hands it one line. */
+                  onShadow: (String) -> Unit = {},
+                  onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
@@ -173,6 +176,7 @@ fun LibraryScreen(kind: LibraryKind, language: String, onBack: () -> Unit) {
             initialTerm = term,
             kind = kind,
             language = language,
+            onShadow = { line -> openTerm = null; onShadow(line) },
             onDismiss = { openTerm = null },
         )
     }

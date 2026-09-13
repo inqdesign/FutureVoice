@@ -86,6 +86,10 @@ fun TodayCard(
     onShadowing: () -> Unit,
     /** The browser behind the dealt hand — iOS's `all` on the tile. */
     onShadowAll: () -> Unit = {},
+    /** The full dictionaries behind the day's hand — iOS's "all" on each tile.
+     *  Without them the library is reachable only from a widget. */
+    onWordsAll: () -> Unit = {},
+    onExpressionsAll: () -> Unit = {},
     onEditGoals: () -> Unit,
 ) {
     Column(
@@ -141,6 +145,7 @@ fun TodayCard(
                         done = today.wordDone,
                         goal = maxOf(today.wordDone, minOf(today.wordDone + dueWords, goals.words)),
                         onClick = onWords,
+                        onAll = onWordsAll,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -154,6 +159,7 @@ fun TodayCard(
                         goal = maxOf(today.expressionDone,
                             minOf(today.expressionDone + dueExpressions, goals.expressions)),
                         onClick = onExpressions,
+                        onAll = onExpressionsAll,
                         modifier = Modifier.weight(1f),
                     )
                 }

@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -99,6 +100,8 @@ fun WordCardSheet(
     initialTerm: String,
     kind: LibraryKind,
     language: String,
+    /** Say it after the fluent self — the same screen the book pages open. */
+    onShadow: (String) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -269,6 +272,11 @@ fun WordCardSheet(
                     icon = if (known) Icons.Filled.CheckCircle else Icons.Outlined.CheckCircle,
                     on = known, onColor = Color(0xFF34C759),
                     modifier = Modifier.weight(1f), onClick = { toggleKnown() })
+                // Saying it is the point of keeping it — the same screen the
+                // book pages open, one line long.
+                IconButton(onClick = { onShadow(term) }) {
+                    Icon(Icons.Filled.GraphicEq, contentDescription = stringResource(R.string.shadow))
+                }
                 IconButton(onClick = { index -= 1 }, enabled = index > 0) {
                     Icon(Icons.Filled.KeyboardArrowUp,
                         contentDescription = stringResource(R.string.previous_item))

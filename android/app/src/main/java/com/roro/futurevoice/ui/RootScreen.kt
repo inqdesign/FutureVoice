@@ -370,6 +370,7 @@ fun RootScreen() {
         library != null -> LibraryScreen(
             kind = library!!,
             language = state.targetLanguage,
+            onShadow = { library = null; shadowLine = it },
             onBack = { library = null },
         )
 
@@ -388,6 +389,8 @@ fun RootScreen() {
             language = state.targetLanguage,
             persona = state.persona,
             nativeLanguage = state.nativeLanguage,
+            voiceId = state.voiceId ?: "",
+            onShadow = { showDeck = false; shadowLine = it },
             onBack = { showDeck = false },
         )
 
@@ -592,6 +595,10 @@ fun RootScreen() {
             onMeasuredLevel = app::applyMeasuredLevel,
             onShadowHand = { shadowHand = it; shadowAt = 0 },
             onShadowAll = { showShadowBrowser = true },
+            // The dictionaries. Until now the library had no in-app entrance
+            // at all — only the widget's deep link reached it.
+            onOpenWordsAll = { library = LibraryKind.WORDS },
+            onOpenExpressionsAll = { library = LibraryKind.EXPRESSIONS },
         )
     }
 }
@@ -739,6 +746,8 @@ private fun HomeScreen(
     onMeasuredLevel: (String) -> Unit = {},
     onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
     onShadowAll: () -> Unit = {},
+    onOpenWordsAll: () -> Unit = {},
+    onOpenExpressionsAll: () -> Unit = {},
 ) {
     val context = LocalContext.current
     var showDeepen by remember { mutableStateOf(false) }
@@ -924,6 +933,8 @@ private fun HomeScreen(
                     onOpenTalk = onOpenTalk,
                     onShadowHand = onShadowHand,
                     onShadowAll = onShadowAll,
+                    onOpenWordsAll = onOpenWordsAll,
+                    onOpenExpressionsAll = onOpenExpressionsAll,
                 )
 
                 HomeTab.PROGRESS -> ProgressBody(

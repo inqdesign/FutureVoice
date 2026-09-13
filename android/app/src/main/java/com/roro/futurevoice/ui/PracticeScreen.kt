@@ -79,6 +79,8 @@ fun PracticeBody(
     onShadowHand: (List<com.roro.futurevoice.data.ShadowPicks.Pick>) -> Unit = {},
     /** Everything shadowable, not today's hand. */
     onShadowAll: () -> Unit = {},
+    onOpenWordsAll: () -> Unit = {},
+    onOpenExpressionsAll: () -> Unit = {},
 ) {
     var editingGoals by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -134,6 +136,8 @@ fun PracticeBody(
                     // Shadowing is reached through a book's line, so the tile
                     // sends them to the shelf that has the lines in it.
                     onShadowAll = onShadowAll,
+                    onWordsAll = onOpenWordsAll,
+                    onExpressionsAll = onOpenExpressionsAll,
                     onShadowing = {
                         // Deal today's hand. With nothing to deal — no talks
                         // yet — the Talk shelf is the honest fallback: the

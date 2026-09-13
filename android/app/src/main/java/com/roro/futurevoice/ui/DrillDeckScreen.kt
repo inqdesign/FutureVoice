@@ -1,5 +1,12 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.AuthRepository
+import com.roro.futurevoice.net.ElevenLabsClient
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.AssistChip
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -80,6 +87,10 @@ fun DrillDeckScreen(
     language: String,
     persona: com.roro.futurevoice.talk.UserPersona? = null,
     nativeLanguage: String = "en",
+    /** The clone, for "Hear it" — blank means no voice yet, and the chip says so by staying off. */
+    voiceId: String = "",
+    /** Shadowing runs its own screen; the deck hands it one line. */
+    onShadow: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBack)
@@ -98,6 +109,9 @@ fun DrillDeckScreen(
     var verdictFor by remember { mutableStateOf<DrillCard?>(null) }
     /** The card opened up — examples, variants, a hook to remember it by. */
     var enrichFor by remember { mutableStateOf<DrillCard?>(null) }
+    /** One line of the card, in the learner's own cloned voice. */
+    var hearing by remember { mutableStateOf(false) }
+    val player = remember { com.roro.futurevoice.audio.Mp3Player(context.cacheDir, source = "drill") }
 
     var dragOffset by remember { mutableStateOf(0f to 0f) }
     var dragging by remember { mutableStateOf(false) }
@@ -227,22 +241,47 @@ fun DrillDeckScreen(
                     )
                 }
 
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                // Offered on the REVEALED card only: the back is where the
+                // learner is already asking "why", and on the front any of
+                // these would give the answer away.
+                if (revealed) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AssistChip(
+                            onClick = {
+                                if (voiceId.isNotBlank() && !hearing) {
+                                    hearing = true
+                                    scope.launch {
+                                        runCatching {
+                                            val audio = ElevenLabsClient(AuthRepository()).synthesize(
+                                                voiceId, top.targetPhrase, purpose = "drill")
+                                            player.play(audio)
+                                        }
+                                        hearing = false
+                                    }
+                                }
+                            },
+                            enabled = voiceId.isNotBlank() && !hearing,
+                            leadingIcon = {
+                                if (hearing) CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null,
+                                    modifier = Modifier.size(16.dp))
+                            },
+                            label = { Text(stringResource(if (hearing) R.string.loading else R.string.hear_it)) })
+                        AssistChip(onClick = { onShadow(top.targetPhrase) },
+                            leadingIcon = { Icon(Icons.Filled.GraphicEq, contentDescription = null,
+                                modifier = Modifier.size(16.dp)) },
+                            label = { Text(stringResource(R.string.shadow)) })
+                        AssistChip(onClick = { enrichFor = top },
+                            leadingIcon = { Icon(Icons.Filled.MenuBook, contentDescription = null,
+                                modifier = Modifier.size(16.dp)) },
+                            label = { Text(stringResource(R.string.examples)) })
+                    }
+                } else {
                     Text(stringResource(R.string.drag_the_card_into_a_folder),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f))
-                    // Offered on the REVEALED card only: the back is where
-                    // the learner is already asking "why", and on the front it
-                    // would give the answer away.
-                    if (revealed) {
-                        TextButton(onClick = { enrichFor = top }) {
-                            Text(stringResource(R.string.show_me_more))
-                        }
-                    }
+                        modifier = Modifier.padding(horizontal = 16.dp))
                 }
 
                 VerdictRow(
