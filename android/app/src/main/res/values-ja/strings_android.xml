@@ -179,4 +179,7 @@
     <string name="your_books">マイ教材</string>
     <string name="expression_notebook">表現ノート</string>
     <string name="in_call_suggestions">通話中の提案</string>
+    <string name="silent_take">(無音)</string>
+
+    <string name="composer_placeholder">状況を書いてください。マイクを押して話してもいいです</string>
 </resources>

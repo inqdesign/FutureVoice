@@ -188,4 +188,11 @@
     <string name="your_books">Your books</string>
     <string name="expression_notebook">Expression notebook</string>
     <string name="in_call_suggestions">In-call suggestions</string>
+    <!-- A shadow take the recognizer heard nothing in. -->
+    <string name="silent_take">(silent)</string>
+
+    <!-- The composer's speak-or-type field. Speaking is the primary path:
+         this is an app about talking, and a blank box asks someone to write
+         about their life in a language they may still be practising. -->
+    <string name="composer_placeholder">Describe the scenario — or tap the mic and say it</string>
 </resources>

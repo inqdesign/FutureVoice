@@ -179,4 +179,7 @@
     <string name="your_books">내 교재</string>
     <string name="expression_notebook">표현 노트</string>
     <string name="in_call_suggestions">통화 중 제안</string>
+    <string name="silent_take">(무음)</string>
+
+    <string name="composer_placeholder">상황을 적어 보세요 — 마이크를 눌러 말해도 돼요</string>
 </resources>
