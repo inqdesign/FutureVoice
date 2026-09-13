@@ -58,7 +58,13 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 **통화 경험**
 - [ ] `CallNowPlaying` — 잠금 화면에서 통화를 제어. 없으면 잠근 폰에서
       끊을 방법이 없다.
-- [x] `RealtimeTalkClient` — **출시된 유일한 통화 경로.** 2026-09-13 통합·에뮬레이터 검증(ready → 오프너 재생 → stats, 소켓 유지, 크래시 없음). 남은 것: **실기기 검증** — 진짜 마이크로 사용자 턴·끼어들기·에코 제거(VOICE_COMMUNICATION AEC)는 에뮬레이터로 볼 수 없다.
+- [x] `RealtimeTalkClient` — **출시된 유일한 통화 경로.** 2026-09-13 통합, 에뮬레이터 검증:
+      접속(`ready`) → 게이트웨이가 오프너 발화 → 세션 유지(stats) → 게이트웨이 유휴(3분, 전사
+      인터림으로 재무장)는 PAUSED → 전사 탭·알약 탭 양쪽으로 재접속(`ready`) → End 정리.
+      벽 매핑: 소진/한도/fair-use(확인 중). 네이티브 크래시 둘(AudioTrack 동시 쓰기,
+      AudioRecord read 중 release) 수정. **실기기에서만 볼 수 있는 것:** 진짜 마이크의
+      사용자 턴과 교정 요청, 스피커 에코 제거·끼어들기(VOICE_COMMUNICATION AEC),
+      블루투스 경로, 잠금화면.
 
 **사람·복습 주변**
 - [ ] `CounterpartDetailView` / `CounterpartVoiceIntakeView` — 상대 상세와
