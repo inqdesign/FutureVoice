@@ -119,6 +119,7 @@
     <string name="build_a_scenario">"상황 만들기"</string>
     <!-- 'Build it from a category below, type it, or say it with the mic — then %@ it.' -->
     <string name="build_it_from_a_category_below_type_it_or_say_it_with_the_mi_657c0f">"아래 카테고리에서 고르거나, 직접 쓰거나, 말로 해 보세요. 그다음 %s를 누르면 돼요."</string>
+    <string name="build_lld_lld">"빌드 %1$d → %2$d"</string>
     <string name="build_new">"새로 만들기"</string>
     <string name="build_your_first_scenario">"첫 상황 만들기"</string>
     <string name="building_real_momentum">"제대로 탄력이 붙는 정도"</string>
@@ -1097,6 +1098,7 @@
     <string name="speaking">"말하는 중…"</string>
     <!-- "Speaking once is easy. Every day is the hard part — so I'll call you. One question a day, answered out loud, and that day is done." -->
     <string name="speaking_once_is_easy_every_day_is_the_hard_part_so_i_ll_cal_ce0232">"한 번 말하는 건 쉬워. 어려운 건 매일이지. 그래서 내가 전화할게. 하루에 질문 하나, 소리 내서 답하면 그날은 끝이야."</string>
+    <string name="speaking_talk_over_it_tap_to_stop">"말하는 중… · 끼어들어도 돼요 · 누르면 종료"</string>
     <string name="speaking_tap_to_stop">"말하는 중 · 누르면 종료"</string>
     <!-- 'Specific enough — %@ it, or tap a breadcrumb to explore more.' -->
     <string name="specific_enough_it_or_tap_a_breadcrumb_to_explore_more">"충분히 구체적이에요 — %s 하거나, 위 경로를 눌러 더 탐색하세요."</string>
@@ -1626,6 +1628,7 @@
     <string name="your_voice_in_safe_hands">"목소리는 안전하게"</string>
     <string name="your_voice_is_handled_with_care">"목소리는 소중히 다룹니다."</string>
     <string name="your_voice_is_ready_sign_in_to_keep_it">"목소리가 준비됐어요 — 로그인하면 계속 쓸 수 있어요."</string>
+    <string name="your_voice_isn_t_ready_yet">"아직 목소리가 준비되지 않았어요."</string>
     <!-- "Your voice model counts as biometric data, so there are rules about who may use the app. We store your answer and nothing else — no birthday, and it's never shown to anyone." -->
     <string name="your_voice_model_counts_as_biometric_data_so_there_are_rules_298305">"음성 모델은 생체인식정보라서, 앱을 쓸 수 있는 나이가 정해져 있습니다. 저장하는 것은 답변 하나뿐입니다. 생년월일은 받지 않고, 다른 사람에게 보이지도 않습니다."</string>
     <!-- "Your voice model is biometric data. It's used only to speak your practice lines back in your own voice — never sold, never shared, never used to train anyone else's model." -->

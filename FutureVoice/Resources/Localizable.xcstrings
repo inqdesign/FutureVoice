@@ -7259,6 +7259,12 @@
             "value" : "ビルド %1$lld → %2$lld"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빌드 %lld → %lld"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -31200,6 +31206,12 @@
             "value" : "話しています… · 割り込んで話せます · タップで停止"
           }
         },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "말하는 중… · 끼어들어도 돼요 · 누르면 종료"
+          }
+        },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
@@ -44879,6 +44891,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "声の準備がまだできていません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 목소리가 준비되지 않았어요."
           }
         },
         "zh-Hant" : {
