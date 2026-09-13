@@ -138,6 +138,22 @@ class TalkViewModel(context: Context) : ViewModel() {
     private var config: TalkConfig? = null
     private var sessionId: String = ""
     private var startedAt: Long = 0L
+
+    /**
+     * How long this call has been up, phone-style. Zero before it starts and
+     * once it is wrapped up; it keeps running while paused, because a call
+     * you put down is still a call you are on.
+     */
+    fun elapsedSeconds(): Long =
+        if (startedAt == 0L || _state.value.phase == TalkPhase.ENDED) 0L
+        else (System.currentTimeMillis() - startedAt) / 1000
+
+    /** Reconnect after a failed reply — the learner spoke and heard nothing. */
+    fun retry() {
+        val cfg = config ?: return
+        _state.update { it.copy(error = null) }
+        if (REALTIME) resume() else start(cfg)
+    }
     private var systemPrompt: String = ""
     private var endpointJob: Job? = null
     private var callJob: Job? = null

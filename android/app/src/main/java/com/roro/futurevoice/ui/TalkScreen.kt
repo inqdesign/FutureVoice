@@ -1,5 +1,12 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material3.Icon
+import androidx.compose.runtime.produceState
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.text.font.FontWeight
@@ -206,6 +213,24 @@ fun TalkScreen(
         if (state.turns.isNotEmpty()) listState.animateScrollToItem(state.turns.lastIndex)
     }
 
+    var confirmingDiscard by remember { mutableStateOf(false) }
+    if (confirmingDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmingDiscard = false },
+            title = { Text(stringResource(R.string.this_conversation_isn_t_saved_yet)) },
+            text = { Text(stringResource(R.string.saving_wraps_up_the_talk_and_keeps_the_transcript_feedback_a_96e079)) },
+            confirmButton = {
+                TextButton(onClick = { confirmingDiscard = false; vm.end() }) {
+                    Text(stringResource(R.string.save_conversation))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingDiscard = false; onExit() }) {
+                    Text(stringResource(R.string.close_without_saving),
+                        color = MaterialTheme.colorScheme.error)
+                }
+            })
+    }
     val paused = state.phase == TalkPhase.PAUSED
     val onCall = state.phase == TalkPhase.LISTENING ||
         state.phase == TalkPhase.THINKING || state.phase == TalkPhase.SPEAKING
@@ -219,7 +244,41 @@ fun TalkScreen(
                     // under the control at the bottom, where the hand is, and
                     // a giant "Listening…" as the page title made the screen
                     // look like a status readout instead of a call.
-                    Text(topic.ifBlank { stringResource(R.string.lets_talk) })
+                    Column {
+                        Text(topic.ifBlank { stringResource(R.string.lets_talk) },
+                            maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        // The level being spoken at, and the call's own clock
+                        // — a phone call shows how long you have been on it.
+                        // It freezes while paused and stops once wrapped up.
+                        val elapsed by produceState(0L, state.phase) {
+                            while (state.phase != TalkPhase.ENDED) {
+                                value = vm.elapsedSeconds()
+                                kotlinx.coroutines.delay(1000)
+                            }
+                        }
+                        Text(
+                            listOfNotNull(
+                                level.code.uppercase(),
+                                elapsed.takeIf { it > 0 }?.let {
+                                    com.roro.futurevoice.data.TalkTime.clock(it.toInt())
+                                },
+                            ).joinToString(" · "),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
+                navigationIcon = {
+                    // A talk with unsaved turns doesn't vanish on a stray tap
+                    // — closing is an explicit choice between saving (the End
+                    // flow: summary, drills) and discarding. Only the
+                    // LEARNER's turns count: an opener alone is not a talk.
+                    IconButton(onClick = {
+                        if (state.turns.any { it.role == TurnRole.USER } && state.phase != TalkPhase.ENDED) {
+                            confirmingDiscard = true
+                        } else onExit()
+                    }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.close))
+                    }
                 },
                 actions = {
                     // End the call and STAY: the wrap-up is the most valuable
@@ -351,13 +410,18 @@ fun TalkScreen(
                 )
             }
 
+            // A failed reply is answerable: the learner said something and
+            // heard nothing back, and the fix is one tap.
             state.error?.let {
-                Text(
-                    it,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp),
-                )
+                Row(Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(R.string.couldn_t_get_a_response),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.retry() }) { Text(stringResource(R.string.retry)) }
+                }
             }
 
             // The wait at the end shows its work (`SummaryProgressView`):
