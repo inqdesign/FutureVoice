@@ -70,7 +70,12 @@ enum class TalkPhase { IDLE, CONNECTING, LISTENING, THINKING, SPEAKING, PAUSED, 
  * the pool refills on its own. Neither is an error, so neither lands in
  * [TalkUiState.error].
  */
-enum class TalkWall { OUT_OF_MINUTES, ALLOWANCE_SPENT, SCENES_SPENT }
+/**
+ * Which wall ended the call. FAIR_USE is not an allowance: it is the
+ * account being checked (a stop far above the fair-use flag), and it must
+ * never read as minutes running out — on Plus there is no such thing.
+ */
+enum class TalkWall { OUT_OF_MINUTES, ALLOWANCE_SPENT, SCENES_SPENT, FAIR_USE }
 
 data class TalkUiState(
     val phase: TalkPhase = TalkPhase.IDLE,
@@ -381,6 +386,7 @@ class TalkViewModel(context: Context) : ViewModel() {
         realtime.onWall = { code ->
             val kind = when (code) {
                 "daily_cap_reached" -> TalkWall.ALLOWANCE_SPENT
+                "fair_use_limit" -> TalkWall.FAIR_USE
                 else -> TalkWall.OUT_OF_MINUTES
             }
             _state.update { it.copy(phase = TalkPhase.ENDED, wall = kind, partial = "") }

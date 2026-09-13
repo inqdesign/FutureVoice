@@ -244,6 +244,10 @@ fun TalkScreen(
                         }
                         TalkWall.ALLOWANCE_SPENT -> spent = SpentPool.TALK
                         TalkWall.SCENES_SPENT -> spent = SpentPool.SCENES
+                        // Nothing to sell and nothing spent: a person is
+                        // reading the admin console. The line below is the
+                        // whole answer.
+                        TalkWall.FAIR_USE -> Unit
                     }
                 }
                 Text(
@@ -255,6 +259,8 @@ fun TalkScreen(
                                 R.string.this_month_s_talk_time_is_used_up
                             TalkWall.SCENES_SPENT ->
                                 R.string.thats_your_watch_scenes_for_this_period
+                            TalkWall.FAIR_USE ->
+                                R.string.some_unusual_usage_needs_checking_write_to_us_and_we_ll_sort_989cca
                         }
                     ),
                     style = MaterialTheme.typography.bodyMedium,
@@ -461,7 +467,9 @@ private fun phaseHint(phase: TalkPhase, paused: Boolean, pausedForIdle: Boolean)
             phase == TalkPhase.LISTENING -> R.string.listening_pause_to_send_tap_to_stop
             phase == TalkPhase.THINKING || phase == TalkPhase.CONNECTING ->
                 R.string.thinking_tap_to_stop
-            phase == TalkPhase.SPEAKING -> R.string.speaking_tap_to_stop
+            // Realtime: the learner can talk over the reply and the gateway
+            // yields — say so, as iOS does on this path.
+            phase == TalkPhase.SPEAKING -> R.string.speaking_talk_over_it_tap_to_stop
             else -> R.string.on_call_tap_to_stop
         }
     )
