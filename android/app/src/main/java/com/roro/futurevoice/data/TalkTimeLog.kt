@@ -2,6 +2,7 @@ package com.roro.futurevoice.data
 
 import android.content.Context
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -52,23 +53,53 @@ object TalkTimeLog {
         }
     }
 
+    /** The day's metered seconds in ONE language — what the streak is judged
+     *  on. The ring's number pools every language; a day counts for one. */
+    fun secondsOn(context: Context, at: Long, language: String): Int {
+        val k = dayKey(at) + SEPARATOR + language.lowercase()
+        return load(context)[k] ?: 0
+    }
+
+    /** Did this day clear the Core's daily bar in the language being
+     *  practised? The one predicate the streak is built from — anything that
+     *  needs to say "today counts" asks THIS, never the learner's own daily
+     *  goal. The goal fills a ring; the bar decides a day. */
+    fun metCoreBar(context: Context, at: Long = System.currentTimeMillis()): Boolean =
+        secondsOn(context, at, LanguageScope.active(context)) >= CoreBar.seconds(context)
+
     /**
-     * Consecutive days with metered talk, anchored to TODAY when today
-     * already has some and to yesterday otherwise — a streak is alive until
-     * its day is over, and without that every learner reads 0 each morning.
+     * Consecutive days over the Core's daily bar, in the language being
+     * practised, anchored to TODAY when today already counts and to yesterday
+     * otherwise — a streak is alive until its day is over, and without that
+     * every learner reads 0 each morning.
+     *
+     * It used to be "any day with any metered second, in any language", which
+     * let a two-second call keep a streak alive and pooled languages together.
+     * There is one rule now and it is the Core's, so the number on Home and
+     * the number the club promotes from can never disagree.
      */
     fun streakDays(context: Context, now: Long = System.currentTimeMillis()): Int {
-        val map = load(context)
-        fun met(dayMillis: Long): Boolean {
-            val prefix = dayKey(dayMillis)
-            return map.entries.any { (k, v) ->
-                v > 0 && (k == prefix || k.startsWith(prefix + SEPARATOR))
-            }
+        val cal = Calendar.getInstance()
+        fun startOfDay(at: Long): Long {
+            cal.timeInMillis = at
+            cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+            return cal.timeInMillis
         }
-        var cursor = if (met(now)) now else now - 86_400_000L
-        if (!met(cursor)) return 0
+        // Calendar steps, never a fixed 86 400 000: a DST day is 23 or 25
+        // hours long and fixed arithmetic silently skips or repeats one.
+        fun dayBefore(at: Long): Long {
+            cal.timeInMillis = at
+            cal.add(Calendar.DAY_OF_YEAR, -1)
+            return cal.timeInMillis
+        }
+        var cursor = startOfDay(now)
+        if (!metCoreBar(context, cursor)) {
+            cursor = dayBefore(cursor)
+            if (!metCoreBar(context, cursor)) return 0
+        }
         var count = 0
-        while (met(cursor)) { count += 1; cursor -= 86_400_000L }
+        while (metCoreBar(context, cursor)) { count += 1; cursor = dayBefore(cursor) }
         return count
     }
 

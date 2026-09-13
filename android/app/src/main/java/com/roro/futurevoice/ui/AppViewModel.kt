@@ -105,6 +105,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             val persona = PersonaStore.shared(appContext).load()
             _state.update { it.copy(persona = persona, personaResolved = true) }
         }
+        // The streak's bar is a server figure the whole app draws offline, so
+        // it is mirrored once per launch and read from disk everywhere else.
+        // A failure keeps the last known value — never a guess mid-session.
+        viewModelScope.launch {
+            val target = appContext.getSharedPreferences("futurevoice", 0)
+                .getString("futurevoice.targetLanguage", null) ?: "en"
+            com.roro.futurevoice.net.CoreClubClient(auth).progress(target)
+                ?.let { com.roro.futurevoice.data.CoreBar.remember(appContext, it.bar_seconds) }
+        }
         // The summarizer writes to the persona behind this screen's back —
         // learned notes, and the metAt stamp that retires the first-call
         // framing. Without a re-read the next free talk still opens with the
