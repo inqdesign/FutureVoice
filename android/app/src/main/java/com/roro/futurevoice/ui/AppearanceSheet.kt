@@ -66,8 +66,7 @@ fun AppearanceSheet(onPicked: (FutureselfTheme) -> Unit, onDismiss: () -> Unit) 
                             shape = RoundedCornerShape(14.dp))
                         .clickable {
                             picked = theme
-                            context.getSharedPreferences("futurevoice", 0).edit()
-                                .putInt(FutureselfTheme.PREF_KEY, theme.ordinal).apply()
+                            FutureselfTheme.pick(context, theme)
                             onPicked(theme)
                         }
                         .padding(12.dp),

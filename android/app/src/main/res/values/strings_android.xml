@@ -168,4 +168,5 @@
     <string name="lld_m">%1$dm</string>
     <string name="talk_time_is_kept_for_lld_days">Talk time is kept for %1$d days.</string>
     <string name="back_in_10_minutes">Back in 10 minutes</string>
+    <string name="how_would_a_fluent_speaker_say_it">How would a fluent speaker say it?</string>
 </resources>

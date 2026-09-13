@@ -168,4 +168,5 @@
     <string name="lld_m">%1$d分鐘</string>
     <string name="talk_time_is_kept_for_lld_days">通話時間只保留 %1$d 天。</string>
     <string name="back_in_10_minutes">10 分鐘後再來</string>
+    <string name="how_would_a_fluent_speaker_say_it">流暢的人會怎麼說？</string>
 </resources>

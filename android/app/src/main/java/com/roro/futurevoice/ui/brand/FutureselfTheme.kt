@@ -46,6 +46,21 @@ enum class FutureselfTheme(val label: String) {
 
         /** The learner's chosen palette (same key iOS's @AppStorage uses). */
         fun stored(context: android.content.Context): FutureselfTheme =
-            from(context.getSharedPreferences("futurevoice", 0).getInt(PREF_KEY, 0))
+            live.value ?: from(context.getSharedPreferences("futurevoice", 0).getInt(PREF_KEY, 0))
+                .also { live.value = it }
+
+        /**
+         * The palette the app is wearing RIGHT NOW. The accent reaches every
+         * tinted control through the colour scheme, so a pick has to repaint
+         * the app rather than wait for the next launch.
+         */
+        val live: androidx.compose.runtime.MutableState<FutureselfTheme?> =
+            androidx.compose.runtime.mutableStateOf(null)
+
+        fun pick(context: android.content.Context, theme: FutureselfTheme) {
+            context.getSharedPreferences("futurevoice", 0).edit()
+                .putInt(PREF_KEY, theme.ordinal).apply()
+            live.value = theme
+        }
     }
 }

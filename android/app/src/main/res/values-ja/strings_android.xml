@@ -168,4 +168,5 @@
     <string name="lld_m">%1$d分</string>
     <string name="talk_time_is_kept_for_lld_days">トーク時間は%1$d日分まで残ります。</string>
     <string name="back_in_10_minutes">10分後にもう一度</string>
+    <string name="how_would_a_fluent_speaker_say_it">流暢な人ならどう言う？</string>
 </resources>

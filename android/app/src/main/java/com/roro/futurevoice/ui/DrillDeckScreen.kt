@@ -1,9 +1,11 @@
 package com.roro.futurevoice.ui
 
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.graphics.graphicsLayer
@@ -268,7 +270,7 @@ fun DrillDeckScreen(
                     )
                 }
             } else {
-                Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
+                Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center) {
                     // A peek of the next card, so the hand reads as a DECK.
                     // A recall card stays concealed back here, or the answer
@@ -277,7 +279,7 @@ fun DrillDeckScreen(
                         DrillCardFace(
                             card = next,
                             revealed = next.sourcePhrase.isBlank(),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxSize()
                                 .graphicsLayer {
                                     scaleX = 0.95f; scaleY = 0.95f; alpha = 0.45f
                                     translationY = 14.dp.toPx()
@@ -313,7 +315,7 @@ fun DrillDeckScreen(
                             }
                         },
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .onGloballyPositioned {
                                 if (!dragging) deckCentre = it.boundsInWindow().center
                             }
@@ -393,11 +395,20 @@ fun DrillDeckScreen(
                     )
                 }
 
-                if (!revealed) {
-                    Text(stringResource(R.string.drag_the_card_into_a_folder),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp))
+                if (!dragging) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.TouchApp, contentDescription = null,
+                            modifier = Modifier.size(15.dp),
+                            tint = MaterialTheme.colorScheme.outline)
+                        Spacer(Modifier.size(6.dp))
+                        Text(stringResource(
+                            if (revealed) R.string.drag_the_card_into_a_folder
+                            else R.string.say_it_out_loud_then_tap_the_card_to_check),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
 
                 if (dragging) {
@@ -439,17 +450,21 @@ fun DrillDeckScreen(
                 // What happens if you let go HERE. Named, so the decision is
                 // readable before it is made.
                 if (dragging) {
-                    Text(
-                        when {
-                            cancelActive -> stringResource(R.string.leave_it_undecided)
-                            activeBin != null -> stringResource(activeBin!!.dropHintRes)
-                            else -> stringResource(R.string.drop_it_on_a_folder)
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    )
+                    Row(Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                        horizontalArrangement = Arrangement.Center) {
+                        Text(
+                            when {
+                                cancelActive -> stringResource(R.string.leave_it_undecided)
+                                activeBin != null -> stringResource(activeBin!!.dropHintRes)
+                                else -> stringResource(R.string.drop_it_on_a_folder)
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(999.dp))
+                                .padding(horizontal = 12.dp, vertical = 5.dp),
+                        )
+                    }
                 }
             }
         }
@@ -500,29 +515,20 @@ private fun DrillCardFace(
 ) {
     val onCard = Color.White
     val onCardSecondary = Color.White.copy(alpha = 0.72f)
-    Box(
+    Column(
         modifier
             .heightIn(min = 240.dp)
             // The accent IS the card, so it needs its own lift off the page.
-            .shadow(8.dp, RoundedCornerShape(18.dp),
+            .shadow(10.dp, RoundedCornerShape(22.dp),
                 ambientColor = MaterialTheme.colorScheme.primary,
                 spotColor = MaterialTheme.colorScheme.primary)
-            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(18.dp))
-            .border(1.dp, Color.White.copy(alpha = 0.14f), RoundedCornerShape(18.dp))
+            .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
             .padding(24.dp),
-    ) {
-    Column(
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Text(
-            stringResource(
-                if (revealed) R.string.when_should_it_come_back
-                else R.string.say_it_out_loud_do_you_know_it),
-            style = MaterialTheme.typography.labelMedium, color = onCardSecondary,
-        )
         if (card.sourcePhrase.isNotBlank()) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(R.string.you_said), style = MaterialTheme.typography.labelSmall,
+                Text(stringResource(R.string.you_said), style = MaterialTheme.typography.bodyMedium,
                     color = onCardSecondary)
                 // Cards minted before the fragment trim carry the WHOLE turn,
                 // so trim at render too — a minute-long transcript struck
@@ -534,36 +540,55 @@ private fun DrillCardFace(
             }
         }
 
-        if (revealed) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.try_saying), style = MaterialTheme.typography.labelSmall,
-                    color = onCardSecondary)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(
+                    if (revealed) R.string.try_saying
+                    else R.string.how_would_a_fluent_speaker_say_it),
+                style = MaterialTheme.typography.bodyMedium, color = onCardSecondary)
+            if (revealed) {
                 Text(card.targetPhrase, style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold, color = onCard)
-                if (card.reason.isNotBlank()) {
-                    Text(stringResource(R.string.why_label), style = MaterialTheme.typography.labelSmall,
-                        color = onCardSecondary, modifier = Modifier.padding(top = 4.dp))
-                    Text(card.reason, style = MaterialTheme.typography.bodyMedium,
-                        color = onCardSecondary)
+            } else {
+                // The ANSWER's shape, greyed: a blank space reads as a card
+                // that failed to load, and the line lengths tell the learner
+                // how much they are being asked to produce.
+                listOf(1f, 1f, 0.55f).forEach { fraction ->
+                    Box(
+                        Modifier.fillMaxWidth(fraction).height(22.dp)
+                            .background(Color.White.copy(alpha = 0.22f), RoundedCornerShape(6.dp)))
                 }
             }
         }
-        if (revealed && actions != null) actions()
-    }
-    // Pinned to the floor of the card, not pushed there by a spacer that
-    // would stretch the card itself.
-    if (!revealed) {
-        Row(Modifier.align(Alignment.BottomStart),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Icon(Icons.Filled.TouchApp, contentDescription = null,
-                tint = onCardSecondary, modifier = Modifier.size(16.dp))
-            Text(stringResource(R.string.tap_to_check_the_meaning),
-                style = MaterialTheme.typography.labelMedium, color = onCardSecondary)
+
+        if (revealed && card.reason.isNotBlank()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(R.string.why_label), style = MaterialTheme.typography.bodyMedium,
+                    color = onCardSecondary)
+                Text(card.reason, style = MaterialTheme.typography.bodyMedium,
+                    color = onCardSecondary)
+            }
+        }
+
+        Spacer(Modifier.weight(1f))
+
+        if (revealed) {
+            actions?.invoke()
+        } else {
+            // Centred on the floor of the card: the one thing to do with a
+            // card whose answer is still hidden.
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Visibility, contentDescription = null,
+                    tint = onCard, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.tap_to_reveal),
+                    style = MaterialTheme.typography.bodyLarge, color = onCard)
+            }
         }
     }
-    }
 }
+
 
 /** The four verdicts — folder counters at rest, drop targets mid-drag. */
 @Composable
@@ -580,40 +605,55 @@ private fun VerdictRow(
 ) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         DrillBin.entries.forEach { bin ->
+            val onTarget = bin == active
+            val n = counts(bin)
+            // At rest these are PLACES — a quiet pill with its count. Mid-drag
+            // they are TARGETS, and a target has to look like somewhere a card
+            // can land, so it grows a face and says what it would do.
             Column(
                 Modifier.weight(1f)
                     .onGloballyPositioned { onBounds(bin, it.boundsInWindow()) }
-                    .then(if (onOpen != null && !dragging && (tappable || counts(bin) > 0))
-                        Modifier.clickable { onOpen(bin) } else Modifier)
                     .graphicsLayer {
-                        val on = bin == active
-                        scaleX = if (on) 1.08f else 1f; scaleY = if (on) 1.08f else 1f
+                        scaleX = if (onTarget) 1.08f else 1f
+                        scaleY = if (onTarget) 1.08f else 1f
                     }
                     .background(
-                        if (bin == active) bin.tint
-                        else bin.tint.copy(alpha = if (dragging) 0.20f else 0.12f),
-                        RoundedCornerShape(12.dp))
-                    .padding(vertical = 10.dp),
+                        when {
+                            onTarget -> bin.tint
+                            dragging -> MaterialTheme.colorScheme.surface
+                            else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        },
+                        RoundedCornerShape(if (dragging) 14.dp else 999.dp))
+                    .then(if (onOpen != null && !dragging && (tappable || n > 0))
+                        Modifier.clickable { onOpen(bin) } else Modifier)
+                    .padding(vertical = if (dragging) 12.dp else 7.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                val onTarget = bin == active
-                Icon(bin.icon, contentDescription = null,
-                    tint = if (onTarget) Color.White else bin.tint,
-                    modifier = Modifier.size(18.dp))
-                Text(stringResource(if (dragging) bin.titleRes else bin.folderTitleRes),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (onTarget) Color.White else MaterialTheme.colorScheme.onSurface)
-                if (!dragging) {
-                    val n = counts(bin)
-                    Text(if (n == 0) "—" else "$n",
+                if (dragging) {
+                    Icon(bin.icon, contentDescription = null,
+                        tint = if (onTarget) Color.White else bin.tint,
+                        modifier = Modifier.size(20.dp))
+                    Text(stringResource(bin.titleRes),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        color = if (onTarget) Color.White else MaterialTheme.colorScheme.onSurface)
+                } else {
+                    // Icon and count only: the folder's NAME is inside it, and
+                    // four labelled boxes at rest read as a button bar.
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(bin.icon, contentDescription = stringResource(bin.folderTitleRes),
+                            tint = bin.tint, modifier = Modifier.size(16.dp))
+                        Text(if (n == 0) "—" else "$n",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (n == 0) MaterialTheme.colorScheme.outline else bin.tint)
+                    }
                 }
             }
         }
     }
 }
+
 
 /** Keeps the folders after the last card — "where did all that go?". */
 @Composable
