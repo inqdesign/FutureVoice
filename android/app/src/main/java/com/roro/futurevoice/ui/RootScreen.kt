@@ -151,6 +151,8 @@ fun RootScreen() {
     var callCast by remember { mutableStateOf<com.roro.futurevoice.talk.ConversationEngine.Cast?>(null) }
     var callCastVoice by remember { mutableStateOf<String?>(null) }
     var showPrivacy by remember { mutableStateOf(false) }
+    val referralJoin by com.roro.futurevoice.data.ReferralJoins.pending.collectAsStateWithLifecycle()
+    referralJoin?.let { ReferralJoinSheet(join = it, onDismiss = com.roro.futurevoice.data.ReferralJoins::dismiss) }
     // A measured level-up, announced once wherever the learner happens to be.
     state.levelUp?.let { (from, to) ->
         LevelUpSheet(from = from, to = to, onDismiss = app::clearLevelUp)

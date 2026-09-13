@@ -33,7 +33,7 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 
 | | 있음 | 전체 |
 |---|---|---|
-| 화면 | 61 | 75 |
+| 화면 | 62 | 75 |
 | 서비스·엔진 | 78 | 95 |
 
 ## 없는 것 — 학습 루프에 닿는 순서
@@ -79,7 +79,9 @@ iOS 소스) 뒤였다. 앞으로 iOS가 움직이면 다시 머지하고 생성�
 - [ ] `ScenarioBuilderSheet`, `ScenarioIdeaCache`
 - [ ] `WatchDialogueStore`, `CommonGround`, `BookGlossary`, `LearnerAddress`
 - [ ] `HistorySheet`, `FeedbackSheet`, `VoiceComparisonSheet`
-- [ ] `ReferralJoinSheet` — 친구가 들어왔을 때 알림
+- [x] `ReferralJoinSheet` — 2026-09-13. 포그라운드에서 `referral_redemptions`를 폴링, 첫 실행은
+      조용히 기준점만, 새 합류는 무음 로컬 알림 + 시트. **미검증**: 다른 계정이 코드를
+      써야 흐름이 보인다.
 - [ ] `LevelEqualizer`, `LevelHeader`
 
 **알림·계측**

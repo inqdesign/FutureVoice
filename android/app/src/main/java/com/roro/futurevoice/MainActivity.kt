@@ -2,6 +2,8 @@ package com.roro.futurevoice
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,6 +37,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Friends who joined with my code since last time — polled here
+        // because there is no push infrastructure.
+        lifecycleScope.launch { com.roro.futurevoice.data.ReferralJoins.announce(this@MainActivity) }
         AppUsageLog.begin()
     }
 
