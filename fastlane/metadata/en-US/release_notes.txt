@@ -1,2 +1,2 @@
-Calls start faster.
-Fixed the greeting sometimes not being heard.
+Words you learn on a call go into your notebook by themselves.
+Scenario and people calls start faster.
