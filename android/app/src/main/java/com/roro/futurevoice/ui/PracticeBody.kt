@@ -66,29 +66,11 @@ enum class Shelf(val labelRes: Int) {
 fun ShelfChips(selected: Shelf, counts: (Shelf) -> Int?, onSelect: (Shelf) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Shelf.entries.forEach { s ->
-            val on = s == selected
-            val n = counts(s)
-            Row(
-                Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(if (on) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.surface)
-                    .clickable { onSelect(s) }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                Text(stringResource(s.labelRes),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (on) MaterialTheme.colorScheme.surface
-                    else MaterialTheme.colorScheme.onSurface)
-                if (n != null) {
-                    Text("$n", style = MaterialTheme.typography.labelMedium,
-                        color = if (on) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            PillChip(
+                label = stringResource(s.labelRes),
+                count = counts(s),
+                selected = s == selected,
+                onClick = { onSelect(s) })
         }
     }
 }
@@ -434,3 +416,32 @@ private val ROW_CARD_WIDTH = 190.dp
 
 @Composable
 private fun stringResource(id: Int) = androidx.compose.ui.res.stringResource(id)
+
+/**
+ * The app's one chip: a black capsule when it is where you are, a quiet white
+ * one when it isn't (iOS). Material's tinted fill reads as "highlighted",
+ * which is a different claim.
+ */
+@Composable
+fun PillChip(label: String, selected: Boolean, count: Int? = null, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(if (selected) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) MaterialTheme.colorScheme.surface
+            else MaterialTheme.colorScheme.onSurface)
+        if (count != null) {
+            Text("$count", style = MaterialTheme.typography.labelMedium,
+                color = if (selected) MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}

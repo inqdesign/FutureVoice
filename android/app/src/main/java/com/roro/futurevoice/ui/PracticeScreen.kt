@@ -508,8 +508,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
         Row(Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Dim.entries.forEach { d ->
-                FilterChip(selected = d == dim, onClick = { dim = d },
-                    label = { Text(stringResource(d.labelRes)) })
+                PillChip(label = stringResource(d.labelRes), selected = d == dim) { dim = d }
             }
         }
 
@@ -525,6 +524,40 @@ fun ProgressBody(language: String, nativeLanguage: String,
         // conversation. A talk's own read is the fallback.
         val headline = report?.cefrLevel?.uppercase()
             ?: scored.firstOrNull()?.cefrLevel?.uppercase()
+        val levelRecipe: (@Composable () -> Unit)? =
+            if (scored.isEmpty() && vocabBands.isEmpty()) null else ({
+                val userTurns = talks.flatMap { it.turns }.filter { it.role == TurnRole.USER }
+                val words = userTurns.sumOf { it.transcript.trim().split(Regex("\\s+")).count { w -> w.isNotEmpty() } }
+                val voiced = userTurns.sumOf { it.fluency?.speakingSeconds ?: 0.0 }
+                val wallSeconds = userTurns.sumOf { it.durationMs / 1000.0 }
+                val wpm = when {
+                    voiced > 30 -> words / (voiced / 60.0)
+                    wallSeconds > 30 -> words / (wallSeconds / 60.0)
+                    else -> 0.0
+                }
+                val perTurn = if (userTurns.isEmpty()) 0.0 else words.toDouble() / userTurns.size
+                val vocabLevel = LevelBands.vocabularyLevel(vocabBands)
+                val fluencyLevel = LevelBands.fluencyBand(wpm, fromVoicedSpeech = voiced > 30)
+                val grammarLevel = LevelBands.grammarBand(scored.firstOrNull()?.grammar?.score ?: 0)
+                val expressLevel = LevelBands.expressionBand(perTurn)
+                fun lit(l: CefrLevel?) = l?.let { CoreVocabulary.levelRank(it) + 1 } ?: 0
+                fun label(l: CefrLevel?, approx: Boolean) =
+                    l?.let { (if (approx) "≈" else "") + it.code.uppercase() } ?: "—"
+                LevelEqualizer.View(listOf(
+                    LevelEqualizer.Bar(stringResource(R.string.axis_vocab), label(vocabLevel, false),
+                        lit(vocabLevel), Color(0xFF3B82F6)),
+                    LevelEqualizer.Bar(stringResource(R.string.fluency), label(fluencyLevel, true),
+                        lit(fluencyLevel), Color(0xFF22C55E)),
+                    LevelEqualizer.Bar(stringResource(R.string.grammar), label(grammarLevel, true),
+                        lit(grammarLevel), Color(0xFFF59E0B)),
+                    LevelEqualizer.Bar(stringResource(R.string.axis_express), label(expressLevel, true),
+                        lit(expressLevel), Color(0xFFA855F7)),
+                ), Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.vocabulary_is_graded_from_the_words_you_actually_use_levels_a3dc6c),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline)
+            })
+
         headline?.takeIf { it.isNotEmpty() }?.let { level ->
             GroupedCard {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -546,6 +579,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                         Text(it, style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    levelRecipe?.invoke()
                 }
             }
         }
@@ -564,42 +598,6 @@ fun ProgressBody(language: String, nativeLanguage: String,
         // ONE unit on the level page: the CEFR read per skill, tappable for
         // the measured numbers behind it. The raw figures (WPM, 0-100 score)
         // live on each skill's own page, not here.
-        // The recipe made visible, equalizer-style: one column per measured
-        // ingredient, lit blocks = that axis's CEFR band. A weak axis is a
-        // visibly shorter column, which a row of 0-100 scores can't show.
-        if (scored.isNotEmpty() || vocabBands.isNotEmpty()) {
-            val userTurns = talks.flatMap { it.turns }.filter { it.role == TurnRole.USER }
-            val words = userTurns.sumOf { it.transcript.trim().split(Regex("\\s+")).count { w -> w.isNotEmpty() } }
-            val voiced = userTurns.sumOf { it.fluency?.speakingSeconds ?: 0.0 }
-            val wallSeconds = userTurns.sumOf { it.durationMs / 1000.0 }
-            val wpm = when {
-                voiced > 30 -> words / (voiced / 60.0)
-                wallSeconds > 30 -> words / (wallSeconds / 60.0)
-                else -> 0.0
-            }
-            val perTurn = if (userTurns.isEmpty()) 0.0 else words.toDouble() / userTurns.size
-            val vocabLevel = LevelBands.vocabularyLevel(vocabBands)
-            val fluencyLevel = LevelBands.fluencyBand(wpm, fromVoicedSpeech = voiced > 30)
-            val grammarLevel = LevelBands.grammarBand(scored.firstOrNull()?.grammar?.score ?: 0)
-            val expressLevel = LevelBands.expressionBand(perTurn)
-            fun lit(l: CefrLevel?) = l?.let { CoreVocabulary.levelRank(it) + 1 } ?: 0
-            fun label(l: CefrLevel?, approx: Boolean) =
-                l?.let { (if (approx) "≈" else "") + it.code.uppercase() } ?: "—"
-            LevelEqualizer.View(listOf(
-                LevelEqualizer.Bar(stringResource(R.string.axis_vocab), label(vocabLevel, false),
-                    lit(vocabLevel), Color(0xFF3B82F6)),
-                LevelEqualizer.Bar(stringResource(R.string.fluency), label(fluencyLevel, true),
-                    lit(fluencyLevel), Color(0xFF22C55E)),
-                LevelEqualizer.Bar(stringResource(R.string.grammar), label(grammarLevel, true),
-                    lit(grammarLevel), Color(0xFFF59E0B)),
-                LevelEqualizer.Bar(stringResource(R.string.axis_express), label(expressLevel, true),
-                    lit(expressLevel), Color(0xFFA855F7)),
-            ), Modifier.padding(top = 8.dp))
-            Text(stringResource(R.string.vocabulary_is_graded_from_the_words_you_actually_use_levels_a3dc6c),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.outline)
-        }
-
         if (scored.isNotEmpty()) {
             val card = scored.first()
             GroupedSectionHeader(stringResource(R.string.across_skills))
