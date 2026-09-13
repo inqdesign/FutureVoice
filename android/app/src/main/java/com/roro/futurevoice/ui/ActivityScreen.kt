@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -66,6 +67,11 @@ import com.roro.futurevoice.data.TalkTimeLog
 import com.roro.futurevoice.talk.Session
 import com.roro.futurevoice.talk.TurnRole
 import com.roro.futurevoice.ui.brand.AppSurfaces
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.ui.draw.scale
+import com.roro.futurevoice.ui.brand.DayCard
+import com.roro.futurevoice.ui.brand.DayCardFormat
+import com.roro.futurevoice.ui.brand.FutureselfTheme
 import com.roro.futurevoice.ui.brand.DayCardData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -170,6 +176,28 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
         dayKey(it.endedAt ?: it.startedAt) == dayKey(selected)
     }
     val selectedSeconds = record.seconds[dayKey(selected)] ?: 0
+    // The day's card, computed ONCE: the summary shows it and the share sheet
+    // shares it, so the preview can never be a different day than the export.
+    val dayCard = remember(selected, selectedSeconds, daySessions) {
+        DayCardStore.resolve(context, selected) {
+            DayCardData(
+                date = selected,
+                talkMinutes = selectedSeconds / 60,
+                // Never less than the talk figure: a call in a pocket is
+                // metered but not foregrounded.
+                studyMinutes = maxOf(AppUsageLog.secondsOn(context, selected) / 60,
+                    selectedSeconds / 60),
+                streakDays = TalkTimeLog.streakDays(context, selected),
+                talks = daySessions.size,
+                reviews = PracticeLog.day(context, selected)?.drillReps ?: 0,
+                shadowTakes = PracticeLog.day(context, selected)?.shadowReps ?: 0,
+                topics = daySessions.sortedByDescending { s ->
+                    s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
+                }.mapNotNull { it.displayTitle }.distinct().take(4),
+            )
+        }
+    }
+    val cardTheme = remember { FutureselfTheme.stored(context).ordinal }
 
     Scaffold(
         topBar = {
@@ -249,6 +277,9 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
                     talks = daySessions,
                     log = PracticeLog.day(context, selected),
                     photo = selectedPhoto,
+                    cardData = dayCard,
+                    cardTheme = cardTheme,
+                    studyMinutes = dayCard.studyMinutes,
                     onShare = { showCard = true },
                     onOpenTalk = onOpenTalk,
                 )
@@ -256,26 +287,7 @@ fun ActivityScreen(language: String, onOpenTalk: (String) -> Unit, onBack: () ->
         }
     }
 
-    if (showCard) {
-        val data = remember(selected, selectedSeconds, daySessions) {
-            DayCardStore.resolve(context, selected) { DayCardData(
-                date = selected,
-                talkMinutes = selectedSeconds / 60,
-                // Never less than the talk figure: a call in a pocket is
-                // metered but not foregrounded.
-                studyMinutes = maxOf(AppUsageLog.secondsOn(context, selected) / 60,
-                    selectedSeconds / 60),
-                streakDays = TalkTimeLog.streakDays(context, selected),
-                talks = daySessions.size,
-                reviews = PracticeLog.day(context, selected)?.drillReps ?: 0,
-                shadowTakes = PracticeLog.day(context, selected)?.shadowReps ?: 0,
-                topics = daySessions.sortedByDescending { s ->
-                    s.turns.filter { it.role == TurnRole.USER }.sumOf { it.durationMs }
-                }.mapNotNull { it.displayTitle }.distinct().take(4),
-            ) }
-        }
-        DayCardSheet(data) { showCard = false }
-    }
+    if (showCard) DayCardSheet(dayCard) { showCard = false }
 }
 
 // MARK: - Headline stats
@@ -547,6 +559,10 @@ private fun DaySummary(
     talks: List<Session>,
     log: PracticeLog.Day?,
     photo: ImageBitmap?,
+    /** The card this day would share — the summary's own face. */
+    cardData: DayCardData,
+    cardTheme: Int,
+    studyMinutes: Int,
     onShare: () -> Unit,
     onOpenTalk: (String) -> Unit,
 ) {
@@ -568,8 +584,10 @@ private fun DaySummary(
             // Only for a day that has something on it — an empty day has
             // nothing to put on a card.
             if (!empty) {
-                OutlinedButton(onClick = onShare) {
-                    Text(stringResource(R.string.share_card))
+                IconButton(onClick = onShare) {
+                    Icon(Icons.Filled.Share,
+                        contentDescription = stringResource(R.string.share_card),
+                        tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -581,16 +599,35 @@ private fun DaySummary(
             return@Column
         }
 
+        // The collection lives INSIDE the calendar: selecting a day puts that
+        // day's card at the top of its summary. A separate grid of the same
+        // days would be a second calendar.
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (photo != null) {
-                Image(photo, contentDescription = null, contentScale = ContentScale.Crop,
-                    modifier = Modifier.size(96.dp).clip(RoundedCornerShape(12.dp)))
+            Box(
+                Modifier.size(PREVIEW_WIDTH, PREVIEW_WIDTH * 5 / 4)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onShare() },
+                contentAlignment = Alignment.Center,
+            ) {
+                // The card is a fixed-size composable, so the preview is the
+                // real thing scaled — requiredSize lets it lay out at its own
+                // size inside a box a quarter as wide, and the scale is about
+                // the CENTRE, which is where the parent puts it.
+                Box(Modifier
+                    .requiredSize(DayCardFormat.FEED.width.dp, DayCardFormat.FEED.height.dp)
+                    .scale(PREVIEW_WIDTH / DayCardFormat.FEED.width.dp)) {
+                    DayCard(cardData, photo, theme = cardTheme)
+                }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Fact(stringResource(R.string.talks), "${talks.size}")
                 // A DAY is a clock (`TalkTime`): 40 seconds of talk must not
                 // be reported as "0 min".
                 Fact(stringResource(R.string.talk_time), TalkTime.clock(seconds))
+                Fact(stringResource(R.string.talks), "${talks.size}")
+                // Foreground minutes, never less than the talk figure — a call
+                // in a pocket is metered but not foregrounded.
+                Fact(stringResource(R.string.study_time),
+                    stringResource(R.string.lld_min_b61908, studyMinutes))
                 if (shadowed > 0) Fact(stringResource(R.string.shadowing), "$shadowed")
                 if (reviewed > 0) Fact(stringResource(R.string.sentences), "$reviewed")
                 // The same three kinds the Progress strip stacks, so a day
@@ -615,6 +652,10 @@ private fun DaySummary(
         }
     }
 }
+
+/** The preview is a real card at a quarter size, not a thumbnail of the
+ *  photo — what the learner is about to share is what they see here. */
+private val PREVIEW_WIDTH = 96.dp
 
 @Composable
 private fun Fact(label: String, value: String) {
@@ -766,8 +807,13 @@ private fun weekdayLabels(): List<String> {
 
 private fun dayKey(at: Long) = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(at))
 private fun dayOfMonth(at: Long) = SimpleDateFormat("d", Locale.US).format(Date(at))
-private fun monthLabel(at: Long) =
-    SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(at))
+private fun monthLabel(at: Long): String {
+    // A SKELETON, never a fixed pattern: "MMMM yyyy" prints "9월 2026" in
+    // Korean, where the order is "2026년 9월". The system reorders it.
+    val locale = Locale.getDefault()
+    val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, "yMMMM")
+    return SimpleDateFormat(pattern, locale).format(Date(at))
+}
 private fun monthShortLabel(at: Long) =
     SimpleDateFormat("MMM", Locale.getDefault()).format(Date(at))
 private fun periodTitle(anchor: Long, period: Period) = when (period) {

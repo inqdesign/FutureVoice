@@ -46,7 +46,6 @@ import com.roro.futurevoice.data.AccountStatus
 import com.roro.futurevoice.data.BillingGate
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import com.roro.futurevoice.data.CefrLevel
 import androidx.compose.material.icons.filled.Bolt
@@ -81,16 +80,34 @@ import com.roro.futurevoice.ui.brand.AppSurfaces
 import androidx.compose.runtime.LaunchedEffect
 import com.roro.futurevoice.data.AuthRepository
 import com.roro.futurevoice.data.LanguageCatalog
+import com.roro.futurevoice.data.LanguageScope
+import com.roro.futurevoice.data.TalkTime
+import com.roro.futurevoice.data.WeeklyReportStore
 import com.roro.futurevoice.net.CoreClubClient
 import com.roro.futurevoice.ui.brand.CoreSeal
 import com.roro.futurevoice.talk.UserPersona
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.filled.AddCircleOutline
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.TrackChanges
+import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Me — the settings surface, reduced to what exists on Android today:
- * profile (name/home + what the future self has learned, each note
- * removable — a memory that can't be corrected is a liability), the daily
- * goal, the learning language row, and sign out. Buying/metering rows arrive
- * with Play Billing.
+ * Settings — everything about "you the account", in iOS's order
+ * (`MeTab.swift`): profile, the subscription on its own, usage + the Core,
+ * Learning (the languages and their levels, the goal, the app's language),
+ * the call, the voice, appearance/data/privacy, then the account itself.
+ *
+ * The profile card also carries what the future self has LEARNED, each note
+ * removable — a memory that can't be corrected is a liability.
+ *
+ * Rows, not grids of chips. A level belongs to a language and cannot ride on
+ * a chip, and a settings list that inlines every picker becomes a wall where
+ * nothing can be scanned.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -103,6 +120,17 @@ fun MeScreen(
     enrolledLanguages: List<String>,
     onSwitchLanguage: (String) -> Unit,
     onAddLanguage: (String, CefrLevel) -> Unit,
+    /**
+     * A level changed by hand, for one language.
+     *
+     * The level belongs to the LANGUAGE, not to the app, so it is written
+     * per code — and it is written to `LanguageScope` here whether or not a
+     * host wires this up, because that is the file every store and prompt
+     * reads. What the callback buys is the ACTIVE language's in-memory copy:
+     * without it the new band reaches the next conversation only after a
+     * language switch or a relaunch.
+     */
+    onSetLevel: ((String, CefrLevel) -> Unit)? = null,
     /** Whether this account has a clone — the Voice row's whole subject. */
     hasVoice: Boolean,
     /** Browsing the pool — the Talk header's own entry leads here too. */
@@ -187,12 +215,36 @@ fun MeScreen(
         mutableStateOf(context.getSharedPreferences("futurevoice", 0)
             .getInt("futurevoice.dailyGoalMinutes", 10))
     }
+    var showingCore by remember { mutableStateOf(false) }
+    // Every enrolled language's level, read once. A `body` that hit the
+    // store per row per recomposition would read preferences on every
+    // keystroke elsewhere on this screen.
+    var levels by remember { mutableStateOf(mapOf<String, CefrLevel>()) }
+    LaunchedEffect(enrolledLanguages) {
+        levels = enrolledLanguages.associateWith { storedLevel(context, it) }
+    }
+    /** Persist, show it immediately, and tell the host if it asked. */
+    val setLevel: (String, CefrLevel) -> Unit = { code, level ->
+        LanguageScope.setLevel(context, code, level.code)
+        levels = levels + (code to level)
+        onSetLevel?.invoke(code, level)
+    }
+    // The AI's own read of the active language — the weekly report's pooled
+    // estimate, the same source Progress publishes. A single talk is too
+    // noisy to suggest from, so no report means no row, never a guess.
+    var aiLevel by remember { mutableStateOf<CefrLevel?>(null) }
+    LaunchedEffect(targetLanguage) {
+        aiLevel = WeeklyReportStore.shared(context).latest(targetLanguage)
+            ?.cefrLevel?.let { CefrLevel.from(it) }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 colors = AppSurfaces.topBarColors(),
-                title = { Text(stringResource(R.string.me)) },
+                // The page is Settings, and says so — "Me" named the tab it
+                // used to live in, not the page.
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -256,85 +308,109 @@ fun MeScreen(
             GroupedSectionSpacer()
             GroupedCard {
                 val acct = account
+                // The plan's NAME is the row's value, the way iOS states a
+                // standing fact that goes nowhere. What the month cost is
+                // the Usage row's job, one card down — saying it twice made
+                // the two rows argue about which one you were meant to read.
                 MeRow(Icons.Filled.AutoAwesome,
                     stringResource(
                         if (acct?.isEntitled == true) R.string.subscription
                         else R.string.subscribe),
-                    when {
+                    // Nothing is claimed about the account until it answers:
+                    // "Talking needs a plan" under a spinner is the app
+                    // telling a subscriber they have no plan.
+                    if (acct == null || acct.isEntitled) null
+                    else stringResource(R.string.talking_needs_a_plan),
+                    value = when {
                         acct == null -> stringResource(R.string.checking)
-                        acct.isEntitled -> {
-                            val tier = if (acct.isPlusPlan) stringResource(R.string.plan_tier_plus)
-                            else stringResource(R.string.plan_tier_light)
-                            "$tier · " + stringResource(
-                                R.string.lld_min_talked_this_month, acct.secondsUsedPeriod / 60)
-                        }
-                        else -> stringResource(R.string.talking_needs_a_plan)
+                        acct.isPlusPlan -> stringResource(R.string.plan_tier_plus)
+                        acct.isEntitled -> stringResource(R.string.plan_tier_light)
+                        else -> null
                     },
                     onClick = onOpenPaywall)
             }
 
-            // ── Talk time, and the club ──
+            // ── Usage, and the club ──
+            // Not "Talk time": the page behind it reports Watch scenes and
+            // the subscription too, and a row that names only one of the
+            // three sends the other two questions somewhere else.
             GroupedSectionSpacer()
             GroupedCard {
                 // What was SPENT, never what is left: a remainder is a
                 // monthly receipt for time NOT used.
-                MeRow(Icons.Filled.Bolt, stringResource(R.string.talk_time),
-                    account?.let {
-                        stringResource(R.string.lld_min_talked_this_month,
-                            it.secondsUsedPeriod / 60)
-                    } ?: stringResource(R.string.checking),
-                    onClick = onOpenPlanPage)
+                MeRow(Icons.Filled.Bolt, stringResource(R.string.usage),
+                    talkTimeLabel(account), onClick = onOpenPlanPage)
                 GroupedRowDivider()
+                // The bar belongs in the row, not in a footer under the
+                // card: someone who has never heard of the Core reads the
+                // subtitle as what this is, and a footer floating outside
+                // the card reads as a note about both rows above it.
                 MeRow(Icons.Filled.WorkspacePremium, stringResource(R.string.the_core),
-                    coreSubtitle(coreProgress), onClick = null)
+                    coreSubtitle(coreProgress),
+                    leading = if (coreProgress?.seated == true) ({ CoreSeal(size = 20.dp) })
+                    else null,
+                    onClick = { showingCore = true })
             }
-            coreProgress?.let { GroupedFooter(coreFooter(it)) }
 
-            // ── Practice ──
-            GroupedSectionHeader(stringResource(R.string.practice))
+            // ── Learning ──
+            // There are exactly two kinds of language here: the ones you are
+            // learning, and the one the app talks to you in. They are ROWS,
+            // not grids of chips — each language wears its own level, and a
+            // level cannot ride on a chip. The goal and the app language sit
+            // with them because they are the other two answers to "how do I
+            // learn here", not app chrome.
+            GroupedSectionHeader(stringResource(R.string.learning))
             GroupedCard {
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.daily_goal))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(5, 10, 15, 20, 30).forEach { m ->
-                            FilterChip(selected = goal == m, onClick = {
-                                goal = m
-                                context.getSharedPreferences("futurevoice", 0).edit()
-                                    .putInt("futurevoice.dailyGoalMinutes", m).apply()
-                            }, label = { Text(stringResource(R.string.lld_min_a_day, m)) })
-                        }
-                    }
-                }
-                GroupedRowDivider(inset = false)
-                // Switching is a chip, not a page: every store already takes
-                // the language as a parameter, so a switch is only a change
-                // of which one they are handed.
-                Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.learn_which_language))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        enrolledLanguages.forEach { code ->
-                            FilterChip(
-                                selected = code == targetLanguage,
-                                onClick = { if (code != targetLanguage) onSwitchLanguage(code) },
-                                label = { Text(LanguageCatalog.endonym(code)) },
-                            )
-                        }
-                        // Never gated on a plan: every server pool is keyed
-                        // per ACCOUNT with no language in it, so a second
-                        // language adds no cost.
-                        AssistChip(
-                            onClick = { addingLanguage = true },
-                            label = { Text(stringResource(R.string.add_a_language)) },
-                        )
-                    }
-                    Text(
-                        LanguageCatalog.ownName(targetLanguage, nativeLanguage),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                enrolledLanguages.forEachIndexed { index, code ->
+                    if (index > 0) GroupedRowDivider()
+                    LanguageRow(
+                        code = code,
+                        active = code == targetLanguage,
+                        level = levels[code] ?: CefrLevel.B1,
+                        // Switching is not a page: every store already takes
+                        // the language as a parameter, so a switch is only a
+                        // change of which one they are handed.
+                        onSelect = { if (code != targetLanguage) onSwitchLanguage(code) },
+                        onLevel = { setLevel(code, it) },
                     )
                 }
+                // The AI's read is a SUGGESTION, never an assignment: the
+                // level is the learner's setting and only a tap moves it.
+                // Only once the current level is actually known — comparing
+                // against a map that hasn't loaded suggests a level the
+                // learner may already be on.
+                aiLevel?.takeIf { levels[targetLanguage] != null && it != levels[targetLanguage] }
+                    ?.let { ai ->
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.AutoAwesome,
+                        stringResource(R.string.ai_read_tap_to_apply, ai.code.uppercase()),
+                        stringResource(R.string.from_your_recent_conversations,
+                            LanguageCatalog.endonym(targetLanguage)),
+                        chevron = false,
+                        onClick = { setLevel(targetLanguage, ai) })
+                }
+                GroupedRowDivider()
+                // Never gated on a plan: every server pool is keyed per
+                // ACCOUNT with no language in it, so a second language adds
+                // no cost.
+                MeRow(Icons.Filled.AddCircleOutline, stringResource(R.string.add_a_language),
+                    stringResource(R.string.same_voice_new_language),
+                    chevron = false,
+                    onClick = { addingLanguage = true })
+                GroupedRowDivider()
+                PickerRow(
+                    icon = Icons.Filled.TrackChanges,
+                    title = stringResource(R.string.daily_goal),
+                    subtitle = stringResource(R.string.minutes_of_speaking_per_day),
+                    value = stringResource(R.string.lld_min_b61908, goal),
+                    options = listOf(5, 10, 15, 20, 30, 45, 60)
+                        .map { it to stringResource(R.string.lld_min_b61908, it) },
+                    onPick = { m ->
+                        goal = m
+                        context.getSharedPreferences("futurevoice", 0).edit()
+                            .putInt("futurevoice.dailyGoalMinutes", m).apply()
+                    },
+                )
                 GroupedRowDivider()
                 // The app's own screens, and the language corrections come
                 // back in — one choice, because a learner has one language
@@ -343,6 +419,8 @@ fun MeScreen(
                     AppLanguageNames.of(nativeLanguage),
                     onClick = { pickingAppLanguage = true })
             }
+            GroupedFooter(stringResource(
+                R.string.tap_a_language_to_practice_it_its_level_calibrates_every_con_1ff279))
 
             // A schedule the app can't ring is the worst failure here: the
             // learner thinks they'll be reminded and they won't. Shown only
@@ -544,7 +622,15 @@ fun MeScreen(
                 PlainActionRow(stringResource(R.string.delete_account),
                     MaterialTheme.colorScheme.error) { if (!deleting) confirmingDelete = true }
             }
+            // What deleting actually takes with it, said before the tap and
+            // not only inside the confirmation.
+            GroupedFooter(stringResource(
+                R.string.deleting_your_account_permanently_removes_your_voice_clone_t_43bafb))
         }
+    }
+
+    if (showingCore) {
+        CoreClubSheet(coreProgress) { showingCore = false }
     }
 
     if (confirmingSignOut) {
@@ -814,10 +900,19 @@ private fun stepLabel(step: BackupService.Step): String = when (step) {
  */
 @Composable
 private fun MeRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     title: String,
     subtitle: String?,
     onClick: (() -> Unit)?,
+    /** A standing fact stated on the right — a plan's name, a level. Never a
+     *  destination, which is what the chevron is for. */
+    value: String? = null,
+    /** Off for a row that ACTS rather than opens: a chevron there promises a
+     *  page that isn't coming. */
+    chevron: Boolean = true,
+    /** Drawn instead of [icon] where the mark is not a glyph — the Core's
+     *  seal is a drawing, and it is the one badge in the app. */
+    leading: (@Composable () -> Unit)? = null,
 ) {
     Row(
         Modifier.fillMaxWidth()
@@ -826,8 +921,12 @@ private fun MeRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary)
+        if (leading != null) {
+            Box(Modifier.size(20.dp), contentAlignment = Alignment.Center) { leading() }
+        } else {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary)
+        }
         Column(Modifier.weight(1f)) {
             Text(title)
             subtitle?.takeIf { it.isNotBlank() }?.let {
@@ -835,13 +934,163 @@ private fun MeRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        if (onClick != null) {
+        value?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (onClick != null && chevron) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
+
+/**
+ * One enrolled language, wearing its own level.
+ *
+ * Two targets in one row, on purpose: the NAME switches to that language,
+ * the LEVEL opens its menu. The level belongs to the language, not to the
+ * app — someone at C1 in English starting German is not a C1 German speaker
+ * — so it can be fixed without switching to that language first.
+ */
+@Composable
+private fun LanguageRow(
+    code: String,
+    active: Boolean,
+    level: CefrLevel,
+    onSelect: () -> Unit,
+    onLevel: (CefrLevel) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            Modifier.weight(1f).clickable(onClick = onSelect).padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(
+                if (active) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
+                contentDescription = null, modifier = Modifier.size(20.dp),
+                tint = if (active) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.outline,
+            )
+            Column {
+                Text(LanguageCatalog.endonym(code))
+                Text(LanguageCatalog.englishName(code),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Box {
+            Row(
+                Modifier.clickable { expanded = true }
+                    .padding(horizontal = 6.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(LanguageCatalog.levelLabel(level, code),
+                    color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.UnfoldMore, contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                CefrLevel.entries.forEach { l ->
+                    DropdownMenuItem(
+                        text = { Text(LanguageCatalog.levelLabel(l, code)) },
+                        onClick = { expanded = false; onLevel(l) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * A settings row whose value is chosen from a short list — iOS's menu-style
+ * `Picker`. The value stands where a chevron would; the list opens on it.
+ */
+@Composable
+private fun <T> PickerRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String?,
+    value: String,
+    options: List<Pair<T, String>>,
+    onPick: (T) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            Modifier.fillMaxWidth().clickable { expanded = true }
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp),
+                tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text(title)
+                subtitle?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+            Text(value, color = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Filled.UnfoldMore, contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { (item, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = { expanded = false; onPick(item) },
+                )
+            }
+        }
+    }
+}
+
+/** The learner's level IN one language, with the setup answer as the only
+ *  fallback — never a hardcoded band. */
+private fun storedLevel(context: android.content.Context, code: String): CefrLevel {
+    val prefs = context.getSharedPreferences("futurevoice", 0)
+    val fallback = prefs.getString("futurevoice.proficiency", "b1") ?: "b1"
+    return CefrLevel.from(LanguageScope.level(context, code, fallback))
+}
+
+/**
+ * What this account's month cost, told FORWARD.
+ *
+ * Plus never counts anything down — a remainder is a monthly receipt for
+ * time NOT used — and Light reads the same direction over its pool, so
+ * switching tier never hands the learner a reversed number.
+ */
+@Composable
+private fun talkTimeLabel(a: AccountStatus?): String = when {
+    a == null -> stringResource(R.string.checking)
+    a.isPlusPlan -> stringResource(R.string.talked_this_month, talkSpan(a.secondsUsedPeriod))
+    a.isEntitled && a.monthlyCapSeconds != null ->
+        stringResource(R.string.of_lld_min_talked_this_month,
+            talkSpan(a.secondsUsedPeriod), a.monthlyCapSeconds / 60)
+    a.unlimited -> stringResource(R.string.lld_min_left, a.secondsBalance / 60)
+    // A one-time pool with nothing to refill toward, so no denominator.
+    a.secondsBalance > 0 -> stringResource(R.string.lld_min_of_talk_left, a.secondsBalance / 60)
+    // Hard paywall — there is no free tier to count down from.
+    else -> stringResource(R.string.no_talk_time_yet)
+}
+
+/** A span is minutes; under a minute it names the seconds, so a new
+ *  account's first 40 seconds never reads as nothing used. */
+@Composable
+private fun talkSpan(seconds: Int): String =
+    if (TalkTime.spanIsSeconds(seconds)) stringResource(R.string.lld_sec, seconds)
+    else stringResource(R.string.lld_min_b61908, seconds / 60)
 
 /** A destructive or plain action, drawn as a list row rather than a button —
  *  the same shape iOS gives a `Button` inside a `Form`. */
@@ -857,17 +1106,97 @@ private fun PlainActionRow(
     ) { Text(title, color = color) }
 }
 
-/** A BAR, never a rank: how many days in a row, against the entry streak. */
+/**
+ * The row's one line.
+ *
+ * Someone who has never heard of the Core sees the BAR — the door has to be
+ * visible from outside or nobody walks toward it — and "3 / 30" is not that:
+ * it is a score in a game whose rules the row never stated.
+ */
 @Composable
 private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
-    core == null -> ""
-    core.seated -> stringResource(R.string.you_re_in)
-    else -> "${core.streak} / ${core.entry_streak}"
+    // No MEMBERSHIP, not "no progress loaded": someone who has never been in
+    // the club has to see the bar, and "no seat right now" says nothing to
+    // them about how a seat is got.
+    core?.member == null -> stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter)
+    core.seated -> stringResource(R.string.in_the_core_lld_days, core.member?.days_total ?: 0)
+    else -> stringResource(R.string.no_seat_right_now)
 }
 
+/**
+ * The Core, from wherever the learner stands: their own standing first,
+ * then the rules, then what a seat is actually worth.
+ *
+ * NUMBERS, NOT A PICTURE. A grid of thirty days was tried on iOS and
+ * retired: it scored a month already spent, and nothing in a field of dots
+ * can say which absence was forgiven. A streak is a rule people already hold
+ * in their heads, and a streak is one number.
+ *
+ * Never add a perk row, and never add a line explaining why there isn't one.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun coreFooter(core: CoreClubClient.Progress): String =
-    stringResource(R.string.s_100_seats_30_days_in_a_row_to_enter)
+private fun CoreClubSheet(p: CoreClubClient.Progress?, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().navigationBarsPadding()
+                .padding(horizontal = 20.dp).padding(bottom = 32.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(stringResource(R.string.the_core), style = MaterialTheme.typography.titleLarge)
+            if (p == null) {
+                Text(stringResource(R.string.the_core_is_unavailable_right_now),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                return@Column
+            }
+            // Where you stand. The streak is shown in every state — it is the
+            // one number that answers "what do I do today".
+            CoreStat(stringResource(R.string.current_streak), "${p.streak}")
+            if (p.seated) {
+                CoreStat(stringResource(R.string.days_in_the_core),
+                    "${p.member?.days_total ?: 0}")
+            } else {
+                p.days_to_entry?.let { CoreStat(stringResource(R.string.days_to_go), "$it") }
+            }
+            GroupedSectionHeader(stringResource(R.string.how_it_works))
+            // Every rule, once each — as points, because a point can't hedge.
+            listOf(
+                stringResource(R.string.talk_lld_minutes_a_day_lld_days_in_a_row,
+                    p.bar_seconds / 60, p.entry_streak),
+                stringResource(R.string.miss_a_day_and_the_count_starts_again_at_zero),
+                stringResource(R.string.finishing_puts_you_in_line_it_doesn_t_seat_you),
+                stringResource(
+                    R.string.lld_seats_one_opens_only_when_the_person_in_it_stops_never_b_60a60d,
+                    p.seats),
+                stringResource(R.string.whoever_qualified_first_takes_it),
+                stringResource(R.string.once_you_re_in_one_missed_day_a_month_is_forgiven),
+            ).forEach {
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+            GroupedSectionHeader(stringResource(R.string.what_you_get))
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CoreSeal(size = 16.dp)
+                Text(stringResource(R.string.a_badge_next_to_your_name_where_you_meet_people),
+                    style = MaterialTheme.typography.bodyMedium)
+            }
+            GroupedFooter(stringResource(
+                R.string.it_s_there_while_you_re_in_the_core_and_it_s_a_promise_to_yo_970f83))
+        }
+    }
+}
+
+/** One number with a name. */
+@Composable
+private fun CoreStat(title: String, value: String) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(value, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
 
 
 /**
