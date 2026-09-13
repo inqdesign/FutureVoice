@@ -66,6 +66,17 @@ struct SetupFlowView: View {
             .navigationBarTitleDisplayMode(.inline)
         }
         .onAppear {
+            #if DEBUG
+            // `-setupNative <code>` drives the language row the way a finger
+            // does, so every language's onboarding can be screenshotted (and
+            // so the pick's effect on the chrome is verifiable without UI
+            // automation). Capture-only: it runs the SAME `pickNative` the
+            // button calls, never a shortcut around it.
+            if let seeded = UserDefaults.standard.string(forKey: "setupNative") {
+                pickNative(LanguageCatalog.normalizedNative(seeded))
+                return
+            }
+            #endif
             nativeLanguage = appState.nativeLanguage
             targetLanguage = appState.targetLanguage
             level = appState.proficiency
@@ -205,7 +216,7 @@ struct SetupFlowView: View {
                         title: Self.endonym(code),
                         subtitle: ownName(code),
                         selected: nativeLanguage == code
-                    ) { nativeLanguage = code }
+                    ) { pickNative(code) }
                 }
             } header: {
                 Text(explain("What's your native language?"))
@@ -219,7 +230,7 @@ struct SetupFlowView: View {
                         title: Self.endonym(code),
                         subtitle: ownName(code),
                         selected: nativeLanguage == code
-                    ) { nativeLanguage = code }
+                    ) { pickNative(code) }
                 }
             } header: {
                 Text(explain("Corrections and notes only"))
@@ -227,6 +238,32 @@ struct SetupFlowView: View {
                 Text(explain("Your corrections, notes and word meanings come back in this language. The app's own screens stay English."))
             }
         }
+    }
+
+    /// Picking the app's language APPLIES it, right there.
+    ///
+    /// This screen is the language picker, so the language has to change as
+    /// it is picked — a list where tapping 日本語 leaves every word around it
+    /// in Korean reads as a broken control, and the learner cannot tell
+    /// whether the tap registered at all. Until 2026-09-13 the choice lived
+    /// only in this view's `@State` and reached the app in `finish()`, four
+    /// steps later: the chrome you were choosing arrived after you had
+    /// answered everything else in a language you had just said you don't
+    /// read.
+    ///
+    /// Writing it to `AppState` is what moves BOTH halves of the UI at once —
+    /// `Text("literal")` follows `RootView`'s `.environment(\.locale, …)`,
+    /// which re-reads because `nativeLanguage` is `@Published`, and
+    /// `explain(…)` follows `LanguageCatalog.currentNative`, which the
+    /// property's `didSet` has just persisted. Setting only one of them
+    /// leaves half the screen behind.
+    ///
+    /// It is the same write `Me → App language` makes, so backing out of
+    /// setup leaves the app in the language last tapped — which is the
+    /// setting the learner just chose, not a side effect.
+    private func pickNative(_ code: String) {
+        nativeLanguage = code
+        appState.nativeLanguage = code
     }
 
     /// `nativeChoices`, split by whether the app itself is translated into it.
