@@ -195,4 +195,5 @@
          this is an app about talking, and a blank box asks someone to write
          about their life in a language they may still be practising. -->
     <string name="composer_placeholder">Describe the scenario — or tap the mic and say it</string>
+    <string name="cloud_words_total">%1$d / %2$d words</string>
 </resources>

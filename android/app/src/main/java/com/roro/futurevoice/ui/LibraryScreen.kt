@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Check
@@ -75,10 +76,14 @@ import java.util.Locale
  * The Library: everything the app has collected, as a list you can read.
  *
  * The decks DEAL from this material; this is where it can be looked at, and
- * where a widget tap lands. Kept as a plain list rather than iOS's explorable
- * word cloud — the cloud is a visual decision that belongs to whoever is
- * designing the Android look, and shipping an improvised one would settle it
- * by accident.
+ * where a widget tap lands. A list is the right shape for it: these are the
+ * words with something owed on them, in an order, with a search over them.
+ *
+ * The whole graded pool is a different question — "what IS there" rather than
+ * "what do I owe" — and iOS answers it with the explorable word cloud, which
+ * this page reaches through the same toolbar button it has there
+ * ([VocabularyCloudScreen]). The cloud is hosted here rather than routed to,
+ * because the list is where the trip starts and coming back must land on it.
  *
  * Two states per item, and they mean different things: KEPT is the learner's
  * bookmark (they are still studying it), KNOWN is a retirement. A word they
@@ -230,6 +235,8 @@ fun LibraryScreen(kind: LibraryKind, language: String,
      *  slide the next/previous terms out from under the thumb. */
     var openTerm by remember { mutableStateOf<String?>(null) }
     var openList by remember { mutableStateOf<List<String>>(emptyList()) }
+    /** The explorable cloud over the whole graded pool — words only. */
+    var showCloud by remember { mutableStateOf(false) }
 
     LaunchedEffect(kind, language, revision) {
         material = if (kind == LibraryKind.WORDS) loadWords(context, language)
@@ -256,6 +263,20 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    // The cloud — the explore view over the whole core
+                    // vocabulary. Expressions have no graded pool behind them,
+                    // so the button only means something on the words page.
+                    if (kind == LibraryKind.WORDS) {
+                        IconButton(onClick = { showCloud = true }) {
+                            Icon(
+                                Icons.Filled.BlurOn,
+                                contentDescription =
+                                    stringResource(R.string.browse_all_vocabulary),
+                            )
+                        }
                     }
                 },
             )
@@ -365,6 +386,14 @@ fun LibraryScreen(kind: LibraryKind, language: String,
                 item { GroupedSectionSpacer() }
             }
         }
+    }
+
+    if (showCloud) {
+        VocabularyCloudScreen(
+            language = language,
+            onShadow = { line -> showCloud = false; onShadow(line) },
+            onBack = { showCloud = false },
+        )
     }
 
     openTerm?.let { term ->

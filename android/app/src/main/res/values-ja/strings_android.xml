@@ -182,4 +182,5 @@
     <string name="silent_take">(無音)</string>
 
     <string name="composer_placeholder">状況を書いてください。マイクを押して話してもいいです</string>
+    <string name="cloud_words_total">単語 %1$d / %2$d</string>
 </resources>
