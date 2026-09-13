@@ -868,7 +868,13 @@ class TalkViewModel(context: Context) : ViewModel() {
 
     /** The suggestion belongs to the USER turn it corrects, not to the reply. */
     private fun attachSuggestion(userTurnId: String, payload: ConversationTurnPayload) {
+        val said = _state.value.turns.firstOrNull { it.id == userTurnId }?.transcript.orEmpty()
+        // Dictation EXPANDS contractions, so a learner who said "I'm" is
+        // transcribed "I am" — and a suggestion rewriting it back tells them
+        // they made a mistake they did not make, in their own voice. The
+        // prompt asks the model not to; this is what makes it true.
         val suggestion = payload.turnSuggestion()
+            ?.takeUnless { said.isNotBlank() && SpokenWords.saysTheSameThing(it.alternative, said) }
         val upgraded = payload.transcript?.takeIf { it.isNotBlank() }
         if (suggestion == null && upgraded == null) return
         _state.update { state ->

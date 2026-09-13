@@ -1,5 +1,11 @@
 package com.roro.futurevoice.ui
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.CircularProgressIndicator
 import com.roro.futurevoice.data.MicPreference
@@ -449,16 +455,7 @@ fun DialogueLine(turn: Turn) {
         )
         Text(turn.transcript, style = MaterialTheme.typography.bodyLarge)
         turn.suggestion?.let { suggestion ->
-            Row(
-                Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
-            ) {
-                Text(
-                    "→ ${suggestion.alternative}  ·  ${suggestion.reason}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            SuggestionChip(suggestion, original = turn.transcript)
         }
     }
 }
@@ -483,11 +480,7 @@ fun DialogueLine(turn: Turn, isCurrent: Boolean = false,
         isCurrent = isCurrent,
         accessory = {
             turn.suggestion?.let { suggestion ->
-                Text(
-                    "→ ${suggestion.alternative}  ·  ${suggestion.reason}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                SuggestionChip(suggestion, original = turn.transcript)
             }
         },
     ) { Text(turn.transcript) }
@@ -550,3 +543,74 @@ private fun phaseHint(phase: TalkPhase, paused: Boolean, pausedForIdle: Boolean)
             else -> R.string.on_call_tap_to_stop
         }
     )
+
+/**
+ * The correction under a turn: the fluent line with the CHANGED words lit up,
+ * the reason, and — on demand — that reason in the learner's own language.
+ *
+ * The highlight compares through [SpokenWords], so "I'm" against "I am"
+ * lights up nothing: contraction and punctuation are the transcriber's
+ * choices, and painting them as the learner's mistake is the bug this
+ * alignment exists to prevent.
+ */
+@Composable
+private fun SuggestionChip(suggestion: com.roro.futurevoice.talk.TurnSuggestion, original: String) {
+    val context = LocalContext.current
+    // The learner's own language, read here rather than threaded through
+    // every caller: a dialogue line is drawn from four screens.
+    val nativeLanguage = remember {
+        context.getSharedPreferences("futurevoice", 0)
+            .getString("futurevoice.nativeLanguage", null) ?: "en"
+    }
+    val scope = rememberCoroutineScope()
+    var showing by remember(suggestion.alternative) { mutableStateOf(false) }
+    var loading by remember(suggestion.alternative) { mutableStateOf(false) }
+    var reasonNative by remember(suggestion.alternative) {
+        mutableStateOf(com.roro.futurevoice.net.Translator.cachedExplanation(
+            context, original, suggestion.alternative, nativeLanguage))
+    }
+    val changed = remember(suggestion.alternative, original) {
+        com.roro.futurevoice.talk.SpokenWords.changedTokens(suggestion.alternative, original)
+    }
+    val tint = MaterialTheme.colorScheme.primary
+    val line = remember(suggestion.alternative, original) {
+        buildAnnotatedString {
+            suggestion.alternative.split(" ").filter { it.isNotEmpty() }.forEachIndexed { i, token ->
+                if (i > 0) append(" ")
+                if (changed.getOrElse(i) { false }) {
+                    withStyle(SpanStyle(color = tint, fontWeight = FontWeight.SemiBold)) { append(token) }
+                } else append(token)
+            }
+        }
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(line, style = MaterialTheme.typography.bodyMedium)
+        Text(suggestion.reason, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.clickable {
+                if (showing) { showing = false; return@clickable }
+                showing = true
+                if (reasonNative == null && !loading) {
+                    loading = true
+                    scope.launch {
+                        val t = com.roro.futurevoice.net.Translator.explainCorrection(
+                            context, original, suggestion.alternative, nativeLanguage)
+                        reasonNative = t
+                        loading = false
+                        if (t == null) showing = false
+                    }
+                }
+            }) {
+            if (loading) CircularProgressIndicator(Modifier.size(12.dp), strokeWidth = 1.5.dp)
+            Text(stringResource(if (showing) R.string.hide else R.string.explain_in_my_language),
+                style = MaterialTheme.typography.labelSmall, color = tint)
+        }
+        if (showing) reasonNative?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
