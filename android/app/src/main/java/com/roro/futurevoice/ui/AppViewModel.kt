@@ -13,6 +13,7 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -103,6 +104,15 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
         viewModelScope.launch {
             val persona = PersonaStore.shared(appContext).load()
             _state.update { it.copy(persona = persona, personaResolved = true) }
+        }
+        // The summarizer writes to the persona behind this screen's back —
+        // learned notes, and the metAt stamp that retires the first-call
+        // framing. Without a re-read the next free talk still opens with the
+        // introduction. persona.json is tiny; a read per store bump is fine.
+        viewModelScope.launch {
+            StoreEvents.revision.drop(1).collect {
+                PersonaStore.shared(appContext).load()?.let { p -> _state.update { it.copy(persona = p) } }
+            }
         }
         viewModelScope.launch {
             auth.sessionStatus.collect { status ->

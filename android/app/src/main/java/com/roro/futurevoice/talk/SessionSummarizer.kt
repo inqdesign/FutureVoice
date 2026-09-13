@@ -145,7 +145,10 @@ object SessionSummarizer {
             native_language = nativeLanguage,
             profile = Json.parseToJsonElement(
                 StoreJson.json.encodeToString(LearnerProfile.serializer(), profile)).jsonObject,
-            known_about_user = emptyList(),
+            // What the fluent self already knows about the person, so the
+            // model doesn't re-learn their job every call.
+            known_about_user = PersonaStore.shared(context).load()?.learnedNotes?.map { it.text }
+                ?: emptyList(),
             expression_budget = expressionBudget(turns.count { it.role == TurnRole.FLUENT_SELF }),
             transcript = formatTranscript(turns),
             metrics = metrics.promptJson(),
@@ -240,6 +243,25 @@ object SessionSummarizer {
 
         val saved = session.copy(topic = resolvedTopic, summary = computed)
         SessionStore.shared(context).save(saved)
+
+        // The other memory: what the talk taught the fluent self about the
+        // PERSON. Capped at 3 a session — this is a notebook, not a
+        // transcript, and the model volunteers more than it should when a
+        // talk ran long. `about_user` is the LAST field in the schema, so a
+        // response cut at the token ceiling loses this and nothing else.
+        val learned = strings(payload, "about_user")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && it.length <= 140 }
+            .take(3)
+            .map { PersonaNote(text = it, sessionId = session.id) }
+        // A plain free talk is where the fluent self gets to know someone;
+        // stamping metAt here is what retires the first-call framing.
+        val wasIntroTalk = session.counterpartId == null && existingTopic.isEmpty()
+        if (learned.isNotEmpty() || wasIntroTalk) {
+            com.roro.futurevoice.data.PersonaMemory.remember(
+                context, learned,
+                metAt = if (wasIntroTalk) (session.endedAt ?: System.currentTimeMillis()) else null)
+        }
 
         // Cards: clear this session's untouched ones (a re-analysis must not
         // reset Leitner progress), mint, then credit live production.
