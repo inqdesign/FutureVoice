@@ -122,6 +122,9 @@ fun CloneFlowScreen(
     ) { granted -> if (granted) startRecordingRequested = true }
     var consented by remember { mutableStateOf(false) }
     val recorder = remember { WavRecorder() }
+    // The clone is built from ONE recording, so it takes the best microphone
+    // in the room — the phone's. This is the one mic surface that never asks.
+    LaunchedEffect(Unit) { com.roro.futurevoice.data.MicPreference.forceBuiltInForClone(context) }
     val sampleFile = remember { File(context.filesDir, "voice/clone-sample.wav") }
     var recording by remember { mutableStateOf(false) }
     var elapsed by remember { mutableFloatStateOf(0f) }

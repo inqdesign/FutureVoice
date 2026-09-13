@@ -1,6 +1,7 @@
 package com.roro.futurevoice.ui
 
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.foundation.clickable
@@ -151,6 +152,7 @@ fun MeScreen(
     var pickingAccent by remember { mutableStateOf(false) }
     var comparingVoice by remember { mutableStateOf(false) }
     var pickingAppLanguage by remember { mutableStateOf(false) }
+    var pickingMic by remember { mutableStateOf(false) }
     var confirmingRerecord by remember { mutableStateOf(false) }
     // Non-null while a pack or a restore is running — both are slow enough to
     // look hung, so the row says where it has got to.
@@ -412,6 +414,19 @@ fun MeScreen(
                     MeRow(Icons.Filled.GraphicEq, stringResource(R.string.doesn_t_sound_like_you),
                         stringResource(R.string.hear_your_recording_and_your_clone_side_by_side), onClick = { comparingVoice = true })
                 }
+                // Which mic records the learner. Shown only where the answer
+                // changes something — with nothing but the phone's own mic
+                // there is nothing to choose.
+                if (com.roro.futurevoice.data.MicPreference.headsetConnected(context)
+                    || com.roro.futurevoice.data.MicPreference.hasChosen(context)) {
+                    GroupedRowDivider()
+                    MeRow(Icons.Filled.Headphones, stringResource(R.string.which_mic),
+                        stringResource(
+                            if (com.roro.futurevoice.data.MicPreference.current(context)
+                                == com.roro.futurevoice.data.MicPreference.PHONE) R.string.phone_mic
+                            else R.string.earphone_mic),
+                        onClick = { pickingMic = true })
+                }
                 if (hasVoice) {
                     GroupedRowDivider()
                     MeRow(Icons.Filled.Mic, stringResource(R.string.re_record_voice),
@@ -623,6 +638,12 @@ fun MeScreen(
         }
     }
 
+    if (pickingMic) {
+        MicChoiceSheet(onChoose = { choice ->
+            com.roro.futurevoice.data.MicPreference.set(context, choice)
+            pickingMic = false
+        })
+    }
     if (pickingAppLanguage) {
         AppLanguageSheet(current = nativeLanguage, onPick = { code ->
             pickingAppLanguage = false

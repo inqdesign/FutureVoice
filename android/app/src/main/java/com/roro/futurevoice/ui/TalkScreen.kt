@@ -1,5 +1,6 @@
 package com.roro.futurevoice.ui
 
+import com.roro.futurevoice.data.MicPreference
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -136,7 +137,18 @@ fun TalkScreen(
     }
     val listState = rememberLazyListState()
 
-    LaunchedEffect(voiceId) {
+    // One-time "which mic?", asked here because the call is the first mic
+    // surface most learners reach. The call waits for the answer; both
+    // buttons are answers.
+    var askingMic by remember { mutableStateOf(MicPreference.shouldAsk(appContext)) }
+    if (askingMic) {
+        MicChoiceSheet(onChoose = { choice ->
+            MicPreference.set(appContext, choice)
+            askingMic = false
+        })
+    }
+    LaunchedEffect(voiceId, askingMic) {
+        if (askingMic) return@LaunchedEffect
         vm.start(
             TalkConfig(
                 voiceId = voiceId,
