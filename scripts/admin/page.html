@@ -340,6 +340,15 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </section>
 
 <section data-tab="money" hidden>
+  <h2>요금제별 사용량과 갱신일</h2>
+  <p class="sub">서버가 벽을 세울 때 쓰는 그 숫자예요 — 각자의 <b>결제 주기</b>(달력 달이 아니라
+  구독이 시작된 날 기준) 안에서 쓴 통화 초와 장면 수를, 그 요금제의 한도에 대고 셉니다.
+  체험은 한도가 7/30로 깎여요(Light 기준). Plus는 통화 상한이 없어요.</p>
+  <div class="card scroll"><table id="planUsage"></table></div>
+  <p class="sub" style="margin-top:10px" id="planUsageNote"></p>
+</section>
+
+<section data-tab="money" hidden>
   <h2>요금제를 다 쓰면</h2>
   <p class="sub">산 걸 전부 썼을 때 남는지 보는 테스트예요. Plus는 통화에 상한이 없어서 장면 쪽만 한계를 매길 수 있어요.
   손익분기 사용률은 순매출이 사라지기까지 쓸 수 있는 할당 비율이에요.</p>
@@ -971,6 +980,13 @@ function personDetail(u){
       u.cloneAt?`<li>클론 ${fmtTs(u.cloneAt)} <span class="muted">(가입 ${fmtGap(gapMin(u.signedUpAt,u.cloneAt))} 후)</span></li>`
         :'<li class="muted">클론 없음</li>',
       `<li>${subChip(u)}${u.subStartedAt?` <span class="muted">시작 ${fmtTs(u.subStartedAt)}</span>`:''}</li>`,
+      (()=>{ const pu=(DATA.planUsage||[]).find(r=>r.u===u.idx); if(!pu) return '';
+        const left = pu.period_end ? Math.ceil((ts(pu.period_end)-Date.now())/86400000) : null;
+        return `<li>${pu.ends?'종료':'갱신'} <b>${fmtD((pu.period_end||'').slice(0,10))}</b>`
+          + `${left!=null?` <span class="muted">(${left<=0?'오늘':left+'일 남음'})</span>`:''}`
+          + ` · 이번 주기 통화 ${fmtMin(pu.talk_used)}`
+          + `${pu.unlimited?'':` / ${fmtMin(pu.talk_cap)}`}`
+          + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
       cost?`<li>지금까지 원가 <b>${usd(cost.usd,3)}</b></li>`:'',
     ].filter(Boolean), '')}
     ${u.intro ? `<div><h4>자기소개</h4><div class="bio">${esc(u.intro)}</div></div>` : ''}
@@ -1031,7 +1047,8 @@ function renderPeople(users){
       <td class="num">${u.talkSessions||'—'}<div class="usub">턴 ${num(u.turns)}</div></td>
       <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
       <td class="num">${u.scenes||'—'}</td>
-      <td>${subChip(u)}</td>
+      <td>${subChip(u)}${(()=>{ const pu=(DATA.planUsage||[]).find(r=>r.u===u.idx);
+        return pu ? `<div class="usub">${pu.ends?'종료':'갱신'} ${fmtD((pu.period_end||'').slice(0,10))}</div>` : ''; })()}</td>
       <td style="white-space:nowrap">${last}</td>
       <td>${sig.join(' ')||'<span class="muted">—</span>'}</td>
     </tr>`;
@@ -1118,6 +1135,68 @@ function renderTrials(){
        +  `<td></td><td></td><td></td><td></td><td></td><td class="num"><b>${usd(sum)}</b></td>`
        +  `<td class="num"><b>${fmtMin(live.reduce((a,u)=>a+u.talkSecs,0))}</b></td></tr>`;
   el.innerHTML = html + '</tbody>';
+}
+
+const USAGE_STATUS_KO = {trialing:'체험', active:'이용 중', grace:'유예'};
+function renderPlanUsage(){
+  const rows = (DATA.planUsage||[]).slice();
+  const el = document.getElementById('planUsage');
+  const note = document.getElementById('planUsageNote');
+  if(!rows.length){
+    el.innerHTML='<tbody><tr><td class="empty">사용 중인 요금제가 없어요.</td></tr></tbody>';
+    if(note) note.textContent=''; return;
+  }
+  const byIdx = Object.fromEntries(DATA.users.map((u,i)=>[i,u]));
+  const daysLeft = iso => { const d=ts(iso); if(!d) return null;
+    return Math.ceil((d - Date.now())/86400000); };
+  const bar = (used, cap, color) => {
+    if(cap==null) return `<span class="muted">상한 없음</span>`;
+    const pct = cap ? Math.min(100, used/cap*100) : 0;
+    const over = cap && used > cap;
+    return `<div class="track" style="height:6px;margin-top:4px">`
+         + `<div class="fill" style="width:${pct}%;background:${over?'var(--crit)':color};height:6px"></div></div>`;
+  };
+  // Soonest ending first — this table exists to answer "who runs out next".
+  rows.sort((a,b)=>(a.period_end||'').localeCompare(b.period_end||''));
+  let html = `<thead><tr><th>유저</th><th>플랜</th><th>상태</th>`
+    + `<th class="num">통화</th><th class="num">장면</th>`
+    + `<th>주기</th><th>${'갱신 · 종료'}</th></tr></thead><tbody>`;
+  for(const r of rows){
+    const u = byIdx[r.u]; if(!u) continue;
+    const left = daysLeft(r.period_end);
+    const talkPct = r.talk_cap ? Math.round(r.talk_used/r.talk_cap*100) : null;
+    const scenePct = r.scenes_cap ? Math.round(r.scenes_used/r.scenes_cap*100) : null;
+    html += `<tr>
+      <td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}
+        <div class="usub">${r.source==='comp'?'무료 제공':(r.source==='apple'?'App Store':r.source)}</div></td>
+      <td><span class="chip">${PLAN_KO[r.plan]||r.plan}</span></td>
+      <td>${USAGE_STATUS_KO[r.status]||r.status}</td>
+      <td class="num">${r.unlimited
+          ? '<span class="muted">' + fmtMin(r.talk_used) + '</span>'
+          : `${fmtMin(r.talk_used)} <span class="muted">/ ${fmtMin(r.talk_cap)}</span>`
+            + (talkPct!=null?`<div class="usub">${talkPct}%</div>`:'')}
+        ${bar(r.talk_used, r.unlimited?null:r.talk_cap, 'var(--s1)')}</td>
+      <td class="num">${r.scenes_used} <span class="muted">/ ${r.scenes_cap}</span>
+        ${scenePct!=null?`<div class="usub">${scenePct}%</div>`:''}
+        ${bar(r.scenes_used, r.scenes_cap, 'var(--s2)')}</td>
+      <td style="white-space:nowrap"><span class="usub">${fmtD(r.period_start)} ~</span></td>
+      <td style="white-space:nowrap">
+        <b class="${r.ends?'warn':''}">${fmtD((r.period_end||'').slice(0,10))}</b>
+        <div class="usub">${r.ends?'여기서 끝':'여기서 갱신'}`
+        + `${left!=null?` · ${left<=0?'오늘':left+'일 남음'}`:''}</div></td>
+    </tr>`;
+  }
+  el.innerHTML = html + '</tbody>';
+
+  // The comps are the ones with a date nobody can renew.
+  const comps = rows.filter(r => r.source==='comp' && r.ends);
+  if(note){
+    note.innerHTML = comps.length
+      ? `무료 제공 <b>${comps.length}명</b>은 <b>${fmtD((comps[0].period_end||'').slice(0,10))}</b>에 끝나요 — `
+        + `그날 밤 00:25 UTC 정리 작업이 <code>expired</code>로 바꾸고, 그 뒤로는 요금제 없이 `
+        + `남은 일회성 잔액으로만 통화해요. 이어서 쓰게 하려면 그 전에 코드를 보내야 해요.`
+      : '';
+  }
 }
 
 function renderUnitTiles(){
@@ -1274,7 +1353,8 @@ function render(){
   const cohort = launchUsers();
   renderFunnel(cohort); renderCohort(cohort); renderDaily(users); renderChannels();
   renderPeopleTiles(users); renderPeople(users);
-  renderMoneyTiles(); renderCancelShape(); renderTrials(); renderUnitTiles(); renderTiers();
+  renderMoneyTiles(); renderCancelShape(); renderTrials();
+  renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
 }
 /** Only the width-dependent drawings. Same code path as the first paint, so a

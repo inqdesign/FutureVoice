@@ -155,6 +155,8 @@ export function assemble(raw: any) {
   // One row per finished realtime call. This is the only per-call record
   // that path produces — its reply and voice never touch the usage ledger.
   const rtSessions = withIdx(raw.rt_sessions);
+  // What each plan has actually spent, counted the way the server counts it.
+  const planUsage = withIdx(raw.plan_usage);
   const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
@@ -284,7 +286,7 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
-    rtSessions, rtReasons, revenue,
+    rtSessions, rtReasons, revenue, planUsage,
     prices: MONTHLY_PRICE,
   };
 }
