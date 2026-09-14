@@ -82,7 +82,8 @@ fun PersonaIntakeScreen(
     Scaffold(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.about_you)) }) },
         bottomBar = {
-            Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedButton(
                     onClick = { if (step > 0) step -= 1 else onBackToSetup() },
                     modifier = Modifier.weight(1f),

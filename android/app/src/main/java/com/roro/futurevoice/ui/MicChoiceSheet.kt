@@ -3,7 +3,6 @@ package com.roro.futurevoice.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Headphones
@@ -37,7 +36,7 @@ fun MicChoiceSheet(onChoose: (String) -> Unit) {
         onDismissRequest = { onChoose(MicPreference.EARPHONE) },
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp)
+        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 24.dp)
             .padding(bottom = 32.dp), horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(stringResource(R.string.which_mic), style = MaterialTheme.typography.titleLarge)

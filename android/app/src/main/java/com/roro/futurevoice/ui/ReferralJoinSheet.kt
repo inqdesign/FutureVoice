@@ -3,7 +3,6 @@ package com.roro.futurevoice.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,7 +34,7 @@ fun ReferralJoinSheet(join: ReferralJoins.Join, onDismiss: () -> Unit) {
         stringResource(R.string.they_got_lld_minutes_too_that_s_lld_of_your_lld_rewarded_inv_9c811c, ReferralClient.bonusMinutes, join.totalJoined, ReferralClient.REWARDED_INVITE_CAP)
     else stringResource(R.string.they_got_lld_minutes_your_lld_rewarded_invites_are_already_u_5cb510, ReferralClient.bonusMinutes, ReferralClient.REWARDED_INVITE_CAP)
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 24.dp).padding(bottom = 32.dp, top = 8.dp),
+        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 24.dp).padding(bottom = 32.dp, top = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text(headline, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             if (join.minutesEarned > 0) Text(stringResource(R.string.lld_min_7c4bb6, join.minutesEarned),

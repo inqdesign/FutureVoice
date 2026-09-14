@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -87,7 +86,7 @@ fun VoiceAccentSheet(
 
     ModalBottomSheet(onDismissRequest = { if (!saving && !generating) onDismiss() }) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding()
+            Modifier.fillMaxWidth().bottomBarInsets()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),

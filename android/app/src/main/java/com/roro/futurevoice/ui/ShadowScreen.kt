@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -414,7 +413,7 @@ fun ShadowScreen(
                 // One control, centred and low: listening rides beside the mic
                 // rather than owning a row of its own.
                 Row(
-                    Modifier.fillMaxWidth().navigationBarsPadding()
+                    Modifier.fillMaxWidth().bottomBarInsets()
                         .padding(top = 12.dp, bottom = 20.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,

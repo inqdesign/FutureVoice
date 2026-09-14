@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -233,7 +232,7 @@ fun WordCardSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-      Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
+      Column(Modifier.fillMaxWidth().bottomBarInsets()) {
         // Where you are in the list you came from. A dealt hand titles by
         // POSITION — that list isn't the notebook, so its count would be a
         // lie there; browsing the notebook keeps the count.

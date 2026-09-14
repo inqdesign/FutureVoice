@@ -237,7 +237,7 @@ fun CloneFlowScreen(
             // The script runs several screens long; the one control the act
             // needs must never scroll away with it.
             if (act == CloneAct.SCRIPT) {
-                Column(Modifier.fillMaxWidth().padding(16.dp)) {
+                Column(Modifier.fillMaxWidth().bottomBarInsets().padding(16.dp)) {
                     if (recording) {
                         LinearProgressIndicator(
                             progress = { (elapsed / MAX_SECONDS).coerceIn(0f, 1f) },

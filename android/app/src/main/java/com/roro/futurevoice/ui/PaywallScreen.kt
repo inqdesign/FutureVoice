@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -272,7 +271,7 @@ private fun PaywallBottomBar(
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Column(
-                Modifier.fillMaxWidth().navigationBarsPadding()
+                Modifier.fillMaxWidth().bottomBarInsets()
                     .padding(horizontal = 24.dp).padding(top = 12.dp, bottom = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),

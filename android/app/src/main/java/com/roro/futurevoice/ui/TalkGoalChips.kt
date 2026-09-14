@@ -279,6 +279,7 @@ fun TalkGoalSheet(
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
         androidx.compose.foundation.layout.Column(
             Modifier.fillMaxWidth()
+                .bottomBarInsets()
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

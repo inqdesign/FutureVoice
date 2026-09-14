@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -707,7 +706,7 @@ fun MeScreen(
     if (managingBackup) {
         ModalBottomSheet(onDismissRequest = { managingBackup = false }) {
             Column(
-                Modifier.fillMaxWidth().navigationBarsPadding()
+                Modifier.fillMaxWidth().bottomBarInsets()
                     .padding(horizontal = 20.dp).padding(bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -826,7 +825,7 @@ private fun AddLanguageSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 32.dp)
+            Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -1139,7 +1138,7 @@ private fun coreSubtitle(core: CoreClubClient.Progress?): String = when {
 private fun CoreClubSheet(p: CoreClubClient.Progress?, onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding()
+            Modifier.fillMaxWidth().bottomBarInsets()
                 .padding(horizontal = 20.dp).padding(bottom = 32.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -1218,7 +1217,7 @@ object AppLanguageNames {
 @Composable
 private fun AppLanguageSheet(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Text(stringResource(R.string.app_language), style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp))
             com.roro.futurevoice.core.UILanguage.translated.forEach { code ->
