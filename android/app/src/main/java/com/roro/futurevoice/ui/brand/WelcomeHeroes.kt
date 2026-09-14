@@ -183,10 +183,14 @@ fun HomeHero(modifier: Modifier = Modifier) {
 fun BookHero(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize().padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Bounded: the card carries a weighted spacer so its bottom block
+        // sits on the floor, and in a fill-height parent that makes it eat
+        // the whole hero and push the words panel off the screen.
         BookCard(
             title = "Asking the landlord for the deposit back",
             origin = "Scenario", accent = Books.scenarios,
             detail = "12 of 19 mastered", progress = 12f / 19f,
+            modifier = Modifier.height(150.dp),
         )
         HeroPanel {
             Text("Words", style = MaterialTheme.typography.titleSmall)
