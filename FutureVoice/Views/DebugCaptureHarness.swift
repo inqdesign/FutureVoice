@@ -671,9 +671,9 @@ enum DebugCapture {
             // a 402 failure.
             return AnyView(PaywallView().environmentObject(appState))
         case "feedback":
-            // The first-talk feedback sheet, at the medium detent the call
-            // ends into. Reachable no other way in a capture run: it fires
-            // once, after a real conversation has been summarized.
+            // The feedback sheet, at the medium detent the call ends into.
+            // Reachable no other way in a capture run: it fires once, after a
+            // minute-long call on a RETURN visit (`shouldShowReturningTalk`).
             return AnyView(FeedbackCaptureHost().environmentObject(appState))
         case "update", "update-required":
             // The update notice, both temperaments. Unreachable in a capture
@@ -1358,7 +1358,7 @@ private struct FeedbackCaptureHost: View {
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
-                FeedbackSheet(context: .firstTalk)
+                FeedbackSheet(context: .returningTalk)
             }
             .onAppear {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { showing = true }

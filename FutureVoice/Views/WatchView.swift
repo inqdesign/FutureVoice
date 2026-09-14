@@ -239,7 +239,6 @@ struct WatchView: View {
     @State private var currentIndex: Int? = nil
     @State private var isPlaying = false
     /// Unified beta feedback modal — presented after the first full listen-through.
-    @State private var feedbackContext: FeedbackSheet.Context?
     @State private var loading = true
     @State private var error: String?
     @State private var outOfCredits = false
@@ -415,9 +414,6 @@ struct WatchView: View {
         }
         .toolbar(.hidden, for: .tabBar)   // immersive watching — hide the tab bar
         .safeAreaInset(edge: .bottom) { controls }
-        .sheet(item: $feedbackContext) { ctx in
-            FeedbackSheet(context: ctx)
-        }
         .alert("Something went wrong", isPresented: errorBinding) {
             if outOfCredits {
                 Button("See plans") { error = nil; showingPaywall = true }
@@ -850,11 +846,6 @@ struct WatchView: View {
         // offering only "watch it again" and start offering the book.
         if reachedEnd, !didFinishScene {
             withAnimation(.easeOut(duration: 0.25)) { didFinishScene = true }
-        }
-        // Completed the whole dialogue for the first time → ask for feedback.
-        if reachedEnd && FeedbackPrompt.shouldShow(.firstWatch) {
-            FeedbackPrompt.markShown(.firstWatch)
-            feedbackContext = .firstWatch
         }
     }
 

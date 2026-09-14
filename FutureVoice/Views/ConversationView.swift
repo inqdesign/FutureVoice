@@ -3689,15 +3689,23 @@ struct ConversationView: View {
         summary = nil
         phoneCallActive = false
         cancelSilenceTimer()
-        // First-ever finished conversation → ask for feedback before leaving;
-        // the sheet's onDismiss completes the exit.
-        if FeedbackPrompt.shouldShow(.firstTalk) {
-            FeedbackPrompt.markShown(.firstTalk)
+        // They came back and had another real call — the first moment at which
+        // "how is it going" is a question about something. The sheet's
+        // onDismiss completes the exit.
+        if FeedbackPrompt.shouldShowReturningTalk(callSeconds: callElapsed) {
+            FeedbackPrompt.markShown(.returningTalk)
             dismissAfterFeedback = true
-            feedbackContext = .firstTalk
+            feedbackContext = .returningTalk
         } else {
             close()
         }
+    }
+
+    /// How long this call ran, in seconds — the same clock the header shows.
+    /// Still readable here: only `startNewSession` clears it, and the summary
+    /// sheet sits between that and this.
+    private var callElapsed: TimeInterval {
+        callElapsedAtPause + (callStartedAt.map { Date().timeIntervalSince($0) } ?? 0)
     }
 
     private static func mp3DurationMs(_ data: Data) -> Int {

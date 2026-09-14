@@ -67,6 +67,7 @@ struct MeTab: View {
     #if DEBUG
     @State private var confirmingOnboardingReset = false
     @State private var confirmingAudioCacheClear = false
+    @State private var previewFeedback: FeedbackSheet.Context?
     #endif
     var body: some View {
         NavigationStack {
@@ -193,6 +194,8 @@ struct MeTab: View {
                     }
                 }
 
+                contactSection
+
                 Section {
                     Button(role: .destructive) {
                         confirmingSignOut = true
@@ -236,6 +239,16 @@ struct MeTab: View {
                         row(icon: "waveform.slash",
                             title: explain("Clear voice cache"),
                             subtitle: explain("Re-synthesize every line — learning data untouched"))
+                    }
+                    // The feedback ask happens once, after a minute-long call
+                    // on a return visit — a moment that cannot be reached on
+                    // demand. This is how it gets LOOKED at before it ships.
+                    Button {
+                        previewFeedback = .returningTalk
+                    } label: {
+                        row(icon: "star.bubble",
+                            title: explain("Preview feedback sheet"),
+                            subtitle: explain("The ask that follows a return visit's call"))
                     }
                 } header: {
                     Text("Developer")
@@ -315,6 +328,7 @@ struct MeTab: View {
                 Text(accountDeleteError ?? "")
             }
             #if DEBUG
+            .sheet(item: $previewFeedback) { FeedbackSheet(context: $0) }
             // Extracted into a modifier: inline, these two tipped `body` past
             // what the type-checker will solve in reasonable time.
             .modifier(DeveloperAlerts(
@@ -869,6 +883,38 @@ struct MeTab: View {
     /// say everything ("Talk time … 132 / 150 min") must not be given a line
     /// of prose to fill the slot. Existing callers pass a plain `String` and
     /// promote for free.
+    /// Write to the person building this — one tap, no compose window.
+    ///
+    /// It sits in the main Settings list rather than three levels down inside
+    /// Privacy (where the only contact row used to live, and where it reads as
+    /// a data-request address, because that is what it is there for). The
+    /// footer names who is on the other end: a learner will not write to a
+    /// support desk about a feature they wish existed, and they will write to
+    /// a person.
+    ///
+    /// Absent entirely until a handle is filled in (`SupportChannel.handle`).
+    @ViewBuilder
+    private var contactSection: some View {
+        let channels = SupportChannel.available
+        if !channels.isEmpty {
+            Section {
+                ForEach(channels) { channel in
+                    Button {
+                        if let url = channel.url { openURL(url) }
+                    } label: {
+                        row(icon: channel.icon,
+                            title: channel.title,
+                            subtitle: channel.subtitle)
+                    }
+                }
+            } header: {
+                Text(explain("Say hello"))
+            } footer: {
+                Text(explain("One person builds this app, and reads every message. Tell me what's missing, what broke, or what you wish it did."))
+            }
+        }
+    }
+
     private func row(icon: String, title: String, subtitle: String?,
                      value: String? = nil) -> some View {
         HStack(spacing: 12) {
