@@ -95,7 +95,8 @@ export function assemble(raw: any) {
     const ds = [...a.days].sort((x, y) => x - y);
     const rv = raw.reviews
       .filter((r: any) => r.id === u.id)
-      .map((r: any) => ({ context: r.context, rating: r.rating, body: r.body, d: r.d }));
+      .map((r: any) => ({ context: r.context, rating: r.rating, body: r.body,
+                          d: r.d, at: r.at ?? null }));
     // Someone who signed up before the cutover is only observed from it, so
     // streaks and week-N retention must be counted from there — not from a
     // signup date whose first weeks this page cannot see.
@@ -230,6 +231,44 @@ export function assemble(raw: any) {
     builds: raw.builds,
   };
 
+  // ------------------------------------------------------------- revenue
+  // Every price is monthly-equivalent (an annual plan divided by 12) so one
+  // number can be added up. `comp` is excluded everywhere — a hand-given plan
+  // is not revenue and never becomes any.
+  const priceOf = (planId: string | null) =>
+    planId ? (MONTHLY_PRICE[planId] ?? 0) : 0;
+  const revenue = (() => {
+    let paid = 0, trialLive = 0, trialLost = 0;
+    let paidN = 0, trialLiveN = 0, trialLostN = 0, compN = 0;
+    for (const u of users) {
+      // The owner's own subscription is not revenue — it is the founder paying
+      // himself to watch real burn. Counting it printed "결제 구독 0 · 월 $19.99"
+      // on the same tile, which is the contradiction that gave it away.
+      if (u.dev || u.owner) continue;
+      const price = priceOf(u.plan);
+      switch (u.subState) {
+        case "paid":            paid += price; paidN++; break;
+        case "cancelling":      paid += price; paidN++; break;
+        case "trial":           trialLive += price; trialLiveN++; break;
+        case "trial_cancelled": trialLost += price; trialLostN++; break;
+        case "comp":            compN++; break;
+      }
+    }
+    const trials = trialLiveN + trialLostN;
+    return {
+      mrr: round(paid, 2), mrrCount: paidN,
+      trialLive: round(trialLive, 2), trialLiveCount: trialLiveN,
+      trialLost: round(trialLost, 2), trialLostCount: trialLostN,
+      compCount: compN,
+      trials,
+      // Of the trials that have been STARTED, how many still intend to bill.
+      keepRate: trials ? round((trialLiveN / trials) * 100) : null,
+      commission: raw.commission,
+      // What lands in the bank if every running trial converts.
+      netIfAllConvert: round((paid + trialLive) * (1 - raw.commission), 2),
+    };
+  })();
+
   return {
     asOf: raw.today,
     liveAt: raw.liveAt,
@@ -245,6 +284,7 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
-    rtSessions, rtReasons,
+    rtSessions, rtReasons, revenue,
+    prices: MONTHLY_PRICE,
   };
 }
