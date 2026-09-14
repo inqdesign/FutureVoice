@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>nawana — Coming soon</title>
-<meta name="description" content="nawana — learn a language from your fluent self. Coming soon." />
-<meta property="og:title" content="nawana — Coming soon" />
-<meta property="og:description" content="Learn a language from your fluent self. Coming soon." />
+<title>nawana — Now on the App Store</title>
+<meta name="description" content="nawana — learn a language from your fluent self. Now on the App Store." />
+<meta property="og:title" content="nawana — Now on the App Store" />
+<meta property="og:description" content="Learn a language from your fluent self. Now on the App Store." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://nawana.app/" />
 <link rel="canonical" href="https://nawana.app/" />
@@ -68,27 +68,23 @@ body{
 .tag{ margin-top:18px; font-size:clamp(15px,1.6vw,19px); line-height:1.4; color:var(--dim); letter-spacing:.01em; }
 .mini{ margin-top:18px; font-family:var(--mono); font-size:11.5px; letter-spacing:.05em; color:var(--faint); line-height:1.9; }
 .mini a{ color:var(--faint); text-decoration:none; } .mini a:hover{ color:var(--tx); }
-.join{ width:min(468px,100%); display:flex; flex-direction:column; gap:16px; }
-/* text-based tabs with a sliding underline indicator */
-.seg{ display:flex; gap:24px; position:relative; }
-.seg .opt{ background:transparent; border:0; padding:0 0 8px; cursor:pointer;
-  font-family:var(--mono); font-size:13px; letter-spacing:.03em; color:var(--dim); transition:color .18s; }
-.seg .opt:hover{ color:var(--tx); }
-.seg .opt.on{ color:var(--tx); }
-.seg-ind{ position:absolute; bottom:0; left:0; height:2px; width:0; background:var(--tx); pointer-events:none;
-  transition:transform .28s cubic-bezier(.4,0,.2,1), width .28s cubic-bezier(.4,0,.2,1); }
-.joinrow{ display:flex; gap:10px; width:100%; }
-.in{ flex:1; min-width:0; background:transparent; border:1px solid rgba(237,236,232,0.28);
-  color:var(--tx); font-family:var(--sans); font-size:16px; padding:14px 16px; border-radius:0; outline:none; transition:border-color .15s; }
-.in::placeholder{ color:var(--faint); }
-.in:focus{ border-color:rgba(237,236,232,0.6); }
-.btn{ flex:none; background:transparent; color:var(--tx); border:1px solid rgba(237,236,232,0.4); cursor:pointer;
-  font-family:var(--mono); font-size:13px; letter-spacing:.08em; padding:0 22px; transition:background .15s, color .15s, border-color .15s; }
-.btn:hover{ background:#F2F1ED; color:#131211; border-color:#F2F1ED; }
-.btn:disabled{ opacity:.55; cursor:default; }
-.msg{ min-height:16px; font-family:var(--mono); font-size:12px; letter-spacing:.03em; color:var(--dim); text-align:right; }
-.msg.ok{ color:#86C9A4; } .msg.err{ color:#E39288; }
-.join.done .seg, .join.done .joinrow{ display:none; }
+/* App Store badge — Apple's official badge look (black, hairline outline, white  + two-line text) */
+.store{ display:flex; flex-direction:column; align-items:flex-end; gap:12px; }
+.btn-store{ display:inline-flex; align-items:center; gap:11px; text-decoration:none; cursor:pointer;
+  background:#000; color:#fff; border-radius:13px; padding:10px 22px 11px 17px;
+  box-shadow:inset 0 0 0 1px #A6A6A6; font-family:-apple-system,"Helvetica Neue","Apple SD Gothic Neo",sans-serif;
+  transition:transform .15s ease; }
+.btn-store:hover{ transform:scale(1.03); }
+.btn-store svg{ width:26px; height:26px; flex:none; }
+.btn-store .tx{ display:flex; flex-direction:column; align-items:flex-start; line-height:1.16; }
+.btn-store .tx small{ font-size:12px; font-weight:400; letter-spacing:.01em; }
+.btn-store .tx b{ font-size:19.5px; font-weight:600; letter-spacing:-.01em; }
+.store .qr{ display:none; }
+/* hint under the play button — gone once the voice is playing (captions take its place) */
+.hint{ position:fixed; left:50%; top:calc(50% + 118px); transform:translateX(-50%); z-index:5;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--dim);
+  white-space:nowrap; pointer-events:none; transition:opacity .35s; }
+body.playing .hint, body.played .hint{ opacity:0; }
 @media (max-width:760px){
   .mark{ top:24px; left:24px; width:54px; }
   .fself{ left:24px; top:112px; transform:none; }   /* JS centers it between logo and band */
@@ -96,8 +92,8 @@ body{
   .eyebrow{ position:fixed; top:44px; right:24px; margin:0; z-index:2; }
   .lang{ top:70px; right:24px; }
   .band{ left:24px; right:24px; bottom:24px; flex-direction:column; align-items:flex-start; gap:22px; transition:opacity .5s ease; }
-  .join{ width:100%; max-width:420px; gap:12px; }
-  .join .msg{ min-height:0; text-align:left; }
+  .store{ align-items:flex-start; }
+  .hint{ top:calc(50% + 104px); }
   /* While the audio is PLAYING, clear everything below the caption so only
      the orb + caption remain — the small screen gets too crowded otherwise.
      Pausing fades the band back in. */
@@ -113,7 +109,7 @@ body{
   if(!_opt){ posthog.init('phc_QFR0wEkAigOahZAlzW9wsYzAUGQEyuurF7PueVdsDoA', {api_host:'https://eu.i.posthog.com', person_profiles:'identified_only', defaults:'2025-05-24'}); posthog.register({app:'nawana'}); }
 </script>
 </head>
-<body>
+<body class="beta-play">
   <canvas class="flower-gl" id="flower-gl" aria-hidden="true"></canvas>
   <div class="veil" aria-hidden="true"></div>
   <a class="mark" href="/" aria-label="nawana"><svg viewBox="0 0 1024 1024" fill="currentColor" aria-hidden="true"><rect x="291" y="238" width="410" height="100"/><rect x="701" y="338" width="104" height="347"/><rect x="187" y="338" width="104" height="347"/><rect x="291" y="685" width="410" height="100"/><rect x="805" y="685" width="98" height="100"/></svg></a>
@@ -123,29 +119,24 @@ body{
 
   <div class="band">
     <div class="brand-block">
-      <div class="eyebrow"><span class="dot"></span><span class="etx">In beta testing</span></div>
+      <div class="eyebrow"><span class="dot"></span><span class="etx">Now on the App Store</span></div>
       <div class="brand-word">nawana</div>
       <p class="tag">Learn a language from<br />your fluent self.</p>
       <p class="mini"><a href="/privacy.html" class="mprivacy">Privacy</a> · <a href="/terms.html" class="mterms">Terms</a> · <a href="/impressum.html" class="mimprint">Impressum</a> · <a href="mailto:hello.dearroroapp@gmail.com" class="mcontact">Contact</a></p>
     </div>
-    <form class="join" id="join" novalidate>
-      <div class="seg" id="seg" role="group" aria-label="Choose an option">
-        <button type="button" class="opt on" data-beta="0">Notify me</button>
-        <button type="button" class="opt" data-beta="1">Beta tester</button>
-      </div>
-      <div class="joinrow">
-        <input class="in" id="email" type="email" inputmode="email" autocomplete="email"
-               placeholder="you@email.com" aria-label="Email address" required />
-        <button class="btn" id="joinbtn" type="submit">NOTIFY ME <span aria-hidden="true">&rarr;</span></button>
-      </div>
-      <p class="msg" id="msg" role="status" aria-live="polite"></p>
-    </form>
+    <div class="store">
+      <a class="btn-store" href="https://apps.apple.com/app/id6792794655" target="_blank" rel="noopener" id="storebtn" aria-label="Download on the App Store">
+        <svg viewBox="0 0 384 512" fill="currentColor" aria-hidden="true"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 140.3 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+        <span class="tx"><small class="ssmall">Download on the</small><b class="sbig">App Store</b></span>
+      </a>
+    </div>
   </div>
 
-  <button class="playbtn" id="playbtn" hidden aria-label="Play">
+  <button class="playbtn" id="playbtn" aria-label="Play">
     <svg class="ico-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
     <svg class="ico-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
   </button>
+  <div class="hint" id="hint"><span class="htx">A voice note from the maker</span></div>
   <div class="caption" id="caption" aria-live="polite"></div>
   <audio id="baudio" src="/beta.mp3" preload="none" crossorigin="anonymous"></audio>
 
@@ -364,95 +355,42 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 </script>
 <script>
 (function(){
-  var SUPA_URL='https://chhzjtigzdotacutwcyo.supabase.co';
-  var SUPA_ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHpqdGlnemRvdGFjdXR3Y3lvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5OTk3NDUsImV4cCI6MjA5NjU3NTc0NX0.tcGaH-m2jJklxsQ8YaHU1UaxtJAZkoRBq0B--inPHVU';
-  var form=document.getElementById('join'), input=document.getElementById('email'),
-      btn=document.getElementById('joinbtn'), msg=document.getElementById('msg'),
-      seg=document.getElementById('seg'), note=document.getElementById('note');
-  if(!form) return;
-  function show(m,cls){ msg.textContent=m; msg.className='msg'+(cls?' '+cls:''); }
-  function valid(e){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
-
   // ── language: audio + on-page copy. Default from the browser; user can switch. ──
   var AUDIO={ ko:'/beta.mp3', en:'/beta-en.mp3' };
   var I18N={
-    en:{ eyebrow:'In beta testing', tag:'Learn a language from<br>your fluent self.',
-      notify:'Notify me', beta:'Beta tester', btnNotify:'NOTIFY ME', btnApply:'APPLY',
-      noteNotify:"We'll email you the moment it launches.",
-      noteBeta:"We'll invite you to the TestFlight beta before launch.",
-      okNotify:"You're on the list. We'll email you at launch.",
-      okBeta:"You're on the waitlist — we'll email you when a beta spot opens up.",
-      bad:'Please enter a valid email.', privacy:'Privacy', terms:'Terms', imprint:'Impressum', contact:'Contact', ph:'you@email.com' },
-    ko:{ eyebrow:'베타 테스트 중', tag:'유창한 나에게<br>언어를 배우세요.',
-      notify:'알림 받기', beta:'베타 신청', btnNotify:'알림 받기', btnApply:'신청하기',
-      noteNotify:'출시되면 이메일로 알려드릴게요.',
-      noteBeta:'출시 전 TestFlight 베타로 초대해드릴게요.',
-      okNotify:'등록됐어요. 출시되면 이메일로 알려드릴게요.',
-      okBeta:'대기명단에 등록됐어요 — 자리가 나면 이메일로 바로 연락드릴게요.',
-      bad:'올바른 이메일을 입력해주세요.', privacy:'개인정보처리방침', terms:'이용약관', imprint:'Impressum', contact:'문의', ph:'you@email.com' }
+    en:{ eyebrow:'Now on the App Store', tag:'Learn a language from<br>your fluent self.',
+      hint:'A voice note from the maker', ssmall:'Download on the', sbig:'App Store',
+      privacy:'Privacy', terms:'Terms', imprint:'Impressum', contact:'Contact' },
+    ko:{ eyebrow:'App Store 출시', tag:'유창한 나에게<br>언어를 배우세요.',
+      hint:'만든 사람이 남긴 음성', ssmall:'App Store에서', sbig:'다운로드',
+      privacy:'개인정보처리방침', terms:'이용약관', imprint:'Impressum', contact:'문의' }
   };
   var lang; try{ lang=localStorage.getItem('nawana_lang'); }catch(e){}
   if(lang!=='ko'&&lang!=='en'){ var nv=(navigator.languages&&navigator.languages[0])||navigator.language||'en'; lang=/^ko/i.test(nv)?'ko':'en'; }
   function t(k){ return (I18N[lang]&&I18N[lang][k])||I18N.en[k]; }
   var qs=function(x){ return document.querySelector(x); };
-  var wantsBeta=false;
-  function renderBtn(){ btn.innerHTML=t(wantsBeta?'btnApply':'btnNotify')+' <span aria-hidden="true">→</span>'; }
-  function renderNote(){ if(note) note.textContent=t(wantsBeta?'noteBeta':'noteNotify'); }
-
-  // sliding underline indicator for the Notify me / Beta tester tabs
-  var segInd=document.createElement('span'); segInd.className='seg-ind'; seg.appendChild(segInd);
-  function moveInd(){ var on=seg.querySelector('.opt.on'); if(!on) return; segInd.style.width=on.offsetWidth+'px'; segInd.style.transform='translateX('+on.offsetLeft+'px)'; }
-
   function applyLang(l){
     lang=l; try{ localStorage.setItem('nawana_lang',l); }catch(e){}
     document.documentElement.setAttribute('lang', l);
     var e;
     if((e=qs('.eyebrow .etx'))) e.textContent=t('eyebrow');
     if((e=qs('.tag'))) e.innerHTML=t('tag');
+    if((e=qs('.hint .htx'))) e.textContent=t('hint');
+    if((e=qs('.btn-store .ssmall'))) e.textContent=t('ssmall');
+    if((e=qs('.btn-store .sbig'))) e.textContent=t('sbig');
     if((e=qs('.mini .mprivacy'))){ e.textContent=t('privacy'); e.setAttribute('href', l==='ko'?'/privacy-ko.html':'/privacy.html'); }
     if((e=qs('.mini .mterms'))){ e.textContent=t('terms'); e.setAttribute('href', l==='ko'?'/terms-ko.html':'/terms.html'); }
     if((e=qs('.mini .mimprint'))) e.textContent=t('imprint');
     if((e=qs('.mini .mcontact'))) e.textContent=t('contact');
-    if(input) input.setAttribute('placeholder', t('ph'));
-    Array.prototype.forEach.call(seg.querySelectorAll('.opt'), function(o){ o.textContent=t(o.getAttribute('data-beta')==='1'?'beta':'notify'); });
-    renderBtn(); renderNote(); moveInd();
     Array.prototype.forEach.call(document.querySelectorAll('.lang .lopt'), function(b){ b.classList.toggle('on', b.getAttribute('data-lang')===l); });
     var au=document.getElementById('baudio');
     if(au && au.getAttribute('src')!==AUDIO[l]){ au.pause(); au.setAttribute('src', AUDIO[l]); if(au.load) au.load(); }
   }
   var langEl=document.getElementById('lang');
   if(langEl){ langEl.addEventListener('click', function(e){ var b=e.target.closest('.lopt'); if(b) applyLang(b.getAttribute('data-lang')); }); }
-
-  segInd.style.transition='none';
-  requestAnimationFrame(function(){ moveInd(); requestAnimationFrame(function(){ segInd.style.transition=''; }); });
-  window.addEventListener('load', moveInd);
-  window.addEventListener('resize', moveInd);
-  seg.addEventListener('click', function(e){
-    var b=e.target.closest('.opt'); if(!b) return;
-    wantsBeta = b.getAttribute('data-beta')==='1';
-    Array.prototype.forEach.call(seg.querySelectorAll('.opt'), function(o){ o.classList.toggle('on', o===b); });
-    moveInd(); renderBtn(); renderNote();
-  });
-
   applyLang(lang);   // initial: copy + audio + toggle from the resolved language
-
-  form.addEventListener('submit', async function(ev){
-    ev.preventDefault();
-    var email=(input.value||'').trim().toLowerCase();
-    if(!valid(email)){ show(t('bad'),'err'); input.focus(); return; }
-    btn.disabled=true; show('…');
-    try{ if(window.posthog) posthog.capture('waitlist_joined', {email:email, beta:wantsBeta, lang:lang}); }catch(e){}
-    try{
-      await fetch(SUPA_URL+'/rest/v1/waitlist', {
-        method:'POST',
-        headers:{ apikey:SUPA_ANON, Authorization:'Bearer '+SUPA_ANON, 'Content-Type':'application/json', Prefer:'return=minimal' },
-        body:JSON.stringify({ email:email, wants_beta:wantsBeta, source:'coming_soon', referrer:document.referrer||null, user_agent:navigator.userAgent })
-      });
-    }catch(e){}
-    form.classList.add('done');
-    if(wantsBeta){ show(t('okBeta'),'ok'); if(window.startBetaPlay) window.startBetaPlay(); }
-    else { show(t('okNotify'),'ok'); }
-  });
+  var sb=document.getElementById('storebtn');
+  if(sb){ sb.addEventListener('click', function(){ try{ if(window.posthog) posthog.capture('appstore_click', {lang:lang, page:'launch'}); }catch(e){} }); }
 })();
 </script>
 <script>
@@ -526,7 +464,7 @@ var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     loadCaptions();
     if(audio.paused){ audio.play().catch(function(){}); } else { audio.pause(); }
   });
-  audio.addEventListener('play', function(){ pb.classList.add('playing'); document.body.classList.add('playing'); if(!pumping){ pumping=true; pump(); } });
+  audio.addEventListener('play', function(){ pb.classList.add('playing'); document.body.classList.add('playing'); document.body.classList.add('played'); if(!pumping){ pumping=true; pump(); } });
   audio.addEventListener('pause', function(){ pb.classList.remove('playing'); document.body.classList.remove('playing'); window.__fselfAudioLevel=null; });
   audio.addEventListener('ended', function(){ pb.classList.remove('playing'); document.body.classList.remove('playing'); window.__fselfAudioLevel=null; if(cap) cap.textContent=''; });
   audio.addEventListener('timeupdate', function(){
