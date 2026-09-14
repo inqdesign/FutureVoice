@@ -160,6 +160,13 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 .att .tx .why{font-size:12px; color:var(--ink-2); margin-top:1px}
 .att .when{font-size:12px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
 
+/* --- heatmap ------------------------------------------------------------ */
+.hm-row{display:flex; align-items:center; gap:8px}
+.hm-name{width:118px; flex:none; font-size:12px; color:var(--ink-2); text-align:right;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hm-side{font-size:11.5px; color:var(--muted); white-space:nowrap;
+  font-variant-numeric:tabular-nums; padding-left:2px}
+
 /* --- cohort grid -------------------------------------------------------- */
 .cohort td, .cohort th{text-align:center; padding:7px 8px}
 .cohort td:first-child, .cohort th:first-child{text-align:left; white-space:nowrap}
@@ -217,6 +224,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   .dl{grid-template-columns:1fr}
   .grid3, .tiles{grid-template-columns:minmax(0,1fr)}
   .fe{grid-template-columns:60px 8px 1fr; gap:8px}
+  .hm-name{width:74px; font-size:11px}
+  .hm-side{display:none}
   .hgap{margin-left:0; width:100%}
   /* 사람 표: 유저 · 구독 · 통화만. 나머지는 행을 눌러서. */
   #peopleTable th:nth-child(2), #peopleTable td:nth-child(2),
@@ -301,9 +310,31 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </section>
 
 <section data-tab="funnel" hidden>
+  <h2>누가 어느 날 말했나</h2>
+  <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
+  <b>테두리가 있는 칸이 가입한 날</b>이라, 그 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
+  위의 코호트 표를 사람 단위로 편 것이에요.</p>
+  <div class="card scroll" id="heatmap"></div>
+</section>
+
+<section data-tab="funnel" hidden>
   <h2>일별</h2>
   <p class="sub">가입은 그날 계정을 만든 사람, 활성은 그날 서버에 기록이 남은 사람이에요.</p>
   <div class="card scroll" id="daily"></div>
+</section>
+
+<section data-tab="funnel" hidden style="display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:12px">
+  <div>
+    <h2>한 번에 얼마나 말하나</h2>
+    <p class="sub">통화 한 건의 길이예요. 10초 미만 조각은 뺐어요 — 통화 중 재개가 있으면
+    한 통화가 세션 여러 개로 쪼개져요.</p>
+    <div class="card bars" id="sessHist"></div>
+  </div>
+  <div>
+    <h2>무슨 기능을 쓰나</h2>
+    <p class="sub">무료 기능의 일일 사용 기록이에요. 전 계정 합산이라 위쪽 토글의 영향을 받지 않아요.</p>
+    <div class="card bars" id="features"></div>
+  </div>
 </section>
 
 <section data-tab="funnel" hidden>
@@ -872,6 +903,110 @@ function renderCohort(users){
     html += `</tr>`;
   }
   el.innerHTML = html + '</tbody>';
+}
+
+/** One row per person, one cell per day, darker where they spoke longer.
+ *  Removed in the 2026-09-14 rewrite and put back the same day: with a
+ *  three-day launch the cohort table says how MANY came back and this says
+ *  WHO, which is the question with seventeen users. The signup day carries a
+ *  ring, so a row that is empty to the right of it is someone who never
+ *  returned — the shape you cannot see in an aggregate. */
+function renderHeatmap(users){
+  const el = document.getElementById('heatmap');
+  if(!el) return;
+  const n = DATA.days.length;
+  const byUser = {};
+  for(const [u,d,rows,t,secs] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs];
+  // Seconds, not row counts: a widget refresh is not a day of practice.
+  const ramp = secs => secs>=600 ? 'var(--seq5)' : secs>=300 ? 'var(--seq4)'
+    : secs>=60 ? 'var(--seq3)' : secs>0 ? 'var(--seq2)' : 'var(--seq1)';
+  const rows = [...users].sort((a,b)=>
+    (b.activeDays-a.activeDays) || (b.talkSecs-a.talkSecs)
+    || (a.signedUpAt||'').localeCompare(b.signedUpAt||''));
+  if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
+  const nameW = innerWNarrow() ? 74 : 118;
+  const gap = 3;
+  const avail = innerW(el, 200) - nameW - 8 - (innerWNarrow() ? 0 : 62);
+  const cs = Math.max(9, Math.min(34, avail/n - gap));
+  const width = n*(cs+gap);
+  const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
+
+  let html = `<div class="hm-row"><div class="hm-name"></div>`
+           + `<svg width="${width}" height="15">`
+           + DATA.days.map((d,i)=>
+               `<text x="${i*(cs+gap)+cs/2}" y="11" class="axis" text-anchor="middle">${fmtD(d)}</text>`).join('')
+           + `</svg></div>`;
+  for(const u of rows){
+    const m = byUser[u.idx] || {};
+    const su = signupIdx(u);
+    let svg = `<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">`
+            + `${esc(nameOf(u))}</div><svg width="${width}" height="${cs+4}">`;
+    for(let i=0;i<n;i++){
+      const c = m[i];
+      const secs = c ? c[2] : 0;
+      const fill = c ? ramp(secs) : 'var(--chip)';
+      const tip = c
+        ? `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`
+          + `${secs?` · 통화 ${fmtMin(secs)}`:''} · 턴 ${c[1]}`
+          + `${i===su?'<br>가입한 날':''}`
+        : `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])} · 조용`
+          + `${i===su?'<br>가입한 날':''}${i<su?'<br>가입 전':''}`;
+      const before = i < su;
+      svg += `<rect x="${i*(cs+gap)}" y="2" width="${cs}" height="${cs}" rx="3"`
+          +  ` fill="${before?'transparent':fill}"`
+          +  `${i===su?' stroke="var(--ink)" stroke-width="1.5"':''}`
+          +  ` data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+    }
+    svg += `</svg>`;
+    if(!innerWNarrow()){
+      svg += `<div class="hm-side">${u.talkSecs?fmtMin(u.talkSecs):'—'} · ${u.activeDays}일</div>`;
+    }
+    html += svg + `</div>`;
+  }
+  html += `<div class="legend">조용 <span class="cell" style="background:var(--chip)"></span>`
+       +  `<span class="cell" style="background:var(--seq2)"></span>`
+       +  `<span class="cell" style="background:var(--seq3)"></span>`
+       +  `<span class="cell" style="background:var(--seq4)"></span>`
+       +  `<span class="cell" style="background:var(--seq5)"></span> 10분 이상`
+       +  ` · <span style="border:1.5px solid var(--ink);width:11px;height:11px;`
+       +  `border-radius:3px;display:inline-block"></span> 가입한 날</div>`;
+  el.innerHTML = html;
+}
+const innerWNarrow = () => innerWidth <= 700;
+
+function renderSessionLengths(users){
+  const el = document.getElementById('sessHist');
+  if(!el) return;
+  const vis = new Set(users.map(u=>u.idx));
+  const buckets = [{k:'10초–1분',max:60},{k:'1–3분',max:180},{k:'3–5분',max:300},
+                   {k:'5–10분',max:600},{k:'10분 이상',max:Infinity}];
+  const counts = buckets.map(()=>0);
+  let total = 0, secs = 0;
+  for(const [u,d,s] of DATA.sessions){
+    if(!vis.has(u) || s < 10) continue;
+    total++; secs += s;
+    for(let i=0;i<buckets.length;i++){ if(s<buckets[i].max){counts[i]++;break;} }
+  }
+  if(!total){ el.innerHTML='<div class="empty">아직 통화가 없어요.</div>'; return; }
+  const max = Math.max(1,...counts);
+  el.innerHTML = buckets.map((b,i)=>
+    `<div class="row"><div class="lbl">${b.k}</div>`
+    + `<div class="track"><div class="fill" style="width:${counts[i]/max*100}%"></div></div>`
+    + `<div class="val">${counts[i]}건</div></div>`).join('')
+    + `<div class="legend">통화 ${total}건 · 합계 ${fmtMin(secs)} · 평균 ${fmtMin(Math.round(secs/total))}</div>`;
+}
+
+function renderFeatures(){
+  const el = document.getElementById('features');
+  if(!el) return;
+  const fs = [...(DATA.features||[])].sort((a,b)=>b.total-a.total).slice(0,12);
+  if(!fs.length){ el.innerHTML='<div class="empty">기록이 없어요.</div>'; return; }
+  const max = Math.max(...fs.map(f=>f.total));
+  el.innerHTML = fs.map(f =>
+    `<div class="row"><div class="lbl">${PURPOSE_KO[f.purpose]||f.purpose}</div>`
+    + `<div class="track"><div class="fill" style="width:${f.total/max*100}%"></div></div>`
+    + `<div class="val">${num(f.total)}회 · ${f.users}명</div></div>`).join('')
+    + `<div class="legend">출시일 이후 · 전 계정 합산</div>`;
 }
 
 function renderDaily(users){
@@ -1454,7 +1589,8 @@ function render(){
   const users = visibleUsers();
   renderTodayTiles(users); renderAttention(users); renderFeed(users); renderNotes();
   const cohort = launchUsers();
-  renderFunnel(cohort); renderCohort(cohort); renderDaily(users); renderChannels();
+  renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
+  renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
@@ -1463,7 +1599,8 @@ function render(){
 /** Only the width-dependent drawings. Same code path as the first paint, so a
  *  redraw can never disagree with it. */
 function redrawCharts(){
-  renderDaily(visibleUsers()); renderBurn();
+  const users = visibleUsers();
+  renderDaily(users); renderHeatmap(users); renderBurn();
 }
 function showTab(name){
   document.querySelectorAll('section[data-tab]').forEach(s => { s.hidden = s.dataset.tab !== name; });
