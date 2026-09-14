@@ -54,7 +54,7 @@
   <table>
     <tr><th>Data</th><th>Why</th><th>Where it lives</th></tr>
     <tr><td>Apple ID sign-in (user identifier, email)</td><td>Your account, subscription entitlement, invite credits</td><td>Our backend (Supabase)</td></tr>
-    <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by ElevenLabs; the app keeps only a reference to your voice</td></tr>
+    <tr><td>60-second voice recording</td><td>Creating your personal voice clone</td><td>Processed by ElevenLabs; a copy is kept on our backend for quality checks, and the app keeps a reference to your voice</td></tr>
     <tr><td>Speech during conversations and shadowing</td><td>Transcription, fluent rewrites, and pronunciation scoring — the core features</td><td>Recognised on-device first; the recording of that turn is also sent for a more accurate transcription, processed per request and not retained. The resulting text stays on your iPhone</td></tr>
     <tr><td>Subscription and credit balance</td><td>Powering conversations, voice generation, and shadowing</td><td>Apple (purchase) + our backend (balance)</td></tr>
     <tr><td>Product usage events (e.g. "a talk ended", "a scene played")</td><td>Understanding which parts of the app work, and fixing the parts that don't</td><td>PostHog, on EU servers, keyed to a random account identifier</td></tr>
@@ -103,6 +103,7 @@
   <ul>
     <li>Learning data (sessions, drills, progress) lives on your device and disappears when you delete the app.</li>
     <li>Your voice clone exists until you replace it, delete it, or delete your account. We do not keep it on any other schedule and we do not archive superseded clones.</li>
+    <li>The 60-second recording your clone was built from is kept for quality checks, so a clone that came out wrong can still be listened to. It is deleted when you withdraw voice consent, and with your account.</li>
     <li>The record of your consent — the date you gave it, and the fact that you confirmed your age — is kept while your account exists, because we are required to be able to show that consent was given. It is deleted with your account.</li>
     <li>Account deletion (in the app: Me → Account → Delete account) removes your voice clone, account record, and credit balance. Purchase records are retained by Apple per their policy.</li>
   </ul>

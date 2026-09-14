@@ -8,7 +8,9 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { recordFreeUsage, rateLimitedResponse, billingClient } from "../_shared/credits.ts"
+import {
+  recordFreeUsage, rateLimitedResponse, billingClient, serviceRoleClient, background,
+} from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-voice-clone"
 
@@ -140,7 +142,7 @@ Deno.serve(async (req) => {
     .eq("user_id", user.id)
     .eq("is_active", true)
 
-  const { error: insErr } = await supabase
+  const { data: cloneRow, error: insErr } = await supabase
     .from("voice_clones")
     .insert({
       user_id: user.id,
@@ -148,7 +150,22 @@ Deno.serve(async (req) => {
       is_active: true,
       name: voiceName,
     })
+    .select("id")
+    .maybeSingle()
   if (insErr) console.error("voice_clones insert failed", insErr)
+
+  // Keep the recording for a DAY. This function is the ONLY place it exists
+  // on our side — the multipart body is forwarded upstream and then forgotten
+  // — and ElevenLabs' own copy dies with the voice, which the app deletes
+  // seconds after an accent pick, so a clone that came out wrong could not be
+  // listened to minutes after the complaint. `purge-voice-originals` removes
+  // it 24h later. See 20260914120000_voice_originals.sql.
+  //
+  // Backgrounded on purpose: onboarding is waiting on this response, and a
+  // learner must never wait on an archive. Every failure is logged and
+  // swallowed — a clone that worked must not be reported as broken because a
+  // bucket write didn't.
+  background(saveOriginal(user.id, json.voice_id, cloneRow?.id ?? null, incoming))
 
   return new Response(JSON.stringify(json), {
     status: 200,
@@ -159,3 +176,60 @@ Deno.serve(async (req) => {
     },
   })
 })
+
+/**
+ * Write the takes this voice was cloned from into the private
+ * `voice-originals` bucket, and point the `voice_clones` row at them.
+ *
+ * Files are the Blobs the multipart parse already produced, so this re-reads
+ * memory rather than the network. Upserted on path, so a retry of the same
+ * clone overwrites rather than accumulating.
+ */
+async function saveOriginal(
+  userId: string,
+  voiceId: string,
+  cloneRowId: string | null,
+  form: FormData,
+): Promise<void> {
+  try {
+    const files = form.getAll("files").filter((v): v is File => v instanceof File)
+    if (files.length === 0) return
+
+    const admin = serviceRoleClient()
+    const folder = `${userId}/${voiceId}`
+    let bytes = 0
+    let saved = 0
+
+    for (const [i, file] of files.entries()) {
+      // The phone names these; never trust the name for a path.
+      const ext = (file.name.match(/\.[A-Za-z0-9]{1,5}$/)?.[0] ?? ".wav").toLowerCase()
+      const path = `${folder}/${String(i + 1).padStart(2, "0")}${ext}`
+      const body = new Uint8Array(await file.arrayBuffer())
+      const { error } = await admin.storage
+        .from("voice-originals")
+        .upload(path, body, {
+          contentType: file.type || (ext === ".mp3" ? "audio/mpeg" : "audio/wav"),
+          upsert: true,
+        })
+      if (error) { console.error("voice original upload failed", path, error.message); continue }
+      bytes += body.byteLength
+      saved += 1
+    }
+    if (saved === 0) return
+
+    if (cloneRowId) {
+      const { error } = await admin
+        .from("voice_clones")
+        .update({
+          original_path: folder,
+          original_bytes: bytes,
+          original_saved_at: new Date().toISOString(),
+        })
+        .eq("id", cloneRowId)
+      if (error) console.error("voice original mark failed", error.message)
+    }
+    console.log("voice original saved", { voiceId, files: saved, bytes })
+  } catch (e) {
+    console.error("voice original save threw", (e as Error)?.message ?? String(e))
+  }
+}

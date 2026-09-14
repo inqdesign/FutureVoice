@@ -96,6 +96,11 @@ Deno.serve(async (req) => {
     // the only pointer to a voice that keeps costing us a slot.
     if (!upstreamOK) continue
 
+    // The recording the clone was built from goes with the account. Storage
+    // does not cascade, and an abandoned onboarding that leaves a voice
+    // recording behind is the one thing this sweep exists to prevent.
+    await removeVoiceOriginals(admin, row.user_id)
+
     const { error: delErr } = await admin.auth.admin.deleteUser(row.user_id)
     if (delErr) {
       console.error("cleanup-anonymous-voices: user delete failed", row.user_id, delErr)
@@ -109,3 +114,28 @@ Deno.serve(async (req) => {
     { status: 200, headers: { "Content-Type": "application/json" } },
   )
 })
+
+/** Every object under `<user_id>/` in the private voice-originals bucket. */
+async function removeVoiceOriginals(
+  admin: { storage: { from: (b: string) => any } },
+  userId: string,
+): Promise<void> {
+  const bucket = admin.storage.from("voice-originals")
+  try {
+    const { data: folders, error } = await bucket.list(userId, { limit: 1000 })
+    if (error) {
+      console.error("cleanup-anonymous-voices: originals list failed", error.message)
+      return
+    }
+    const paths: string[] = []
+    for (const folder of folders ?? []) {
+      const { data: files } = await bucket.list(`${userId}/${folder.name}`, { limit: 1000 })
+      for (const f of files ?? []) paths.push(`${userId}/${folder.name}/${f.name}`)
+    }
+    if (paths.length === 0) return
+    const { error: rmErr } = await bucket.remove(paths)
+    if (rmErr) console.error("cleanup-anonymous-voices: originals remove failed", rmErr.message)
+  } catch (e) {
+    console.error("cleanup-anonymous-voices: originals threw", (e as Error)?.message ?? String(e))
+  }
+}

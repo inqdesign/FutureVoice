@@ -6,7 +6,7 @@
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { requireUser, handlePreflight, errorResponse, cors } from "../_shared/auth.ts"
-import { priceFor, charge } from "../_shared/credits.ts"
+import { priceFor, charge, serviceRoleClient } from "../_shared/credits.ts"
 
 const SOURCE_FN = "elevenlabs-voice-delete"
 
@@ -61,8 +61,45 @@ Deno.serve(async (req) => {
     .update({ is_active: false })
     .eq("id", owned.id)
 
+  // The recording behind the voice (20260914120000) — kept or dropped by what
+  // the learner is LEFT with, because this one endpoint serves two intents the
+  // wire cannot tell apart:
+  //
+  //   * an accent pick or a re-record deletes the OLD clone moments after a
+  //     new one was inserted. A clone is still active, the learner asked for a
+  //     different voice, not for their recording to be forgotten — and this is
+  //     precisely the case that used to destroy the only copy in existence.
+  //   * Me → delete my voice is a consent WITHDRAWAL and leaves nothing
+  //     active. Then the recording goes too; keeping the source of a voice
+  //     somebody just revoked would be the worst possible reading of consent.
+  const { count } = await supabase
+    .from("voice_clones")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id)
+    .eq("is_active", true)
+  if ((count ?? 0) === 0) await removeVoiceOriginals(user.id)
+
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: { "Content-Type": "application/json", ...cors() },
   })
 })
+
+/** Every object under `<user_id>/` in the private voice-originals bucket. */
+async function removeVoiceOriginals(userId: string): Promise<void> {
+  const bucket = serviceRoleClient().storage.from("voice-originals")
+  try {
+    const { data: folders, error } = await bucket.list(userId, { limit: 1000 })
+    if (error) { console.error("voice-delete: originals list failed", error.message); return }
+    const paths: string[] = []
+    for (const folder of folders ?? []) {
+      const { data: files } = await bucket.list(`${userId}/${folder.name}`, { limit: 1000 })
+      for (const f of files ?? []) paths.push(`${userId}/${folder.name}/${f.name}`)
+    }
+    if (paths.length === 0) return
+    const { error: rmErr } = await bucket.remove(paths)
+    if (rmErr) console.error("voice-delete: originals remove failed", rmErr.message)
+  } catch (e) {
+    console.error("voice-delete: originals threw", (e as Error)?.message ?? String(e))
+  }
+}
