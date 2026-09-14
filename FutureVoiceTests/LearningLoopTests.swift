@@ -173,14 +173,47 @@ final class DrillStoreTests: XCTestCase {
         // "Got it" GRADUATES — the learner said they know it, so the card goes
         // to the top rung in one drop (it used to climb one box at a time,
         // which meant five Got-its before anything left the to-study pile).
-        // Back in ~30 days, the top rung's own interval.
+        // And the top rung RETIRES it: it used to come back in 30 days, be
+        // marked known again, and come back again — so nothing ever left the
+        // store.
         store.markKnown(card, at: now)
         XCTAssertTrue(store.due(now: now).isEmpty)
         card = store.load().first!
         XCTAssertEqual(card.box, DrillStore.maxBox)
         XCTAssertEqual(card.timesCorrect, 1)
-        let thirtyDays: TimeInterval = 30 * 24 * 60 * 60
-        XCTAssertEqual(card.nextReviewAt.timeIntervalSince(now), thirtyDays, accuracy: 1)
+        XCTAssertEqual(card.nextReviewAt, DrillStore.retiredReviewDate)
+        // A year later it is still gone.
+        XCTAssertTrue(store.due(now: now.addingTimeInterval(365 * 24 * 60 * 60)).isEmpty)
+    }
+
+    /// Known is a door, not a waiting room — but only the ladder is barred
+    /// from reopening it. Re-filing from the Known folder is the learner's
+    /// own call and must still work.
+    func testRetiredCardComesBackWhenTheLearnerFilesItAgain() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        store.markKnown(store.due(now: now).first!, at: now)
+
+        let retired = store.load().first!
+        store.snooze(retired, box: 1, until: now.addingTimeInterval(24 * 60 * 60), at: now)
+        let back = store.load().first!
+        XCTAssertLessThan(back.box, DrillStore.maxBox)
+        XCTAssertNotEqual(back.nextReviewAt, DrillStore.retiredReviewDate)
+    }
+
+    /// Cards that reached the top rung while it still meant "back in 30 days"
+    /// are retired where they sit, so the backlog they built stops returning.
+    func testTopRungCardsFromBeforeRetirementAreRetiredOnRead() {
+        let now = Date()
+        store.upsertMany([
+            DrillCard(sourcePhrase: "", targetPhrase: "We're on the same page.",
+                      reason: "", createdAt: now, lastReviewedAt: now,
+                      nextReviewAt: now.addingTimeInterval(13 * 60 * 60),
+                      box: DrillStore.maxBox)
+        ])
+        XCTAssertEqual(store.load().first?.nextReviewAt, DrillStore.retiredReviewDate)
+        XCTAssertTrue(store.due(now: now.addingTimeInterval(14 * 60 * 60)).isEmpty)
     }
 
     func testIncorrectDropsARungAndComesBackNow() {

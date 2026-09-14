@@ -57,6 +57,12 @@ final class DrillStore: LanguageScopedStore {
                     var c = card
                     c.targetPhrase = Self.coreSentence(of: c.targetPhrase,
                                                        pairedWith: c.sourcePhrase)
+                    // Cards that reached the top rung while it still meant
+                    // "back in 30 days" still carry that date. Known is an
+                    // END now, so retire them where they sit — read-time
+                    // like the store's other repairs, and the next write
+                    // persists it.
+                    if c.box >= Self.maxBox { c.nextReviewAt = Self.retiredReviewDate }
                     return c
                 }
         )
@@ -197,7 +203,6 @@ final class DrillStore: LanguageScopedStore {
         }
     }
 
-    /// Promote the card one Leitner box and reschedule.
     /// "Got it" — the learner asserting they know this line. It GRADUATES the
     /// card to the top rung rather than climbing one, which is what the word
     /// and expression decks have always meant by the same bin: drop on Got it,
@@ -207,14 +212,14 @@ final class DrillStore: LanguageScopedStore {
     /// before a card left the to-study pile, so the pile never visibly
     /// shrank and the To study / Known filter looked broken. The three delay
     /// bins are the "not yet" answers and still carry the spacing; the top
-    /// rung's own 30-day interval brings a known card back once, much later.
+    /// rung RETIRES the card (see `retiredReviewDate`).
     func markKnown(_ card: DrillCard, at now: Date = Date()) {
         var c = card
         c.timesSeen += 1
         c.timesCorrect += 1
         c.lastReviewedAt = now
         c.box = Self.maxBox
-        c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
         save(c)
         Analytics.capture("drill_reviewed", ["correct": true, "box": c.box])
     }
@@ -225,7 +230,7 @@ final class DrillStore: LanguageScopedStore {
         c.timesSeen += 1
         c.lastReviewedAt = now
         c.box = max(c.box - 1, 0)
-        c.nextReviewAt = now.addingTimeInterval(Self.interval(for: c.box))
+        c.nextReviewAt = Self.nextReview(after: c.box, from: now)
         save(c)
         Analytics.capture("drill_reviewed", ["correct": false, "box": c.box])
     }
@@ -242,7 +247,9 @@ final class DrillStore: LanguageScopedStore {
         var c = card
         c.timesSeen += 1
         c.lastReviewedAt = now
-        c.box = min(max(box, 0), Self.maxBox)
+        // Never the top rung: a delay is by definition "not yet known", and
+        // the top rung means retired.
+        c.box = min(max(box, 0), Self.maxBox - 1)
         c.nextReviewAt = date
         save(c)
         Analytics.capture("drill_snoozed", [
@@ -266,7 +273,7 @@ final class DrillStore: LanguageScopedStore {
             guard promoted > all[index].box else { continue }
             all[index].box = promoted
             all[index].lastReviewedAt = now
-            all[index].nextReviewAt = now.addingTimeInterval(Self.interval(for: promoted))
+            all[index].nextReviewAt = Self.nextReview(after: promoted, from: now)
             touched = true
             Analytics.capture("drill_used_in_conversation", ["box": promoted])
         }
@@ -352,8 +359,27 @@ final class DrillStore: LanguageScopedStore {
     /// drill deck's folder chips read this to bucket graduated cards.
     static let maxBox = 5
 
+    /// The top rung's "return": there isn't one. "Got it" is the learner
+    /// saying they know this line, and the word and expression decks have
+    /// always treated that as an END (`ReviewQueue.retire` clears the date
+    /// outright). Here it used to be a 30-day interval, which quietly made
+    /// Known a waiting room instead of a door — every known card came back,
+    /// was marked known again, and came back again, so nothing ever left the
+    /// store and the deck filled with sentences the learner had already
+    /// retired several times over. A card is still LISTED under Known (the
+    /// deck's folder, the Sentences page), and re-filing it from that folder
+    /// is what brings it back — the learner's call, not the ladder's.
+    static let retiredReviewDate = Date.distantFuture
+
+    /// When a card at `box` comes back. Everything below the top rung climbs
+    /// the interval table; the top rung retires.
+    private static func nextReview(after box: Int, from now: Date) -> Date {
+        box >= maxBox ? retiredReviewDate : now.addingTimeInterval(interval(for: box))
+    }
+
     /// Leitner intervals (in seconds) per box. Box 0 stays due immediately so
-    /// new cards surface in the next session.
+    /// new cards surface in the next session. The top rung never asks — it
+    /// retires instead.
     private static func interval(for box: Int) -> TimeInterval {
         let days: TimeInterval
         switch box {

@@ -33,7 +33,12 @@ enum DrillReminder {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [requestId])
 
-        let cardDates = DrillStore.shared.load().map(\.nextReviewAt)
+        // Live cards only — a retired one has no return (its date is
+        // `DrillStore.retiredReviewDate`), and letting it through would make
+        // the reminder promise a card the deck will never deal.
+        let cardDates = DrillStore.shared.load()
+            .filter { $0.box < DrillStore.maxBox }
+            .map(\.nextReviewAt)
         // Live entries only — an item marked known elsewhere must not be
         // counted, or the reminder promises cards the deck won't deal.
         let studyDates = ReviewQueue.returnDates()
