@@ -41,6 +41,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -266,6 +268,7 @@ fun DrillDeckScreen(
                         finishedCount = resolved,
                         remainingDue = remainingDue,
                         onNext = if (remainingDue > 0) ({ scope.launch { resolved = 0; dealHand() } }) else null,
+                        onOpen = { bin -> openFolder = bin },
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -657,26 +660,46 @@ internal fun VerdictRow(
 }
 
 
-/** Keeps the folders after the last card — "where did all that go?". */
+/**
+ * The last card is gone — `DrillSheet.emptyState`.
+ *
+ * A glyph, then what happened, then the one thing left to do, and the folders
+ * stay reachable underneath. Those folders are the SAME row the deck drags
+ * onto: "so where did all that go?" is asked here, and answering it with a
+ * second, differently-shaped row would make the drag's destination look like
+ * somewhere else.
+ */
 @Composable
 private fun DeckDone(
     folders: List<Pair<DrillBin, Int>>,
     finishedCount: Int = 0,
     remainingDue: Int = 0,
     onNext: (() -> Unit)? = null,
+    onOpen: (DrillBin) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val finished = finishedCount > 0
     Column(
-        modifier.fillMaxWidth().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier.fillMaxWidth().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(stringResource(
-            if (finishedCount == 0) R.string.no_drills_due else R.string.nice_work),
-            style = MaterialTheme.typography.titleMedium)
+        Spacer(Modifier.weight(1f))
+        // Nothing due at all is a different day from a deck just finished —
+        // one is "come back after a talk", the other is "nice work" — so the
+        // glyph differs too.
+        Icon(
+            if (finished) Icons.Filled.CheckCircle else Icons.Outlined.Lightbulb,
+            contentDescription = null,
+            tint = if (finished) Color(0xFF34C759) else MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(44.dp),
+        )
+        Text(stringResource(if (finished) R.string.nice_work else R.string.no_drills_due),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold)
         Text(
             when {
-                finishedCount == 0 -> stringResource(R.string.drills_appear_here_after_you_end_a_conversation)
+                !finished -> stringResource(R.string.drills_appear_here_after_you_end_a_conversation)
                 remainingDue > 0 -> stringResource(
                     R.string.you_finished_lld_cards_lld_more_are_waiting_when_you_re_read_985087,
                     finishedCount, remainingDue)
@@ -688,29 +711,19 @@ private fun DeckDone(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         if (onNext != null) {
-            Button(onClick = onNext) {
+            Button(onClick = onNext, modifier = Modifier.padding(top = 4.dp)) {
                 Text(stringResource(R.string.next_lld, minOf(remainingDue, SESSION_CAP)))
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            folders.forEach { (bin, n) ->
-                Column(
-                    Modifier.weight(1f)
-                        .background(bin.tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                        .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(bin.icon, contentDescription = null, tint = bin.tint,
-                        modifier = Modifier.size(18.dp))
-                    Text(stringResource(bin.folderTitleRes),
-                        style = MaterialTheme.typography.labelSmall)
-                    Text(if (n == 0) "—" else "$n",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
+        VerdictRow(
+            dragging = false,
+            tappable = true,
+            counts = { bin -> folders.firstOrNull { it.first == bin }?.second ?: 0 },
+            onBounds = { _, _ -> },
+            onOpen = onOpen,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        Spacer(Modifier.weight(1f))
     }
 }
 

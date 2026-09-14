@@ -23,6 +23,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Visibility
@@ -447,9 +448,12 @@ private fun StudyCard(
 }
 
 /**
- * The done state keeps the folders. "Where did all that go?" is asked after
- * the last card, and having to reopen the deck to look is the very thing that
- * made a kept promise look broken.
+ * The last card is gone — `StudyDeckView.doneState`.
+ *
+ * A green seal, what happened, and then the folders, which stay reachable
+ * because THIS is the moment "so where did all that go?" gets asked. The deck
+ * used to answer by disappearing, and reopening it to look was exactly when
+ * the same cards seemed to come back.
  */
 @Composable
 private fun DeckDoneState(
@@ -458,32 +462,29 @@ private fun DeckDoneState(
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier.fillMaxWidth().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier.fillMaxWidth().padding(32.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.weight(1f))
+        Icon(Icons.Filled.Verified, contentDescription = null,
+            tint = Color(0xFF34C759), modifier = Modifier.size(44.dp))
         Text(stringResource(R.string.done_for_today),
-            style = MaterialTheme.typography.titleMedium)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            folders.forEach { (bin, n) ->
-                Column(
-                    Modifier.weight(1f)
-                        .background(bin.tint.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
-                        .clickable { onOpen(bin) }
-                        .padding(vertical = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(bin.icon, contentDescription = null, tint = bin.tint,
-                        modifier = Modifier.size(18.dp))
-                    Text(stringResource(bin.folderTitleRes),
-                        style = MaterialTheme.typography.labelSmall)
-                    Text(if (n == 0) "—" else "$n",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold)
+        Text(stringResource(
+            R.string.every_card_in_today_s_hand_is_sorted_come_back_tomorrow_or_k_110a2a),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        VerdictRow(
+            dragging = false,
+            tappable = true,
+            counts = { bin -> folders.firstOrNull { it.first == bin }?.second ?: 0 },
+            onBounds = { _, _ -> },
+            onOpen = onOpen,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Spacer(Modifier.weight(1f))
     }
 }
