@@ -1248,6 +1248,10 @@ final class AppState: ObservableObject {
         }
         proficiency = level        // didSet syncs the profile
         setupComplete = true
+        // What they picked, to the server. Usually a no-op right here — the
+        // setup flow runs before the anonymous session exists — and the
+        // launch-time call below is what actually lands it.
+        LearnerSetupSync.push(target: target, native: native, level: level)
     }
 
     /// Switch the active practice language. Order matters: persist the

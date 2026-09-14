@@ -153,6 +153,15 @@ struct RootTabView: View {
                 await PublicPersonaService.autoSyncMyPersona(
                     appState.persona, language: appState.targetLanguage)
             }
+            // The onboarding choice, mirrored to `profiles`. Here rather than
+            // in `completeSetup` because the choice is made before any session
+            // exists — and here rather than nowhere because every row on the
+            // server still holds the trigger's defaults.
+            if appState.setupComplete {
+                LearnerSetupSync.push(target: appState.targetLanguage,
+                                      native: appState.nativeLanguage,
+                                      level: appState.proficiency)
+            }
         }
         // Feature usage: which tab the user is on.
         .onChange(of: selection) { _, tab in

@@ -157,6 +157,11 @@ export function assemble(raw: any) {
   const rtSessions = withIdx(raw.rt_sessions);
   // What each plan has actually spent, counted the way the server counts it.
   const planUsage = withIdx(raw.plan_usage);
+  // One row per (user, language) with the seconds spoken and which sources
+  // know about it. `users[].langs` is still the plain code list.
+  const userLangs = withIdx(raw.user_langs);
+  // The onboarding CHOICE, only for rows a build has actually written.
+  const setup = withIdx(raw.setup);
   const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
@@ -286,7 +291,7 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
-    rtSessions, rtReasons, revenue, planUsage,
+    rtSessions, rtReasons, revenue, planUsage, userLangs, setup,
     prices: MONTHLY_PRICE,
   };
 }
