@@ -118,6 +118,25 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
 .warn{color:var(--warn); font-weight:600}
 .muted{color:var(--muted)}
 
+/* --- who they are ------------------------------------------------------- */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:12px}
+.pcard{background:var(--surface); border:1px solid var(--ring); border-radius:10px;
+  padding:15px 17px; display:flex; flex-direction:column; gap:8px}
+.pcard .top{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.pcard .nm{font-size:16.5px; font-weight:700; letter-spacing:-.01em}
+.pcard .mail{font-size:12.5px; color:var(--ink-2); word-break:break-all; user-select:all}
+.pcard .mail .relay{color:var(--muted); font-size:11.5px}
+.pcard .meta{display:flex; flex-wrap:wrap; gap:6px}
+.pcard .bio{font-size:13px; color:var(--ink-2); white-space:pre-wrap; overflow:hidden;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:5; line-clamp:5}
+.pcard .bio.open{display:block; overflow:visible}
+.pcard .more{margin-top:2px; background:none; border:none; padding:0; font:inherit;
+  font-size:12px; font-weight:600; color:var(--s1); cursor:pointer; text-align:left}
+.pcard .foot{margin-top:auto; padding-top:8px; border-top:1px solid var(--grid);
+  font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums;
+  display:flex; flex-wrap:wrap; gap:4px 12px}
+.pcard .foot b{color:var(--ink); font-weight:600}
+
 /* --- expandable person row ---------------------------------------------- */
 .xrow{cursor:pointer}
 .xrow:hover td{background:var(--chip)}
@@ -321,6 +340,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h2>누가 어느 날 말했나</h2>
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
   <b>테두리가 있는 칸이 가입한 날</b>이라, 그 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
+  말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
   이름 아래 주황색은 <b>보이스 클론 이름</b>, 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 —
   둘 다 클릭 한 번에 전체가 선택돼요.</p>
   <div class="card scroll" id="heatmap"></div>
@@ -369,6 +389,13 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </section>
 
 <section data-tab="people" hidden>
+  <h2>이 사람들은 누구인가</h2>
+  <p class="sub">온보딩에서 본인이 직접 쓴 자기소개예요. 애플 비공개 릴레이 주소 뒤의 실제 신원은
+  웨이트리스트 가입 이메일로 이어 붙였어요. 자기소개가 없는 계정은 아래 표에만 있어요.</p>
+  <div class="cards" id="cards"></div>
+</section>
+
+<section data-tab="people" hidden>
   <h2>무슨 언어를 배우나</h2>
   <p class="sub"><b>고른 언어</b>는 온보딩에서 직접 선택한 값이에요.
   <b>쓴 언어</b>는 말했거나, 그 언어로 뭔가를 썼거나, 그 언어로 자기소개를 올린 기록이에요.
@@ -380,8 +407,13 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 <section data-tab="people" hidden>
   <h2>한 사람씩</h2>
   <p class="sub"><b>행을 누르면</b> 그 사람의 프로필·자기소개·통화·구독 이벤트·문제·리뷰가 전부 펼쳐져요.
-  좁은 화면에서는 열이 접히니 눌러서 보세요. 정렬은 마지막 활동 기준이에요.</p>
+  좁은 화면에서는 열이 접히니 눌러서 보세요. 정렬은 마지막 활동 기준이에요.
+  이름이 <code>8798gh6rp2</code> 같은 건 애플 비공개 릴레이 주소예요 — 자기소개를 안 쓴 계정이라
+  이름 대신 그게 보여요. 아래 칸에 유저 ID를 붙여넣어 찾을 수 있어요.</p>
   <div class="seg" id="peopleFilter" role="group" aria-label="추리기"></div>
+  <input id="peopleSearch" type="search" placeholder="이름 · 이메일 · 유저 ID · 보이스 이름으로 찾기"
+    style="width:100%;font:inherit;font-size:14px;padding:9px 12px;margin:0 0 12px;
+    border:1px solid var(--ring);border-radius:8px;background:var(--surface);color:var(--ink)">
   <div class="card scroll"><table id="peopleTable"></table></div>
 </section>
 
@@ -992,12 +1024,19 @@ function renderHeatmap(users){
   const n = DATA.days.length;
   const byUser = {};
   for(const [u,d,rows,t,secs] of DATA.cells) (byUser[u] ??= {})[d] = [rows,t,secs];
-  // Seconds, not row counts: a widget refresh is not a day of practice.
+  // Intensity is TALK seconds — that is what the grid is for. But a day
+  // spent on Watch scenes or the review deck is not an empty day, and drawing
+  // it as one is how a Watch-only learner vanished from this chart. A day
+  // with server activity and no talking gets its own mark: the faintest fill
+  // plus a dot, so "they were here" and "they spoke" are told apart at a
+  // glance instead of being the same blank square.
   const ramp = secs => secs>=600 ? 'var(--seq5)' : secs>=300 ? 'var(--seq4)'
-    : secs>=60 ? 'var(--seq3)' : secs>0 ? 'var(--seq2)' : 'var(--seq1)';
+    : secs>=60 ? 'var(--seq3)' : 'var(--seq2)';
+  //活動일 first, so a Watch-only learner sits with the regulars rather than
+  // at the bottom with the accounts that never opened the app.
   const rows = [...users].sort((a,b)=>
     (b.activeDays-a.activeDays) || (b.talkSecs-a.talkSecs)
-    || (a.signedUpAt||'').localeCompare(b.signedUpAt||''));
+    || (b.signedUpAt||'').localeCompare(a.signedUpAt||''));
   if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
   const nameW = innerWNarrow() ? 88 : 186;
   const gap = 3;
@@ -1021,19 +1060,28 @@ function renderHeatmap(users){
             + `</div><svg width="${width}" height="${cs+4}">`;
     for(let i=0;i<n;i++){
       const c = m[i];
-      const secs = c ? c[2] : 0;
-      const fill = c ? ramp(secs) : 'var(--chip)';
-      const tip = c
+      const rowsN = c ? c[0] : 0, turnsN = c ? c[1] : 0, secs = c ? c[2] : 0;
+      const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
+      const fill = secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
+      const tip = secs
         ? `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`
-          + `${secs?` · 통화 ${fmtMin(secs)}`:''} · 턴 ${c[1]}`
+          + ` · 통화 ${fmtMin(secs)} · 턴 ${turnsN}`
           + `${i===su?'<br>가입한 날':''}`
-        : `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])} · 조용`
-          + `${i===su?'<br>가입한 날':''}${i<su?'<br>가입 전':''}`;
+        : usedOnly
+          ? `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`
+            + `<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건`
+            + `${i===su?'<br>가입한 날':''}`
+          : `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])} · 조용`
+            + `${i===su?'<br>가입한 날':''}${i<su?'<br>가입 전':''}`;
       const before = i < su;
       svg += `<rect x="${i*(cs+gap)}" y="2" width="${cs}" height="${cs}" rx="3"`
           +  ` fill="${before?'transparent':fill}"`
           +  `${i===su?' stroke="var(--ink)" stroke-width="1.5"':''}`
           +  ` data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
+      if(usedOnly && !before){
+        svg += `<circle cx="${i*(cs+gap)+cs/2}" cy="${2+cs/2}" r="${Math.max(1.5, cs*0.13)}"`
+            +  ` fill="var(--seq4)" pointer-events="none"/>`;
+      }
     }
     svg += `</svg>`;
     if(!innerWNarrow()){
@@ -1045,6 +1093,9 @@ function renderHeatmap(users){
     html += svg + `</div>`;
   }
   html += `<div class="legend">조용 <span class="cell" style="background:var(--chip)"></span>`
+       +  `<span class="cell" style="background:var(--seq1);position:relative">`
+       +  `<span style="position:absolute;left:3.5px;top:3.5px;width:4px;height:4px;`
+       +  `border-radius:50%;background:var(--seq4)"></span></span> 썼지만 말 안 함 `
        +  `<span class="cell" style="background:var(--seq2)"></span>`
        +  `<span class="cell" style="background:var(--seq3)"></span>`
        +  `<span class="cell" style="background:var(--seq4)"></span>`
@@ -1269,6 +1320,54 @@ const PEOPLE_FILTERS = [
   ['paying','체험·결제', u=>isSale(u)],
   ['lost','체험 취소', u=>stateOf(u)==='trial_cancelled'],
 ];
+function renderCards(users){
+  const el = document.getElementById('cards'); if(!el) return;
+  // Only people who actually wrote something about themselves. A card whose
+  // body is a relay address and nothing else is a row, not a portrait.
+  const rows = users.filter(u => u.intro || u.occupation || (u.reviews||[]).length)
+    .sort((a,b)=>(b.lastTalkAt||b.signedUpAt||'').localeCompare(a.lastTalkAt||a.signedUpAt||''));
+  if(!rows.length){ el.innerHTML='<div class="empty">아직 자기소개를 쓴 사람이 없어요.</div>'; return; }
+  el.innerHTML = rows.map(u => {
+    const meta = [];
+    if(u.channel)  meta.push(`<span class="chip">${esc(u.channel)}에서 유입</span>`);
+    if(u.device)   meta.push(`<span class="chip">${u.device}</span>`);
+    if(u.location) meta.push(`<span class="chip">${esc(u.location)}</span>`);
+    if(u.voiceName) meta.push(`<span class="chip" style="color:var(--s2)">${esc(u.voiceName)}</span>`);
+    if(u.plan) meta.push(subChip(u));
+    const mail = u.realEmail
+      ? `<div class="mail">${esc(u.realEmail)} <span class="relay">· 앱 로그인 ${esc(u.email||'')}</span></div>`
+      : `<div class="mail">${esc(u.email||'이메일 없음')} <span class="relay">· 웨이트리스트 매핑 없음</span></div>`;
+    // The intro usually opens with the occupation — don't print it twice.
+    const dup = u.occupation && u.intro
+      && u.intro.trim().startsWith(u.occupation.trim().slice(0,40));
+    const occ = u.occupation && !dup ? `<div class="bio open">${esc(u.occupation)}</div>` : '';
+    const long = u.intro && u.intro.length > 160;
+    const bio = u.intro
+      ? `<div><div class="bio${long?'':' open'}">${esc(u.intro)}</div>`
+        + `${long?'<button class="more" type="button">더보기</button>':''}</div>`
+      : '';
+    const revs = (u.reviews||[]).map(r =>
+      `<div class="quote">${esc(r.body)}<span class="ctx">${REVIEW_CTX[r.context]||r.context}`
+      + ` · ${fmtD(r.d)}</span></div>`).join('');
+    return `<div class="pcard">
+      <div class="top"><span class="nm">${esc(nameOf(u))}</span>${badge(u)}</div>
+      ${mail}
+      <div class="meta">${meta.join('')}</div>
+      ${occ}${bio}${revs}
+      <div class="foot">
+        <span>활동 <b>${u.activeDays}일</b></span>
+        <span>통화 <b>${u.talkSecs?fmtMin(u.talkSecs):'없음'}</b></span>
+        <span>턴 <b>${num(u.turns)}</b></span>
+        ${u.scenes?`<span>장면 <b>${u.scenes}</b></span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('.pcard .more').forEach(btn => btn.addEventListener('click', ()=>{
+    const bio = btn.previousElementSibling;
+    btn.textContent = bio.classList.toggle('open') ? '접기' : '더보기';
+  }));
+}
+
 function renderPeopleTiles(users){
   const talked = users.filter(u=>u.firstTalkAt || u.turns>0).length;
   const secs = users.reduce((a,u)=>a+u.talkSecs,0);
@@ -1441,8 +1540,23 @@ function personDetail(u){
   </div>`;
 }
 
+let peopleQuery = '';
 function renderPeople(users){
   const f = PEOPLE_FILTERS.find(x=>x[0]===peopleFilter) || PEOPLE_FILTERS[0];
+  const box = document.getElementById('peopleSearch');
+  if(box && !box.dataset.wired){
+    box.dataset.wired = '1';
+    box.addEventListener('input', ()=>{
+      peopleQuery = box.value.trim().toLowerCase();
+      renderPeople(visibleUsers());
+    });
+  }
+  const matches = u => {
+    if(!peopleQuery) return true;
+    return [u.id, u.label, u.name, u.email, u.realEmail, u.voiceName, u.voiceId,
+            u.occupation, u.location]
+      .some(v => v && String(v).toLowerCase().includes(peopleQuery));
+  };
   document.getElementById('peopleFilter').innerHTML = PEOPLE_FILTERS.map(([k,lab,t])=>
     `<button type="button" data-k="${k}" aria-pressed="${k===peopleFilter}">`
     + `${lab} ${users.filter(t).length}</button>`).join('');
@@ -1450,10 +1564,13 @@ function renderPeople(users){
     peopleFilter = b.dataset.k; renderPeople(visibleUsers());
   }));
 
-  const rows = users.filter(f[2]).sort((a,b)=>
+  const rows = users.filter(f[2]).filter(matches).sort((a,b)=>
     (b.lastTalkAt||b.lastSignIn||b.signedUpAt||'').localeCompare(a.lastTalkAt||a.lastSignIn||a.signedUpAt||''));
   const el = document.getElementById('peopleTable');
-  if(!rows.length){ el.innerHTML='<tbody><tr><td class="empty">해당하는 사람이 없어요.</td></tr></tbody>'; return; }
+  if(!rows.length){
+    el.innerHTML = `<tbody><tr><td class="empty">`
+      + (peopleQuery ? `“${esc(peopleQuery)}”에 맞는 사람이 없어요.` : '해당하는 사람이 없어요.')
+      + `</td></tr></tbody>`; return; }
   let html = `<thead><tr><th>유저</th><th>가입</th><th>클론</th><th class="num">통화</th>`
     + `<th class="num">시간</th><th class="num">장면</th><th>구독</th><th>마지막</th><th>신호</th></tr></thead><tbody>`;
   for(const u of rows){
@@ -1790,7 +1907,7 @@ function render(){
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
   renderHoursMetric(); renderHours(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
-  renderPeopleTiles(users); renderLangs(users); renderPeople(users);
+  renderPeopleTiles(users); renderCards(users); renderLangs(users); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
   renderPlanUsage(); renderUnitTiles(); renderTiers();
   renderBurn(); renderCostMonths(); renderCostTable(); renderFairUse();
