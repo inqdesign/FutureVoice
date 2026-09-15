@@ -34,6 +34,16 @@ const args = Object.fromEntries(
 )
 const url = args.url ?? "wss://futurevoice-gateway.futurevoice-gateway.workers.dev/call"
 const voice = args.voice ?? "NDTYOmYEjbDIVCKB35i3"
+// The target language, exactly as the app sends it. It decides the ONE thing
+// pinning the transcriber to a language (`languagePin` in src/transcriber.ts),
+// so this flag is how that pin gets tested from the terminal:
+//   node test/live-talk.mjs --language de
+const language = args.language ?? "en"
+const LANGUAGE_NAMES = {
+  en: "English", de: "German", ko: "Korean", ja: "Japanese",
+  es: "Spanish", fr: "French", zh: "Chinese",
+}
+const languageName = LANGUAGE_NAMES[language.toLowerCase().split("-")[0]] ?? language
 
 // --- fresh anonymous session (1h expiry outlives any test call) ---
 const auth = await fetch(`${env.SUPABASE_URL}/auth/v1/signup`, {
@@ -60,11 +70,11 @@ ws.onopen = () => {
     type: "start",
     token,
     voiceId: voice,
-    language: "en",
+    language,
     system: [
       "You are the user's fluent future self on a phone call — warm, casual,",
       "encouraging. Reply in one to three short spoken sentences, then keep",
-      "the conversation going naturally. Speak English.",
+      `the conversation going naturally. Speak ${languageName}.`,
     ].join(" "),
   }))
 }

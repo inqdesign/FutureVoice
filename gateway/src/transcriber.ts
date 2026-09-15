@@ -74,13 +74,7 @@ export class GeminiTranscriber {
         // is not). Without it the first phonemes of an utterance get
         // language-guessed from nothing, and the learner watched their
         // English open in Thai script.
-        systemInstruction: {
-          parts: [{
-            text: `Transcribe the speaker's ${languageName(this.language)} exactly as `
-              + `heard. Output only ${languageName(this.language)} text — never `
-              + `another script, even for the first words of an utterance.`,
-          }],
-        },
+        systemInstruction: { parts: [{ text: languagePin(this.language) }] },
         // Default end-of-speech sensitivity. HIGH was tried for the ~0.3 s
         // it shaves and withdrawn the same day: on a real earphone call it
         // committed turns on "…yet, but" and "…setting up my own" — cutting a
@@ -169,6 +163,32 @@ export class GeminiTranscriber {
     try { this.ws?.close() } catch { /* already closed */ }
     this.ws = null
   }
+}
+
+/** The language pin — the whole of it, since this model takes no config-level
+ *  language setting (see `connect`). Every sentence here is load-bearing.
+ *
+ *  The first version of it was written in terms of SCRIPT, because that is the
+ *  bug it was born from: English opening in Thai letters. A script rule is a
+ *  no-op for the learner who reported the next one (2026-09-15, German —
+ *  "내가 하는 말은 당연히 독일어일텐데 자꾸 다른 나라 언어로 인식하는게
+ *  아쉬웠어요"): German and English share the Latin alphabet, so accented
+ *  German written down as English breaks nothing the old sentence asked for.
+ *
+ *  So the rule is about the LANGUAGE now, and it says out loud the thing the
+ *  model keeps getting wrong — a foreign accent and broken grammar are what a
+ *  LEARNER sounds like, never evidence that they switched languages. The
+ *  ambiguous cases are named too (the first phonemes of an utterance, and
+ *  one-word replies that sound identical across languages), because those are
+ *  where a per-utterance guess has the least to go on. */
+function languagePin(code: string): string {
+  const name = languageName(code)
+  return [
+    `You transcribe a language LEARNER speaking ${name}. Write down exactly what you hear, word for word.`,
+    `The language is settled before you hear anything: the speaker is speaking ${name}, and every line you write is ${name}. That holds for the first words of an utterance, when you have heard almost nothing yet, and for short replies that sound the same in several languages — write those in ${name} too.`,
+    `The speaker has a foreign accent, hesitates, and makes grammar mistakes. That is what a learner sounds like. It is never evidence that they switched to another language, and never a reason to write their words in another language, another spelling or another script.`,
+    `Never translate and never correct — their mistakes are the material. If part of an utterance is unintelligible, write the ${name} words you are sure of and leave the rest out; do not fill the gap with another language.`,
+  ].join("\n")
 }
 
 /** English name for the few languages the app teaches; the code itself for
