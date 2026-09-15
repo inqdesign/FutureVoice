@@ -390,8 +390,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="people" hidden>
   <h2>이 사람들은 누구인가</h2>
-  <p class="sub">온보딩에서 본인이 직접 쓴 자기소개예요. 애플 비공개 릴레이 주소 뒤의 실제 신원은
-  웨이트리스트 가입 이메일로 이어 붙였어요. 자기소개가 없는 계정은 아래 표에만 있어요.</p>
+  <p class="sub">가입한 사람 전부예요. 자기소개가 있는 계정이 먼저 오고, 없는 계정은 왜 없는지 적혀 있어요.
+  애플 비공개 릴레이 주소 뒤의 실제 신원은 웨이트리스트 가입 이메일로 이어 붙였어요.</p>
+  <p class="sub" style="margin-top:-8px" id="cardsNote"></p>
   <div class="cards" id="cards"></div>
 </section>
 
@@ -1322,11 +1323,24 @@ const PEOPLE_FILTERS = [
 ];
 function renderCards(users){
   const el = document.getElementById('cards'); if(!el) return;
-  // Only people who actually wrote something about themselves. A card whose
-  // body is a relay address and nothing else is a row, not a portrait.
-  const rows = users.filter(u => u.intro || u.occupation || (u.reviews||[]).length)
-    .sort((a,b)=>(b.lastTalkAt||b.signedUpAt||'').localeCompare(a.lastTalkAt||a.signedUpAt||''));
-  if(!rows.length){ el.innerHTML='<div class="empty">아직 자기소개를 쓴 사람이 없어요.</div>'; return; }
+  const note = document.getElementById('cardsNote');
+  const has = u => !!(u.intro || u.occupation || (u.reviews||[]).length);
+  // EVERY account gets a card. The first version showed only the ones with an
+  // intro, which quietly hid two thirds of the launch — and the hiding was
+  // itself the finding: `public_personas` is the Find-people POOL, not a
+  // profile store, so a row exists only for someone who said yes to being
+  // seen by strangers. What the learner actually filled in lives on their
+  // phone (`PersonaStore`) and has never reached a server.
+  const rows = [...users].sort((a,b)=>
+    (has(b)?1:0)-(has(a)?1:0)
+    || (b.lastTalkAt||b.signedUpAt||'').localeCompare(a.lastTalkAt||a.signedUpAt||''));
+  if(note){
+    const n = users.filter(has).length;
+    note.innerHTML = `${users.length}명 중 <b>${n}명</b>이 자기소개를 남겼어요. `
+      + `나머지는 <b>Find people 공개에 동의하지 않은</b> 계정이라 서버에 프로필이 없어요 — `
+      + `안 썼다는 뜻이 아니라, 학습자가 쓴 내용은 기기 안에만 있다는 뜻이에요.`;
+  }
+  if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
   el.innerHTML = rows.map(u => {
     const meta = [];
     if(u.channel)  meta.push(`<span class="chip">${esc(u.channel)}에서 유입</span>`);
@@ -1349,11 +1363,16 @@ function renderCards(users){
     const revs = (u.reviews||[]).map(r =>
       `<div class="quote">${esc(r.body)}<span class="ctx">${REVIEW_CTX[r.context]||r.context}`
       + ` · ${fmtD(r.d)}</span></div>`).join('');
+    const blank = !has(u)
+      ? `<div class="bio open muted">자기소개 없음 <span style="opacity:.8">— Find people 공개에`
+        + ` 동의하지 않았거나 아직 묻지 않은 계정이에요. 학습자가 온보딩에서 쓴 내용은`
+        + ` 기기 안에만 있어요.</span></div>`
+      : '';
     return `<div class="pcard">
       <div class="top"><span class="nm">${esc(nameOf(u))}</span>${badge(u)}</div>
       ${mail}
       <div class="meta">${meta.join('')}</div>
-      ${occ}${bio}${revs}
+      ${occ}${bio}${revs}${blank}
       <div class="foot">
         <span>활동 <b>${u.activeDays}일</b></span>
         <span>통화 <b>${u.talkSecs?fmtMin(u.talkSecs):'없음'}</b></span>
