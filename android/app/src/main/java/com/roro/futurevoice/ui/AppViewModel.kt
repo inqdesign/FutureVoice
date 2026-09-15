@@ -114,6 +114,14 @@ class AppViewModel(private val appContext: android.content.Context) : ViewModel(
             com.roro.futurevoice.net.CoreClubClient(auth).progress(target)
                 ?.let { com.roro.futurevoice.data.CoreBar.remember(appContext, it.bar_seconds) }
         }
+        // Someone taking a seat is the club's only public event. There is no
+        // push, so the app notices on launch and says so quietly.
+        viewModelScope.launch {
+            runCatching {
+                com.roro.futurevoice.data.CoreArrivals.poll(
+                    appContext, auth.accessToken(), auth.userId)
+            }
+        }
         // The summarizer writes to the persona behind this screen's back —
         // learned notes, and the metAt stamp that retires the first-call
         // framing. Without a re-read the next free talk still opens with the
