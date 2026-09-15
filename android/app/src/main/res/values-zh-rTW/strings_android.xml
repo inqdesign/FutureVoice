@@ -201,4 +201,38 @@
     <string name="feedback_anything_you_want_to_say">想說的話</string>
     <string name="feedback_not_rated">尚未評分</string>
     <string name="feedback_lld_out_of_5">5 分中的 %1$d 分</string>
+
+    <!-- Progress: the per-skill pages and the "How it's assessed" sheet.
+         iOS passes these as plain Swift Strings rather than SwiftUI Text
+         literals, so the generated catalog never saw them. -->
+    <string name="unit_words_min_speaking">字/分（只算說話時間）</string>
+    <string name="unit_words_min">字/分</string>
+    <string name="fluency_measured_line">每分鐘停頓 %1$s 次 · 每次 %2$d 分鐘 · 每輪 %3$d 字</string>
+    <string name="talk_more_often_and_a_little_longer">多說幾次、每次說久一點。超過每天的目標，流暢感就會出來。</string>
+    <string name="grammar_measured_line">在評分過的對話裡，每 100 個字有 %1$s 個確認過的文法失誤%2$s。</string>
+    <string name="counted_from_transcript_verified_slips_only">只算逐字稿確認過的失誤，辨識雜訊和用法建議都不算。這就是等級評定看的那個數字。</string>
+    <string name="run_your_review_cards_built_from_your_own_slips">去跑複習卡。那些卡就是用你自己的失誤做的，正好對準這裡。</string>
+    <string name="how_vividly_and_naturally_you_get_your_meaning_across">把想說的話說得多生動、多自然。</string>
+    <string name="tell_stories_react_and_add_detail">說故事、給反應、加細節——不只是發生了什麼，還有當下的感受。</string>
+    <string name="finding_your_flow">正在找到節奏</string>
+    <string name="pace_conversational">能對話的速度</string>
+    <string name="pace_fluent">流利的速度</string>
+    <string name="pace_very_fluent">非常流利的速度</string>
+    <string name="estimated_from_lld_distinct_words_graded_by_cefr">從對話裡用過的 %1$d 個不重複單字推估，每個都用 CEFR 分級——是說出口的字，不是看得懂的字。</string>
+    <string name="distinct_words_from_your_talks">對話裡用過的不重複單字。</string>
+    <string name="assessed_detail_vocabulary">實際用過的 %1$d 個不重複單字，逐一對 CEFR 單字表分級。完全客觀。</string>
+    <string name="assessed_detail_fluency">只算說話時間，每分鐘 %1$d 個字，停頓和思考時間都扣掉。</string>
+    <string name="assessed_detail_grammar_density">每 100 個字有 %1$s 個確認過的文法失誤，和等級評定看的密度一樣。</string>
+    <string name="assessed_detail_grammar_score">最近幾次對話平均 %1$d/100 分，每次都從真正說出口的句子裡確認的失誤來評分。</string>
+    <string name="assessed_detail_expression">每輪 %1$d 個字——想法展開到哪裡。</string>
+    <string name="a_week_since_the_last_assessment">距離上次評定滿一週</string>
+    <string name="one_more_day">再 1 天</string>
+    <string name="lld_more_days">再 %1$d 天</string>
+    <string name="enough_new_conversation">新對話已足夠</string>
+    <string name="lld_more_min_of_new_talk">新對話再 %1$d 分鐘</string>
+    <string name="reps_this_week">本週複習</string>
+    <string name="days_active">有活動的天數</string>
+    <string name="avg_shadow_score">跟讀平均分</string>
+    <string name="open_google_play">開啟 Google Play</string>
+    <string name="get_the_new_test_build">取得新的測試版</string>
 </resources>

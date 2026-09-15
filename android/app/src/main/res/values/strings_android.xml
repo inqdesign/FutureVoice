@@ -217,4 +217,38 @@
     <string name="feedback_anything_you_want_to_say">Anything you want to say</string>
     <string name="feedback_not_rated">Not rated</string>
     <string name="feedback_lld_out_of_5">%1$d out of 5</string>
+
+    <!-- Progress: the per-skill pages and the "How it's assessed" sheet.
+         iOS passes these as plain Swift Strings rather than SwiftUI Text
+         literals, so the generated catalog never saw them. -->
+    <string name="unit_words_min_speaking">words / min speaking</string>
+    <string name="unit_words_min">words / min</string>
+    <string name="fluency_measured_line">%1$s pauses/min · %2$dm per talk · %3$d words/turn</string>
+    <string name="talk_more_often_and_a_little_longer">Talk more often and a little longer. Aim past your daily speaking goal; longer turns build flow.</string>
+    <string name="grammar_measured_line">%1$s verified grammar slips per 100 spoken words across your assessed talks%2$s.</string>
+    <string name="counted_from_transcript_verified_slips_only">Counted from transcript-verified slips only — recognizer artifacts and style suggestions are excluded. This is the exact number your level assessment weighs.</string>
+    <string name="run_your_review_cards_built_from_your_own_slips">Run your review cards — they\'re built from your own slips and target exactly these.</string>
+    <string name="how_vividly_and_naturally_you_get_your_meaning_across">How vividly and naturally you get your meaning across.</string>
+    <string name="tell_stories_react_and_add_detail">Tell stories, react, and add detail — describe how things felt, not just what happened.</string>
+    <string name="finding_your_flow">Finding your flow</string>
+    <string name="pace_conversational">Conversational</string>
+    <string name="pace_fluent">Fluent</string>
+    <string name="pace_very_fluent">Very fluent</string>
+    <string name="estimated_from_lld_distinct_words_graded_by_cefr">Estimated from %1$d distinct words you\'ve used in your talks, each graded by CEFR level — your speaking vocabulary, not everything you recognize.</string>
+    <string name="distinct_words_from_your_talks">Distinct words from your talks.</string>
+    <string name="assessed_detail_vocabulary">%1$d distinct words you\'ve used, each graded against the CEFR word list. Fully objective.</string>
+    <string name="assessed_detail_fluency">%1$d words per minute of voiced speech — pauses and think-time removed.</string>
+    <string name="assessed_detail_grammar_density">%1$s verified grammar slips per 100 spoken words — the same density the assessment weighs.</string>
+    <string name="assessed_detail_grammar_score">Scoring %1$d/100 across recent talks — each talk graded from the verified grammar slips in what you said.</string>
+    <string name="assessed_detail_expression">%1$d words per turn — how far ideas get developed.</string>
+    <string name="a_week_since_the_last_assessment">A week since the last assessment</string>
+    <string name="one_more_day">1 more day</string>
+    <string name="lld_more_days">%1$d more days</string>
+    <string name="enough_new_conversation">Enough new conversation</string>
+    <string name="lld_more_min_of_new_talk">%1$d more min of new talk</string>
+    <string name="reps_this_week">reps this week</string>
+    <string name="days_active">days active</string>
+    <string name="avg_shadow_score">avg shadow score</string>
+    <string name="open_google_play">Open Google Play</string>
+    <string name="get_the_new_test_build">Get the new test build</string>
 </resources>

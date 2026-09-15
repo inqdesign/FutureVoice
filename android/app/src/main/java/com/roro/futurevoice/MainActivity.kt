@@ -36,6 +36,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             FutureVoiceTheme {
                 Surface(Modifier.fillMaxSize()) { RootScreen() }
+                // Asks the server once per launch whether this build is
+                // behind, and says so only when it is. Hosted beside the root
+                // rather than inside it: the notice belongs to the app, not
+                // to whichever tab happens to be open.
+                com.roro.futurevoice.ui.UpdateGate()
             }
         }
     }

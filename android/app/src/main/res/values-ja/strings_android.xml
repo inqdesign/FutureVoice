@@ -201,4 +201,38 @@
     <string name="feedback_anything_you_want_to_say">言いたいこと</string>
     <string name="feedback_not_rated">未評価</string>
     <string name="feedback_lld_out_of_5">5点中%1$d点</string>
+
+    <!-- Progress: the per-skill pages and the "How it's assessed" sheet.
+         iOS passes these as plain Swift Strings rather than SwiftUI Text
+         literals, so the generated catalog never saw them. -->
+    <string name="unit_words_min_speaking">語/分（発話のみ）</string>
+    <string name="unit_words_min">語/分</string>
+    <string name="fluency_measured_line">ポーズ %1$s回/分 · 1回 %2$d分 · 1ターン %3$d語</string>
+    <string name="talk_more_often_and_a_little_longer">もっと頻繁に、少し長めに話してみましょう。1日の目標を超えると流れがつかめます。</string>
+    <string name="grammar_measured_line">評価対象のトークで、100語あたり確認済みの文法ミスが %1$s 件%2$s。</string>
+    <string name="counted_from_transcript_verified_slips_only">書き起こしで確認できたミスだけを数えます。認識のゆれや言い回しの提案は除きます。レベル判定が見る数字と同じです。</string>
+    <string name="run_your_review_cards_built_from_your_own_slips">復習カードを回しましょう。自分のミスから作られているので、ここにそのまま効きます。</string>
+    <string name="how_vividly_and_naturally_you_get_your_meaning_across">言いたいことをどれだけ生き生きと自然に伝えられているかです。</string>
+    <string name="tell_stories_react_and_add_detail">エピソードを話し、反応し、描写を足しましょう。何があったかだけでなく、どう感じたかまで。</string>
+    <string name="finding_your_flow">流れをつかむところ</string>
+    <string name="pace_conversational">会話できる速さ</string>
+    <string name="pace_fluent">流暢な速さ</string>
+    <string name="pace_very_fluent">とても流暢な速さ</string>
+    <string name="estimated_from_lld_distinct_words_graded_by_cefr">トークで使った異なり語 %1$d 語をCEFRで採点して推定しました。知っている語ではなく、話した語です。</string>
+    <string name="distinct_words_from_your_talks">トークで使った異なり語です。</string>
+    <string name="assessed_detail_vocabulary">実際に使った異なり語 %1$d 語を、CEFRの語彙リストで採点します。完全に客観的です。</string>
+    <string name="assessed_detail_fluency">発話時間あたり %1$d 語/分。ポーズと考える時間は除きます。</string>
+    <string name="assessed_detail_grammar_density">100語あたり確認済みの文法ミス %1$s 件。レベル判定が見る密度と同じです。</string>
+    <string name="assessed_detail_grammar_score">最近のトークで %1$d/100点。トークごとに、実際に話した文から確認できたミスで採点します。</string>
+    <string name="assessed_detail_expression">1ターン %1$d 語。考えをどこまで広げているかです。</string>
+    <string name="a_week_since_the_last_assessment">前回の評価から1週間</string>
+    <string name="one_more_day">あと1日</string>
+    <string name="lld_more_days">あと%1$d日</string>
+    <string name="enough_new_conversation">新しいトークは十分</string>
+    <string name="lld_more_min_of_new_talk">新しいトークがあと%1$d分</string>
+    <string name="reps_this_week">今週の復習</string>
+    <string name="days_active">活動した日</string>
+    <string name="avg_shadow_score">シャドーイング平均</string>
+    <string name="open_google_play">Google Play を開く</string>
+    <string name="get_the_new_test_build">新しいテストビルドを入手</string>
 </resources>

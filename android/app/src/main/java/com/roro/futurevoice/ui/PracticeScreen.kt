@@ -24,7 +24,8 @@ import com.roro.futurevoice.data.StudyScheduleStore
 import com.roro.futurevoice.data.VocabStore
 import com.roro.futurevoice.data.CoreVocabulary
 import com.roro.futurevoice.data.CefrLevel
-import com.roro.futurevoice.data.LevelBands
+import com.roro.futurevoice.data.DeepLinkInbox
+import com.roro.futurevoice.data.LanguageCatalog
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -51,7 +52,9 @@ import com.roro.futurevoice.data.WeeklyReport
 import com.roro.futurevoice.data.WeeklyReportStore
 import com.roro.futurevoice.net.WeeklyReportEngine
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.CircularProgressIndicator
@@ -60,7 +63,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.ui.text.font.FontWeight
@@ -449,11 +454,17 @@ private fun dayLabel(at: Long): String =
 /** How many cards a daily deck deals. Mirrors iOS's per-day goal default. */
 private const val DAILY_HAND = 10
 
-
 /**
- * Progress — measured, never guessed: the CEFR read comes from the talks
- * themselves (the summary's holistic estimate), the minutes from the meter,
- * and the two strips from the logs.
+ * Progress — measured, never guessed. Every number here is computed in code
+ * from the talks themselves (`ProgressMath`); the only thing an LLM writes on
+ * this tab is the qualitative note beside a figure it did not invent.
+ *
+ * The overall level is ONE pooled judgment over everything said since the
+ * last assessment — never a single talk's read, which is too small a sample
+ * to publish. The per-skill pages behind the chips lean on the deterministic
+ * measurements (CEFR-graded vocabulary, articulation pace, verified slip
+ * density, words per turn). Shadowing and drill reps are PRACTICE, not
+ * assessment: they appear as effort and never move the level.
  *
  * No share card here. The day card's home is the Activity page and only
  * there — that page's day summary already says what the day was, and the card
@@ -464,7 +475,14 @@ fun ProgressBody(language: String, nativeLanguage: String,
                  onOpenAssessment: () -> Unit, onOpenActivity: () -> Unit,
                  goalMinutes: Int = 10,
                  /** A measured CEFR level from a fresh assessment. */
-                 onMeasuredLevel: (String) -> Unit = {}) {
+                 onMeasuredLevel: (String) -> Unit = {},
+                 /**
+                  * Pace and turn length only move by speaking, so the way out
+                  * of those pages is a call. Null hides the button rather
+                  * than offering a door that opens nowhere — the words and
+                  * slips pages route themselves through `DeepLinkInbox`.
+                  */
+                 onStartTalk: (() -> Unit)? = null) {
     val context = LocalContext.current
     val revision by StoreEvents.revision.collectAsStateWithLifecycle()
     var talks by remember { mutableStateOf<List<Session>>(emptyList()) }
@@ -472,6 +490,10 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var minutesByDay by remember { mutableStateOf<List<Pair<Long, Int>>>(emptyList()) }
     var effortByDay by remember { mutableStateOf<List<Pair<String, PracticeLog.Day>>>(emptyList()) }
     var report by remember { mutableStateOf<WeeklyReport?>(null) }
+    /** The newest report that actually CARRIES a level — reports written
+     *  before the pooled read existed have none, and the latest report is
+     *  not always one of them. */
+    var levelReport by remember { mutableStateOf<WeeklyReport?>(null) }
     var unlock by remember { mutableStateOf<WeeklyReportEngine.Unlock?>(null) }
     var generating by remember { mutableStateOf(false) }
     var dim by remember { mutableStateOf(Dim.OVERALL) }
@@ -479,14 +501,22 @@ fun ProgressBody(language: String, nativeLanguage: String,
     var carryoverWeek by remember { mutableStateOf(0) }
     var material by remember { mutableStateOf(0 to 0) }
     var streak by remember { mutableStateOf(0) }
-    var vocabBands by remember { mutableStateOf<Map<CefrLevel, Int>>(emptyMap()) }
+    var avgShadowScore by remember { mutableStateOf(0) }
+    // False until the first pass has landed. Every number below starts at
+    // zero, and a zero is a CLAIM here ("nothing measured, 0/15 min") — so
+    // the pages must not be drawn from it before the archive has been read.
+    var loaded by remember { mutableStateOf(false) }
+    var metrics by remember { mutableStateOf(ProgressMetrics()) }
+    var showHowAssessed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(language, revision) {
         talks = SessionStore.shared(context).load(language)
         todaySeconds = TalkTimeLog.secondsToday(context)
         minutesByDay = TalkTimeLog.recentSeconds(context, EFFORT_DAYS)
         effortByDay = PracticeLog.recent(context, EFFORT_DAYS)
-        report = WeeklyReportStore.shared(context).latest(language)
+        val reports = WeeklyReportStore.shared(context).load(language)
+        report = reports.firstOrNull()
+        levelReport = reports.firstOrNull { it.cefrLevel != null }
         unlock = WeeklyReportEngine.unlockState(talks.filter { it.endedAt != null }, report)
         // Studied, then SAID — the loop closing, which is the one number that
         // proves the app worked. The detector already writes it onto every
@@ -508,9 +538,20 @@ fun ProgressBody(language: String, nativeLanguage: String,
             b.curriculum?.let { it.words.size + it.expressions.size + it.shadowLines.size } ?: 0
         }
         streak = TalkTimeLog.streakDays(context)
-        vocabBands = VocabStore.shared(context).usedWordsByLevel(language)
+        val bands = VocabStore.shared(context).usedWordsByLevel(language)
+        val expressions = VocabStore.shared(context).expressionEntries(language).size
+        val attempts = ShadowAttemptStore.shared(context).load(language)
+        avgShadowScore = attempts.sortedByDescending { it.createdAt }.take(10)
+            .map { it.matchScore }.takeIf { it.isNotEmpty() }?.average()?.toInt() ?: 0
+        // The walk is several passes over every ended talk plus a scorecard
+        // recomputation each — off the main thread, or the tab opens on the
+        // still-empty state and a learner with a year of talks reads zeroes.
+        val loadedTalks = talks
+        metrics = withContext(Dispatchers.Default) {
+            ProgressMath.compute(loadedTalks, reports, bands, expressions)
+        }
+        loaded = true
     }
-    val scored = talks.mapNotNull { it.summary?.scorecard }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -519,111 +560,181 @@ fun ProgressBody(language: String, nativeLanguage: String,
             }
         }
 
-        if (dim != Dim.OVERALL) {
-            // Each skill's own page: its measured number and what the number
-            // is. Measurement only — the DOING lives in Practice.
-            SkillPage(dim, scored.firstOrNull())
+        // Deliberately NOT the empty state: it says nothing has been
+        // measured, which is a lie for anyone with a history, and it is what
+        // the tab showed on every entry while the archive was still being
+        // read.
+        if (!loaded) {
+            CircularProgressIndicator(Modifier.padding(top = 32.dp))
             return@Column
         }
 
-        // The pooled read outranks any single talk's: it is judged over the
-        // whole window's speech at once, a far larger sample than one
-        // conversation. A talk's own read is the fallback.
-        val headline = report?.cefrLevel?.uppercase()
-            ?: scored.firstOrNull()?.cefrLevel?.uppercase()
-        val levelRecipe: (@Composable () -> Unit)? =
-            if (scored.isEmpty() && vocabBands.isEmpty()) null else ({
-                val userTurns = talks.flatMap { it.turns }.filter { it.role == TurnRole.USER }
-                val words = userTurns.sumOf { it.transcript.trim().split(Regex("\\s+")).count { w -> w.isNotEmpty() } }
-                val voiced = userTurns.sumOf { it.fluency?.speakingSeconds ?: 0.0 }
-                val wallSeconds = userTurns.sumOf { it.durationMs / 1000.0 }
-                val wpm = when {
-                    voiced > 30 -> words / (voiced / 60.0)
-                    wallSeconds > 30 -> words / (wallSeconds / 60.0)
-                    else -> 0.0
+        val seeWords = { DeepLinkInbox.pending.value = DeepLinkInbox.Destination.VOCABULARY }
+        val browseExpressions = { DeepLinkInbox.pending.value = DeepLinkInbox.Destination.EXPRESSIONS }
+        val reviewSlips = { DeepLinkInbox.pending.value = DeepLinkInbox.Destination.REVIEW }
+
+        if (dim != Dim.OVERALL) {
+            // Each skill's own page: its measured number, the sentence saying
+            // what was measured, the trend over its CEFR bands, and the way
+            // to improve it — which always leaves this tab, because Progress
+            // measures and the doing lives in Talk and Practice.
+            ProgressSkillPage(dim, metrics,
+                onSeeWords = seeWords,
+                onReviewSlips = reviewSlips,
+                onStartTalk = onStartTalk,
+                onBrowseExpressions = browseExpressions)
+            return@Column
+        }
+
+        // A level shows ONLY once a pooled read exists. No early guess from a
+        // single talk: if the sample is not big enough yet, the honest
+        // display is the recipe plus how far along the unlock is.
+        val level = levelReport?.cefrLevel?.let { raw ->
+            CefrLevel.entries.firstOrNull { it.code.equals(raw, true) }
+        }
+        val assessedAt = levelReport?.generatedAt
+        val stale = assessedAt != null &&
+            System.currentTimeMillis() - assessedAt > LEVEL_STALE_DAYS * 86_400_000L
+
+        ProgressPanel {
+            Text(stringResource(R.string.estimated_level),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (level != null) {
+                val code = level.code.uppercase()
+                // A level assessed 4+ weeks ago dims instead of posing as
+                // today's truth.
+                Text(code,
+                    style = com.roro.futurevoice.ui.brand.DisplayFace
+                        .style(code, MaterialTheme.typography.displayMedium),
+                    color = if (stale) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary)
+                // Korean learners orient by TOPIK, Japanese by JLPT — the
+                // official equivalence under the big number.
+                LanguageCatalog.levelLabel(level, language).takeIf { it != code }?.let {
+                    Text(it, style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                val perTurn = if (userTurns.isEmpty()) 0.0 else words.toDouble() / userTurns.size
-                val vocabLevel = LevelBands.vocabularyLevel(vocabBands)
-                val fluencyLevel = LevelBands.fluencyBand(wpm, fromVoicedSpeech = voiced > 30)
-                val grammarLevel = LevelBands.grammarBand(scored.firstOrNull()?.grammar?.score ?: 0)
-                val expressLevel = LevelBands.expressionBand(perTurn)
+                // What the level MEANS, before where it came from: a bare
+                // letter is a grade, and this is a measurement.
+                Text(canDoAt(code), style = MaterialTheme.typography.bodyMedium)
+                assessedAt?.let { at ->
+                    Text(
+                        if (stale) stringResource(
+                            R.string.assessed_a_while_back_your_next_talks_feed_a_fresh_assessmen_2febb6,
+                            Recency.label(at))
+                        else stringResource(
+                            R.string.assessed_from_your_recent_talk_vocabulary_grammar_fluency_an_688dda,
+                            Recency.label(at)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                GroupedRowDivider(inset = false)
+                NextAssessmentStatus(unlock, generating)
+            } else {
+                // The recipe made visible, equalizer-style: one bar per
+                // measured ingredient, lit LED blocks = that axis's CEFR
+                // band. A weak axis is a visibly shorter column.
                 fun lit(l: CefrLevel?) = l?.let { CoreVocabulary.levelRank(it) + 1 } ?: 0
                 fun label(l: CefrLevel?, approx: Boolean) =
                     l?.let { (if (approx) "≈" else "") + it.code.uppercase() } ?: "—"
                 LevelEqualizer.View(listOf(
-                    LevelEqualizer.Bar(stringResource(R.string.axis_vocab), label(vocabLevel, false),
-                        lit(vocabLevel), Color(0xFF3B82F6)),
-                    LevelEqualizer.Bar(stringResource(R.string.fluency), label(fluencyLevel, true),
-                        lit(fluencyLevel), Color(0xFF22C55E)),
-                    LevelEqualizer.Bar(stringResource(R.string.grammar), label(grammarLevel, true),
-                        lit(grammarLevel), Color(0xFFF59E0B)),
-                    LevelEqualizer.Bar(stringResource(R.string.axis_express), label(expressLevel, true),
-                        lit(expressLevel), Color(0xFFA855F7)),
+                    LevelEqualizer.Bar(stringResource(R.string.axis_vocab),
+                        label(metrics.vocabLevel, false), lit(metrics.vocabLevel), Color(0xFF3B82F6)),
+                    LevelEqualizer.Bar(stringResource(R.string.fluency),
+                        label(metrics.fluencyLevel, true), lit(metrics.fluencyLevel), Color(0xFF22C55E)),
+                    LevelEqualizer.Bar(stringResource(R.string.grammar),
+                        label(metrics.grammarLevel, true), lit(metrics.grammarLevel), Color(0xFFF59E0B)),
+                    LevelEqualizer.Bar(stringResource(R.string.axis_express),
+                        label(metrics.expressionLevel, true), lit(metrics.expressionLevel), Color(0xFFA855F7)),
                 ), Modifier.padding(top = 8.dp))
                 Text(stringResource(R.string.vocabulary_is_graded_from_the_words_you_actually_use_levels_a3dc6c),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.outline)
-            })
+                GroupedRowDivider(inset = false)
+                BuildingStatus(unlock, generating)
+            }
+            TextButton(onClick = { showHowAssessed = true },
+                modifier = Modifier.padding(top = 2.dp)) {
+                Text(stringResource(R.string.how_this_is_assessed))
+            }
+        }
+        if (showHowAssessed) {
+            HowAssessedSheet(
+                level = level,
+                rationale = levelReport?.levelRationale,
+                firstReportMinutes = (WeeklyReportEngine.FIRST_REPORT_MIN_SECONDS / 60).toInt(),
+                m = metrics,
+                onDismiss = { showHowAssessed = false })
+        }
 
-        headline?.takeIf { it.isNotEmpty() }?.let { level ->
-            GroupedCard {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.estimated_level),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
+        // THE growth graph: the level, one point per assessment. Present from
+        // the first assessment on — with one point it says the curve starts
+        // at the second, instead of hiding entirely.
+        if (metrics.levelHistory.isNotEmpty()) {
+            ProgressPanel {
+                Text(stringResource(R.string.growth), style = MaterialTheme.typography.titleMedium)
+                if (metrics.levelHistory.size >= 2) {
+                    LevelHistoryChart(metrics.levelHistory)
+                    Text(stringResource(
+                        R.string.your_level_one_point_per_assessment_this_line_is_what_growin_5b1e84),
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(level,
-                        style = com.roro.futurevoice.ui.brand.DisplayFace
-                            .style(level, MaterialTheme.typography.displayMedium),
-                        color = MaterialTheme.colorScheme.primary)
-                    // What the level MEANS, before where it came from: a bare
-                    // letter is a grade, and this is a measurement.
-                    Text(canDoAt(level), style = MaterialTheme.typography.bodyMedium)
-                    // Never an unexplainable verdict: the judge's own
-                    // rationale names the evidence it decided from.
-                    (report?.levelRationale?.takeIf { it.isNotBlank() }
-                        ?: stringResource(R.string.a_level_measured_not_guessed)).let {
-                        Text(it, style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    levelRecipe?.invoke()
+                } else {
+                    Text(stringResource(
+                        R.string.your_growth_curve_starts_at_your_second_assessment_every_ass_e7099b),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
+
         GroupedCard {
             Row(Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Stat(stringResource(R.string.today), "${todaySeconds / 60}")
                 Stat(stringResource(R.string.talks), "${talks.count { it.endedAt != null }}")
-                if (scored.isNotEmpty()) {
-                    Stat(stringResource(R.string.overall),
-                        "${scored.map { it.overall }.average().toInt()}")
-                }
             }
         }
 
-        // ONE unit on the level page: the CEFR read per skill, tappable for
-        // the measured numbers behind it. The raw figures (WPM, 0-100 score)
-        // live on each skill's own page, not here.
-        if (scored.isNotEmpty()) {
-            val card = scored.first()
+        // ONE unit on the level page: the CEFR band per skill, tappable for
+        // the measured numbers behind it. Each row reads its OWN axis's band
+        // — the raw figures (WPM, slips/100, words per turn) live on the
+        // skill's own page, never beside a CEFR letter as a second scale.
+        if (metrics.scoredCount > 0 || metrics.vocabLevel != null) {
             GroupedSectionHeader(stringResource(R.string.across_skills))
             GroupedCard {
-            SkillRow(stringResource(R.string.vocabulary), card.vocabulary.score) {
-                dim = Dim.VOCABULARY
+                SkillRow(stringResource(R.string.vocabulary),
+                    metrics.vocabLevel?.code?.uppercase()) { dim = Dim.VOCABULARY }
+                GroupedRowDivider(inset = false)
+                SkillRow(stringResource(R.string.fluency),
+                    metrics.fluencyLevel?.let { "≈" + it.code.uppercase() }) { dim = Dim.FLUENCY }
+                GroupedRowDivider(inset = false)
+                SkillRow(stringResource(R.string.grammar),
+                    metrics.grammarLevel?.let { "≈" + it.code.uppercase() }) { dim = Dim.GRAMMAR }
+                GroupedRowDivider(inset = false)
+                SkillRow(stringResource(R.string.expressiveness),
+                    metrics.expressionLevel?.let { "≈" + it.code.uppercase() }) {
+                    dim = Dim.EXPRESSIVENESS
+                }
             }
-            GroupedRowDivider(inset = false)
-            SkillRow(stringResource(R.string.fluency), card.fluency.score) {
-                dim = Dim.FLUENCY
-            }
-            GroupedRowDivider(inset = false)
-            SkillRow(stringResource(R.string.grammar), card.grammar.score) {
-                dim = Dim.GRAMMAR
-            }
-            GroupedRowDivider(inset = false)
-            SkillRow(stringResource(R.string.expressiveness), card.expressiveness.score) {
-                dim = Dim.EXPRESSIVENESS
-            }
+            Text(stringResource(R.string.same_bands_as_how_this_is_assessed_tap_a_skill_for_its_measu_19d33d),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                modifier = Modifier.padding(horizontal = 4.dp))
+        }
+
+        // What to do next, from the SAME per-axis measurements the sheet
+        // shows: only an axis measuring BELOW the target level appears, each
+        // anchored to its live number. An unmeasured axis stays silent.
+        level?.let { ProgressBands.next(it) }?.let { next ->
+            ProgressPanel {
+                Text(stringResource(R.string.to_reach, next.code.uppercase()),
+                    style = MaterialTheme.typography.titleMedium)
+                Text(canDoAt(next.code.uppercase()), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FocusTips(metrics, next, seeWords, reviewSlips, onStartTalk)
             }
         }
 
@@ -631,8 +742,15 @@ fun ProgressBody(language: String, nativeLanguage: String,
         // when there is something in them: an empty chart is a reproach, and
         // a new learner has done nothing wrong.
         if (minutesByDay.any { it.second > 0 }) {
-            Text(stringResource(R.string.talk_time), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.time_speaking),
+                    style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.lld_min_this_week,
+                    minutesByDay.takeLast(7).sumOf { it.second } / 60),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             EffortCharts.Bars(
                 days = minutesByDay.map { (at, secs) ->
                     EffortCharts.DayBar(dayLabel(at),
@@ -640,7 +758,9 @@ fun ProgressBody(language: String, nativeLanguage: String,
                 },
                 goal = goalMinutes.toFloat(),
             )
-            Text(stringResource(R.string.the_dashed_line_is_your_daily_goal),
+            Text(stringResource(
+                R.string.minutes_you_actually_spoke_per_day_the_dashed_line_is_your_l_b779b3,
+                goalMinutes),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -706,6 +826,7 @@ fun ProgressBody(language: String, nativeLanguage: String,
                     }.getOrNull()?.let {
                         WeeklyReportStore.shared(context).save(it, language)
                         report = it
+                        if (it.cefrLevel != null) levelReport = it
                         // The MEASURED level replaces the self-reported
                         // setting — from here scoring calibration, pickup-word
                         // difficulty and the talk-card label all track
@@ -715,6 +836,13 @@ fun ProgressBody(language: String, nativeLanguage: String,
                         it.cefrLevel?.let { measured -> onMeasuredLevel(measured) }
                         unlock = WeeklyReportEngine.unlockState(
                             talks.filter { s -> s.endedAt != null }, it)
+                        val fresh = WeeklyReportStore.shared(context).load(language)
+                        val bands = VocabStore.shared(context).usedWordsByLevel(language)
+                        val seen = talks
+                        val expressions = metrics.expressionCount
+                        metrics = withContext(Dispatchers.Default) {
+                            ProgressMath.compute(seen, fresh, bands, expressions)
+                        }
                     }
                     generating = false
                 }
@@ -744,6 +872,216 @@ fun ProgressBody(language: String, nativeLanguage: String,
                 stringResource(R.string.sentences) to sentences,
                 stringResource(R.string.notebook) to notebook,
             ))
+            // Reps stay what they have always meant here — REVIEW work.
+            // Talk time is counted in minutes, in its own strip above.
+            val week = effortByDay.takeLast(7)
+            val reps = week.sumOf { it.second.total }
+            val daysActive = week.count { it.second.total > 0 }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Stat(stringResource(R.string.reps_this_week), "$reps")
+                Stat(stringResource(R.string.days_active), "$daysActive")
+                if (avgShadowScore > 0) {
+                    Stat(stringResource(R.string.avg_shadow_score), "$avgShadowScore")
+                }
+            }
+        }
+    }
+}
+
+/** A level assessed longer ago than this reads as stale — dimmed, with a
+ *  "talk again and it refreshes" line, rather than posing as today's truth. */
+private const val LEVEL_STALE_DAYS = 28L
+
+/**
+ * When and how the level actually gets assessed — the weekly read's REAL
+ * unlock rules, never a vague progress bar. Shown INSTEAD of a level, while
+ * there isn't one.
+ */
+@Composable
+private fun BuildingStatus(unlock: WeeklyReportEngine.Unlock?, working: Boolean) {
+    if (working) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.assessing_your_level_from_everything_you_ve_said),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        return
+    }
+    when (unlock) {
+        is WeeklyReportEngine.Unlock.First -> {
+            Text(stringResource(
+                R.string.your_level_is_graded_at_your_first_assessment_one_pooled_jud_873e14),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            UnlockBar(unlock.accumulated, unlock.required)
+        }
+        is WeeklyReportEngine.Unlock.Next -> {
+            Text(stringResource(
+                R.string.your_level_is_re_assessed_regularly_the_next_assessment_need_a344c5),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            UnlockConditionRow(unlock.daysRemaining == 0, daysRemainingText(unlock.daysRemaining))
+            UnlockConditionRow(unlock.secondsRemaining == 0.0,
+                newTalkRemainingText(unlock.secondsRemaining))
+        }
+        WeeklyReportEngine.Unlock.Ready -> Text(
+            stringResource(R.string.ready_assessing_your_level_now),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        null -> Unit
+    }
+}
+
+/**
+ * Shown UNDER an existing level: when the next re-assessment happens and
+ * exactly how much more talk gets you there — the part the learner can go and
+ * do right now.
+ */
+@Composable
+private fun NextAssessmentStatus(unlock: WeeklyReportEngine.Unlock?, working: Boolean) {
+    if (working) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+            Text(stringResource(R.string.re_assessing_your_level_now),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        return
+    }
+    when (unlock) {
+        is WeeklyReportEngine.Unlock.Next -> {
+            Text(stringResource(R.string.next_assessment),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val required = WeeklyReportEngine.RECURRING_MIN_SECONDS
+            val done = (required - unlock.secondsRemaining).coerceIn(0.0, required)
+            Row(verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LinearProgressIndicator(
+                    progress = { (done / required).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier.weight(1f))
+                Text(stringResource(R.string.lld_lld_min_new_talk,
+                    (done / 60).toInt(), (required / 60).toInt()),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            UnlockConditionRow(unlock.daysRemaining == 0, daysRemainingText(unlock.daysRemaining))
+            if (unlock.secondsRemaining > 0) {
+                Text(stringResource(
+                    R.string.talk_lld_more_minutes_and_this_level_gets_re_read_from_every_b72704,
+                    minutesUp(unlock.secondsRemaining)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        WeeklyReportEngine.Unlock.Ready -> Text(
+            stringResource(R.string.ready_re_assessing_your_level_now),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // Can't happen once a level exists; nothing to show.
+        else -> Unit
+    }
+}
+
+@Composable
+private fun UnlockBar(accumulated: Double, required: Double) {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        LinearProgressIndicator(
+            progress = { (accumulated / required).toFloat().coerceIn(0f, 1f) },
+            modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.lld_of_lld_min_of_talking,
+            (accumulated / 60).toInt(), (required / 60).toInt()),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun UnlockConditionRow(met: Boolean, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(if (met) Icons.Filled.CheckCircle else Icons.Filled.Schedule,
+            contentDescription = null,
+            tint = if (met) Color(0xFF34C759) else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium,
+            color = if (met) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun daysRemainingText(days: Int): String = when {
+    days == 0 -> stringResource(R.string.a_week_since_the_last_assessment)
+    days == 1 -> stringResource(R.string.one_more_day)
+    else -> stringResource(R.string.lld_more_days, days)
+}
+
+@Composable
+private fun newTalkRemainingText(secondsRemaining: Double): String =
+    if (secondsRemaining <= 0.0) stringResource(R.string.enough_new_conversation)
+    else stringResource(R.string.lld_more_min_of_new_talk, minutesUp(secondsRemaining))
+
+/** Minutes, rounded UP and never zero — "0 more min" is not a condition. */
+private fun minutesUp(seconds: Double): Int =
+    kotlin.math.ceil(seconds / 60.0).toInt().coerceAtLeast(1)
+
+/**
+ * The lagging axes, each with its live number and the one place that axis is
+ * actually worked on. Capped at three so it reads as focus, not a checklist;
+ * two axes that want the same door keep their line and drop the duplicate
+ * button rather than showing it twice.
+ */
+@Composable
+private fun FocusTips(
+    m: ProgressMetrics,
+    next: CefrLevel,
+    onSeeWords: () -> Unit,
+    onReviewSlips: () -> Unit,
+    onStartTalk: (() -> Unit)?,
+) {
+    val targetRank = CoreVocabulary.levelRank(next)
+    fun lags(l: CefrLevel?) = l != null && CoreVocabulary.levelRank(l) < targetRank
+    val tips = mutableListOf<Pair<String, ProgressAction?>>()
+    if (lags(m.vocabLevel)) {
+        tips += stringResource(R.string.use_more_level_words_in_your_talks, next.code.uppercase()) to
+            ProgressAction(stringResource(R.string.see_words, next.code.uppercase()), onSeeWords)
+    }
+    if (lags(m.grammarLevel)) {
+        val hint = m.grammarNextThreshold?.let { t ->
+            m.grammarLevel?.let { ProgressBands.next(it) }?.let { up ->
+                stringResource(R.string.get_under_1f_and_this_reads, t, up.code.uppercase())
+            }
+        }.orEmpty()
+        tips += stringResource(R.string.you_re_at_1f_verified_slips_per_100_words,
+            m.slipsPer100Words, hint) to
+            ProgressAction(stringResource(R.string.review_your_slips), onReviewSlips)
+    }
+    if (lags(m.fluencyLevel)) {
+        tips += stringResource(R.string.your_pace_is_lld_words_min_talk_more_often_and_a_little_long_608384,
+            m.effectivePace) to
+            onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it) }
+    }
+    if (lags(m.expressionLevel)) {
+        tips += stringResource(R.string.your_turns_average_lld_words_add_detail_how_things_felt_not_b4c918,
+            m.wordsPerTurn) to
+            onStartTalk?.let { ProgressAction(stringResource(R.string.start_a_talk), it) }
+    }
+    if (tips.isEmpty()) {
+        tips += stringResource(R.string.every_measured_skill_already_reads_at_or_above_keep_talking_24170a,
+            next.code.uppercase()) to null
+    }
+    val offered = mutableSetOf<String>()
+    tips.take(3).forEach { (text, action) ->
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(text, style = MaterialTheme.typography.bodyMedium)
+            if (action != null && offered.add(action.title)) ProgressActionLink(action)
         }
     }
 }
@@ -847,9 +1185,14 @@ private fun AssessmentPanel(
 /**
  * One skill's line on the level page: what it is, and the band it measures
  * at. Tappable, because the numbers behind it are on its own page.
+ *
+ * It is handed the band its OWN axis measured — vocabulary is graded from
+ * the word list, the other three from their own deterministic proxies. A row
+ * that ran every axis's 0-100 score through the grammar table said something
+ * different about the same skill than the equalizer directly above it.
  */
 @Composable
-private fun SkillRow(title: String, score: Int, onOpen: () -> Unit) {
+private fun SkillRow(title: String, band: String?, onOpen: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onOpen)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -860,40 +1203,11 @@ private fun SkillRow(title: String, score: Int, onOpen: () -> Unit) {
         // The band, not the 0-100 score: the number is calibrated to the
         // learner's own level setting, so beside a CEFR letter it reads as a
         // second, contradicting scale. The score lives on the skill's page.
-        Text(LevelBands.grammarBand(score)?.let { "≈" + it.code.uppercase() } ?: "—",
+        Text(band ?: "—",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null,
             tint = MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
-    }
-}
-
-/**
- * A skill's own page: the measured number, and a plain sentence saying what
- * was measured. Nothing to DO here — Progress is the measurement tab, and
- * the doing lives in Practice.
- */
-@Composable
-private fun SkillPage(dim: Dim, card: com.roro.futurevoice.talk.SessionScorecard?) {
-    val axis = when (dim) {
-        Dim.VOCABULARY -> card?.vocabulary
-        Dim.GRAMMAR -> card?.grammar
-        Dim.FLUENCY -> card?.fluency
-        Dim.EXPRESSIVENESS -> card?.expressiveness
-        Dim.OVERALL -> null
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("${axis?.score ?: 0}",
-            style = MaterialTheme.typography.displaySmall,
-            color = MaterialTheme.colorScheme.primary)
-        Text(stringResource(dim.labelRes), style = MaterialTheme.typography.titleMedium)
-        // The coach's own note about this axis, in the learner's language.
-        axis?.note?.takeIf { it.isNotBlank() }?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } ?: Text(stringResource(R.string.have_a_talk_and_this_gets_measured),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -1216,8 +1216,16 @@ object AppLanguageNames {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AppLanguageSheet(current: String, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
+    // Full height and scrolling: the second group is sixty languages long,
+    // and a half sheet with no scroll simply cut them off.
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+            skipPartiallyExpanded = true),
+    ) {
+        Column(Modifier.fillMaxWidth().bottomBarInsets()
+            .verticalScroll(androidx.compose.foundation.rememberScrollState())
+            .padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Text(stringResource(R.string.app_language), style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp))
             // The same two groups the setup step shows, for the same reason:

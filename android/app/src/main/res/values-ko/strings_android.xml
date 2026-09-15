@@ -201,4 +201,38 @@
     <string name="feedback_anything_you_want_to_say">하고 싶은 말</string>
     <string name="feedback_not_rated">점수 없음</string>
     <string name="feedback_lld_out_of_5">5점 중 %1$d점</string>
+
+    <!-- Progress: the per-skill pages and the "How it's assessed" sheet.
+         iOS passes these as plain Swift Strings rather than SwiftUI Text
+         literals, so the generated catalog never saw them. -->
+    <string name="unit_words_min_speaking">분당 단어(발화 기준)</string>
+    <string name="unit_words_min">분당 단어</string>
+    <string name="fluency_measured_line">분당 멈춤 %1$s회 · 통화당 %2$d분 · 턴당 %3$d단어</string>
+    <string name="talk_more_often_and_a_little_longer">더 자주, 조금 더 길게 말해 보세요. 하루 목표를 넘겨 보면 흐름이 붙어요.</string>
+    <string name="grammar_measured_line">평가에 쓰인 대화에서 100단어당 확인된 문법 실수 %1$s개%2$s.</string>
+    <string name="counted_from_transcript_verified_slips_only">전사로 확인된 실수만 세요. 인식 오류나 표현 제안은 빼요. 레벨 판정이 보는 숫자와 똑같아요.</string>
+    <string name="run_your_review_cards_built_from_your_own_slips">복습 카드를 돌려 보세요. 직접 틀린 문장으로 만든 거라 딱 이걸 겨냥해요.</string>
+    <string name="how_vividly_and_naturally_you_get_your_meaning_across">하고 싶은 말을 얼마나 생생하고 자연스럽게 전하는지예요.</string>
+    <string name="tell_stories_react_and_add_detail">이야기를 들려주고, 반응하고, 살을 붙여 보세요. 무슨 일이 있었는지만 말고 어떤 기분이었는지까지요.</string>
+    <string name="finding_your_flow">흐름을 찾는 중</string>
+    <string name="pace_conversational">대화가 되는 속도</string>
+    <string name="pace_fluent">유창한 속도</string>
+    <string name="pace_very_fluent">아주 유창한 속도</string>
+    <string name="estimated_from_lld_distinct_words_graded_by_cefr">대화에서 쓴 서로 다른 단어 %1$d개를 CEFR로 채점해 추정했어요. 아는 단어가 아니라 말한 단어예요.</string>
+    <string name="distinct_words_from_your_talks">대화에서 쓴 서로 다른 단어예요.</string>
+    <string name="assessed_detail_vocabulary">실제로 쓴 서로 다른 단어 %1$d개를 CEFR 단어 목록으로 채점해요. 완전히 객관적이에요.</string>
+    <string name="assessed_detail_fluency">말한 시간 기준 분당 %1$d단어. 멈춤과 생각하는 시간은 빼요.</string>
+    <string name="assessed_detail_grammar_density">100단어당 확인된 문법 실수 %1$s개. 레벨 판정이 보는 밀도와 같아요.</string>
+    <string name="assessed_detail_grammar_score">최근 대화 평균 %1$d/100점. 대화마다 실제로 말한 문장에서 확인된 실수로 채점해요.</string>
+    <string name="assessed_detail_expression">한 턴에 %1$d단어. 생각을 얼마나 펼치는지예요.</string>
+    <string name="a_week_since_the_last_assessment">지난 평가로부터 일주일</string>
+    <string name="one_more_day">하루 더</string>
+    <string name="lld_more_days">%1$d일 더</string>
+    <string name="enough_new_conversation">새 대화 충분</string>
+    <string name="lld_more_min_of_new_talk">새 대화 %1$d분 더</string>
+    <string name="reps_this_week">이번 주 복습</string>
+    <string name="days_active">활동한 날</string>
+    <string name="avg_shadow_score">쉐도잉 평균</string>
+    <string name="open_google_play">Google Play 열기</string>
+    <string name="get_the_new_test_build">새 테스트 빌드 받기</string>
 </resources>
