@@ -23,16 +23,6 @@
   --good:#0ca30c; --good-text:#006300; --crit:#d03b3b; --warn:#c98a06;
   --seq1:#cde2fb; --seq2:#86b6ef; --seq3:#3987e5; --seq4:#1c5cab; --seq5:#0d366b;
 }
-@media (prefers-color-scheme: dark){
-  :root:where(:not([data-theme="light"])){
-    color-scheme: dark;
-    --page:#0d0d0d; --surface:#1a1a19; --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --baseline:#383835; --ring:rgba(255,255,255,.10); --chip:#262624;
-    --s1:#3987e5; --s2:#d95926; --s3:#199e70;
-    --good:#0ca30c; --good-text:#0ca30c; --crit:#e66767; --warn:#fab219;
-    --seq1:#184f95; --seq2:#256abf; --seq3:#3987e5; --seq4:#6da7ec; --seq5:#b7d3f6;
-  }
-}
 *{box-sizing:border-box}
 body{margin:0; background:var(--page); color:var(--ink); font-size:15px; line-height:1.55;
   font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif}
