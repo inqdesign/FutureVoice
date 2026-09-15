@@ -370,6 +370,39 @@ export class CallSession implements DurableObject {
     return suffixes !== undefined && suffixes.some((s) => last.endsWith(s))
   }
 
+  /** Is this text written in the target language's SCRIPT? The transcriber
+   *  has to pick a writing system off the first ~200 ms of an utterance,
+   *  and it guesses wrong often enough that the learner watches their
+   *  English open in Thai or Devanagari and get rewritten a word later —
+   *  still, after the language pin (reported on the pinned build,
+   *  2026-09-16). The pin is a request; the first phonemes are a guess no
+   *  prompt reaches. So a wrong-script INTERIM is simply not shown: the
+   *  next interim replaces it and the bubble never flashes. Barge-in,
+   *  speculation and the hold clock still see every interim — this gates
+   *  the screen and nothing else. Same-script errors (German heard as
+   *  English) are invisible here by construction; that is the pin's job.
+   *
+   *  The test is "any letter of the target script at all", not a majority:
+   *  the failure being hidden is a line written ENTIRELY in the wrong
+   *  system, and a majority rule threw away "어제 Netflix 봤어" — one Hangul
+   *  syllable is a whole word against seven Latin letters. */
+  private static inTargetScript(text: string, language: string): boolean {
+    const lang = language.toLowerCase().split("-")[0]
+    const want = CallSession.targetScript[lang]
+    if (!want) return true
+    if (!/\p{L}/u.test(text)) return true
+    return want.test(text)
+  }
+
+  private static readonly targetScript: Record<string, RegExp> = {
+    en: /\p{Script=Latin}/u, de: /\p{Script=Latin}/u, es: /\p{Script=Latin}/u,
+    fr: /\p{Script=Latin}/u, it: /\p{Script=Latin}/u, pt: /\p{Script=Latin}/u,
+    ko: /\p{Script=Hangul}/u,
+    // Kanji are Han: a Japanese line is kana and Han together.
+    ja: /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u,
+    zh: /\p{Script=Han}/u,
+  }
+
   /** No terminal punctuation on the final — see `unfinishedMs`. A closing
    *  quote or bracket after the mark is still an ending; an ellipsis is a
    *  trail-off and is not. */
@@ -599,8 +632,10 @@ export class CallSession implements DurableObject {
             // saw as their sentence vanishing mid-thought ("I don't know
             // why it's overwriting what I said", 2026-09-04).
             this.armPending(CallSession.pendingHoldMs)
-            this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
-          } else {
+            if (CallSession.inTargetScript(text, this.language)) {
+              this.emit({ type: "user_partial", text: this.pendingUtterance + " " + text })
+            }
+          } else if (CallSession.inTargetScript(text, this.language)) {
             this.emit({ type: "user_partial", text })
           }
           // The learner is audibly speaking. If the fluent self is mid-reply,
@@ -623,7 +658,17 @@ export class CallSession implements DurableObject {
           this.specTimer = setTimeout(() => this.fireSpec(specText),
                                       CallSession.specSettleMs) as unknown as number
         },
-        onUtterance: (text) => this.handleUtterance(text),
+        onUtterance: (text) => {
+          // A FINAL in the wrong script is not hidden — it is what the turn
+          // will be answered from, and silence would be worse than a wrong
+          // answer the learner can see. It is recorded, because until now
+          // nothing said how often the pin fails outright.
+          if (!CallSession.inTargetScript(text, this.language)) {
+            this.emit({ type: "warning", code: "script_mismatch",
+                        message: `final not in target script: ${text.slice(0, 80)}` })
+          }
+          this.handleUtterance(text)
+        },
         onRotating: () => this.emit({ type: "rotating" }),
         // Fatal: with no transcriber the call is deaf. The client offers a
         // reconnect that carries the history, so the talk itself survives.
