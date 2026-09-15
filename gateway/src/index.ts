@@ -4,7 +4,7 @@
 // Everything interesting lives in session.ts; this file only routes.
 
 import { CallSession } from "./session"
-import { GEO_HEADER, geoOf, type Env } from "./supabase"
+import type { Env } from "./supabase"
 
 export { CallSession }
 
@@ -76,14 +76,7 @@ export default {
       // for the API use" and no call could hear anything. The upstreams
       // (Gemini, ElevenLabs) are US-hosted anyway, so pinning the DO next
       // to them trades a longer client<->DO leg for shorter DO<->API legs.
-      //
-      // The DO does not reliably see `request.cf`, so the city Cloudflare
-      // resolved from the caller's IP rides in as a header — overwritten here
-      // so a client can never supply its own. The IP itself is not forwarded.
-      const headers = new Headers(request.headers)
-      headers.set(GEO_HEADER, JSON.stringify(geoOf(request)))
-      return env.CALL_SESSION.get(id, { locationHint: "wnam" })
-        .fetch(new Request(request, { headers }))
+      return env.CALL_SESSION.get(id, { locationHint: "wnam" }).fetch(request)
     }
     return new Response("not found", { status: 404 })
   },

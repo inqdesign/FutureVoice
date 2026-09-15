@@ -321,9 +321,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <h2 style="margin:0">지금 누가, 어디서, 뭘 하나</h2>
     <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
   </div>
-  <p class="sub">서버에 닿은 요청으로 읽어요. 3분 안이면 <b>지금</b>, 30분 안이면 <b>방금</b>이에요.
-  위치는 통화를 연결할 때 IP로 본 도시(약 10km 단위)라, 이 기능 이후 통화한 적 없는 사람은 지도 밖 목록에만 있어요.
-  어두운 띠는 지금 밤인 곳이에요.</p>
+  <p class="sub">서버 요청과 PostHog 앱 이벤트를 합쳐 읽어요. 앱이 열려 있거나 3분 안에 요청이 있으면 <b>지금</b>,
+  30분 안이면 <b>방금</b>이에요. 위치는 PostHog가 IP로 본 도시예요. 어두운 띠는 지금 밤인 곳이에요.</p>
+  <p class="sub warn" id="liveNote" hidden></p>
   <div class="tiles" id="liveTiles" style="margin-bottom:12px"></div>
   <div class="livegrid">
     <div id="liveMap"></div>
@@ -1963,7 +1963,16 @@ const TEST_LIVE  = () => new Set(DATA.users.filter(u=>u.dev).map(u=>u.id));
 let liveData = null, liveAt = 0, liveTimer = null, liveMap = null, liveLayer = null, nightLayer = null;
 let liveFit = false;
 
+/** Server activity and PostHog's app events, as one clock. The app counts as
+ *  OPEN while its last lifecycle event is "Opened" and it has sent anything in
+ *  the last 10 min — a killed app never sends "Backgrounded", and without the
+ *  second condition it would read as open forever. */
+function appOpen(u, now){
+  const ph = u.ph;
+  return !!(ph && ph.lifecycle==='Application Opened' && ph.lastAt && now - new Date(ph.lastAt) < 10*60e3);
+}
 function liveState(u, now){
+  if(appOpen(u, now)) return 'live';
   const d = now - new Date(u.last_at);
   return d <= LIVE_MS ? 'live' : d <= RECENT_MS ? 'recent' : 'today';
 }
@@ -1978,8 +1987,10 @@ function doingOf(u, now){
     const lang = LANG_KO[tick.language] || LANG_KO[u.target] || '';
     return {k:'talk', e:'📞', t: lang ? `${lang}로 통화 중` : '통화 중'};
   }
-  const a = rec[0] ? activityOf(rec[0]) : {k:'app', e:'✨', t:'앱 사용'};
-  return liveState(u, now)==='live' ? {...a, t: a.t + (a.k==='talk'?' 중':'')} : a;
+  const serverNow = rec[0] && now - new Date(rec[0].at) <= LIVE_MS;
+  if(!serverNow && appOpen(u, now)) return {k:'app', e:'📱', t:'앱 보는 중'};
+  const a = rec[0] ? activityOf(rec[0]) : {k:'app', e:'📱', t:'앱 열어봄'};
+  return serverNow ? {...a, t: a.t + (a.k==='talk'?' 중':'')} : a;
 }
 /** Consecutive activities, newest first, collapsed — "📞 통화 ×14" not 14 chips. */
 function trailOf(u){
@@ -2075,15 +2086,33 @@ function renderLive(){
   const now = Date.now(), inc = document.getElementById('devToggle').checked;
   const owner = OWNER_LIVE(), tests = TEST_LIVE();
   const keep = u => inc || (u.id!==owner && !tests.has(u.id));
-  const users = (liveData.users||[]).filter(keep)
-    .map(u=>({...u, state: liveState(u, now), doing: doingOf(u, now)}));
-  const placed = (liveData.placed||[]).filter(keep);
+  const PH = liveData.ph || {};
+  const geoOf = ph => ph && ph.lat!=null && ph.lon!=null
+    ? {city: ph.city, country: ph.cc, lat: ph.lat, lon: ph.lon} : null;
+  const newer = (a,b) => !a ? b : !b ? a : (new Date(a) > new Date(b) ? a : b);
+  const DAY = 24*3600e3;
+  // Someone who only opened the app today asked the server for nothing, but
+  // PostHog saw them — they belong in the list, not among the quiet dots.
+  const seenToday = (liveData.placed||[]).filter(u => PH[u.id]?.lastAt && now - new Date(PH[u.id].lastAt) < DAY)
+    .map(u => ({...u, recent: [], stint_from: null, talk_secs_24h: 0, last_at: PH[u.id].lastAt}));
+  const users = [...(liveData.users||[]), ...seenToday].filter(keep)
+    .map(u => { const ph = PH[u.id] || null;
+      const x = {...u, ph, geo: geoOf(ph), last_at: newer(u.last_at, ph?.lastAt)};
+      return {...x, state: liveState(x, now), doing: doingOf(x, now)}; });
+  const seen = new Set(users.map(u=>u.id));
+  const placed = (liveData.placed||[]).filter(keep).filter(u => !seen.has(u.id))
+    .map(u => ({...u, ...(geoOf(PH[u.id])||{}), at: PH[u.id]?.lastAt})).filter(u => u.lat!=null);
+  const note = document.getElementById('liveNote');
+  note.hidden = !liveData.phError;
+  note.textContent = liveData.phError==='no_key'
+    ? 'PostHog 키가 없어서 지도와 앱 열림 상태는 비어 있어요 — bash admin/deploy.sh secret POSTHOG_API_KEY'
+    : `PostHog을 읽지 못했어요 (${liveData.phError}) — 위치와 앱 열림은 마지막으로 읽은 값이에요.`;
 
   const n = s => users.filter(u=>u.state===s).length;
   const calling = users.filter(u=>u.state==='live' && u.doing.k==='talk').length;
   const located = users.filter(u=>u.geo).length;
   document.getElementById('liveTiles').innerHTML = [
-    {k:'지금 사용 중', v:num(n('live')), d:'3분 안에 요청'},
+    {k:'지금 사용 중', v:num(n('live')), d:'앱 열림 · 3분 안 요청'},
     {k:'통화 중', v:num(calling), d:'45초 안에 통화 틱'},
     {k:'방금', v:num(n('recent')), d:'30분 안'},
     {k:'오늘 24시간', v:num(users.length), d:`지도에 ${located}명`},
@@ -2137,7 +2166,7 @@ function renderLive(){
         + `<br>${where(p.u.geo)}${p.u.geo?.region?` · ${esc(p.u.geo.region)}`:''}`
         + `<div class="trail">${trailOf(p.u).map(t=>`<span>${fmtClock(t.at)} ${t.e} ${esc(t.t)}${t.n>1?` ×${t.n}`:''}</span>`).join('')}</div>`
       : `<b>${esc(liveName(p))}</b><br>${flagOf(p.country)} ${esc(p.city||'')} · 24시간 넘게 조용`
-        + `<br><span class="muted">마지막 통화 위치 ${ago(p.at)}</span>`;
+        + `<br><span class="muted">마지막으로 앱을 연 곳 · ${ago(p.at)}</span>`;
     mk.bindTooltip(tip, {className:'lt', direction:'top', offset:[p.dx,p.dy-14]});
     mk.addTo(liveLayer);
     if(p.u) p.u._marker = mk;
