@@ -14,8 +14,13 @@ import Foundation
 ///    time of day. The clock still colours the line (morning ≠ midnight); the
 ///    pool is what keeps day 300 from reading like day 1.
 ///
-/// Everything here is CHROME → target language (see CLAUDE.md "Two
-/// languages"), so every line goes through `chrome()`.
+/// Everything here is MATERIAL → target language (see CLAUDE.md "Two
+/// languages"): the speaker is the future self, so the line is in the
+/// language the call will open in, and it follows the language switcher the
+/// moment it moves. Every line goes through `material()`, never `chrome()`
+/// — chrome is the app language, and this greeting spent a month in it
+/// (2026-08-17 → 2026-09-15) reading as the app's voice instead of the
+/// learner's own.
 ///
 /// **The speaker is the future self, and the Korean is 반말 on purpose** (2026-08-28).
 /// Every other string in the app is 해요체; these 26 are the one voice that is
@@ -139,25 +144,25 @@ enum HeroGreeting {
         switch kind(for: input) {
         case .firstRun:
             return pick([
-                chrome("Ready for your first talk?"),
-                chrome("Shall we start small?"),
+                material("Ready for your first talk?"),
+                material("Shall we start small?"),
             ], input)
         case .missedCall:
             return pick([
-                chrome("I called earlier."),
-                chrome("I left you a message."),
+                material("I called earlier."),
+                material("I left you a message."),
             ], input)
         case .comeback:
             return pick([
-                chrome("It's been a while."),
-                chrome("Good to have you back."),
-                chrome("Long time. Where were we?"),
+                material("It's been a while."),
+                material("Good to have you back."),
+                material("Long time. Where were we?"),
             ], input)
         case .goalMet:
             return pick([
-                chrome("Today's done. One more?"),
-                chrome("You hit today's goal."),
-                chrome("Goal met. How did it feel?"),
+                material("Today's done. One more?"),
+                material("You hit today's goal."),
+                material("Goal met. How did it feel?"),
             ], input)
         case .question:
             return pick(questions(hour: input.calendar.component(.hour, from: input.now)), input)
@@ -171,31 +176,31 @@ enum HeroGreeting {
         switch hour {
         case 5..<12:
             return [
-                chrome("What's on your mind this morning?"),
-                chrome("Did you sleep well?"),
-                chrome("What's the plan today?"),
-                chrome("How does today look?"),
+                material("What's on your mind this morning?"),
+                material("Did you sleep well?"),
+                material("What's the plan today?"),
+                material("How does today look?"),
             ]
         case 12..<17:
             return [
-                chrome("What's on your mind this afternoon?"),
-                chrome("How's your day going?"),
-                chrome("Busy today?"),
-                chrome("What did you do today?"),
+                material("What's on your mind this afternoon?"),
+                material("How's your day going?"),
+                material("Busy today?"),
+                material("What did you do today?"),
             ]
         case 17..<22:
             return [
-                chrome("What's on your mind this evening?"),
-                chrome("How was your day?"),
-                chrome("Anything good today?"),
-                chrome("How did today go?"),
+                material("What's on your mind this evening?"),
+                material("How was your day?"),
+                material("Anything good today?"),
+                material("How did today go?"),
             ]
         default:
             return [
-                chrome("What's on your mind tonight?"),
-                chrome("Still up?"),
-                chrome("How was today?"),
-                chrome("Thinking about tomorrow?"),
+                material("What's on your mind tonight?"),
+                material("Still up?"),
+                material("How was today?"),
+                material("Thinking about tomorrow?"),
             ]
         }
     }

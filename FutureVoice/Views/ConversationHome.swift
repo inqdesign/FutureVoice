@@ -9,6 +9,7 @@ struct ConversationHome: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var auth: AuthService
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.locale) private var locale
     @State private var snapshot = PracticeStats.Snapshot(
         streakDays: 0, totalSessions: 0, lastScorecard: nil,
         lastSessionEndedAt: nil, lastSevenDayScores: Array(repeating: 0, count: 7),
@@ -127,6 +128,31 @@ struct ConversationHome: View {
                 HeroGreeting.advanceRotation()
                 reload()
             }
+            // A language switch happens with this page ON SCREEN (the chip is
+            // in its own toolbar, Me is a sheet over it), so nothing here
+            // disappears and `onAppear` never fires again. Everything cached
+            // above is read from language-scoped stores — the hero line's
+            // own state included — so without this the page kept the language
+            // it was opened in until the app was relaunched (reported
+            // 2026-09-15: the line above the ring not following the switch).
+            // No `advanceRotation()`: the learner asked for this change, so
+            // the line must show the NEW language's state, not the next line
+            // of the old one's rotation.
+            .onChange(of: appState.targetLanguage) { _, _ in
+                reload()
+                drawRing()
+            }
+            // The ring proxy's headline is a `chrome()` String cached on
+            // AppState — an app-language change can't reach it the way it
+            // reaches a `Text("literal")`, so re-resolve it here.
+            .onChange(of: appState.nativeLanguage) { _, _ in
+                appState.talkRingHeadline = goalHeadline
+            }
+            // The hero line is a cached STRING, localized when it was made;
+            // an app-language change re-resolves every `Text("literal")`
+            // through the environment but can't reach a String — recompute
+            // it, or it stays in the old language until relaunch.
+            .onChange(of: locale) { _, _ in refreshHeroLine() }
             // The reveal after a call: the ring re-draws itself from zero as
             // the backdrop lifts, instead of popping in fully drawn.
             .onChange(of: appState.talkRingProxyActive) { _, active in
