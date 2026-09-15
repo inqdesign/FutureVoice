@@ -318,6 +318,15 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </section>
 
 <section data-tab="funnel" hidden>
+  <h2>몇 시에 말하나</h2>
+  <p class="sub">출시 이후 과금된 통화 초를 하루 24시간에 나눠 담았어요. 막대 높이는 통화 시간,
+  아래 숫자는 그 시간에 말한 사람 수예요. 데일리 콜을 몇 시에 울릴지, 알림을 언제 보낼지가
+  이 그림에서 나와요. 유저 대부분이 한국이라 기본은 한국 시간이에요.</p>
+  <div class="seg" id="tzPick" role="group" aria-label="시간대"></div>
+  <div class="card" id="hours"></div>
+</section>
+
+<section data-tab="funnel" hidden>
   <h2>일별</h2>
   <p class="sub">가입은 그날 계정을 만든 사람, 활성은 그날 서버에 기록이 남은 사람이에요.</p>
   <div class="card scroll" id="daily"></div>
@@ -1009,6 +1018,106 @@ function renderFeatures(){
     + `<div class="legend">출시일 이후 · 전 계정 합산</div>`;
 }
 
+/* ---------------------------------------------------------------- 시간대 */
+// KST has no DST, so rotating UTC buckets by +9 is exact. "내 시간대" uses the
+// browser's CURRENT offset, which is approximate across a DST change — said
+// out loud in the legend rather than pretended away.
+const TZ_CHOICES = [
+  ['kst', '한국 시간', 9],
+  ['local', '내 시간대', -new Date().getTimezoneOffset()/60],
+  ['utc', 'UTC', 0],
+];
+let tzKey = 'kst';
+const tzOffset = () => (TZ_CHOICES.find(t=>t[0]===tzKey) || TZ_CHOICES[0])[2];
+
+function renderTzPick(){
+  const el = document.getElementById('tzPick'); if(!el) return;
+  el.innerHTML = TZ_CHOICES.map(([k,lab,off])=>
+    `<button type="button" data-k="${k}" aria-pressed="${k===tzKey}">${lab}`
+    + ` <span style="opacity:.6">${off>=0?'+':''}${off}</span></button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    tzKey = b.dataset.k; renderTzPick(); renderHours(visibleUsers());
+  }));
+}
+
+function renderHours(users){
+  const el = document.getElementById('hours'); if(!el) return;
+  const vis = new Set(users.map(u=>u.idx));
+  const off = tzOffset();
+  const secs = Array(24).fill(0), people = Array.from({length:24},()=>new Set());
+  for(const r of (DATA.hours||[])){
+    if(!vis.has(r.u)) continue;
+    const h = ((r.h + off) % 24 + 24) % 24;
+    secs[h] += r.secs; if(r.secs>0) people[h].add(r.u);
+  }
+  const total = secs.reduce((a,b)=>a+b,0);
+  if(!total){ el.innerHTML='<div class="empty">아직 통화 기록이 없어요.</div>'; return; }
+
+  const W = innerW(el, 260), H = 132, LEFT = 30, RIGHT = 6, top = 8, bh = H - top - 30;
+  const bw = (W - LEFT - RIGHT) / 24;
+  const max = Math.max(...secs);
+  // Where the mass is: the tightest run of hours holding half the talking.
+  let best = {len:25, from:0, to:0};
+  for(let a=0;a<24;a++){
+    let sum=0;
+    for(let n=1;n<=24;n++){
+      sum += secs[(a+n-1)%24];
+      if(sum >= total/2){ if(n < best.len) best = {len:n, from:a, to:(a+n-1)%24}; break; }
+    }
+  }
+  const hh = h => `${String(h).padStart(2,'0')}시`;
+  let svg = `<div class="panel-label"><span class="swatch" style="background:var(--s1)"></span>통화 시간`
+    + `<span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${fmtMin(total)}</span></div>`
+    + `<svg width="${W}" height="${H}" role="img" aria-label="시간대별 통화">`
+    + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
+  for(let h=0;h<24;h++){
+    const x = LEFT + h*bw;
+    if(h % 3 === 0) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H-16}" class="axis"`
+      + ` text-anchor="middle">${h}</text>`;
+    const v = secs[h];
+    if(v){
+      const bar = Math.max(2, v/max*bh);
+      const wide = Math.max(3, bw-3);
+      svg += `<rect x="${(x+(bw-wide)/2).toFixed(1)}" y="${(top+bh-bar).toFixed(1)}"`
+        + ` width="${wide.toFixed(1)}" height="${bar.toFixed(1)}" rx="2" fill="var(--s1)"`
+        + ` data-tip="<b>${hh(h)}–${hh((h+1)%24)}</b><br>통화 ${fmtMin(v)}<br>${people[h].size}명"/>`;
+    }
+    if(people[h].size) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H-3}" class="axis"`
+      + ` text-anchor="middle" style="fill:var(--ink-2)">${people[h].size}</text>`;
+  }
+  svg += '</svg>';
+  const band = best.len<=24
+    ? `말하는 시간의 절반이 <b style="color:var(--ink)">${hh(best.from)}–${hh((best.to+1)%24)}</b>`
+      + ` ${best.len}시간 안에 몰려 있어요`
+    : '';
+  el.innerHTML = svg + `<div class="legend">가로는 ${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]} 기준,`
+    + ` 막대 아래 숫자는 그 시간에 말한 사람 수예요`
+    + `${tzKey==='local'?' · 서머타임이 바뀌는 구간은 한 시간 어긋날 수 있어요':''}`
+    + `${band?' · '+band:''}</div>`;
+}
+
+/** "주로 21–23시" — one person's own usual hour, in the chosen zone. */
+function usualHour(idx){
+  const off = tzOffset();
+  const by = Array(24).fill(0);
+  let total = 0;
+  for(const r of (DATA.hours||[])){
+    if(r.u !== idx || !r.secs) continue;
+    by[((r.h + off) % 24 + 24) % 24] += r.secs; total += r.secs;
+  }
+  if(!total) return null;
+  let best = {len:25, from:0, to:0};
+  for(let a=0;a<24;a++){
+    let sum=0;
+    for(let n=1;n<=24;n++){
+      sum += by[(a+n-1)%24];
+      if(sum >= total*0.6){ if(n<best.len) best={len:n, from:a, to:(a+n-1)%24}; break; }
+    }
+  }
+  const hh = h => `${String(h).padStart(2,'0')}시`;
+  return `${hh(best.from)}–${hh((best.to+1)%24)}`;
+}
+
 function renderDaily(users){
   const vis = new Set(users.map(u=>u.idx));
   const n = DATA.days.length;
@@ -1212,6 +1321,9 @@ function personDetail(u){
           + ` · 이번 주기 통화 ${fmtMin(pu.talk_used)}`
           + `${pu.unlimited?'':` / ${fmtMin(pu.talk_cap)}`}`
           + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
+      (()=>{ const uh = usualHour(u.idx);
+        return uh ? `<li>주로 <b>${uh}</b>에 말해요 <span class="muted">`
+          + `(${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]})</span></li>` : ''; })(),
       cost?`<li>지금까지 원가 <b>${usd(cost.usd,3)}</b></li>`:'',
     ].filter(Boolean), '')}
     ${col('언어', [
@@ -1590,6 +1702,7 @@ function render(){
   renderTodayTiles(users); renderAttention(users); renderFeed(users); renderNotes();
   const cohort = launchUsers();
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
+  renderTzPick(); renderHours(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
@@ -1600,7 +1713,7 @@ function render(){
  *  redraw can never disagree with it. */
 function redrawCharts(){
   const users = visibleUsers();
-  renderDaily(users); renderHeatmap(users); renderBurn();
+  renderDaily(users); renderHeatmap(users); renderHours(users); renderBurn();
 }
 function showTab(name){
   document.querySelectorAll('section[data-tab]').forEach(s => { s.hidden = s.dataset.tab !== name; });

@@ -162,6 +162,8 @@ export function assemble(raw: any) {
   const userLangs = withIdx(raw.user_langs);
   // The onboarding CHOICE, only for rows a build has actually written.
   const setup = withIdx(raw.setup);
+  // Talk seconds by UTC hour-of-day, per user. The page rotates them.
+  const hours = withIdx(raw.hours);
   const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
@@ -291,7 +293,7 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
-    rtSessions, rtReasons, revenue, planUsage, userLangs, setup,
+    rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours,
     prices: MONTHLY_PRICE,
   };
 }
