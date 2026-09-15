@@ -102,7 +102,11 @@ export type ServerMessage =
    *  providers, so the usage ledger sees neither), which is why it exists:
    *  the client writes it to client_events and the console reads it. */
   | { type: "ended"; reason: string; turns: number; speechSeconds: number
-      durationMs: number; voiceFirstMs: number[]; warnings: number }
+      durationMs: number; voiceFirstMs: number[]; warnings: number
+      /** Turn-taking evidence (2026-09-15): barge-ins right after a commit,
+       *  finals merged into a held one, and the learner's measured pause on
+       *  each caught continuation. A client older than this ignores them. */
+      cutoffs: number; merges: number; mergeGapMs: number[] }
   | { type: "error"; code: string; message: string }
 
 export function send(ws: WebSocket, msg: ServerMessage): void {

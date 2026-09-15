@@ -125,6 +125,24 @@ export class CallSession implements DurableObject {
    *  learner feels as "the pause before it answers". */
   private commitAtByContext = new Map<string, number>()
   private voiceFirstMs: number[] = []
+  /** Turn-taking evidence — see `handleUtterance` and `interrupt`. None of
+   *  it changes the call; all of it is what the next decision about the hold
+   *  windows has to be made from. Until 2026-09-15 there was NO record of how
+   *  often the fluent self spoke over a learner mid-sentence, and the 0.8 s
+   *  continuation window was set from one fluent speaker's device. */
+  private lastCommitAt = 0
+  /** Barge-ins landing within `cutoffWindowMs` of a commit: the learner was
+   *  still talking and we answered anyway. A proxy — a fast second thought
+   *  counts too — but it is the only signature a cut-off leaves. */
+  private cutoffs = 0
+  private static readonly cutoffWindowMs = 2500
+  /** Finals that merged into a held one — continuations the window caught. */
+  private merges = 0
+  /** final → next interim, for every hold that saw the learner continue.
+   *  This is a learner's own pause, measured, which is the number an
+   *  adaptive window would have to be built from. */
+  private mergeGapMs: number[] = []
+  private pendingSince = 0
   /** One retry per turn on a failed reply generation; the second failure
    *  is spoken as an apology instead of ending the call. */
   private replyRetried = new Set<string>()
@@ -253,22 +271,111 @@ export class CallSession implements DurableObject {
    *  final. The reply the speculation already wrote waits with it, so the
    *  cost is this window on the VOICE, not on the thinking. */
   private static readonly continuationMs = 800
+  /** A final with NO terminal punctuation. The transcriber punctuates a
+   *  finished sentence and leaves a cut-off clause bare — probed 2026-09-15
+   *  (test/probe-language-pin.mjs on hello16k.wav truncated mid-clause):
+   *  "…and had a" and "…yester" came back without a period 6 times out of
+   *  6, the whole sentence with one. That is a language-independent "not
+   *  done" the hanging-word list cannot give (it can only name words it
+   *  knows), so it earns a middle window — longer than a plain
+   *  continuation, shorter than a conjunction, because a bare noun can
+   *  still be the end of a thought. */
+  private static readonly unfinishedMs = 2000
 
-  /** Words a spoken thought does not END on. The app's lists, verbatim
+  /** Words a spoken thought does not END on, per target language. The
+   *  English set is the app's own lists verbatim
    *  (ConversationView.trailingConjunctions / trailingFunctionWords /
-   *  fillerWords). */
-  private static readonly hangingWords = new Set([
-    "and", "but", "or", "so", "because", "cause",
-    "if", "when", "while", "that", "which", "though", "although",
-    "the", "a", "an", "to", "in", "on", "at", "of",
-    "for", "with", "by", "from", "into", "about",
-    "uh", "um", "er", "ah", "hmm", "mm", "well",
-  ])
+   *  fillerWords). Until 2026-09-15 it was the ONLY set, keyed to nothing —
+   *  so a German learner never once earned the long hold ("und", "weil",
+   *  "äh" matched nothing) and got the 0.8 s window on every turn, which is
+   *  the "it cuts me off mid-sentence" reported that week.
+   *
+   *  Every list errs toward NOT matching: a false hanging word costs a
+   *  finished sentence up to 4 s of silence, so anything that can END a
+   *  sentence in that language stays out — German separable prefixes (an,
+   *  auf, mit, zu, ein: "ich rufe dich an") and "das" ("ich weiß das"),
+   *  French "en"/"avec"/"si"/"voilà" ("j'en ai", "je viens avec", "si !"),
+   *  Spanish "bueno"/"pues"/"este", Japanese て (a request), Chinese
+   *  那个/这个 (an object as well as a filler). */
+  private static readonly hangingWords: Record<string, Set<string>> = {
+    en: new Set([
+      "and", "but", "or", "so", "because", "cause",
+      "if", "when", "while", "that", "which", "though", "although",
+      "the", "a", "an", "to", "in", "on", "at", "of",
+      "for", "with", "by", "from", "into", "about",
+      "uh", "um", "er", "ah", "hmm", "mm", "well",
+    ]),
+    de: new Set([
+      "und", "aber", "oder", "weil", "dass", "wenn", "ob", "denn", "sondern",
+      "obwohl", "während", "bevor", "nachdem", "damit", "als",
+      "der", "die", "den", "dem", "des", "eine", "einen", "einem", "einer",
+      "zum", "zur", "im", "am", "vom", "beim", "für", "von", "bei",
+      "äh", "ähm", "hm", "hmm", "naja",
+    ]),
+    es: new Set([
+      "y", "e", "o", "u", "pero", "porque", "que", "si", "cuando", "aunque",
+      "mientras", "como", "donde",
+      "el", "la", "los", "las", "un", "una", "unos", "unas",
+      "de", "del", "a", "al", "en", "con", "por", "para", "sin", "sobre",
+      "entre", "hasta", "desde",
+      "eh", "em", "mmm",
+    ]),
+    fr: new Set([
+      "et", "ou", "mais", "donc", "car", "que", "quand", "comme", "lorsque",
+      "puisque", "parce",
+      "le", "la", "les", "un", "une", "des", "du", "de", "à", "au", "aux",
+      "dans", "sur", "pour", "par", "chez", "vers",
+      "euh", "ben", "bah",
+    ]),
+    // Korean fillers and connectives that stand as their own word. The
+    // real signal in Korean is the verb ENDING — see `hangingSuffixes`.
+    ko: new Set([
+      "그", "저", "음", "어", "아", "근데", "그런데", "그래서", "그리고",
+      "그러니까", "그니까", "그러면", "약간", "이제", "막", "뭔가",
+    ]),
+  }
 
-  private static endsHanging(text: string): boolean {
+  /** Clause endings that keep a sentence open, for languages where the
+   *  signal is a suffix rather than a word — agglutinative Korean, and
+   *  Japanese/Chinese written without spaces (there the "last word" is the
+   *  whole utterance). Matched against the end of the last token with its
+   *  punctuation stripped. Korean 면 is deliberately absent: too many nouns
+   *  end on it (라면, 화면, 장면); Japanese が too, since a polite sentence
+   *  ends on 〜ですが as often as it continues from it. */
+  private static readonly hangingSuffixes: Record<string, string[]> = {
+    // 서 is the contracted -아/어서 (가서, 만나서, 해서) and cannot be
+    // enumerated; 에서 is the one common ending it must not catch. 고 stays
+    // narrow (하고/이고): 최고, 사고, 광고 end answers all day.
+    ko: ["는데", "은데", "니까", "지만", "서", "려고", "면서", "하고", "이고"],
+    ja: ["けど", "けれど", "から", "ので", "のに", "たら", "なら", "でも",
+         "えっと", "えー", "あの", "あのー", "その"],
+    zh: ["然后", "然後", "但是", "可是", "因为", "因為", "所以", "如果",
+         "虽然", "雖然", "而且", "就是", "的话", "的話", "的时候", "的時候",
+         "嗯", "呃"],
+  }
+
+  /** Endings a suffix above would otherwise swallow. */
+  private static readonly hangingSuffixExceptions: Record<string, string[]> = {
+    ko: ["에서"],
+  }
+
+  private static endsHanging(text: string, language: string): boolean {
+    const lang = language.toLowerCase().split("-")[0]
     const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
     const last = words.at(-1)?.replace(/[^\p{L}\p{N}']+/gu, "")
-    return last !== undefined && CallSession.hangingWords.has(last)
+    if (!last) return false
+    if (CallSession.hangingWords[lang]?.has(last)) return true
+    if (CallSession.hangingSuffixExceptions[lang]?.some((e) => last.endsWith(e))) return false
+    const suffixes = CallSession.hangingSuffixes[lang]
+    return suffixes !== undefined && suffixes.some((s) => last.endsWith(s))
+  }
+
+  /** No terminal punctuation on the final — see `unfinishedMs`. A closing
+   *  quote or bracket after the mark is still an ending; an ellipsis is a
+   *  trail-off and is not. */
+  private static endsUnfinished(text: string): boolean {
+    const t = text.trim().replace(/["'”’」』)\]]+$/u, "")
+    return !/[.?!。？！]$/u.test(t)
   }
 
   constructor(private state: DurableObjectState, private env: Env) {}
@@ -477,6 +584,12 @@ export class CallSession implements DurableObject {
           this.lastInterimAt = Date.now()
           this.armIdleHangUp()
           if (this.pendingUtterance !== null) {
+            // First interim after the final: the pause this learner actually
+            // took before going on. Once per hold.
+            if (this.pendingSince !== 0) {
+              this.mergeGapMs.push(Date.now() - this.pendingSince)
+              this.pendingSince = 0
+            }
             // The held line is not over: the next final merges into it, so
             // the hold waits for that final instead of its own clock. The
             // clock is re-armed, not cleared — an interim the transcriber
@@ -679,18 +792,26 @@ export class CallSession implements DurableObject {
 
     // A held fragment absorbs whatever follows it — the learner was
     // mid-thought, and this is the rest of the thought.
+    if (this.pendingUtterance !== null) this.merges += 1
     const merged = this.pendingUtterance !== null
       ? this.pendingUtterance + " " + text.trim()
       : text.trim()
     this.clearPending()
     // Held, always. A hanging word says "still composing" and earns the
-    // long hold; anything else gets the continuation window, because a
-    // final alone never proved the learner stopped (see `continuationMs`).
-    const hanging = CallSession.endsHanging(merged)
+    // long hold; a final the transcriber didn't close with a mark gets the
+    // middle one (see `unfinishedMs`); anything else gets the continuation
+    // window, because a final alone never proved the learner stopped (see
+    // `continuationMs`).
+    const hanging = CallSession.endsHanging(merged, this.language)
+    const unfinished = !hanging && CallSession.endsUnfinished(merged)
     this.pendingUtterance = merged
+    this.pendingSince = Date.now()
     this.emit({ type: "user_partial", text: merged })
-    console.log(`holding (${hanging ? "ends hanging" : "continuation"}): "${merged.slice(-30)}"`)
-    this.armPending(hanging ? CallSession.pendingHoldMs : CallSession.continuationMs)
+    const kind = hanging ? "ends hanging" : unfinished ? "unpunctuated" : "continuation"
+    console.log(`holding (${kind}): "${merged.slice(-30)}"`)
+    this.armPending(hanging ? CallSession.pendingHoldMs
+                    : unfinished ? CallSession.unfinishedMs
+                    : CallSession.continuationMs)
   }
 
   /** (Re)start the clock on the held utterance. When it fires the pause was
@@ -708,12 +829,14 @@ export class CallSession implements DurableObject {
   private clearPending(): void {
     if (this.pendingTimer !== null) { clearTimeout(this.pendingTimer); this.pendingTimer = null }
     this.pendingUtterance = null
+    this.pendingSince = 0
   }
 
   /** A turn is settled. Commit it and speak the reply. */
   private commitTurn(text: string): void {
     console.log(`commit: "${text.slice(0, 80)}"`)
     this.learnerSpoke = true
+    this.lastCommitAt = Date.now()
     this.emit({ type: "user_turn", text })
     this.history.push({ role: "user", text })
     // A stale reply still going (e.g. utterance finalized right behind a
@@ -966,6 +1089,18 @@ export class CallSession implements DurableObject {
   private interrupt(): void {
     const context = this.activeContext
     if (!context) return
+    const sinceCommit = Date.now() - this.lastCommitAt
+    if (sinceCommit < CallSession.cutoffWindowMs) {
+      this.cutoffs += 1
+      console.log(`cutoff: barge-in ${sinceCommit}ms after commit`)
+      // Rides the `warning` channel because that is the one message a
+      // shipped client already forwards verbatim to client_events (build 48
+      // logs code + message and nothing else); the count on `ended` needs
+      // the next app build to be read at all. Not `warn()`: the call
+      // survived nothing here — it talked over someone.
+      this.emit({ type: "warning", code: "cutoff",
+                  message: `barge-in ${sinceCommit}ms after commit` })
+    }
     this.activeContext = null
     // The client stops playback NOW — the projected play-out is void, and
     // leaving it running would hold the echo window open over the learner's
@@ -1054,6 +1189,9 @@ export class CallSession implements DurableObject {
       durationMs: Date.now() - this.sessionStartedAt,
       voiceFirstMs: this.voiceFirstMs.slice(0, 200),
       warnings: this.warnings,
+      cutoffs: this.cutoffs,
+      merges: this.merges,
+      mergeGapMs: this.mergeGapMs.slice(0, 200),
     })
     this.ended = true
     this.billing?.stop()   // final flush — the last partial batch still bills

@@ -1638,6 +1638,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // ledger — so it goes straight to client_events for the console.
             let voice = (json["voiceFirstMs"] as? [Int] ?? []).sorted()
             let p50 = voice.isEmpty ? nil : voice[voice.count / 2]
+            let gaps = (json["mergeGapMs"] as? [Int] ?? []).sorted()
+            let gapP50 = gaps.isEmpty ? nil : gaps[gaps.count / 2]
             Telemetry.log("talk_rt_session", [
                 "reason": json["reason"] as? String ?? "",
                 "turns": String(json["turns"] as? Int ?? 0),
@@ -1648,6 +1650,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 "voice_samples": String(voice.count),
                 "warnings": String(json["warnings"] as? Int ?? 0),
                 "lines": String(lines.count),
+                // Turn-taking evidence (gateway 2026-09-15): how often the
+                // fluent self talked over the learner, how often the hold
+                // window caught a continuation, and how long this learner's
+                // own mid-thought pauses ran. Absent from an older gateway.
+                "cutoffs": String(json["cutoffs"] as? Int ?? 0),
+                "merges": String(json["merges"] as? Int ?? 0),
+                "merge_gap_p50_ms": gapP50.map(String.init) ?? "",
+                "merge_gap_max_ms": gaps.last.map(String.init) ?? "",
             ])
         case "error":
             Self.step("gateway error: \(json)")
