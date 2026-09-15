@@ -1071,6 +1071,9 @@ private fun HomeScreen(
                     goalMinutes = LocalContext.current
                         .getSharedPreferences("futurevoice", 0)
                         .getInt("futurevoice.dailyGoalMinutes", 10),
+                    // The advice on a measured page ends in "go talk", so the
+                    // page gets the door rather than describing one.
+                    onStartTalk = { onTabChange(HomeTab.TALK) },
                 )
             }
             Spacer(Modifier.height(16.dp))
