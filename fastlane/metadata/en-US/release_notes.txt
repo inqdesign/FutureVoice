@@ -1,3 +1,4 @@
 See exactly how your introduction reads to other learners before it's shared — and choose.
 Lock any line your fluent self picked up in a talk, and it stays between you two.
+Switch your learning language and the greeting on the Talk tab switches with it, right away.
 Fixed talks in German and other non-English languages being written down in the wrong language.
