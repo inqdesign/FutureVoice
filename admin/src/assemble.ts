@@ -122,6 +122,11 @@ export function assemble(raw: any) {
       occupation: u.occupation, location: u.location,
       interests: u.interests, intro: u.intro,
       channel: u.channel, device: deviceOf(u.user_agent),
+      // The clone they are USING — its ElevenLabs name and id, which is the
+      // only handle that matches a row here to the ElevenLabs dashboard.
+      voiceName: u.voice_name ?? null,
+      voiceId: u.voice_id ?? null,
+      voiceAt: u.voice_at ?? null,
       waitlistAt: u.waitlist_at, reviews: rv,
       // launch watch (2026-09-12) — timestamps, not dates, because on a
       // launch day "when" is an hour, not a date

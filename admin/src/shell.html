@@ -162,10 +162,15 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 
 /* --- heatmap ------------------------------------------------------------ */
 .hm-row{display:flex; align-items:center; gap:8px}
-.hm-name{width:118px; flex:none; font-size:12px; color:var(--ink-2); text-align:right;
+.hm-name{width:186px; flex:none; text-align:right; overflow:hidden; line-height:1.3}
+.hm-name .n{font-size:12.5px; color:var(--ink); font-weight:600;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.hm-name .v{font-size:11px; color:var(--s2); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
 .hm-side{font-size:11.5px; color:var(--muted); white-space:nowrap;
-  font-variant-numeric:tabular-nums; padding-left:2px}
+  font-variant-numeric:tabular-nums; padding-left:4px; line-height:1.3}
+.hm-side .id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px;
+  user-select:all; display:block}
 
 /* --- cohort grid -------------------------------------------------------- */
 .cohort td, .cohort th{text-align:center; padding:7px 8px}
@@ -224,7 +229,9 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   .dl{grid-template-columns:1fr}
   .grid3, .tiles{grid-template-columns:minmax(0,1fr)}
   .fe{grid-template-columns:60px 8px 1fr; gap:8px}
-  .hm-name{width:74px; font-size:11px}
+  .hm-name{width:88px}
+  .hm-name .n{font-size:11px}
+  .hm-name .v{font-size:10px}
   .hm-side{display:none}
   .hgap{margin-left:0; width:100%}
   /* 사람 표: 유저 · 구독 · 통화만. 나머지는 행을 눌러서. */
@@ -313,15 +320,19 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <h2>누가 어느 날 말했나</h2>
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
   <b>테두리가 있는 칸이 가입한 날</b>이라, 그 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
-  위의 코호트 표를 사람 단위로 편 것이에요.</p>
+  이름 아래 주황색은 <b>보이스 클론 이름</b>, 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 —
+  둘 다 클릭 한 번에 전체가 선택돼요.</p>
   <div class="card scroll" id="heatmap"></div>
 </section>
 
 <section data-tab="funnel" hidden>
   <h2>몇 시에 말하나</h2>
-  <p class="sub">출시 이후 과금된 통화 초를 하루 24시간에 나눠 담았어요. 막대 높이는 통화 시간,
-  아래 숫자는 그 시간에 말한 사람 수예요. 데일리 콜을 몇 시에 울릴지, 알림을 언제 보낼지가
-  이 그림에서 나와요. 유저 대부분이 한국이라 기본은 한국 시간이에요.</p>
+  <p class="sub">앱이 서버에 남긴 흔적을 하루 24시간에 나눠 담았어요. <b>앱 사용</b>은 통화만이 아니라
+  Watch 장면·섀도잉·요약·토픽 생성·드릴 음성까지 전부예요. 막대 아래 숫자는 그 시간에 뭔가를 한 사람 수고요.
+  데일리 콜을 몇 시에 울릴지, 알림을 언제 보낼지가 이 그림에서 나와요.
+  <span class="muted">서버를 부르지 않는 복습(캐시된 단어 뜻, 오프라인 채점)은 안 잡혀요 —
+  실제 사용은 이보다 많아요.</span></p>
+  <div class="seg" id="hoursMetric" role="group" aria-label="무엇을 셀지"></div>
   <div class="seg" id="tzPick" role="group" aria-label="시간대"></div>
   <div class="card" id="hours"></div>
 </section>
@@ -933,9 +944,9 @@ function renderHeatmap(users){
     (b.activeDays-a.activeDays) || (b.talkSecs-a.talkSecs)
     || (a.signedUpAt||'').localeCompare(b.signedUpAt||''));
   if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
-  const nameW = innerWNarrow() ? 74 : 118;
+  const nameW = innerWNarrow() ? 88 : 186;
   const gap = 3;
-  const avail = innerW(el, 200) - nameW - 8 - (innerWNarrow() ? 0 : 62);
+  const avail = innerW(el, 200) - nameW - 8 - (innerWNarrow() ? 0 : 250);
   const cs = Math.max(9, Math.min(34, avail/n - gap));
   const width = n*(cs+gap);
   const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
@@ -949,7 +960,10 @@ function renderHeatmap(users){
     const m = byUser[u.idx] || {};
     const su = signupIdx(u);
     let svg = `<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">`
-            + `${esc(nameOf(u))}</div><svg width="${width}" height="${cs+4}">`;
+            + `<div class="n">${esc(nameOf(u))}${badge(u)}</div>`
+            + `<div class="v">${u.voiceName ? esc(u.voiceName)
+                 : '<span class="muted">클론 없음</span>'}</div>`
+            + `</div><svg width="${width}" height="${cs+4}">`;
     for(let i=0;i<n;i++){
       const c = m[i];
       const secs = c ? c[2] : 0;
@@ -968,7 +982,10 @@ function renderHeatmap(users){
     }
     svg += `</svg>`;
     if(!innerWNarrow()){
-      svg += `<div class="hm-side">${u.talkSecs?fmtMin(u.talkSecs):'—'} · ${u.activeDays}일</div>`;
+      svg += `<div class="hm-side">${u.talkSecs?fmtMin(u.talkSecs):'—'} · ${u.activeDays}일`
+          +  `<span class="id" title="클릭하면 전체가 선택돼요">${u.id}</span>`
+          +  `${u.voiceId?`<span class="id" style="color:var(--s2)" title="ElevenLabs 보이스 ID">`
+             + `${u.voiceId}</span>`:''}</div>`;
     }
     html += svg + `</div>`;
   }
@@ -1030,6 +1047,25 @@ const TZ_CHOICES = [
 let tzKey = 'kst';
 const tzOffset = () => (TZ_CHOICES.find(t=>t[0]===tzKey) || TZ_CHOICES[0])[2];
 
+// Using the app is not the same as talking into it: KST 21:00 holds 7 talk
+// ticks and 55 rows of everything else. `events` is the default for that
+// reason; `secs` is still here because it is what the allowance is made of.
+const HOUR_METRICS = [
+  ['events', '앱 사용', r=>r.events, v=>`${num(v)}회`],
+  ['secs',   '통화 시간', r=>r.secs, v=>fmtMin(v)],
+];
+let hourMetric = 'events';
+const hourMetricDef = () => HOUR_METRICS.find(m=>m[0]===hourMetric) || HOUR_METRICS[0];
+
+function renderHoursMetric(){
+  const el = document.getElementById('hoursMetric'); if(!el) return;
+  el.innerHTML = HOUR_METRICS.map(([k,lab])=>
+    `<button type="button" data-k="${k}" aria-pressed="${k===hourMetric}">${lab}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    hourMetric = b.dataset.k; renderHoursMetric(); renderHours(visibleUsers());
+  }));
+}
+
 function renderTzPick(){
   const el = document.getElementById('tzPick'); if(!el) return;
   el.innerHTML = TZ_CHOICES.map(([k,lab,off])=>
@@ -1044,11 +1080,15 @@ function renderHours(users){
   const el = document.getElementById('hours'); if(!el) return;
   const vis = new Set(users.map(u=>u.idx));
   const off = tzOffset();
+  const [, metricLabel, pick, fmtVal] = hourMetricDef();
   const secs = Array(24).fill(0), people = Array.from({length:24},()=>new Set());
   for(const r of (DATA.hours||[])){
     if(!vis.has(r.u)) continue;
     const h = ((r.h + off) % 24 + 24) % 24;
-    secs[h] += r.secs; if(r.secs>0) people[h].add(r.u);
+    const v = pick(r);
+    secs[h] += v;
+    // Who was HERE that hour — any server call, whether or not they spoke.
+    if(r.events > 0) people[h].add(r.u);
   }
   const total = secs.reduce((a,b)=>a+b,0);
   if(!total){ el.innerHTML='<div class="empty">아직 통화 기록이 없어요.</div>'; return; }
@@ -1066,8 +1106,8 @@ function renderHours(users){
     }
   }
   const hh = h => `${String(h).padStart(2,'0')}시`;
-  let svg = `<div class="panel-label"><span class="swatch" style="background:var(--s1)"></span>통화 시간`
-    + `<span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${fmtMin(total)}</span></div>`
+  let svg = `<div class="panel-label"><span class="swatch" style="background:var(--s1)"></span>${metricLabel}`
+    + `<span style="font-weight:400;color:var(--muted);margin-left:auto">합계 ${fmtVal(total)}</span></div>`
     + `<svg width="${W}" height="${H}" role="img" aria-label="시간대별 통화">`
     + `<line x1="${LEFT}" y1="${top+bh}" x2="${W-RIGHT}" y2="${top+bh}" class="baseline"/>`;
   for(let h=0;h<24;h++){
@@ -1080,18 +1120,20 @@ function renderHours(users){
       const wide = Math.max(3, bw-3);
       svg += `<rect x="${(x+(bw-wide)/2).toFixed(1)}" y="${(top+bh-bar).toFixed(1)}"`
         + ` width="${wide.toFixed(1)}" height="${bar.toFixed(1)}" rx="2" fill="var(--s1)"`
-        + ` data-tip="<b>${hh(h)}–${hh((h+1)%24)}</b><br>통화 ${fmtMin(v)}<br>${people[h].size}명"/>`;
+        + ` data-tip="<b>${hh(h)}–${hh((h+1)%24)}</b><br>${metricLabel} ${fmtVal(v)}`
+        + `<br>${people[h].size}명"/>`;
     }
     if(people[h].size) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H-3}" class="axis"`
       + ` text-anchor="middle" style="fill:var(--ink-2)">${people[h].size}</text>`;
   }
   svg += '</svg>';
   const band = best.len<=24
-    ? `말하는 시간의 절반이 <b style="color:var(--ink)">${hh(best.from)}–${hh((best.to+1)%24)}</b>`
+    ? `${hourMetric==='secs'?'말하는 시간':'사용'}의 절반이`
+      + ` <b style="color:var(--ink)">${hh(best.from)}–${hh((best.to+1)%24)}</b>`
       + ` ${best.len}시간 안에 몰려 있어요`
     : '';
   el.innerHTML = svg + `<div class="legend">가로는 ${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]} 기준,`
-    + ` 막대 아래 숫자는 그 시간에 말한 사람 수예요`
+    + ` 막대 아래 숫자는 그 시간에 앱을 쓴 사람 수예요`
     + `${tzKey==='local'?' · 서머타임이 바뀌는 구간은 한 시간 어긋날 수 있어요':''}`
     + `${band?' · '+band:''}</div>`;
 }
@@ -1101,9 +1143,11 @@ function usualHour(idx){
   const off = tzOffset();
   const by = Array(24).fill(0);
   let total = 0;
+  const pick = hourMetricDef()[2];
   for(const r of (DATA.hours||[])){
-    if(r.u !== idx || !r.secs) continue;
-    by[((r.h + off) % 24 + 24) % 24] += r.secs; total += r.secs;
+    if(r.u !== idx) continue;
+    const v = pick(r); if(!v) continue;
+    by[((r.h + off) % 24 + 24) % 24] += v; total += v;
   }
   if(!total) return null;
   let best = {len:25, from:0, to:0};
@@ -1309,6 +1353,8 @@ function personDetail(u){
       `<li>${PROVIDER_KO[u.provider]||u.provider||'로그인 방식 미상'}`
         + `${u.device?' · '+u.device:''}${u.location?' · '+esc(u.location):''}</li>`,
       u.occupation?`<li>${esc(u.occupation)}</li>`:'',
+      u.voiceName ? `<li>보이스 <b>${esc(u.voiceName)}</b>`
+        + `${u.voiceId?` <span class="uid" style="display:inline">${u.voiceId}</span>`:''}</li>` : '',
       u.channel?`<li>${esc(u.channel)}에서 유입</li>`:'',
       `<li>가입 ${fmtTs(u.signedUpAt)}${u.lastSignIn?` · 마지막 로그인 ${fmtTs(u.lastSignIn)}`:''}</li>`,
       u.cloneAt?`<li>클론 ${fmtTs(u.cloneAt)} <span class="muted">(가입 ${fmtGap(gapMin(u.signedUpAt,u.cloneAt))} 후)</span></li>`
@@ -1322,7 +1368,7 @@ function personDetail(u){
           + `${pu.unlimited?'':` / ${fmtMin(pu.talk_cap)}`}`
           + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
       (()=>{ const uh = usualHour(u.idx);
-        return uh ? `<li>주로 <b>${uh}</b>에 말해요 <span class="muted">`
+        return uh ? `<li>주로 <b>${uh}</b>에 써요 <span class="muted">`
           + `(${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]})</span></li>` : ''; })(),
       cost?`<li>지금까지 원가 <b>${usd(cost.usd,3)}</b></li>`:'',
     ].filter(Boolean), '')}
@@ -1393,7 +1439,9 @@ function renderPeople(users){
           return used || '<span class="muted">언어 기록 없음</span>'; })()}</div>
         <div class="uid" title="클릭하면 전체가 선택돼요">${u.id}</div></td>
       <td style="white-space:nowrap">${fmtTs(u.signedUpAt)}<div class="usub">${ago(u.signedUpAt)}</div></td>
-      <td>${u.clone?'<span class="ok">✓</span>':'<span class="muted">—</span>'}</td>
+      <td>${u.clone?`<span class="ok">✓</span>${u.voiceName
+            ? `<div class="usub">${esc(u.voiceName)}</div>`:''}`
+          :'<span class="muted">—</span>'}</td>
       <td class="num">${u.talkSessions||'—'}<div class="usub">턴 ${num(u.turns)}</div></td>
       <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
       <td class="num">${u.scenes||'—'}</td>
@@ -1702,7 +1750,7 @@ function render(){
   renderTodayTiles(users); renderAttention(users); renderFeed(users); renderNotes();
   const cohort = launchUsers();
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
-  renderTzPick(); renderHours(users);
+  renderHoursMetric(); renderTzPick(); renderHours(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
