@@ -203,4 +203,18 @@
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">Cancel any time before then in Google Play</string>
     <string name="manage_in_google_play">Manage in Google Play</string>
+    <!-- What picking a fully translated native language buys, said
+         BEFORE the tap. -->
+    <string name="everything_you_read_in_the_app">Everything you read in the app — menus, buttons, corrections, notes — is in this language.</string>
+
+    <!-- The one feedback ask, on the first call of a RETURN visit. Two
+         scores and a sentence; iOS retired the first-call/first-Watch asks
+         (FeedbackSheet.swift, 2026-09-14) and these replace them. -->
+    <string name="feedback_returning_title">How is it going so far?</string>
+    <string name="feedback_returning_subtitle">You\'ve been back for another call. Two quick questions, and anything you want to say.</string>
+    <string name="feedback_the_app_overall">The app overall</string>
+    <string name="feedback_talking_to_your_future_self">Talking to your future self</string>
+    <string name="feedback_anything_you_want_to_say">Anything you want to say</string>
+    <string name="feedback_not_rated">Not rated</string>
+    <string name="feedback_lld_out_of_5">%1$d out of 5</string>
 </resources>

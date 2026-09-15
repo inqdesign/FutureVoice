@@ -135,11 +135,19 @@ fun TalkScreen(
     // first and its dismissal completes the exit.
     var feedback by remember { mutableStateOf<FeedbackContext?>(null) }
     val appContext = LocalContext.current
+    val feedbackScope = rememberCoroutineScope()
+    // Asked after a RETURNING talk, not the first one: someone who has just
+    // met the app has nothing to compare it to, and the first call is the
+    // worst moment to interrupt. The gate wants the length of the call that
+    // just ended — a minute of talking is the bar for having an opinion.
     fun leave() {
-        if (FeedbackPrompt.shouldShow(appContext, FeedbackContext.FIRST_TALK)) {
-            FeedbackPrompt.markShown(appContext, FeedbackContext.FIRST_TALK)
-            feedback = FeedbackContext.FIRST_TALK
-        } else onExit()
+        val seconds = vm.elapsedSeconds()
+        feedbackScope.launch {
+            if (FeedbackPrompt.shouldShowReturningTalk(appContext, seconds)) {
+                FeedbackPrompt.markShown(appContext, FeedbackContext.RETURNING_TALK)
+                feedback = FeedbackContext.RETURNING_TALK
+            } else onExit()
+        }
     }
     feedback?.let { FeedbackSheet(it, onDismiss = { feedback = null; onExit() }) }
     androidx.activity.compose.BackHandler {

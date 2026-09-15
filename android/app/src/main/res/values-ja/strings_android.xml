@@ -189,4 +189,16 @@
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">それまでならGoogle Playでいつでも解約できます</string>
     <string name="manage_in_google_play">Google Playで管理</string>
+    <!-- What picking a fully translated native language buys, said
+         BEFORE the tap. -->
+    <string name="everything_you_read_in_the_app">メニュー、ボタン、修正、メモまで、アプリで読むすべてがこの言語で表示されます。</string>
+
+    <!-- The one feedback ask, on the first call of a RETURN visit. -->
+    <string name="feedback_returning_title">使ってみて、どうですか？</string>
+    <string name="feedback_returning_subtitle">また通話に来てくれました。短い質問が2つと、言いたいことを何でもどうぞ。</string>
+    <string name="feedback_the_app_overall">アプリ全体</string>
+    <string name="feedback_talking_to_your_future_self">流暢な自分との通話</string>
+    <string name="feedback_anything_you_want_to_say">言いたいこと</string>
+    <string name="feedback_not_rated">未評価</string>
+    <string name="feedback_lld_out_of_5">5点中%1$d点</string>
 </resources>

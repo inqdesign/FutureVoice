@@ -189,4 +189,16 @@
     <string name="scene_fraction" translatable="false">%1$d / %2$d</string>
     <string name="cancel_any_time_before_then_in_google_play">그전까지 Google Play에서 언제든 해지할 수 있어요</string>
     <string name="manage_in_google_play">Google Play에서 관리</string>
+    <!-- What picking a fully translated native language buys, said
+         BEFORE the tap. -->
+    <string name="everything_you_read_in_the_app">메뉴, 버튼, 교정, 노트까지 앱에서 읽는 모든 것이 이 언어로 나와요.</string>
+
+    <!-- The one feedback ask, on the first call of a RETURN visit. -->
+    <string name="feedback_returning_title">써 보니 어떠세요?</string>
+    <string name="feedback_returning_subtitle">또 통화하러 오셨네요. 짧은 질문 두 개하고, 하고 싶은 말 아무거나요.</string>
+    <string name="feedback_the_app_overall">앱 전체</string>
+    <string name="feedback_talking_to_your_future_self">유창해진 나와 하는 통화</string>
+    <string name="feedback_anything_you_want_to_say">하고 싶은 말</string>
+    <string name="feedback_not_rated">점수 없음</string>
+    <string name="feedback_lld_out_of_5">5점 중 %1$d점</string>
 </resources>

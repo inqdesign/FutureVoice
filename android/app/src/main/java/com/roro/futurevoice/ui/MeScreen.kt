@@ -1220,21 +1220,47 @@ private fun AppLanguageSheet(current: String, onPick: (String) -> Unit, onDismis
         Column(Modifier.fillMaxWidth().bottomBarInsets().padding(horizontal = 20.dp).padding(bottom = 28.dp)) {
             Text(stringResource(R.string.app_language), style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(bottom = 8.dp))
-            com.roro.futurevoice.core.UILanguage.translated.forEach { code ->
+            // The same two groups the setup step shows, for the same reason:
+            // a name under "Corrections and notes only" buys the coaching
+            // text and leaves the app's own screens in English, and that has
+            // to be readable BEFORE the tap. The footer used to sit here with
+            // no list under it, so those sixty languages had no way in at all.
+            val groups = remember { LanguageCatalog.nativeGroups() }
+            fun isCurrent(code: String): Boolean {
+                val now = com.roro.futurevoice.core.UILanguage.normalize(current)
+                return current == code || now == code || (now == null && code == "en")
+            }
+            groups.translated.forEach { code ->
                 Row(Modifier.fillMaxWidth().clickable { onPick(code) }.padding(vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text(AppLanguageNames.of(code), Modifier.weight(1f),
+                    Text(LanguageCatalog.endonym(code), Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge)
-                    if (com.roro.futurevoice.core.UILanguage.normalize(current) == code
-                        || (com.roro.futurevoice.core.UILanguage.normalize(current) == null && code == "en")) {
-                        Icon(Icons.Filled.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    if (isCurrent(code)) {
+                        Icon(Icons.Filled.Check, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
-            Text(stringResource(R.string.corrections_and_notes_only),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 8.dp))
+            GroupedFooter(stringResource(R.string.everything_you_read_in_the_app))
+            GroupedSectionHeader(stringResource(R.string.corrections_and_notes_only))
+            groups.coachingOnly.forEach { code ->
+                Row(Modifier.fillMaxWidth().clickable { onPick(code) }.padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(LanguageCatalog.endonym(code),
+                            style = MaterialTheme.typography.bodyLarge)
+                        Text(LanguageCatalog.ownName(code, current),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (isCurrent(code)) {
+                        Icon(Icons.Filled.Check, contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+            GroupedFooter(stringResource(
+                R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21))
         }
     }
 }

@@ -182,11 +182,10 @@ fun WatchSceneScreen(
                 audio?.let { mp3.play(it) }
             }
             playingIndex = -1
-            // Completed the whole dialogue for the first time → ask for feedback.
-            if (FeedbackPrompt.shouldShow(context, FeedbackContext.FIRST_WATCH)) {
-                FeedbackPrompt.markShown(context, FeedbackContext.FIRST_WATCH)
-                feedback = FeedbackContext.FIRST_WATCH
-            }
+            // No ask here any more. The one feedback moment is after a
+            // returning TALK: a scene just played is a poor place to stop
+            // someone, and two asks competing meant whichever fired first
+            // silenced the other.
         } catch (e: Exception) {
             generating = false
             error = e.message

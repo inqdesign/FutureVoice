@@ -71,6 +71,31 @@ object LanguageCatalog {
         return preferred + nativeLanguages.filter { it !in preferred }
     }
 
+    /**
+     * The same list, SPLIT by what picking it actually buys.
+     *
+     * A handful of languages are translated end to end; the other sixty only
+     * get the LLM's coaching text, and the app's own screens stay English.
+     * One flat list of sixty-six let someone pick Vietnamese and get an
+     * English app without being told — the caveat has to be readable BEFORE
+     * the tap, which is what the two groups are for. Both the setup step and
+     * Me → App language read this, so they can never disagree.
+     */
+    data class NativeGroups(val translated: List<String>, val coachingOnly: List<String>)
+
+    fun nativeGroups(): NativeGroups {
+        val ui = com.roro.futurevoice.core.UILanguage.translated
+        val all = nativeChoices()
+        // A stored "zh" IS the Traditional column here, so it belongs above.
+        fun isTranslated(code: String) =
+            com.roro.futurevoice.core.UILanguage.normalize(code) != null && code in nativeLanguages ||
+                code in ui
+        return NativeGroups(
+            translated = all.filter { isTranslated(it) },
+            coachingOnly = all.filterNot { isTranslated(it) },
+        )
+    }
+
     fun defaultNative(): String =
         deviceLanguageCodes().firstOrNull { it in nativeLanguages } ?: "en"
 

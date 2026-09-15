@@ -96,20 +96,39 @@ fun SetupFlowScreen(
                 progress = { (step + 1) / 4f },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             )
-            Text(
-                stringResource(when (step) {
-                    0 -> R.string.what_s_your_native_language
-                    1 -> R.string.which_language_do_you_want_to_speak
-                    2 -> R.string.how_comfortable_are_you_right_now
-                    else -> R.string.how_much_will_you_talk_each_day
-                }),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 8.dp),
-            )
+            // Step 0 asks its question as the first section's HEADER, because
+            // it has two sections and each needs its own — repeating it above
+            // them said the same thing twice.
+            if (step > 0) {
+                Text(
+                    stringResource(when (step) {
+                        1 -> R.string.which_language_do_you_want_to_speak
+                        2 -> R.string.how_comfortable_are_you_right_now
+                        else -> R.string.how_much_will_you_talk_each_day
+                    }),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+            }
             when (step) {
-                0 -> ChoiceList(LanguageCatalog.nativeChoices(), selected = native,
-                    title = { LanguageCatalog.endonym(it) },
-                    subtitle = { LanguageCatalog.ownName(it, native) }) { native = it }
+                // Two groups, not one flat list of sixty-six: a handful of
+                // languages are translated end to end and the rest only get
+                // the coaching text. Picking Vietnamese from a single list
+                // chose an English app without saying so, and the caveat has
+                // to be readable BEFORE the tap.
+                0 -> {
+                    val groups = remember { LanguageCatalog.nativeGroups() }
+                    ChoiceList(groups.translated, selected = native,
+                        title = { LanguageCatalog.endonym(it) },
+                        subtitle = { LanguageCatalog.ownName(it, native) },
+                        footer = stringResource(R.string.everything_you_read_in_the_app),
+                        header = stringResource(R.string.what_s_your_native_language),
+                        more = groups.coachingOnly,
+                        moreHeader = stringResource(R.string.corrections_and_notes_only),
+                        moreFooter = stringResource(
+                            R.string.your_corrections_notes_and_word_meanings_come_back_in_this_l_95bb21),
+                    ) { native = it }
+                }
                 1 -> ChoiceList(targetChoices, selected = target,
                     title = { LanguageCatalog.endonym(it) },
                     subtitle = { LanguageCatalog.ownName(it, native) },
@@ -133,31 +152,57 @@ private fun <T> ChoiceList(
     title: @Composable (T) -> String,
     subtitle: @Composable (T) -> String,
     footer: String? = null,
+    header: String? = null,
+    /** A SECOND group under its own header — what a choice buys can differ
+     *  inside one question, and the difference belongs beside the rows. */
+    more: List<T> = emptyList(),
+    moreHeader: String? = null,
+    moreFooter: String? = null,
     onPick: (T) -> Unit,
 ) {
     LazyColumn {
-        items(options) { option ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onPick(option) }.padding(vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(title(option), style = MaterialTheme.typography.bodyLarge)
-                    Text(subtitle(option), style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                if (option == selected) {
-                    Icon(Icons.Filled.Check, contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary)
+        header?.let { item { GroupedSectionHeader(it) } }
+        item {
+            GroupedCard {
+                options.forEachIndexed { i, option ->
+                    if (i > 0) GroupedRowDivider()
+                    ChoiceRow(title(option), subtitle(option), option == selected) { onPick(option) }
                 }
             }
         }
-        footer?.let {
+        footer?.let { item { GroupedFooter(it) } }
+        if (more.isNotEmpty()) {
+            item { GroupedSectionSpacer() }
+            moreHeader?.let { item { GroupedSectionHeader(it) } }
             item {
-                Text(it, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(vertical = 12.dp))
+                GroupedCard {
+                    more.forEachIndexed { i, option ->
+                        if (i > 0) GroupedRowDivider()
+                        ChoiceRow(title(option), subtitle(option), option == selected) { onPick(option) }
+                    }
+                }
             }
+            moreFooter?.let { item { GroupedFooter(it) } }
+        }
+        item { Spacer(Modifier.padding(vertical = 12.dp)) }
+    }
+}
+
+@Composable
+private fun ChoiceRow(title: String, subtitle: String, selected: Boolean, onPick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable { onPick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (selected) {
+            Icon(Icons.Filled.Check, contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
