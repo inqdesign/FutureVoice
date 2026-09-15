@@ -216,7 +216,7 @@ export default {
     const signedIn = !!session && constantTimeEqual(session, expected);
     if (!signedIn) {
       // data.json is for scripts, and a script gets a 404 rather than a form.
-      if (path === "/data.json") return text("Not found", 404);
+      if (path === "/data.json" || path === "/live.json") return text("Not found", 404);
       return html(loginPage(base), 401);
     }
 
@@ -228,6 +228,25 @@ export default {
         "키는 Supabase 대시보드 → Project Settings → API keys → service_role.\n",
         503,
       );
+    }
+
+    // The 라이브 tab polls this every 15 s — its own small RPC, never the whole
+    // admin_raw() read the page itself is built from.
+    if (path === "/live.json") {
+      const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/admin_live`, {
+        method: "POST",
+        headers: {
+          apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+          Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+      });
+      const body = r.ok ? await r.text() : JSON.stringify({ error: `admin_live ${r.status}` });
+      return new Response(body, {
+        status: r.ok ? 200 : 502,
+        headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
+      });
     }
 
     let data: unknown;
@@ -245,7 +264,7 @@ export default {
 
     const page = (shell as unknown as string)
       .replace("__ADMIN_DATA__", () => JSON.stringify(data))
-      .replace("__ADMIN_BASE__", base);
+      .replaceAll("__ADMIN_BASE__", base);
     return html(page);
   },
 };

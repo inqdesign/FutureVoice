@@ -1,5 +1,6 @@
 <title>nawana 어드민</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 /* ===========================================================================
    nawana admin — ONE file.
@@ -23,6 +24,51 @@
   --good:#0ca30c; --good-text:#006300; --crit:#d03b3b; --warn:#c98a06;
   --seq1:#cde2fb; --seq2:#86b6ef; --seq3:#3987e5; --seq4:#1c5cab; --seq5:#0d366b;
 }
+/* --- 라이브 ----------------------------------------------------------- */
+.livehead{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.livebeat{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-2)}
+.livebeat i{width:8px; height:8px; border-radius:50%; background:var(--good); display:inline-block;
+  animation:beat 1.6s ease-out infinite}
+.livebeat.stale i{background:var(--muted); animation:none}
+@keyframes beat{0%{box-shadow:0 0 0 0 rgba(12,163,12,.55)}100%{box-shadow:0 0 0 9px rgba(12,163,12,0)}}
+.livegrid{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr); gap:12px; align-items:start}
+@media (max-width:860px){ .livegrid{grid-template-columns:minmax(0,1fr)} }
+#liveMap{height:520px; border-radius:10px; border:1px solid var(--ring); background:#dde6ee; z-index:0}
+@media (max-width:560px){ #liveMap{height:380px} }
+.leaflet-container{font-family:inherit}
+.lm{position:relative; width:34px; height:34px}
+.lm .face{position:absolute; inset:0; border-radius:50%; display:grid; place-items:center;
+  font-size:17px; background:#fff; border:2.5px solid var(--st); box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.lm.live .face{animation:bob 2.4s ease-in-out infinite}
+.lm.live::before{content:""; position:absolute; inset:-2px; border-radius:50%; background:var(--st);
+  opacity:.45; animation:ripple 1.8s ease-out infinite}
+@keyframes ripple{0%{transform:scale(1); opacity:.45}100%{transform:scale(2.3); opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.lm .tag{position:absolute; left:50%; bottom:calc(100% + 6px); transform:translateX(-50%);
+  background:var(--ink); color:#fff; font-size:11.5px; font-weight:600; white-space:nowrap;
+  padding:3px 8px; border-radius:12px; pointer-events:none}
+.lm .tag::after{content:""; position:absolute; left:50%; top:100%; margin-left:-4px;
+  border:4px solid transparent; border-top-color:var(--ink)}
+.lm.quiet{width:12px; height:12px}
+.lm.quiet .face{border-width:0; background:var(--st); font-size:0; box-shadow:none; opacity:.55}
+.lm.today .face{filter:grayscale(.2); opacity:.9}
+.leaflet-tooltip.lt{background:var(--surface); color:var(--ink); border:1px solid var(--ring);
+  border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.12); padding:10px 12px; font-size:12.5px;
+  line-height:1.45; max-width:280px; white-space:normal}
+.leaflet-tooltip.lt::before{display:none}
+.lpeople{display:flex; flex-direction:column; gap:8px; max-height:520px; overflow:auto; padding-right:2px}
+.lp{display:grid; grid-template-columns:38px minmax(0,1fr); gap:10px; background:var(--surface);
+  border:1px solid var(--ring); border-radius:10px; padding:10px 12px; cursor:pointer}
+.lp:hover{background:var(--chip)}
+.lp .em{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-size:19px;
+  background:var(--chip); border:2px solid var(--st)}
+.lp.live .em{animation:bob 2.4s ease-in-out infinite}
+.lp .doing{font-weight:600; font-size:13.5px}
+.lp .who{font-size:12px; color:var(--ink-2); margin-top:1px}
+.trail{display:flex; gap:4px; flex-wrap:wrap; margin-top:6px}
+.trail span{font-size:11px; background:var(--chip); color:var(--ink-2); border-radius:8px; padding:1px 6px;
+  white-space:nowrap}
+.lsec{font-size:11.5px; font-weight:600; letter-spacing:.04em; color:var(--muted); margin:6px 0 0}
 *{box-sizing:border-box}
 body{margin:0; background:var(--page); color:var(--ink); font-size:15px; line-height:1.55;
   font-family:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", sans-serif}
@@ -262,11 +308,28 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </header>
 
 <nav class="tabs" role="tablist" aria-label="어드민 섹션">
+  <button role="tab" data-go="live"   aria-selected="false">라이브</button>
   <button role="tab" data-go="today"  aria-selected="true">오늘</button>
   <button role="tab" data-go="funnel" aria-selected="false">퍼널</button>
   <button role="tab" data-go="people" aria-selected="false">사람</button>
   <button role="tab" data-go="money"  aria-selected="false">돈</button>
 </nav>
+
+<!-- ====================================================== 라이브 -->
+<section data-tab="live" hidden>
+  <div class="livehead">
+    <h2 style="margin:0">지금 누가, 어디서, 뭘 하나</h2>
+    <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
+  </div>
+  <p class="sub">서버에 닿은 요청으로 읽어요. 3분 안이면 <b>지금</b>, 30분 안이면 <b>방금</b>이에요.
+  위치는 통화를 연결할 때 IP로 본 도시(약 10km 단위)라, 이 기능 이후 통화한 적 없는 사람은 지도 밖 목록에만 있어요.
+  어두운 띠는 지금 밤인 곳이에요.</p>
+  <div class="tiles" id="liveTiles" style="margin-bottom:12px"></div>
+  <div class="livegrid">
+    <div id="liveMap"></div>
+    <div class="lpeople" id="livePeople"></div>
+  </div>
+</section>
 
 <!-- ====================================================== 오늘 -->
 <section data-tab="today">
@@ -452,6 +515,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 </div>
 <div id="tooltip"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
 const DATA = __ADMIN_DATA__;
 
@@ -554,7 +619,8 @@ function innerW(el, min){
 }
 
 /* ---------------------------------------------------------- vocabulary */
-const LANG_KO = {en:'영어', de:'독일어', ko:'한국어', ja:'일본어', fr:'프랑스어', es:'스페인어', zh:'중국어'};
+const LANG_KO = {en:'영어', de:'독일어', ko:'한국어', ja:'일본어', fr:'프랑스어', es:'스페인어', zh:'중국어',
+  'zh-Hans':'중국어', 'zh-Hant':'중국어'};
 const PLAN_KO = {light_monthly:'Light 월간', plus_monthly:'Plus 월간',
   light_annual:'Light 연간', plus_annual:'Plus 연간',
   light_yearly:'Light(연)', plus_yearly:'Plus(연)'};
@@ -1864,17 +1930,264 @@ function redrawCharts(){
   const users = visibleUsers();
   renderDaily(users); renderHeatmap(users); renderHours(users); renderBurn();
 }
+/* ============================================================ 라이브
+ * Polls __ADMIN_BASE__/live.json (admin_live()) every 15 s while the tab is
+ * open. Everything here is derived from the last actions a learner's app
+ * asked the server for — see 20260915200000_user_geo_admin_live.sql.
+ */
+const LIVE_MS = 3*60e3, RECENT_MS = 30*60e3, POLL_MS = 15e3;
+/** One learner-facing activity per ledger row. Order of the checks matters
+ *  only where purposes overlap (a `turn` TTS is a call, not "listening"). */
+function activityOf(r){
+  const a = r.action||'', p = r.purpose||'';
+  if(a==='talk_time' || p==='turn' || p==='transcribe' || a.startsWith('event:talk_'))
+    return {k:'talk', e:'📞', t:'통화'};
+  if(p==='opener' || p==='freetalk-openers') return {k:'talk', e:'📞', t:'통화 거는 중'};
+  if(p==='summary' || a==='gemini_summary') return {k:'wrap', e:'📝', t:'통화 정리'};
+  if(p==='daily-call-script' || p==='daily-call') return {k:'wrap', e:'⏰', t:'다음 전화 준비'};
+  if(a==='tts_scene' || p==='scene' || p==='scenario-curriculum') return {k:'scene', e:'🎬', t:'장면 보기'};
+  if(p==='shadow' || a.startsWith('event:shadow')) return {k:'shadow', e:'🎙️', t:'쉐도잉'};
+  if(p==='drill' || p==='enrichment') return {k:'review', e:'🃏', t:'복습 카드'};
+  if(p==='library') return {k:'review', e:'📚', t:'표현 듣기'};
+  if(p==='topics') return {k:'browse', e:'📰', t:'주제 고르기'};
+  if(p==='weekly') return {k:'browse', e:'📊', t:'주간 리포트'};
+  if(a==='voice_clone' || a==='voice_remix' || p==='voice_preview') return {k:'voice', e:'🧬', t:'목소리 만들기'};
+  return {k:'app', e:'✨', t:'앱 사용'};
+}
+const flagOf = cc => cc && /^[A-Z]{2}$/.test(cc)
+  ? String.fromCodePoint(...[...cc].map(c=>0x1F1E6 + c.charCodeAt(0) - 65)) : '';
+const liveName = u => u.name || (u.email ? u.email.split('@')[0] : String(u.id).slice(0,8));
+const OWNER_LIVE = () => (DATA.users.find(u=>u.owner)||{}).id;
+const TEST_LIVE  = () => new Set(DATA.users.filter(u=>u.dev).map(u=>u.id));
+
+let liveData = null, liveAt = 0, liveTimer = null, liveMap = null, liveLayer = null, nightLayer = null;
+let liveFit = false;
+
+function liveState(u, now){
+  const d = now - new Date(u.last_at);
+  return d <= LIVE_MS ? 'live' : d <= RECENT_MS ? 'recent' : 'today';
+}
+const ST_COLOR = {live:'var(--good)', recent:'var(--s2)', today:'var(--muted)', quiet:'var(--muted)'};
+
+/** What they are doing: a talk tick in the last 45 s wins outright (a call
+ *  is the product), otherwise the newest row's activity. */
+function doingOf(u, now){
+  const rec = u.recent||[];
+  const tick = rec.find(r=>r.action==='talk_time');
+  if(tick && now - new Date(tick.at) < 45e3){
+    const lang = LANG_KO[tick.language] || LANG_KO[u.target] || '';
+    return {k:'talk', e:'📞', t: lang ? `${lang}로 통화 중` : '통화 중'};
+  }
+  const a = rec[0] ? activityOf(rec[0]) : {k:'app', e:'✨', t:'앱 사용'};
+  return liveState(u, now)==='live' ? {...a, t: a.t + (a.k==='talk'?' 중':'')} : a;
+}
+/** Consecutive activities, newest first, collapsed — "📞 통화 ×14" not 14 chips. */
+function trailOf(u){
+  const out = [];
+  for(const r of (u.recent||[])){
+    const a = activityOf(r), last = out[out.length-1];
+    if(last && last.t===a.t){ last.n++; continue; }
+    out.push({...a, n:1, at:r.at});
+  }
+  return out.slice(0,5);
+}
+
+/** Night side of the earth as a polygon — sun position from the date alone
+ *  (NOAA's low-precision formulas, good to a fraction of a degree). */
+function nightPolygon(date){
+  const rad = Math.PI/180;
+  const jd = date.getTime()/86400000 + 2440587.5, n = jd - 2451545.0;
+  const L = (280.460 + 0.9856474*n) % 360, g = ((357.528 + 0.9856003*n) % 360)*rad;
+  const lambda = (L + 1.915*Math.sin(g) + 0.020*Math.sin(2*g))*rad;
+  const eps = (23.439 - 0.0000004*n)*rad;
+  const dec = Math.asin(Math.sin(eps)*Math.sin(lambda));
+  const ra = Math.atan2(Math.cos(eps)*Math.sin(lambda), Math.cos(lambda));
+  const gmst = (18.697374558 + 24.06570982441908*n) % 24;
+  const sunLon = ((ra/rad - gmst*15) % 360 + 540) % 360 - 180;
+  const pts = [];
+  for(let lon=-180; lon<=180; lon+=2){
+    const ha = (lon - sunLon)*rad;
+    const lat = Math.atan(-Math.cos(ha)/Math.tan(dec))/rad;
+    pts.push([lat, lon]);
+  }
+  const pole = dec > 0 ? -90 : 90;   // the pole in darkness
+  return [[pole,-180], ...pts, [pole,180]];
+}
+
+function ensureMap(){
+  if(liveMap || typeof L === 'undefined') return;
+  liveMap = L.map('liveMap', {worldCopyJump:true, zoomControl:true, attributionControl:true,
+                              minZoom:2, maxZoom:9}).setView([30, 40], 2);
+  // No tile server: OSM refuses anything that isn't a browser following its
+  // policy to the letter, and CARTO stamps "API KEY REQUIRED" over its tiles
+  // unpredictably. The countries are drawn from Natural Earth (world-atlas)
+  // instead, in the page's own palette — nothing to be blocked from.
+  liveMap.attributionControl.addAttribution('Natural Earth');
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json')
+    .then(r => r.json())
+    .then(topo => {
+      const fc = topojson.feature(topo, topo.objects.countries);
+      // Rings that touch both sides of the antimeridian (Chukotka, Fiji) draw
+      // a line across the whole world; move their western half east of 180.
+      // Antarctica is dropped — nobody learns there and it eats the bottom.
+      const fixRing = ring => ring.some(c=>c[0]>150) && ring.some(c=>c[0]<-150)
+        ? ring.map(([x,y]) => [x<0 ? x+360 : x, y]) : ring;
+      fc.features = fc.features.filter(f => f.id !== '010').map(f => {
+        const g = f.geometry; if(!g) return f;
+        if(g.type==='Polygon') g.coordinates = g.coordinates.map(fixRing);
+        if(g.type==='MultiPolygon') g.coordinates = g.coordinates.map(p=>p.map(fixRing));
+        return f;
+      });
+      L.geoJSON(fc, {
+        interactive:false,
+        style:{color:'#c9c7bd', weight:.7, fillColor:'#f7f6f2', fillOpacity:1},
+      }).addTo(liveMap).bringToBack();
+    })
+    .catch(() => {});
+  nightLayer = L.polygon(nightPolygon(new Date()), {stroke:false, fillColor:'#0b1a33',
+    fillOpacity:.1, interactive:false}).addTo(liveMap);
+  liveLayer = L.layerGroup().addTo(liveMap);
+}
+
+/** People in the same city stack on one point — fan them out on a spiral in
+ *  PIXELS (a degree offset is invisible at world zoom and absurd at city
+ *  zoom), so every face stays visible at any zoom. */
+function spread(list){
+  const byKey = new Map();
+  for(const it of list){
+    const k = `${it.lat},${it.lon}`;
+    if(!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(it);
+  }
+  for(const group of byKey.values()){
+    // live first, so the busiest face sits on the true point
+    group.sort((a,b)=>({live:0,recent:1,today:2,quiet:3}[a.kind]) - ({live:0,recent:1,today:2,quiet:3}[b.kind]));
+    group.forEach((it,i)=>{
+      const ang = i*2.4, r = i ? 20*Math.sqrt(i) : 0;
+      it.dx = Math.round(r*Math.cos(ang)); it.dy = Math.round(r*Math.sin(ang));
+    });
+  }
+  return list;
+}
+
+function renderLive(){
+  if(!liveData) return;
+  const now = Date.now(), inc = document.getElementById('devToggle').checked;
+  const owner = OWNER_LIVE(), tests = TEST_LIVE();
+  const keep = u => inc || (u.id!==owner && !tests.has(u.id));
+  const users = (liveData.users||[]).filter(keep)
+    .map(u=>({...u, state: liveState(u, now), doing: doingOf(u, now)}));
+  const placed = (liveData.placed||[]).filter(keep);
+
+  const n = s => users.filter(u=>u.state===s).length;
+  const calling = users.filter(u=>u.state==='live' && u.doing.k==='talk').length;
+  const located = users.filter(u=>u.geo).length;
+  document.getElementById('liveTiles').innerHTML = [
+    {k:'지금 사용 중', v:num(n('live')), d:'3분 안에 요청'},
+    {k:'통화 중', v:num(calling), d:'45초 안에 통화 틱'},
+    {k:'방금', v:num(n('recent')), d:'30분 안'},
+    {k:'오늘 24시간', v:num(users.length), d:`지도에 ${located}명`},
+  ].map(t=>`<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div>`
+    + `<div class="d">${t.d}</div></div>`).join('');
+
+  const stint = u => u.stint_from && u.state!=='today'
+    ? Math.max(1, Math.round((new Date(u.last_at) - new Date(u.stint_from))/60000)) : null;
+  const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
+
+  // ---- list
+  const order = {live:0, recent:1, today:2};
+  const sorted = [...users].sort((a,b)=> order[a.state]-order[b.state] || new Date(b.last_at)-new Date(a.last_at));
+  const card = u => {
+    const m = stint(u);
+    const trail = trailOf(u).map(t=>`<span>${fmtClock(t.at)} ${t.e} ${esc(t.t)}${t.n>1?` ×${t.n}`:''}</span>`).join('');
+    return `<div class="lp ${u.state}" data-live="${esc(u.id)}" style="--st:${ST_COLOR[u.state]}">
+      <div class="em">${u.doing.e}</div>
+      <div><div class="doing">${esc(u.doing.t)}${u.state==='live'&&m?` <span class="muted" style="font-weight:500">· ${m}분째</span>`:''}</div>
+      <div class="who"><b>${esc(liveName(u))}</b>${u.id===owner?'<span class="ownchip">본인</span>':''} · ${where(u.geo)}
+        · ${u.state==='live'?'<span class="ok">지금</span>':ago(u.last_at)}${u.target?` · ${LANG_KO[u.target]||u.target}`:''}</div>
+      <div class="trail">${trail}</div></div></div>`;
+  };
+  const sec = (label, list) => list.length ? `<p class="lsec">${label} ${list.length}</p>` + list.map(card).join('') : '';
+  document.getElementById('livePeople').innerHTML =
+    (users.length ? '' : '<div class="empty">24시간 안에 활동한 사람이 없어요.</div>')
+    + sec('지금', sorted.filter(u=>u.state==='live'))
+    + sec('방금', sorted.filter(u=>u.state==='recent'))
+    + sec('오늘', sorted.filter(u=>u.state==='today'));
+
+  // ---- map
+  ensureMap();
+  if(!liveMap) return;
+  nightLayer.setLatLngs(nightPolygon(new Date()));
+  liveLayer.clearLayers();
+  const pins = spread([
+    ...placed.filter(p=>p.lat!=null).map(p=>({kind:'quiet', ...p})),
+    ...users.filter(u=>u.geo && u.geo.lat!=null).map(u=>({kind:u.state, u, lat:u.geo.lat, lon:u.geo.lon})),
+  ]);
+  const bounds = [];
+  for(const p of pins){
+    const st = p.kind;
+    const label = p.u && st==='live' ? `<div class="tag">${esc(p.u.doing.t)}</div>` : '';
+    const half = st==='quiet' ? 6 : 17;
+    const icon = L.divIcon({className:'', iconSize: st==='quiet'?[12,12]:[34,34],
+      iconAnchor: [half - p.dx, half - p.dy],
+      html:`<div class="lm ${st}" style="--st:${ST_COLOR[st]}">${label}<div class="face">${p.u?p.u.doing.e:''}</div></div>`});
+    const mk = L.marker([+p.lat, +p.lon], {icon, zIndexOffset: st==='live'?1000:st==='recent'?500:0});
+    const tip = p.u
+      ? `<b>${esc(liveName(p.u))}</b><br>${p.u.doing.e} ${esc(p.u.doing.t)} · ${p.u.state==='live'?'지금':ago(p.u.last_at)}`
+        + `<br>${where(p.u.geo)}${p.u.geo?.region?` · ${esc(p.u.geo.region)}`:''}`
+        + `<div class="trail">${trailOf(p.u).map(t=>`<span>${fmtClock(t.at)} ${t.e} ${esc(t.t)}${t.n>1?` ×${t.n}`:''}</span>`).join('')}</div>`
+      : `<b>${esc(liveName(p))}</b><br>${flagOf(p.country)} ${esc(p.city||'')} · 24시간 넘게 조용`
+        + `<br><span class="muted">마지막 통화 위치 ${ago(p.at)}</span>`;
+    mk.bindTooltip(tip, {className:'lt', direction:'top', offset:[p.dx,p.dy-14]});
+    mk.addTo(liveLayer);
+    if(p.u) p.u._marker = mk;
+    if(st!=='quiet') bounds.push([+p.lat, +p.lon]);
+  }
+  if(!liveFit && bounds.length){
+    liveFit = true;
+    liveMap.fitBounds(bounds, {padding:[40,40], maxZoom:5});
+  }
+  document.querySelectorAll('#livePeople .lp').forEach(el => el.addEventListener('click', () => {
+    const u = users.find(x=>x.id===el.dataset.live);
+    if(u && u._marker){ liveMap.flyTo(u._marker.getLatLng(), 7, {duration:.8});
+      setTimeout(()=>u._marker.openTooltip(), 850); }
+  }));
+}
+
+function renderLiveBeat(err){
+  const el = document.getElementById('liveBeat'); if(!el) return;
+  el.classList.toggle('stale', !!err || !liveAt);
+  el.querySelector('span').textContent = err ? `읽지 못했어요 (${err})`
+    : liveAt ? `15초마다 갱신 · ${new Date(liveAt).toLocaleTimeString('ko-KR',{timeZone:tzZone(),hour12:false})}` : '불러오는 중';
+}
+async function pollLive(){
+  try{
+    const r = await fetch('__ADMIN_BASE__/live.json', {cache:'no-store', credentials:'same-origin'});
+    if(!r.ok) throw new Error(r.status);
+    liveData = await r.json(); liveAt = Date.now();
+    renderLive(); renderLiveBeat();
+  }catch(e){ renderLiveBeat(e.message||'오류'); }
+}
+function liveShow(on){
+  clearInterval(liveTimer); liveTimer = null;
+  if(!on) return;
+  ensureMap();
+  setTimeout(()=>liveMap && liveMap.invalidateSize(), 0);
+  pollLive();
+  liveTimer = setInterval(()=>{ if(!document.hidden) pollLive(); }, POLL_MS);
+}
 function showTab(name){
   document.querySelectorAll('section[data-tab]').forEach(s => { s.hidden = s.dataset.tab !== name; });
   document.querySelectorAll('.tabs button').forEach(b =>
     b.setAttribute('aria-selected', String(b.dataset.go === name)));
   try{ localStorage.setItem('nawana.admin.tab3', name); }catch(e){}
   hideTip();
+  liveShow(name === 'live');
   redrawCharts();   // a hidden section measures 0 — now it can be measured
 }
 document.querySelectorAll('.tabs button').forEach(b =>
   b.addEventListener('click', () => showTab(b.dataset.go)));
-document.getElementById('devToggle').addEventListener('change', render);
+document.getElementById('devToggle').addEventListener('change', () => { render(); renderLive(); });
 document.addEventListener('mousemove', ev => {
   const t = ev.target.closest('[data-tip]');
   if(t) showTip(t.getAttribute('data-tip'), ev); else hideTip();

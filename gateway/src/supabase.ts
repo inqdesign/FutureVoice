@@ -62,3 +62,46 @@ export async function ownsVoice(env: Env, userId: string, voiceId: string): Prom
   const rows = (await r.json()) as unknown[]
   return Array.isArray(rows) && rows.length > 0
 }
+
+/** Header the Worker uses to hand the DO Cloudflare's view of the caller. */
+export const GEO_HEADER = "x-fv-geo"
+
+export interface Geo {
+  city?: string; region?: string; country?: string
+  lat?: number; lon?: number; timezone?: string
+}
+
+/** City-level location from `request.cf`, coordinates rounded to 0.1°
+ *  (~10 km). Nothing finer is kept — see 20260915200000_user_geo_admin_live. */
+export function geoOf(request: Request): Geo {
+  const cf = (request as unknown as { cf?: Record<string, unknown> }).cf ?? {}
+  const round = (v: unknown) => {
+    const n = typeof v === "string" ? parseFloat(v) : typeof v === "number" ? v : NaN
+    return Number.isFinite(n) ? Math.round(n * 10) / 10 : undefined
+  }
+  const str = (v: unknown) => (typeof v === "string" && v ? v : undefined)
+  return {
+    city: str(cf.city), region: str(cf.region), country: str(cf.country),
+    lat: round(cf.latitude), lon: round(cf.longitude), timezone: str(cf.timezone),
+  }
+}
+
+/** Last-seen city for the admin console's map. One row per learner, replaced
+ *  on every call. Fire-and-forget: a location is never worth a call. */
+export async function recordGeo(env: Env, userId: string, geo: Geo): Promise<void> {
+  if (geo.lat === undefined || geo.lon === undefined) return
+  await fetch(`${env.SUPABASE_URL}/rest/v1/user_geo?on_conflict=user_id`, {
+    method: "POST",
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    },
+    body: JSON.stringify({
+      user_id: userId, city: geo.city ?? null, region: geo.region ?? null,
+      country: geo.country ?? null, lat: geo.lat, lon: geo.lon,
+      timezone: geo.timezone ?? null, seen_at: new Date().toISOString(),
+    }),
+  }).catch(() => undefined)
+}

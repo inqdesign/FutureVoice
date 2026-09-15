@@ -21,7 +21,7 @@ import { GeminiTranscriber } from "./transcriber"
 import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
-import { verifyUser, ownsVoice, type Env } from "./supabase"
+import { verifyUser, ownsVoice, recordGeo, GEO_HEADER, type Env, type Geo } from "./supabase"
 import { TalkBilling } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
@@ -411,6 +411,9 @@ export class CallSession implements DurableObject {
     return !/[.?!。？！]$/u.test(t)
   }
 
+  /** Caller's city as Cloudflare resolved it (see GEO_HEADER). */
+  private geo: Geo | null = null
+
   constructor(private state: DurableObjectState, private env: Env) {}
 
   async fetch(request: Request): Promise<Response> {
@@ -418,6 +421,8 @@ export class CallSession implements DurableObject {
       return new Response("expected websocket", { status: 426 })
     }
     if (this.client) return new Response("session in use", { status: 409 })
+
+    try { this.geo = JSON.parse(request.headers.get(GEO_HEADER) ?? "null") } catch { this.geo = null }
 
     const pair = new WebSocketPair()
     const [toClient, ours] = [pair[0], pair[1]]
@@ -539,6 +544,7 @@ export class CallSession implements DurableObject {
           .then((r) => { console.log(`start: ownsVoice ${Date.now() - gateAt}ms`); return r }),
         preflight,
       ])
+      if (this.geo) this.state.waitUntil(recordGeo(this.env, userId, this.geo))
       if (!owns) {
         return this.fail("voice_forbidden", "voice_id not permitted")
       }
