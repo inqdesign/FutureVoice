@@ -213,6 +213,91 @@ class Orb:
             g = self.grain[tq] = ((hash21(self.pos17 + tq * np.array([13.7, 91.3], np.float32)) - 0.5) * 0.06)[..., None]
         return np.clip(col + g, 0, 1)
 
+
+# ── the letter-pattern flower: numpy port of the page's halftone-flower shader ──
+# ASCII/jamo glyph atlas (light→heavy by ink coverage), one 8-petal polar flower
+# with a top-right sun, a stem, grain — on the dark palette, then the page's veil
+# (a radial darkening at the centre so the foreground reads).
+FLOWER_CH = ' .......ㄱㅏrㄴcㅗtㅓoㄷaㄹeㅋxㅂsㅍwㅁmㅇㅎ'
+PAPER, INK, GRAIN = np.array([.071, .067, .063], np.float32), np.array([.58, .55, .5], np.float32), 0.022
+
+def hsh(p):                                     # h(): fract(sin(dot(p,(127.1,311.7)))*43758.5453)
+    return frac(np.sin(p[..., 0] * 127.1 + p[..., 1] * 311.7) * 43758.5453)
+def vnoise(p):
+    i, f = np.floor(p), frac(p); f = f * f * (3 - 2 * f)
+    a = hsh(i); b = hsh(i + [1, 0]); c = hsh(i + [0, 1]); d = hsh(i + [1, 1])
+    return (a + (b - a) * f[..., 0]) * (1 - f[..., 1]) + (c + (d - c) * f[..., 0]) * f[..., 1]
+def fbm(p):
+    v, a = 0.0, 0.5
+    for _ in range(3):
+        v = v + a * vnoise(p); p = p * 2.1; a *= 0.5
+    return v
+
+class Flower:
+    def __init__(self, w, h):
+        self.w, self.h = w, h
+        cell = max(10.0, h / 85.0)
+        self.cols, self.rows = int(math.ceil(w / cell)), int(math.ceil(h / cell))
+        # cell centres in the shader's space: y UP, x scaled by aspect
+        ys, xs = np.mgrid[0:self.rows, 0:self.cols].astype(np.float32)
+        cc = np.stack([(xs + 0.5) * cell, (ys + 0.5) * cell], -1)         # y up → row 0 is the BOTTOM
+        cuv = cc / np.array([w, h], np.float32)
+        self.asp = w / h
+        self.p = np.stack([cuv[..., 0] * self.asp, cuv[..., 1]], -1)
+        # glyph atlas at 64 px, then resampled to the cell (GL LINEAR ≈ bilinear)
+        G, S = 64, int(math.ceil(cell))
+        self.S = S
+        font = ImageFont.truetype("/System/Library/Fonts/AppleSDGothicNeo.ttc", int(G * .74), index=6)   # Bold
+        atlas = np.zeros((len(FLOWER_CH), S, S), np.float32)
+        for i, ch in enumerate(FLOWER_CH):
+            im = Image.new("L", (G, G), 0); ImageDraw.Draw(im).text((G / 2, G / 2 + 2), ch, font=font, fill=255, anchor="mm")
+            atlas[i] = np.asarray(im.resize((S, S), Image.BILINEAR), np.float32) / 255.0
+        self.atlas_flat = atlas.reshape(-1)
+        # per-pixel gather tables: which cell, which atlas texel (rows here are TOP-down image rows)
+        py, px = np.mgrid[0:h, 0:w].astype(np.float32)
+        gy = (h - py - 0.5) / cell; gx = (px + 0.5) / cell                 # gl_FragCoord (y up)
+        cr, ccol = np.minimum(np.floor(gy), self.rows - 1).astype(np.int64), np.minimum(np.floor(gx), self.cols - 1).astype(np.int64)
+        iu, iv = frac(gx), frac(gy)
+        ai = np.minimum((iu * S).astype(np.int64), S - 1); aj = np.minimum(((1 - iv) * S).astype(np.int64), S - 1)
+        self.pix_cell = (cr * self.cols + ccol).reshape(-1)
+        self.pix_sub = (aj * S + ai).reshape(-1)
+        self.grain = ((hsh(np.stack([px + 0.5, h - py - 0.5], -1)) - 0.5) * GRAIN)[..., None]
+        # the page's .veil: radial-gradient(72% 56% at 50% 50%, bg .74, bg .22 64%, bg 0 100%)
+        d = np.sqrt(((px + 0.5 - w / 2) / (0.72 * w)) ** 2 + ((py + 0.5 - h / 2) / (0.56 * h)) ** 2)
+        a = np.where(d < 0.64, 0.74 + (0.22 - 0.74) * (d / 0.64), np.clip(0.22 * (1 - (d - 0.64) / 0.36), 0, 1))
+        self.veil = a.astype(np.float32)[..., None]
+        self.bg = np.array(BG, np.float32) / 255.0
+
+    def frame(self, t, center=(0.70, 0.55), R=0.32, N=8.0, q=0.0):
+        p = self.p
+        c = np.array([self.asp * center[0] + 0.02 * math.sin(t * 0.5 + q), center[1]], np.float32)
+        d = p - c
+        rad = np.sqrt(np.sum(d * d, -1))
+        ang = np.arctan2(d[..., 1], d[..., 0]) + 0.07 * math.sin(t * 0.55 + q)
+        w = fbm(np.stack([ang * 2.3 + q * 3.0, rad * 5.0], -1) + q)
+        lobe = np.abs(np.cos(N * 0.5 * ang + q)) ** 0.40
+        pet = R * (0.55 + 0.45 * lobe) * (0.55 + 0.9 * w)
+        g = smoothstep(pet, pet * 0.20, rad)
+        ridge = np.abs(np.cos(N * 0.5 * ang + q))
+        rr = np.clip(rad / np.maximum(pet, 1e-4), 0, 1)
+        form = 0.40 + 0.60 * ridge * (1.0 + (0.55 - 1.0) * rr)
+        u = d / np.maximum(rad, 1e-4)[..., None]
+        sun = 0.55 + 0.55 * (u[..., 0] * 0.55 + u[..., 1] * 0.83)
+        g = g * np.clip(form * sun, 0, 1)
+        g = np.maximum(g, 0.14 * smoothstep(pet * 1.6, pet * 0.9, rad))
+        # stem, below the flower centre only
+        dy = c[1] - p[..., 1]
+        sx = c[0] + 0.05 * np.sin(dy * 4.0 + q) + dy * dy * 0.14 * math.sin(t * 0.5 + q)
+        stem = np.where(p[..., 1] > c[1], 0.0, 0.30 * smoothstep(0.006, 0.002, np.abs(p[..., 0] - sx)))
+        L = np.maximum(np.maximum(0.05, g), stem)
+        lvl = np.sqrt(np.clip(L, 0, 1))
+        gi = np.floor(lvl * (len(FLOWER_CH) - 1) + 0.5).astype(np.int64)
+        strength = 0.20 + 0.80 * smoothstep(0.05, 0.32, L)
+        k = self.atlas_flat[gi.reshape(-1)[self.pix_cell] * (self.S * self.S) + self.pix_sub].reshape(self.h, self.w)
+        ks = (k * strength.reshape(-1)[self.pix_cell].reshape(self.h, self.w))[..., None]
+        col = PAPER + (INK - PAPER) * ks + self.grain
+        return col * (1 - self.veil) + self.bg * self.veil
+
 # ── level from the audio, exactly as the page's pump() + smoother ──
 def levels(samples, sr, n_frames, fps=FPS):
     """Smoothed drive per video frame, simulating the page's 60 Hz rAF loop."""
@@ -233,24 +318,24 @@ def levels(samples, sr, n_frames, fps=FPS):
 
 # ── static layer: mark, eyebrow, wordmark, tagline, URL ──
 def static_layer(fonts, lang, label):
-    img = Image.new("RGB", (W, H), BG)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     # the app mark (pixel O-ring + detached cell), geometry from the page's <svg viewBox="0 0 1024 1024">
     rects = [(291, 238, 410, 100), (701, 338, 104, 347), (187, 338, 104, 347), (291, 685, 410, 100), (805, 685, 98, 100)]
     gw = 903 - 187; scale = 64 / gw; ox = W / 2 - (187 + gw / 2) * scale; oy = 150 - 238 * scale
     for x, y, w, h in rects:
-        d.rectangle([ox + x * scale, oy + y * scale, ox + (x + w) * scale, oy + (y + h) * scale], fill=TX)
+        d.rectangle([ox + x * scale, oy + y * scale, ox + (x + w) * scale, oy + (y + h) * scale], fill=TX + (255,))
     c = COPY[lang]
     eyebrow = (label + "  ·  " if label else "") + c["eyebrow"]
     ey = 1478
     ew = fonts["eyebrow"].width(eyebrow) + 22
     ex = W / 2 - ew / 2
-    d.ellipse([ex, ey - 12, ex + 12, ey], fill=DOT)
-    fonts["eyebrow"].draw(d, ex + 22, ey, eyebrow, DIM)
-    fonts["wordmark"].draw_centered(d, W / 2, 1610, "nawana", TX)
-    fonts["tag"].draw_centered(d, W / 2, 1680, c["tag"][0], DIM)
-    fonts["tag"].draw_centered(d, W / 2, 1730, c["tag"][1], DIM)
-    fonts["url"].draw_centered(d, W / 2, 1800, "nawana.app", FAINT)
+    d.ellipse([ex, ey - 12, ex + 12, ey], fill=DOT + (255,))
+    fonts["eyebrow"].draw(d, ex + 22, ey, eyebrow, DIM + (255,))
+    fonts["wordmark"].draw_centered(d, W / 2, 1610, "nawana", TX + (255,))
+    fonts["tag"].draw_centered(d, W / 2, 1680, c["tag"][0], DIM + (255,))
+    fonts["tag"].draw_centered(d, W / 2, 1730, c["tag"][1], DIM + (255,))
+    fonts["url"].draw_centered(d, W / 2, 1800, "nawana.app", FAINT + (255,))
     return np.asarray(img).copy()
 
 def alpha_over(dst, layer, y0):
@@ -266,6 +351,7 @@ def main():
     ap.add_argument("--to", dest="t_to", type=float, default=None)
     ap.add_argument("--label", default="")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--no-flower", action="store_true", help="flat ink ground instead of the letter-pattern flower")
     ap.add_argument("--frames", default=None, help="comma-separated audio times → PNG stills into --out dir")
     args = ap.parse_args()
 
@@ -281,7 +367,11 @@ def main():
     cues = [(s - args.t_from, e - args.t_from, b) for s, e, b in parse_vtt(vtt)]
 
     fonts = load_fonts()
-    base = static_layer(fonts, args.lang, args.label)
+    overlay = static_layer(fonts, args.lang, args.label)
+    ov_a = overlay[..., 3:4].astype(np.float32) / 255.0
+    ov_rgb = overlay[..., :3].astype(np.float32)
+    flower = None if args.no_flower else Flower(W, H)
+    flat_bg = np.full((H, W, 3), BG, np.uint8)
     orb = Orb(ORB_D)
     lv = levels(seg, sr, n_frames)
     lead_frames = int(round(LEAD * FPS))
@@ -292,7 +382,11 @@ def main():
         t = i / FPS                       # video time
         ta = t - LEAD                     # audio time
         level = lv[max(0, i - lead_frames)] if ta >= 0 else 0.0
-        frame = base.copy()
+        if flower is not None:
+            bgf = flower.frame(t) * 255.0
+            frame = (bgf * (1 - ov_a) + ov_rgb * ov_a + 0.5).astype(np.uint8)
+        else:
+            frame = flat_bg.copy(); alpha_over(frame, overlay, 0)
         o = orb.frame(t, level)
         region = frame[y0:y0 + ORB_D, x0:x0 + ORB_D].astype(np.float32) / 255.0
         frame[y0:y0 + ORB_D, x0:x0 + ORB_D] = ((o * orb.alpha + region * (1 - orb.alpha)) * 255 + 0.5).astype(np.uint8)
