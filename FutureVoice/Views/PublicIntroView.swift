@@ -11,6 +11,9 @@ import SwiftUI
 /// conversation, so publishing unlocks at a minimum length.
 struct PublicIntroView: View {
     @EnvironmentObject private var appState: AppState
+    /// Called after a publish or take-down; `PublicIntroPreviewSheet` uses it
+    /// to close itself once "Edit first" has ended in a decision.
+    var onDecided: (() -> Void)? = nil
 
     @State private var displayName = ""
     @State private var intro = ""
@@ -26,8 +29,8 @@ struct PublicIntroView: View {
     @State private var confirmingWithdraw = false
 
     /// A one-line hello can't carry a conversation — the pool only takes
-    /// intros dense enough to talk to.
-    private static let minIntroLength = 80
+    /// intros dense enough to talk to. The same bar the auto-mirror uses.
+    private static let minIntroLength = PublicPersonaService.minIntroLength
 
     private var trimmedIntro: String {
         intro.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -139,13 +142,17 @@ struct PublicIntroView: View {
             interests = mine.interests
             voicePresetId = mine.voice_preset_id
         } else {
-            // Draft seeds from the profile the user already gave onboarding —
-            // the intro itself stays theirs to write.
+            // Draft seeds from the profile the user already gave onboarding.
+            // The intro starts as the same paragraph the mirror would publish
+            // (work, town, situations, unlocked remembered lines) so "edit
+            // first" from the preview lands on the text they were just shown
+            // — it stays theirs to rewrite.
             displayName = appState.persona?.displayName ?? ""
             if let p = appState.persona {
                 location = [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", ")
                 occupation = p.occupation
                 interests = p.interests.joined(separator: ", ")
+                intro = PublicPersonaService.composedIntro(p)
             }
         }
     }
@@ -169,6 +176,7 @@ struct PublicIntroView: View {
                 publishedId = try? await PublicPersonaService.fetchMine(
                     language: appState.targetLanguage)?.id
             }
+            onDecided?()
         } catch {
             errorText = explain("Couldn't publish — check your connection and try again.")
         }
@@ -184,6 +192,7 @@ struct PublicIntroView: View {
             // auto-sync from quietly putting the row back next launch.
             UserDefaults.standard.set(true, forKey: PublicPersonaService.manualIntroKey)
             publishedId = nil
+            onDecided?()
         } catch {
             errorText = explain("Couldn't take it down — check your connection and try again.")
         }

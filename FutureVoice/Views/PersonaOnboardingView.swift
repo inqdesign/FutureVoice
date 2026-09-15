@@ -15,7 +15,8 @@ struct PersonaOnboardingView: View {
     @State private var situationsDraft: String = ""
     @State private var avatarPick: PhotosPickerItem?
 
-    init(initialPersona: UserPersona? = nil) {
+    init(initialPersona: UserPersona? = nil, startStep: Int = 0) {
+        _step = State(initialValue: startStep)
         var p = initialPersona ?? .empty
         // First-run only: seed the name from what Apple gave us at sign-in, so
         // the user isn't retyping something we already know. They can edit it.
@@ -174,14 +175,33 @@ struct PersonaOnboardingView: View {
     /// learner, and until 2026-09-03 the only remedy was to delete the whole
     /// line and hope the next call re-learned it right. A line emptied in
     /// place is dropped on save, so clearing is the same gesture as fixing.
+    ///
+    /// Each line also carries a lock (`PersonaNote.isPrivate`): the summary
+    /// call decides which lines a stranger could hear and the learner
+    /// overrules it here. A locked line never leaves the notebook; an
+    /// unlocked one may become part of the Find-people intro.
     @ViewBuilder
     private var rememberedSection: some View {
         if !persona.learnedNotes.isEmpty {
             Section {
                 ForEach($persona.learnedNotes) { $note in
-                    TextField("", text: $note.text, axis: .vertical)
-                        .font(.subheadline)
-                        .lineLimit(1...3)
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        TextField("", text: $note.text, axis: .vertical)
+                            .font(.subheadline)
+                            .lineLimit(1...3)
+                        Button {
+                            note.isPrivate.toggle()
+                        } label: {
+                            Image(systemName: note.isPrivate ? "lock.fill" : "lock.open")
+                                .font(.subheadline)
+                                .foregroundStyle(note.isPrivate ? Color.accentColor : Color.secondary)
+                                .frame(width: 24)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(note.isPrivate
+                                            ? explain("Private — only your fluent self knows this")
+                                            : explain("Shareable — may appear in your Find people intro"))
+                    }
                 }
                 .onDelete { offsets in
                     persona.learnedNotes.remove(atOffsets: offsets)
@@ -189,7 +209,7 @@ struct PersonaOnboardingView: View {
             } header: {
                 Text("What I've picked up")
             } footer: {
-                Text(explain("From your talks. Tap a line to fix what I misheard, or swipe to remove it."))
+                Text(explain("From your talks. Tap a line to fix what I misheard, or swipe to remove it. Locked lines stay between us; unlocked ones can go into your Find people intro."))
             }
         }
     }

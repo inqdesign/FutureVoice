@@ -370,11 +370,14 @@ enum SessionSummarizer {
         // `personaBlock`. Capped at 3 a session: this is a notebook, not a
         // transcript, and the model volunteers more than it should when a talk
         // ran long.
+        // Each line carries the model's verdict on whether a stranger may
+        // read it; the learner can overturn it in Me → Profile.
         let learned = payload.about_user
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty && $0.count <= 140 }
+            .map { ($0.text.trimmingCharacters(in: .whitespacesAndNewlines), $0.isPrivate) }
+            .filter { !$0.0.isEmpty && $0.0.count <= 140 }
             .prefix(3)
-            .map { PersonaNote(text: $0, sessionId: sessionId, learnedAt: Date()) }
+            .map { PersonaNote(text: $0.0, sessionId: sessionId, learnedAt: Date(),
+                               isPrivate: $0.1) }
         // A plain free talk is where the fluent self gets to know someone —
         // a scenario casts it as a barista and a Find-people call as a
         // stranger, and neither of those met the learner. Stamping this is

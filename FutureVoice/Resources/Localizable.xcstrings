@@ -3819,30 +3819,6 @@
     },
     "%lld out of 5" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5점 만점에 %lld점"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5点中%lld点"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5 分中 %lld 分"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5 分中 %lld 分"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -3853,6 +3829,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld sur 5"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5点中%lld点"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5점 만점에 %lld점"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 分中 %lld 分"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 分中 %lld 分"
           }
         }
       }
@@ -9710,30 +9710,6 @@
     },
     "Anything you want to say" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "하고 싶은 말"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "言いたいこと"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "想說的話"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "想说的话"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -9744,6 +9720,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ce que tu veux dire"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "言いたいこと"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "하고 싶은 말"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想说的话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "想說的話"
           }
         }
       }
@@ -19527,6 +19527,46 @@
         }
       }
     },
+    "Edit first" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar primero"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier d’abord"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先に編集する"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "먼저 고치기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先编辑"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先編輯"
+          }
+        }
+      }
+    },
     "Edit interests" : {
       "localizations" : {
         "de" : {
@@ -23816,6 +23856,7 @@
       }
     },
     "From your talks. Tap a line to fix what I misheard, or swipe to remove it." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -23851,6 +23892,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "從通話裡記下來的。聽錯的點一下修改，不要的滑動刪除。"
+          }
+        }
+      }
+    },
+    "From your talks. Tap a line to fix what I misheard, or swipe to remove it. Locked lines stay between us; unlocked ones can go into your Find people intro." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apuntado de tus llamadas. Toca una frase para corregir lo que escuché mal, o deslízala para quitarla. Las bloqueadas quedan entre nosotros; las desbloqueadas pueden ir a tu presentación de Buscar personas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noté depuis tes appels. Touche une phrase pour corriger ce que j’ai mal entendu, ou balaie pour la retirer. Les phrases verrouillées restent entre nous ; les autres peuvent aller dans ta présentation de Trouver des gens."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通話の内容から書き留めたものです。聞き間違いはタップして直し、いらなければスワイプで削除してください。ロックした行は二人だけの秘密、ロックを外した行は 人を探す の自己紹介に載ることがあります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화 내용에서 적어둔 거예요. 잘못 들은 건 눌러서 고치고, 아니면 밀어서 지우세요. 잠근 줄은 우리 둘만 알고, 푼 줄은 사람 찾기 소개에 들어갈 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从通话里记下来的。听错的点击修改，不要的滑动删除。锁住的只有我们知道，解锁的可能会放进「找人」的自我介绍。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從通話裡記下來的。聽錯的點一下修改，不要的滑動刪除。鎖住的只有我們知道，解鎖的可能會放進「找人」的自我介紹。"
           }
         }
       }
@@ -26644,30 +26725,6 @@
     },
     "How is it going so far?" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "좀 써보니 어때요?"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使ってみてどうですか？"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用起來感覺如何？"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用起来感觉如何？"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -26678,6 +26735,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ça se passe comment jusqu’ici ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使ってみてどうですか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "좀 써보니 어때요?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用起来感觉如何？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用起來感覺如何？"
           }
         }
       }
@@ -28850,30 +28931,6 @@
     },
     "Instagram DM" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "인스타그램 DM"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instagram DM"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instagram 私訊"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Instagram 私信"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -28884,6 +28941,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "DM Instagram"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instagram DM"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "인스타그램 DM"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instagram 私信"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instagram 私訊"
           }
         }
       }
@@ -33657,6 +33738,46 @@
         }
       }
     },
+    "Meet other learners" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conoce a otros estudiantes"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rencontrer d’autres apprenants"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかの学習者と出会う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 학습자 만나기"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认识其他学习者"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認識其他學習者"
+          }
+        }
+      }
+    },
     "Meet your fluent self" : {
       "localizations" : {
         "es" : {
@@ -38137,30 +38258,6 @@
     },
     "Not rated" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "별점 없음"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未評価"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未評分"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未评分"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -38171,6 +38268,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pas noté"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未評価"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "별점 없음"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未评分"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未評分"
           }
         }
       }
@@ -39438,30 +39559,6 @@
     },
     "One person builds this app, and reads every message. Tell me what's missing, what broke, or what you wish it did." : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 앱은 한 사람이 만들어요. 메시지는 전부 제가 읽어요. 없어서 아쉬운 것, 안 되는 것, 있었으면 하는 것 아무거나 알려주세요."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このアプリは一人で作っています。メッセージはすべて読んでいます。足りないもの、うまくいかないもの、あったらいいなと思うもの、何でも教えてください。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "這個 App 是一個人做的，每一則訊息我都會看。缺了什麼、哪裡壞了、你希望它能做什麼，都跟我說。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这个 App 是一个人做的，每一条消息我都会看。缺了什么、哪里坏了、你希望它能做什么，都告诉我。"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -39472,6 +39569,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Une seule personne fait cette app, et lit chaque message. Dis-moi ce qui manque, ce qui ne marche pas, ou ce que tu aimerais qu’elle fasse."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアプリは一人で作っています。メッセージはすべて読んでいます。足りないもの、うまくいかないもの、あったらいいなと思うもの、何でも教えてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 앱은 한 사람이 만들어요. 메시지는 전부 제가 읽어요. 없어서 아쉬운 것, 안 되는 것, 있었으면 하는 것 아무거나 알려주세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这个 App 是一个人做的，每一条消息我都会看。缺了什么、哪里坏了、你希望它能做什么，都告诉我。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這個 App 是一個人做的，每一則訊息我都會看。缺了什麼、哪裡壞了、你希望它能做什麼，都跟我說。"
           }
         }
       }
@@ -40490,6 +40611,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自己寫"
+          }
+        }
+      }
+    },
+    "Other %@ learners could practice with an AI playing this, in a stock voice — never yours. Their talks never reach you. Locked lines from your talks are never included." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otros estudiantes de %@ podrían practicar con una IA que interpreta esto, con una voz estándar, nunca la tuya. Sus conversaciones nunca te llegan. Las frases bloqueadas de tus llamadas nunca se incluyen."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "D’autres apprenants de %@ pourraient s’entraîner avec une IA qui joue ce texte, avec une voix standard, jamais la tienne. Leurs conversations ne te parviennent jamais. Les phrases verrouillées de tes appels ne sont jamais incluses."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかの%@学習者が、この紹介文を演じるAIと練習できます。声は標準ボイスで、自分の声は使われません。相手の会話がこちらに届くことはありません。トークでロックした行は含まれません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 %@ 학습자가 이 소개를 연기하는 AI와 연습할 수 있어요. 목소리는 기본 음성이고, 내 목소리는 절대 쓰이지 않아요. 그 사람들의 대화는 나에게 오지 않아요. 통화에서 잠근 줄은 절대 들어가지 않아요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他%@学习者可以和扮演这段介绍的 AI 练习，用的是内置语音，绝不会用你的声音。他们的对话不会传到你这里。你在通话中锁住的内容绝不会被放进去。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他%@學習者可以和扮演這段介紹的 AI 練習，用的是內建語音，絕不會用你的聲音。他們的對話不會傳到你這裡。你在通話中鎖住的內容絕不會被放進去。"
           }
         }
       }
@@ -43131,6 +43292,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "隱私權政策"
+          }
+        }
+      }
+    },
+    "Private — only your fluent self knows this" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privado: solo lo sabe tu yo fluido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privé : seul ton moi fluide le sait"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "非公開・流暢な自分だけが知っています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "비공개 — 유창해진 나만 아는 내용"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私密：只有流利的自己知道"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "私密：只有流利的自己知道"
           }
         }
       }
@@ -48963,30 +49164,6 @@
     },
     "Say hello" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "만든 사람에게"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作った人へ"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟開發者打聲招呼"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跟开发者打声招呼"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -48997,6 +49174,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dis bonjour"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作った人へ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "만든 사람에게"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟开发者打声招呼"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟開發者打聲招呼"
           }
         }
       }
@@ -51294,6 +51495,46 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分享邀請"
+          }
+        }
+      }
+    },
+    "Shareable — may appear in your Find people intro" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartible: puede aparecer en tu presentación de Buscar personas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partageable : peut apparaître dans ta présentation de Trouver des gens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開可・人を探す の自己紹介に載ることがあります"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공개 가능 — 사람 찾기 소개에 들어갈 수 있어요"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可公开：可能出现在「找人」的自我介绍里"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可公開：可能出現在「找人」的自我介紹裡"
           }
         }
       }
@@ -55936,30 +56177,6 @@
     },
     "Talking to your future self" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "미래의 나와 통화"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未来の自分との通話"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "和未來的自己通話"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "和未来的自己通话"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -55970,6 +56187,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Parler à ton futur moi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未来の自分との通話"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "미래의 나와 통화"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "和未来的自己通话"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "和未來的自己通話"
           }
         }
       }
@@ -57208,10 +57449,16 @@
     },
     "Telegram" : {
       "localizations" : {
-        "ko" : {
+        "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "텔레그램"
+            "value" : "Telegram"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Telegram"
           }
         },
         "ja" : {
@@ -57220,10 +57467,10 @@
             "value" : "Telegram"
           }
         },
-        "zh-Hant" : {
+        "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Telegram"
+            "value" : "텔레그램"
           }
         },
         "zh-Hans" : {
@@ -57232,13 +57479,7 @@
             "value" : "Telegram"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Telegram"
-          }
-        },
-        "fr" : {
+        "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Telegram"
@@ -57982,30 +58223,6 @@
     },
     "The app overall" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱 전반"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリ全体"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "整體 App"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App 整体"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -58016,6 +58233,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "L’app dans l’ensemble"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ全体"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 전반"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 整体"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整體 App"
           }
         }
       }
@@ -66133,6 +66374,46 @@
         }
       }
     },
+    "What they'd hear" : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lo que oirían"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce qu’ils entendraient"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "相手に聞こえる内容"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 사람에게 들리는 나"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他们会听到的内容"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他們會聽到的內容"
+          }
+        }
+      }
+    },
     "What to practice" : {
       "localizations" : {
         "de" : {
@@ -69956,6 +70237,46 @@
         }
       }
     },
+    "You can change or take this down any time in Me → Find people." : {
+      "localizations" : {
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Puedes cambiarlo o retirarlo cuando quieras en Mi perfil → Buscar personas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tu peux le modifier ou le retirer à tout moment dans Mon profil → Trouver des gens."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "いつでも マイページ → 人を探す で変更や取り下げができます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "언제든 나 → 사람 찾기에서 고치거나 내릴 수 있어요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "随时可以在「我的 → 找人」修改或下架。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隨時可以在「我的 → 找人」修改或下架。"
+          }
+        }
+      }
+    },
     "You can start — go ahead" : {},
     "You can't use your own code." : {
       "localizations" : {
@@ -71765,30 +72086,6 @@
     },
     "You've been back for another call. Two quick questions, and anything you want to say." : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 돌아와서 또 통화하셨네요. 짧게 두 가지만, 그리고 하고 싶은 말 아무거나요."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "また戻ってきて話してくれましたね。短い質問が二つと、言いたいことがあれば何でも。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你又回來通話了。想問兩個小問題，還有任何你想說的話。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你又回来通话了。想问两个小问题，还有任何你想说的话。"
-          }
-        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
@@ -71799,6 +72096,30 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tu es revenu pour un autre appel. Deux questions rapides, et tout ce que tu veux dire."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "また戻ってきて話してくれましたね。短い質問が二つと、言いたいことがあれば何でも。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 돌아와서 또 통화하셨네요. 짧게 두 가지만, 그리고 하고 싶은 말 아무거나요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你又回来通话了。想问两个小问题，还有任何你想说的话。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你又回來通話了。想問兩個小問題，還有任何你想說的話。"
           }
         }
       }

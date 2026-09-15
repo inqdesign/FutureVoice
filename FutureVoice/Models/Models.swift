@@ -581,6 +581,38 @@ struct PersonaNote: Codable, Identifiable, Hashable {
     /// The talk it came out of — provenance, so a note is never orphaned.
     var sessionId: UUID?
     var learnedAt: Date
+    /// Whether this stays between the learner and their fluent self. A
+    /// private line still rides into every conversation prompt (that is what
+    /// the notebook is for) but can never reach the Find-people intro or any
+    /// other surface a stranger reads. The summary call classifies each
+    /// line; the learner can flip it in Me → Profile. DEFAULTS TO TRUE —
+    /// a note nobody has judged is hidden, never shown.
+    var isPrivate: Bool = true
+
+    private enum CodingKeys: String, CodingKey {
+        case id, text, sessionId, learnedAt, isPrivate
+    }
+
+    init(id: UUID = UUID(), text: String, sessionId: UUID? = nil, learnedAt: Date,
+         isPrivate: Bool = true) {
+        self.id = id
+        self.text = text
+        self.sessionId = sessionId
+        self.learnedAt = learnedAt
+        self.isPrivate = isPrivate
+    }
+
+    /// Lenient on `isPrivate`: every note written before the field existed
+    /// has no key, and a throw here would empty `learnedNotes` wholesale
+    /// through `UserPersona`'s own lenient decoder. Missing means private.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
+        text = try c.decode(String.self, forKey: .text)
+        sessionId = try? c.decodeIfPresent(UUID.self, forKey: .sessionId)
+        learnedAt = (try? c.decodeIfPresent(Date.self, forKey: .learnedAt)) ?? Date()
+        isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? true
+    }
 
     /// Comparison form for "do we already know this?" — the model rewrites
     /// the same fact with different punctuation and spacing every session.
@@ -633,6 +665,10 @@ extension UserPersona {
         out.append(contentsOf: learnedNotes.map(\.text))
         return out
     }
+
+    /// The remembered lines the learner has let out of the notebook — the
+    /// only ones any stranger-facing surface may read.
+    var publicNotes: [PersonaNote] { learnedNotes.filter { !$0.isPrivate } }
 
     /// Append what a talk taught, dropping anything already on file. Newest
     /// last; the oldest fall off past `limit` so the conversation prompt this

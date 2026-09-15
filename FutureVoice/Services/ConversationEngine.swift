@@ -558,7 +558,7 @@ enum ConversationEngine {
             "top_line":       "one-sentence holistic read of the session",
             "cefr_level":     "a1|a2|b1|b2|c1|c2"
           },
-          "about_user": ["...", "..."]
+          "about_user": [ { "text": "...", "private": true } ]
         }
 
         OUTPUT LANGUAGE, FIELD BY FIELD (applies the contract above):
@@ -569,7 +569,7 @@ enum ConversationEngine {
           grammar_errors.quote, grammar_errors.correction.
         - \(nativeName) — the learner reads these to
           understand what happened: phrases_used.reason, grammar_errors.note,
-          overall_note, scorecard.*.note, scorecard.top_line, about_user.
+          overall_note, scorecard.*.note, scorecard.top_line, about_user.text.
         - English regardless — these two are never shown to the learner, they
           are re-injected into the next conversation's prompt and must stay
           machine-readable: weak_vocab_areas, new_patterns_detected.context.
@@ -702,6 +702,13 @@ enum ConversationEngine {
             is not worth a line. Empty array is the normal answer for a talk
             where they said nothing about themselves — and an empty array is
             always better than an invented fact.
+          - `private`: would they tell this to a STRANGER at a language school
+            on the first day? `false` only for name-tag facts — what they do
+            in general, their town, a hobby, what they're learning the
+            language for. `true` for everything else: family, partner, kids,
+            health, money, an exact address or employer, anything going wrong
+            at work or at home, anything said with hesitation. When in doubt,
+            `true` — a private line only ever stays between you two.
           - This field is LAST on purpose: everything above it is the review
             material and must be written first.
         - Tone: warm, never condescending.
@@ -1140,9 +1147,35 @@ struct ClaudeSummaryPayload: Decodable {
     let grammar_errors: [GrammarError]?
     let overall_note: String
     let scorecard: Scorecard?
+    /// One remembered line. Decodes the CURRENT shape (`{text, private}`)
+    /// and the shape the schema had before 2026-09-15 (a bare string), because
+    /// a model that ignores the new schema line still returns strings — and a
+    /// line whose privacy was never judged is PRIVATE, not dropped.
+    struct AboutUser: Decodable {
+        let text: String
+        let isPrivate: Bool
+
+        private enum CodingKeys: String, CodingKey {
+            case text
+            case isPrivate = "private"
+        }
+
+        init(from decoder: Decoder) throws {
+            if let single = try? decoder.singleValueContainer(),
+               let s = try? single.decode(String.self) {
+                text = s
+                isPrivate = true
+                return
+            }
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            text = try c.decode(String.self, forKey: .text)
+            isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? true
+        }
+    }
+
     /// What the talk taught the fluent self about the person — folded into
     /// `UserPersona.learnedNotes`, never into the review material.
-    let about_user: [String]
+    let about_user: [AboutUser]
 
     private enum CodingKeys: String, CodingKey {
         case title, phrases_used, new_patterns_detected, suggested_drills
@@ -1166,7 +1199,7 @@ struct ClaudeSummaryPayload: Decodable {
         // it forgot can't be invented, and a made-up 0 would read as a bad
         // score rather than a missing one.
         scorecard = try? c.decodeIfPresent(Scorecard.self, forKey: .scorecard)
-        about_user = Self.lossyArray(String.self, in: c, forKey: .about_user)
+        about_user = Self.lossyArray(AboutUser.self, in: c, forKey: .about_user)
     }
 
     /// Decodes an array element by element, skipping the ones that don't fit.

@@ -90,6 +90,33 @@ enum DebugCapture {
         .init(title: "a mix-up with someone's name", blurb: "At a cafe: they called the wrong name for my drink and I sort it out."),
     ]
 
+    /// A profile with both halves filled: the typed fields and three lines
+    /// the fluent self picked up, classified the way the summary call would.
+    private static func seedSamplePersona(_ appState: AppState) {
+        var p = UserPersona.empty
+        p.displayName = "Eunggyu"
+        p.city = "Munich"
+        p.country = "Germany"
+        p.lengthOfStay = "3 years"
+        p.occupation = "Solo founder of an AI app for language learners"
+        p.household = "Wife and 4yo daughter at Kita"
+        p.interests = ["AI / tech", "parenting", "language learning"]
+        p.situations = ["Kita / school", "Client calls", "Daily small talk"]
+        p.freeNotes = "Thinking about moving back next year."
+        p.metAt = Calendar.current.date(byAdding: .day, value: -20, to: Date())
+        let day: TimeInterval = 86_400
+        p.learnedNotes = [
+            PersonaNote(text: "매주 토요일 아침 이자르 강변에서 달린다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-9 * day), isPrivate: false),
+            PersonaNote(text: "딸이 Kita 적응을 힘들어해서 요즘 걱정이 많다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-5 * day), isPrivate: true),
+            PersonaNote(text: "투자자 미팅이 잘 안 풀려서 자금 압박이 있다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-2 * day), isPrivate: true),
+        ]
+        PersonaStore.shared.save(p)
+        appState.persona = p
+    }
+
     /// Idempotent per name — the resolver may evaluate more than once.
     private static func once(_ name: String, _ work: () -> Void) {
         guard !seeded.contains(name) else { return }
@@ -286,6 +313,17 @@ enum DebugCapture {
         case "watchtab":
             // The Watch tab with the merged People entry in its header.
             return AnyView(WatchTab().environmentObject(appState))
+        case "intro-preview":
+            // The mirrored Find-people intro, seen before anything is
+            // published: work · town · situations · the unlocked lines only.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PublicIntroPreviewSheet().environmentObject(appState))
+        case "profile-notes":
+            // Me → Profile, "Your life" step: the remembered lines with their
+            // locks — two private, one the summary call let out.
+            once("sample-persona") { seedSamplePersona(appState) }
+            return AnyView(PersonaOnboardingView(initialPersona: appState.persona, startStep: 1)
+                .environmentObject(appState))
         case "people":
             // The ONE people page: own people on top, the shared pool below.
             return AnyView(FindPeopleSheet(onNew: {}, onTalk: { _ in }, onWatch: { _ in },

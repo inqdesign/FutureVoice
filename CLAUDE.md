@@ -25,7 +25,7 @@ top, and below them strangers you can practice with, like meeting someone at
 a language school. Rows come from the Supabase table `public_personas`, read anonymously, written only by their owner (RLS).
 
 - A row is either **curated** (`owner_user_id` null — seeded by migration, deliberately diverse in job/place/register) or a **real user's** self-introduction. Same pool, same shape; the pool self-mixes as users join.
-- The user's own row is auto-published from their onboarding `UserPersona` at app start (`PublicPersonaService.autoSyncMyPersona`) so existing users appear without doing anything. Editing or taking it down by hand in Me → Find people sets `manualIntroKey`, after which auto-sync never touches that row again — an explicit choice always wins. Your own row is filtered out of your own pool.
+- The user's own row is a MIRROR of their onboarding `UserPersona` (`PublicPersonaService.autoSyncMyPersona`) — but **nothing is published until they have seen the paragraph once** (2026-09-15, `PublicIntroPreviewSheet`, raised on the Watch tab via `needsIntroDecision`). Until then the profile was written for the fluent self, not for strangers, and it went out on first launch with "wife and 4yo daughter at Kita" in it and the author never saw the text. Three exits: **Publish** sets `autoApprovedKey` and the mirror follows profile edits from then on; **Edit first** lands in `PublicIntroView` seeded with the same paragraph (publishing there sets `manualIntroKey`, as before); **Not now** sets `manualIntroKey` and withdraws any row an older build put up unasked. While undecided, an existing unconsented row is rewritten to the current composition (`trimUnapprovedRow`) — never inserted, never left carrying the old lines. `composedIntro` reads **occupation · city+stay · situations · unlocked remembered lines** and deliberately NOT `household` or `freeNotes`. Your own row is filtered out of your own pool.
 - A remote persona materializes as a normal `Counterpart` with `remoteId` set (`asCounterpart`). `remoteId != nil` is what keeps strangers OUT of the Watch stories row and the People sheet — they live in the Find sheet's "People you've met" instead, so the row never crowds out people you actually know.
 - **The pool section is named "Strangers" and shows EVERYONE unmet**
   (2026-08-31, was "People today", six a day on a daily seed): that they're
@@ -226,6 +226,7 @@ talk is spent meeting them, and what it hears is written down.
   order above it is load-bearing for `SessionSummarizer.Progress.absorb`;
   appending is safe, inserting is not. Being last also means a response cut off
   at the token ceiling loses this and nothing else.
+- **Every remembered line carries a lock** (`PersonaNote.isPrivate`, 2026-09-15). The summary call returns `about_user` as `{text, private}` — private is "would they tell a stranger on day one at a language school?", and the default in every fallback (old string shape, missing key, note on disk from before the field) is PRIVATE: a line nobody judged is hidden, never shown. Private lines still ride into every conversation prompt — that is what the notebook is for — but `UserPersona.publicNotes` is the ONLY set any stranger-facing surface may read (`composedIntro`). The learner flips the lock per line in Me → Profile.
 - **`rememberAboutUser` is not `savePersona`** — it must not wipe topic
   suggestions or re-sync the public intro on every talk end, and these lines
   must never reach the Find-people pool: `composedIntro` reads only fields the
@@ -403,6 +404,32 @@ cleanup to `DrillStore` — the store grows, and the exit is the learner
 pressing Got it. The two deliberate exceptions stay what they are: deleting
 the talk deletes its cards, and flagging a turn as misheard deletes the
 cards minted from it.
+
+**A talk book is finished when its CHAPTERS are** (2026-09-15).
+`TalkCurriculum.Snapshot` counted two things — pickup words and the
+turn-suggestion corrections — while the book page offered four chapters:
+Words, Expressions, Shadow, Drill. So the Shadow chapter, the Expressions
+chapter and every correction the SUMMARY produced (`phrasesUsed`, which is
+most of them on many talks) counted for nothing, and a book reached 100%,
+left Studying and landed on the finished shelf with the learner having
+shadowed nothing and cleared no card. The chapter tabs said it out loud:
+only Words carried a `done/total`. The snapshot is now one array per chapter
+(`words` · `expressions` · `shadowLines` · `corrections`) and every one of
+them counts — **anything the page asks for has to be in the snapshot**, or
+the cover is measuring a different book from the one being read. Three
+things that follow: the old `shadowLines` (corrections) is now `corrections`
+and `shadowLineId` is `correctionId`, while `shadowLines` means the Shadow
+chapter's fluent-self lines (`shadowPicks`, so page and count can't ask for
+different things); the pages render the snapshot rather than building their
+own filtered lists, because the Expressions page dropped a phrase once it
+was known and a chapter that empties as you learn can never read as finished
+(the same trap `pickupCandidates` avoids for words); and mastery keeps each
+chapter's own rule — a word through `VocabStore`, an expression through the
+expression pool, a shadow line only by a take at or above the bar, a
+correction by its card reaching the top box. Books already showing as
+finished go back to in progress, which is the truth: mastery is computed,
+never stored. Watch books were always consistent this way — `ScenarioCurriculum`
+holds exactly the three chapters `ScenarioDetailView` shows.
 
 **A call's expressions come from BOTH mouths** (`expressions_offered`, 2026-08-19). `expressions_used` is what the learner said, verified verbatim against their own turns — that is EVIDENCE. For a long time it was the only expression a talk produced, so the whole class of "the fluent self said something good and I want it" was dropped: the only survivors were single lemmas (`TalkCurriculum.pickupCandidates`, which needs the word to be in `CoreVocabulary` at or above the learner's level, so phrasal verbs built from A1 words — `push back`, `end up -ing` — were filtered out by construction) and four shadow lines. The reusable chunk in between, which is the unit people actually learn, had no home. The summary call now also returns `expressions_offered` — up to 6 reusable phrases the FLUENT SELF used and the learner didn't — in the SAME call (no new request, no new spend), verified against the fluent-self turns and de-duped against `expressions_used` and against the learner's own words. It is MATERIAL, so it lives on `SessionSummary` and is merged at read time by `ExpressionCatalog` as `Origin.heard`, exactly as scene expressions are: never copied into `VocabStore`, whose rows count times SAID and would have to lie about a phrase nobody has spoken yet. Everything downstream is that merge — the Expressions library, the Practice tile, the talk book's Expressions chapter (offered above used), the book export, and the daily deck, which deals heard-in-a-call BEFORE said-it because a deck exists to teach what you can't say yet. The verbatim check is cheaper on this side than on the other: fluent-self text is model-written, so no transcriber sits between the phrase and the check.
 

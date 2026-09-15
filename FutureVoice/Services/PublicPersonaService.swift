@@ -220,54 +220,123 @@ enum PublicPersonaService {
     // MARK: - Auto-publish (current users appear without lifting a finger)
 
     /// Set once the user has taken control of their public intro by hand —
-    /// published or taken it down in Me → Find people. From then on the
-    /// auto-sync below never touches their row again: an explicit choice
-    /// always beats the automatic one.
+    /// published, edited or taken it down in Me → Find people, or said "not
+    /// now" to the preview. From then on the auto-sync below never touches
+    /// their row again: an explicit choice always beats the automatic one.
     static let manualIntroKey = "futurevoice.publicIntroManaged"
 
-    /// Mirror the onboarding profile into the pool so EXISTING users show up
-    /// in Find people without doing anything. Runs fire-and-forget at app
-    /// start; skips when the user manages their intro manually, when the
-    /// persona is too thin to carry a conversation, or when signed out.
-    /// Re-running keeps the row in step with persona edits.
-    static func autoSyncMyPersona(_ persona: UserPersona?, language: String) async {
-        guard !UserDefaults.standard.bool(forKey: manualIntroKey),
-              let p = persona, p.isMinimallyComplete else { return }
-        let intro = composedIntro(p)
-        // 80 because the DATABASE says 80: `public_personas_intro_bounds`
-        // rejects any row with `is_active = true` under it, and publishMine
-        // always writes true. A lower bar here doesn't publish thinner rows —
-        // it fires an insert that can only ever fail, on every launch and
-        // every profile save, for anyone whose composed intro lands in
-        // between.
-        guard intro.count >= 80 else { return }
-        guard let uid = try? await SupabaseProvider.shared.auth.session.user.id else { return }
-        // Stable per-user voice pick so "you" doesn't change voices between
-        // launches — hash the user id into the preset catalog.
-        let voice = VoicePreset.catalog[abs(uid.uuidString.hashValue) % VoicePreset.catalog.count]
-        try? await publishMine(
-            displayName: p.displayName,
-            intro: intro,
-            location: [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", "),
-            occupation: p.occupation,
-            interests: p.interests.joined(separator: ", "),
-            voicePresetId: voice.id,
-            language: language)
+    /// Set when the user looked at the mirrored intro (`PublicIntroPreviewSheet`)
+    /// and said yes. Until then NOTHING is published on their behalf: the
+    /// onboarding profile was written for their own fluent self, not for
+    /// strangers, and a row nobody agreed to is the one thing this pool must
+    /// never hold. Once set, the mirror keeps following profile edits.
+    static let autoApprovedKey = "futurevoice.publicIntroAutoApproved"
+
+    /// Whether the mirrored intro still needs the learner's yes or no —
+    /// the trigger for `PublicIntroPreviewSheet`. False once they decided
+    /// either way, and false while the profile is too thin to publish (there
+    /// is nothing to show them yet).
+    static func needsIntroDecision(_ persona: UserPersona?) -> Bool {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: manualIntroKey), !d.bool(forKey: autoApprovedKey),
+              let p = persona, p.isMinimallyComplete else { return false }
+        return composedIntro(p).count >= minIntroLength
     }
 
-    /// The onboarding profile, folded into one spoken-style paragraph. The
-    /// user wrote these fields in their own words (often their native
-    /// language) — the conversation prompt's language guard keeps the talk
-    /// in the target language regardless.
-    private static func composedIntro(_ p: UserPersona) -> String {
+    /// 80 because the DATABASE says 80: `public_personas_intro_bounds`
+    /// rejects any row with `is_active = true` under it, and publishMine
+    /// always writes true. A lower bar here doesn't publish thinner rows —
+    /// it fires an insert that can only ever fail, on every launch and
+    /// every profile save, for anyone whose composed intro lands in
+    /// between.
+    static let minIntroLength = 80
+
+    /// Mirror the onboarding profile into the pool so EXISTING users show up
+    /// in Find people without doing anything more than saying yes once.
+    /// Runs fire-and-forget at app start and on every profile save; skips
+    /// when the user manages their intro manually, when the persona is too
+    /// thin to carry a conversation, or when signed out. Re-running keeps
+    /// the row in step with persona edits.
+    ///
+    /// Before the learner has approved the mirror it publishes NOTHING —
+    /// but a row published by an earlier build (which asked nobody) is
+    /// rewritten to the current composition, so the family and free-note
+    /// lines that build copied out stop being spoken by strangers' phones
+    /// today, not when the learner next opens the preview.
+    static func autoSyncMyPersona(_ persona: UserPersona?, language: String) async {
+        let d = UserDefaults.standard
+        guard !d.bool(forKey: manualIntroKey), let p = persona, p.isMinimallyComplete else { return }
+        guard d.bool(forKey: autoApprovedKey) else {
+            await trimUnapprovedRow(p, language: language)
+            return
+        }
+        await publishMirror(p, language: language)
+    }
+
+    /// Publish the composed profile as the user's row. The voice is a stable
+    /// per-user pick so "you" doesn't change voices between launches — the
+    /// user id hashed into the preset catalog.
+    @discardableResult
+    static func publishMirror(_ p: UserPersona, language: String) async -> Bool {
+        let intro = composedIntro(p)
+        guard intro.count >= minIntroLength else { return false }
+        guard let uid = try? await SupabaseProvider.shared.auth.session.user.id else { return false }
+        let voice = VoicePreset.catalog[abs(uid.uuidString.hashValue) % VoicePreset.catalog.count]
+        do {
+            try await publishMine(
+                displayName: p.displayName,
+                intro: intro,
+                location: [p.city, p.country].filter { !$0.isEmpty }.joined(separator: ", "),
+                occupation: p.occupation,
+                interests: p.interests.joined(separator: ", "),
+                voicePresetId: voice.id,
+                language: language)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// A row the old auto-sync put up without asking: rewrite its intro to
+    /// what the current composition allows, or take it down when that is too
+    /// thin to stand. Never inserts — a learner who has no row yet gets one
+    /// only through the preview's yes.
+    private static func trimUnapprovedRow(_ p: UserPersona, language: String) async {
+        guard let existing = try? await fetchMine(language: language) else { return }
+        let intro = composedIntro(p)
+        if intro == existing.intro { return }
+        if intro.count >= minIntroLength {
+            struct Patch: Encodable { let intro: String }
+            _ = try? await SupabaseProvider.shared
+                .from("public_personas")
+                .update(Patch(intro: intro))
+                .eq("id", value: existing.id)
+                .execute()
+        } else {
+            try? await withdrawMine(language: language)
+        }
+    }
+
+    /// The onboarding profile, folded into one spoken-style paragraph — what
+    /// a stranger's phone will speak as "you". The user wrote these fields in
+    /// their own words (often their native language); the conversation
+    /// prompt's language guard keeps the talk in the target language
+    /// regardless.
+    ///
+    /// Only what a person would say on the first day at a language school:
+    /// work, town, what they need the language for, and the remembered lines
+    /// they have unlocked. `household` and `freeNotes` are deliberately NOT
+    /// here — they were written for the fluent self, and until 2026-09-15
+    /// "wife and 4yo daughter at Kita" went out to every learner in the pool
+    /// without the author ever seeing the paragraph it was in.
+    static func composedIntro(_ p: UserPersona) -> String {
         var parts: [String] = []
         if !p.occupation.isEmpty { parts.append(p.occupation) }
-        if !p.household.isEmpty { parts.append(p.household) }
         if !p.lengthOfStay.isEmpty, !p.city.isEmpty {
             parts.append("\(p.city) · \(p.lengthOfStay)")
         }
         if !p.situations.isEmpty { parts.append(p.situations.joined(separator: ", ")) }
-        if !p.freeNotes.isEmpty { parts.append(p.freeNotes) }
+        parts.append(contentsOf: p.publicNotes.map(\.text))
         return parts.joined(separator: "\n")
     }
 

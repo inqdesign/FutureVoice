@@ -42,6 +42,9 @@ struct RootTabView: View {
     @ObservedObject private var callInbox = DailyCallInbox.shared
     @ObservedObject private var referralInbox = ReferralInbox.shared
     @ObservedObject private var updates = AppUpdateService.shared
+    /// The one look at the mirrored Find-people intro before it is published
+    /// — raised on the Watch tab, where the pool is met.
+    @State private var showingIntroPreview = false
 
     enum Tab: Hashable {
         case home, watch, practice, progress
@@ -166,6 +169,14 @@ struct RootTabView: View {
         // Feature usage: which tab the user is on.
         .onChange(of: selection) { _, tab in
             Analytics.capture("screen_viewed", ["screen": Self.screenName(tab)])
+            // Nothing about this learner reaches the pool until they have
+            // seen the paragraph a stranger's phone would speak as "them".
+            if tab == .watch, PublicPersonaService.needsIntroDecision(appState.persona) {
+                showingIntroPreview = true
+            }
+        }
+        .sheet(isPresented: $showingIntroPreview) {
+            PublicIntroPreviewSheet().environmentObject(appState)
         }
         // Free Talk widget tap while the app is already up — and in-app jumps
         // ("Start a talk" on a Progress tip), which can be staged from any tab,
