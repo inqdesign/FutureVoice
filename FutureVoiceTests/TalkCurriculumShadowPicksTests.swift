@@ -78,3 +78,81 @@ final class TalkCurriculumShadowPicksTests: XCTestCase {
         XCTAssertFalse(picks.contains { $0.id == farewell.id })
     }
 }
+
+/// The book's cover measured two chapters while the page offered four, so a
+/// talk finished itself the moment its words were ticked — shadowing
+/// untouched, cards uncleared. Every chapter counts now.
+@MainActor
+final class TalkCurriculumCompletionTests: XCTestCase {
+
+    private func turn(_ text: String, role: TurnRole = .fluentSelf,
+                      suggestion: TurnSuggestion? = nil) -> Turn {
+        Turn(id: UUID(), role: role, audioURL: nil, transcript: text,
+             durationMs: 0, timestamp: Date(), suggestion: suggestion)
+    }
+
+    private func session(_ turns: [Turn], summary: SessionSummary?) -> Session {
+        Session(id: UUID(), userId: UUID(), targetLanguage: "en",
+                mode: .conversation, topic: "Coffee chat",
+                startedAt: Date().addingTimeInterval(-300),
+                endedAt: Date(), turns: turns, summary: summary)
+    }
+
+    /// A talk whose corrections came from the SUMMARY (no turn suggestion at
+    /// all) used to contribute nothing: `totalCount` was the word list, and
+    /// the book was "mastered" with its Drill and Shadow chapters untouched.
+    func testSummaryCorrectionsAndShadowLinesCountTowardTheBook() {
+        let summary = SessionSummary(
+            phrasesUsed: [PhraseFeedback(userSaid: "I go bank yesterday",
+                                         fluentAlternative: "I went to the bank yesterday",
+                                         reason: "past tense")],
+            newPatternsDetected: [], suggestedDrills: [], overallNote: "",
+            scorecard: nil,
+            expressionsOffered: ["end up doing"])
+        let s = session([
+            turn("Hello there so good to see you again!"),
+            turn("You could push back on the deadline and end up doing it next week."),
+            turn("I went to the bank yesterday", role: .user),
+            turn("Bye for now have a lovely evening!")
+        ], summary: summary)
+
+        let snap = TalkCurriculum.build(session: s, proficiency: .b1,
+                                        shadowAttempts: [], drillCards: [])
+
+        XCTAssertEqual(snap.corrections.count, 1, "the summary's correction is a chapter item")
+        XCTAssertFalse(snap.shadowLines.isEmpty, "the Shadow chapter counts too")
+        XCTAssertFalse(snap.expressions.isEmpty, "so does the Expressions chapter")
+        XCTAssertEqual(snap.totalCount,
+                       snap.words.count + snap.expressions.count
+                           + snap.shadowLines.count + snap.corrections.count)
+        // Nothing has been shadowed and no card cleared, so the book is open
+        // however many words happen to be ticked already.
+        XCTAssertFalse(snap.isMastered)
+        XCTAssertNil(snap.corrections.first?.masteredAt)
+        XCTAssertNil(snap.shadowLines.first?.masteredAt)
+    }
+
+    /// The correction's card graduating is what finishes it — the Drill
+    /// chapter studies corrections as cards, never as shadowing.
+    func testAGraduatedCardMastersItsCorrection() {
+        let summary = SessionSummary(
+            phrasesUsed: [PhraseFeedback(userSaid: "I go bank yesterday",
+                                         fluentAlternative: "I went to the bank yesterday",
+                                         reason: "past tense")],
+            newPatternsDetected: [], suggestedDrills: [], overallNote: "", scorecard: nil)
+        let s = session([turn("I went to the bank yesterday", role: .user)], summary: summary)
+        let card = DrillCard(sourcePhrase: "I go bank yesterday",
+                             targetPhrase: "I went to the bank yesterday",
+                             reason: "past tense", createdAt: Date(),
+                             lastReviewedAt: Date(), nextReviewAt: Date(),
+                             box: DrillStore.maxBox, sourceSessionId: s.id)
+
+        let open = TalkCurriculum.build(session: s, proficiency: .b1,
+                                        shadowAttempts: [], drillCards: [])
+        XCTAssertNil(open.corrections.first?.masteredAt)
+
+        let done = TalkCurriculum.build(session: s, proficiency: .b1,
+                                        shadowAttempts: [], drillCards: [card])
+        XCTAssertNotNil(done.corrections.first?.masteredAt)
+    }
+}

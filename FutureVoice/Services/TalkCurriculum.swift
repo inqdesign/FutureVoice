@@ -23,22 +23,35 @@ enum TalkCurriculum {
 
     /// A computed curriculum snapshot. Mirrors `ScenarioCurriculum`'s counts
     /// so book cards can render either interchangeably.
+    /// ONE ITEM PER PIECE OF WORK THE BOOK ASKS FOR — the four arrays are the
+    /// book's four study chapters, in page order.
+    ///
+    /// It used to be two (words + the turn-suggestion corrections), while the
+    /// page offered four: the Expressions chapter, the Shadow chapter and
+    /// every correction the SUMMARY produced counted for nothing. So a talk
+    /// finished itself the moment its words were ticked — the learner had
+    /// shadowed nothing and cleared no cards, and the book still moved to the
+    /// finished shelf. A book is mastered when the learner has done what the
+    /// book asks; anything the page asks for has to be in here.
     struct Snapshot {
         var words: [ScenarioCurriculum.Item] = []
+        var expressions: [ScenarioCurriculum.Item] = []
+        /// The fluent self's lines to say back — the Shadow chapter.
         var shadowLines: [ScenarioCurriculum.Item] = []
+        /// The talk's corrections — the Drill chapter, studied as cards.
+        var corrections: [ScenarioCurriculum.Item] = []
 
-        var totalCount: Int { words.count + shadowLines.count }
-        var masteredCount: Int {
-            (words + shadowLines).filter { $0.masteredAt != nil }.count
+        private var all: [ScenarioCurriculum.Item] {
+            words + expressions + shadowLines + corrections
         }
+        var totalCount: Int { all.count }
+        var masteredCount: Int { all.filter { $0.masteredAt != nil }.count }
         var progress: Double {
             totalCount == 0 ? 0 : Double(masteredCount) / Double(totalCount)
         }
         var isMastered: Bool { totalCount > 0 && masteredCount == totalCount }
         /// Most recent mastery event — when this book was last studied.
-        var lastStudiedAt: Date? {
-            (words + shadowLines).compactMap(\.masteredAt).max()
-        }
+        var lastStudiedAt: Date? { all.compactMap(\.masteredAt).max() }
     }
 
     /// How many pickup words one talk's book keeps — matches the cap the old
@@ -163,18 +176,19 @@ enum TalkCurriculum {
 
     /// Stable id for one sentence of a turn, so a shadow attempt made today is
     /// still recognised tomorrow. Derived from the source turn like
-    /// `shadowLineId`, but off a different byte so the two can never collide.
+    /// `correctionId`, but off a different byte so the two can never collide.
     nonisolated static func sentenceLineId(for turnId: UUID, index: Int) -> UUID {
         var bytes = turnId.uuid
         bytes.15 ^= 0xA0 &+ UInt8(index & 0x0F)
         return UUID(uuid: bytes)
     }
 
-    /// Stable shadow-line id derived from the source turn — the SAME
-    /// transform the transcript's suggestion-shadow has always used
-    /// (first byte XOR), so attempts made from either surface land on the
-    /// same line and old attempts count retroactively.
-    static func shadowLineId(for turnId: UUID) -> UUID {
+    /// Stable id for a turn's CORRECTION — the SAME transform the
+    /// transcript's suggestion-shadow has always used (first byte XOR), so
+    /// attempts made from either surface land on the same line and old
+    /// attempts count retroactively. (It was called `shadowLineId` while the
+    /// corrections WERE the curriculum's shadow lines.)
+    static func correctionId(for turnId: UUID) -> UUID {
         var bytes = turnId.uuid
         bytes.0 ^= 0xFF
         return UUID(uuid: bytes)
@@ -221,37 +235,96 @@ enum TalkCurriculum {
             return item
         }
 
-        // Shadow lines — every corrected sentence, in conversation order.
+        // Expressions — the reusable phrases the talk produced: the ones the
+        // fluent self offered and the ones the learner said. Mastered by the
+        // expression pool (used in a real talk, or "I know it"), the same
+        // rule `refreshScenarioMastery` applies to a scene's expressions.
+        //
+        // Built from the summary's RAW lists, not the page's filtered ones:
+        // the page drops an expression once it is known, so a chapter built
+        // on that would shrink as the learner learned and could never read
+        // as finished — the same trap `pickupCandidates` avoids above.
+        let credited = Set((session.summary?.carryovers ?? [])
+            .map { CarryoverDetector.normalized($0.item) })
+        var seenExpressions = Set<String>()
+        for phrase in (session.summary?.expressionsUsed ?? [])
+            + (session.summary?.expressionsOffered ?? []) {
+            let key = phrase.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let normalized = CarryoverDetector.normalized(phrase)
+            guard !key.isEmpty, !credited.contains(normalized),
+                  !VocabStore.shared.isDismissedExpression(phrase),
+                  seenExpressions.insert(normalized).inserted else { continue }
+            var item = ScenarioCurriculum.Item(text: phrase, note: "")
+            // `hasUsedExpression`'s own test, read for its date: a bookmark
+            // alone creates a row, and reading that as mastery would tick
+            // items off for saving them.
+            if let record = VocabStore.shared.expressionRecords[key],
+               record.state == .known || record.count > 0 {
+                item.masteredAt = record.lastAt
+            }
+            snap.expressions.append(item)
+        }
+
+        // Shadow lines — the fluent self's own lines, exactly the ones the
+        // Shadow chapter offers (`shadowPicks`, so the page and the count
+        // can't ask for different things). Mastered by a take scoring at or
+        // above the mastery bar, and by nothing else: shadowing is the one
+        // chapter whose work can only be done out loud.
+        for turn in shadowPicks(session: session, proficiency: proficiency) {
+            var item = ScenarioCurriculum.Item(id: turn.id, text: turn.transcript, note: "")
+            item.masteredAt = shadowAttempts
+                .filter { $0.turnId == turn.id && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore }
+                .map(\.createdAt).max()
+            snap.shadowLines.append(item)
+        }
+
+        // Corrections — every corrected sentence, in conversation order.
         // Misheard-flagged turns are skipped: their "correction" fixes a
         // sentence the user never said.
         let sessionCards = drillCards.filter { $0.sourceSessionId == session.id }
-        for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
-            guard let s = turn.suggestion else { continue }
-            var item = ScenarioCurriculum.Item(
-                id: shadowLineId(for: turn.id),
-                text: s.alternative,
-                note: s.reason
-            )
-            item.masteredAt = shadowAttempts
-                .filter { $0.turnId == item.id && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore }
-                .map(\.createdAt).max()
-            // The book page studies corrections as drill CARDS, not shadowing
-            // — a card graduated to the top box (Got it / produced live in a
-            // talk) masters the line, or the cover's count asks for work no
-            // chapter offers. Turn-id match first; text match catches cards
-            // minted from the summary without a source turn (same fallback
-            // the Drill chapter's openCard uses).
-            if item.masteredAt == nil {
-                let needle = CarryoverDetector.normalized(s.alternative)
-                if let card = sessionCards.first(where: {
-                    $0.box == DrillStore.maxBox
-                        && ($0.sourceTurnId == turn.id
-                            || CarryoverDetector.normalized($0.targetPhrase) == needle)
-                }) {
-                    item.masteredAt = card.lastReviewedAt ?? card.createdAt
-                }
+        var seenCorrections = Set<String>()
+
+        /// A correction is mastered by its drill card reaching the top box
+        /// ("Got it", or produced live in a talk) — the Drill chapter studies
+        /// corrections as CARDS, never as shadowing — or by a shadow take on
+        /// the line, which the transcript still offers.
+        func masteryDate(for text: String, turnId: UUID?, itemId: UUID) -> Date? {
+            if let attempt = shadowAttempts
+                .filter({ $0.turnId == itemId
+                          && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore })
+                .map(\.createdAt).max() {
+                return attempt
             }
-            snap.shadowLines.append(item)
+            let needle = CarryoverDetector.normalized(text)
+            // Turn-id match first; text match catches cards minted from the
+            // summary without a source turn (the same fallback the Drill
+            // chapter's openCard uses).
+            guard let card = sessionCards.first(where: {
+                $0.box == DrillStore.maxBox
+                    && ((turnId != nil && $0.sourceTurnId == turnId)
+                        || CarryoverDetector.normalized($0.targetPhrase) == needle)
+            }) else { return nil }
+            return card.lastReviewedAt ?? card.createdAt
+        }
+
+        for turn in session.turns where turn.role == .user && !turn.excludedFromScoring {
+            guard let s = turn.suggestion,
+                  seenCorrections.insert(CarryoverDetector.normalized(s.alternative)).inserted
+            else { continue }
+            let id = correctionId(for: turn.id)
+            var item = ScenarioCurriculum.Item(id: id, text: s.alternative, note: s.reason)
+            item.masteredAt = masteryDate(for: s.alternative, turnId: turn.id, itemId: id)
+            snap.corrections.append(item)
+        }
+        // The summary's own corrections. They carry a card each and the Drill
+        // chapter has always listed them — they just never counted, which is
+        // most of how a book finished itself with the chapter untouched.
+        for p in session.summary?.phrasesUsed ?? [] {
+            guard seenCorrections.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
+            else { continue }
+            var item = ScenarioCurriculum.Item(text: p.fluentAlternative, note: p.reason)
+            item.masteredAt = masteryDate(for: p.fluentAlternative, turnId: nil, itemId: item.id)
+            snap.corrections.append(item)
         }
 
         return snap

@@ -376,10 +376,8 @@ struct ConversationDetailView: View {
         // Shadow = repeat the fluent self's lines. Drill = the grammar and
         // expression fixes — corrections studied as CARDS (saved, enriched,
         // recalled), never as shadowing.
-        let hasShadow = !freshShadowLines.isEmpty
-        let hasDrill = drillCount > 0
-            || !(session.summary?.phrasesUsed.isEmpty ?? true)
-            || !curriculum.shadowLines.isEmpty
+        let hasShadow = !curriculum.shadowLines.isEmpty
+        let hasDrill = drillCount > 0 || !curriculum.corrections.isEmpty
 
         var entries: [ChapterEntry] = []
 
@@ -392,19 +390,27 @@ struct ConversationDetailView: View {
                                         total: curriculum.words.count,
                                         count: mineWords.count))
         }
-        if !usedExpressions.isEmpty || !offeredExpressions.isEmpty {
+        // Every chapter reports done/total, because every chapter now counts
+        // toward the book being finished. A tab showing only a count was the
+        // visible half of the old bug: three of the four chapters asked for
+        // work the cover's progress bar never measured.
+        if !curriculum.expressions.isEmpty {
             entries.append(ChapterEntry(chapter: .expressions, title: chrome("Expressions"),
                                         icon: "quote.opening",
-                                        count: usedExpressions.count + offeredExpressions.count))
+                                        done: curriculum.expressions.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.expressions.count))
         }
         if hasShadow {
             entries.append(ChapterEntry(chapter: .lines, title: chrome("Shadow"),
                                         icon: "waveform.badge.mic",
-                                        count: freshShadowLines.count))
+                                        done: curriculum.shadowLines.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.shadowLines.count))
         }
         if hasDrill {
             entries.append(ChapterEntry(chapter: .cards, title: chrome("Drill"),
                                         icon: "rectangle.stack",
+                                        done: curriculum.corrections.filter { $0.masteredAt != nil }.count,
+                                        total: curriculum.corrections.count,
                                         count: drillCount))
         }
         return entries
@@ -539,39 +545,48 @@ struct ConversationDetailView: View {
     /// (new material) above what the learner already said (evidence).
     @ViewBuilder
     private var expressionsPage: some View {
-        if !offeredExpressions.isEmpty {
+        // The curriculum's own list, split back into the two groups — the
+        // page used to build its own, filtered so a known phrase disappeared,
+        // and a chapter that empties as you learn can never read as finished.
+        let mine = Set((session.summary?.expressionsUsed ?? [])
+            .map(CarryoverDetector.normalized))
+        let offered = curriculum.expressions.filter {
+            !mine.contains(CarryoverDetector.normalized($0.text))
+        }
+        let used = curriculum.expressions.filter {
+            mine.contains(CarryoverDetector.normalized($0.text))
+        }
+        if !offered.isEmpty {
             Text("From your fluent self")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
-            ForEach(offeredExpressions, id: \.self) { e in
-                expressionRow(e, icon: "quote.opening")
-            }
+            ForEach(offered) { expressionRow($0) }
         }
-        if !usedExpressions.isEmpty {
-            if !offeredExpressions.isEmpty { Divider().padding(.leading, 16) }
+        if !used.isEmpty {
+            if !offered.isEmpty { Divider().padding(.leading, 16) }
             Text("You said these")
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
-            ForEach(usedExpressions, id: \.self) { e in
-                expressionRow(e, icon: "checkmark")
-            }
+            ForEach(used) { expressionRow($0) }
         }
         Color.clear.frame(height: 8)
     }
 
-    private func expressionRow(_ e: String, icon: String) -> some View {
+    private func expressionRow(_ item: ScenarioCurriculum.Item) -> some View {
+        expressionRow(item.text, mastered: item.masteredAt != nil)
+    }
+
+    private func expressionRow(_ e: String, mastered: Bool) -> some View {
         Button {
             phraseSheet = PhraseRef(value: e)
         } label: {
             HStack(alignment: .top, spacing: 8) {
-                Image(systemName: icon)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tint)
-                    .padding(.top, 3)
+                masteryMark(mastered)
+                    .padding(.top, 2)
                 Text(ExpressionsView.display(e))
                     .font(.subheadline)
                     .foregroundStyle(.primary)
@@ -594,16 +609,19 @@ struct ConversationDetailView: View {
     /// material, not shadowing — they live in the Drill chapter as cards.
     @ViewBuilder
     private var shadowPage: some View {
-        ForEach(freshShadowLines) { turn in
-            let best = bestShadowScore(for: turn.id)
+        ForEach(curriculum.shadowLines) { line in
+            // The item's id IS the line's turn id (`TalkCurriculum.build`),
+            // so the sheet and the score lookup work exactly as before.
+            let turn = freshShadowLines.first { $0.id == line.id }
+            let best = bestShadowScore(for: line.id)
             Button {
                 fluentShadowTurn = turn
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 12) {
                     // Same row grammar as every other study list: state up
                     // front, score at the end — not a decorative icon.
-                    masteryMark((best ?? 0) >= ScenarioCurriculum.shadowMasteryScore)
-                    Text(turn.transcript)
+                    masteryMark(line.masteredAt != nil)
+                    Text(line.text)
                         .font(.subheadline)
                         .foregroundStyle(.primary)
                         .lineSpacing(2)
@@ -637,17 +655,24 @@ struct ConversationDetailView: View {
         let reason: String
         /// The user turn the correction fixed — how its drill card is found.
         let sourceTurnId: UUID?
+        /// When the card behind it graduated, or a take mastered the line.
+        let masteredAt: Date?
     }
 
-    /// Turn-suggestion corrections first, then any summary corrections that
-    /// aren't already the same sentence.
+    /// The Drill chapter's list — `curriculum.corrections`, which already
+    /// holds both sources (turn suggestions and the summary's own) in page
+    /// order. Reading it here is what keeps the list and the chapter's
+    /// done/total the same set.
     private var corrections: [CorrectionItem] {
-        var items: [CorrectionItem] = []
-        var seen = Set<String>()
-        for line in curriculum.shadowLines {
-            // The line id is its source turn's id with the first byte
-            // flipped (`TalkCurriculum.shadowLineId`) — flip it back to find
-            // the sentence the correction fixed.
+        // What the learner ACTUALLY said, per correction. A turn-derived item
+        // carries its source turn in its id (first byte flipped); a
+        // summary-derived one has to be matched back by text.
+        let saidByPhrase = Dictionary(
+            (session.summary?.phrasesUsed ?? []).map {
+                (CarryoverDetector.normalized($0.fluentAlternative), $0.userSaid)
+            },
+            uniquingKeysWith: { first, _ in first })
+        return curriculum.corrections.map { line in
             var bytes = line.id.uuid
             bytes.0 ^= 0xFF
             let turnId = UUID(uuid: bytes)
@@ -657,24 +682,17 @@ struct ConversationDetailView: View {
             // reads as "everything you said was wrong" next to a two-line fix
             // — the same reason `ingest` and the drill deck both trim this
             // side.
-            let original = session.turns.first { $0.id == turnId }
-                .map { DrillStore.relevantFragment(of: $0.transcript, matching: line.text) }
-            items.append(CorrectionItem(id: line.id, original: original,
-                                        fluent: line.text, reason: line.note,
-                                        sourceTurnId: turnId))
-            seen.insert(CarryoverDetector.normalized(line.text))
+            let turn = session.turns.first { $0.id == turnId }
+            let said = turn?.transcript
+                ?? saidByPhrase[CarryoverDetector.normalized(line.text)]
+            return CorrectionItem(
+                id: line.id,
+                original: said.map { DrillStore.relevantFragment(of: $0, matching: line.text) },
+                fluent: line.text,
+                reason: line.note,
+                sourceTurnId: turn?.id,
+                masteredAt: line.masteredAt)
         }
-        for p in session.summary?.phrasesUsed ?? [] {
-            guard seen.insert(CarryoverDetector.normalized(p.fluentAlternative)).inserted
-            else { continue }
-            items.append(CorrectionItem(id: p.id,
-                                        original: DrillStore.relevantFragment(
-                                            of: p.userSaid, matching: p.fluentAlternative),
-                                        fluent: p.fluentAlternative,
-                                        reason: p.reason,
-                                        sourceTurnId: nil))
-        }
-        return items
     }
 
     /// The correction's drill card — every correction is ingested as one at
@@ -758,6 +776,9 @@ struct ConversationDetailView: View {
             openCard(for: item)
         } label: {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
+                // Same row grammar as the other study lists: state up front,
+                // so "what's left in this chapter" is readable at a glance.
+                masteryMark(item.masteredAt != nil)
                 VStack(alignment: .leading, spacing: 4) {
                     if let original = item.original, !original.isEmpty {
                         Text(original)
@@ -1461,7 +1482,7 @@ private struct TranscriptRow: View {
     /// so attempts recorded here master the book's line and cached audio is
     /// shared across both surfaces.
     private func suggestionTurn(_ s: TurnSuggestion) -> Turn {
-        Turn(id: TalkCurriculum.shadowLineId(for: turn.id), role: .fluentSelf, audioURL: nil,
+        Turn(id: TalkCurriculum.correctionId(for: turn.id), role: .fluentSelf, audioURL: nil,
              transcript: s.alternative, durationMs: 0,
              timestamp: turn.timestamp, suggestion: nil)
     }
