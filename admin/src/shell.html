@@ -257,6 +257,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <p class="asof" id="asof"></p>
   </div>
   <div class="hgap">
+    <div class="seg" id="tzPick" role="group" aria-label="시간대" style="margin:0"></div>
     <label class="toggle"><input type="checkbox" id="devToggle"> 본인·테스트 계정 포함</label>
     <a class="linkbtn" href="__ADMIN_BASE__/logout">나가기</a>
   </div>
@@ -327,13 +328,12 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
 
 <section data-tab="funnel" hidden>
   <h2>몇 시에 말하나</h2>
-  <p class="sub">앱이 서버에 남긴 흔적을 하루 24시간에 나눠 담았어요. <b>앱 사용</b>은 통화만이 아니라
+  <p class="sub">앱이 서버에 남긴 흔적을 하루 24시간에 나눠 담았어요. 가로축은 <b>머리말에서 고른 시간대</b>예요. <b>앱 사용</b>은 통화만이 아니라
   Watch 장면·섀도잉·요약·토픽 생성·드릴 음성까지 전부예요. 막대 아래 숫자는 그 시간에 뭔가를 한 사람 수고요.
   데일리 콜을 몇 시에 울릴지, 알림을 언제 보낼지가 이 그림에서 나와요.
   <span class="muted">서버를 부르지 않는 복습(캐시된 단어 뜻, 오프라인 채점)은 안 잡혀요 —
   실제 사용은 이보다 많아요.</span></p>
   <div class="seg" id="hoursMetric" role="group" aria-label="무엇을 셀지"></div>
-  <div class="seg" id="tzPick" role="group" aria-label="시간대"></div>
   <div class="card" id="hours"></div>
 </section>
 
@@ -469,11 +469,56 @@ const fmtD = s => { const [,m,d]=String(s).split('-'); return `${+m}/${+d}`; };
 const fmtDate = s => { const [,m,d]=String(s).split('-'); return `${+m}월 ${+d}일`; };
 const fmtMin = secs => secs>=3600 ? `${Math.floor(secs/3600)}시간 ${Math.round(secs%3600/60)}분`
   : secs>=60 ? `${Math.round(secs/60)}분` : `${secs||0}초`;
+/* ---------------------------------------------------------------- the clock
+ * Every time on this page is read in ONE zone, and the reader picks it in the
+ * header. Default Europe/Berlin: that is where the person reading this sits,
+ * and a console whose clock follows whatever laptop opened it cannot be
+ * compared with yesterday's screenshot. Seoul is one click away because the
+ * learners are there and the daily-call hour is their decision, not ours.
+ *
+ * DAY-bucketed charts (일별 · 히트맵 · 코호트) are the server's UTC days and
+ * stay that way — they come out of the database already grouped, and the
+ * notes say so. Against Berlin that is a two-hour seam, never a day.
+ */
+const PAGE_TZ = [
+  ['berlin', '독일',  'Europe/Berlin'],
+  ['seoul',  '한국',  'Asia/Seoul'],
+  ['utc',    'UTC',   'UTC'],
+];
+let tzKey = (()=>{ try{ return localStorage.getItem('nawana.admin.tz') || 'berlin'; }
+                   catch(e){ return 'berlin'; } })();
+const tzRow   = () => PAGE_TZ.find(t=>t[0]===tzKey) || PAGE_TZ[0];
+const tzZone  = () => tzRow()[2];
+const tzLabel = () => tzRow()[1];
+/** Whole-hour offset of a named zone right now — used to rotate the UTC
+ *  hour-of-day buckets. Computed from the zone rather than hard-coded, so
+ *  Berlin is +2 in summer and +1 in winter without a code change. */
+function zoneOffsetHours(zone){
+  const d = new Date();
+  const utc = new Date(d.toLocaleString('en-US', { timeZone: 'UTC' }));
+  const loc = new Date(d.toLocaleString('en-US', { timeZone: zone }));
+  return Math.round((loc - utc) / 3600000);
+}
+function renderTzPick(){
+  const el = document.getElementById('tzPick'); if(!el) return;
+  el.innerHTML = PAGE_TZ.map(([k,lab,zone])=>{
+    const off = zoneOffsetHours(zone);
+    return `<button type="button" data-k="${k}" aria-pressed="${k===tzKey}">${lab}`
+      + ` <span style="opacity:.6">${off>=0?'+':''}${off}</span></button>`;
+  }).join('');
+  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
+    tzKey = b.dataset.k;
+    try{ localStorage.setItem('nawana.admin.tz', tzKey); }catch(e){}
+    render();
+  }));
+}
+
 const ts = iso => iso ? new Date(iso) : null;
 const fmtTs = iso => { const d=ts(iso); return d ? d.toLocaleString('ko-KR',
-  {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; };
+  {timeZone: tzZone(), month:'numeric',day:'numeric',
+   hour:'2-digit',minute:'2-digit',hour12:false}) : '—'; };
 const fmtClock = iso => { const d=ts(iso); return d ? d.toLocaleTimeString('ko-KR',
-  {hour:'2-digit',minute:'2-digit',hour12:false}) : ''; };
+  {timeZone: tzZone(), hour:'2-digit',minute:'2-digit',hour12:false}) : ''; };
 const ago = iso => { const d=ts(iso); if(!d) return '—';
   const m=Math.round((Date.now()-d)/60000);
   if(m<1) return '방금'; if(m<60) return `${m}분 전`;
@@ -481,11 +526,17 @@ const ago = iso => { const d=ts(iso); if(!d) return '—';
 const gapMin = (a,b) => (ts(a)&&ts(b)) ? Math.max(0, Math.round((ts(b)-ts(a))/60000)) : null;
 const fmtGap = m => m==null ? '—' : m<1 ? '바로' : m<60 ? `${m}분` : m<2880 ? `${Math.round(m/60)}시간`
   : `${Math.round(m/1440)}일`;
-const localDay = d => { const x=new Date(d);
-  return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`; };
+/** YYYY-MM-DD in the page's zone. `en-CA` is the locale that formats that
+ *  way, which is why it is here and not `ko-KR`. */
+const localDay = d => new Intl.DateTimeFormat('en-CA',
+  { timeZone: tzZone(), year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date(d));
 const isDay = (iso, day) => !!iso && localDay(iso)===day;
-const TODAY = localDay(new Date());
-const YESTERDAY = localDay(new Date(Date.now()-86400000));
+// Timestamps are compared in the reader's zone; DAY buckets came out of the
+// database as UTC days and are looked up with the server's own idea of today.
+let TODAY = localDay(new Date());
+let YESTERDAY = localDay(new Date(Date.now()-86400000));
+const SERVER_TODAY = () => DATA.asOf;
+const SERVER_YESTERDAY = () => DATA.days[DATA.days.length-2] ?? DATA.asOf;
 
 /** Content width of a card, so an SVG can be drawn to fit it. A hidden
  *  section measures 0 — hence the floor, and hence redrawCharts() on tab
@@ -638,7 +689,8 @@ function renderTodayTiles(users){
 
   const tiles = [
     {k:'오늘 가입',   v:num(signupsOn(TODAY)),  d:since(0,signupsOn(YESTERDAY))},
-    {k:'오늘 통화',   v:num(talkedOn(TODAY))+'명', d:`${fmtMin(secsOn(TODAY))} · 어제 ${talkedOn(YESTERDAY)}명`},
+    {k:'오늘 활동',   v:num(talkedOn(SERVER_TODAY()))+'명',
+      d:`통화 ${fmtMin(secsOn(SERVER_TODAY()))} · 어제 ${talkedOn(SERVER_YESTERDAY())}명`},
     {k:'체험 중',     v:num(cnt('trial')),      d:`오늘 시작 ${trialStartedOn(TODAY)}`},
     {k:'자동갱신 끔', v:num(cancelled),
       d: cancelled ? `${users.filter(u=>stateOf(u)==='trial_cancelled' && cancelledBeforeUse(u)).length}건은 써보기 전에`
@@ -804,6 +856,9 @@ function renderNotes(){
     o ? `<b>본인 계정(${esc(nameOf(o))})과 테스트 계정은 기본으로 빠져 있어요.</b> 헤더에서 켤 수 있어요.
      베타 내내 본인 계정이 전체 대화 턴의 절반을 넘겨서, 켜 두면 퍼널과 잔존이 거의 한 사람 숫자가 돼요.
      대신 원가 단가는 그 계정에서 나오니 <b>돈 탭은 토글과 무관하게 전 계정</b>이에요.` : '',
+    `<b>이 페이지의 모든 시각은 머리말에서 고른 시간대</b>(기본 독일)로 읽혀요. 다만
+     <b>일별·히트맵·코호트의 '하루'</b>는 서버가 UTC로 묶어 내려준 날짜 그대로예요 —
+     독일 시간과는 두 시간 차이라 날이 바뀌는 새벽에만 한 칸 어긋날 수 있어요.`,
     `<b>대화 턴</b>은 응답 생성 호출 1건이에요. 전사 호출과 둘로 쪼갠 TTS, 버려지는 투기 호출은 빼요.`,
     `<b>통화 시간</b>은 서버가 실제로 과금한 초예요. 학습자가 말하기 전에는 0이고, 유휴는 세지 않아요.`,
     `<b>통화 끊김</b> 기록은 2026-09-13 이후 빌드부터 올라와요. 그 전 통화는 서버에 흔적이 없어요.`,
@@ -904,7 +959,7 @@ function renderCohort(users){
     for(let o=0; o<=maxOffset; o++){
       const di = start + o;
       if(di >= days.length){ html += `<td class="muted">·</td>`; continue; }
-      const running = days[di] === TODAY;
+      const running = days[di] === SERVER_TODAY();
       const n = cohort.filter(u => (talkDays[u.idx]||{})[di] > 0).length;
       const pct = cohort.length ? n/cohort.length : 0;
       const bg = n===0 ? 'var(--chip)'
@@ -1036,16 +1091,7 @@ function renderFeatures(){
 }
 
 /* ---------------------------------------------------------------- 시간대 */
-// KST has no DST, so rotating UTC buckets by +9 is exact. "내 시간대" uses the
-// browser's CURRENT offset, which is approximate across a DST change — said
-// out loud in the legend rather than pretended away.
-const TZ_CHOICES = [
-  ['kst', '한국 시간', 9],
-  ['local', '내 시간대', -new Date().getTimezoneOffset()/60],
-  ['utc', 'UTC', 0],
-];
-let tzKey = 'kst';
-const tzOffset = () => (TZ_CHOICES.find(t=>t[0]===tzKey) || TZ_CHOICES[0])[2];
+const tzOffset = () => zoneOffsetHours(tzZone());
 
 // Using the app is not the same as talking into it: KST 21:00 holds 7 talk
 // ticks and 55 rows of everything else. `events` is the default for that
@@ -1063,16 +1109,6 @@ function renderHoursMetric(){
     `<button type="button" data-k="${k}" aria-pressed="${k===hourMetric}">${lab}</button>`).join('');
   el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
     hourMetric = b.dataset.k; renderHoursMetric(); renderHours(visibleUsers());
-  }));
-}
-
-function renderTzPick(){
-  const el = document.getElementById('tzPick'); if(!el) return;
-  el.innerHTML = TZ_CHOICES.map(([k,lab,off])=>
-    `<button type="button" data-k="${k}" aria-pressed="${k===tzKey}">${lab}`
-    + ` <span style="opacity:.6">${off>=0?'+':''}${off}</span></button>`).join('');
-  el.querySelectorAll('button').forEach(b=>b.addEventListener('click', ()=>{
-    tzKey = b.dataset.k; renderTzPick(); renderHours(visibleUsers());
   }));
 }
 
@@ -1132,9 +1168,8 @@ function renderHours(users){
       + ` <b style="color:var(--ink)">${hh(best.from)}–${hh((best.to+1)%24)}</b>`
       + ` ${best.len}시간 안에 몰려 있어요`
     : '';
-  el.innerHTML = svg + `<div class="legend">가로는 ${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]} 기준,`
+  el.innerHTML = svg + `<div class="legend">가로는 ${tzLabel()} 시간 기준,`
     + ` 막대 아래 숫자는 그 시간에 앱을 쓴 사람 수예요`
-    + `${tzKey==='local'?' · 서머타임이 바뀌는 구간은 한 시간 어긋날 수 있어요':''}`
     + `${band?' · '+band:''}</div>`;
 }
 
@@ -1369,7 +1404,7 @@ function personDetail(u){
           + ` · 장면 ${pu.scenes_used}/${pu.scenes_cap}</li>`; })(),
       (()=>{ const uh = usualHour(u.idx);
         return uh ? `<li>주로 <b>${uh}</b>에 써요 <span class="muted">`
-          + `(${(TZ_CHOICES.find(t=>t[0]===tzKey)||[])[1]})</span></li>` : ''; })(),
+          + `(${tzLabel()} 시간)</span></li>` : ''; })(),
       cost?`<li>지금까지 원가 <b>${usd(cost.usd,3)}</b></li>`:'',
     ].filter(Boolean), '')}
     ${col('언어', [
@@ -1746,11 +1781,14 @@ function renderFairUse(){
 
 /* ============================================================ wiring */
 function render(){
+  TODAY = localDay(new Date());
+  YESTERDAY = localDay(new Date(Date.now()-86400000));
+  renderTzPick();
   const users = visibleUsers();
   renderTodayTiles(users); renderAttention(users); renderFeed(users); renderNotes();
   const cohort = launchUsers();
   renderFunnel(cohort); renderCohort(cohort); renderHeatmap(users);
-  renderHoursMetric(); renderTzPick(); renderHours(users);
+  renderHoursMetric(); renderHours(users);
   renderDaily(users); renderSessionLengths(users); renderFeatures(); renderChannels();
   renderPeopleTiles(users); renderLangs(users); renderPeople(users);
   renderMoneyTiles(); renderCancelShape(); renderTrials();
@@ -1784,7 +1822,7 @@ addEventListener('resize', () => { clearTimeout(redrawTimer); redrawTimer = setT
 document.getElementById('asof').textContent =
   `${fmtDate(DATA.windowStart)} 출시 ~ ${fmtDate(DATA.asOf)} · `
   + (DATA.liveAt
-      ? `${new Date(DATA.liveAt).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 조회 — 새로고침하면 다시 읽어요`
+      ? `${fmtClock(DATA.liveAt)} 조회 (${tzLabel()} 시간) — 새로고침하면 다시 읽어요`
       : '프로덕션 DB에서 직접 집계');
 
 render();
