@@ -1153,7 +1153,7 @@ function renderHours(users){
   const total = secs.reduce((a,b)=>a+b,0);
   if(!total){ el.innerHTML='<div class="empty">아직 통화 기록이 없어요.</div>'; return; }
 
-  const W = innerW(el, 260), H = 132, LEFT = 30, RIGHT = 6, top = 8, bh = H - top - 30;
+  const W = innerW(el, 260), H = 146, LEFT = 30, RIGHT = 6, top = 22, bh = H - top - 30;
   const bw = (W - LEFT - RIGHT) / 24;
   const max = Math.max(...secs);
   // Where the mass is: the tightest run of hours holding half the talking.
@@ -1186,6 +1186,18 @@ function renderHours(users){
     if(people[h].size) svg += `<text x="${(x+bw/2).toFixed(1)}" y="${H-3}" class="axis"`
       + ` text-anchor="middle" style="fill:var(--ink-2)">${people[h].size}</text>`;
   }
+  // Now, in the chosen zone — so "is this the busy hour?" needs no arithmetic.
+  const nowParts = new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(),
+    hour:'2-digit', minute:'2-digit', hourCycle:'h23'}).formatToParts(new Date());
+  const nh = +nowParts.find(p=>p.type==='hour').value;
+  const nm = +nowParts.find(p=>p.type==='minute').value;
+  const nx = LEFT + (nh + nm/60) * bw;
+  const nowText = `지금 ${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
+  const anchor = nx < LEFT + 40 ? 'start' : nx > W - RIGHT - 40 ? 'end' : 'middle';
+  svg += `<line x1="${nx.toFixed(1)}" y1="${top-4}" x2="${nx.toFixed(1)}" y2="${top+bh}"`
+    + ` stroke="var(--crit)" stroke-width="1.5" stroke-dasharray="3 2"/>`
+    + `<text x="${nx.toFixed(1)}" y="${top-8}" class="axis" text-anchor="${anchor}"`
+    + ` style="fill:var(--crit);font-weight:600">${nowText}</text>`;
   svg += '</svg>';
   const band = best.len<=24
     ? `${hourMetric==='secs'?'말하는 시간':'사용'}의 절반이`
@@ -1869,6 +1881,8 @@ document.addEventListener('mousemove', ev => {
 });
 let redrawTimer;
 addEventListener('resize', () => { clearTimeout(redrawTimer); redrawTimer = setTimeout(redrawCharts, 150); });
+// The hours chart's "지금" marker walks with the clock.
+setInterval(() => renderHours(visibleUsers()), 60000);
 
 document.getElementById('asof').textContent =
   `${fmtDate(DATA.windowStart)} 출시 ~ ${fmtDate(DATA.asOf)} · `
