@@ -745,7 +745,13 @@ private fun TalkHero(state: AppState, enabled: Boolean, onTap: () -> Unit,
     val goalMinutes = remember {
         context.getSharedPreferences("futurevoice", 0).getInt("futurevoice.dailyGoalMinutes", 10)
     }
-    LaunchedEffect(revision) {
+    // Keyed on the LANGUAGE as well as the store revision: the switcher chip
+    // sits in this same screen, so a switch recomposes without anything
+    // leaving composition and a revision-only key kept the previous
+    // language's talk count — which is what the line above the ring is
+    // written from, so a fresh language still read "it's been a while"
+    // until the app was restarted.
+    LaunchedEffect(revision, state.targetLanguage) {
         seconds = TalkTimeLog.secondsToday(context)
         sessionCount = SessionStore.shared(context).load(state.targetLanguage).size
     }
