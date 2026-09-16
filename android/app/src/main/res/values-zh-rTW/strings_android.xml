@@ -235,4 +235,5 @@
     <string name="avg_shadow_score">跟讀平均分</string>
     <string name="open_google_play">開啟 Google Play</string>
     <string name="get_the_new_test_build">取得新的測試版</string>
+    <string name="android_is_blocking_the_call">Android 擋住了來電。請到設定開啟 nawana 的通知，再到「我」重新開啟。</string>
 </resources>

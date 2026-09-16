@@ -251,4 +251,5 @@
     <string name="avg_shadow_score">avg shadow score</string>
     <string name="open_google_play">Open Google Play</string>
     <string name="get_the_new_test_build">Get the new test build</string>
+    <string name="android_is_blocking_the_call">Android is blocking the call. Turn on notifications for nawana in Settings, then switch it on again in Me.</string>
 </resources>

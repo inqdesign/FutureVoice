@@ -235,4 +235,5 @@
     <string name="avg_shadow_score">シャドーイング平均</string>
     <string name="open_google_play">Google Play を開く</string>
     <string name="get_the_new_test_build">新しいテストビルドを入手</string>
+    <string name="android_is_blocking_the_call">Androidが電話をブロックしています。設定でnawanaの通知をオンにしてから、マイページでもう一度オンにしてください。</string>
 </resources>

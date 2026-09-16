@@ -235,4 +235,5 @@
     <string name="avg_shadow_score">쉐도잉 평균</string>
     <string name="open_google_play">Google Play 열기</string>
     <string name="get_the_new_test_build">새 테스트 빌드 받기</string>
+    <string name="android_is_blocking_the_call">안드로이드가 전화를 막고 있어요. 설정에서 nawana 알림을 켠 뒤, 나 탭에서 다시 켜 주세요.</string>
 </resources>

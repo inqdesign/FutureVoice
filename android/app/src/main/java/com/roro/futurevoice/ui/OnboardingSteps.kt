@@ -1,6 +1,18 @@
 package com.roro.futurevoice.ui
 
 import android.content.Context
+import com.roro.futurevoice.data.PersonaStore
+import com.roro.futurevoice.data.LearnerAddress
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.PhoneCallback
+import android.os.Build
+import android.content.pm.PackageManager
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -63,31 +75,67 @@ object OnboardingFlags {
 @Composable
 fun DailyCallOnboardingScreen(context: Context, onDone: () -> Unit) {
     val time = rememberTimePickerState(initialHour = 8, initialMinute = 0, is24Hour = true)
+    // By NAME when there is one: everything on this screen is the future self
+    // speaking, and being called by name is what separates that from an app
+    // announcing a feature (`DailyCallOnboardingView`).
+    var name by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        name = LearnerAddress.vocative(context, PersonaStore.shared(context).load()?.displayName)
+    }
+    /** They said yes and the system said no. The screen has to say so, or they
+     *  leave believing a call is coming that never will. */
+    var denied by remember { mutableStateOf(false) }
     fun finish(enable: Boolean) {
-        if (enable) DailyCallStore.set(context, true, time.hour, time.minute)
+        com.roro.futurevoice.core.Analytics.capture("daily_call_onboarding",
+            mapOf("enabled" to enable, "hour" to time.hour))
+        DailyCallStore.set(context, enable, time.hour, time.minute)
         OnboardingFlags.markSeen(context, OnboardingFlags.DAILY_CALL)
         onDone()
     }
+    val permission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) finish(enable = true) else denied = true }
+
     Column(
         // A full-screen step of its own: the app draws edge to edge, so this
         // is the only thing keeping the buttons off the gesture pill.
         Modifier.fillMaxSize().systemBarsPadding().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(1f))
-        Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(40.dp),
-            tint = MaterialTheme.colorScheme.primary)
-        Text(stringResource(R.string.your_future_self_can_call_you),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.pick_a_time_answer_and_youre_already_talking),
+        Icon(Icons.Filled.PhoneCallback, contentDescription = null,
+            modifier = Modifier.size(52.dp), tint = MaterialTheme.colorScheme.primary)
+        // The title is the FUTURE SELF talking, in the first person — not a
+        // feature name. "A call every day" described the mechanism and sold
+        // nothing.
+        Text(name?.let { stringResource(R.string.i_ll_help_you_keep_it_up_d1116e, it) }
+                ?: stringResource(R.string.i_ll_help_you_keep_it_up_fe0fae),
+            style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center)
+        Text(stringResource(R.string.speaking_once_is_easy_every_day_is_the_hard_part_so_i_ll_cal_ce0232),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+            color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.it_rings_even_on_silent_and_i_remember_how_the_last_call_wen_b28e80),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline, textAlign = TextAlign.Center)
+        // The dial, not the compact field: TimeInput takes focus and raises
+        // the keyboard over the very button this screen exists to offer.
         TimePicker(state = time)
+        if (denied) {
+            Text(stringResource(R.string.android_is_blocking_the_call),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+        }
         Spacer(Modifier.weight(1f))
-        Button(onClick = { finish(enable = true) }, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.call_me))
+        Button(onClick = {
+            denied = false
+            if (Build.VERSION.SDK_INT >= 33 && context.checkSelfPermission(
+                    android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                permission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            } else finish(enable = true)
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.call_me_every_day))
         }
         // Skipping still sets the flag: a screen you cannot get past is a
         // wall, and this one is an offer.
