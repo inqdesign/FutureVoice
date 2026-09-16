@@ -62,10 +62,24 @@ enum Analytics {
     /// Tie events to the signed-in account. `userId` is the Supabase UUID —
     /// not an email/name — so this stays a stable, non-PII identifier. An
     /// excluded (owner/team) account opts the device out entirely instead.
+    ///
+    /// If the device is still identified as a DIFFERENT account, drop that
+    /// identity first. posthog-ios ignores `identify` on an already-identified
+    /// device when the id differs (it only logs "already identified with id"),
+    /// and `reset` runs only on in-app sign-out / delete — so an account the
+    /// SERVER deleted (an onboarding session reclaimed by
+    /// `cleanup-anonymous-voices`) left the phone reporting a ghost uuid for
+    /// every account that came after it, and the admin live tab could never
+    /// join that person to their real row (2026-09-16).
     static func identify(userId: String) {
         if excludedUserIds.contains(userId.uppercased()) {
             PostHogSDK.shared.optOut()
             return
+        }
+        let current = PostHogSDK.shared.getDistinctId()
+        let isIdentified = !current.isEmpty && current != PostHogSDK.shared.getAnonymousId()
+        if isIdentified, current.uppercased() != userId.uppercased() {
+            PostHogSDK.shared.reset()
         }
         PostHogSDK.shared.identify(userId)
     }

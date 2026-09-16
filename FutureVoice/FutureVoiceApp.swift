@@ -625,7 +625,15 @@ final class AppState: ObservableObject {
         for await change in SupabaseProvider.shared.auth.authStateChanges {
             guard let session = change.session else { continue }
             // distinct_id = Supabase user UUID (a random account id, not PII).
-            Analytics.identify(userId: session.user.id.uuidString)
+            // Only a real account: the onboarding session is anonymous and is
+            // reclaimed server-side if sign-up never happens, and an id that
+            // is going to be deleted must not become the phone's identity.
+            // Events before sign-up ride on PostHog's own anonymous id and
+            // merge into the person at identify time. Apple sign-in LINKS the
+            // anonymous user, so the id identified here is the same one.
+            if !session.user.isAnonymous {
+                Analytics.identify(userId: session.user.id.uuidString)
+            }
             await self.restoreVoiceCloneFromCloud()
             // Retry any delete that never landed — an orphaned clone holds an
             // account voice slot hostage, and the ceiling is shared by every
@@ -977,9 +985,10 @@ final class AppState: ObservableObject {
     /// typed, and something said out loud to your own future self was not
     /// said to strangers. No persona on file means the learner never finished
     /// onboarding — writing one here would fake that.
-    func rememberAboutUser(_ notes: [PersonaNote], metAt when: Date? = nil) {
+    func rememberAboutUser(_ notes: [PersonaNote], updates: [UserPersona.NoteUpdate] = [],
+                           metAt when: Date? = nil) {
         guard var p = persona else { return }
-        p.absorb(notes: notes)
+        p.absorb(notes: notes, updates: updates)
         if let when, p.metAt == nil { p.metAt = when }
         PersonaStore.shared.save(p)
         persona = p

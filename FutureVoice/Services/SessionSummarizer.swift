@@ -217,11 +217,6 @@ enum SessionSummarizer {
         let userTexts = turns
             .filter { $0.role == .user && !$0.excludedFromScoring }
             .map { $0.transcript }
-        let freshWords = VocabStore.shared.ingest(
-            sessionId: sessionId, userTexts: userTexts)
-        let priorWords = session.summary?.newWordsUsed ?? []
-        computed.newWordsUsed = priorWords + freshWords.filter { !priorWords.contains($0) }
-
         // What they had been studying, and what they had marked known, as it
         // stood BEFORE this talk is credited: producing a word takes it out of
         // the notebook, and the wrap-up still has to say it was a notebook
@@ -231,6 +226,11 @@ enum SessionSummarizer {
         let knownWordsBefore = vocab.unconfirmedKnownWords
         let studyingExpressionsBefore = vocab.studyingExpressions
         let knownExpressionsBefore = vocab.unconfirmedKnownExpressions
+        let freshWords = VocabStore.shared.ingest(
+            sessionId: sessionId, userTexts: userTexts)
+        let priorWords = session.summary?.newWordsUsed ?? []
+        computed.newWordsUsed = priorWords + freshWords.filter { !priorWords.contains($0) }
+
         // Keep only expressions that literally appear in the user's own
         // turns — the LLM occasionally paraphrases, and we never show or
         // store an expression they didn't actually say.
@@ -341,11 +341,6 @@ enum SessionSummarizer {
             sessionId: sessionId, sessionStartedAt: session.startedAt)
         computed.carryovers = carryovers
         report { $0.carryovers = carryovers.count }
-
-        // Free-talk sessions (no picked topic) take the summary's generated
-        // title so History/Practice lists don't fill with identical
-        // "Conversation" rows.
-        let generatedTitle = payload.title?.trimmingCharacters(in: .whitespacesAndNewlines)
         // Bookmarked or self-marked expressions said out loud: credit the pool
         // the way the summary's own list is credited, so the record, the
         // bookmark and the schedule all move — not just the receipt. Words
@@ -357,6 +352,11 @@ enum SessionSummarizer {
             phrases: carryovers
                 .filter { $0.source == .studyingExpression || $0.source == .knownExpression }
                 .map(\.item))
+
+        // Free-talk sessions (no picked topic) take the summary's generated
+        // title so History/Practice lists don't fill with identical
+        // "Conversation" rows.
+        let generatedTitle = payload.title?.trimmingCharacters(in: .whitespacesAndNewlines)
         let existingTopic = session.topic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let resolvedTopic = existingTopic.isEmpty ? (generatedTitle ?? "") : existingTopic
 
@@ -378,11 +378,6 @@ enum SessionSummarizer {
         // it against the SRS schedule, not just the wrap-up.
         DrillStore.shared.markUsedInConversation(
             ids: carryovers.filter { $0.source == .drillCard }.compactMap { $0.sourceId })
-        // Same principle for book material: producing it live masters it,
-        // wherever the book lives.
-        appState.markCurriculumItemsUsedInConversation(
-            itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
-        if !carryovers.isEmpty {
         // A suggestion adopted later in the SAME call: the card it just
         // minted is born confirmed — they already said the corrected line.
         let adopted = Set(carryovers.filter { $0.source == .suggestion }
@@ -394,6 +389,11 @@ enum SessionSummarizer {
                         && adopted.contains(CarryoverDetector.normalized($0.targetPhrase)) }
                     .map(\.id))
         }
+        // Same principle for book material: producing it live masters it,
+        // wherever the book lives.
+        appState.markCurriculumItemsUsedInConversation(
+            itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
+        if !carryovers.isEmpty {
             Analytics.capture("carryovers_detected", [
                 "count": carryovers.count,
                 "from_cards": carryovers.filter { $0.source == .drillCard }.count,

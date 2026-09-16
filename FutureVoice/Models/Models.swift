@@ -1508,6 +1508,11 @@ struct DrillCard: Codable, Identifiable {
     /// actually said is the ground truth. nil for cards without a source
     /// utterance (suggested drills, Watch "Save phrase", pre-existing cards).
     var sourceTurnId: UUID?
+    /// When the learner PRODUCED this line in a real talk — the strongest
+    /// evidence there is. "Got it" is the learner's own verdict and only
+    /// reaches the top rung; this is what makes that verdict CONFIRMED.
+    /// nil for a card that was only ever marked known by hand.
+    var usedInTalkAt: Date?
     var enrichment: DrillCardEnrichment?  // on-demand, persisted once fetched
 }
 
@@ -1528,8 +1533,3 @@ struct DrillCardEnrichment: Codable, Hashable {
     var memoryHook: String      // 1-line trigger to help recall when to reach for it
     var generatedAt: Date
 }
-    /// When the learner PRODUCED this line in a real talk — the strongest
-    /// evidence there is. "Got it" is the learner's own verdict and only
-    /// reaches the top rung; this is what makes that verdict CONFIRMED.
-    /// nil for a card that was only ever marked known by hand.
-    var usedInTalkAt: Date?

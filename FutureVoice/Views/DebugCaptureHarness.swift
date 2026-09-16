@@ -415,9 +415,9 @@ enum DebugCapture {
             // already said (ticked), the rest still open. Real use needs a
             // notebook AND a live call, so the state is staged here.
             let goals = [
+                TalkGoalItem(key: "hectic", text: "hectic", isWord: true, claimedKnown: true),
                 TalkGoalItem(key: "commute", text: "commute", isWord: true),
                 TalkGoalItem(key: "it slipped my mind", text: "it slipped my mind", isWord: false),
-                TalkGoalItem(key: "hectic", text: "hectic", isWord: true, claimedKnown: true),
                 TalkGoalItem(key: "run me through it", text: "run me through it", isWord: false),
                 TalkGoalItem(key: "eventually", text: "eventually", isWord: true),
             ]
@@ -1124,13 +1124,13 @@ enum DebugCapture {
                  quote: "Next Friday. I'm really looking forward to it."),
             Seed(source: .studyingWord, item: "commute",
                  quote: "I commuted for two hours every day back then."),
-        ]
-
-        var turns: [Turn] = []
             Seed(source: .knownExpression, item: "on the same page",
                  quote: "Just so we're on the same page, it's Friday, right?"),
             Seed(source: .knownWord, item: "hectic",
                  quote: "This week has been pretty hectic at work."),
+        ]
+
+        var turns: [Turn] = []
         var carryovers: [Carryover] = []
         for (index, seed) in seeds.enumerated() {
             let at = started.addingTimeInterval(Double(index) * 90)
