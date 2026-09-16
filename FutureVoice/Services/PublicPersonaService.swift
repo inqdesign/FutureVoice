@@ -325,7 +325,8 @@ enum PublicPersonaService {
     ///
     /// Only what a person would say on the first day at a language school:
     /// work, town, what they need the language for, and the remembered lines
-    /// they have unlocked. `household` and `freeNotes` are deliberately NOT
+    /// at the rung the learner set (`strangerLines`: the line itself, or its
+    /// gist, or nothing). `household` and `freeNotes` are deliberately NOT
     /// here — they were written for the fluent self, and until 2026-09-15
     /// "wife and 4yo daughter at Kita" went out to every learner in the pool
     /// without the author ever seeing the paragraph it was in.
@@ -336,7 +337,7 @@ enum PublicPersonaService {
             parts.append("\(p.city) · \(p.lengthOfStay)")
         }
         if !p.situations.isEmpty { parts.append(p.situations.joined(separator: ", ")) }
-        parts.append(contentsOf: p.publicNotes.map(\.text))
+        parts.append(contentsOf: p.strangerLines)
         return parts.joined(separator: "\n")
     }
 

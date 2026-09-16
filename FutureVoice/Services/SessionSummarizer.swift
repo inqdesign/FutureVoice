@@ -110,11 +110,17 @@ enum SessionSummarizer {
             onProgress?(progress)
         }
 
+        // The notebook as the summary call sees it, numbered in this order.
+        // A `replaces` in the payload is an index into THIS list, so it is
+        // captured once here and never re-read from the persona afterwards.
+        let rememberedNotes = appState.persona?.currentNotes() ?? []
         let systemP = ConversationEngine.summarySystemPrompt(
             targetLanguage: session.targetLanguage,
             nativeLanguage: appState.nativeLanguage,
             profile: appState.learnerProfile,
             knownAboutUser: appState.persona?.knownFacts ?? [],
+            rememberedNotes: rememberedNotes,
+            shareCorrections: appState.persona?.shareCorrections ?? [],
             // What a talk is allowed to yield follows how much was said in it.
             expressionBudget: ConversationEngine.expressionBudget(
                 fluentTurns: turns.filter { $0.role == .fluentSelf }.count)
@@ -404,22 +410,51 @@ enum SessionSummarizer {
         // `personaBlock`. Capped at 3 a session: this is a notebook, not a
         // transcript, and the model volunteers more than it should when a talk
         // ran long.
-        // Each line carries the model's verdict on whether a stranger may
-        // read it; the learner can overturn it in Me → Profile.
-        let learned = payload.about_user
-            .map { ($0.text.trimmingCharacters(in: .whitespacesAndNewlines), $0.isPrivate) }
-            .filter { !$0.0.isEmpty && $0.0.count <= 140 }
-            .prefix(3)
-            .map { PersonaNote(text: $0.0, sessionId: sessionId, learnedAt: Date(),
-                               isPrivate: $0.1) }
+        // Each line carries the model's verdict on how much of it a stranger
+        // may hear (`share`), the gist that rung hands out, the reason, and
+        // the sentence it was distilled from; the learner overturns the
+        // verdict in Me → Profile. The gist is kept whatever the rung, so a
+        // learner moving a line to "the gist" later has one to hand out.
+        // A line naming a remembered line's number is an UPDATE — the old
+        // line has changed or ended and this is the new truth — and takes
+        // its place instead of counting against the three new ones. A
+        // number that doesn't match anything is treated as a new line
+        // rather than dropped: the fact is still worth keeping, only its
+        // predecessor was misnamed.
+        let usable = payload.about_user
+            .map { ($0, $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { !$0.1.isEmpty && $0.1.count <= 140 }
+        func clip(_ raw: String?, _ limit: Int) -> String? {
+            guard let t = raw?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !t.isEmpty, t.count <= limit else { return nil }
+            return t
+        }
+        func note(_ entry: ClaudeSummaryPayload.AboutUser, _ text: String) -> PersonaNote {
+            let gist = clip(entry.gist, 140)
+            // "The gist" with no gist to hand out is an empty promise; the
+            // safe rung is the one below it.
+            let share: PersonaNote.Share = (entry.share == .gist && gist == nil) ? .nothing : entry.share
+            return PersonaNote(text: text, sessionId: sessionId, learnedAt: Date(),
+                               share: share, kind: entry.kind,
+                               heard: clip(entry.heard, 240), gist: gist, why: clip(entry.why, 140))
+        }
+        var updates: [UserPersona.NoteUpdate] = []
+        var learned: [PersonaNote] = []
+        for (entry, text) in usable {
+            if let n = entry.replaces, n >= 1, n <= rememberedNotes.count, updates.count < 3 {
+                updates.append(.init(replacing: rememberedNotes[n - 1].id, note: note(entry, text)))
+            } else if learned.count < 3 {
+                learned.append(note(entry, text))
+            }
+        }
         // A plain free talk is where the fluent self gets to know someone —
         // a scenario casts it as a barista and a Find-people call as a
         // stranger, and neither of those met the learner. Stamping this is
         // what retires the first-call framing.
         let wasIntroTalk = session.counterpartId == nil && existingTopic.isEmpty
-        if !learned.isEmpty || (wasIntroTalk && appState.persona?.metAt == nil) {
+        if !learned.isEmpty || !updates.isEmpty || (wasIntroTalk && appState.persona?.metAt == nil) {
             appState.rememberAboutUser(
-                Array(learned),
+                learned, updates: updates,
                 metAt: wasIntroTalk ? (session.endedAt ?? Date()) : nil)
         }
         // Kick off async weekly-report generation if unlock conditions are

@@ -579,10 +579,16 @@ struct UserPersona: Codable {
     /// was spent getting to know them. Nil until that call has happened, and
     /// that is what makes the first call read as a first call.
     var metAt: Date? = nil
+    /// The learner's own hand moves on the share level — the last few times
+    /// they overruled the summary call's pick, newest last. Fed back into
+    /// the next summary call so it sorts the way THIS person draws the line:
+    /// people differ on what counts as private, and a correction is the only
+    /// signal that says where. Capped at `maxShareCorrections`.
+    var shareCorrections: [ShareCorrection] = []
 
     enum CodingKeys: String, CodingKey {
         case displayName, city, country, lengthOfStay, occupation, household,
-             interests, freeNotes, updatedAt, learnedNotes, metAt
+             interests, freeNotes, updatedAt, learnedNotes, metAt, shareCorrections
         // Personas on disk predate multi-language prep — keep the legacy key.
         case situations = "englishSituations"
     }
@@ -625,37 +631,136 @@ struct PersonaNote: Codable, Identifiable, Hashable {
     /// The talk it came out of — provenance, so a note is never orphaned.
     var sessionId: UUID?
     var learnedAt: Date
-    /// Whether this stays between the learner and their fluent self. A
-    /// private line still rides into every conversation prompt (that is what
-    /// the notebook is for) but can never reach the Find-people intro or any
-    /// other surface a stranger reads. The summary call classifies each
-    /// line; the learner can flip it in Me → Profile. DEFAULTS TO TRUE —
-    /// a note nobody has judged is hidden, never shown.
-    var isPrivate: Bool = true
+    /// How much of this a STRANGER gets — the Find-people intro, a cast
+    /// counterpart in a call. Three rungs, not a switch (2026-09-16): in
+    /// real life the details of a story are private while its shape is not
+    /// — "two kids, kindergarten age" is family, but "a parent of young
+    /// kids" is what anyone at a language school would be told. `.gist`
+    /// hands out `gist`, `.all` the line itself, `.nothing` nothing. The
+    /// line always rides into the fluent self's own prompt whatever this
+    /// says; that is what the notebook is for. The summary call sorts each
+    /// line at write time and says why (`why`); the learner overrules it in
+    /// Me → Profile. DEFAULTS TO NOTHING — a note nobody has judged is
+    /// hidden, never shown.
+    var share: Share = .nothing
+    /// The sentence the line was distilled from, in the learner's own words.
+    /// A note is a standing truth ("two kids, kindergarten age"), never the
+    /// episode it came out of ("dropped the kids off this morning") — but
+    /// the episode is the evidence, and the profile shows it under the line
+    /// so the learner can see why the app believes something. Nil on notes
+    /// written before 2026-09-16.
+    var heard: String? = nil
+    /// The one-rung-up version a stranger may hear when `share == .gist`.
+    /// Written by the summary call beside the fact; editable. Nil when the
+    /// model found no honest gist (health, money, someone else's private
+    /// life) — such a line can only be nothing or everything.
+    var gist: String? = nil
+    /// The model's one-clause reason for its `share` pick, in the app
+    /// language. Shown in the profile so the pick is checkable rather than
+    /// a bare lock.
+    var why: String? = nil
+    /// How long this is expected to stay true. A `fact` (job, town, family,
+    /// a weekly routine) has no horizon; a `now` line (a trip coming up, jet
+    /// lag, a deadline, a cold) is worth knowing on the next call and stale
+    /// a month later. Before 2026-09-15 every line was a fact and the file
+    /// still said "planning to visit Seoul" weeks after the trip — a
+    /// memory with no sense of time asks about the preparations after
+    /// you're back. `now` lines expire (`isExpired`) and are shown to the
+    /// fluent self as recent news, dated, under the durable lines.
+    var kind: Kind = .fact
 
+    enum Kind: String, Codable, Hashable {
+        case fact, now
+    }
+
+    /// What a stranger gets. Ordered least to most.
+    enum Share: String, Codable, Hashable, CaseIterable {
+        case nothing, gist, all
+    }
+
+    /// Kept for readers that only need the binary: nothing at all leaves the
+    /// notebook. A `.gist` line is NOT private in this sense — its gist does.
+    var isPrivate: Bool { share == .nothing }
+
+    /// The line as a stranger-facing surface may read it, or nil. `.gist`
+    /// with no gist on file yields nil rather than falling back to the text:
+    /// the learner chose "the outline", and the outline is missing, so
+    /// nothing goes out.
+    var strangerLine: String? {
+        switch share {
+        case .nothing: return nil
+        case .all: return text
+        case .gist:
+            let g = (gist ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return g.isEmpty ? nil : g
+        }
+    }
+
+    /// How long a `now` line is believed after it was learned.
+    static let nowHorizon: TimeInterval = 30 * 86_400
+
+    /// `isPrivate` is read for notes written before `share` existed and is
+    /// never written: a build from before 2026-09-16 reading a `.gist` line
+    /// with `isPrivate: false` on it would put the WHOLE line in the intro.
+    /// With no key it reads the line as private, which is the safe reading.
     private enum CodingKeys: String, CodingKey {
-        case id, text, sessionId, learnedAt, isPrivate
+        case id, text, sessionId, learnedAt, isPrivate, kind, share, heard, gist, why
     }
 
     init(id: UUID = UUID(), text: String, sessionId: UUID? = nil, learnedAt: Date,
-         isPrivate: Bool = true) {
+         share: Share = .nothing, kind: Kind = .fact,
+         heard: String? = nil, gist: String? = nil, why: String? = nil) {
         self.id = id
         self.text = text
         self.sessionId = sessionId
         self.learnedAt = learnedAt
-        self.isPrivate = isPrivate
+        self.share = share
+        self.kind = kind
+        self.heard = heard
+        self.gist = gist
+        self.why = why
     }
 
-    /// Lenient on `isPrivate`: every note written before the field existed
-    /// has no key, and a throw here would empty `learnedNotes` wholesale
-    /// through `UserPersona`'s own lenient decoder. Missing means private.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(text, forKey: .text)
+        try c.encodeIfPresent(sessionId, forKey: .sessionId)
+        try c.encode(learnedAt, forKey: .learnedAt)
+        try c.encode(kind, forKey: .kind)
+        try c.encode(share, forKey: .share)
+        try c.encodeIfPresent(heard, forKey: .heard)
+        try c.encodeIfPresent(gist, forKey: .gist)
+        try c.encodeIfPresent(why, forKey: .why)
+    }
+
+    /// A `now` line past its horizon. Facts never expire.
+    func isExpired(at now: Date = Date()) -> Bool {
+        kind == .now && now.timeIntervalSince(learnedAt) > Self.nowHorizon
+    }
+
+    /// Lenient on everything but the text: every note written before a
+    /// field existed has no key for it, and a throw here would empty
+    /// `learnedNotes` wholesale through `UserPersona`'s own lenient decoder.
+    /// `share` falls back to the old two-way lock (`isPrivate` true →
+    /// nothing, false → all), and with neither key to nothing.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = (try? c.decodeIfPresent(UUID.self, forKey: .id)) ?? UUID()
         text = try c.decode(String.self, forKey: .text)
         sessionId = try? c.decodeIfPresent(UUID.self, forKey: .sessionId)
         learnedAt = (try? c.decodeIfPresent(Date.self, forKey: .learnedAt)) ?? Date()
-        isPrivate = (try? c.decodeIfPresent(Bool.self, forKey: .isPrivate)) ?? true
+        kind = (try? c.decodeIfPresent(Kind.self, forKey: .kind)) ?? .fact
+        if let s = try? c.decodeIfPresent(Share.self, forKey: .share) {
+            share = s
+        } else if let legacy = try? c.decodeIfPresent(Bool.self, forKey: .isPrivate) {
+            share = legacy ? .nothing : .all
+        } else {
+            share = .nothing
+        }
+        heard = try? c.decodeIfPresent(String.self, forKey: .heard)
+        gist = try? c.decodeIfPresent(String.self, forKey: .gist)
+        why = try? c.decodeIfPresent(String.self, forKey: .why)
     }
 
     /// Comparison form for "do we already know this?" — the model rewrites
@@ -692,12 +797,39 @@ extension UserPersona {
         updatedAt = value(.updatedAt, Date())
         learnedNotes = value(.learnedNotes, [])
         metAt = (try? c.decodeIfPresent(Date.self, forKey: .metAt)) ?? nil
+        shareCorrections = value(.shareCorrections, [])
     }
 
-    /// Everything already on file about this person, as plain lines. Handed
+    /// One time the learner moved a line's share level by hand.
+    struct ShareCorrection: Codable, Hashable {
+        var text: String
+        var from: PersonaNote.Share
+        var to: PersonaNote.Share
+        var at: Date
+    }
+
+    static let maxShareCorrections = 8
+
+    /// Record the learner's hand moves between what was on file and what
+    /// they saved, so the next summary call can learn from them. Only a
+    /// CHANGED level counts; a line saved as it was says nothing.
+    mutating func recordShareCorrections(from previous: [PersonaNote], now: Date = Date()) {
+        let before = Dictionary(previous.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for note in learnedNotes {
+            guard let old = before[note.id], old.share != note.share else { continue }
+            shareCorrections.append(.init(text: note.text, from: old.share, to: note.share, at: now))
+        }
+        if shareCorrections.count > Self.maxShareCorrections {
+            shareCorrections.removeFirst(shareCorrections.count - Self.maxShareCorrections)
+        }
+    }
+
+    /// Everything the learner TYPED about themselves, as plain lines. Handed
     /// to the summary call as the "don't hand this back as a discovery" list —
     /// without it the same fact is re-learned every session and the profile
-    /// fills with paraphrases of one sentence.
+    /// fills with paraphrases of one sentence. The remembered lines go to the
+    /// same call separately (`currentNotes`), numbered and dated, because
+    /// those are the ones it may also UPDATE.
     var knownFacts: [String] {
         var out: [String] = []
         let place = [city, country].filter { !$0.isEmpty }.joined(separator: ", ")
@@ -706,18 +838,47 @@ extension UserPersona {
         if !household.isEmpty { out.append(household) }
         if !interests.isEmpty { out.append("Interested in \(interests.joined(separator: ", "))") }
         if !freeNotes.isEmpty { out.append(freeNotes) }
-        out.append(contentsOf: learnedNotes.map(\.text))
         return out
     }
 
-    /// The remembered lines the learner has let out of the notebook — the
-    /// only ones any stranger-facing surface may read.
-    var publicNotes: [PersonaNote] { learnedNotes.filter { !$0.isPrivate } }
+    /// The remembered lines still believed: everything on file minus the
+    /// `now` lines whose month has passed. Every reader of the notebook — the
+    /// conversation prompt, the summary call's on-file list, the public
+    /// intro — goes through this, so an expired line is gone from all of
+    /// them at once even before the next save prunes it from disk.
+    func currentNotes(at now: Date = Date()) -> [PersonaNote] {
+        learnedNotes.filter { !$0.isExpired(at: now) }
+    }
 
-    /// Append what a talk taught, dropping anything already on file. Newest
-    /// last; the oldest fall off past `limit` so the conversation prompt this
-    /// feeds can't grow without bound.
-    mutating func absorb(notes: [PersonaNote], limit: Int = 40) {
+    /// What a STRANGER gets from the notebook — the only lines any
+    /// stranger-facing surface (the Find-people intro, a cast counterpart's
+    /// prompt) may read: the text of an `.all` line, the gist of a `.gist`
+    /// line, nothing of a `.nothing` one. Never the notes themselves.
+    var strangerLines: [String] { currentNotes().compactMap(\.strangerLine) }
+
+    /// A line the summary call says has CHANGED: the trip that was planned
+    /// has happened, the job that was hunted was found. `replacing` is the
+    /// on-file line it supersedes; the new one takes its place in the
+    /// notebook as the freshest line.
+    struct NoteUpdate {
+        var replacing: UUID
+        var note: PersonaNote
+    }
+
+    /// Fold what a talk taught into the notebook. Updates first — an
+    /// outdated line goes and its successor is appended as the newest —
+    /// then additions, dropping anything already on file. Expired `now`
+    /// lines are pruned here too. Newest last; the oldest fall off past
+    /// `limit` so the conversation prompt this feeds can't grow without
+    /// bound.
+    mutating func absorb(notes: [PersonaNote], updates: [NoteUpdate] = [],
+                         limit: Int = 40, now: Date = Date()) {
+        for update in updates {
+            guard let idx = learnedNotes.firstIndex(where: { $0.id == update.replacing }) else { continue }
+            learnedNotes.remove(at: idx)
+            learnedNotes.append(update.note)
+        }
+        learnedNotes.removeAll { $0.isExpired(at: now) }
         var seen = Set(learnedNotes.map(\.dedupeKey))
         for note in notes where !note.dedupeKey.isEmpty && !seen.contains(note.dedupeKey) {
             seen.insert(note.dedupeKey)

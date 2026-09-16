@@ -14,6 +14,8 @@ struct PersonaOnboardingView: View {
     @State private var interestsDraft: String = ""
     @State private var situationsDraft: String = ""
     @State private var avatarPick: PhotosPickerItem?
+    /// "Show the talk" on a remembered line — the session it was heard in.
+    @State private var talkToShow: Session?
 
     init(initialPersona: UserPersona? = nil, startStep: Int = 0) {
         _step = State(initialValue: startStep)
@@ -96,6 +98,12 @@ struct PersonaOnboardingView: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
         }
+        .sheet(item: $talkToShow) { session in
+            NavigationStack {
+                ConversationDetailView(session: session)
+                    .environmentObject(appState)
+            }
+        }
     }
 
     private var title: String {
@@ -176,42 +184,199 @@ struct PersonaOnboardingView: View {
     /// line and hope the next call re-learned it right. A line emptied in
     /// place is dropped on save, so clearing is the same gesture as fixing.
     ///
-    /// Each line also carries a lock (`PersonaNote.isPrivate`): the summary
-    /// call decides which lines a stranger could hear and the learner
-    /// overrules it here. A locked line never leaves the notebook; an
-    /// unlocked one may become part of the Find-people intro.
+    /// Two lists since 2026-09-16, by `PersonaNote.Kind`: the durable lines
+    /// ("What I know about you") and the ones that fade ("Right now"). Every
+    /// row shows the sentence the line was distilled from (`heard`) as its
+    /// evidence, and a "Strangers hear" line that says what leaves the
+    /// notebook — nothing, the gist, or everything (`PersonaNote.share`),
+    /// with the model's reason for its pick. The learner moves the rung from
+    /// the trailing button or the long-press menu; the moves are recorded on
+    /// save (`recordShareCorrections`) so the next summary call sorts the way
+    /// this person does. The last section is the paragraph strangers actually
+    /// get, composed live from the draft, so a change to a rung is visible in
+    /// the same screen.
     @ViewBuilder
     private var rememberedSection: some View {
-        if !persona.learnedNotes.isEmpty {
+        let hasFacts = persona.learnedNotes.contains { $0.kind == .fact }
+        let hasRecent = persona.learnedNotes.contains { $0.kind == .now }
+        if hasFacts {
             Section {
                 ForEach($persona.learnedNotes) { $note in
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        TextField("", text: $note.text, axis: .vertical)
-                            .font(.subheadline)
-                            .lineLimit(1...3)
-                        Button {
-                            note.isPrivate.toggle()
-                        } label: {
-                            Image(systemName: note.isPrivate ? "lock.fill" : "lock.open")
-                                .font(.subheadline)
-                                .foregroundStyle(note.isPrivate ? Color.accentColor : Color.secondary)
-                                .frame(width: 24)
-                        }
-                        .buttonStyle(.borderless)
-                        .accessibilityLabel(note.isPrivate
-                                            ? explain("Private — only your fluent self knows this")
-                                            : explain("Shareable — may appear in your Find people intro"))
-                    }
-                }
-                .onDelete { offsets in
-                    persona.learnedNotes.remove(atOffsets: offsets)
+                    if note.kind == .fact { noteRow($note) }
                 }
             } header: {
-                Text("What I've picked up")
+                Text("What I know about you")
             } footer: {
-                Text(explain("From your talks. Tap a line to fix what I misheard, or swipe to remove it. Locked lines stay between us; unlocked ones can go into your Find people intro."))
+                Text(explain("From your talks. Tap a line to fix what I misheard. For each one, choose what strangers hear — nothing, just the gist, or everything. I always know the whole line."))
             }
         }
+        if hasRecent {
+            Section {
+                ForEach($persona.learnedNotes) { $note in
+                    if note.kind == .now { noteRow($note) }
+                }
+            } header: {
+                Text("Right now")
+            } footer: {
+                Text(explain("True for a while. I forget these on my own after a month — or tell me when it's over."))
+            }
+        }
+        if hasFacts || hasRecent {
+            Section {
+                let intro = PublicPersonaService.composedIntro(persona)
+                if intro.isEmpty {
+                    Text("Nothing yet")
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(intro)
+                        .font(.subheadline)
+                }
+            } header: {
+                Text("What strangers can see")
+            } footer: {
+                Text(explain("The intro another learner's phone speaks as you in Find people. Change it or take it down in Me → Find people."))
+            }
+        }
+    }
+
+    private func noteRow(_ note: Binding<PersonaNote>) -> some View {
+        let n = note.wrappedValue
+        let gistBinding = Binding<String>(
+            get: { note.wrappedValue.gist ?? "" },
+            set: { note.wrappedValue.gist = $0.isEmpty ? nil : $0 })
+        return HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                TextField("", text: note.text, axis: .vertical)
+                    .font(.subheadline)
+                    .lineLimit(1...3)
+                // The evidence: what they actually said, and when. A learner
+                // deciding whether to fix a line needs to see what it was
+                // made from, not just that it exists.
+                if let heard = n.heard, !heard.isEmpty {
+                    Text(explain("You said “\(heard)”"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(spacing: 6) {
+                    Text(n.learnedAt, format: .relative(presentation: .named))
+                    if n.kind == .now, let fade = fadeLabel(n) {
+                        Text("·")
+                        Text(fade)
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                // What leaves the notebook, and the model's reason for it.
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("Strangers hear:")
+                        .foregroundStyle(.secondary)
+                    switch n.share {
+                    case .nothing:
+                        Text("nothing")
+                    case .all:
+                        Text("everything")
+                    case .gist:
+                        TextField(chrome("the gist, in a few words"), text: gistBinding, axis: .vertical)
+                            .lineLimit(1...2)
+                    }
+                }
+                .font(.caption)
+                if let why = n.why, !why.isEmpty {
+                    Text(why)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            Menu {
+                sharePicker(note)
+            } label: {
+                Image(systemName: shareIcon(n.share))
+                    .font(.subheadline)
+                    .foregroundStyle(n.share == .all ? Color.secondary : Color.accentColor)
+                    .frame(width: 24)
+            }
+            .accessibilityLabel(shareLabel(n.share))
+        }
+        .contextMenu {
+            if let sid = n.sessionId,
+               let session = SessionStore.shared.loadAcrossLanguages().first(where: { $0.id == sid }) {
+                Button {
+                    talkToShow = session
+                } label: {
+                    Label("Show the talk", systemImage: "waveform")
+                }
+            }
+            Menu {
+                sharePicker(note)
+            } label: {
+                Label("Strangers hear", systemImage: shareIcon(n.share))
+            }
+            if n.kind == .now {
+                Button {
+                    forget(n.id)
+                } label: {
+                    Label("That's over now", systemImage: "checkmark")
+                }
+            }
+            Button(role: .destructive) {
+                forget(n.id)
+            } label: {
+                Label("Forget this", systemImage: "trash")
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                forget(n.id)
+            } label: {
+                Label("Forget this", systemImage: "trash")
+            }
+        }
+    }
+
+    /// The three rungs. "The gist" is offered only when there is one to
+    /// hand out — the model found no honest outline for some lines, and a
+    /// rung that would send nothing is not a choice.
+    @ViewBuilder
+    private func sharePicker(_ note: Binding<PersonaNote>) -> some View {
+        let hasGist = !(note.wrappedValue.gist ?? "").trimmingCharacters(in: .whitespaces).isEmpty
+        Picker("Strangers hear", selection: note.share) {
+            Label("Nothing", systemImage: shareIcon(.nothing)).tag(PersonaNote.Share.nothing)
+            if hasGist || note.wrappedValue.share == .gist {
+                Label("Just the gist", systemImage: shareIcon(.gist)).tag(PersonaNote.Share.gist)
+            }
+            Label("Everything", systemImage: shareIcon(.all)).tag(PersonaNote.Share.all)
+        }
+    }
+
+    private func shareIcon(_ share: PersonaNote.Share) -> String {
+        switch share {
+        case .nothing: return "lock.fill"
+        case .gist: return "text.redaction"
+        case .all: return "lock.open"
+        }
+    }
+
+    private func shareLabel(_ share: PersonaNote.Share) -> String {
+        switch share {
+        case .nothing: return explain("Strangers hear nothing — only your fluent self knows this")
+        case .gist: return explain("Strangers hear the gist — the outline, not the details")
+        case .all: return explain("Strangers hear everything — may appear in your Find people intro")
+        }
+    }
+
+    /// "fades in 3 weeks" for a `now` line — how long until the app forgets
+    /// it on its own.
+    private func fadeLabel(_ n: PersonaNote) -> String? {
+        let left = n.learnedAt.addingTimeInterval(PersonaNote.nowHorizon).timeIntervalSinceNow
+        guard left > 0 else { return nil }
+        let days = Int(left / 86_400)
+        if days >= 14 { return explain("fades in \(days / 7) weeks") }
+        if days >= 2 { return explain("fades in \(days) days") }
+        return explain("fades tomorrow")
+    }
+
+    private func forget(_ id: UUID) {
+        persona.learnedNotes.removeAll { $0.id == id }
     }
 
     // MARK: - Step 3 · World
@@ -308,6 +473,11 @@ struct PersonaOnboardingView: View {
             }
             Button {
                 if step < 2 {
+                    // Editing: each page is saved as it's left, so a sheet
+                    // swiped away on page three keeps what pages one and two
+                    // said. First run keeps the single save at the end —
+                    // a persona on file is what swaps RootView out of setup.
+                    if isEditing { commit() }
                     step += 1
                 } else {
                     finish()
@@ -334,6 +504,14 @@ struct PersonaOnboardingView: View {
     }
 
     private func finish() {
+        commit()
+        dismiss()   // closes the edit sheet; on first-onboarding RootView swaps anyway
+    }
+
+    /// Writes the draft as it stands. Skipped when nothing changed, because
+    /// `savePersona` also wipes topic suggestions and re-syncs the public
+    /// intro — a Next that edited nothing must not do either.
+    private func commit() {
         // Make sure any unsubmitted free text gets folded in.
         mergeDraft(into: &persona.interests, from: &interestsDraft)
         mergeDraft(into: &persona.situations, from: &situationsDraft)
@@ -345,7 +523,18 @@ struct PersonaOnboardingView: View {
             kept.text = text
             return kept
         }
+        // What the learner moved by hand is what the next summary call
+        // learns to sort from. Compared against what is on file — the last
+        // page saved, or the profile as the sheet opened — never the draft.
+        persona.recordShareCorrections(from: appState.persona?.learnedNotes ?? [])
+        if let saved = appState.persona, Self.sameContent(saved, persona) { return }
         appState.savePersona(persona)
-        dismiss()   // closes the edit sheet; on first-onboarding RootView swaps anyway
+    }
+
+    private static func sameContent(_ a: UserPersona, _ b: UserPersona) -> Bool {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        guard let da = try? encoder.encode(a), let db = try? encoder.encode(b) else { return false }
+        return da == db
     }
 }

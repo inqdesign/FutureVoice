@@ -107,11 +107,20 @@ enum DebugCapture {
         let day: TimeInterval = 86_400
         p.learnedNotes = [
             PersonaNote(text: "매주 토요일 아침 이자르 강변에서 달린다",
-                        sessionId: nil, learnedAt: Date().addingTimeInterval(-9 * day), isPrivate: false),
-            PersonaNote(text: "딸이 Kita 적응을 힘들어해서 요즘 걱정이 많다",
-                        sessionId: nil, learnedAt: Date().addingTimeInterval(-5 * day), isPrivate: true),
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-9 * day), share: .all,
+                        heard: "Saturday mornings I run along the Isar, every week", why: "취미"),
+            PersonaNote(text: "유치원생 딸이 하나 있다",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-5 * day), share: .gist,
+                        heard: "I dropped my daughter off at Kita this morning", gist: "어린 아이를 키우는 부모",
+                        why: "가족"),
             PersonaNote(text: "투자자 미팅이 잘 안 풀려서 자금 압박이 있다",
-                        sessionId: nil, learnedAt: Date().addingTimeInterval(-2 * day), isPrivate: true),
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-2 * day), share: .nothing,
+                        heard: "the investor meeting didn't go well, money is getting tight",
+                        gist: "회사를 키우는 중", why: "돈 이야기"),
+            PersonaNote(text: "서울 다녀와서 시차 적응 중",
+                        sessionId: nil, learnedAt: Date().addingTimeInterval(-1 * day), share: .nothing,
+                        kind: .now, heard: "I got back from Seoul on Sunday and I'm still waking up at 4",
+                        gist: "최근 여행을 다녀옴", why: "지금 상황"),
         ]
         PersonaStore.shared.save(p)
         appState.persona = p
