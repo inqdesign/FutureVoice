@@ -97,6 +97,7 @@ enum DialogueEngine {
           or when neither side owns the move.
         - Each turn: 1–3 sentences. Real spoken \(languageName) — contractions, hedges, \
           half-finished thoughts, gentle interruptions are fine.
+        - \(CoachingLanguage.breathPunctuation)
         - Reference SHARED context from the personas. Don't restate facts the two \
           already know about each other; show it through how they talk.
         - Match the counterpart's described conversation style.

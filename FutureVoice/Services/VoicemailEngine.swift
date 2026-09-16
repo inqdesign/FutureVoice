@@ -173,6 +173,7 @@ enum VoicemailEngine {
           should feel a question waiting, not an invitation.
         - Natural spoken \(targetName) a CEFR \(c.proficiency.rawValue.uppercased())
           learner follows at speed. Contractions, no literary phrasing.
+        - \(CoachingLanguage.breathPunctuation)
         - In a language that separates formal from informal address (Korean
           반말, Japanese plain form, German du, French tu, Spanish tú…), use the
           INFORMAL form — it is you talking to yourself.

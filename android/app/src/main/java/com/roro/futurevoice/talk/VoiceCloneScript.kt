@@ -92,7 +92,7 @@ object VoiceCloneScript {
     private val greetings: Map<String, String> = mapOf(
         "en" to "Hey — it's you. Just more fluent. Pick a color that feels like us.",
         "de" to "Hey — das bist du. Nur fließender. Such dir eine Farbe aus, die zu uns passt.",
-        "ko" to "안녕 — 너야. 조금 더 유창한. 우리한테 어울리는 색을 골라봐.",
+        "ko" to "안녕, 한국어를 유창하게 잘하는 너야. 우리한테 어울리는 색을 골라볼래?",
         "ja" to "やあ — 君だよ。ただ、もっと流暢な。僕たちらしい色を選んでみて。",
         "es" to "Oye — eres tú. Solo que más fluido. Elige un color que nos represente.",
         "fr" to "Salut — c'est toi. En plus fluide. Choisis une couleur qui nous ressemble.",

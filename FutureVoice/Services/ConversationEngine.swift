@@ -278,6 +278,7 @@ enum ConversationEngine {
           Drop fillers in occasionally where a real speaker would: "yeah", "well", \
           "I mean", "honestly", "you know", "uh", "hm". Not every turn — sparingly, \
           where it fits.
+        - \(CoachingLanguage.breathPunctuation)
         - Real conversation is lots of brief turns, not paragraphs. Never a \
           paragraph, at any level.
         - VARY turn length — DOWNWARD from the ceiling, never past it. Sometimes \

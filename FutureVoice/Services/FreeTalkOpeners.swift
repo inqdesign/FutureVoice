@@ -282,6 +282,7 @@ final class FreeTalkOpeners {
 
         Rules:
         - Warm, natural spoken \(languageName) a CEFR \(proficiency.rawValue.uppercased()) learner easily follows.
+        - \(CoachingLanguage.breathPunctuation)
         - Each opener distinct in flavor; every one must invite a reply.
         - Address \(name) by name in AT MOST two of them.
         - In a language that separates formal from informal address (Korean
