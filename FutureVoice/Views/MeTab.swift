@@ -1167,11 +1167,7 @@ struct MeTab: View {
                      : explain("Set up your profile"))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
-                // Apple often returns no email (private relay, or the email
-                // scope only arrives on first sign-in), so account.email can
-                // be nil OR an empty string — coalesce both to a label instead
-                // of rendering a blank line.
-                Text(accountSubtitle)
+                Text(profileSubtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -1183,9 +1179,18 @@ struct MeTab: View {
         .padding(.vertical, 6)
     }
 
-    private var accountSubtitle: String {
-        let email = account.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return email.isEmpty ? explain("Signed in with Apple") : email
+    /// An invitation, not an account label. "Signed in with Apple" (or a
+    /// private-relay address) told the learner nothing they could act on;
+    /// what this row can actually do is make the fluent self know them
+    /// better, so it asks for the missing parts until there are none.
+    private var profileSubtitle: String {
+        guard let persona = appState.persona else { return explain("Tap to complete your profile") }
+        let blank = { (s: String) in s.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        let complete = !blank(persona.displayName) && !blank(persona.city)
+            && !blank(persona.occupation)
+            && !persona.interests.isEmpty && !persona.situations.isEmpty
+        return complete ? explain("What your fluent self knows about you")
+                        : explain("Tap to complete your profile")
     }
 }
 
