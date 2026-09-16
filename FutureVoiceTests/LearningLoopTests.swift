@@ -200,7 +200,8 @@ final class DrillStoreTests: XCTestCase {
         let used = store.load().first!
         XCTAssertEqual(used.box, DrillStore.maxBox)
         XCTAssertEqual(used.nextReviewAt, DrillStore.retiredReviewDate)
-        XCTAssertEqual(used.usedInTalkAt, now)
+        // The store writes ISO 8601, which keeps whole seconds only.
+        XCTAssertEqual(used.usedInTalkAt?.timeIntervalSince1970 ?? 0, now.timeIntervalSince1970, accuracy: 1)
         XCTAssertTrue(store.due(now: now).isEmpty)
 
         // "Got it" on another card reaches the same rung without the stamp.
