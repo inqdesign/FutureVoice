@@ -1658,7 +1658,7 @@ private struct CarryoverRow: View {
         .padding(.vertical, 4)
     }
 
-    private var originText: String { carryover.source.label }
+    private var originText: String { carryover.source.localizedLabel }
     private var originIcon: String { carryover.source.icon }
 
     private var hasAudio: Bool {

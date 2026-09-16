@@ -26,6 +26,10 @@ struct TalkGoalItem: Identifiable, Equatable {
     /// Single words go by lemma ("I commuted for years" ticks *commute*);
     /// everything else goes through the phrase rules.
     let isWord: Bool
+    /// The learner MARKED this known and has never said it in a talk. It is
+    /// a claim, and the call is where the claim gets checked — which is why
+    /// these lead the row and wear a different empty circle.
+    var claimedKnown: Bool = false
 
     var id: String { key }
 }
@@ -41,25 +45,48 @@ enum TalkGoalPicker {
     /// short, scannable words being pushed off screen.
     static let maxExpressions = 2
 
-    /// Today's due studying items, expressions and words mixed.
+    /// What the call should check first, then what the learner is studying.
     ///
-    /// Due-ness comes from `StudyScheduleStore` — the same schedule the daily
-    /// words/expressions sessions deal from — so an item snoozed to "3 days"
-    /// stays out of the row too, and the app never asks for the same thing in
-    /// two voices on the same day. Nothing tops the list up from the core
-    /// wordlist: this row is about what the learner CHOSE to study.
+    /// **Items they marked known lead.** "Known" is the learner's own verdict
+    /// and a talk is the one place it can be confirmed, so unconfirmed known
+    /// words and expressions come before the notebook. They have no schedule
+    /// (retiring cleared it), so they rotate by the day like never-scheduled
+    /// notebook entries do.
+    ///
+    /// For studying items, due-ness comes from `StudyScheduleStore` — the same
+    /// schedule the daily words/expressions sessions deal from — so an item
+    /// snoozed to "3 days" stays out of the row too, and the app never asks
+    /// for the same thing in two voices on the same day. Nothing tops the
+    /// list up from the core wordlist: this row is about what the learner
+    /// CHOSE to study or claimed to know.
     static func pick(limit: Int = maxItems,
                      now: Date = Date(),
                      calendar: Calendar = .current) -> [TalkGoalItem] {
         let store = VocabStore.shared
 
-        let phrases = ordered(store.studyingExpressions.filter { !store.isKnownExpression($0) },
-                              kind: .expression, now: now, calendar: calendar)
+        // Newest verdict first, which `ordered` then rotates oldest-first.
+        let knownPhrases = rotated(
+            store.unconfirmedKnownExpressions
+                .sorted { (store.expressionRecords[$0]?.lastAt ?? .distantPast)
+                        > (store.expressionRecords[$1]?.lastAt ?? .distantPast) },
+            now: now, calendar: calendar)
             .filter { CarryoverDetector.isCreditable($0) }
-            .prefix(maxExpressions)
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
+                                isWord: false, claimedKnown: true) }
+        let knownWords = rotated(
+            store.unconfirmedKnownWords
+                .sorted { (store.lastAt(of: $0) ?? .distantPast) > (store.lastAt(of: $1) ?? .distantPast) },
+            now: now, calendar: calendar)
+            .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
+                                isWord: !$0.contains(" "), claimedKnown: true) }
+            .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+
+        let studyingPhrases = ordered(store.studyingExpressions.filter { !store.hasUsedExpression($0) },
+                                      kind: .expression, now: now, calendar: calendar)
+            .filter { CarryoverDetector.isCreditable($0) }
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0, isWord: false) }
 
-        let words = ordered(store.studying, kind: .word, now: now, calendar: calendar)
+        let studyingWords = ordered(store.practicedStudyingWords, kind: .word, now: now, calendar: calendar)
             .map { word -> TalkGoalItem in
                 // A multi-word entry can land in the notebook (a learner taps a
                 // two-word chunk in a transcript); it can't be lemma-matched, so
@@ -69,6 +96,9 @@ enum TalkGoalPicker {
                                     text: word, isWord: single)
             }
             .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
+
+        let phrases = Array((knownPhrases + studyingPhrases).prefix(maxExpressions))
+        let words = knownWords + studyingWords
 
         // Interleave so the row opens with something short: a phrase first
         // would fill the visible width on its own and the words would only
@@ -86,6 +116,17 @@ enum TalkGoalPicker {
             out.append(item)
         }
         return out
+    }
+
+    /// Never-scheduled items (a newest-first list), oldest first and rotated
+    /// by the day, so a long list doesn't lead with the same five forever.
+    private static func rotated(_ newestFirst: [String], now: Date,
+                                calendar: Calendar) -> [String] {
+        guard !newestFirst.isEmpty else { return [] }
+        let day = calendar.ordinality(of: .day, in: .year, for: now) ?? 0
+        let oldestFirst = Array(newestFirst.reversed())
+        let offset = day % oldestFirst.count
+        return Array(oldestFirst[offset...] + oldestFirst[..<offset])
     }
 
     /// Overdue-scheduled first (earliest return first), then never-scheduled,
@@ -163,7 +204,10 @@ struct TalkGoalChipsRow: View {
 
     private func chip(_ item: TalkGoalItem, done: Bool) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+            // Empty circle = studying; empty CHECKED circle = the learner said
+            // they know this and the call is about to find out; filled = said.
+            Image(systemName: done ? "checkmark.circle.fill"
+                              : (item.claimedKnown ? "checkmark.circle" : "circle"))
                 .font(.caption2)
                 .foregroundStyle(done ? Color.green : Color.secondary)
             Text(item.text)
@@ -177,7 +221,8 @@ struct TalkGoalChipsRow: View {
         .animation(.easeInOut(duration: 0.25), value: done)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.text)
-        .accessibilityValue(done ? explain("used") : explain("not used yet"))
+        .accessibilityValue(done ? explain("used")
+                            : (item.claimedKnown ? explain("Marked known") : explain("not used yet")))
     }
 }
 

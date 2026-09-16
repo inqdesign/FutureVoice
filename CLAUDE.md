@@ -377,6 +377,58 @@ so deck, Sentences list and widget agree at once and the next write persists
 it). A card the read filter would drop is never minted at all — a card no
 lookup can find is what made every visit mint another one.
 
+**Three states, and USED outranks KNOWN** (2026-09-15, user decision). Every
+review item — a word, an expression, a sentence card — is in one of three
+states, in order: **studying** (the deck's 10 min / tomorrow / 3 days),
+**known** (the learner's OWN verdict: "Got it" on a card, "I know it" on a
+word or phrase — a claim, nothing more), and **used in a talk** (the learner
+produced it in a real conversation — evidence, and the strongest state there
+is). Producing an item live moves it to the top from ANY state: a studying
+word leaves the notebook and its schedule (`VocabStore.ingest`, same for
+`ingestExpressions` and the bookmark), a known one becomes CONFIRMED (word
+record `.known` → `.used`; expression count > 0; `DrillCard.usedInTalkAt`,
+which `markUsedInConversation` stamps while taking the card straight to the
+top rung, retired), and a `.suggestion` adopted later in the same call
+confirms the card that call just minted. `CarryoverDetector` is therefore
+given the known-but-unconfirmed items too (`knownWords` /
+`knownExpressions`, sources `.knownWord` / `.knownExpression`), read from a
+SNAPSHOT taken before `ingest` graduates anything, because the wrap-up still
+has to say it was a notebook word they used. "Known" on every list means
+known OR confirmed (`hasUsedExpression`, a non-nil word record, box 5), and
+the row badge tells them apart: a plain check is the claim, a filled check is
+the talk. The manual verdict stays — it is how a learner retires something
+the app has no evidence for — but it never outranks their own mouth, and the
+old rule (used once → +2 boxes, minimum 3) is gone: a spoken line is not
+"probably known", it is known. Don't re-add a partial credit. **The call's
+chip row leads with the known-but-unconfirmed items** (`TalkGoalPicker.pick`,
+`claimedKnown`, drawn as an empty checked circle): a claim is what the call is
+there to check, so it goes in front of the notebook.
+
+**"You used what you practiced" may only list what was PRACTICED**
+(2026-09-16, from a real wrap-up that read "nawana · app · english · setup ·
+give me feedback"). Three things had gone wrong at once, and each has its own
+guard now. ① `keepFromTalk` was filling the notebook with the learner's OWN
+words: the fluent self answers about whatever the learner brought up, so its
+turns echo their vocabulary, and nothing excluded it — `pickupCandidates`
+takes `excludingLemmas` (the learner's turns in that talk) in both the
+summarizer and the book chapter, and `offListContentWords` treats a capital
+letter mid-sentence as a name, because NLTagger passes "Nawana" and
+"English" as `OtherWord` (measured). ② A word the app kept by itself and the
+learner never touched is not something they studied: `VocabStore.autoKept`
+is a PROVENANCE mark (cleared by a hand bookmark, a deck snooze, a removal,
+or graduation), `practicedStudyingWords` is what the detector and the call's
+chip row read, and on first run every notebook word without a schedule
+entry is treated as auto-kept — the conservative reading, since the only
+thing it costs is a row that must never lie. ③ The phrase matcher tolerates
+inserted words (right for padding), so "give me a feedback" satisfied the
+card "give me feedback" — the learner repeated the exact mistake and was
+credited, and under the used-outranks-known rule that retired the card as
+confirmed. `firstMatch(rejectingMistake:)` now checks the matched SPAN
+against the card's `sourcePhrase`: every token the correction added must be
+present, every token it removed must be absent (`showsTheFix`). Cards with
+no source line are unchanged. Don't relax the span to the whole turn — an
+"a" three clauses later would reject a real fix.
+
 **"Got it" RETIRES a sentence card** (2026-09-14). The top Leitner rung used
 to carry a 30-day interval, so a card marked known came back a month later,
 was marked known again, and came back again — for as long as the app was

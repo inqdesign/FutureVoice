@@ -76710,3 +76710,73 @@
   },
   "version" : "1.1"
 }
+    },
+    "Expression notebook" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "표현 노트"
+          }
+        }
+      }
+    },
+    "Your books" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 책"
+          }
+        }
+      }
+    },
+    "In-call suggestions" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "통화 중 제안"
+          }
+        }
+      }
+    },
+    "Words you marked known" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안다고 한 단어"
+          }
+        }
+      }
+    },
+    "Expressions you marked known" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안다고 한 표현"
+          }
+        }
+      }
+    },
+    "Used in a talk" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화에서 썼어요"
+          }
+        }
+      }
+    },
+    "Marked known" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "안다고 표시함"
+          }
+        }
+      }

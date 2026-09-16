@@ -121,6 +121,6 @@ enum ExpressionCatalog {
                         sessions: [Session] = SessionStore.shared.load(),
                         store: VocabStore = .shared) -> [Item] {
         all(scenarios: scenarios, sessions: sessions, store: store)
-            .filter { !store.isKnownExpression($0.text) }
+            .filter { !store.hasUsedExpression($0.text) }
     }
 }

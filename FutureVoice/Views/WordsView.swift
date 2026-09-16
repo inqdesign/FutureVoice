@@ -259,14 +259,18 @@ struct WordsView: View {
     private func row(_ item: WordCatalog.Item) -> some View {
         let studying = store.isStudying(item.text)
         let known = store.state(of: item.key) != nil
+        let confirmed = store.isConfirmedWord(item.key)
         return HStack(spacing: 12) {
             // Same badge grammar as the cloud and the expressions list:
-            // bookmark = in the notebook, check = retired.
+            // bookmark = in the notebook, check = marked known, filled check
+            // = said in a talk (confirmed).
             if studying || known {
-                Image(systemName: studying ? "bookmark.fill" : "checkmark")
+                Image(systemName: studying ? "bookmark.fill" : (confirmed ? "checkmark.circle.fill" : "checkmark"))
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(studying ? Color.accentColor : Color.green)
                     .frame(width: 16)
+                    .accessibilityLabel(studying ? explain("Studying")
+                                        : (confirmed ? explain("Used in a talk") : explain("Marked known")))
             }
             VStack(alignment: .leading, spacing: 3) {
                 // The word wears the same rounded face as its card and the

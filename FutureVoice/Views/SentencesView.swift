@@ -69,6 +69,24 @@ struct SentencesView: View {
     }
 
     private func row(_ card: DrillCard) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            // Same badge grammar as the word and expression lists: check =
+            // marked known ("Got it"), filled check = said in a talk.
+            if card.box >= DrillStore.maxBox {
+                Image(systemName: card.usedInTalkAt != nil ? "checkmark.circle.fill" : "checkmark")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.green)
+                    .frame(width: 16)
+                    .padding(.top, 3)
+                    .accessibilityLabel(card.usedInTalkAt != nil
+                                        ? explain("Used in a talk") : explain("Marked known"))
+            }
+            sentence(card)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func sentence(_ card: DrillCard) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(card.targetPhrase)
                 .font(.headline)
@@ -89,7 +107,6 @@ struct SentencesView: View {
                     .lineLimit(1)
             }
         }
-        .padding(.vertical, 4)
     }
 
     /// Newest first — the sentence you minted this morning is the one you

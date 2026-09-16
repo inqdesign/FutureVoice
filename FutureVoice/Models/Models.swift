@@ -305,6 +305,8 @@ struct Carryover: Codable, Identifiable, Hashable {
         case studyingExpression   // a phrase they'd bookmarked in their notebook
         case suggestion           // a suggestion given earlier in THIS call
         case studyingWord         // a word they'd collected into their notebook
+        case knownWord            // a word they had marked known, now confirmed out loud
+        case knownExpression      // an expression they had marked known, now confirmed
     }
 
     var id: UUID = UUID()
@@ -334,6 +336,22 @@ extension Carryover.Source {
         case .studyingExpression: return "Expression notebook"
         case .studyingWord:       return "Word notebook"
         case .suggestion:         return "In-call suggestions"
+        case .knownWord:          return "Words you marked known"
+        case .knownExpression:    return "Expressions you marked known"
+        }
+    }
+
+    /// `label`, resolved in the app language. A `switch` of literals rather
+    /// than `explain(label)`, so the build's string extraction sees every key.
+    var localizedLabel: String {
+        switch self {
+        case .drillCard:          return explain("Review cards")
+        case .curriculumItem:     return explain("Your books")
+        case .studyingExpression: return explain("Expression notebook")
+        case .studyingWord:       return explain("Word notebook")
+        case .suggestion:         return explain("In-call suggestions")
+        case .knownWord:          return explain("Words you marked known")
+        case .knownExpression:    return explain("Expressions you marked known")
         }
     }
 
@@ -344,13 +362,16 @@ extension Carryover.Source {
         case .studyingExpression: return "bookmark"
         case .studyingWord:       return "text.book.closed"
         case .suggestion:         return "lightbulb"
+        case .knownWord:          return "checkmark.circle"
+        case .knownExpression:    return "checkmark.circle"
         }
     }
 
     /// Fixed display order — heaviest evidence first, so the breakdown reads
     /// the same everywhere and never reshuffles between reloads.
     static let displayOrder: [Carryover.Source] = [
-        .drillCard, .curriculumItem, .studyingExpression, .studyingWord, .suggestion,
+        .drillCard, .curriculumItem, .studyingExpression, .studyingWord,
+        .knownExpression, .knownWord, .suggestion,
     ]
 }
 
@@ -1323,3 +1344,8 @@ struct DrillCardEnrichment: Codable, Hashable {
     var memoryHook: String      // 1-line trigger to help recall when to reach for it
     var generatedAt: Date
 }
+    /// When the learner PRODUCED this line in a real talk — the strongest
+    /// evidence there is. "Got it" is the learner's own verdict and only
+    /// reaches the top rung; this is what makes that verdict CONFIRMED.
+    /// nil for a card that was only ever marked known by hand.
+    var usedInTalkAt: Date?

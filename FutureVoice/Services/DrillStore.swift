@@ -269,13 +269,18 @@ final class DrillStore: LanguageScopedStore {
         var all = load()
         var touched = false
         for index in all.indices where wanted.contains(all[index].id) {
-            let promoted = min(max(all[index].box + 2, 3), Self.maxBox)
-            guard promoted > all[index].box else { continue }
-            all[index].box = promoted
-            all[index].lastReviewedAt = now
-            all[index].nextReviewAt = Self.nextReview(after: promoted, from: now)
+            // Produced in a real talk outranks every flashcard verdict: the
+            // card goes straight to the top rung and retires, and the date
+            // marks it CONFIRMED — "Got it" is the learner's opinion, this
+            // is the evidence. Saying a confirmed card again refreshes it.
+            all[index].usedInTalkAt = now
+            if all[index].box < Self.maxBox {
+                all[index].box = Self.maxBox
+                all[index].lastReviewedAt = now
+                all[index].nextReviewAt = Self.nextReview(after: Self.maxBox, from: now)
+                Analytics.capture("drill_used_in_conversation", ["box": Self.maxBox])
+            }
             touched = true
-            Analytics.capture("drill_used_in_conversation", ["box": promoted])
         }
         if touched { write(all) }
     }

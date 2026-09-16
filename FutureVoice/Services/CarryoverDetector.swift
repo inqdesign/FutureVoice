@@ -50,6 +50,10 @@ enum CarryoverDetector {
     ///     (`VocabStore.studyingExpressions`), lowercased keys.
     ///   - studyingWords: headwords collected into the notebook
     ///     (`VocabStore.studying`). Matched by lemma, not by string.
+    ///   - knownExpressions / knownWords: items the learner MARKED known and
+    ///     has never yet said in a talk. "Known" is their own verdict; a hit
+    ///     here is the talk confirming it, which is the whole point of the
+    ///     Known state existing.
     ///   - sessionStartedAt: cutoff for "the user already had this".
     /// A Watch book's study item, flattened for matching. `isWord` picks the
     /// matcher: single words go by lemma, expressions and shadow lines go
@@ -66,6 +70,8 @@ enum CarryoverDetector {
         curriculumItems: [CurriculumItem] = [],
         studyingExpressions: [String] = [],
         studyingWords: [String] = [],
+        knownExpressions: [String] = [],
+        knownWords: [String] = [],
         sessionId: UUID,
         sessionStartedAt: Date,
         now: Date = Date()
@@ -102,7 +108,8 @@ enum CarryoverDetector {
         where card.sourceSessionId != sessionId && card.createdAt < sessionStartedAt {
             let key = normalized(card.targetPhrase)
             guard available(key),
-                  let hit = firstMatch(of: card.targetPhrase, in: userTurns),
+                  let hit = firstMatch(of: card.targetPhrase, in: userTurns,
+                                       rejectingMistake: card.sourcePhrase),
                   free(hit) else { continue }
             claim(key, hit, source: .drillCard, item: card.targetPhrase, sourceId: card.id)
         }
@@ -130,6 +137,15 @@ enum CarryoverDetector {
                   let hit = firstMatch(of: phrase, in: userTurns),
                   free(hit) else { continue }
             claim(key, hit, source: .studyingExpression, item: phrase, sourceId: nil)
+        }
+
+        // ── Expressions they'd declared known, now said for real.
+        for phrase in knownExpressions {
+            let key = normalized(phrase)
+            guard available(key),
+                  let hit = firstMatch(of: phrase, in: userTurns),
+                  free(hit) else { continue }
+            claim(key, hit, source: .knownExpression, item: phrase, sourceId: nil)
         }
 
         // ── Suggestions from earlier in THIS call, applied later in it.
@@ -160,14 +176,18 @@ enum CarryoverDetector {
         // "It slipped my mind" and then "mind" as separate rows reads like the
         // app padding its own scorecard.
         let claimedWords = Set(claimed.flatMap { $0.split(separator: " ").map(String.init) })
-        var wordHits: [(word: String, hit: Hit, rank: Int)] = []
-        for word in studyingWords {
-            let key = normalized(word)
-            guard !key.isEmpty, !claimedWords.contains(key),
-                  let hit = firstLemmaMatch(of: key, in: userTurns),
-                  !creditedTurns.contains(hit.turnId) else { continue }
-            let rank = CoreVocabulary.level(of: key).map { CoreVocabulary.levelRank($0) } ?? 0
-            wordHits.append((key, hit, rank))
+        var wordHits: [(word: String, hit: Hit, rank: Int, source: Carryover.Source)] = []
+        var seenWords = Set<String>()
+        for (list, source) in [(studyingWords, Carryover.Source.studyingWord),
+                               (knownWords, Carryover.Source.knownWord)] {
+            for word in list {
+                let key = normalized(word)
+                guard !key.isEmpty, !claimedWords.contains(key), seenWords.insert(key).inserted,
+                      let hit = firstLemmaMatch(of: key, in: userTurns),
+                      !creditedTurns.contains(hit.turnId) else { continue }
+                let rank = CoreVocabulary.level(of: key).map { CoreVocabulary.levelRank($0) } ?? 0
+                wordHits.append((key, hit, rank, source))
+            }
         }
         // Hardest words first, then capped: a learner with a big notebook can
         // hit a dozen in one talk, and a dozen rows buries the phrases above.
@@ -175,7 +195,7 @@ enum CarryoverDetector {
         // real one — see `SessionSummary.carryovers`.
         for entry in wordHits.sorted(by: { $0.rank > $1.rank }).prefix(maxWordCarryovers) {
             out.append(Carryover(
-                sessionId: sessionId, source: .studyingWord, item: entry.word,
+                sessionId: sessionId, source: entry.source, item: entry.word,
                 quote: entry.hit.quote, turnId: entry.hit.turnId,
                 sourceId: nil, detectedAt: now))
         }
@@ -198,17 +218,41 @@ enum CarryoverDetector {
 
     /// First user turn that contains `item`. Earliest turn wins so the quote
     /// points at the moment they reached for it, not a later repetition.
-    static func firstMatch(of item: String, in userTurns: [Turn]) -> Hit? {
+    ///
+    /// `rejectingMistake`: for a correction card, the line the card was
+    /// minted to FIX. The phrase matcher tolerates inserted words, which is
+    /// right for padding ("I'd rather *just* stay in") and wrong for the one
+    /// case a card exists for: "give me a feedback" contains every token of
+    /// "give me feedback", in order, and was credited as the correction
+    /// while being the exact mistake (real talk, 2026-09-16). So the matched
+    /// span has to show the fix: every word the correction ADDED must be
+    /// there, and no word it REMOVED may be.
+    static func firstMatch(of item: String, in userTurns: [Turn],
+                           rejectingMistake source: String? = nil) -> Hit? {
         let needle = tokens(item)
         let core = contentTokens(item)
         guard needle.count >= minTokens, core.count >= minContentTokens else { return nil }
         for turn in userTurns {
-            guard contains(needle, core: core, in: tokens(turn.transcript)) else { continue }
+            guard let span = matchedSpan(needle, core: core, in: tokens(turn.transcript)) else { continue }
+            if let source, !showsTheFix(from: source, to: item, in: span) { continue }
             return Hit(
                 quote: DrillStore.relevantFragment(of: turn.transcript, matching: item),
                 turnId: turn.id)
         }
         return nil
+    }
+
+    /// Does `span` (the learner's matched words) carry the correction and
+    /// not the mistake? Tokens the target added must all be present; tokens
+    /// it dropped must all be absent. A card with no source line (a suggested
+    /// drill) or a source identical to its target has nothing to check.
+    static func showsTheFix(from source: String, to target: String, in span: [String]) -> Bool {
+        let before = tokens(source), after = tokens(target)
+        guard !before.isEmpty, before != after else { return true }
+        let added = Set(after).subtracting(before)
+        let removed = Set(before).subtracting(after)
+        let said = Set(span)
+        return added.isSubset(of: said) && removed.isDisjoint(with: said)
     }
 
     /// Could this phrase EVER be credited? The token bars in `firstMatch`
@@ -244,12 +288,19 @@ enum CarryoverDetector {
     /// exactly, in order. That's deliberate: short items are the ones generic
     /// enough to hit by accident.
     private static func contains(_ needle: [String], core: [String], in hay: [String]) -> Bool {
-        guard !needle.isEmpty, hay.count >= minTokens else { return false }
+        matchedSpan(needle, core: core, in: hay) != nil
+    }
+
+    /// The learner's words that matched, trimmed to the phrase itself — from
+    /// the first token of the item to its last — so a check on what was said
+    /// AROUND the phrase can't be fooled by the rest of the window.
+    private static func matchedSpan(_ needle: [String], core: [String], in hay: [String]) -> [String]? {
+        guard !needle.isEmpty, hay.count >= minTokens else { return nil }
         // Room for the learner to pad the phrase out — "I'd rather just stay
         // in tonight, honestly" still counts.
         let window = needle.count * 2 + 4
         let required = Int((Double(needle.count) * minCoverage).rounded(.up))
-        guard hay.count >= required else { return false }
+        guard hay.count >= required else { return nil }
         for start in 0...(hay.count - required) {
             let slice = Array(hay[start..<min(hay.count, start + window)])
             guard lcsLength(needle, slice) >= required else { continue }
@@ -262,9 +313,14 @@ enum CarryoverDetector {
             // slip — that's what `minCoverage` is for. Content words may not.
             guard lcsLength(core, slice.filter { !filler.contains($0) }) == core.count
             else { continue }
-            return true
+            // Trim to the phrase: from where the item's first word lands to
+            // where its last word does (the function-word ends may have
+            // slipped, in which case the whole slice stands).
+            let lo = slice.firstIndex(of: needle[0]) ?? 0
+            let hi = slice.lastIndex(of: needle[needle.count - 1]).map { max($0, lo) } ?? slice.count - 1
+            return Array(slice[lo...hi])
         }
-        return false
+        return nil
     }
 
     /// Longest common subsequence length — order-preserving overlap that

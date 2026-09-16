@@ -677,3 +677,117 @@ final class UngradedPickupTests: XCTestCase {
         XCTAssertNil(store.state(of: "chore"))
     }
 }
+
+/// Using a word or expression in a real talk is the strongest state there is:
+/// it takes the item out of the notebook and its schedule, and turns a
+/// self-declared "known" into a confirmed one. Runs against the shared store
+/// like the schedule tests above, so every item is cleaned up after.
+@MainActor
+final class ConfirmedByUseTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        UserDefaults.standard.set("en", forKey: LanguageCatalog.targetLanguageDefaultsKey)
+    }
+
+    func testSayingANotebookWordGraduatesIt() {
+        let store = VocabStore.shared
+        let word = "commute"
+        store.unmark(word); store.forgetRemovedByHand(word)
+        store.addStudying(word)
+        StudyScheduleStore.shared.snooze(.word, word, until: Date().addingTimeInterval(3 * 86_400))
+        defer { store.unmark(word); store.removeStudying(word); store.forgetRemovedByHand(word)
+                StudyScheduleStore.shared.clear(.word, word) }
+
+        store.ingest(sessionId: UUID(), userTexts: ["I commuted for two hours every day."])
+
+        XCTAssertFalse(store.isStudying(word), "used in a talk means known — it leaves the notebook")
+        XCTAssertTrue(store.isConfirmedWord(word))
+        XCTAssertNil(StudyScheduleStore.shared.nextReview(.word, word), "and its return date goes with it")
+        XCTAssertFalse(store.removedByHand.contains(word), "graduating is not throwing out")
+    }
+
+    /// A word a talk put in the notebook by itself is not something the
+    /// learner practiced — until they touch it. The wrap-up's "you used what
+    /// you practiced" must not list it before then.
+    func testAutoKeptWordIsNotPracticedUntilTouched() {
+        let store = VocabStore.shared
+        let word = "zzqauto"
+        store.unmark(word); store.removeStudying(word); store.forgetRemovedByHand(word)
+        defer { store.removeStudying(word); store.forgetRemovedByHand(word)
+                StudyScheduleStore.shared.clear(.word, word) }
+
+        store.keepFromTalk([word])
+        XCTAssertTrue(store.isStudying(word))
+        XCTAssertFalse(store.practicedStudyingWords.contains(word))
+
+        // Dealt in a deck and put away: now it has been practiced.
+        StudyScheduleStore.shared.snooze(.word, word, until: Date().addingTimeInterval(600))
+        XCTAssertTrue(store.practicedStudyingWords.contains(word))
+
+        // Kept by hand: practiced from the start.
+        let byHand = "zzqhand"
+        store.removeStudying(byHand); store.forgetRemovedByHand(byHand)
+        defer { store.removeStudying(byHand); store.forgetRemovedByHand(byHand) }
+        store.addStudying(byHand)
+        XCTAssertTrue(store.practicedStudyingWords.contains(byHand))
+    }
+
+    /// The fluent self echoes the learner's own words back; those are not
+    /// pickup material. And a capitalized word mid-sentence is a name even
+    /// when the tagger disagrees.
+    func testPickupSkipsTheLearnersOwnWordsAndNames() {
+        let fluent = ["He said he can't use the Nawana app in the car.",
+                      "This is the best time to practice English, right?"]
+        let picks = VocabStore.shared.pickupCandidates(
+            fromFluentTexts: fluent, atOrAbove: nil, excludingLemmas: ["app", "car"])
+        XCTAssertFalse(picks.contains("nawana"))
+        XCTAssertFalse(picks.contains("english"))
+        XCTAssertFalse(picks.contains("app"))
+        XCTAssertFalse(picks.contains("car"))
+        XCTAssertTrue(picks.contains("practice") || picks.contains("time"),
+                      "ordinary words the learner didn't say still come through")
+    }
+
+    func testSayingAKnownWordConfirmsIt() {
+        let store = VocabStore.shared
+        let word = "hectic"
+        store.unmark(word); store.removeStudying(word); store.forgetRemovedByHand(word)
+        store.markKnown(word)
+        defer { store.unmark(word); store.forgetRemovedByHand(word) }
+        XCTAssertFalse(store.isConfirmedWord(word), "marked by hand is a claim, not evidence")
+        XCTAssertTrue(store.unconfirmedKnownWords.contains(word))
+
+        store.ingest(sessionId: UUID(), userTexts: ["This week has been pretty hectic."])
+        XCTAssertTrue(store.isConfirmedWord(word))
+        XCTAssertFalse(store.unconfirmedKnownWords.contains(word))
+    }
+
+    func testSayingABookmarkedExpressionConfirmsAndUnbookmarksIt() {
+        let store = VocabStore.shared
+        let phrase = "on the same page \(UUID().uuidString.prefix(6).lowercased())"
+        store.setStudyingExpression(phrase, true)
+        StudyScheduleStore.shared.snooze(.expression, phrase, until: Date().addingTimeInterval(86_400))
+        defer { store.dismissExpression(phrase) }
+        XCTAssertFalse(store.isConfirmedExpression(phrase), "a bookmark alone is a zero-count row")
+
+        store.ingestExpressions(sessionId: UUID(), phrases: [phrase])
+
+        XCTAssertTrue(store.isConfirmedExpression(phrase))
+        XCTAssertTrue(store.hasUsedExpression(phrase))
+        XCTAssertFalse(store.isStudyingExpression(phrase))
+        XCTAssertNil(StudyScheduleStore.shared.nextReview(.expression, phrase))
+    }
+
+    func testSayingAKnownExpressionConfirmsIt() {
+        let store = VocabStore.shared
+        let phrase = "slipped my mind \(UUID().uuidString.prefix(6).lowercased())"
+        store.setKnownExpression(phrase, true)
+        defer { store.dismissExpression(phrase) }
+        XCTAssertTrue(store.unconfirmedKnownExpressions.contains(phrase))
+
+        store.ingestExpressions(sessionId: UUID(), phrases: [phrase])
+        XCTAssertTrue(store.isConfirmedExpression(phrase))
+        XCTAssertTrue(store.hasUsedExpression(phrase), "still counts as known — confirmed is above it")
+        XCTAssertFalse(store.unconfirmedKnownExpressions.contains(phrase))
+    }
+}

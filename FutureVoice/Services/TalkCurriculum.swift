@@ -219,7 +219,8 @@ enum TalkCurriculum {
         // in, and its progress was pinned at 0 forever.
         let pickups = VocabStore.shared.pickupCandidates(
             fromFluentTexts: session.turns.filter { $0.role == .fluentSelf }.map(\.transcript),
-            atOrAbove: proficiency
+            atOrAbove: proficiency,
+            excludingLemmas: userLemmas
         ).prefix(maxWords)
         snap.words = pickups.map { w in
             var item = ScenarioCurriculum.Item(text: w, note: "")

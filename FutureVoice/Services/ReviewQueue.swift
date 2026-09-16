@@ -73,10 +73,12 @@ enum ReviewQueue {
                                   _ vocab: VocabStore) -> Bool {
         switch item.kind {
         case .word:
-            return vocab.state(of: VocabStore.lookupKey(for: item.text)) == .known
-                || vocab.state(of: item.text.lowercased()) == .known
+            // Known by hand OR confirmed by use — unless the learner bookmarked
+            // it again, in which case the deck's promise stands.
+            return [VocabStore.lookupKey(for: item.text), item.text.lowercased()]
+                .contains { vocab.state(of: $0) != nil && !vocab.isStudying($0) }
         case .expression:
-            return vocab.isKnownExpression(item.text)
+            return vocab.hasUsedExpression(item.text)
         }
     }
 }

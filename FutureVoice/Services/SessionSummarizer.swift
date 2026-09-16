@@ -216,6 +216,15 @@ enum SessionSummarizer {
         let priorWords = session.summary?.newWordsUsed ?? []
         computed.newWordsUsed = priorWords + freshWords.filter { !priorWords.contains($0) }
 
+        // What they had been studying, and what they had marked known, as it
+        // stood BEFORE this talk is credited: producing a word takes it out of
+        // the notebook, and the wrap-up still has to say it was a notebook
+        // word they used.
+        let vocab = VocabStore.shared
+        let studyingWordsBefore = vocab.practicedStudyingWords
+        let knownWordsBefore = vocab.unconfirmedKnownWords
+        let studyingExpressionsBefore = vocab.studyingExpressions
+        let knownExpressionsBefore = vocab.unconfirmedKnownExpressions
         // Keep only expressions that literally appear in the user's own
         // turns — the LLM occasionally paraphrases, and we never show or
         // store an expression they didn't actually say.
@@ -288,7 +297,8 @@ enum SessionSummarizer {
         VocabStore.shared.keepFromTalk(
             Array(VocabStore.shared.pickupCandidates(
                 fromFluentTexts: turns.filter { $0.role == .fluentSelf }.map(\.transcript),
-                atOrAbove: appState.proficiency).prefix(TalkCurriculum.maxWords)))
+                atOrAbove: appState.proficiency,
+                excludingLemmas: VocabStore.lemmas(in: userTexts)).prefix(TalkCurriculum.maxWords)))
 
         // Same guard for grammar evidence: a quote the user can't find in
         // their own words destroys trust in the whole list. Compare with
@@ -318,8 +328,10 @@ enum SessionSummarizer {
         let carryovers = CarryoverDetector.detect(
             in: turns, cards: DrillStore.shared.load(),
             curriculumItems: appState.openCurriculumItems,
-            studyingExpressions: VocabStore.shared.studyingExpressions,
-            studyingWords: VocabStore.shared.studying,
+            studyingExpressions: studyingExpressionsBefore,
+            studyingWords: studyingWordsBefore,
+            knownExpressions: knownExpressionsBefore,
+            knownWords: knownWordsBefore,
             sessionId: sessionId, sessionStartedAt: session.startedAt)
         computed.carryovers = carryovers
         report { $0.carryovers = carryovers.count }
@@ -328,6 +340,17 @@ enum SessionSummarizer {
         // title so History/Practice lists don't fill with identical
         // "Conversation" rows.
         let generatedTitle = payload.title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Bookmarked or self-marked expressions said out loud: credit the pool
+        // the way the summary's own list is credited, so the record, the
+        // bookmark and the schedule all move — not just the receipt. Words
+        // need nothing here: `ingest` above already credits every tracked
+        // word the learner said. `ingestExpressions` dedupes per session, so
+        // a phrase the model ALSO listed is counted once.
+        VocabStore.shared.ingestExpressions(
+            sessionId: sessionId,
+            phrases: carryovers
+                .filter { $0.source == .studyingExpression || $0.source == .knownExpression }
+                .map(\.item))
         let existingTopic = session.topic?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let resolvedTopic = existingTopic.isEmpty ? (generatedTitle ?? "") : existingTopic
 
@@ -354,6 +377,17 @@ enum SessionSummarizer {
         appState.markCurriculumItemsUsedInConversation(
             itemIds: carryovers.filter { $0.source == .curriculumItem }.compactMap { $0.sourceId })
         if !carryovers.isEmpty {
+        // A suggestion adopted later in the SAME call: the card it just
+        // minted is born confirmed — they already said the corrected line.
+        let adopted = Set(carryovers.filter { $0.source == .suggestion }
+            .map { CarryoverDetector.normalized($0.item) })
+        if !adopted.isEmpty {
+            DrillStore.shared.markUsedInConversation(
+                ids: DrillStore.shared.load()
+                    .filter { $0.sourceSessionId == sessionId
+                        && adopted.contains(CarryoverDetector.normalized($0.targetPhrase)) }
+                    .map(\.id))
+        }
             Analytics.capture("carryovers_detected", [
                 "count": carryovers.count,
                 "from_cards": carryovers.filter { $0.source == .drillCard }.count,

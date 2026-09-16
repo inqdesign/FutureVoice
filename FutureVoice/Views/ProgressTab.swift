@@ -816,7 +816,7 @@ struct ProgressTab: View {
                 FlowLayout(spacing: 8) {
                     ForEach(Carryover.Source.displayOrder, id: \.self) { source in
                         if let count = carryover.bySource[source], count > 0 {
-                            Label("\(source.label) \(count)", systemImage: source.icon)
+                            Label { Text(verbatim: "\(source.localizedLabel) \(count)") } icon: { Image(systemName: source.icon) }
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8).padding(.vertical, 4)

@@ -186,6 +186,31 @@ final class DrillStoreTests: XCTestCase {
         XCTAssertTrue(store.due(now: now.addingTimeInterval(365 * 24 * 60 * 60)).isEmpty)
     }
 
+    /// Saying the card's line in a real talk outranks every flashcard verdict:
+    /// top rung, retired, and stamped CONFIRMED — which "Got it" never is,
+    /// because that one is the learner's own claim.
+    func testSayingACardInATalkConfirmsIt() {
+        let now = Date()
+        store.ingest(summary: summary(drills: ["Could you say that again?"]),
+                     turns: [], sessionId: UUID(), now: now)
+        let fresh = store.load().first!
+        XCTAssertNil(fresh.usedInTalkAt)
+
+        store.markUsedInConversation(ids: [fresh.id], at: now)
+        let used = store.load().first!
+        XCTAssertEqual(used.box, DrillStore.maxBox)
+        XCTAssertEqual(used.nextReviewAt, DrillStore.retiredReviewDate)
+        XCTAssertEqual(used.usedInTalkAt, now)
+        XCTAssertTrue(store.due(now: now).isEmpty)
+
+        // "Got it" on another card reaches the same rung without the stamp.
+        store.ingest(summary: summary(drills: ["We're on the same page."]),
+                     turns: [], sessionId: UUID(), now: now)
+        let other = store.due(now: now).first!
+        store.markKnown(other, at: now)
+        XCTAssertNil(store.load().first { $0.id == other.id }?.usedInTalkAt)
+    }
+
     /// Known is a door, not a waiting room — but only the ladder is barred
     /// from reopening it. Re-filing from the Known folder is the learner's
     /// own call and must still work.
