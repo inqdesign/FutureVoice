@@ -91,7 +91,41 @@ async function fetchData(env: Env) {
     body: "{}",
   });
   if (!r.ok) throw new Error(`admin_raw ${r.status}: ${(await r.text()).slice(0, 300)}`);
-  return assemble(await r.json());
+  const raw = await r.json();
+  // Never let this card take the whole console down with it.
+  raw.recent_ledger = await recentLedger(env).catch((e) => {
+    console.log(`recentLedger: ${(e as Error).message}`);
+    return [];
+  });
+  return assemble(raw);
+}
+
+/** Every usage_ledger row of the last 8 days, thin. `admin_raw.hours` is a
+ *  whole-window UTC hour-of-day sum, which can say when people usually come
+ *  but not what TODAY looks like against that — and "today" has to be cut in
+ *  the zone the page is set to, so the rows go to the page raw and it buckets
+ *  them. ~1k rows a day at launch; paged because PostgREST caps a response. */
+async function recentLedger(env: Env): Promise<unknown[]> {
+  const since = new Date(Date.now() - 8 * 86_400_000).toISOString();
+  const page = 1000;
+  const rows: unknown[] = [];
+  for (let from = 0; from < 50_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
+      + `?select=user_id,created_at,action,delta,seconds:metadata->seconds`
+      + `&created_at=gte.${encodeURIComponent(since)}&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`usage_ledger ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    const batch = await r.json() as unknown[];
+    rows.push(...batch);
+    if (batch.length < page) break;
+  }
+  return rows;
 }
 
 // ---- PostHog: where people are, and whether the app is open --------------

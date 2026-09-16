@@ -169,6 +169,18 @@ export function assemble(raw: any) {
   const setup = withIdx(raw.setup);
   // Talk seconds by UTC hour-of-day, per user. The page rotates them.
   const hours = withIdx(raw.hours);
+  // The last 8 days, one row per ledger row: [user idx, epoch ms, talk
+  // seconds or -1 for a non-talk row]. Same seconds rule as
+  // `talk_row_seconds`: metadata.seconds when present, else a negative delta.
+  const recentActivity = (raw.recent_ledger ?? [])
+    .filter((r: any) => uidx.has(r.user_id))
+    .map((r: any) => [
+      uidx.get(r.user_id),
+      Date.parse(r.created_at),
+      r.action !== "talk_time" ? -1
+        : typeof r.seconds === "number" ? r.seconds
+        : r.delta < 0 ? -r.delta : 0,
+    ]);
   const rtReasons = raw.rt_reasons ?? [];
 
   // ---------------------------------------------------------------- cost
@@ -298,7 +310,7 @@ export function assemble(raw: any) {
     cost,
     fairUse: raw.fair_use,
     subEvents, recentSessions, recentEvents, freeRecent,
-    rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours,
+    rtSessions, rtReasons, revenue, planUsage, userLangs, setup, hours, recentActivity,
     prices: MONTHLY_PRICE,
   };
 }
