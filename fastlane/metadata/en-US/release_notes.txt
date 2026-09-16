@@ -1,4 +1,4 @@
-See exactly how your introduction reads to other learners before it's shared — and choose.
-Lock any line your fluent self picked up in a talk, and it stays between you two.
-Switch your learning language and the greeting on the Talk tab switches with it, right away.
-Fixed talks in German and other non-English languages being written down in the wrong language.
+Your fluent self keeps what it learns about you as short notes, and you choose for each one what others see: nothing, just the gist, or everything.
+If a call drops for a moment, it now reconnects on its own.
+Your fluent self's voice pauses more naturally between sentences.
+Words and phrases you've actually used in a call are now marked in your review.
