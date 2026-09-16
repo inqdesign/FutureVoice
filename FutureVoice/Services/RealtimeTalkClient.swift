@@ -626,7 +626,47 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     func hangUp() {
         guard !isTornDown else { return }
         sendControl(["type": "end"])
+        // The gateway answers `end` with `ended` — the session's only record —
+        // but tearing down cancelled the socket in the same breath, so it never
+        // landed: not one `talk_rt_session` row in the three days after it
+        // shipped (checked 2026-09-15), and the console had drop counts with
+        // nothing to divide them by. The audio stops NOW; the socket alone is
+        // kept a moment longer to hear that last word.
+        let draining = socket
+        socket = nil
         teardown()
+        guard let draining else { return }
+        Task { @MainActor [weak self] in
+            await self?.drainForSessionRecord(draining)
+            draining.cancel(with: .goingAway, reason: nil)
+        }
+    }
+
+    /// Read until `ended` arrives, the socket closes, or `sessionRecordWait`
+    /// passes — whichever is first. Everything else the socket says after a
+    /// hang-up is dropped: the call is over.
+    private static let sessionRecordWait: UInt64 = 1_500_000_000
+
+    private func drainForSessionRecord(_ socket: URLSessionWebSocketTask) async {
+        let read = Task { () -> [String: Any]? in
+            while !Task.isCancelled {
+                guard let message = try? await socket.receive() else { return nil }
+                guard case .string(let text) = message,
+                      let data = text.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+                else { continue }
+                if json["type"] as? String == "ended" { return json }
+            }
+            return nil
+        }
+        let timeout = Task {
+            try? await Task.sleep(nanoseconds: Self.sessionRecordWait)
+            read.cancel()
+            socket.cancel(with: .goingAway, reason: nil)
+        }
+        let json = await read.value
+        timeout.cancel()
+        if let json { logSession(json) }
     }
 
     private func teardown() {
@@ -1497,6 +1537,38 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
 
     // MARK: - Events
 
+    /// Write the gateway's per-session record. Called from `handleEvent` and
+    /// from `hangUp`'s drain, which is the ONLY way it arrives for a call the
+    /// learner ends — see there.
+    private func logSession(_ json: [String: Any]) {
+        // The gateway's last word. The only per-session record this path
+        // produces — the reply and the voice never touch the usage
+        // ledger — so it goes straight to client_events for the console.
+        let voice = (json["voiceFirstMs"] as? [Int] ?? []).sorted()
+        let p50 = voice.isEmpty ? nil : voice[voice.count / 2]
+        let gaps = (json["mergeGapMs"] as? [Int] ?? []).sorted()
+        let gapP50 = gaps.isEmpty ? nil : gaps[gaps.count / 2]
+        Telemetry.log("talk_rt_session", [
+            "reason": json["reason"] as? String ?? "",
+            "turns": String(json["turns"] as? Int ?? 0),
+            "speech_s": String(json["speechSeconds"] as? Int ?? 0),
+            "duration_ms": String(json["durationMs"] as? Int ?? 0),
+            "voice_first_p50_ms": p50.map(String.init) ?? "",
+            "voice_first_max_ms": voice.last.map(String.init) ?? "",
+            "voice_samples": String(voice.count),
+            "warnings": String(json["warnings"] as? Int ?? 0),
+            "lines": String(lines.count),
+            // Turn-taking evidence (gateway 2026-09-15): how often the
+            // fluent self talked over the learner, how often the hold
+            // window caught a continuation, and how long this learner's
+            // own mid-thought pauses ran. Absent from an older gateway.
+            "cutoffs": String(json["cutoffs"] as? Int ?? 0),
+            "merges": String(json["merges"] as? Int ?? 0),
+            "merge_gap_p50_ms": gapP50.map(String.init) ?? "",
+            "merge_gap_max_ms": gaps.last.map(String.init) ?? "",
+        ])
+    }
+
     private var turnCommittedAt: Date?
 
     private func handleEvent(_ text: String) {
@@ -1628,37 +1700,19 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             // The call survived something — a retried reply, a dropped TTS
             // line. Nothing to show; everything to record.
             warningsThisCall += 1
-            Telemetry.log("talk_rt_warning", [
-                "code": json["code"] as? String ?? "",
-                "message": String((json["message"] as? String ?? "").prefix(200)),
-            ])
+            // With the SAME audio facts a failure carries. A `cutoff` is the
+            // fluent self being talked over, and whether that is a learner in
+            // earphones, a phone on a car seat, or a speakerphone in a kitchen
+            // is the whole diagnosis — 46 warnings had no route on them
+            // (2026-09-16, a car-Bluetooth report that no row could confirm or
+            // rule out). Read-only: nothing here touches the session.
+            var props = audioFacts()
+            props["code"] = json["code"] as? String ?? ""
+            props["message"] = String((json["message"] as? String ?? "").prefix(200))
+            props["built_out"] = builtOutput
+            Telemetry.log("talk_rt_warning", props)
         case "ended":
-            // The gateway's last word. The only per-session record this path
-            // produces — the reply and the voice never touch the usage
-            // ledger — so it goes straight to client_events for the console.
-            let voice = (json["voiceFirstMs"] as? [Int] ?? []).sorted()
-            let p50 = voice.isEmpty ? nil : voice[voice.count / 2]
-            let gaps = (json["mergeGapMs"] as? [Int] ?? []).sorted()
-            let gapP50 = gaps.isEmpty ? nil : gaps[gaps.count / 2]
-            Telemetry.log("talk_rt_session", [
-                "reason": json["reason"] as? String ?? "",
-                "turns": String(json["turns"] as? Int ?? 0),
-                "speech_s": String(json["speechSeconds"] as? Int ?? 0),
-                "duration_ms": String(json["durationMs"] as? Int ?? 0),
-                "voice_first_p50_ms": p50.map(String.init) ?? "",
-                "voice_first_max_ms": voice.last.map(String.init) ?? "",
-                "voice_samples": String(voice.count),
-                "warnings": String(json["warnings"] as? Int ?? 0),
-                "lines": String(lines.count),
-                // Turn-taking evidence (gateway 2026-09-15): how often the
-                // fluent self talked over the learner, how often the hold
-                // window caught a continuation, and how long this learner's
-                // own mid-thought pauses ran. Absent from an older gateway.
-                "cutoffs": String(json["cutoffs"] as? Int ?? 0),
-                "merges": String(json["merges"] as? Int ?? 0),
-                "merge_gap_p50_ms": gapP50.map(String.init) ?? "",
-                "merge_gap_max_ms": gaps.last.map(String.init) ?? "",
-            ])
+            logSession(json)
         case "error":
             Self.step("gateway error: \(json)")
             let code = json["code"] as? String ?? ""

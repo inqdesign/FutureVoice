@@ -23,9 +23,18 @@ export interface TranscriberCallbacks {
   onInterim(text: string): void
   /** The utterance is over and this is its transcript — the turn signal. */
   onUtterance(text: string): void
-  onRotating(): void
+  /** The upstream socket is being replaced; `why` says what closed it. The
+   *  call survives — audio is buffered until the new socket is set up. */
+  onRotating(why: string): void
+  /** Fatal: the socket could not be replaced. Only here is the call deaf. */
   onError(message: string): void
 }
+
+/** More rotations than this inside `rotationWindowMs` means upstream is
+ *  refusing us in a loop, not hitting its ~10 min ceiling — give up instead
+ *  of reconnecting forever with the learner hearing nothing. */
+const maxRotationsPerWindow = 4
+const rotationWindowMs = 60_000
 
 export class GeminiTranscriber {
   private ws: WebSocket | null = null
@@ -33,6 +42,12 @@ export class GeminiTranscriber {
   private closed = false
   private setupDone = false
   private pendingAudio: string[] = []
+  /** Bumped on every connect AND at the start of every rotation, so a socket
+   *  being replaced can no longer speak for the transcriber: its close/error
+   *  events (workerd fires both on an unclean end, and `close` again for the
+   *  close() rotate itself issues) would otherwise start a SECOND rotation. */
+  private generation = 0
+  private rotationsAt: number[] = []
 
   constructor(private apiKey: string,
               private model: string,
@@ -46,23 +61,30 @@ export class GeminiTranscriber {
     const ws = resp.webSocket
     if (!ws) throw new Error(`transcribe-live upgrade refused: ${resp.status}`)
     ws.accept()
-    console.log("transcriber: upgraded, sending setup")
+    const gen = ++this.generation
+    console.log(`transcriber: upgraded (gen ${gen}), sending setup`)
     this.ws = ws
     this.setupDone = false
 
-    ws.addEventListener("message", (ev) => this.handleMessage(ev))
+    ws.addEventListener("message", (ev) => {
+      if (gen === this.generation) this.handleMessage(ev)
+    })
+    // Transcription sessions cap at ~10 min — rotate on any unasked end;
+    // with a resumption handle the context survives, without one we simply
+    // start fresh (the transcript state lives in the session, not here).
+    //
+    // `error` rotates too. Until 2026-09-16 it was FATAL — the call ended
+    // with "transcribe-live socket error" while `close`, which always follows
+    // it, had a perfectly good reconnect path it never got to run. Three of
+    // that day's six dropped calls were this, one of them exactly 10 min 4 s
+    // after the previous connect: the ceiling itself, arriving as an error.
     ws.addEventListener("close", (ev) => {
-      console.log(`transcriber: closed code=${ev.code} reason=${ev.reason ?? ""} wasClean=${(ev as any).wasClean}`)
-      if (this.closed) return
-      // Transcription sessions cap at ~10 min — rotate on any unasked close;
-      // with a resumption handle the context survives, without one we simply
-      // start fresh (the transcript state lives in the session, not here).
-      this.callbacks.onRotating()
-      this.rotate().catch(() =>
-        this.callbacks.onError(`transcribe-live closed: ${ev.code} ${ev.reason ?? ""}`))
+      console.log(`transcriber: closed gen=${gen} code=${ev.code} reason=${ev.reason ?? ""} wasClean=${(ev as any).wasClean}`)
+      this.rotateFrom(gen, `closed ${ev.code} ${ev.reason ?? ""}`.trim())
     })
     ws.addEventListener("error", () => {
-      if (!this.closed) this.callbacks.onError("transcribe-live socket error")
+      console.log(`transcriber: socket error gen=${gen}`)
+      this.rotateFrom(gen, "socket error")
     })
 
     ws.send(JSON.stringify({
@@ -100,6 +122,29 @@ export class GeminiTranscriber {
     this.ws?.send(JSON.stringify({
       realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } },
     }))
+  }
+
+  /** Replace the socket of generation `gen`, unless it is already stale
+   *  (a rotation is under way, or a newer socket is live) or the transcriber
+   *  was closed on purpose. Idempotent per generation — the same socket's
+   *  `error` and `close` both land here and only the first one acts. */
+  private rotateFrom(gen: number, why: string): void {
+    if (this.closed || gen !== this.generation) return
+    this.generation += 1
+    // A socket that never reached setupComplete died on the handshake — most
+    // likely a resumption handle the service no longer honours. Retrying with
+    // the same handle would fail the same way; start fresh instead.
+    if (!this.setupDone) this.resumptionHandle = null
+    const now = Date.now()
+    this.rotationsAt = this.rotationsAt.filter((t) => now - t < rotationWindowMs)
+    this.rotationsAt.push(now)
+    if (this.rotationsAt.length > maxRotationsPerWindow) {
+      this.callbacks.onError(`transcribe-live ${why} (${this.rotationsAt.length} rotations in ${rotationWindowMs / 1000}s)`)
+      return
+    }
+    this.callbacks.onRotating(why)
+    this.rotate().catch((e) =>
+      this.callbacks.onError(`transcribe-live reconnect failed after ${why}: ${String(e)}`))
   }
 
   private async rotate(): Promise<void> {
@@ -142,8 +187,7 @@ export class GeminiTranscriber {
       return
     }
     if (msg.goAway !== undefined) {
-      this.callbacks.onRotating()
-      this.rotate().catch((e) => this.callbacks.onError(String(e)))
+      this.rotateFrom(this.generation, "goAway")
       return
     }
     const content = msg.serverContent

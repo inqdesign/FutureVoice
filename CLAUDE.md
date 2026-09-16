@@ -377,21 +377,6 @@ conversation → summary (+ scorecard metrics) → DrillStore.ingest (SRS cards)
             ↘ WeeklyReportEngine (unlocks on accumulated speaking time)
 ```
 
-**One card per sentence, enforced by the STORE** (2026-09-13). `ingest` had
-deduped on the normalized target since the beginning, so the loop above could
-not repeat itself — but `DrillStore.save` replaces by `id` only, and every
-mint path outside ingest hands it a freshly minted `DrillCard` with a fresh
-UUID: Watch's "Save phrase" on a scene played twice, the book page's
-correction tap, the debug seeds a capture run re-plants (which is where it was
-caught — one sample sentence sitting in the deck twelve times). `saveIfNew` is
-now the one door for those paths: same `matchKey` ingest uses, plus the
-`isDrillable` check, returning whatever is on file so a caller can still open
-the card. `load()` collapses the copies already on learners' phones, keeping
-the one with Leitner progress on it (read-time like the store's other repairs,
-so deck, Sentences list and widget agree at once and the next write persists
-it). A card the read filter would drop is never minted at all — a card no
-lookup can find is what made every visit mint another one.
-
 **Three states, and USED outranks KNOWN** (2026-09-15, user decision). Every
 review item — a word, an expression, a sentence card — is in one of three
 states, in order: **studying** (the deck's 10 min / tomorrow / 3 days),
@@ -443,6 +428,21 @@ against the card's `sourcePhrase`: every token the correction added must be
 present, every token it removed must be absent (`showsTheFix`). Cards with
 no source line are unchanged. Don't relax the span to the whole turn — an
 "a" three clauses later would reject a real fix.
+
+**One card per sentence, enforced by the STORE** (2026-09-13). `ingest` had
+deduped on the normalized target since the beginning, so the loop above could
+not repeat itself — but `DrillStore.save` replaces by `id` only, and every
+mint path outside ingest hands it a freshly minted `DrillCard` with a fresh
+UUID: Watch's "Save phrase" on a scene played twice, the book page's
+correction tap, the debug seeds a capture run re-plants (which is where it was
+caught — one sample sentence sitting in the deck twelve times). `saveIfNew` is
+now the one door for those paths: same `matchKey` ingest uses, plus the
+`isDrillable` check, returning whatever is on file so a caller can still open
+the card. `load()` collapses the copies already on learners' phones, keeping
+the one with Leitner progress on it (read-time like the store's other repairs,
+so deck, Sentences list and widget agree at once and the next write persists
+it). A card the read filter would drop is never minted at all — a card no
+lookup can find is what made every visit mint another one.
 
 **"Got it" RETIRES a sentence card** (2026-09-14). The top Leitner rung used
 to carry a 30-day interval, so a card marked known came back a month later,
@@ -580,10 +580,21 @@ seventeen times.
   question it never heard the answer to.
 - **A refused or dropped ElevenLabs socket ends the LINE** (`warn("tts")` →
   `endLine`): the text is already on screen and the socket reopens lazily.
-- **A transcriber failure stays fatal**, and the app answers it with
-  **Reconnect** (`ConversationView.reconnectRealtimeCall`) — same voice, the
-  turns so far as history, no opener. Before this a dropped call had no
-  message at all: the screen went quiet and the only move was to hang up.
+- **A transcriber failure stays fatal — but only once the socket could not
+  be REPLACED** (2026-09-16). Gemini's transcribe socket ends every ~10 min
+  and on any upstream hiccup, and `GeminiTranscriber` rotates it (resumption
+  handle, mic audio buffered meanwhile). Until 2026-09-16 the socket's
+  `error` event skipped that path and ended the call outright, while `close`
+  — which always follows an error — would have rotated: three of that day's
+  six drops, one exactly 10 min 4 s after the previous connect. Both events
+  now go through `rotateFrom`, idempotent per socket generation (the old
+  socket's own close, and a second event for the same end, can't start a
+  second rotation); a rotation is a `warning` (`transcriber`, "rotating: …"),
+  and only a refused reconnect or >4 rotations a minute is `fail`. The app
+  answers that with **Reconnect** (`ConversationView.reconnectRealtimeCall`)
+  — same voice, the turns so far as history, no opener. Before this a dropped
+  call had no message at all: the screen went quiet and the only move was to
+  hang up.
 
 **Every failure now leaves a record, and that is the point.** The gateway
 sends two new messages (`gateway/src/protocol.ts`): `warning` (survived) and
@@ -898,6 +909,7 @@ Nothing here names a language. Adding German is a `de` column in the catalogs pl
   - `fidelityModelId` bills ~2x per character upstream while `priceFor("tts")` in the edge function is model-BLIND, so that 2x is pure margin we absorb. Only put a path on it when `PhraseAudioStore` caches the result (making the 2x one-time per unique line) or when it fires once per user, ever. NEVER for live conversation turns.
   - Voice settings are fixed server-side in `supabase/functions/elevenlabs-tts/`. `style` MUST stay `0` — any style exaggeration pulls the output away from the reference speaker.
   - **The level changes WHICH WORDS, not HOW MUCH** (2026-08-20, `ConversationEngine.SpeechScale`). Turn length used to scale with the band (2 sentences at A1, 4 at C1); it now stops at 3 for everyone and says one thing — this is a phone call, nobody monologues. A learner doesn't need shorter turns than a fluent speaker gets, they need easier ones, so the band drives vocabulary + sentence SHAPES and nothing else. The old ceiling made replies stop mid-thought and pushed the model to satisfy the count by writing longer sentences, which is how a rule meant to keep the call spoken made it read written. Keep the ceiling COUNTABLE though — the qualitative version lost to the concrete REACT/VARY bullets and an A1 turn came back at four sentences.
+  - **Punctuation is the breath** (2026-09-15, rewritten 2026-09-16, `CoachingLanguage.breathPunctuation`). Reported as "when it speaks Korean it reads without breathing". Measured on both TTS models and on the gateway's per-sentence path: the synthesizer pauses at punctuation and nowhere else — a Korean turn with no commas got ~1.1 s of internal pause in 12 s, the same text with a comma at each clause boundary ~1.7 s, and the gap BETWEEN sentences was ~400 ms on every path, so the text never asked. `speed: 0.9` slowed the words and REDUCED the pauses — wrong axis. **The first wording ("a comma between two clauses") made the model end finished sentences on a comma** ("나 방금 너랑 비슷한 사람 봤다, 어찌나 반갑던지, 뭐 하고 지내?"), which keeps the voice suspended on a sentence that is over — 10 of 18 opener lines against 2–6 with no rule. It is now stated as INTONATION: a period finishes, a comma hangs, a comma only after an ending that leaves the sentence open (~는데/~서/~니까/~고/~던지/~면), never after a sentence-final ending (0 wrong commas on both models after the rewrite). Don't delete it to fix choppiness — that brings the breathless reading back. It also carries the other half of the fix: **don't stack three short sentences** — two clauses that are one thought (a reason and what it led to) join with a connective and a comma, which is the take the learner picked by ear from four synthesized voicemails. That is not a licence to merge past the turn ceiling; over it, an idea is still dropped. The older choppiness (short lines on an English skeleton, "지금 괜찮아? 목소리 듣고 싶어서.", in ElevenLabs history since August) is a separate problem this rule doesn't address.
 
 ## Audio format
 

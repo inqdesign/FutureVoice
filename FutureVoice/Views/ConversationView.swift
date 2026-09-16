@@ -611,6 +611,16 @@ struct ConversationView: View {
     /// Whether this call ever reached a live state — a failure before that
     /// is a connect failure and keeps its own (existing) alert.
     @State private var realtimeWasLive = false
+    /// When the call last put ITSELF back together after a transport drop.
+    /// The gateway's Durable Object can be reset under a live call — a deploy,
+    /// or Cloudflare moving the object (prod 2026-09-15: "object was reset",
+    /// no exception of ours) — and a reconnect carries the whole talk. One
+    /// learner tapped Reconnect and was back in 3 s; the next hung up at the
+    /// alert. So a socket drop reconnects without asking, at most once a
+    /// minute: a second drop inside that is no longer a blip, and gets the
+    /// alert.
+    @State private var lastAutoReconnectAt: Date?
+    private static let autoReconnectSpacing: TimeInterval = 60
 
     private func isBillableMoment() -> Bool {
         // Nothing counts until the learner has said something IN THIS CALL.
@@ -930,6 +940,13 @@ struct ConversationView: View {
                         // everything else deserves the way back.
                         if realtime.lastFailureCode == "idle" {
                             error = message
+                        } else if realtime.lastFailureCode == "socket", !isTornDown,
+                                  lastAutoReconnectAt.map({ Date().timeIntervalSince($0)
+                                      > Self.autoReconnectSpacing }) ?? true {
+                            lastAutoReconnectAt = Date()
+                            Telemetry.log("talk_rt_reconnect", ["turns": String(turns.count),
+                                                                "auto": "1"])
+                            Task { await reconnectRealtimeCall() }
                         } else {
                             callDropped = message
                         }

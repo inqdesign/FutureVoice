@@ -669,9 +669,17 @@ export class CallSession implements DurableObject {
           }
           this.handleUtterance(text)
         },
-        onRotating: () => this.emit({ type: "rotating" }),
-        // Fatal: with no transcriber the call is deaf. The client offers a
-        // reconnect that carries the history, so the talk itself survives.
+        // Survived: the socket is being replaced and mic audio is buffered
+        // meanwhile. Recorded as a warning so the console can count how often
+        // a call rides through one (and whether the ~10 min ceiling is the
+        // usual reason), never shown to the learner.
+        onRotating: (why) => {
+          this.warn("transcriber", `rotating: ${why}`)
+          this.emit({ type: "rotating" })
+        },
+        // Fatal: the socket could not be REPLACED, so the call is deaf. The
+        // client offers a reconnect that carries the history, so the talk
+        // itself survives.
         onError: (message) => this.fail("transcriber", message),
       },
     )
