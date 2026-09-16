@@ -3696,6 +3696,9 @@ struct ConversationView: View {
             FeedbackPrompt.markShown(.returningTalk)
             dismissAfterFeedback = true
             feedbackContext = .returningTalk
+        } else if ReviewRequest.shouldAsk(callSeconds: callElapsed) {
+            close()
+            ReviewRequest.ask()
         } else {
             close()
         }

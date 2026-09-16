@@ -63,6 +63,17 @@ enum TalkTimeLog {
         load()[key(day: day, language: language)] ?? 0
     }
 
+    /// Every metered second still in the log, all days and languages. The log
+    /// keeps `keepDays`, so this is "recent" talk — what `ReviewRequest` wants.
+    static func totalSeconds() -> Int {
+        load().values.reduce(0, +)
+    }
+
+    /// Distinct local days with any metered talk, within the log's window.
+    static func daysWithTalk() -> Int {
+        Set(load().filter { $0.value > 0 }.keys.map { String($0.prefix(10)) }).count
+    }
+
     // MARK: - Server backfill
 
     /// Rebuild the log from the server's `usage_ledger`, which is where the
