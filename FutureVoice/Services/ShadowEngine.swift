@@ -110,6 +110,10 @@ enum ShadowEngine {
         let targetDurationMs: Int
         /// Learner word span, pace-normalized (ms).
         let learnerDurationMs: Int
+        /// Both onsets were observed by a recognizer. False when either side
+        /// is an estimate or an interpolated gap — drawn on the card, never
+        /// graded or coloured, and never used to pin the normalization.
+        let isMeasured: Bool
     }
 
     struct RhythmAnalysis: Hashable {
@@ -187,12 +191,26 @@ enum ShadowEngine {
     ///
     /// Guards mirror `LocalAlignment`'s philosophy: if the token stream and
     /// the word spans don't account for each other exactly, return nil (never
-    /// show wrong data); likewise under 3 pairs.
+    /// show wrong data); likewise under `minMeasuredPairs` MEASURED pairs.
     ///
-    /// Normalization: both timelines are re-zeroed on their first paired
-    /// onset, then the learner timeline is scaled by targetSpan/learnerSpan.
-    /// A uniformly slower attempt therefore scores 100 — overall speed is the
-    /// duration card's job; rhythm grades only relative word placement.
+    /// **Only a pair observed on BOTH sides counts** (2026-09-16). Every
+    /// target timeline built for a live-call line starts as a character-count
+    /// estimate, and both the free target alignment and the learner's
+    /// `ShadowTranscriber.realigned` share out up to half their words across
+    /// gaps a recognizer never placed — none of which the card could tell from
+    /// a measurement, so it coloured a learner red for missing a beat that
+    /// was itself made up. `WordTiming.isMeasured` now rides in from every
+    /// timing source; an unmeasured pair is still returned (the bar is drawn,
+    /// dimmed) but carries no credit, and a target that is estimate throughout
+    /// yields nil, which `overallScore` reads as "rhythm was not measured".
+    ///
+    /// Normalization: both timelines are re-zeroed on their first MEASURED
+    /// pair's onset, then the learner timeline is scaled by
+    /// targetSpan/learnerSpan over the measured extremes. A uniformly slower
+    /// attempt therefore scores 100 — overall speed is the duration card's
+    /// job; rhythm grades only relative word placement. Those two pinned
+    /// words score 1.0 by construction, which is why the minimum is four
+    /// rather than three: three left exactly one word to judge.
     static func analyzeRhythm(
         steps: [DiffStep],
         targetTimings: [WordTiming],
@@ -233,14 +251,16 @@ enum ShadowEngine {
         }
         // Slots must consume BOTH token streams exactly — anything else means
         // the diff and the timings are describing different text.
-        guard t == targetWordOf.count, l == learnerWordOf.count,
-              pairs.count >= 3 else { return nil }
+        guard t == targetWordOf.count, l == learnerWordOf.count else { return nil }
 
-        let t0 = pairs[0].target.startMs
-        let l0 = pairs[0].learner.startMs
-        guard let lastPair = pairs.last else { return nil }
-        let targetSpan = lastPair.target.startMs - t0
-        let learnerSpan = lastPair.learner.startMs - l0
+        let measured = pairs.filter { $0.target.isMeasured && $0.learner.isMeasured }
+        guard measured.count >= minMeasuredPairs,
+              let firstMeasured = measured.first, let lastMeasured = measured.last else { return nil }
+
+        let t0 = firstMeasured.target.startMs
+        let l0 = firstMeasured.learner.startMs
+        let targetSpan = lastMeasured.target.startMs - t0
+        let learnerSpan = lastMeasured.learner.startMs - l0
         guard targetSpan > 0, learnerSpan > 0 else { return nil }
         let scale = Double(targetSpan) / Double(learnerSpan)
 
@@ -251,29 +271,35 @@ enum ShadowEngine {
                 targetOnsetMs: pair.target.startMs - t0,
                 learnerOnsetMs: Int((Double(pair.learner.startMs - l0) * scale).rounded()),
                 targetDurationMs: max(0, pair.target.endMs - pair.target.startMs),
-                learnerDurationMs: max(0, Int((Double(pair.learner.endMs - pair.learner.startMs) * scale).rounded()))
+                learnerDurationMs: max(0, Int((Double(pair.learner.endMs - pair.learner.startMs) * scale).rounded())),
+                isMeasured: pair.target.isMeasured && pair.learner.isMeasured
             )
         }
 
-        // Continuous per-word credit: 1.0 inside ±graceMs, fading linearly to
-        // 0 at grace+ramp. Mean × 100 → score. First/last words pin the
-        // normalization (deviation 0), which slightly flatters short lines —
-        // acceptable next to the ≥3-pair guard.
-        let credits = words.map { w -> Double in
+        // Continuous per-word credit over MEASURED words only: 1.0 inside
+        // ±graceMs, fading linearly to 0 at grace+ramp. Mean × 100 → score.
+        let credits = words.filter(\.isMeasured).map { w -> Double in
             let over = max(0, Double(abs(w.deviationMs)) - rhythmGraceMs)
             return max(0, 1 - over / rhythmRampMs)
         }
         let mean = credits.reduce(0, +) / Double(credits.count)
         let score = max(0, min(100, Int((mean * 100).rounded())))
-        let spanEnd = lastPair.target.endMs - t0
+        // The drawn extent covers every pair, measured or not, so an
+        // unmeasured tail still fits on the card.
+        let spanEnd = pairs.map { $0.target.endMs - t0 }.max() ?? targetSpan
         return RhythmAnalysis(score: score, words: words, targetSpanMs: max(spanEnd, targetSpan))
     }
+
+    /// Fewest measured pairs a rhythm score may stand on. The first and last
+    /// pin the normalization and score 1.0 whatever happened, so this is
+    /// "two words actually judged", not four.
+    static let minMeasuredPairs = 4
 
     /// Compact rhythm evidence for the coach prompt — only meaningfully
     /// off-beat words, e.g. `[weather +180] [is -240]` (+ = late, − = early).
     static func renderRhythmForPrompt(_ rhythm: RhythmAnalysis?) -> String {
         guard let rhythm else { return "n/a" }
-        let off = rhythm.words.filter { rhythmGrade(deviationMs: $0.deviationMs) < 2 }
+        let off = rhythm.words.filter { $0.isMeasured && rhythmGrade(deviationMs: $0.deviationMs) < 2 }
         guard !off.isEmpty else { return "all words on beat" }
         return off.map { w in
             String(format: "[%@ %+dms]", w.word, w.deviationMs)

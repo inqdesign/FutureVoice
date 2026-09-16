@@ -62,7 +62,10 @@ final class SpeechTranscriber {
         timeout: TimeInterval = 15
     ) async -> ScoringResult? {
         guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: LanguageCatalog.sttLocale(languageCode))),
-              recognizer.isAvailable else { return nil }
+              recognizer.isAvailable else {
+            Telemetry.log("shadow_device_pass", ["outcome": "unavailable"])
+            return nil
+        }
         recognizer.defaultTaskHint = .dictation
 
         let request = SFSpeechURLRecognitionRequest(url: audioURL)
@@ -86,11 +89,23 @@ final class SpeechTranscriber {
         return await withCheckedContinuation { cont in
             var task: SFSpeechRecognitionTask?
             task = recognizer.recognitionTask(with: request) { result, error in
-                if error != nil {
-                    if once.claim() { cont.resume(returning: nil) }
+                if let error {
+                    if once.claim() {
+                        // Which reason the timing pass died for is the only
+                        // way to tell a busy recognizer from a bad file.
+                        Telemetry.log("shadow_device_pass", [
+                            "outcome": "error",
+                            "detail": String(describing: error).prefix(120).description,
+                        ])
+                        cont.resume(returning: nil)
+                    }
                     return
                 }
                 if let result, result.isFinal, once.claim() {
+                    Telemetry.log("shadow_device_pass", [
+                        "outcome": "final",
+                        "words": "\(result.bestTranscription.segments.count)",
+                    ])
                     let timings = result.bestTranscription.segments.map { seg in
                         WordTiming(
                             word: seg.substring,
@@ -106,6 +121,7 @@ final class SpeechTranscriber {
             }
             DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 if once.claim() {
+                    Telemetry.log("shadow_device_pass", ["outcome": "timeout"])
                     task?.cancel()
                     cont.resume(returning: nil)
                 }

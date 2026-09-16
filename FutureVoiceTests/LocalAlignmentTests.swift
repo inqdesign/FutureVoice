@@ -69,6 +69,8 @@ final class LocalAlignmentTests: XCTestCase {
             heardSpans: spans([(0.0, 0.5), (1.0, 1.5)]), durationMs: 1500)
         XCTAssertEqual(out[1].startMs, 500)
         XCTAssertEqual(out[1].endMs, 1000)
+        // …and is marked as a guess, so the rhythm card can't grade it.
+        XCTAssertEqual(out.map(\.isMeasured), [true, false, true])
     }
 
     /// A trailing run with no anchor after it runs to the end of the FILE, not

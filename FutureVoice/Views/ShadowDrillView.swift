@@ -60,6 +60,9 @@ struct ShadowDrillView: View {
     /// before a live mic session starts — two speech recognizers running at
     /// once break the recording (it cut off after the first line).
     @State private var recoverTask: Task<Void, Never>?
+    /// The target was played since the last attempt — logged with the attempt
+    /// so "rhythm goes missing after I press play" can be checked against data.
+    @State private var playedSinceLastAttempt = false
     /// Word-index range selected for loop practice, shared between the target
     /// line text and the timeline player (both read/write it).
     @State private var selectedWordRange: ClosedRange<Int>?
@@ -97,7 +100,6 @@ struct ShadowDrillView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     targetSection
                     durationCard
-                    rhythmCard
                     if let fb = feedback {
                         feedbackSection(fb)
                     }
@@ -186,9 +188,26 @@ struct ShadowDrillView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(timings.isEmpty ? "no timings" : "\(timings.count) words")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                if let r = rhythm {
+                    // How many words the score stands on, when not all of
+                    // them — the header is the only place the number lives.
+                    let total = activeRange?.count ?? timings.count
+                    let judged = r.words.filter(\.isMeasured).count
+                    HStack(spacing: 6) {
+                        if judged < total {
+                            Text(verbatim: "\(judged)/\(total)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Label("\(r.score)", systemImage: "metronome")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(scoreColor(r.score))
+                    }
+                } else {
+                    Text(timings.isEmpty ? "no timings" : "\(timings.count) words")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
             }
             // Re-render at 30 Hz whenever a time-driven highlight is needed:
             // live sync (clock running) OR preview playback.
@@ -209,22 +228,81 @@ struct ShadowDrillView: View {
     /// background for the loop range (shared with the timeline player).
     private var karaokeWords: some View {
         let alignment = positionAlignment()
-        return FlowLayout(spacing: 1, lineSpacing: 6) {
+        let beats = rhythmByWord
+        return FlowLayout(spacing: 1, lineSpacing: 4) {
             ForEach(Array(timings.enumerated()), id: \.offset) { i, wt in
                 let selected = selectedWordRange?.contains(i) ?? false
-                Text(wt.word)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(wordColor(at: i, wt: wt, alignment: alignment, offset: 0))
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 1)
-                    .background(
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture { tapWord(i) }
+                VStack(spacing: 0) {
+                    Text(wt.word)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(wordColor(at: i, wt: wt, alignment: alignment, offset: 0))
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(selected ? Color.accentColor.opacity(0.22) : Color.clear)
+                        )
+                    beatMark(beats[i])
+                }
+                .contentShape(Rectangle())
+                .onTapGesture { tapWord(i) }
             }
         }
+    }
+
+    // MARK: - Beat marks
+
+    /// The rhythm result, keyed by index into `timings` (the practiced
+    /// range's words are re-based onto the whole line).
+    private var rhythmByWord: [Int: ShadowEngine.RhythmWord] {
+        guard let rhythm else { return [:] }
+        let base = activeRange?.lowerBound ?? 0
+        return Dictionary(rhythm.words.map { ($0.targetIndex + base, $0) },
+                          uniquingKeysWith: { first, _ in first })
+    }
+
+    /// 300 ms — the edge of "slightly off" — is 18 pt: visible under a short
+    /// word without walking into its neighbour.
+    private static let beatPointsPerMs: CGFloat = 0.06
+    private static let beatMaxOffset: CGFloat = 24
+
+    /// The rhythm verdict, drawn ON the target line rather than in a card of
+    /// its own (2026-09-16): a dot under each word the attempt was timed on,
+    /// sitting where the learner started — under the word's centre on the
+    /// beat, pushed right if late, left if early — in the same colour scale
+    /// the score is built from. A word nobody measured, or the learner
+    /// skipped, gets no dot; the header's `6/10` says how many did. The row
+    /// is always reserved so the line doesn't jump when a result lands.
+    ///
+    /// Two things this replaced, same day: bar timelines (Target / You) whose
+    /// bar WIDTHS were durations the score never reads and the two sources
+    /// couldn't agree on, and a per-word card with `+0.2s` labels that was
+    /// right but took a third of the screen for one number per word. Colour
+    /// on the word ITSELF was considered and rejected: text colour already
+    /// means "wrong word" (orange for a substitution), and one channel can't
+    /// carry two verdicts.
+    @ViewBuilder
+    private func beatMark(_ w: ShadowEngine.RhythmWord?) -> some View {
+        ZStack {
+            if let w, w.isMeasured {
+                let offset = min(Self.beatMaxOffset, max(-Self.beatMaxOffset,
+                                 CGFloat(w.deviationMs) * Self.beatPointsPerMs))
+                let color = rhythmColor(deviationMs: w.deviationMs)
+                let onBeat = ShadowEngine.rhythmGrade(deviationMs: w.deviationMs) == 2
+                if !onBeat {
+                    // A trace back to where the beat was.
+                    Rectangle()
+                        .fill(color.opacity(0.5))
+                        .frame(width: abs(offset), height: 1)
+                        .offset(x: offset / 2)
+                }
+                Circle()
+                    .fill(onBeat ? color.opacity(0.55) : color)
+                    .frame(width: 5, height: 5)
+                    .offset(x: offset)
+            }
+        }
+        .frame(height: 6)
     }
 
     /// Tap a target word to build the loop range: first tap sets an anchor
@@ -404,72 +482,6 @@ struct ShadowDrillView: View {
 
     private var karaokeAnimating: Bool {
         (phase == .syncing && syncStartedAt != nil) || player.isPlaying
-    }
-
-    // MARK: - Rhythm card
-
-    /// Two parallel word-onset timelines — target rhythm on top, the
-    /// learner's (pace-normalized) below. Because both rows are re-zeroed
-    /// and the learner row is scaled to the same span, a vertical offset
-    /// between a pair of bars reads directly as "you were early/late on this
-    /// word", independent of overall speed (which the duration card owns).
-    @ViewBuilder
-    private var rhythmCard: some View {
-        if let r = rhythm, !diffSteps.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text("Rhythm")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Label("\(r.score)", systemImage: "metronome")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(scoreColor(r.score))
-                }
-                VStack(spacing: 6) {
-                    rhythmRow(label: "Target", analysis: r, learner: false)
-                    rhythmRow(label: "You", analysis: r, learner: true)
-                }
-                Text(explain("Word starts, speed-matched — orange landed off the target's beat."))
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(12)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-    }
-
-    private func rhythmRow(
-        label: String,
-        analysis: ShadowEngine.RhythmAnalysis,
-        learner: Bool
-    ) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(width: 44, alignment: .leading)
-            GeometryReader { geo in
-                let span = CGFloat(max(1, analysis.targetSpanMs))
-                ZStack(alignment: .topLeading) {
-                    ForEach(analysis.words, id: \.self) { w in
-                        let onsetMs = learner ? w.learnerOnsetMs : w.targetOnsetMs
-                        let durMs = learner ? w.learnerDurationMs : w.targetDurationMs
-                        let x = min(1, max(0, CGFloat(onsetMs) / span)) * geo.size.width
-                        let width = min(geo.size.width - x,
-                                        max(4, CGFloat(durMs) / span * geo.size.width))
-                        Capsule()
-                            .fill(learner
-                                  ? rhythmColor(deviationMs: w.deviationMs)
-                                  : Color.secondary.opacity(0.35))
-                            .frame(width: width, height: 8)
-                            .offset(x: x)
-                    }
-                }
-            }
-            .frame(height: 8)
-        }
     }
 
     private func rhythmColor(deviationMs: Int) -> Color {
@@ -929,6 +941,7 @@ struct ShadowDrillView: View {
 
     private func previewTarget() async {
         error = nil
+        playedSinceLastAttempt = true
 
         // Fast path: cached and file actually exists on disk.
         if let url = cachedAudioURL,
@@ -1110,6 +1123,12 @@ struct ShadowDrillView: View {
         // Kill the background timing-recovery recognizer FIRST — a second
         // speech recognizer running against the file collides with the live
         // mic recognizer and truncates the recording after the first line.
+        Telemetry.log("shadow_attempt_started", [
+            "recovery_running": recoverTask == nil ? "0" : "1",
+            "played_first": playedSinceLastAttempt ? "1" : "0",
+            "target_measured": timings.contains(where: \.isMeasured) ? "1" : "0",
+        ])
+        playedSinceLastAttempt = false
         recoverTask?.cancel()
         recoverTask = nil
         // Ensure we have target timings loaded (used for the visual reference)
@@ -1309,6 +1328,27 @@ struct ShadowDrillView: View {
         phase = .idle
         HapticEngine.selection()
         Telemetry.log("shadow_attempt_cancelled")
+        rearmTimingRecovery()
+    }
+
+    /// The free target alignment is killed the moment a recording starts
+    /// (two recognizers on one mic truncate the take) and used to stay dead
+    /// for the rest of the visit — so a learner who pressed record before it
+    /// finished had EVERY attempt's rhythm judged against the character-count
+    /// estimate, on a line whose audio came from a live call and so never had
+    /// stored timings to begin with. Re-arm it once the mic is down. Only when
+    /// `startSync` cleared it: a pass that already ran this visit keeps the
+    /// one-try-per-open rule `recoverTimings` documents.
+    private func rearmTimingRecovery() {
+        // Only while the line is still on the ESTIMATE. A recovered timeline
+        // with a few interpolated words is as good as this pass gets, and a
+        // recognizer re-run after every attempt is a recognizer that may
+        // still be winding down when the next take's scoring pass starts.
+        guard recoverTask == nil, !timings.contains(where: \.isMeasured),
+              let url = cachedAudioURL,
+              FileManager.default.fileExists(atPath: url.path),
+              let voiceId = appState.voiceCloneId else { return }
+        recoverTask = Task { await recoverTimings(url: url, voiceId: voiceId) }
     }
 
     private func finishSync() {
@@ -1378,6 +1418,7 @@ struct ShadowDrillView: View {
             learnerTimings: learnerTimings,
             language: targetLanguage
         )
+        rearmTimingRecovery()
         // Learner duration = measured utterance span (first voice → last
         // voice, incl. mid-speech pauses) — NOT the wall clock, which includes
         // lead-in silence and the auto-stop tail and systematically inflated
@@ -1663,7 +1704,8 @@ struct ShadowDrillView: View {
             cursor += msPerChar * Double(max(w.count, 1))
             // Small trailing gap so adjacent highlights read as distinct words.
             return WordTiming(word: w, startMs: Int(start),
-                              endMs: max(Int(start) + 1, Int(cursor) - 20))
+                              endMs: max(Int(start) + 1, Int(cursor) - 20),
+                              isMeasured: false)
         }
     }
 

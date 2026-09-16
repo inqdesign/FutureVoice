@@ -196,6 +196,29 @@ struct WordTiming: Codable, Hashable {
     var word: String
     var startMs: Int
     var endMs: Int
+    /// False when the span was never observed — a character-count estimate
+    /// (`ShadowDrillView.estimatedTimings`) or a word `LocalAlignment.fill`
+    /// spread across the gap between two anchored neighbours. Karaoke may
+    /// light on either; the rhythm card may only GRADE a measured one.
+    /// Defaults true so every timing already cached on disk keeps working.
+    var isMeasured: Bool = true
+
+    init(word: String, startMs: Int, endMs: Int, isMeasured: Bool = true) {
+        self.word = word
+        self.startMs = startMs
+        self.endMs = endMs
+        self.isMeasured = isMeasured
+    }
+
+    private enum CodingKeys: String, CodingKey { case word, startMs, endMs, isMeasured }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        word = try c.decode(String.self, forKey: .word)
+        startMs = try c.decode(Int.self, forKey: .startMs)
+        endMs = try c.decode(Int.self, forKey: .endMs)
+        isMeasured = try c.decodeIfPresent(Bool.self, forKey: .isMeasured) ?? true
+    }
 }
 
 struct TurnSuggestion: Codable, Hashable {

@@ -82,10 +82,15 @@ enum LocalAlignment {
     ) -> [WordTiming] {
         var starts = [Double?](repeating: nil, count: expected.count)
         var ends = [Double?](repeating: nil, count: expected.count)
+        // Which words a recognizer actually placed. The rest are shared out
+        // below so karaoke has a window for every word, but a shared-out
+        // window is a guess and is marked as one (`WordTiming.isMeasured`).
+        var anchored = [Bool](repeating: false, count: expected.count)
         for (i, segIndex) in pairing.enumerated() {
             guard let segIndex, segIndex < heardSpans.count else { continue }
             starts[i] = heardSpans[segIndex].start
             ends[i] = heardSpans[segIndex].end
+            anchored[i] = true
         }
 
         // Bounds for a leading / trailing run with no anchor on one side.
@@ -123,7 +128,8 @@ enum LocalAlignment {
             previousEnd = e
             out.append(WordTiming(word: word,
                                   startMs: Int(s * 1000),
-                                  endMs: Int(e * 1000)))
+                                  endMs: Int(e * 1000),
+                                  isMeasured: anchored[i]))
         }
         return out
     }
