@@ -124,13 +124,15 @@ final class GeminiClient {
         purpose: String? = nil,
         idempotencyKey: String? = nil,
         jsonResponse: Bool = false,
-        requestTimeout: TimeInterval? = nil
+        requestTimeout: TimeInterval? = nil,
+        fastThinking: Bool = false
     ) async throws -> (text: String, finishReason: String?) {
         let request = try await makeRequest(
             system: system, messages: messages, model: model, maxTokens: maxTokens,
             temperature: temperature, searchGrounding: searchGrounding,
             purpose: purpose, idempotencyKey: idempotencyKey,
-            jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false
+            jsonResponse: jsonResponse, requestTimeout: requestTimeout, stream: false,
+            fastThinking: fastThinking
         )
 
         let (data, response) = try await session.dataWithRetry(for: request)
@@ -283,7 +285,11 @@ final class GeminiClient {
         searchGrounding: Bool = false,
         purpose: String? = nil,
         idempotencyKey: String? = nil,
-        requestTimeout: TimeInterval? = nil
+        requestTimeout: TimeInterval? = nil,
+        /// Gen-3 thinking at "minimal" instead of "low". For a call whose
+        /// job is perception rather than reasoning (transcribing a file),
+        /// the thinking pass is pure latency.
+        fastThinking: Bool = false
     ) async throws -> T {
         let (raw, finishReason) = try await sendRaw(
             system: system,
@@ -295,7 +301,8 @@ final class GeminiClient {
             purpose: purpose,
             idempotencyKey: idempotencyKey,
             jsonResponse: true,
-            requestTimeout: requestTimeout
+            requestTimeout: requestTimeout,
+            fastThinking: fastThinking
         )
         // Reclassify ONLY after parsing has actually failed — never on the
         // flag alone, so a response that happens to be complete is still used.

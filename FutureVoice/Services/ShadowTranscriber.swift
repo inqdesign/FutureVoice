@@ -57,6 +57,26 @@ enum ShadowTranscriber {
         /// True when the two readers disagreed about the WORDS. Logged, never
         /// shown: it is the only measure of how often the old path was wrong.
         let readersDisagreed: Bool
+        /// How the audio-grounded read ended — logged so a slow day can be
+        /// told apart from a failing one.
+        let audioOutcome: AudioOutcome
+        /// Wall time from the start of `read` until the on-device pass /
+        /// the audio-grounded read settled. `audioMs` includes any wait that
+        /// was abandoned.
+        let deviceMs: Int
+        let audioMs: Int
+    }
+
+    enum AudioOutcome: String {
+        /// Gemini returned a line.
+        case heard
+        /// The call failed or the model heard no speech.
+        case failed
+        /// The device pass had landed and the audio read was still not back
+        /// after `audioGraceAfterDevice` — abandoned, scored on-device.
+        case abandoned
+        /// No file to read.
+        case skipped
     }
 
     /// - Parameters:
@@ -75,8 +95,11 @@ enum ShadowTranscriber {
         recognitionHints: [String]
     ) async -> Reading {
         guard let audioURL, FileManager.default.fileExists(atPath: audioURL.path) else {
-            return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false)
+            return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false,
+                           audioOutcome: .skipped, deviceMs: 0, audioMs: 0)
         }
+        let startedAt = Date()
+        func elapsedMs() -> Int { Int(Date().timeIntervalSince(startedAt) * 1000) }
 
         // Level once, read twice. `peakNormalizedWAV` returns the input URL
         // untouched when the take is already healthy, so the cleanup below
@@ -86,17 +109,34 @@ enum ShadowTranscriber {
             if levelled != audioURL { try? FileManager.default.removeItem(at: levelled) }
         }
 
-        async let devicePass = SpeechTranscriber.transcribeForScoring(
+        // The audio-grounded read is its own task so it can be ABANDONED. It
+        // is an upgrade over the on-device pass, never a requirement — and
+        // the request carries the whole take as base64, which on a bad
+        // cellular link can stall without failing. Reported 2026-09-17: the
+        // device pass had the line in 4 s and the learner then sat on
+        // "Comparing…" for the full 60 s of `URLSession.edgeFunctions`'
+        // ceiling before the upload was declared dead (the request never
+        // reached the edge function — no ledger row). Once Apple's text is
+        // in hand the better reader gets `audioGraceAfterDevice` to land,
+        // and no longer.
+        let audioTask = Task { await heard(audioURL: levelled, targetLanguage: targetLanguage) }
+        let device = await SpeechTranscriber.transcribeForScoring(
             audioURL: levelled,
             languageCode: targetLanguage,
             contextualStrings: recognitionHints
         )
-        async let audioPass = heard(audioURL: levelled, targetLanguage: targetLanguage)
-
-        let device = await devicePass
-        let audio = await audioPass
-
+        let deviceMs = elapsedMs()
         let deviceText = device?.text.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        // With nothing from the device pass the audio read is the only real
+        // reader left, so it keeps the longer leash; the request's own
+        // timeout below is the ceiling either way.
+        let (audio, timedOut) = await value(
+            of: audioTask,
+            within: deviceText.isEmpty ? audioCeilingAlone : audioGraceAfterDevice
+        )
+        let audioMs = elapsedMs()
+        let audioOutcome: AudioOutcome = audio != nil ? .heard : (timedOut ? .abandoned : .failed)
         let disagreed = !deviceText.isEmpty && audio != nil
             && LocalAlignment.normalized(deviceText) != LocalAlignment.normalized(audio ?? "")
 
@@ -106,14 +146,48 @@ enum ShadowTranscriber {
                 text: audio,
                 wordTimings: realigned(words: words, onto: device?.wordTimings ?? []),
                 source: .audioGrounded,
-                readersDisagreed: disagreed
+                readersDisagreed: disagreed,
+                audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs
             )
         }
         if let device, !deviceText.isEmpty {
             return Reading(text: device.text, wordTimings: device.wordTimings,
-                           source: .onDevice, readersDisagreed: false)
+                           source: .onDevice, readersDisagreed: false,
+                           audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
         }
-        return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false)
+        return Reading(text: liveText, wordTimings: [], source: .rough, readersDisagreed: false,
+                       audioOutcome: audioOutcome, deviceMs: deviceMs, audioMs: audioMs)
+    }
+
+    /// How long the audio-grounded read may still take once the on-device
+    /// pass has delivered a line. A healthy call lands in ~2 s (ledger,
+    /// wifi and cellular alike); this leaves room for jitter, not for a
+    /// stalled upload.
+    static let audioGraceAfterDevice: TimeInterval = 6
+    /// The leash when the device pass produced nothing — then the audio
+    /// read is the difference between a score and a live partial.
+    static let audioCeilingAlone: TimeInterval = 20
+    /// Connection-level ceiling on the transcribe request, in place of the
+    /// session's 60 s. Belt to the task-level braces above.
+    private static let audioRequestTimeout: TimeInterval = 25
+
+    /// `task`'s value, or nil once `seconds` have passed — at which point the
+    /// task is cancelled (URLSession honours that and the upload stops).
+    /// `timedOut` tells an abandoned read from one that finished with nil.
+    private static func value<T: Sendable>(
+        of task: Task<T?, Never>, within seconds: TimeInterval
+    ) async -> (value: T?, timedOut: Bool) {
+        await withTaskGroup(of: (T?, Bool).self) { group in
+            group.addTask { (await task.value, false) }
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                return (nil, true)
+            }
+            let first = await group.next() ?? (nil, true)
+            group.cancelAll()
+            if first.1 { task.cancel() }
+            return (first.0, first.1)
+        }
     }
 
     // MARK: - The audio-grounded read
@@ -143,7 +217,12 @@ enum ShadowTranscriber {
                 // writes are the learner's grade.
                 model: .flash36,
                 maxTokens: 1024,
-                purpose: "transcribe"
+                purpose: "transcribe",
+                requestTimeout: audioRequestTimeout,
+                // Transcribing is perception, not reasoning: the ledger shows
+                // ~95 thought tokens spent on a six-word line, which is wait
+                // time the learner sits through for no better words.
+                fastThinking: true
             )
             let text = payload.transcript?.trimmingCharacters(in: .whitespacesAndNewlines)
             return (text?.isEmpty == false) ? text : nil

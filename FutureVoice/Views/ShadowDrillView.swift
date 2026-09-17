@@ -39,6 +39,14 @@ struct ShadowDrillView: View {
     @State private var usedRoughTranscript = false
     @State private var recordingFileURL: URL?
     @State private var feedback: ShadowFeedback?
+    /// The coach call is still writing its bullets for the attempt on
+    /// screen. The score, diff and recording are already up — the result
+    /// no longer waits for the garnish.
+    @State private var coachPending = false
+    /// The attempt the result screen is showing. A coach reply that lands
+    /// after the learner has started another take updates that attempt's
+    /// RECORD and nothing on screen.
+    @State private var shownAttemptId: UUID?
     @State private var diffSteps: [ShadowEngine.DiffStep] = []
     /// Word-onset timing comparison for the last attempt — nil whenever the
     /// timing data wasn't trustworthy (see ShadowEngine.analyzeRhythm guards).
@@ -535,7 +543,9 @@ struct ShadowDrillView: View {
     private func feedbackSection(_ fb: ShadowFeedback) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Feedback")
+                // Not "Feedback": that key is Settings' "Send feedback" row,
+                // so the score header read as a mail link in every language.
+                Text("Your take")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -560,6 +570,15 @@ struct ShadowDrillView: View {
             }
             if recordingFileURL != nil {
                 playbackRow
+            }
+            if coachPending {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Writing feedback…")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
             // Empty bullets happen when the coach call failed — the score,
             // diff and recording above are still shown/saved.
@@ -1160,6 +1179,8 @@ struct ShadowDrillView: View {
 
         // Reset state
         feedback = nil
+        coachPending = false
+        shownAttemptId = nil
         diffSteps = []
         rhythm = nil
         attemptWordTimings = []
@@ -1322,6 +1343,8 @@ struct ShadowDrillView: View {
         prevTranscript = ""
         activeRange = nil
         feedback = nil
+        coachPending = false
+        shownAttemptId = nil
         diffSteps = []
         rhythm = nil
         attemptWordTimings = []
@@ -1402,6 +1425,9 @@ struct ShadowDrillView: View {
             "source": reading.source.rawValue,
             "disagreed": reading.readersDisagreed ? "1" : "0",
             "timed": learnerTimings.isEmpty ? "0" : "1",
+            "audio": reading.audioOutcome.rawValue,
+            "device_ms": "\(reading.deviceMs)",
+            "audio_ms": "\(reading.audioMs)",
         ])
 
         let analysis = ShadowEngine.analyze(target: attemptTargetText, learner: scoredText,
@@ -1452,64 +1478,90 @@ struct ShadowDrillView: View {
         // exactly the one that needs a bullet, and under the old gate it was
         // the one that never got one.
         let overall = ShadowEngine.overallScore(match: analysis.score, rhythm: rhythm?.score)
+        let coachable = overall < 90
 
-        var payload: ShadowEngine.Payload?
-        if overall < 90 {
-            do {
-                payload = try await GeminiClient.shared.sendJSON(
-                    system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
-                                                      nativeLanguage: appState.nativeLanguage),
-                    messages: [GeminiClient.Message(
-                        role: .user,
-                        content: ShadowEngine.userMessage(
-                            targetText: attemptTargetText,
-                            learnerText: scoredText,
-                            targetDurationMs: attemptTargetDurationMs,
-                            learnerDurationMs: learnerDurMs,
-                            diffSteps: analysis.steps,
-                            rhythm: rhythm
-                        )
-                    )],
-                    // Three native-language bullets — cheap, but 300 left no
-                    // room for thinking, and a truncation drops the feedback
-                    // entirely (payload = nil) leaving a bare score.
-                    maxTokens: 1024,
-                    purpose: "shadow"
-                )
-            } catch {
-                payload = nil
-            }
-        }
-
+        // The result goes up NOW, on the deterministic half. The bullets
+        // used to sit in front of it — one more Gemini round trip (3–6 s on
+        // the ledger) between "Comparing…" and a score that had been known
+        // for all of it. They arrive in place below.
         feedback = ShadowFeedback(
-            pronunciation: payload?.pronunciation
-                ?? (overall >= 90
-                    ? "Nailed it — matched the line almost word for word, on the beat."
-                    : "Coach comments couldn't load — the score and highlighted words above are still accurate."),
-            pacing: payload?.pacing ?? "",
-            fix: payload?.fix ?? "",
+            pronunciation: coachable
+                ? ""
+                : "Nailed it — matched the line almost word for word, on the beat.",
+            pacing: "",
+            fix: "",
             matchScore: analysis.score,
             rhythmScore: rhythm?.score
         )
+        coachPending = coachable
         phase = .result
         HapticEngine.shadowComplete(score: overall)
 
         // Persist this attempt so the user can revisit / hear it later —
-        // even when the coach bullets failed to generate.
-        let attempt = ShadowAttempt(
+        // before the coach call, so an attempt whose bullets never come is
+        // still on file with its score and recording.
+        var attempt = ShadowAttempt(
             turnId: turn.id,
             targetText: attemptTargetText,
             learnerTranscript: scoredText,
             recordingFilename: recordingFileURL?.lastPathComponent,
             matchScore: analysis.score,
             rhythmScore: rhythm?.score,
-            pronunciation: payload?.pronunciation ?? "",
-            pacing: payload?.pacing ?? "",
-            fix: payload?.fix ?? ""
+            pronunciation: feedback?.pronunciation ?? "",
+            pacing: "",
+            fix: ""
         )
+        shownAttemptId = attempt.id
         appState.saveShadowAttempt(attempt)
         // A recorded take IS the practice — nothing else to finish.
         PracticeLog.shared.record(.shadow, finished: true)
+
+        guard coachable else { return }
+        let coachStartedAt = Date()
+        var payload: ShadowEngine.Payload?
+        do {
+            payload = try await GeminiClient.shared.sendJSON(
+                system: ShadowEngine.systemPrompt(targetLanguage: targetLanguage,
+                                                  nativeLanguage: appState.nativeLanguage),
+                messages: [GeminiClient.Message(
+                    role: .user,
+                    content: ShadowEngine.userMessage(
+                        targetText: attemptTargetText,
+                        learnerText: scoredText,
+                        targetDurationMs: attemptTargetDurationMs,
+                        learnerDurationMs: learnerDurMs,
+                        diffSteps: analysis.steps,
+                        rhythm: rhythm
+                    )
+                )],
+                // Three native-language bullets — cheap, but 300 left no
+                // room for thinking, and a truncation drops the feedback
+                // entirely (payload = nil) leaving a bare score.
+                maxTokens: 1024,
+                purpose: "shadow"
+            )
+        } catch {
+            payload = nil
+        }
+        Telemetry.log("shadow_coach", [
+            "outcome": payload == nil ? "failed" : "ok",
+            "ms": "\(Int(Date().timeIntervalSince(coachStartedAt) * 1000))",
+        ])
+
+        if let payload {
+            attempt.pronunciation = payload.pronunciation
+            attempt.pacing = payload.pacing
+            attempt.fix = payload.fix
+            appState.updateShadowAttempt(attempt)
+        }
+        // The learner may have started the next take meanwhile; the record
+        // above is theirs either way, the screen is not.
+        guard shownAttemptId == attempt.id else { return }
+        coachPending = false
+        feedback?.pronunciation = payload?.pronunciation
+            ?? "Coach comments couldn't load — the score and highlighted words above are still accurate."
+        feedback?.pacing = payload?.pacing ?? ""
+        feedback?.fix = payload?.fix ?? ""
     }
 
     /// Replace `userWordTimings` from the LATEST segment-level word timings

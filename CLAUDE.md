@@ -530,6 +530,28 @@ The narrowness is the point in both directions: a mixed suggestion that fixes so
 
 `Source` is `audioGrounded` · `onDevice` · `rough`, worst-first fallback, and only `rough` (nothing read the file) raises the UI's warning — the old behaviour is still a real final pass, just a weaker one. `shadow_transcript` logs the source plus whether the two readers described DIFFERENT sentences, which is the only measure there has ever been of how wrong the single-reader path was.
 
+**The result never waits on the slower reader, and never on the coach**
+(2026-09-17). Telemetry from a real take: Apple's pass had the 18-word line
+in 4 s, and the learner then sat on "Comparing…" for exactly 60 s more —
+the Gemini transcribe request (the whole take as base64, on cellular) had
+stalled without failing, and nothing declared it dead before
+`URLSession.edgeFunctions`' ceiling; no ledger row, so it never reached the
+edge function. Two braces now: once the device pass has landed, the
+audio-grounded read gets `ShadowTranscriber.audioGraceAfterDevice` (6 s — a
+healthy call lands in ~2 s) and is then CANCELLED and the take scored
+on-device (`AudioOutcome.abandoned`); with no device text it keeps a 20 s
+leash, and the request carries its own 25 s timeout under both. The
+transcribe call runs `fastThinking` — perception, not reasoning, and the
+ledger showed ~95 thought tokens on a six-word line. And the coach call
+left the critical path: `analyze` puts the score, diff and recording up
+and SAVES the attempt as soon as the deterministic half is done, then
+fetches the bullets behind a "Writing feedback…" row and
+`updateShadowAttempt`s the same record (never `saveShadowAttempt` twice —
+that counts an attempt). `shownAttemptId` keeps a late reply off a newer
+take's screen. `shadow_transcript` now carries `audio` / `device_ms` /
+`audio_ms` and `shadow_coach` its `ms`, so the next "it takes long" can be
+read off a row instead of reproduced.
+
 **The rhythm card may only grade a beat somebody MEASURED** (2026-09-16, `WordTiming.isMeasured`). The Target row had no such rule: every live-call line is saved with `timings: []` (the streaming TTS returns none), so the shadow view opens on `estimatedTimings` — character-count proportions — while the free `LocalAlignment` pass runs behind it; `startSync` kills that pass (two recognizers on one mic truncate the take) and nothing re-armed it, so a learner who pressed record first had EVERY attempt of that visit coloured against a made-up beat. Both alignments (`LocalAlignment.fill`, `ShadowTranscriber.realigned`) also share out up to half their words across gaps a recognizer never placed, indistinguishable from a measurement. Now every timing source marks its spans — ElevenLabs and Apple segments measured, the estimate and every filled gap not (old caches decode as measured; they passed the anchor gate when written) — and `analyzeRhythm` pins the normalization on measured pairs only, credits only those, needs `minMeasuredPairs` (4: the pinned two score 1.0 whatever happened, so three left one word judged) and returns nil for an estimated target, which `overallScore` already reads as "not measured". `rearmTimingRecovery` restarts the free pass once the mic is down. **The verdict is drawn ON the target line, and there is no rhythm card** (same day, two passes): `beatMark` puts a dot under each word the attempt was timed on, where the learner started — under the centre on the beat, pushed right if late, left if early, in the score's own colour scale — and nothing under a word unmeasured or skipped; the score sits in the target section's header where the word count was, with `6/10` beside it when it stands on fewer than all the words. Two things it replaced: bar timelines (Target / You) whose bars carried WIDTH, a duration the score never reads and one the two sources disagree on by construction (ElevenLabs leaves gaps, Apple's segments abut), so the rows looked different for reasons unrelated to rhythm and a grey interpolated bar still invited comparison ("Target and You look nothing alike, how is that 100"); then a per-word card with `+0.2s` labels, correct but a third of the screen (user: too much space, put it on the sentence, no seconds needed). Colouring the word itself was rejected — text colour already means "wrong word". Don't bring a second timeline or a card back. Known, deliberately untouched: the dot turns green at ±120 ms while credit starts fading at ±60 ms, so an all-green row can read 85.
 
 **The correction card never precedes the voice** (2026-08-21, two iterations). Holding the bubble's TEXT swaps until `voiceDidStart` was not enough: the card itself is a correction the learner READS, and the payload usually closes while the TTS is still loading, so it kept appearing before the voice — "it corrects me, then answers" every turn. It was removed from the live call outright, then restored the same day with its DISPLAY deferred: `requestReply` parks the suggestion on `DeferredTurnWork` while the turn is still held, and `flushDeferredTurnWork` (voice audible) is what sets `turns[idx].suggestion` — so the card appears with the voice, never ahead of it, and nothing ever waits on it (display timing only, zero latency cost). A payload landing after the flush applies directly, which is fine — the voice is already out.

@@ -735,6 +735,14 @@ final class AppState: ObservableObject {
         Analytics.capture("shadow_attempted", ["score": a.matchScore])
     }
 
+    /// Re-writes an attempt already on file (the coach bullets landing after
+    /// the score was saved). Not `saveShadowAttempt`: that counts an attempt,
+    /// and this is the same one.
+    func updateShadowAttempt(_ a: ShadowAttempt) {
+        ShadowAttemptStore.shared.save(a)
+        shadowAttempts = ShadowAttemptStore.shared.load()
+    }
+
     func deleteShadowAttempt(id: UUID) {
         ShadowAttemptStore.shared.delete(id: id)
         shadowAttempts = ShadowAttemptStore.shared.load()
