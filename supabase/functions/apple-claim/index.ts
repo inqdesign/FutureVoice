@@ -130,6 +130,18 @@ Deno.serve(async (req) => {
       && existing.apple_original_tx_id !== originalTxId) {
     return json({ status: existing.status, plan_id: null, applied: false, reason: "live row kept" })
   }
+  // Two LIVE Apple subscriptions on one account — two Apple IDs, since a plan
+  // change inside one subscription group keeps its original transaction id.
+  // The row follows the one that runs longer. On 2026-09-17 a fresh sign-in
+  // re-sent a device's cancelled-but-still-running Light trial (ends 09-19)
+  // and it overwrote the Plus row the webhook had filed the day before
+  // (ends 09-23, offer code on renewal): the account read Light for a week.
+  if (live && existing && LIVE.has(existing.status)
+      && existing.apple_original_tx_id && existing.apple_original_tx_id !== originalTxId
+      && existing.current_period_end && expiresMs !== undefined
+      && Date.parse(existing.current_period_end) >= expiresMs) {
+    return json({ status: existing.status, plan_id: null, applied: false, reason: "longer live row kept" })
+  }
   // Same subscription, and the row already describes a LATER period than this
   // transaction: StoreKit handed the device an older period than the webhook
   // has already filed. Dead or not, it is stale — it must not wind the period

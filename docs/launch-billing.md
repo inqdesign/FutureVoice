@@ -516,3 +516,26 @@ day (one mail, one sender); delete it with `supabase functions delete
 offer-code-mail` if it is still deployed. Annual offers are deliberately not
 offered: half of an already-discounted annual price is a third less revenue
 for the same year.
+
+**What a redeemed code looks like from here (first real redemption,
+2026-09-16, read off the App Store Server API on 09-17).** Apple gives a
+new subscriber the 7-day intro trial FIRST and applies the code from the
+first renewal: the purchase transaction carries `offerType 1 / FREE_TRIAL`,
+and the code (`offerType 3`, `PAY_AS_YOU_GO`, `offerIdentifier "Beta50 Plus
+Monthly v2"`, ₩14,500) sits in `signedRenewalInfo` only. So for the trial
+week nothing in `subscription_transactions` says "code", the app's "half
+price with your launch code" line (which reads the latest transaction's
+`offer_type`) stays hidden, and the person writes in asking whether it
+worked. The truth is one call away —
+`GET /inApps/v1/subscriptions/<originalTransactionId>` returns every
+subscription that Apple ID holds in the app, with `autoRenewStatus` and the
+renewal offer (In-App Purchase key in `~/.appstoreconnect/private_keys/`,
+issuer id beside it; sign ES256 with `openssl`, `bid` = bundle id, host
+`api.storekit.itunes.apple.com`). Two more things that case taught: a
+redeem-link purchase has NO `appAccountToken`, so RevenueCat files it under
+an anonymous customer and the RC dashboard keeps showing whatever the
+tokened subscription was; and one account can hold two live Apple
+subscriptions (two Apple IDs — a plan change inside one group keeps its
+original transaction id), which is why `apple-claim` and `apple-webhook`
+both keep the row on the one that ends LATER (`20260917150000` restored the
+row that a re-claim of a cancelled-but-running trial had overwritten).

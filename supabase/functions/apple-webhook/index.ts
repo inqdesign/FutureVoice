@@ -53,6 +53,8 @@ import { verifyAppleJWS as verifyJWS } from "../_shared/apple-jws.ts"
 
 const SOURCE_FN = "apple-webhook"
 
+const LIVE = new Set(["trialing", "active", "grace"])
+
 Deno.serve(async (req) => {
   if (req.method !== "POST") return json(405, { error: "method not allowed" })
 
@@ -118,20 +120,38 @@ Deno.serve(async (req) => {
     // `null` = this notification says nothing about standing (see statusFor).
     // Keep whatever the row already says; with no row yet, read it off the
     // transaction's own expiry rather than assuming the sale went through.
+    const { data: current } = await db
+      .from("user_subscriptions")
+      .select("status, apple_original_tx_id, current_period_end")
+      .eq("user_id", userId)
+      .maybeSingle()
+
+    // Two Apple subscriptions on one account (two Apple IDs — a plan change
+    // inside one subscription group keeps its original transaction id). The
+    // row follows the one that runs longer; a notification about the OTHER
+    // one — its expiry, its cancellation — is recorded below as a transaction
+    // and must not rewrite the row. Same rule as apple-claim (2026-09-17,
+    // where a cancelled Light trial ending 09-19 overwrote a Plus row ending
+    // 09-23; its EXPIRED on 09-19 would have done it again from here).
+    const other = current && LIVE.has(current.status)
+      && current.apple_original_tx_id && tx.originalTransactionId
+      && current.apple_original_tx_id !== tx.originalTransactionId
+      && current.current_period_end && tx.expiresDate
+      && Date.parse(current.current_period_end) >= tx.expiresDate
+    if (other) {
+      console.warn("apple-webhook: notification for the shorter of two live subscriptions, row kept",
+        { user: userId, row: current.apple_original_tx_id, notified: tx.originalTransactionId })
+    }
+
     let status = statusFor(payload.notificationType, payload.subtype, isTrial)
     if (status === null) {
-      const { data: current } = await db
-        .from("user_subscriptions")
-        .select("status")
-        .eq("user_id", userId)
-        .maybeSingle()
       status = current?.status
         ?? (tx.expiresDate && tx.expiresDate < Date.now()
               ? "expired"
               : isTrial ? "trialing" : "active")
     }
 
-    const { error: subErr } = await db.from("user_subscriptions").upsert({
+    const { error: subErr } = other ? { error: null } : await db.from("user_subscriptions").upsert({
       user_id: userId,
       plan_id: plan.id,
       source: "apple",
