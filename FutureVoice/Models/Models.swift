@@ -1454,6 +1454,14 @@ struct ShadowAttempt: Codable, Identifiable, Hashable {
     var pacing: String
     var fix: String
     var createdAt: Date = Date()
+    /// The word range of the line this take practised when the learner had
+    /// selected a PHRASE — nil for the whole line. Optional so attempts
+    /// saved before it decode. A phrase take is real practice (it is
+    /// counted, listed and replayable) but it is not the LINE: nothing that
+    /// masters, retries or ranks a line may read one — nailing "the bank"
+    /// used to check off the sentence it came from.
+    var phraseRange: ClosedRange<Int>? = nil
+    var isPartial: Bool { phraseRange != nil }
 
     /// The number this attempt is JUDGED by, everywhere. `matchScore` alone
     /// answers "did you say the right words", which is reading aloud;

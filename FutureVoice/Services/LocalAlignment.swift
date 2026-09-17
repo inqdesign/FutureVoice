@@ -36,7 +36,11 @@ enum LocalAlignment {
         durationMs: Int = 0
     ) async -> [WordTiming] {
         guard await SpeechTranscriber.requestPermission() else { return [] }
-        let locale = Locale(identifier: languageCode)
+        // `sttLocale`, as the scoring pass uses — a bare "zh-Hant" or "ko"
+        // handed straight to SFSpeechRecognizer can resolve to no
+        // recognizer, and karaoke recovery then silently returned [] for
+        // that language.
+        let locale = Locale(identifier: LanguageCatalog.sttLocale(languageCode))
         guard let recognizer = SFSpeechRecognizer(locale: locale),
               recognizer.isAvailable else { return [] }
 

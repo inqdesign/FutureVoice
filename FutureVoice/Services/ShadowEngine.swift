@@ -339,7 +339,7 @@ enum ShadowEngine {
         You are a strict but fair pronunciation + delivery coach for \(LanguageCatalog.englishName(targetLanguage)). \
         The learner shadowed a fluent line. You will be given:
           • target_line       — what they tried to say
-          • learner_transcript — what on-device STT heard them say
+          • learner_transcript — what a transcriber heard them say
           • duration_ratio    — learner_duration / target_duration
           • diff              — token-level alignment using [= match] [~ sub] [- del] [+ ins]
           • rhythm            — per-word onset deviation after pace \
@@ -416,6 +416,14 @@ enum ShadowEngine {
     /// tokens, so expanded forms are consistent with the existing display.
     static func expandForDiff(_ text: String, language: String) -> String {
         var out = text.lowercased()
+        // Typographic apostrophes → ASCII. A model-written target says
+        // "I’m" (U+2019) and every recognizer writes "I'm"; the suffix table
+        // below only knows the ASCII form, so the target tokenized to
+        // `i`,`m` against the learner's `i am` and a word they said
+        // perfectly was scored a substitution.
+        for curly in ["\u{2019}", "\u{2018}", "\u{02BC}"] {
+            out = out.replacingOccurrences(of: curly, with: "'")
+        }
         // Hyphens → spaces so "twenty-one"/"check-in" (written) match
         // "twenty one"/"check in" (how STT writes them). Spell-out below
         // strips its own hyphens at insertion for the same reason.
@@ -423,7 +431,8 @@ enum ShadowEngine {
 
         // Digits → spell-out in the practice language. Word-ish digit runs
         // only; anything NumberFormatter can't parse is left alone.
-        if let re = try? NSRegularExpression(pattern: #"\d+"#) {
+        if out.unicodeScalars.contains(where: { CharacterSet.decimalDigits.contains($0) }),
+           let re = digitRun {
             let formatter = NumberFormatter()
             formatter.numberStyle = .spellOut
             formatter.locale = Locale(identifier: language)
@@ -468,6 +477,11 @@ enum ShadowEngine {
         }
         return out
     }
+
+    /// Built once: `expandForDiff` runs per word per frame while the karaoke
+    /// line animates over a result (`tokenSpans`), and compiling a regex
+    /// there was measurable.
+    private static let digitRun = try? NSRegularExpression(pattern: #"\d+"#)
 
     /// Lowercase + strip punctuation; collapses contractions like "don't" to
     /// a single token. Comparison is case- and punctuation-insensitive.

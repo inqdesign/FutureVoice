@@ -902,9 +902,13 @@ final class AppState: ObservableObject {
             }
         }
         for i in c.shadowLines.indices where c.shadowLines[i].masteredAt == nil {
+            // `overallScore`, the number the take is judged by everywhere
+            // (Talk books have used it since rhythm entered the score) —
+            // this read `matchScore`, so the same take mastered a Watch
+            // line and not a Talk line.
             let best = shadowAttempts
-                .filter { $0.turnId == c.shadowLines[i].id }
-                .map(\.matchScore).max() ?? 0
+                .filter { $0.turnId == c.shadowLines[i].id && !$0.isPartial }
+                .map(\.overallScore).max() ?? 0
             if best >= ScenarioCurriculum.shadowMasteryScore {
                 c.shadowLines[i].masteredAt = Date()
                 changed = true

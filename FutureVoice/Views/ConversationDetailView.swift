@@ -1017,7 +1017,9 @@ struct ConversationDetailView: View {
     }
 
     private func bestShadowScore(for lineId: UUID) -> Int? {
-        let scores = appState.shadowAttempts.filter { $0.turnId == lineId }.map(\.overallScore)
+        let scores = appState.shadowAttempts
+            .filter { $0.turnId == lineId && !$0.isPartial }
+            .map(\.overallScore)
         return scores.max()
     }
 

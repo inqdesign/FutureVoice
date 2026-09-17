@@ -220,7 +220,7 @@ enum PracticeStats {
     ) -> [ShadowPick] {
         // Latest attempt per target line.
         var latestByTurn: [UUID: ShadowAttempt] = [:]
-        for a in attempts {
+        for a in attempts where !a.isPartial {
             if let existing = latestByTurn[a.turnId], existing.createdAt >= a.createdAt { continue }
             latestByTurn[a.turnId] = a
         }

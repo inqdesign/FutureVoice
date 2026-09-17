@@ -35,6 +35,18 @@ final class ShadowEngineTests: XCTestCase {
         XCTAssertEqual(subs.first?.learner, "go")
     }
 
+    /// A model-written target carries a typographic apostrophe; every
+    /// recognizer writes the ASCII one. Both must expand to the same tokens
+    /// or "I’m" against "I'm" is a substitution the learner never made.
+    func testCurlyApostropheMatchesAsciiContraction() {
+        let a = ShadowEngine.analyze(target: "I\u{2019}m building it, don\u{2019}t worry",
+                                     learner: "I'm building it, don't worry")
+        XCTAssertEqual(a.score, 100, "\(a.steps)")
+        let b = ShadowEngine.analyze(target: "I\u{2019}m building it",
+                                     learner: "I am building it")
+        XCTAssertEqual(b.score, 100, "\(b.steps)")
+    }
+
     func testInsertionAndDeletionOps() {
         let a = ShadowEngine.analyze(target: "the weather is nice today",
                                      learner: "the weather nice today actually")

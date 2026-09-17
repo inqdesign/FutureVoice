@@ -274,7 +274,8 @@ enum TalkCurriculum {
         for turn in shadowPicks(session: session, proficiency: proficiency) {
             var item = ScenarioCurriculum.Item(id: turn.id, text: turn.transcript, note: "")
             item.masteredAt = shadowAttempts
-                .filter { $0.turnId == turn.id && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore }
+                .filter { $0.turnId == turn.id && !$0.isPartial
+                          && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore }
                 .map(\.createdAt).max()
             snap.shadowLines.append(item)
         }
@@ -291,7 +292,7 @@ enum TalkCurriculum {
         /// the line, which the transcript still offers.
         func masteryDate(for text: String, turnId: UUID?, itemId: UUID) -> Date? {
             if let attempt = shadowAttempts
-                .filter({ $0.turnId == itemId
+                .filter({ $0.turnId == itemId && !$0.isPartial
                           && $0.overallScore >= ScenarioCurriculum.shadowMasteryScore })
                 .map(\.createdAt).max() {
                 return attempt
