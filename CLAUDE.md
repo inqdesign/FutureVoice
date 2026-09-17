@@ -590,7 +590,19 @@ seventeen times.
   now go through `rotateFrom`, idempotent per socket generation (the old
   socket's own close, and a second event for the same end, can't start a
   second rotation); a rotation is a `warning` (`transcriber`, "rotating: …"),
-  and only a refused reconnect or >4 rotations a minute is `fail`. The app
+  and only a refused reconnect or >4 rotations a minute is `fail`. **The
+  rotation itself dropped a call the day after it shipped** (2026-09-17, a
+  19-turn call, `internal`: "Can't call WebSocket send() after close()"):
+  `rotate` closed the old socket and awaited the new upgrade while
+  `setupDone` stayed true and `ws` still pointed at the closed socket, so
+  the next mic frame was a `send()` on a dead socket, and that TypeError
+  escaped through `handleClientMessage`'s catch — which is `fail`. Now
+  `rotate` nulls `ws` and drops `setupDone` BEFORE the await (frames buffer
+  in `pendingAudio`, newest-kept, flushed on setupComplete),
+  `sendAudioB64` never throws (a refused send buffers the frame and starts
+  the rotation itself), and the session wraps the forward in its own
+  try/catch as a `warning` — a frame that could not be forwarded is never a
+  reason to end a call. The app
   answers that with **Reconnect** (`ConversationView.reconnectRealtimeCall`)
   — same voice, the turns so far as history, no opener. Before this a dropped
   call had no message at all: the screen went quiet and the only move was to

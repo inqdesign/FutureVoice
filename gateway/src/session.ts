@@ -450,7 +450,14 @@ export class CallSession implements DurableObject {
             ? await (raw as Blob).arrayBuffer()
             : null
         if (!pcm) return
-        this.transcriber.sendAudio(pcm)
+        // Forwarding a frame must never end the call: a rejection here lands
+        // in the listener's catch as `internal`, and that is exactly how a
+        // transcriber rotation dropped a 19-turn call on 2026-09-17.
+        try {
+          this.transcriber.sendAudio(pcm)
+        } catch (e) {
+          this.warn("transcriber", `frame dropped: ${String(e).slice(0, 120)}`)
+        }
         if (Date.now() - this.lastInterimAt < 2000) {
           this.speechSeconds += pcm.byteLength / 2 / 16000
         }

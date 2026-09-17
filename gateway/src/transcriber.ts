@@ -41,7 +41,14 @@ export class GeminiTranscriber {
   private resumptionHandle: string | null = null
   private closed = false
   private setupDone = false
+  /** Mic frames that arrived while no socket could take them — before the
+   *  first setupComplete, and during a rotation. Newest-kept: when it fills,
+   *  the OLDEST frame goes, because the speech leading into the next
+   *  utterance is worth more than the tail of the last one. Sized for a
+   *  rotation (~1–2 s to upgrade + setup) at the 48 kHz tap's ~43 ms
+   *  frames; a 16 kHz earphone tap's frames are three times longer. */
   private pendingAudio: string[] = []
+  private static readonly maxPendingFrames = 120
   /** Bumped on every connect AND at the start of every rotation, so a socket
    *  being replaced can no longer speak for the transcriber: its close/error
    *  events (workerd fires both on an unclean end, and `close` again for the
@@ -111,17 +118,39 @@ export class GeminiTranscriber {
   /** Forward one mic frame (16 kHz mono s16le PCM). */
   sendAudio(pcm: ArrayBuffer): void {
     const data = base64Encode(pcm)
-    if (!this.setupDone) {
-      if (this.pendingAudio.length < 50) this.pendingAudio.push(data)
+    if (!this.setupDone || !this.ws) {
+      this.buffer(data)
       return
     }
     this.sendAudioB64(data)
   }
 
+  private buffer(data: string): void {
+    if (this.pendingAudio.length >= GeminiTranscriber.maxPendingFrames) this.pendingAudio.shift()
+    this.pendingAudio.push(data)
+  }
+
+  /** Never throws. A socket that has closed under us — its close event not
+   *  yet delivered, or delivered and a rotation already under way — refuses
+   *  `send()` with a TypeError, and until 2026-09-17 that TypeError escaped
+   *  through the session's message handler and ended the CALL as
+   *  `internal` ("Can't call WebSocket send() after close()"), one second
+   *  after a `goAway` rotation had been announced as survivable. The frame
+   *  is kept for the replacement socket instead. */
   private sendAudioB64(data: string): void {
-    this.ws?.send(JSON.stringify({
-      realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } },
-    }))
+    const ws = this.ws
+    if (!ws) return this.buffer(data)
+    try {
+      ws.send(JSON.stringify({
+        realtimeInput: { audio: { data, mimeType: "audio/pcm;rate=16000" } },
+      }))
+    } catch (e) {
+      this.buffer(data)
+      // workerd may deliver the dead socket's close/error event late or,
+      // for a socket we closed ourselves, only after the next macrotask;
+      // rotate now rather than wait, idempotent per generation either way.
+      if (ws === this.ws) this.rotateFrom(this.generation, `send failed: ${String(e).slice(0, 80)}`)
+    }
   }
 
   /** Replace the socket of generation `gen`, unless it is already stale
@@ -149,7 +178,15 @@ export class GeminiTranscriber {
 
   private async rotate(): Promise<void> {
     if (this.closed) return
-    try { this.ws?.close() } catch { /* already closing */ }
+    // Take the old socket OUT of the way before the (awaited) upgrade of the
+    // new one: `setupDone` stays true and `ws` keeps pointing at the closed
+    // socket for the whole round trip otherwise, so every mic frame in that
+    // window is a `send()` on a closed socket. Frames buffer instead and
+    // are flushed on the new socket's setupComplete.
+    const old = this.ws
+    this.ws = null
+    this.setupDone = false
+    try { old?.close() } catch { /* already closing */ }
     await this.connect()
   }
 
