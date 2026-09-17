@@ -65,6 +65,20 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
 
     private var markerTimes: [Double] { timings.map { Double($0.startMs) / 1000.0 } }
 
+    /// The track's right edge is where the SPEECH ends, not where the file
+    /// does. A render carries a silent tail, and the word timings stop at the
+    /// last word (`LocalAlignment.fill` by design, ElevenLabs by nature), so
+    /// a track scaled to the file left a dead strip after the whole-line
+    /// band — a third of the width on a short line, which read as the
+    /// timeline not filling the row. Playback still runs the file out past
+    /// this edge (`playbackEnd`); the playhead just parks at the end.
+    private var trackEnd: Double {
+        let file = max(player.duration, 0.01)
+        guard let last = timings.last else { return file }
+        let spoken = Double(last.endMs) / 1000.0 + TLConst.tailRelease
+        return spoken > 0 && spoken < file ? spoken : file
+    }
+
     private var selectionTimes: (start: Double, end: Double)? {
         if let r = selectedWordRange,
            r.lowerBound >= 0, r.upperBound < timings.count {
@@ -157,7 +171,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
     private var timeline: some View {
         GeometryReader { geo in
             let w = geo.size.width
-            let dur = max(player.duration, 0.01)
+            let dur = trackEnd
             let sel = selectionTimes
             let sx = sel.map { CGFloat($0.start / dur) * w }
             let ex = sel.map { CGFloat($0.end / dur) * w }
@@ -267,7 +281,7 @@ struct ShadowTimelinePlayer<MicControl: View>: View {
                 Text("full line")
             }
             Spacer()
-            Text(timeLabel(player.duration))
+            Text(timeLabel(trackEnd))
         }
         .font(.caption.monospacedDigit())
         .foregroundStyle(.secondary)
