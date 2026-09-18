@@ -67,7 +67,7 @@
 .lm.today .face{filter:grayscale(.2); opacity:.9}
 .leaflet-tooltip.lt{background:var(--surface); color:var(--ink); border:1px solid var(--ring);
   border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.12); padding:10px 12px; font-size:12.5px;
-  line-height:1.45; max-width:280px; white-space:normal}
+  line-height:1.55; width:max-content; max-width:min(460px, 86vw); white-space:normal}
 .leaflet-tooltip.lt::before{display:none}
 .tlhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px}
 .tlhead .clear{cursor:pointer; color:var(--s1); margin-left:6px}
@@ -287,7 +287,8 @@ svg text{font-family:inherit}
 details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-weight:600}
 
 #tooltip{position:fixed; pointer-events:none; z-index:10; background:var(--ink); color:var(--page);
-  font-size:12px; line-height:1.45; padding:7px 10px; border-radius:7px; max-width:280px;
+  font-size:12px; line-height:1.45; padding:7px 10px; border-radius:7px;
+  width:max-content; max-width:min(420px, 90vw);
   display:none; box-shadow:0 4px 14px rgba(0,0,0,.18)}
 #tooltip b{font-weight:600}
 
