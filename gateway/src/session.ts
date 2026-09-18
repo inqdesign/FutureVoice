@@ -398,6 +398,18 @@ export class CallSession implements DurableObject {
     return want.test(text)
   }
 
+  /** A final with no letter of the target script that is too short to be a
+   *  sentence: one or two words, a handful of letters (marks like Devanagari
+   *  vowel signs don't count). That is the shape of a filler the transcriber
+   *  mis-scripted — "अह", "उम" — and not of a learner who answered in
+   *  another language, which still goes through as before. */
+  private static isForeignScriptHesitation(text: string, language: string): boolean {
+    if (CallSession.inTargetScript(text, language)) return false
+    const words = text.trim().split(/\s+/).filter(Boolean)
+    const letters = text.match(/\p{L}/gu)?.length ?? 0
+    return words.length <= 2 && letters <= 6
+  }
+
   private static readonly targetScript: Record<string, RegExp> = {
     en: /\p{Script=Latin}/u, de: /\p{Script=Latin}/u, es: /\p{Script=Latin}/u,
     fr: /\p{Script=Latin}/u, it: /\p{Script=Latin}/u, pt: /\p{Script=Latin}/u,
@@ -662,6 +674,19 @@ export class CallSession implements DurableObject {
                                       CallSession.specSettleMs) as unknown as number
         },
         onUtterance: (text) => {
+          // A hesitation the transcriber wrote in a foreign script is not a
+          // turn. Reported 2026-09-18 in Korean AND German: every utterance
+          // opening on 어/음 or äh/ähm came back as Devanagari ("अह", "उम")
+          // and was answered on its own, so the learner's sentence split into
+          // a filler bubble, a reply to nobody ("천천히 생각하고 말해봐") and
+          // the rest. A filler is exactly the moment a learner is composing —
+          // answering it is cutting them off. It moves the hold's clock like
+          // an interim does (they are still going) and adds nothing to it.
+          if (CallSession.isForeignScriptHesitation(text, this.language)) {
+            this.warn("script_mismatch", `hesitation dropped: ${text.slice(0, 40)}`)
+            if (this.pendingUtterance !== null) this.armPending(CallSession.pendingHoldMs)
+            return
+          }
           // A FINAL in the wrong script is not hidden — it is what the turn
           // will be answered from, and silence would be worse than a wrong
           // answer the learner can see. It is recorded, because until now

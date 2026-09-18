@@ -268,6 +268,7 @@ function languagePin(code: string): string {
     `You transcribe a language LEARNER speaking ${name}. Write down exactly what you hear, word for word.`,
     `The language is settled before you hear anything: the speaker is speaking ${name}, and every line you write is ${name}. That holds for the first words of an utterance, when you have heard almost nothing yet, and for short replies that sound the same in several languages — write those in ${name} too.`,
     `The speaker has a foreign accent, hesitates, and makes grammar mistakes. That is what a learner sounds like. It is never evidence that they switched to another language, and never a reason to write their words in another language, another spelling or another script.`,
+    `Hesitation sounds — uh, um, a drawn-out vowel before the first word — belong to the ${name} utterance too. Write them the way ${name} writes a filler, or leave them out; they are never a word of another language and never another script.`,
     `Never translate and never correct — their mistakes are the material. If part of an utterance is unintelligible, write the ${name} words you are sure of and leave the rest out; do not fill the gap with another language.`,
   ].join("\n")
 }
