@@ -83,6 +83,10 @@ struct ConversationView: View {
     /// The last failure was a 402 — the user is out of credits. Retry is
     /// pointless until they top up, so the recovery UI leads with the paywall.
     @State private var outOfCredits = false
+    /// The free first call's seconds ran out mid-call. The call wraps itself
+    /// up (`handleTalkPoolSpent`) and the plans are offered after the book,
+    /// whether or not the pitch has been made once already.
+    @State private var freeCallSpent = false
     /// Wall-clock talk metering (4.5 cr/min via `talk-tick`). Started when
     /// the call seat opens, stopped on end/teardown; its 402 ends the call
     /// gracefully through the same out-of-credits alert as a turn failure.
@@ -751,8 +755,7 @@ struct ConversationView: View {
                     } else if meter.wallReason == .dailyCapReached {
                         dailyCapReached = true
                     } else {
-                        outOfCredits = true
-                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                        handleTalkPoolSpent()
                     }
                 }
                 // Silence isn't billed — see `isBillableMoment`. Set before
@@ -930,8 +933,7 @@ struct ConversationView: View {
                     } else if realtime.wallCode == "daily_cap_reached" {
                         dailyCapReached = true
                     } else if realtime.wallCode == "insufficient_credits" {
-                        outOfCredits = true
-                        error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+                        handleTalkPoolSpent()
                     } else if realtimeWasLive {
                         // A LIVE call that failed — not a connect failure
                         // (that one is reported where the connect happens).
@@ -1074,7 +1076,10 @@ struct ConversationView: View {
         if isEnding {
             ZStack {
                 Color(.systemBackground).opacity(0.95).ignoresSafeArea()
-                SummaryProgressView(progress: summaryProgress, facts: talkFacts)
+                SummaryProgressView(progress: summaryProgress, facts: talkFacts,
+                                    banner: freeCallSpent
+                                        ? explain("Your free talk time is used up")
+                                        : nil)
             }
             .transition(.opacity)
         }
@@ -3498,8 +3503,32 @@ struct ConversationView: View {
         }
     }
 
+    /// The free pool ran out mid-call — the one wall a paying account never
+    /// meets. The call puts ITSELF down and wraps up: book first, plans after.
+    ///
+    /// It used to raise the error alert and wait for End. Prod, 2026-09-17: a
+    /// first caller with 42 turns hit this wall at 23:57:51 and never pressed
+    /// End — no summary call, no book, and the plans pitch (which hangs off
+    /// the summary sheet's Done) never shown; five minutes later they were in
+    /// Watch, and they never subscribed. The screen after the wall is a dead
+    /// call — the gateway has torn the session down, the mic is closed,
+    /// nothing answers — so leaving the learner on it with a message is
+    /// asking them to find the one button that produces what the free call
+    /// was FOR. A wall with no learner turn behind it (the pre-flight refused
+    /// the greeting) keeps the alert: there is nothing to wrap up.
+    private func handleTalkPoolSpent() {
+        outOfCredits = true
+        guard turns.contains(where: { $0.role == .user }), !isEnding else {
+            error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+            return
+        }
+        freeCallSpent = true
+        Telemetry.log("talk_free_call_spent", ["turns": String(turns.count)])
+        Task { await endSession() }
+    }
+
     private func endSession() async {
-        guard !turns.isEmpty else { return }
+        guard !turns.isEmpty, !isEnding else { return }
         phoneCallActive = false
         // The call is over — summary generation isn't talk time, and the lock
         // screen must stop showing a call that has hung up.

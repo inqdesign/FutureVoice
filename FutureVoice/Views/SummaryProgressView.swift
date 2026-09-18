@@ -22,6 +22,10 @@ struct SummaryProgressView: View {
     /// True facts about the talk just finished ("12 turns · 4 min"), shown
     /// while the analysis runs so the longest step still says something.
     let facts: String?
+    /// Why the talk ended, when the learner didn't end it — the free pool
+    /// ran out mid-call. One line over the board, so the wrap-up says what
+    /// happened before it says what it is building.
+    var banner: String? = nil
 
     private struct Step: Identifiable {
         let id: Int
@@ -74,6 +78,11 @@ struct SummaryProgressView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
+            if let banner {
+                Label(banner, systemImage: "phone.down.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
             VStack(alignment: .leading, spacing: 10) {
                 Text("Building your review material")
                     .font(.headline)

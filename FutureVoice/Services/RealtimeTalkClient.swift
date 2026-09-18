@@ -314,6 +314,16 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// The server said the line is complete; the moment the local queue
     /// drains after this is when the learner's turn actually begins.
     private var serverAudioEnded = false
+    /// A wall (`insufficient_credits` and its kin) that landed while the last
+    /// line was still in the player. The gateway already holds its error
+    /// until the line's `audio_end`, but "sent" is not "heard": ElevenLabs'
+    /// final can arrive with seconds still queued here, and `error` is this
+    /// client's teardown — which stops the player. Held until the queue
+    /// drains (or the cap), so the last line the allowance paid for is
+    /// heard to its end before the call is put down.
+    private var heldWall: (code: String, message: String)?
+    private var heldWallTask: Task<Void, Never>?
+    private static let heldWallCapSeconds: TimeInterval = 15
     /// Lines the fluent self has started on THIS call — the first one on the
     /// speaker is half-duplex (see `audio_start`).
     private var linesStarted = 0
@@ -346,6 +356,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         isTornDown = false
         wallCode = nil
+        heldWall = nil
+        heldWallTask?.cancel()
+        heldWallTask = nil
         lastFailureCode = nil
         warningsThisCall = 0
         state = .connecting
@@ -677,6 +690,8 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // closing line (reported 2026-09-01).
         handOverReply()
         isTornDown = true
+        heldWallTask?.cancel()
+        heldWallTask = nil
         routePollTask?.cancel()
         routePollTask = nil
         if let routeObserver {
@@ -1521,6 +1536,9 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 guard let self, !self.isTornDown else { return }
                 switch result {
                 case .failure(let error):
+                    // The gateway closes the socket right after a wall; the
+                    // held one settles when the audio drains, not here.
+                    if self.heldWall != nil { return }
                     self.fail("socket", error.localizedDescription)
                     self.teardown()
                 case .success(let message):
@@ -1733,6 +1751,18 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
             if code == "insufficient_credits" || code == "daily_cap_reached"
                 || code == "fair_use_limit" {
                 wallCode = code
+                if state == .speaking, pendingBuffers > 0 {
+                    Self.step("wall \(code) held: \(pendingBuffers) buffers still playing")
+                    heldWall = (code, message)
+                    heldWallTask?.cancel()
+                    heldWallTask = Task { @MainActor [weak self] in
+                        try? await Task.sleep(nanoseconds:
+                            UInt64(Self.heldWallCapSeconds * 1_000_000_000))
+                        guard !Task.isCancelled else { return }
+                        self?.settleHeldWall()
+                    }
+                    return
+                }
             }
             fail(code.isEmpty ? "gateway" : code, message)
             teardown()
@@ -1792,6 +1822,17 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// Hand the finished (or interrupted) fluent-self line to the call
     /// screen, with the audio that was actually heard. Idempotent: a line is
     /// handed over once, whether it ended on its own or was talked over.
+    /// The last line has been heard: the wall that waited for it lands.
+    private func settleHeldWall() {
+        guard let held = heldWall else { return }
+        heldWall = nil
+        heldWallTask?.cancel()
+        heldWallTask = nil
+        guard !isTornDown else { return }
+        fail(held.code, held.message)
+        teardown()
+    }
+
     private func handOverReply() {
         guard let context = replyContext else { return }
         let pcm = replyPCM
@@ -1937,6 +1978,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                         if self.serverAudioEnded { self.state = .listening }
                         else { self.armDrainFallback() }
                     }
+                    if self.pendingBuffers == 0 { self.settleHeldWall() }
                 }
             }
         }

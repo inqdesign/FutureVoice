@@ -22,7 +22,7 @@ import { ReplyEngine } from "./reply"
 import { ElevenTTS } from "./eleven-tts"
 import { send, type ClientMessage, type ServerMessage } from "./protocol"
 import { verifyUser, ownsVoice, type Env } from "./supabase"
-import { TalkBilling } from "./billing"
+import { TalkBilling, type WallCode } from "./billing"
 
 const DEFAULT_TRANSCRIBE_MODEL = "models/gemini-3.5-transcribe-live"
 const DEFAULT_REPLY_MODEL = "gemini-3.6-flash"
@@ -51,6 +51,10 @@ export class CallSession implements DurableObject {
   /** Server-side meter — the gateway charges the call itself (see billing.ts);
    *  the app's TalkMeter stays local-only on this path. */
   private billing: TalkBilling | null = null
+  /** A spent allowance that arrived while a line was still playing — held
+   *  until that line ends, then the session ends for it (`wall`). */
+  private pendingWall: WallCode | null = null
+  private wallTimer: number | null = null
 
   /** A reply generation fired BEFORE the transcriber committed the turn —
    *  the same trick the app's SpeculativeReply plays on its VAD, moved
@@ -513,15 +517,7 @@ export class CallSession implements DurableObject {
           && (this.activeContext !== null
             || Date.now() - this.lastSpokeAt < 2000
             || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
-        (code) => {
-          // Out of minutes: say WHICH wall (the client shows the paywall for
-          // a spent free pool, "see you tomorrow" for a subscriber's day)
-          // and put the call down. Mid-sentence audio is allowed to finish
-          // client-side; nothing new is generated.
-          this.endReason ??= code
-          this.emit({ type: "error", code, message: "talk allowance spent" })
-          this.teardown()
-        },
+        (code) => this.wall(code),
       )
       // Preflight — an empty allowance must surface BEFORE the greeting
       // speaks, not a free minute later (same rule as the classic path). It
@@ -1074,6 +1070,38 @@ export class CallSession implements DurableObject {
     this.armLineEndFallback(context)
   }
 
+  /** Out of minutes. Says WHICH wall (the client wraps a spent free pool
+   *  up into its book and then the paywall, and shows "see you tomorrow"
+   *  for a subscriber's day) and puts the call down — but a line still
+   *  playing is allowed to FINISH first. The old comment here claimed the
+   *  client let mid-sentence audio finish; it doesn't — `error` is its
+   *  teardown, and teardown stops the player — so a wall landing mid-line
+   *  cut the fluent self off mid-word, and that was the last thing a free
+   *  caller heard before being asked to pay. Held until the line's
+   *  `audio_end` (or a barge-in, or the cap), and nothing new is generated
+   *  meanwhile: `activeContext` stays set for the whole hold, which is what
+   *  gates a reply, and billing already stopped at the 402. */
+  private wall(code: WallCode): void {
+    if (this.ended || this.pendingWall !== null) return
+    if (this.activeContext === null) return this.settleWall(code)
+    console.log(`wall ${code}: holding for line ${this.activeContext}`)
+    this.pendingWall = code
+    this.wallTimer = setTimeout(() => this.settleWall(code),
+                                CallSession.wallHoldMs) as unknown as number
+  }
+  /** Longer than any line the turn ceiling allows (three sentences), short
+   *  enough that a line whose end never reports still ends the call. */
+  private static readonly wallHoldMs = 20_000
+
+  private settleWall(code: WallCode): void {
+    if (this.wallTimer !== null) { clearTimeout(this.wallTimer); this.wallTimer = null }
+    this.pendingWall = null
+    if (this.ended) return
+    this.endReason ??= code
+    this.emit({ type: "error", code, message: "talk allowance spent" })
+    this.teardown()
+  }
+
   /** The line is over: tell the client, and free the turn. Idempotent —
    *  the TTS final and the play-out fallback below can both land. */
   private endLine(context: string): void {
@@ -1088,6 +1116,7 @@ export class CallSession implements DurableObject {
     this.eleven?.closeContext(context)
     this.emit({ type: "audio_end", context })
     this.activeContext = null
+    if (this.pendingWall !== null) this.settleWall(this.pendingWall)
   }
 
   /** `audio_end` used to ride on ElevenLabs' `isFinal` alone, and on
@@ -1162,6 +1191,9 @@ export class CallSession implements DurableObject {
                   message: `barge-in ${sinceCommit}ms after commit` })
     }
     this.activeContext = null
+    // Talked over the last line the allowance covered: nothing can answer
+    // what they are saying, so the held wall lands now.
+    if (this.pendingWall !== null) this.settleWall(this.pendingWall)
     // The client stops playback NOW — the projected play-out is void, and
     // leaving it running would hold the echo window open over the learner's
     // own next words.
@@ -1257,6 +1289,7 @@ export class CallSession implements DurableObject {
     this.billing?.stop()   // final flush — the last partial batch still bills
     if (this.statsTimer !== null) clearInterval(this.statsTimer)
     if (this.idleTimer !== null) clearTimeout(this.idleTimer)
+    if (this.wallTimer !== null) clearTimeout(this.wallTimer)
     if (this.watchTimer !== null) clearInterval(this.watchTimer)
     this.clearPending()
     this.dropSpec()
