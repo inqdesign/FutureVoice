@@ -97,7 +97,65 @@ async function fetchData(env: Env) {
     console.log(`recentLedger: ${(e as Error).message}`);
     return [];
   });
-  return assemble(raw);
+  const data = assemble(raw);
+  // Same rule as recentLedger: a missing column must not blank the console.
+  const offers = await offerCodes(env).catch((e) => {
+    console.log(`offerCodes: ${(e as Error).message}`);
+    return {} as Record<string, OfferInfo>;
+  });
+  for (const u of data.users as { id: string; offer?: OfferInfo }[]) {
+    if (offers[u.id]) u.offer = offers[u.id];
+  }
+  return data;
+}
+
+/** Who is on an App Store offer code (type 3), and at what price.
+ *  Two sources, because Apple applies a code AFTER the free trial: during the
+ *  trial week only renewal info knows about it (`renewal_offer_*`, filed from
+ *  signedRenewalInfo since 20260918100000); once a period has been charged
+ *  under it, the transaction carries `offer_type = 3` too. */
+type OfferInfo = {
+  name: string | null;
+  price: number | null; currency: string | null;   // next charge, major units
+  pending: boolean;                                  // code not charged yet
+  firstChargedAt: string | null; charges: number;
+};
+async function offerCodes(env: Env): Promise<Record<string, OfferInfo>> {
+  const get = async (q: string) => {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/${q}`, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+    });
+    if (!r.ok) throw new Error(`${q.split("?")[0]} ${r.status}: ${(await r.text()).slice(0, 200)}`);
+    return await r.json() as Record<string, unknown>[];
+  };
+  const [subs, txs] = await Promise.all([
+    get("user_subscriptions?select=user_id,renewal_offer_type,renewal_offer_id,"
+      + "renewal_price_milliunits,renewal_currency&renewal_offer_type=eq.3"),
+    get("subscription_transactions?select=user_id,purchase_date,price_milliunits,currency"
+      + "&offer_type=eq.3&order=purchase_date.asc"),
+  ]);
+  const out: Record<string, OfferInfo> = {};
+  const money = (m: unknown) => (typeof m === "number" ? m / 1000 : null);
+  for (const t of txs) {
+    const id = String(t.user_id);
+    const o = out[id] ??= { name: null, price: money(t.price_milliunits),
+      currency: (t.currency as string) ?? null, pending: false,
+      firstChargedAt: (t.purchase_date as string) ?? null, charges: 0 };
+    o.charges++;
+  }
+  for (const s of subs) {
+    const id = String(s.user_id);
+    const o = out[id] ??= { name: null, price: null, currency: null, pending: true,
+      firstChargedAt: null, charges: 0 };
+    o.name = (s.renewal_offer_id as string) ?? o.name;
+    o.price = money(s.renewal_price_milliunits) ?? o.price;
+    o.currency = (s.renewal_currency as string) ?? o.currency;
+    o.pending = o.charges === 0;
+  }
+  return out;
 }
 
 /** Every usage_ledger row of the last 8 days, thin. `admin_raw.hours` is a

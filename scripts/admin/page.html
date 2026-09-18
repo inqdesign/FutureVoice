@@ -1821,6 +1821,40 @@ function renderCancelShape(){
       : ` ${off.length}명 중 ${off.length-before.length}명은 써보고 껐어요.`;
 }
 
+/** What happens next to a subscription, and how long until it does.
+ *  D-n counts CALENDAR days in the page's zone (so "D-1" is tomorrow, not
+ *  "24 h from now"); inside 48 h the hours carry the answer instead. */
+/** An App Store offer code (Beta50…): the chip says a code is on the plan,
+ *  the countdown cell says what the next charge will be because of it. */
+const fmtMoney = (n, cur) => n==null ? '' : (() => {
+  try{ return new Intl.NumberFormat('ko-KR', {style:'currency', currency:cur||'USD',
+         maximumFractionDigits: n%1 ? 2 : 0}).format(n); }
+  catch(e){ return `${n} ${cur||''}`; } })();
+function offerChip(u){
+  const o = u.offer; if(!o) return '';
+  const tip = `${esc(o.name||'오퍼 코드')}${o.pending
+      ? ' · 체험이 끝나면 첫 결제부터 적용돼요'
+      : ` · ${o.charges}번 결제됨, 첫 결제 ${fmtTs(o.firstChargedAt)}`}`;
+  return ` <span class="chip" style="background:none;border:1px solid var(--s3);color:var(--s3)"`
+    + ` data-tip="${tip}">🎟 코드${/50/.test(o.name||'')?' 반값':''}</span>`;
+}
+function countdownCell(k, iso, offer){
+  const d = ts(iso); if(!d) return '<span class="muted">—</span>';
+  const what = {trial:'첫 결제', paid:'갱신', cancelling:'종료', trial_cancelled:'체험 종료'}[k] || '끝';
+  const ms = d - Date.now();
+  const dayKey = x => x.toLocaleDateString('en-CA', {timeZone: tzZone()});
+  const dd = Math.round((new Date(dayKey(d)) - new Date(dayKey(new Date())))/86400000);
+  const when = fmtTs(iso);
+  if(ms <= 0) return `<b>${what}</b> <span class="muted">지남 · ${when}</span>`;
+  const h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000);
+  const left = ms < 3600000 ? `${m}분 남음` : ms < 48*3600000 ? `${h}시간 ${m}분 남음` : null;
+  const tag = dd<=0 ? '오늘' : `D-${dd}`;
+  const urgent = ms < 24*3600000;
+  const code = offer && offer.price!=null && (k==='trial' || k==='paid')
+    ? `<div class="usub" style="color:var(--s3)">${fmtMoney(offer.price, offer.currency)} (코드 적용)</div>` : '';
+  return `<b class="${urgent?'warn':''}">${what} ${tag}</b>`
+    + `<div class="usub">${when}${left?` · ${left}`:''}</div>${code}`;
+}
 function renderTrials(){
   // Money is an account fact, never a launch-window one — this table ignores
   // the header toggle on purpose and lists every account with a real plan.
@@ -1830,7 +1864,7 @@ function renderTrials(){
   const el = document.getElementById('trialTable');
   if(!rows.length){ el.innerHTML='<tbody><tr><td class="empty">아직 체험이 없어요.</td></tr></tbody>'; return; }
   let html = `<thead><tr><th>유저</th><th>플랜</th><th>상태</th><th>언제 껐나</th><th>시작</th>`
-    + `<th>끝나는 날</th><th class="num">월 환산</th><th class="num">통화</th></tr></thead><tbody>`;
+    + `<th>다음 일</th><th class="num">월 환산</th><th class="num">통화</th></tr></thead><tbody>`;
   for(const u of rows){
     const k = stateOf(u), st = SUB_KO[k];
     const price = (DATA.prices||{})[u.plan] || 0;
@@ -1838,7 +1872,7 @@ function renderTrials(){
     const ends = u.trialEndsAt || u.periodEnd;
     html += `<tr>
       <td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}</td>
-      <td><span class="chip">${PLAN_KO[u.plan]||u.plan}</span></td>
+      <td><span class="chip">${PLAN_KO[u.plan]||u.plan}</span>${offerChip(u)}</td>
       <td><span class="${alive?'ok':'warn'}">${st?st.ko:k}</span></td>
       <td>${k==='trial_cancelled'
             ? (cancelledBeforeUse(u)
@@ -1846,7 +1880,7 @@ function renderTrials(){
                 : '<span class="bad">써보고 나서</span>')
             : '<span class="muted">—</span>'}</td>
       <td style="white-space:nowrap">${fmtTs(u.subStartedAt)}</td>
-      <td style="white-space:nowrap">${ends?fmtD(ends.slice(0,10)):'—'}</td>
+      <td style="white-space:nowrap">${countdownCell(k, ends, u.offer)}</td>
       <td class="num">${price?usd(price):'—'}</td>
       <td class="num">${u.talkSecs?fmtMin(u.talkSecs):'—'}</td>
     </tr>`;
@@ -2385,6 +2419,8 @@ let redrawTimer;
 addEventListener('resize', () => { clearTimeout(redrawTimer); redrawTimer = setTimeout(redrawCharts, 150); });
 // The hours chart's "지금" marker walks with the clock.
 setInterval(() => { const u = visibleUsers(); renderHoursToday(u); renderHours(u); renderHoursByUser(u); }, 60000);
+// The trial table's countdowns ("첫 결제 D-2", "5시간 12분 남음") tick too.
+setInterval(renderTrials, 60000);
 
 document.getElementById('asof').textContent =
   `${fmtDate(DATA.windowStart)} 출시 ~ ${fmtDate(DATA.asOf)} · `
