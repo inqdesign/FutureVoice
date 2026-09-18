@@ -103,8 +103,15 @@ async function fetchData(env: Env) {
     console.log(`offerCodes: ${(e as Error).message}`);
     return {} as Record<string, OfferInfo>;
   });
-  for (const u of data.users as { id: string; offer?: OfferInfo }[]) {
+  // Every profile's language pair — admin_raw's `setup` only has people who
+  // finished setup after setup_at existed, which left the rest as "?".
+  const langs = await profileLangs(env).catch((e) => {
+    console.log(`profileLangs: ${(e as Error).message}`);
+    return {} as Record<string, { native: string | null; target: string | null }>;
+  });
+  for (const u of data.users as { id: string; offer?: OfferInfo; native?: string | null; target?: string | null }[]) {
     if (offers[u.id]) u.offer = offers[u.id];
+    if (langs[u.id]) { u.native = langs[u.id].native; u.target = langs[u.id].target; }
   }
   return data;
 }
@@ -134,6 +141,21 @@ async function dayLedger(env: Env): Promise<unknown[]> {
     if (batch.length < page) break;
   }
   return rows;
+}
+
+async function profileLangs(env: Env): Promise<Record<string, { native: string | null; target: string | null }>> {
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/profiles?select=id,native_language,target_language`, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  });
+  if (!r.ok) throw new Error(`profiles ${r.status}`);
+  const out: Record<string, { native: string | null; target: string | null }> = {};
+  for (const x of await r.json() as { id: string; native_language: string | null; target_language: string | null }[]) {
+    out[x.id] = { native: x.native_language, target: x.target_language };
+  }
+  return out;
 }
 
 /** Who is on an App Store offer code (type 3), and at what price.

@@ -174,6 +174,8 @@ td{padding:9px 10px; border-bottom:1px solid var(--grid); vertical-align:top}
 tr:last-child td{border-bottom:none}
 td.num, th.num{text-align:right; font-variant-numeric:tabular-nums}
 .uname{font-weight:600}
+.langpair{margin-left:8px; font-size:14px; white-space:nowrap; cursor:help}
+.langpair .arrow{font-size:11px; color:var(--muted); margin:0 3px}
 .usub{font-size:11.5px; color:var(--muted); margin-top:1px}
 .uid{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10.5px; color:var(--muted);
   margin-top:2px; user-select:all; line-height:1.35}
@@ -1613,6 +1615,23 @@ function langSummary(idx){
 
 /** The onboarding pick, or null where no build has reported it yet. */
 const chosenLang = idx => ((DATA.setup||[]).find(r=>r.u===idx) || {}).target || null;
+const nativeLang = idx => ((DATA.setup||[]).find(r=>r.u===idx) || {}).native || null;
+/** A language drawn as a flag. A language is not a country, so this is the
+ *  usual stand-in (English → 🇺🇸) and the name is always in the title. */
+const LANG_FLAG = {en:'🇺🇸', ko:'🇰🇷', ja:'🇯🇵', de:'🇩🇪', fr:'🇫🇷', es:'🇪🇸', it:'🇮🇹', pt:'🇵🇹',
+  zh:'🇨🇳', 'zh-Hans':'🇨🇳', 'zh-Hant':'🇹🇼', ru:'🇷🇺', vi:'🇻🇳', th:'🇹🇭', id:'🇮🇩', ar:'🇸🇦', hi:'🇮🇳'};
+const langFlag = c => LANG_FLAG[c] || (c ? c.toUpperCase() : '');
+/** "🇰🇷 → 🇺🇸" — the language they think in, then every one they practise:
+ *  the onboarding pick first, then any other language they have spoken. */
+function langPair(idx){
+  const u = DATA.users[idx] || {};
+  const nat = nativeLang(idx) || u.native || null;
+  const targets = [...new Set([chosenLang(idx) || u.target, ...langsOf(idx).map(r=>r.lang)].filter(Boolean))];
+  if(!nat && !targets.length) return '';
+  const tip = `${nat ? langLabel(nat)+'로 ' : ''}${targets.map(langLabel).join(' · ') || '?'} 배우는 중`;
+  return `<span class="langpair" title="${esc(tip)}">${nat ? langFlag(nat) : '<span class="muted">?</span>'}`
+    + `<span class="arrow">→</span>${targets.map(langFlag).join(' ') || '<span class="muted">?</span>'}</span>`;
+}
 
 function renderLangs(users){
   const el = document.getElementById('langs');
@@ -1797,7 +1816,7 @@ function renderPeople(users){
     const last = u.lastTalkAt ? `통화 ${ago(u.lastTalkAt)}`
       : u.lastSignIn ? `<span class="muted">로그인 ${ago(u.lastSignIn)}</span>` : '—';
     html += `<tr class="xrow" data-u="${u.idx}" aria-expanded="false" title="${esc(u.realEmail||u.email||'')}">
-      <td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}
+      <td><span class="uname">${esc(nameOf(u))}</span>${badge(u)}${langPair(u.idx)}
         <div class="usub">${(()=>{ const c=chosenLang(u.idx), used=langSummary(u.idx);
           if(c && used) return `${langLabel(c)} 선택 · ${used}`;
           if(c) return `${langLabel(c)} 선택 <span class="muted">(아직 안 씀)</span>`;
