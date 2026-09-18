@@ -245,7 +245,7 @@ enum PracticeStats {
             for turn in session.turns where turn.role == .fluentSelf {
                 let text = turn.transcript.trimmingCharacters(in: .whitespacesAndNewlines)
                 let key = text.lowercased()
-                let wordCount = text.split(separator: " ").count
+                let wordCount = WordSplitter.count(text)
                 guard !text.isEmpty,
                       wordCount >= minPickWords,
                       latestByTurn[turn.id] == nil,

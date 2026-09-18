@@ -265,9 +265,8 @@ extension Session {
         }
         if let first = turns.first(where: { $0.role == .user })?.transcript
             .trimmingCharacters(in: .whitespacesAndNewlines), !first.isEmpty {
-            let words = first.split(separator: " ")
-            let snippet = words.prefix(6).joined(separator: " ")
-            return "\u{201C}\(snippet)\(words.count > 6 ? "…" : "")\u{201D}"
+            let snippet = WordSplitter.snippet(first, words: 6, characters: 14)
+            return "\u{201C}\(snippet)\u{201D}"
         }
         return "Conversation"
     }

@@ -5,11 +5,11 @@ import Foundation
 /// in dictionary form: 行く, 疲れる, 多い, 家事 …).
 ///
 /// Japanese needs this for two reasons Korean doesn't. There are no spaces,
-/// so every `split(separator: " ")` in the app reads a whole sentence as one
-/// word — `words(in:)` is the segmenter that replaces it. And NLTagger has
-/// no lemma or lexical-class scheme for Japanese at all (measured on iOS 26:
-/// every token comes back `OtherWord`, lemma nil), so there is nothing to
-/// fall back on.
+/// so every `split(separator: " ")` in the app read a whole sentence as one
+/// word — `words(in:)` is the segmenter `WordSplitter` routes to. And
+/// NLTagger has no lemma or lexical-class scheme for Japanese at all
+/// (measured on iOS 26: every token comes back `OtherWord`, lemma nil), so
+/// there is nothing to fall back on.
 ///
 /// Same contract as `KoreanMorph`: a HEURISTIC that generates candidate
 /// dictionary forms and keeps only what the lexicon confirms. A wrong guess
@@ -23,6 +23,13 @@ enum JapaneseMorph {
         let surface: String
         let range: Range<String.Index>
         let reading: String
+    }
+
+    /// A run of the original text: a word, or the punctuation/whitespace
+    /// between two words. Concatenating every piece gives the text back.
+    struct Piece: Equatable {
+        let text: String
+        let isWord: Bool
     }
 
     // MARK: - Segmentation
@@ -46,7 +53,9 @@ enum JapaneseMorph {
             let nsRange = NSRange(location: r.location, length: r.length)
             guard let range = Range(nsRange, in: text) else { continue }
             let surface = String(text[range])
-            guard surface.unicodeScalars.contains(where: { CharacterSet.letters.contains($0) })
+            // Digits are words too (3時 is 3 + 時): only a token with no
+            // letter or digit at all is punctuation.
+            guard surface.unicodeScalars.contains(where: { CharacterSet.alphanumerics.contains($0) })
             else { continue }
             let latin = CFStringTokenizerCopyCurrentTokenAttribute(
                 tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? String
@@ -61,44 +70,97 @@ enum JapaneseMorph {
         words(in: text).map(\.surface)
     }
 
+    /// The whole text as words and the gaps between them, for a view that
+    /// styles words and must still draw the 、。「」 around them. The
+    /// tokenizer never emits punctuation, so the gaps are read off the ranges.
+    static func displayPieces(in text: String) -> [Piece] {
+        var out: [Piece] = []
+        var cursor = text.startIndex
+        for token in words(in: text) {
+            if token.range.lowerBound > cursor {
+                out.append(Piece(text: String(text[cursor..<token.range.lowerBound]), isWord: false))
+            }
+            out.append(Piece(text: token.surface, isWord: true))
+            cursor = token.range.upperBound
+        }
+        if cursor < text.endIndex {
+            out.append(Piece(text: String(text[cursor...]), isWord: false))
+        }
+        return out
+    }
+
     // MARK: - Headwords
 
     /// Every headword spoken in `text`, with the range it was said over.
     ///
     /// Adjacent tokens are tried joined first (up to three, EXACT headword
-    /// only), because the tokenizer occasionally cuts a listed compound in
-    /// two. The join never reaches into a function token — し + た would
-    /// otherwise spell した and read back as 下.
+    /// only), because the tokenizer cuts some listed compounds in two
+    /// (面倒|くさい, お|疲れ|様). The join never reaches into a function
+    /// token — し + た would otherwise spell した and read back as 下.
     static func headwords(in text: String,
                           lexicon: Set<String>,
-                          readings: [String: String]) -> [(headword: String, range: Range<String.Index>)] {
+                          forms: [String: String]) -> [(headword: String, range: Range<String.Index>)] {
         let tokens = words(in: text)
         var out: [(String, Range<String.Index>)] = []
         var i = 0
         while i < tokens.count {
-            var matched = false
-            for width in stride(from: min(3, tokens.count - i), through: 2, by: -1) {
-                let slice = tokens[i..<(i + width)]
-                guard !slice.contains(where: { isFunctionToken($0.surface) }) else { continue }
-                let joined = slice.map(\.surface).joined()
-                if lexicon.contains(joined) {
-                    out.append((joined, slice.first!.range.lowerBound..<slice.last!.range.upperBound))
-                    i += width
-                    matched = true
-                    break
-                }
+            if let (head, width) = compound(at: i, in: tokens, lexicon: lexicon, forms: forms) {
+                out.append((head, tokens[i].range.lowerBound..<tokens[i + width - 1].range.upperBound))
+                i += width
+                continue
             }
-            if matched { continue }
             let token = tokens[i]
             let inflected = i + 1 < tokens.count && inflections.contains(tokens[i + 1].surface)
             if let head = dictionaryForm(of: token.surface, reading: token.reading,
-                                         inflected: inflected,
-                                         in: lexicon, readings: readings) {
+                                         inflected: inflected, in: lexicon, forms: forms) {
                 out.append((head, token.range))
             }
             i += 1
         }
         return out
+    }
+
+    /// The notebook key for every piece of `displayPieces(in:)`, in the same
+    /// order — "" for punctuation and for a word the pool doesn't know. A
+    /// compound headword puts its key on each of the tokens it spans, so the
+    /// whole word lights up and any of it can be tapped.
+    static func pieceKeys(in text: String,
+                          lexicon: Set<String>,
+                          forms: [String: String]) -> [String] {
+        let tokens = words(in: text)
+        var keyByToken = [String](repeating: "", count: tokens.count)
+        var i = 0
+        while i < tokens.count {
+            if let (head, width) = compound(at: i, in: tokens, lexicon: lexicon, forms: forms) {
+                for k in i..<(i + width) { keyByToken[k] = head }
+                i += width
+                continue
+            }
+            let inflected = i + 1 < tokens.count && inflections.contains(tokens[i + 1].surface)
+            keyByToken[i] = dictionaryForm(of: tokens[i].surface, reading: tokens[i].reading,
+                                           inflected: inflected, in: lexicon, forms: forms) ?? ""
+            i += 1
+        }
+        var out: [String] = []
+        var next = 0
+        for piece in displayPieces(in: text) {
+            if piece.isWord { out.append(keyByToken[next]); next += 1 } else { out.append("") }
+        }
+        return out
+    }
+
+    private static func compound(at i: Int, in tokens: [Token],
+                                 lexicon: Set<String>,
+                                 forms: [String: String]) -> (String, Int)? {
+        guard tokens.count - i >= 2 else { return nil }
+        for width in stride(from: min(3, tokens.count - i), through: 2, by: -1) {
+            let slice = tokens[i..<(i + width)]
+            guard !slice.contains(where: { isFunctionToken($0.surface) }) else { continue }
+            let joined = slice.map(\.surface).joined()
+            if lexicon.contains(joined) { return (joined, width) }
+            if let head = forms[joined], lexicon.contains(head) { return (head, width) }
+        }
+        return nil
     }
 
     /// The headword one token stands for, or nil. Tries the surface's
@@ -112,10 +174,10 @@ enum JapaneseMorph {
                                reading: String? = nil,
                                inflected: Bool = false,
                                in lexicon: Set<String>,
-                               readings: [String: String]) -> String? {
+                               forms: [String: String]) -> String? {
         guard !isFunctionToken(surface) else { return nil }
         func resolve(_ c: String) -> String? {
-            let head = lexicon.contains(c) ? c : readings[c].flatMap { lexicon.contains($0) ? $0 : nil }
+            let head = lexicon.contains(c) ? c : forms[c].flatMap { lexicon.contains($0) ? $0 : nil }
             return head.flatMap { isFunctionToken($0) ? nil : $0 }
         }
         func ordered(_ s: String) -> [String] {
@@ -236,12 +298,14 @@ enum JapaneseMorph {
     private static let suffixes = [
         "ませんでした", "なかった", "ました", "ません", "ている", "ていた",
         "でした", "たかった", "られる", "させる",
-        "ます", "ない", "たい", "ます", "です", "ている",
+        "ます", "ない", "たい", "です",
         "て", "た", "で", "だ", "う",
     ].sorted { $0.count > $1.count }
 
     /// Particles, auxiliaries and copulas: tokens that are grammar, never a
     /// word to track. Without this ない reads back as 無い and まし as 増し.
+    /// `CarryoverDetector` reads it as the filler list too: a phrase made of
+    /// nothing but these has taught nobody anything.
     private static let functionTokens: Set<String> = [
         "は", "が", "を", "に", "へ", "と", "も", "や", "か", "ね", "よ", "な",
         "の", "ん", "で", "て", "た", "だ", "う", "ぞ", "さ", "わ",
@@ -250,6 +314,11 @@ enum JapaneseMorph {
         "ない", "なかっ", "なく", "なけれ", "なきゃ", "ば", "たい", "たく", "たかっ",
         "れる", "られ", "られる", "せる", "させ", "させる", "ちゃ", "じゃ",
         "いる", "い", "ある", "あっ", "おり", "ござい",
+        // Spoken contractions and the passive/potential れ on its own —
+        // 追わ|れ|てる. てる is what ている sounds like; it is not 照る.
+        "れ", "てる", "てた", "てて", "てれ", "とく", "とい", "とる",
+        "ちゃう", "ちゃっ", "ちゃい", "じゃう", "じゃっ",
+        "たり", "ながら", "ず", "ぬ", "まい", "じゃん", "かな", "かしら", "っけ",
     ]
 
     static func isFunctionToken(_ s: String) -> Bool { functionTokens.contains(s) }
@@ -281,13 +350,48 @@ enum JapaneseMorph {
         }
     }
 
-    // MARK: - Bundled readings
+    // MARK: - Readings
 
-    /// kana spelling → headword, from `ja_readings.tsv` (see
-    /// `scripts/build-ja-wordlist.py` for what is and isn't kept). Loaded
+    /// The whole line as kana, punctuation and spacing dropped — what it
+    /// SOUNDS like, whatever script the transcriber chose. 分かった and
+    /// わかった read the same; 分かった and 分かりました don't.
+    static func reading(of text: String) -> String {
+        words(in: text).map(\.reading).joined()
+    }
+
+    /// How a headword is read, for display beside it — nil when it has no
+    /// kanji (the word already spells its sound). The JLPT list's readings
+    /// first, all of them for a word that has several (からい・つらい);
+    /// the system tokenizer's guess for anything off the list.
+    static func reading(ofHeadword word: String) -> String? {
+        guard word.contains(where: { ch in
+            ch.unicodeScalars.contains { (0x4E00...0x9FFF).contains($0.value) || $0.value == 0x3005 }
+        }) else { return nil }
+        if let listed = bundledReadings[word] { return listed }
+        let guess = reading(of: word)
+        return guess.isEmpty || guess == word ? nil : guess
+    }
+
+    /// headword → reading(s), the third column of `cefr_words_ja.tsv`.
+    private static let bundledReadings: [String: String] = {
+        guard let url = Bundle.main.url(forResource: "cefr_words_ja", withExtension: "tsv"),
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return [:] }
+        var out: [String: String] = [:]
+        for line in text.split(whereSeparator: \.isNewline) {
+            let parts = line.split(separator: "\t")
+            if parts.count == 3 { out[String(parts[0])] = String(parts[2]) }
+        }
+        return out
+    }()
+
+    // MARK: - Bundled forms
+
+    /// Any other spelling → headword, from `ja_forms.tsv`: kana readings
+    /// (わかる → 分かる), other kanji (判る → 分かる), okurigana variants. See
+    /// `scripts/build-ja-wordlist.py` for what is and isn't kept. Loaded
     /// once; empty when the resource is absent, which only costs recall.
-    static let bundledReadings: [String: String] = {
-        guard let url = Bundle.main.url(forResource: "ja_readings", withExtension: "tsv"),
+    static let bundledForms: [String: String] = {
+        guard let url = Bundle.main.url(forResource: "ja_forms", withExtension: "tsv"),
               let text = try? String(contentsOf: url, encoding: .utf8) else { return [:] }
         var out: [String: String] = [:]
         for line in text.split(whereSeparator: \.isNewline) {

@@ -699,9 +699,11 @@ final class VocabStore: ObservableObject {
     ///
     /// Empty for Korean by construction: `koreanLemmas` can only return
     /// lexicon hits, because a dictionary form the wordlist can't confirm is
-    /// a guess rather than a word to track.
+    /// a guess rather than a word to track. Japanese the same, one reason
+    /// further: NLTagger has no part of speech for it, so the first filter
+    /// above cannot even be asked.
     nonisolated static func offListContentWords(in texts: [String]) -> [String: Int] {
-        guard !Self.matchesKorean else { return [:] }
+        guard !Self.matchesKorean, !Self.matchesJapanese else { return [:] }
         let language = Self.taggerLanguage
         let content: Set<String> = [
             NLTag.noun.rawValue, NLTag.verb.rawValue,
@@ -764,6 +766,12 @@ final class VocabStore: ObservableObject {
         if Self.matchesKorean {
             return KoreanMorph.dictionaryForm(of: w, in: CoreVocabulary.set) ?? w
         }
+        if Self.matchesJapanese {
+            // The whole chunk, not one segment: 疲れた is 疲れ + た, and only
+            // the た says the 疲れ is the verb and not the noun.
+            return JapaneseMorph.headwords(in: w, lexicon: CoreVocabulary.set,
+                                           forms: JapaneseMorph.bundledForms).first?.headword ?? w
+        }
         let tagger = NLTagger(tagSchemes: [.lemma])
         tagger.string = w
         tagger.setLanguage(Self.taggerLanguage, range: w.startIndex..<w.endIndex)
@@ -792,6 +800,12 @@ final class VocabStore: ObservableObject {
         LanguageCatalog.language(LanguageScope.active)?.code == "ko"
     }
 
+    /// Japanese: no spaces and no NLTagger lemma, so `JapaneseMorph` does
+    /// both the cutting and the headword lookup.
+    nonisolated private static var matchesJapanese: Bool {
+        LanguageCatalog.language(LanguageScope.active)?.code == "ja"
+    }
+
     /// NLTagger language for the current target. NLLanguage raw values ARE
     /// bare BCP-47 codes ("en", "de"), so the active code maps directly;
     /// an unsupported code just yields nil tags → surface-token fallback.
@@ -808,6 +822,7 @@ final class VocabStore: ObservableObject {
     /// knowledge belongs here, not scattered across callers.
     nonisolated static func lemmas(in texts: [String]) -> Set<String> {
         if Self.matchesKorean { return koreanLemmas(in: texts) }
+        if Self.matchesJapanese { return japaneseLemmas(in: texts) }
         let language = Self.taggerLanguage
         var out = Set<String>()
         let tagger = NLTagger(tagSchemes: [.lemma])
@@ -840,6 +855,20 @@ final class VocabStore: ObservableObject {
                 if let head = KoreanMorph.dictionaryForm(of: token, in: CoreVocabulary.set) {
                     out.insert(head)
                 }
+            }
+        }
+        return out
+    }
+
+    /// Japanese: segment, then map each stem to a wordlist headword
+    /// (行きました → 行く, わかりません → 分かる). Lexicon hits only, like
+    /// Korean — the same guess-versus-word line.
+    nonisolated private static func japaneseLemmas(in texts: [String]) -> Set<String> {
+        var out = Set<String>()
+        for text in texts {
+            for hit in JapaneseMorph.headwords(in: text, lexicon: CoreVocabulary.set,
+                                               forms: JapaneseMorph.bundledForms) {
+                out.insert(hit.headword)
             }
         }
         return out

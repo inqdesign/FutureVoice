@@ -1146,8 +1146,10 @@ struct TalkTranscriptView: View {
                 atOrAbove: appState.proficiency)
             var keys: [UUID: [String]] = [:]
             for turn in session.turns where turn.role == .fluentSelf {
-                keys[turn.id] = turn.transcript.split(separator: " ")
-                    .map { VocabStore.lookupKey(for: String($0)) }
+                keys[turn.id] = WordSplitter.spaced
+                    ? turn.transcript.split(separator: " ").map { VocabStore.lookupKey(for: String($0)) }
+                    : JapaneseMorph.pieceKeys(in: turn.transcript, lexicon: CoreVocabulary.set,
+                                              forms: JapaneseMorph.bundledForms)
             }
             turnTokenKeys = keys
         }
@@ -1320,8 +1322,8 @@ private struct TranscriptRow: View {
     /// This row is the one the sequential replay is speaking right now —
     /// drawn as `DialogueLine`'s accent ring, the same cursor Watch uses.
     var isCurrent: Bool = false
-    /// Notebook lookup key per transcript token (parent precomputes — NLTagger
-    /// is too slow for row bodies), aligned with `transcript.split(" ")`.
+    /// Notebook lookup key per transcript piece (parent precomputes — NLTagger
+    /// is too slow for row bodies), aligned with `displayPieces`.
     let tokenKeys: [String]
     /// Token indices highlighted as worth picking up; only these are tappable.
     let highlightedIndices: Set<Int>
@@ -1342,20 +1344,30 @@ private struct TranscriptRow: View {
     /// pickup-worthy words which are tinted, dot-underlined, and carry a
     /// `futurevoice://word/<tokenIndex>` link so they're tappable inline.
     private var highlightedTranscript: AttributedString {
-        let tokens = turn.transcript.split(separator: " ")
+        let pieces = displayPieces
         var out = AttributedString()
-        for (index, token) in tokens.enumerated() {
-            var piece = AttributedString(String(token))
-            if highlightedIndices.contains(index) {
+        for (index, token) in pieces.enumerated() {
+            var piece = AttributedString(token.text)
+            if token.isWord, highlightedIndices.contains(index) {
                 piece.foregroundColor = .accentColor
                 piece.font = .body.weight(.medium)
                 piece.underlineStyle = Text.LineStyle(pattern: .dot)
                 piece.link = URL(string: "futurevoice://word/\(index)")
             }
             out += piece
-            if index < tokens.count - 1 { out += AttributedString(" ") }
+            if WordSplitter.spaced, index < pieces.count - 1 { out += AttributedString(" ") }
         }
         return out
+    }
+
+    /// The line cut where words are: a spaced language's space-split tokens
+    /// (punctuation stays attached, rejoined with spaces), or the segmenter's
+    /// words and the 、。「」 between them, rejoined as they were. Indexes
+    /// line up with `tokenKeys`.
+    private var displayPieces: [JapaneseMorph.Piece] {
+        WordSplitter.spaced
+            ? turn.transcript.split(separator: " ").map { JapaneseMorph.Piece(text: String($0), isWord: true) }
+            : JapaneseMorph.displayPieces(in: turn.transcript)
     }
 
     /// Speaker separation comes from `DialogueLine` — the same component the
@@ -1554,12 +1566,22 @@ private struct TranscriptRow: View {
 /// comparison words, hence `owner`: a token is highlighted only when EVERY
 /// word inside it went unmatched.
 func highlightedCorrection(_ alternative: String, original: String, baseFont: Font) -> AttributedString {
-    let altWords = alternative.split(separator: " ", omittingEmptySubsequences: true)
+    // Japanese is diffed and painted by CHARACTER: its segments are cut
+    // differently on each side of a fix (面倒|くさかっ|た against
+    // 面倒|くさい|でし|た), so no segment-level answer can say "かっ" changed
+    // and "くさ" didn't.
+    let spaced = WordSplitter.spaced
+    if !spaced {
+        return highlightedCharacters(alternative, original: original, baseFont: baseFont)
+    }
+    let altWords: [JapaneseMorph.Piece] = alternative
+        .split(separator: " ", omittingEmptySubsequences: true)
+        .map { JapaneseMorph.Piece(text: String($0), isWord: true) }
     // Comparison words, each tagged with the display token it came from.
     var a: [String] = []
     var owner: [Int] = []
     for (idx, word) in altWords.enumerated() {
-        for spoken in ConversationEngine.spokenWords(String(word)) {
+        for spoken in ConversationEngine.spokenWords(word.text) {
             a.append(spoken)
             owner.append(idx)
         }
@@ -1592,13 +1614,51 @@ func highlightedCorrection(_ alternative: String, original: String, baseFont: Fo
 
     var out = AttributedString()
     for (idx, word) in altWords.enumerated() {
-        var piece = AttributedString(String(word))
+        var piece = AttributedString(word.text)
         if tokenChanged[idx], tokenHasWord[idx] {
             piece.foregroundColor = .accentColor
             piece.font = baseFont.weight(.semibold)
         }
         out += piece
         if idx < altWords.count - 1 { out += AttributedString(" ") }
+    }
+    return out
+}
+
+/// `highlightedCorrection` for Japanese: an LCS over the letters of both
+/// lines (punctuation is the transcriber's, so it never takes part), then
+/// every letter of the alternative the learner didn't say is painted. A
+/// change reads as the few characters it is — くさ[かっ]た — and a pure
+/// re-spelling never gets this far (`saysTheSameThing` compares readings).
+private func highlightedCharacters(_ alternative: String, original: String,
+                                   baseFont: Font) -> AttributedString {
+    let alt = Array(alternative)
+    func isLetter(_ c: Character) -> Bool { c.isLetter || c.isNumber }
+    let aIdx = alt.indices.filter { isLetter(alt[$0]) }
+    let a = aIdx.map { alt[$0] }
+    let o = original.filter(isLetter).map { $0 }
+    let m = a.count, n = o.count
+    var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
+    for i in stride(from: m - 1, through: 0, by: -1) {
+        for j in stride(from: n - 1, through: 0, by: -1) {
+            dp[i][j] = a[i] == o[j] ? dp[i + 1][j + 1] + 1 : max(dp[i + 1][j], dp[i][j + 1])
+        }
+    }
+    var changed = Set<Int>()
+    var i = 0, j = 0
+    while i < m {
+        if j < n, a[i] == o[j] { i += 1; j += 1 }
+        else if j < n, dp[i + 1][j] < dp[i][j + 1] { j += 1 }
+        else { changed.insert(aIdx[i]); i += 1 }
+    }
+    var out = AttributedString()
+    for (k, ch) in alt.enumerated() {
+        var piece = AttributedString(String(ch))
+        if changed.contains(k) {
+            piece.foregroundColor = .accentColor
+            piece.font = baseFont.weight(.semibold)
+        }
+        out += piece
     }
     return out
 }

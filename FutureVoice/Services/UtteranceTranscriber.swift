@@ -94,6 +94,9 @@ enum UtteranceTranscriber {
     /// whole turn — the context used to grow with every piece, so the later
     /// pieces of a long turn carried (and repeated) the most.
     private static func contextTail(_ text: String, maxWords: Int = 30) -> String {
+        // No spaces to count words by: the last stretch of characters, about
+        // as much text as thirty words carry.
+        guard WordSplitter.spaced else { return String(text.suffix(maxWords * 4)) }
         let words = text.split(separator: " ")
         guard !words.isEmpty else { return "" }
         return words.suffix(maxWords).joined(separator: " ")

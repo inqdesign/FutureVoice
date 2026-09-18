@@ -363,6 +363,24 @@ export class CallSession implements DurableObject {
     ko: ["에서"],
   }
 
+  /** Languages written without spaces, where a whitespace split sees one
+   *  "word" per utterance however long it is. */
+  private static writesSpaces(language: string): boolean {
+    const lang = language.toLowerCase().split("-")[0]
+    return lang !== "ja" && lang !== "zh"
+  }
+
+  /** "A scrap of a word": one word where words are spaced; where they
+   *  aren't, a few letters (はい, うん, ね) — counted as one word, EVERY
+   *  Japanese answer was a scrap, and a learner who answered within the
+   *  echo window lost the whole sentence without a trace. */
+  private static isScrap(text: string, language: string): boolean {
+    if (CallSession.writesSpaces(language)) {
+      return text.trim().split(/\s+/).filter(Boolean).length <= 1
+    }
+    return (text.match(/\p{L}/gu)?.length ?? 0) <= 3
+  }
+
   private static endsHanging(text: string, language: string): boolean {
     const lang = language.toLowerCase().split("-")[0]
     const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
@@ -864,9 +882,8 @@ export class CallSession implements DurableObject {
     // that short — "yeah", "wait" — arrives with the learner's own volume
     // behind it and passes the client's gate, so it never gets this far
     // silently; what lands here is the room.
-    const words = text.trim().split(/\s+/).filter(Boolean)
     const sinceSpoke = Date.now() - this.lastSpokeAt
-    if (words.length <= 1 && sinceSpoke < CallSession.echoSuspicionMs
+    if (CallSession.isScrap(text, this.language) && sinceSpoke < CallSession.echoSuspicionMs
         && this.pendingUtterance === null) {
       return
     }
@@ -874,8 +891,11 @@ export class CallSession implements DurableObject {
     // A held fragment absorbs whatever follows it — the learner was
     // mid-thought, and this is the rest of the thought.
     if (this.pendingUtterance !== null) this.merges += 1
+    // Joined as written: a space between two Japanese pieces is one the
+    // learner never said, and it reaches the bubble and the model both.
+    const joint = CallSession.writesSpaces(this.language) ? " " : ""
     const merged = this.pendingUtterance !== null
-      ? this.pendingUtterance + " " + text.trim()
+      ? this.pendingUtterance + joint + text.trim()
       : text.trim()
     this.clearPending()
     // Held, always. A hanging word says "still composing" and earns the

@@ -123,7 +123,7 @@ enum TalkCurriculum {
         for turn in fluent {
             let parts = sentences(in: turn.transcript)
             for (offset, sentence) in parts.enumerated() {
-                guard (4...28).contains(sentence.split(separator: " ").count) else { continue }
+                guard (4...28).contains(WordSplitter.count(sentence)) else { continue }
                 guard seen.insert(CarryoverDetector.normalized(sentence)).inserted else { continue }
                 // A turn that IS one sentence keeps its own identity: its
                 // recorded audio still matches the text, and any shadow
@@ -164,7 +164,7 @@ enum TalkCurriculum {
         var current = ""
         for character in text {
             current.append(character)
-            guard ".!?".contains(character) else { continue }
+            guard ".!?。！？".contains(character) else { continue }
             let piece = current.trimmingCharacters(in: .whitespacesAndNewlines)
             if !piece.isEmpty { out.append(piece) }
             current = ""

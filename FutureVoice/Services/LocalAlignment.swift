@@ -62,6 +62,13 @@ enum LocalAlignment {
         guard let segments = await recognize(recognizer: recognizer, request: request),
               !segments.isEmpty else { return [] }
 
+        if !LanguageCatalog.writesSpaces(languageCode) {
+            return alignByCharacters(
+                expected: expected,
+                heard: segments.map { ($0.substring, $0.timestamp, $0.timestamp + $0.duration) },
+                durationMs: durationMs)
+        }
+
         let pairing = align(expected: expected.map(normalized),
                             heard: segments.map { normalized($0.substring) })
         let anchored = pairing.compactMap { $0 }.count
@@ -134,6 +141,73 @@ enum LocalAlignment {
                                   startMs: Int(s * 1000),
                                   endMs: Int(e * 1000),
                                   isMeasured: anchored[i]))
+        }
+        return out
+    }
+
+    /// `wordTimings` for a language written without spaces. The recognizer
+    /// cuts Japanese into segments of its own choosing (昨日は / 友達と …)
+    /// that rarely coincide with the line's words, so word-for-word anchoring
+    /// finds almost nothing. Both sides are taken down to CHARACTERS instead —
+    /// each recognized segment's span shared evenly across its letters — the
+    /// characters are aligned, and then gathered back into the expected
+    /// words.
+    ///
+    /// What counts as MEASURED is decided at the word's first letter, because
+    /// an onset is all the rhythm grade reads: measured only when that letter
+    /// anchored to the FIRST letter of a recognized segment, i.e. to a real
+    /// timestamp. A letter inside a segment took an even share of it — a
+    /// guess, however close. Returns [] under `minRatio` of the letters
+    /// anchored, like the word path.
+    static func alignByCharacters(
+        expected: [String],
+        heard: [(text: String, start: Double, end: Double)],
+        durationMs: Int,
+        minRatio: Double = minMatchRatio
+    ) -> [WordTiming] {
+        var expectedChars: [String] = []
+        var charRange: [Range<Int>] = []
+        for word in expected {
+            let start = expectedChars.count
+            expectedChars.append(contentsOf: normalized(word).map(String.init))
+            charRange.append(start..<expectedChars.count)
+        }
+        var heardChars: [String] = []
+        var spans: [(start: Double, end: Double)] = []
+        var opensSegment: [Bool] = []
+        for segment in heard {
+            let letters = Array(normalized(segment.text))
+            guard !letters.isEmpty else { continue }
+            let share = max(0, segment.end - segment.start) / Double(letters.count)
+            for (k, letter) in letters.enumerated() {
+                heardChars.append(String(letter))
+                spans.append((segment.start + share * Double(k), segment.start + share * Double(k + 1)))
+                opensSegment.append(k == 0)
+            }
+        }
+        guard !expectedChars.isEmpty, !heardChars.isEmpty else { return [] }
+        let pairing = align(expected: expectedChars, heard: heardChars)
+        let anchored = pairing.compactMap { $0 }.count
+        guard Double(anchored) / Double(expectedChars.count) >= minRatio else { return [] }
+        let chars = fill(expected: expectedChars, pairing: pairing,
+                         heardSpans: spans, durationMs: durationMs)
+
+        var out: [WordTiming] = []
+        var previousEnd = 0
+        for (w, word) in expected.enumerated() {
+            let range = charRange[w]
+            guard let first = range.first, let last = range.last else {
+                // Nothing but punctuation — a sliver at the cursor, never graded.
+                out.append(WordTiming(word: word, startMs: previousEnd, endMs: previousEnd + 10,
+                                      isMeasured: false))
+                previousEnd += 10
+                continue
+            }
+            let measured = pairing[first].map { opensSegment[$0] } ?? false
+            let s = max(chars[first].startMs, previousEnd)
+            let e = max(chars[last].endMs, s + 10)
+            out.append(WordTiming(word: word, startMs: s, endMs: e, isMeasured: measured))
+            previousEnd = e
         }
         return out
     }
@@ -234,7 +308,9 @@ enum LocalAlignment {
         }
     }
 
+    /// The target's own words, punctuation intact — `WordSplitter`'s timing
+    /// cut, so a Japanese line is words and not one run.
     private static func tokens(of text: String) -> [String] {
-        text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).map(String.init)
+        WordSplitter.timingWords(text)
     }
 }

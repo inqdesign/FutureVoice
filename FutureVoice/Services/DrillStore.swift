@@ -420,10 +420,10 @@ final class DrillStore: LanguageScopedStore {
         let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > maxChars else { return trimmed }
         let sentences = trimmed
-            .split(whereSeparator: { ".!?\n".contains($0) })
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        let targetWords = Set(normalizedForMatch(target).split(separator: " "))
+        let targetWords = Set(WordSplitter.words(normalizedForMatch(target)))
         if sentences.count > 1, !targetWords.isEmpty,
            let best = sentences.max(by: { overlap($0, targetWords) < overlap($1, targetWords) }),
            overlap(best, targetWords) > 0 {
@@ -445,17 +445,17 @@ final class DrillStore: LanguageScopedStore {
         let trimmed = target.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > maxChars else { return trimmed }
         let sentences = trimmed
-            .split(whereSeparator: { ".!?\n".contains($0) })
+            .split(whereSeparator: { ".!?。！？\n".contains($0) })
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty }
-        let sourceWords = Set(normalizedForMatch(source).split(separator: " "))
+        let sourceWords = Set(WordSplitter.words(normalizedForMatch(source)))
         guard sentences.count > 1, !sourceWords.isEmpty,
               let best = sentences.max(by: { overlap($0, sourceWords) < overlap($1, sourceWords) }),
               overlap(best, sourceWords) > 0 else { return trimmed }
         // Splitting ate the terminal punctuation — restore it so TTS keeps
         // the sentence's intonation (a dropped "?" flattens a question).
         if let range = trimmed.range(of: best), range.upperBound < trimmed.endIndex,
-           ".!?".contains(trimmed[range.upperBound]) {
+           ".!?。！？".contains(trimmed[range.upperBound]) {
             return best + String(trimmed[range.upperBound])
         }
         return best
@@ -465,8 +465,8 @@ final class DrillStore: LanguageScopedStore {
     /// keys on — how the drill card's playback trim locates its quoted
     /// fragment inside the turn recording's word timings.
     static func matchWords(of text: String) -> [String] {
-        text.split(whereSeparator: { $0.isWhitespace })
-            .map { LocalAlignment.normalized(String($0)) }
+        WordSplitter.timingWords(text)
+            .map { LocalAlignment.normalized($0) }
             .filter { !$0.isEmpty }
     }
 
@@ -490,8 +490,8 @@ final class DrillStore: LanguageScopedStore {
         return nil
     }
 
-    private static func overlap(_ sentence: String, _ targetWords: Set<Substring>) -> Int {
-        Set(normalizedForMatch(sentence).split(separator: " ")).intersection(targetWords).count
+    private static func overlap(_ sentence: String, _ targetWords: Set<String>) -> Int {
+        Set(WordSplitter.words(normalizedForMatch(sentence))).intersection(targetWords).count
     }
 
     /// A card's content identity: two cards with the same key drill the same

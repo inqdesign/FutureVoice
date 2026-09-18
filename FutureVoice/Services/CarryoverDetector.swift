@@ -175,7 +175,7 @@ enum CarryoverDetector {
         // A word already sitting inside a credited phrase is skipped: seeing
         // "It slipped my mind" and then "mind" as separate rows reads like the
         // app padding its own scorecard.
-        let claimedWords = Set(claimed.flatMap { $0.split(separator: " ").map(String.init) })
+        let claimedWords = Set(claimed.flatMap { tokens($0) })
         var wordHits: [(word: String, hit: Hit, rank: Int, source: Carryover.Source)] = []
         var seenWords = Set<String>()
         for (list, source) in [(studyingWords, Carryover.Source.studyingWord),
@@ -231,7 +231,7 @@ enum CarryoverDetector {
                            rejectingMistake source: String? = nil) -> Hit? {
         let needle = tokens(item)
         let core = contentTokens(item)
-        guard needle.count >= minTokens, core.count >= minContentTokens else { return nil }
+        guard needle.count >= minTokensNow, core.count >= minContentTokensNow else { return nil }
         for turn in userTurns {
             guard let span = matchedSpan(needle, core: core, in: tokens(turn.transcript)) else { continue }
             if let source, !showsTheFix(from: source, to: item, in: span) { continue }
@@ -264,8 +264,18 @@ enum CarryoverDetector {
     /// cannot tick, and one of those teaches the learner the whole row is
     /// decorative.
     static func isCreditable(_ phrase: String) -> Bool {
-        tokens(phrase).count >= minTokens && contentTokens(phrase).count >= minContentTokens
+        tokens(phrase).count >= minTokensNow && contentTokens(phrase).count >= minContentTokensNow
     }
+
+    /// The bars above are written for a spaced language, where a single
+    /// word has its own matcher (`firstLemmaMatch`) and three words are the
+    /// shortest thing worth calling a phrase. In Japanese a token is a
+    /// segment — なるほど, ただいま, 気をつけて are one, one and four — and a
+    /// segment has no other way in, so the floor is one word and one
+    /// meaning-carrying token. Generic small talk is still bounded by the
+    /// order-and-window rule; the genericness gate was English-only anyway.
+    private static var minTokensNow: Int { WordSplitter.spaced ? minTokens : 1 }
+    private static var minContentTokensNow: Int { WordSplitter.spaced ? minContentTokens : 1 }
 
     /// First user turn that used `lemma`. Lemma-based, so the notebook's
     /// headword matches whatever form the learner actually inflected it into.
@@ -295,7 +305,7 @@ enum CarryoverDetector {
     /// the first token of the item to its last — so a check on what was said
     /// AROUND the phrase can't be fooled by the rest of the window.
     private static func matchedSpan(_ needle: [String], core: [String], in hay: [String]) -> [String]? {
-        guard !needle.isEmpty, hay.count >= minTokens else { return nil }
+        guard !needle.isEmpty, hay.count >= minTokensNow else { return nil }
         // Room for the learner to pad the phrase out — "I'd rather just stay
         // in tonight, honestly" still counts.
         let window = needle.count * 2 + 4
@@ -311,7 +321,7 @@ enum CarryoverDetector {
             // mood today", because the one word that made the phrase worth
             // studying was the one allowed to go missing. Function words may
             // slip — that's what `minCoverage` is for. Content words may not.
-            guard lcsLength(core, slice.filter { !filler.contains($0) }) == core.count
+            guard lcsLength(core, slice.filter { !isFiller($0) }) == core.count
             else { continue }
             // Trim to the phrase: from where the item's first word lands to
             // where its last word does (the function-word ends may have
@@ -355,22 +365,35 @@ enum CarryoverDetector {
             .joined(separator: " ")
     }
 
+    /// Words, normalized. An unspaced language is segmented FIRST and each
+    /// segment normalized after — `normalized` keeps letters and spaces, and
+    /// a Japanese sentence has neither space nor case to lose, so the two
+    /// orders agree; segmenting the raw text just lets the tokenizer see its
+    /// punctuation, which is how it tells clauses apart.
     private static func tokens(_ text: String) -> [String] {
-        normalized(text).split(separator: " ").map(String.init)
+        WordSplitter.spaced
+            ? normalized(text).split(separator: " ").map(String.init)
+            : JapaneseMorph.segments(in: text).map(normalized).filter { !$0.isEmpty }
     }
 
     /// Used ONLY to judge whether an item is too generic to be worth
     /// crediting — never to match, because dropping function words would let
     /// "how ARE you" and "how DO you" collapse into the same phrase.
     private static func contentTokens(_ text: String) -> [String] {
-        tokens(text).filter { !filler.contains($0) }
+        tokens(text).filter { !isFiller($0) }
+    }
+
+    private static func isFiller(_ token: String) -> Bool {
+        WordSplitter.spaced ? filler.contains(token) : JapaneseMorph.isFunctionToken(token)
     }
 
     /// Grammatical filler — words whose presence says nothing about whether
     /// the learner studied anything. The list is English-only by design: for
-    /// other target languages nothing is dropped, so the genericness gate is
-    /// simply easier to clear. It gates, it never matches, so the worst case
-    /// is admitting a short item — the order and window rules still decide.
+    /// other spaced target languages nothing is dropped, so the genericness
+    /// gate is simply easier to clear (Japanese has its own list — the
+    /// particles and auxiliaries `JapaneseMorph` already knows). It gates, it
+    /// never matches, so the worst case is admitting a short item — the
+    /// order and window rules still decide.
     private static let filler: Set<String> = [
         "a", "an", "the", "and", "or", "but", "so", "if", "of", "to", "in", "on",
         "at", "for", "with", "is", "am", "are", "was", "were", "be", "been",

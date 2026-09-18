@@ -726,7 +726,7 @@ enum ConversationEngine {
           set phrases a fluent speaker would reach for in completely unrelated
           conversations (e.g. "push back", "at the end of the day", "flag it
           early", "catch up on", "end up -ing"). The test: would this exact
-          phrase be useful next week on a different topic? Quote them VERBATIM
+          phrase be useful next week on a different topic?\(unspacedExpressionNote(targetLanguage)) Quote them VERBATIM
           from the user's turns — never invent or paraphrase; a paraphrase is
           dropped on arrival. Prefer the strongest ones first. Return an empty
           list only when the user genuinely produced nothing reusable (very
@@ -973,7 +973,7 @@ enum ConversationEngine {
           "I am" → "I'm", "do not" → "don't", "it is" → "it's" — is correcting
           the transcriber, not the learner, and tells them they made a mistake
           they did not make. NEVER offer one. If the only thing you would
-          change in a line is a contraction, the line was fine: return null.
+          change in a line is a contraction, the line was fine: return null.\(scriptGuard(targetLanguage))
         - "suggestion": include whenever the user's most recent line has a
           grammar slip or wording a fluent speaker wouldn't choose — give the
           natural version. Set it to null only when the line was already
@@ -1050,7 +1050,7 @@ enum ConversationEngine {
           building" arrives as "I am building" every time. A suggestion whose
           only change is contracting what you received is correcting the
           transcriber, not the learner. If that is the only change you would
-          make, the line was fine: return null.
+          make, the line was fine: return null.\(scriptGuard(targetLanguage))
         - Judge it as SPEECH, never as writing. Contractions, casual register
           and fragments ("Sounds good.", "Maybe tomorrow?") are how fluent
           speakers talk, not slips.
@@ -1079,8 +1079,42 @@ enum ConversationEngine {
     /// languages get the case/punctuation half, which is the part that isn't
     /// English-specific.
     static func saysTheSameThing(_ a: String, _ b: String) -> Bool {
+        if LanguageScope.active == "ja" {
+            // Japanese has no contractions to expand; what the transcriber
+            // chooses there is the SCRIPT — 分かった or わかった, 下さい or
+            // ください, which kanji. Compared by reading, a rewrite that only
+            // re-spells what was said collapses the same way "I am" / "I'm"
+            // does. Any change of sound survives.
+            let left = JapaneseMorph.reading(of: a)
+            return !left.isEmpty && left == JapaneseMorph.reading(of: b)
+        }
         let left = spokenWords(a)
         return !left.isEmpty && left == spokenWords(b)
+    }
+
+    /// Japanese-only line for both correction prompts: the script is the
+    /// transcriber's. Empty for every other target, so their prompts are
+    /// byte-identical to before.
+    static func scriptGuard(_ targetLanguage: String) -> String {
+        guard LanguageCatalog.language(targetLanguage)?.code == "ja" else { return "" }
+        return "\n- ASR SCRIPT GUARD: the recognizer, not the learner, decides kanji"
+            + "\n  or kana and which kanji (分かる / わかる, 下さい / ください,"
+            + "\n  綺麗 / きれい). A suggestion whose only change is how a word is"
+            + "\n  WRITTEN corrects nothing they said. If that is the only change you"
+            + "\n  would make, the line was fine: return null."
+    }
+
+    /// For a target written without spaces, "multi-word" needs saying in its
+    /// own terms, or the model hands back single words (a noun is one
+    /// "word" to it) or whole sentences.
+    static func unspacedExpressionNote(_ targetLanguage: String) -> String {
+        guard !LanguageCatalog.writesSpaces(targetLanguage) else { return "" }
+        return "\n  \(LanguageCatalog.englishName(targetLanguage)) is written without spaces, so"
+            + "\n  \"multi-word\" means a chunk of MORE THAN ONE word as a speaker"
+            + "\n  would reuse it — a verb with its particle and object"
+            + "\n  (家事に追われる), a set phrase (とりあえず一つずつ), a connector"
+            + "\n  pattern (〜ようにする) — never one word alone and never a whole"
+            + "\n  sentence, and quoted exactly as said, inflection included."
     }
 
     /// Everything a transcriber chooses, normalized away — what's left is the

@@ -274,6 +274,15 @@ enum ShadowTranscriber {
     /// unreliable pass.
     static func realigned(words: [String], onto device: [WordTiming]) -> [WordTiming] {
         guard !words.isEmpty, !device.isEmpty else { return [] }
+        if !WordSplitter.spaced {
+            // Apple's segments and the scored words are cut in different
+            // places for Japanese — align letters, not words.
+            return LocalAlignment.alignByCharacters(
+                expected: words,
+                heard: device.map { ($0.word, Double($0.startMs) / 1000, Double($0.endMs) / 1000) },
+                durationMs: device.last?.endMs ?? 0,
+                minRatio: minAnchorRatio)
+        }
         let pairing = LocalAlignment.align(
             expected: words.map(LocalAlignment.normalized),
             heard: device.map { LocalAlignment.normalized($0.word) }
@@ -294,9 +303,12 @@ enum ShadowTranscriber {
     /// number. Same bar `LocalAlignment` holds its own pass to.
     private static let minAnchorRatio = 0.5
 
-    /// The word split `ShadowEngine.tokenSpans` assumes — whitespace only, so
-    /// timings and diff tokens index the same stream.
+    /// The word split `ShadowEngine.tokenSpans` assumes — whitespace for a
+    /// spaced language, the segmenter's words (punctuation kept on them) for
+    /// Japanese. Any cut works for the diff, since each word is tokenized on
+    /// its own and the pieces concatenate; what matters is that the rhythm
+    /// has more than one word to pair.
     static func words(of text: String) -> [String] {
-        text.split(whereSeparator: { $0.isWhitespace || $0.isNewline }).map(String.init)
+        WordSplitter.timingWords(text)
     }
 }

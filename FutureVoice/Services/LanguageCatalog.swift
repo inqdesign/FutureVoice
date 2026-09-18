@@ -97,7 +97,11 @@ enum LanguageCatalog {
         Language(code: "fr", sttLocale: "fr-FR", tokenStyle: .word, wordlistResource: nil),
         Language(code: "it", sttLocale: "it-IT", tokenStyle: .word, wordlistResource: nil),
         Language(code: "pt", sttLocale: "pt-BR", tokenStyle: .word, wordlistResource: nil),
-        Language(code: "ja", sttLocale: "ja-JP", tokenStyle: .syllable, wordlistResource: nil),
+        // Japanese wordlist: JLPT N5–N1 (Waller's reconstruction, CC-BY, via
+        // open-anki-jlpt-decks) mapped N5→A1 … N1→C1; headword spellings
+        // settled against JMdict — see scripts/build-ja-wordlist.py. Speech
+        // reaches it through `JapaneseMorph` (no spaces, no NLTagger lemma).
+        Language(code: "ja", sttLocale: "ja-JP", tokenStyle: .syllable, wordlistResource: "cefr_words_ja"),
         // Korean wordlist: 국립국어원 「한국어 학습용 어휘 목록」 (2003, 5,965
         // headwords, grades A/B/C) → A/B/C split by in-grade frequency rank
         // into a1/a2, b1/b2, c1/c2.
@@ -328,6 +332,14 @@ enum LanguageCatalog {
 
     static func tokenStyle(_ code: String) -> TokenStyle {
         language(code)?.tokenStyle ?? .word
+    }
+
+    /// Whether the language puts spaces between words. Everything that
+    /// splits a transcript on " " — highlights, phrase matching, word counts
+    /// — goes through `WordSplitter` and asks this instead. Korean is
+    /// `.syllable` for shadow scoring yet spaced, so this is its own question.
+    static func writesSpaces(_ code: String) -> Bool {
+        !["ja", "zh"].contains(language(code)?.code ?? base(code))
     }
 
     // MARK: - Level naming

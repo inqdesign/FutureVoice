@@ -270,14 +270,18 @@ struct ShadowDrillView: View {
     /// Tappable target words: karaoke color from `wordColor`, plus a selection
     /// background for the loop range (shared with the timeline player).
     private var karaokeWords: some View {
-        FlowLayout(spacing: 1, lineSpacing: 4) {
+        // A language written without spaces reads as one run: the words sit
+        // flush, or the gaps between them read as spaces Japanese never has
+        // (慌て て, 一 つ ずつ). Selection and colour still go per word.
+        let spaced = LanguageCatalog.writesSpaces(targetLanguage)
+        return FlowLayout(spacing: spaced ? 1 : 0, lineSpacing: 4) {
             ForEach(Array(timings.enumerated()), id: \.offset) { i, wt in
                 let selected = selectedWordRange?.contains(i) ?? false
                 VStack(spacing: 0) {
                     Text(wt.word)
                         .font(.title2.weight(.semibold))
                         .foregroundStyle(wordColor(at: i, wt: wt))
-                        .padding(.horizontal, 2)
+                        .padding(.horizontal, spaced ? 2 : 0)
                         .padding(.vertical, 1)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
@@ -382,7 +386,7 @@ struct ShadowDrillView: View {
 
     private var practiceText: String {
         guard let r = practiceRange else { return turn.transcript }
-        return timings[r].map(\.word).joined(separator: " ")
+        return timings[r].map(\.word).joined(separator: WordSplitter.spaced ? " " : "")
     }
 
     /// First word to last word — the span the learner's own duration is
@@ -1149,7 +1153,11 @@ struct ShadowDrillView: View {
     static func recognitionHints(for target: String) -> [String] {
         var hints = [target]
         var seen = Set<String>()
-        for word in target.components(separatedBy: .whitespacesAndNewlines) {
+        // Japanese words are segments; a particle on its own is no hint.
+        let words = WordSplitter.spaced
+            ? target.components(separatedBy: .whitespacesAndNewlines)
+            : JapaneseMorph.segments(in: target).filter { !JapaneseMorph.isFunctionToken($0) }
+        for word in words {
             let w = word.trimmingCharacters(in: .punctuationCharacters)
             guard w.count > 1, seen.insert(w.lowercased()).inserted else { continue }
             hints.append(w)
@@ -1647,7 +1655,7 @@ struct ShadowDrillView: View {
         // Screenshot capture: synthesize evenly-spaced karaoke timings locally
         // and skip the voice-clone/network path so the timeline renders offline.
         if DebugCapture.captureShadow {
-            let words = turn.transcript.split(separator: " ").map(String.init)
+            let words = WordSplitter.timingWords(turn.transcript)
             let per = 380
             timings = words.enumerated().map { i, w in
                 WordTiming(word: w, startMs: i * per, endMs: (i + 1) * per - 60)
@@ -1703,7 +1711,8 @@ struct ShadowDrillView: View {
         if let ready = url, FileManager.default.fileExists(atPath: ready.path) {
             cachedAudioURL = ready
             targetDurationMs = Self.durationMs(of: ready)
-            timings = Self.fits(storedTimings, durationMs: targetDurationMs) ? storedTimings : []
+            timings = Self.fits(storedTimings, durationMs: targetDurationMs)
+                && Self.cutMatches(storedTimings, text: turn.transcript) ? storedTimings : []
             phase = .idle
             if timings.isEmpty {
                 timings = Self.estimatedTimings(for: turn.transcript,
@@ -1802,14 +1811,18 @@ struct ShadowDrillView: View {
     /// Approximate, but it keeps the highlight moving with the audio — the
     /// product rule is that karaoke always works, at zero synthesis cost.
     static func estimatedTimings(for text: String, durationMs: Int) -> [WordTiming] {
-        let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        let words = WordSplitter.timingWords(text)
         guard !words.isEmpty, durationMs > 0 else { return [] }
-        let totalChars = words.reduce(0) { $0 + max($1.count, 1) }
+        // Weighted by what is SAID — a 。 or 「 on a Japanese word takes no time.
+        func weight(_ w: String) -> Int {
+            WordSplitter.spaced ? max(w.count, 1) : max(LocalAlignment.normalized(w).count, 1)
+        }
+        let totalChars = words.reduce(0) { $0 + weight($1) }
         let msPerChar = Double(durationMs) / Double(totalChars)
         var cursor = 0.0
         return words.map { w in
             let start = cursor
-            cursor += msPerChar * Double(max(w.count, 1))
+            cursor += msPerChar * Double(weight(w))
             // Small trailing gap so adjacent highlights read as distinct words.
             return WordTiming(word: w, startMs: Int(start),
                               endMs: max(Int(start) + 1, Int(cursor) - 20),
@@ -1836,8 +1849,16 @@ struct ShadowDrillView: View {
     /// Rough spoken length of a line, for when the real audio duration isn't
     /// available. Only ever used to size a SAFETY cutoff, so it errs long.
     static func durationFromText(_ text: String) -> Int {
-        let words = text.split(whereSeparator: \.isWhitespace).count
+        let words = WordSplitter.count(text)
         return max(6000, words * 400)
+    }
+
+    /// A stored timeline is cut into the words this line is cut into now.
+    /// Always true for a spaced language; for Japanese it refuses a timeline
+    /// saved before the line had words (one span for the whole sentence),
+    /// which the estimate plus the free local pass then rebuild.
+    static func cutMatches(_ timings: [WordTiming], text: String) -> Bool {
+        WordSplitter.spaced || timings.map(\.word) == WordSplitter.timingWords(text)
     }
 
     private static func durationMs(of url: URL) -> Int {

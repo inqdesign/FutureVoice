@@ -574,12 +574,11 @@ left the mic hot and let the auto-stop save a take for a screen that was
 gone); the karaoke highlight outranks the diff colours while the target
 plays, so "Hear target" moves after a result; the free timing recovery is
 re-armed once per visit and two seconds late, so a quick retry cancels a
-sleep rather than a recognizer. Not done, and the next real gap: ja/zh
-timings are whitespace-split, so the whole line is ONE word for karaoke,
-word-tap and rhythm (the DIFF is already per character via `tokenStyle`);
-fixing it means character units in `ElevenLabsClient.wordTimings(from:)`,
-`estimatedTimings`, `LocalAlignment.tokens` and `ShadowTranscriber.words`
-together, with Apple's word segments split across their characters.
+sleep rather than a recognizer. Japanese timelines are cut into words
+since 2026-09-18 — see "Japanese as a TARGET language". Chinese is not a
+selectable target, but `WordSplitter` already counts it as unspaced and
+would cut it with the JAPANESE tokenizer — give `zh` its own segmenter
+before it gets a wordlist.
 
 **"Both at once" lines the takes up by EAR, not by timings** (2026-09-18).
 The duet skips each file to its first word, and both leads came from word
@@ -626,6 +625,61 @@ Three consequences to preserve when touching this: the failure path in `requestR
 - **`deferredTurnWork` is armed in `stopAndSend`, the moment the turn is appended** — not in `requestReply`. The chunk wait sits between the two, and while nothing was armed the recognizer's rescored pass (2.0 s timeout, so it routinely lands inside a 1.5 s chunk wait) sailed through `applyRecognizerUpgrade`'s hold branch and painted a second correction. `requestReply` only arms when the turn isn't already held, which is the Retry path.
 
 Any future work that improves the learner's line has the same obligation: improve what the MODEL gets, never what the SCREEN shows, until `voiceDidStart`.
+
+## Japanese as a TARGET language (2026-09-18)
+
+Japanese was wired for STT, shadow scoring and the clone script from the
+start, and hidden from the picker because it had no graded wordlist. It now
+has one, and the harder half was everything that assumed spaces.
+
+- **The pool** (`cefr_words_ja.tsv`, built by `scripts/build-ja-wordlist.py`):
+  Waller's JLPT N5–N1 (CC BY, via open-anki-jlpt-decks) mapped N5→A1 …
+  N1→C1, C2 empty. The attribution is the file's first line — the loaders
+  skip a line with no tab, and there is no credits screen. **The headword is
+  what the learner SEES**, so its spelling is settled against JMdict (CC
+  BY-SA): kana where nobody writes the kanji (ください, not 下さい; ちょうど,
+  not 丁度), today's okurigana (落ち着く, not 落着く), and a hand-checked
+  list for the rest — JMdict's "usually kana" flag alone is NOT trusted (it
+  marks 犬 and 行く). A third column carries the READING(S) (からい・つらい),
+  which the word card prints under a kanji headword; `ja_forms.tsv` maps
+  every other spelling (わかる, 判る, 朝御飯) onto the headword, skipping any
+  spelling that names two words and any one-kana form (that is inflection).
+- **`JapaneseMorph`** segments (CFStringTokenizer — NLTagger has no lemma and
+  no part of speech for Japanese, measured) and maps stems to headwords,
+  lexicon hits only, like `KoreanMorph`. A stem before inflection is the verb
+  (行き+ました → 行く, not the noun 行き); a kanji-only surface never grows
+  a verb ending (語 is not 語る, 箸 is not 走る); particles, auxiliaries and
+  spoken contractions (てる, ちゃう) are grammar and never a word. Read a
+  CHUNK, not a segment, wherever a level or key is wanted — 疲れ alone can't
+  say it is 疲れる.
+- **`WordSplitter` is the one question "where are the words?"** Every
+  `split(separator: " ")` over target-language text asks it instead —
+  highlights, phrase matching, word counts, titles, sentence ends (。！？).
+  Two of those were silent failures: the realtime path requested a
+  correction only for `>= 3` space-separated words, so no Japanese turn ever
+  got one, and the gateway dropped any ONE-word utterance inside the 1.2 s
+  echo window, which was every Japanese answer (`isScrap`, gateway). Never
+  count words on " " again.
+- **The script is the transcriber's, like punctuation.** 分かった / わかった
+  is a choice no mouth makes, so `saysTheSameThing` compares READINGS for
+  Japanese and both correction prompts carry an ASR SCRIPT GUARD (appended
+  at a line end so every other language's prompt is byte-identical). The
+  correction highlight is per CHARACTER — segments are cut differently on
+  either side of a fix — so it reads くさ[かっ]た.
+- **Shadowing cuts its timeline into WORDS too** (`WordSplitter.timingWords`
+  — punctuation rides on the word before, an opening bracket on the word
+  after, so the words joined give the line back, which is what the screen
+  draws). ElevenLabs' per-character alignment is grouped into those words;
+  Apple's segments, cut wherever the recognizer likes, are aligned to them
+  LETTER by letter (`LocalAlignment.alignByCharacters`, used by the free
+  karaoke pass and by `ShadowTranscriber.realigned`), and a word counts as
+  MEASURED only when its first letter lands on a real segment start — the
+  onset is all the rhythm grade reads. A timeline stored as one run is
+  refused on load (`cutMatches`) and rebuilt. Karaoke draws the words flush
+  for an unspaced language — gaps between them read as spaces Japanese
+  doesn't have.
+- Captures: `-capture transcript-ja` / `talkdetail-ja` / `wordcard-ja` /
+  `shadow-ja` with `-futurevoice.targetLanguage ja`.
 
 ## A call does not die quietly (2026-09-13)
 

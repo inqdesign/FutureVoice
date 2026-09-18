@@ -78,7 +78,7 @@ enum TalkGoalPicker {
                 .sorted { (store.lastAt(of: $0) ?? .distantPast) > (store.lastAt(of: $1) ?? .distantPast) },
             now: now, calendar: calendar)
             .map { TalkGoalItem(key: CarryoverDetector.normalized($0), text: $0,
-                                isWord: !$0.contains(" "), claimedKnown: true) }
+                                isWord: WordSplitter.isSingleWord($0), claimedKnown: true) }
             .filter { $0.isWord || CarryoverDetector.isCreditable($0.text) }
 
         let studyingPhrases = ordered(store.studyingExpressions.filter { !store.hasUsedExpression($0) },
@@ -91,7 +91,7 @@ enum TalkGoalPicker {
                 // A multi-word entry can land in the notebook (a learner taps a
                 // two-word chunk in a transcript); it can't be lemma-matched, so
                 // it goes through the phrase rules instead.
-                let single = !word.contains(" ")
+                let single = WordSplitter.isSingleWord(word)
                 return TalkGoalItem(key: CarryoverDetector.normalized(word),
                                     text: word, isWord: single)
             }

@@ -823,6 +823,18 @@ enum DebugCapture {
                 appState.weeklyReports = [report]
             }
             return AnyView(ProgressTab().environmentObject(appState))
+        case "shadow-ja":
+            // A Japanese line in karaoke: words, not one run — each lights
+            // and taps on its own, punctuation riding on the word before.
+            once("shadow-ja") { captureShadow = true }
+            return AnyView(NavigationStack {
+                ShadowDrillView(
+                    turn: Turn(id: UUID(uuidString: "00000000-0000-0000-0000-0000000000B3")!,
+                               role: .fluentSelf, audioURL: nil,
+                               transcript: "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。",
+                               durationMs: 4200, timestamp: Date(), suggestion: nil),
+                    targetLanguage: "ja")
+            })
         case "shadow":
             once("shadow") { captureShadow = true }
             return AnyView(NavigationStack {
@@ -890,6 +902,26 @@ enum DebugCapture {
                 session: talkDetailSession,
                 chapter: chapter)
                 .environmentObject(appState))
+        case "wordcard-ja":
+            // The word card on a kanji headword: its reading has to sit
+            // under it (あわてる), or the card teaches a word nobody can say.
+            return AnyView(NavigationStack {
+                WordCard(word: "慌てる", currentWord: .constant("慌てる"))
+            }.environmentObject(appState))
+        case "transcript-ja", "talkdetail-ja":
+            // A Japanese talk — the one target with no spaces. The transcript
+            // has to draw its 、。 back around highlighted words, the
+            // correction has to light up the changed segments only, and the
+            // word chapter has to hold headwords (疲れる, not 疲れ). Launch
+            // with `-futurevoice.targetLanguage ja` so the stores and the
+            // splitter are on the Japanese pool.
+            if name == "transcript-ja" {
+                return AnyView(NavigationStack {
+                    TalkTranscriptView(session: japaneseTalkSession)
+                }.environmentObject(appState))
+            }
+            return AnyView(TalkBookCaptureHost(session: japaneseTalkSession, chapter: .words)
+                .environmentObject(appState))
         case "talkdetail", "talkdetail-mid", "talkdetail-low":
             // The ONE session detail page in post-talk mode — exactly what
             // the wrap-up sheet presents when a talk ends. Lists don't honor
@@ -947,6 +979,50 @@ enum DebugCapture {
     /// One fully-populated finished talk — every section of the session
     /// detail page has material (scorecard + grammar slips, new words,
     /// expressions, say-it-better, suggestions → shadow lines, drill next).
+    static var japaneseTalkSession: Session {
+        let started = Date().addingTimeInterval(-900)
+        let turns = [
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "久しぶり！最近、家事に追われてるって言ってたけど、少しは落ち着いた？", durationMs: 3200,
+                 timestamp: started, suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "うん、でも洗濯が溜まって、とても面倒くさいでした。", durationMs: 62_000,
+                 timestamp: started.addingTimeInterval(6),
+                 suggestion: TurnSuggestion(alternative: "うん、でも洗濯が溜まって、とても面倒くさかった。",
+                                            reason: "い형용사의 과거형")),
+            Turn(id: UUID(), role: .fluentSelf, audioURL: nil,
+                 transcript: "なるほど。通勤も長いし、慌てて片付けるより、とりあえず一つずつでいいと思うよ。", durationMs: 4200,
+                 timestamp: started.addingTimeInterval(70), suggestion: nil),
+            Turn(id: UUID(), role: .user, audioURL: nil,
+                 transcript: "そうだね。週末に掃除をするつもりです。", durationMs: 58_000,
+                 timestamp: started.addingTimeInterval(80),
+                 suggestion: TurnSuggestion(alternative: "そうだね。週末に掃除するつもり。",
+                                            reason: "반말로 통일"))
+        ]
+        var summary = SessionSummary(
+            phrasesUsed: [PhraseFeedback(userSaid: "面倒くさいでした",
+                                         fluentAlternative: "面倒くさかった",
+                                         reason: "い형용사의 과거형")],
+            newPatternsDetected: [],
+            suggestedDrills: ["週末にまとめて片付けるつもり。", "洗濯が溜まって面倒くさかった。"],
+            overallNote: "자연스럽게 이어졌어요. 형용사 과거형만 다듬으면 돼요.",
+            scorecard: sampleScorecard)
+        summary.newWordsUsed = ["洗濯", "掃除", "溜まる"]
+        summary.expressionsUsed = ["週末に掃除をする"]
+        summary.expressionsOffered = ["家事に追われる", "とりあえず一つずつ", "少しは落ち着いた"]
+        summary.grammarIssues = [
+            GrammarIssue(quote: "とても面倒くさいでした",
+                         correction: "とても面倒くさかった",
+                         note: "い형용사는 かった로 과거를 만들어요")
+        ]
+        return Session(
+            id: UUID(uuidString: "00000000-0000-0000-0000-0000000000D2")!,
+            userId: UUID(), targetLanguage: "ja", mode: .conversation,
+            topic: "家事と通勤", startedAt: started,
+            endedAt: started.addingTimeInterval(600),
+            turns: turns, summary: summary)
+    }
+
     static var talkDetailSession: Session {
         let started = Date().addingTimeInterval(-900)
         let turns = [

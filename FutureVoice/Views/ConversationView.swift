@@ -1709,6 +1709,7 @@ struct ConversationView: View {
     /// the learner's own speech.
     /// - Returns: the joined text, and how many words were dropped as echo.
     nonisolated static func stitch(_ text: String, _ piece: String) -> (String, Int) {
+        if !WordSplitter.spaced { return stitchUnspaced(text, piece) }
         let minEchoWords = 4
         let maxEchoWords = 80
         let pieceWords = piece.split(separator: " ").map(String.init)
@@ -1733,6 +1734,35 @@ struct ConversationView: View {
         let kept = pieceWords.dropFirst(dropRaw)
         guard !kept.isEmpty else { return (text, pieceWords.count) }
         return (text + " " + kept.joined(separator: " "), dropRaw)
+    }
+
+    /// `stitch` for a language written without spaces: the same echo rule
+    /// over SEGMENTS, and the pieces joined as they were written — a space
+    /// between two Japanese pieces is a space the learner never said. A
+    /// longer bar than words (segments are finer: 行き|まし|た is three), and
+    /// the cut lands at the end of the last echoed segment in the raw piece.
+    nonisolated private static func stitchUnspaced(_ text: String, _ piece: String) -> (String, Int) {
+        let minEchoSegments = 6
+        let maxEchoSegments = 120
+        let pieceTokens = JapaneseMorph.words(in: piece)
+        guard !pieceTokens.isEmpty else { return (text, 0) }
+        guard !text.isEmpty else { return (piece, 0) }
+        let prev = JapaneseMorph.segments(in: text)
+        let cur = pieceTokens.map(\.surface)
+        var drop = 0
+        let limit = min(prev.count, cur.count, maxEchoSegments)
+        if limit >= minEchoSegments {
+            for k in stride(from: limit, through: minEchoSegments, by: -1)
+            where Array(prev.suffix(k)) == Array(cur.prefix(k)) {
+                drop = k
+                break
+            }
+        }
+        guard drop > 0 else { return (text + piece, 0) }
+        guard drop < pieceTokens.count else { return (text, pieceTokens.count) }
+        let rest = piece[pieceTokens[drop - 1].range.upperBound...]
+            .drop { $0.isWhitespace || $0.isPunctuation }
+        return (text + rest, drop)
     }
 
     /// Words reduced to their comparable form, dropping tokens that normalize
@@ -2309,7 +2339,10 @@ struct ConversationView: View {
     /// must stay that way: the voice is already playing by the time this
     /// fires, so nothing the learner hears ever waits on coaching.
     private func requestRealtimeSuggestion(for turnId: UUID, said: String) {
-        guard said.split(separator: " ").count >= 3 else { return }
+        // Words, not spaces: a Japanese line is one space-free run, and
+        // counting on " " gave every Japanese turn a length of one — no
+        // correction was ever requested on this path.
+        guard WordSplitter.count(said) >= 3 else { return }
         let target = appState.targetLanguage
         let native = appState.nativeLanguage
         Task { @MainActor in

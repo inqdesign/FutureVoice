@@ -88,18 +88,24 @@ enum CoreVocabulary {
     }
 
     /// Grades a SPOKEN surface token. English callers pre-lemmatize so this
-    /// is a direct lookup; Korean surface forms carry particles/conjugation,
-    /// so they route through the KoreanMorph headword heuristic first.
+    /// is a direct lookup; Korean and Japanese surface forms carry
+    /// particles/conjugation, so they route through their headword
+    /// heuristic first.
     static func level(ofSurface token: String) -> CEFRLevel? {
-        if isKorean {
+        switch LanguageCatalog.language(LanguageScope.active)?.code {
+        case "ko":
             guard let head = KoreanMorph.dictionaryForm(of: token, in: set) else { return nil }
             return level(of: head)
+        case "ja":
+            // Read as a chunk — 行きました needs its ました to be 行く rather
+            // than the noun 行き — so callers hand whole text or headwords.
+            guard let head = JapaneseMorph.headwords(in: token, lexicon: set,
+                                                     forms: JapaneseMorph.bundledForms).first?.headword
+            else { return nil }
+            return level(of: head)
+        default:
+            return level(of: token)
         }
-        return level(of: token)
-    }
-
-    private static var isKorean: Bool {
-        LanguageCatalog.language(LanguageScope.active)?.code == "ko"
     }
 
     /// Words per CEFR level — for filter-scoped counts in the UI.
@@ -119,7 +125,9 @@ enum CoreVocabulary {
         var out: [Entry] = []
         for line in text.split(whereSeparator: \.isNewline) {
             let parts = line.split(separator: "\t")
-            guard parts.count == 2,
+            // Two columns, or three: Japanese carries each headword's
+            // reading after its level (`JapaneseMorph.reading(ofHeadword:)`).
+            guard parts.count >= 2,
                   let level = CEFRLevel(rawValue: parts[1].lowercased()) else { continue }
             out.append(Entry(word: String(parts[0]), level: level))
         }
