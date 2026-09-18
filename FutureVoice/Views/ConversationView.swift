@@ -92,6 +92,15 @@ struct ConversationView: View {
     /// gracefully through the same out-of-credits alert as a turn failure.
     @StateObject private var meter = TalkMeter()
     @State private var showingPaywall = false
+    /// The plans are offered ONCE, right after the first call's summary — not
+    /// before the call (see `20260918100000_first_call_is_free`). Launch week:
+    /// every one of the 14 people who stopped had cloned their voice and
+    /// opened Talk, and left inside two minutes without buying, having never
+    /// heard the fluent self answer them. The flag is set when the pitch is
+    /// DECIDED, so a declined offer never comes back on the next call.
+    @AppStorage("futurevoice.paywall.afterFirstCall") private var firstCallPitchShown = false
+    /// The call screen is waiting on that pitch to close before it exits.
+    @State private var closeAfterPaywall = false
     /// Today's talk allowance is spent. Its own SHEET, not the error alert —
     /// a finished day is not something going wrong.
     @State private var dailyCapReached = false
@@ -861,7 +870,13 @@ struct ConversationView: View {
             } message: {
                 Text(explain("Some unusual usage needs checking. Write to us and we'll sort it out — everything you've saved is untouched, and reviewing still works."))
             }
-            .sheet(isPresented: $showingPaywall, onDismiss: { paywallTier = nil }) {
+            .sheet(isPresented: $showingPaywall, onDismiss: {
+                paywallTier = nil
+                // The post-summary pitch holds the exit: the call's own
+                // dismissal is what happens when the learner closes it,
+                // whether they bought or not.
+                if closeAfterPaywall { closeAfterPaywall = false; close() }
+            }) {
                 // Reached here from an out-of-credits failure → no trial pitch.
                 // Opened FROM the spent-day sheet it carries the tier that
                 // sheet named, so "Go Unlimited" doesn't land on Daily.
@@ -3735,6 +3750,32 @@ struct ConversationView: View {
         summary = nil
         phoneCallActive = false
         cancelSilenceTimer()
+        // They have now had the conversation the plans are for. This is the
+        // one place the app asks, and it asks at most once per install.
+        // A call the free pool ended asks again even if the pitch was made
+        // once: this time it is the answer to "what now", not an offer.
+        if !firstCallPitchShown || freeCallSpent {
+            firstCallPitchShown = true
+            Task {
+                // Forced: they just spent minutes, so a cached snapshot from
+                // before the call would answer about a different account.
+                let account = await BillingGate.shared.snapshot(force: true)
+                guard let account, !account.isEntitled, !account.unlimited else {
+                    // Already paying, or we couldn't ask — never hold the
+                    // exit on a question we have no answer to.
+                    endAndCloseAfterPitch()
+                    return
+                }
+                closeAfterPaywall = true
+                showingPaywall = true
+            }
+            return
+        }
+        endAndCloseAfterPitch()
+    }
+
+    /// Everything the end of a call does once the plans question is settled.
+    private func endAndCloseAfterPitch() {
         // They came back and had another real call — the first moment at which
         // "how is it going" is a question about something. The sheet's
         // onDismiss completes the exit.
