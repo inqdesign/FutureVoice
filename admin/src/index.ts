@@ -109,6 +109,33 @@ async function fetchData(env: Env) {
   return data;
 }
 
+/** Every usage_ledger row of the last 24 h, thin, oldest first — the 라이브
+ *  tab folds them into per-person episodes ("18:32–18:41 영어로 통화"). */
+async function dayLedger(env: Env): Promise<unknown[]> {
+  const since = new Date(Date.now() - 24 * 3_600_000).toISOString();
+  const page = 1000;
+  const rows: unknown[] = [];
+  for (let from = 0; from < 20_000; from += page) {
+    const url = `${env.SUPABASE_URL}/rest/v1/usage_ledger`
+      + `?select=u:user_id,at:created_at,action,purpose:metadata->>purpose,`
+      + `language:metadata->>language,seconds:metadata->seconds`
+      + `&created_at=gte.${encodeURIComponent(since)}&user_id=not.is.null`
+      + `&or=(source_fn.is.null,source_fn.neq.migration)&order=created_at.asc`;
+    const r = await fetch(url, {
+      headers: {
+        apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+        Range: `${from}-${from + page - 1}`,
+      },
+    });
+    if (!r.ok) throw new Error(`usage_ledger ${r.status}: ${(await r.text()).slice(0, 300)}`);
+    const batch = await r.json() as unknown[];
+    rows.push(...batch);
+    if (batch.length < page) break;
+  }
+  return rows;
+}
+
 /** Who is on an App Store offer code (type 3), and at what price.
  *  Two sources, because Apple applies a code AFTER the free trial: during the
  *  trial week only renewal info knows about it (`renewal_offer_*`, filed from
@@ -410,7 +437,13 @@ export default {
         });
       }
       const live = await r.json() as Record<string, unknown>;
-      return new Response(JSON.stringify({ ...live, ph: ph.rows, phError: ph.error ?? null }), {
+      // The timeline needs every row of the day, not admin_live's last 12 per
+      // person — a call alone writes a talk tick every 15 s.
+      const events = await dayLedger(env).catch((e) => {
+        console.log(`dayLedger: ${(e as Error).message}`);
+        return [];
+      });
+      return new Response(JSON.stringify({ ...live, events, ph: ph.rows, phError: ph.error ?? null }), {
         headers: { "Content-Type": "application/json; charset=utf-8", ...PRIVATE_HEADERS },
       });
     }

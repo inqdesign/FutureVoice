@@ -53,6 +53,7 @@
   padding:3px 8px; border-radius:12px; pointer-events:none}
 .lm .tag::after{content:""; position:absolute; left:50%; top:100%; margin-left:-4px;
   border:4px solid transparent; border-top-color:var(--ink)}
+.lm.sel .face{outline:3px solid var(--s1); outline-offset:2px}
 .lm.quiet{width:12px; height:12px}
 .lm.quiet .face{border-width:0; background:var(--st); font-size:0; box-shadow:none; opacity:.55}
 .lm.today .face{filter:grayscale(.2); opacity:.9}
@@ -60,19 +61,40 @@
   border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.12); padding:10px 12px; font-size:12.5px;
   line-height:1.45; max-width:280px; white-space:normal}
 .leaflet-tooltip.lt::before{display:none}
-.lpeople{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:8px}
-.lpeople > .lsec, .lpeople > .empty{grid-column:1 / -1}
-.lp{display:grid; grid-template-columns:38px minmax(0,1fr); gap:10px; background:var(--surface);
-  border:1px solid var(--ring); border-radius:10px; padding:10px 12px; cursor:pointer}
-.lp:hover{background:var(--chip)}
-.lp .em{width:38px; height:38px; border-radius:50%; display:grid; place-items:center; font-size:19px;
-  background:var(--chip); border:2px solid var(--st)}
-.lp.live .em{animation:bob 2.4s ease-in-out infinite}
-.lp .doing{font-weight:600; font-size:13.5px}
-.lp .who{font-size:12px; color:var(--ink-2); margin-top:1px}
-.trail{display:flex; gap:4px; flex-wrap:wrap; margin-top:6px}
-.trail span{font-size:11px; background:var(--chip); color:var(--ink-2); border-radius:8px; padding:1px 6px;
-  white-space:nowrap}
+.tlhead{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+.tlhead .clear{cursor:pointer; color:var(--s1); margin-left:6px}
+.hstrip{display:grid; grid-template-columns:repeat(24, minmax(0,1fr)); gap:3px;
+  height:78px; margin-bottom:26px; position:relative}
+.hcol{position:relative; height:100%; display:flex; flex-direction:column; cursor:pointer;
+  border-radius:4px; padding:0 1px}
+.hcol:hover{background:var(--chip)}
+.hcol.sel{background:var(--chip); outline:2px solid var(--s1); outline-offset:1px}
+.hcol.night .hl{opacity:.55}
+.hcol .hb{display:flex; flex-direction:column-reverse; height:58px; overflow:hidden; margin-top:auto}
+.hcol i{display:block; border-radius:2px; min-height:2px}
+.kchip{display:inline-block; font-size:11.5px; font-weight:500; color:var(--ink-2); background:var(--chip);
+  border-left:3px solid var(--cat); border-radius:6px; padding:1px 7px; margin-left:6px; white-space:nowrap}
+.hcol .hl{position:absolute; left:0; right:0; bottom:-17px; text-align:center; font-size:10.5px;
+  color:var(--muted); font-variant-numeric:tabular-nums}
+.hcol .hn{position:absolute; left:0; right:0; top:-2px; text-align:center; font-size:10px; color:var(--ink-2)}
+.tlhour{display:flex; align-items:baseline; gap:8px; margin:14px 0 4px; padding-top:8px;
+  border-top:1px solid var(--grid); font-weight:600; font-size:13px}
+.tlhour:first-child{border-top:none; margin-top:4px}
+.tlrow{display:grid; grid-template-columns:92px 26px minmax(0,1fr) minmax(0,.9fr); gap:10px;
+  align-items:center; padding:6px 8px; border-radius:8px; cursor:pointer; border-left:3px solid var(--cat)}
+.tlrow:hover{background:var(--chip)}
+.tlrow .tt{font-variant-numeric:tabular-nums; font-size:12.5px; color:var(--ink-2); white-space:nowrap}
+.tlrow .te{font-size:17px; text-align:center}
+.tlrow .tw{font-weight:600; font-size:13.5px}
+.tlrow .tw small{font-weight:400; color:var(--muted); font-size:12px}
+.tlrow .tp{font-size:12.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.tlrow .nowdot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--good);
+  margin-right:5px; animation:beat 1.6s ease-out infinite; vertical-align:1px}
+@media (max-width:640px){
+  .tlrow{grid-template-columns:70px 22px minmax(0,1fr)}
+  .tlrow .tp{grid-column:3; margin-top:-4px}
+  .kchip{margin:3px 4px 0 0}
+}
 .lsec{font-size:11.5px; font-weight:600; letter-spacing:.04em; color:var(--muted); margin:6px 0 0}
 *{box-sizing:border-box}
 body{margin:0; background:var(--page); color:var(--ink); font-size:15px; line-height:1.55;
@@ -327,12 +349,20 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
     <span class="livebeat" id="liveBeat"><i></i><span>불러오는 중</span></span>
   </div>
   <p class="sub">서버 요청과 PostHog 앱 이벤트를 합쳐 읽어요. 앱이 열려 있거나 3분 안에 요청이 있으면 <b>지금</b>,
-  30분 안이면 <b>방금</b>이에요. 위치는 PostHog가 IP로 본 도시예요. 어두운 띠는 지금 밤인 곳이에요.</p>
+  30분 안이면 <b>방금</b>이에요. 위치는 PostHog가 IP로 본 도시예요. 어두운 띠는 지금 밤인 곳이에요.
+  아래 막대에서 시간을 누르면 지도도 그 시간으로 바뀌고, 지도의 사람을 누르면 그 사람만 보여요.</p>
   <p class="sub warn" id="liveNote" hidden></p>
   <div class="tiles" id="liveTiles" style="margin-bottom:12px"></div>
   <div class="livegrid">
     <div id="liveMap"></div>
-    <div class="lpeople" id="livePeople"></div>
+    <div class="card" id="liveTimeline">
+      <div class="tlhead">
+        <h3 style="margin:0">지난 24시간, 시간대별</h3>
+        <span class="muted" id="tlFilter"></span>
+      </div>
+      <div class="hstrip" id="tlStrip"></div>
+      <div id="tlList"></div>
+    </div>
   </div>
 </section>
 
@@ -2143,7 +2173,9 @@ function activityOf(r){
     return {k:'talk', e:'📞', t:'통화'};
   if(p==='opener' || p==='freetalk-openers') return {k:'talk', e:'📞', t:'통화 거는 중'};
   if(p==='summary' || a==='gemini_summary') return {k:'wrap', e:'📝', t:'통화 정리'};
-  if(p==='daily-call-script' || p==='daily-call') return {k:'wrap', e:'⏰', t:'다음 전화 준비'};
+  // The next morning's call (script + voice) is written by the app itself the
+  // moment a talk ends — part of the wrap-up, not something anyone did.
+  if(p==='daily-call-script' || p==='daily-call') return {k:'wrap', e:'📝', t:'통화 정리'};
   if(a==='tts_scene' || p==='scene' || p==='scenario-curriculum') return {k:'scene', e:'🎬', t:'장면 보기'};
   if(p==='shadow' || a.startsWith('event:shadow')) return {k:'shadow', e:'🎙️', t:'쉐도잉'};
   if(p==='drill' || p==='enrichment') return {k:'review', e:'🃏', t:'복습 카드'};
@@ -2162,45 +2194,7 @@ const TEST_LIVE  = () => new Set(DATA.users.filter(u=>u.dev).map(u=>u.id));
 let liveData = null, liveAt = 0, liveTimer = null, liveMap = null, liveLayer = null, nightLayer = null;
 let liveFit = false;
 
-/** Server activity and PostHog's app events, as one clock. The app counts as
- *  OPEN while its last lifecycle event is "Opened" and it has sent anything in
- *  the last 10 min — a killed app never sends "Backgrounded", and without the
- *  second condition it would read as open forever. */
-function appOpen(u, now){
-  const ph = u.ph;
-  return !!(ph && ph.lifecycle==='Application Opened' && ph.lastAt && now - new Date(ph.lastAt) < 10*60e3);
-}
-function liveState(u, now){
-  if(appOpen(u, now)) return 'live';
-  const d = now - new Date(u.last_at);
-  return d <= LIVE_MS ? 'live' : d <= RECENT_MS ? 'recent' : 'today';
-}
 const ST_COLOR = {live:'var(--good)', recent:'var(--s2)', today:'var(--muted)', quiet:'var(--muted)'};
-
-/** What they are doing: a talk tick in the last 45 s wins outright (a call
- *  is the product), otherwise the newest row's activity. */
-function doingOf(u, now){
-  const rec = u.recent||[];
-  const tick = rec.find(r=>r.action==='talk_time');
-  if(tick && now - new Date(tick.at) < 45e3){
-    const lang = LANG_KO[tick.language] || LANG_KO[u.target] || '';
-    return {k:'talk', e:'📞', t: lang ? `${lang}로 통화 중` : '통화 중'};
-  }
-  const serverNow = rec[0] && now - new Date(rec[0].at) <= LIVE_MS;
-  if(!serverNow && appOpen(u, now)) return {k:'app', e:'📱', t:'앱 보는 중'};
-  const a = rec[0] ? activityOf(rec[0]) : {k:'app', e:'📱', t:'앱 열어봄'};
-  return serverNow ? {...a, t: a.t + (a.k==='talk'?' 중':'')} : a;
-}
-/** Consecutive activities, newest first, collapsed — "📞 통화 ×14" not 14 chips. */
-function trailOf(u){
-  const out = [];
-  for(const r of (u.recent||[])){
-    const a = activityOf(r), last = out[out.length-1];
-    if(last && last.t===a.t){ last.n++; continue; }
-    out.push({...a, n:1, at:r.at});
-  }
-  return out.slice(0,5);
-}
 
 /** Night side of the earth as a polygon — sun position from the date alone
  *  (NOAA's low-precision formulas, good to a fraction of a degree). */
@@ -2283,106 +2277,244 @@ function spread(list){
   return list;
 }
 
+/** Activity colours: one per kind, shared by the hour strip and the rows. */
+const CAT_COLOR = {talk:'var(--s1)', try:'var(--seq2)', scene:'var(--s2)', shadow:'var(--s3)', review:'var(--warn)',
+  voice:'#8a5cd6', browse:'var(--baseline)', app:'var(--baseline)'};
+const CAT_ORDER = ['talk','scene','shadow','review','voice','browse','app'];
+
+/** A day of ledger rows → SESSIONS: one person using the app once — rows
+ *  less than 10 min apart, whatever they were for. One row per session reads
+ *  as "02:19–02:32 · 통화 13분 + 장면 + 쉐도잉"; one row per activity read as
+ *  a dozen fragments of the same sitting.
+ *
+ *  Three folds keep a row honest about what the PERSON did:
+ *    - the wrap-up after a call (summary, and the next morning's call script +
+ *      voice, which the app writes by itself) is part of that call;
+ *    - reply/voice rows with no talk tick beside them are not a call: next to
+ *      a voice clone they are the onboarding greeting, alone they are a call
+ *      that never got going ("통화 시도");
+ *    - talk minutes are the metered ticks, the same figure billing uses. */
+const KIND_RANK = ['talk','scene','shadow','review','voice','browse','try','app'];
+const KIND_META = {
+  talk:{e:'📞', t:'통화'}, scene:{e:'🎬', t:'장면'}, shadow:{e:'🎙️', t:'쉐도잉'},
+  review:{e:'🃏', t:'복습'}, voice:{e:'🧬', t:'목소리 만들기'}, browse:{e:'📰', t:'둘러보기'},
+  try:{e:'📞', t:'통화 시도'}, app:{e:'📱', t:'앱 열어봄'},
+};
+function sessionsOf(events){
+  const byUser = new Map();
+  for(const r of events){ if(!byUser.has(r.u)) byUser.set(r.u, []); byUser.get(r.u).push(r); }
+  const out = [], GAP = 10*60e3;
+  for(const [u, rows] of byUser){
+    let cur = null;
+    for(const r of rows){
+      const t = +new Date(r.at);
+      if(!cur || t - cur.end > GAP){
+        cur = {u, start:t, end:t, kinds:{}, secs:0, lang:null, wrapped:false, turns:0};
+        out.push(cur);
+      }
+      cur.end = t;
+      const a = activityOf(r);
+      if(r.action==='talk_time'){ cur.secs += +r.seconds||0; cur.lang = r.language || cur.lang;
+        cur.kinds.talk = (cur.kinds.talk||0) + 1; continue; }
+      if(a.k==='wrap'){ cur.wrapped = true; continue; }
+      if(a.k==='talk'){ cur.turns++; continue; }
+      cur.kinds[a.k] = (cur.kinds[a.k]||0) + 1;
+    }
+  }
+  for(const x of out){
+    if(!x.kinds.talk && x.turns && !x.kinds.voice) x.kinds.try = x.turns;
+    const ks = KIND_RANK.filter(k => x.kinds[k]);
+    x.k = ks[0] || 'app';
+    x.others = ks.slice(1);
+  }
+  return out.sort((a,b)=>b.start-a.start);
+}
+const hourKeyOf = t => new Intl.DateTimeFormat('en-CA', {timeZone: tzZone(), year:'numeric',
+  month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23'}).format(new Date(t));
+const hourOf = t => +new Intl.DateTimeFormat('en-GB', {timeZone: tzZone(), hour:'2-digit',
+  hourCycle:'h23'}).format(new Date(t));
+
+let liveHour = null, liveUser = null;   // the two filters: an hour-start (ms), a user id
+
 function renderLive(){
   if(!liveData) return;
   const now = Date.now(), inc = document.getElementById('devToggle').checked;
   const owner = OWNER_LIVE(), tests = TEST_LIVE();
-  const keep = u => inc || (u.id!==owner && !tests.has(u.id));
+  const keep = id => inc || (id!==owner && !tests.has(id));
   const PH = liveData.ph || {};
   const geoOf = ph => ph && ph.lat!=null && ph.lon!=null
     ? {city: ph.city, country: ph.cc, lat: ph.lat, lon: ph.lon} : null;
-  const newer = (a,b) => !a ? b : !b ? a : (new Date(a) > new Date(b) ? a : b);
-  const DAY = 24*3600e3;
-  // Someone who only opened the app today asked the server for nothing, but
-  // PostHog saw them — they belong in the list, not among the quiet dots.
-  const seenToday = (liveData.placed||[]).filter(u => PH[u.id]?.lastAt && now - new Date(PH[u.id].lastAt) < DAY)
-    .map(u => ({...u, recent: [], stint_from: null, talk_secs_24h: 0, last_at: PH[u.id].lastAt}));
-  const users = [...(liveData.users||[]), ...seenToday].filter(keep)
-    .map(u => { const ph = PH[u.id] || null;
-      const x = {...u, ph, geo: geoOf(ph), last_at: newer(u.last_at, ph?.lastAt)};
-      return {...x, state: liveState(x, now), doing: doingOf(x, now)}; });
-  const seen = new Set(users.map(u=>u.id));
-  const placed = (liveData.placed||[]).filter(keep).filter(u => !seen.has(u.id))
-    .map(u => ({...u, ...(geoOf(PH[u.id])||{}), at: PH[u.id]?.lastAt})).filter(u => u.lat!=null);
+  const dir = new Map([...(liveData.placed||[]), ...(liveData.users||[])].map(u=>[u.id, u]));
+  const person = id => dir.get(id) || {id};
+  const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
+
   const note = document.getElementById('liveNote');
   note.hidden = !liveData.phError;
   note.textContent = liveData.phError==='no_key'
-    ? 'PostHog 키가 없어서 지도와 앱 열림 상태는 비어 있어요 — bash admin/deploy.sh secret POSTHOG_API_KEY'
+    ? 'PostHog 키가 없어서 지도와 앱 열림 상태는 비어 있어요.'
     : `PostHog을 읽지 못했어요 (${liveData.phError}) — 위치와 앱 열림은 마지막으로 읽은 값이에요.`;
 
-  const n = s => users.filter(u=>u.state===s).length;
-  const calling = users.filter(u=>u.state==='live' && u.doing.k==='talk').length;
-  const located = users.filter(u=>u.geo).length;
+  // ---- episodes, plus "app open" from PostHog for people the server hasn't heard from
+  const eps = sessionsOf((liveData.events||[]).filter(r=>keep(r.u)));
+  for(const [id, ph] of Object.entries(PH)){
+    if(!keep(id) || !dir.has(id)) continue;
+    const open = ph.lifecycle==='Application Opened' && ph.lastAt && now - new Date(ph.lastAt) < 10*60e3;
+    if(open && !eps.some(e=>e.u===id && now - e.end < LIVE_MS)){
+      const t0 = +new Date(ph.lifecycleAt || ph.lastAt);
+      eps.push({u:id, k:'app', start:t0, end:now, kinds:{}, others:[], secs:0, app:true});
+    }
+  }
+  eps.sort((a,b)=>b.start-a.start);
+  const isNow = e => now - e.end < LIVE_MS;
+
+  // ---- tiles
+  const liveUsers = new Set(eps.filter(isNow).map(e=>e.u));
+  const calling = new Set(eps.filter(e=>isNow(e) && e.k==='talk' && now - e.end < 60e3).map(e=>e.u));
+  const recent = new Set(eps.filter(e=>now - e.end < RECENT_MS && !liveUsers.has(e.u)).map(e=>e.u));
+  const dayUsers = new Set(eps.map(e=>e.u));
+  const located = [...dayUsers].filter(id=>geoOf(PH[id])).length;
   document.getElementById('liveTiles').innerHTML = [
-    {k:'지금 사용 중', v:num(n('live')), d:'앱 열림 · 3분 안 요청'},
-    {k:'통화 중', v:num(calling), d:'45초 안에 통화 틱'},
-    {k:'방금', v:num(n('recent')), d:'30분 안'},
-    {k:'오늘 24시간', v:num(users.length), d:`지도에 ${located}명`},
+    {k:'지금 사용 중', v:num(liveUsers.size), d:'앱 열림 · 3분 안 요청'},
+    {k:'통화 중', v:num(calling.size), d:'1분 안에 통화 틱'},
+    {k:'방금', v:num(recent.size), d:'30분 안'},
+    {k:'오늘 24시간', v:num(dayUsers.size), d:`지도에 ${located}명`},
   ].map(t=>`<div class="tile"><div class="k">${t.k}</div><div class="v">${t.v}</div>`
     + `<div class="d">${t.d}</div></div>`).join('');
 
-  const stint = u => u.stint_from && u.state!=='today'
-    ? Math.max(1, Math.round((new Date(u.last_at) - new Date(u.stint_from))/60000)) : null;
-  const where = g => g ? `${flagOf(g.country)} ${esc(g.city || g.country || '')}` : '<span class="muted">위치 모름</span>';
-
-  // ---- list
-  const order = {live:0, recent:1, today:2};
-  const sorted = [...users].sort((a,b)=> order[a.state]-order[b.state] || new Date(b.last_at)-new Date(a.last_at));
-  const card = u => {
-    const m = stint(u);
-    const trail = trailOf(u).map(t=>`<span>${fmtClock(t.at)} ${t.e} ${esc(t.t)}${t.n>1?` ×${t.n}`:''}</span>`).join('');
-    return `<div class="lp ${u.state}" data-live="${esc(u.id)}" style="--st:${ST_COLOR[u.state]}">
-      <div class="em">${u.doing.e}</div>
-      <div><div class="doing">${esc(u.doing.t)}${u.state==='live'&&m?` <span class="muted" style="font-weight:500">· ${m}분째</span>`:''}</div>
-      <div class="who"><b>${esc(liveName(u))}</b>${u.id===owner?'<span class="ownchip">본인</span>':''} · ${where(u.geo)}
-        · ${u.state==='live'?'<span class="ok">지금</span>':ago(u.last_at)}${u.target?` · ${LANG_KO[u.target]||u.target}`:''}</div>
-      <div class="trail">${trail}</div></div></div>`;
+  // ---- hour strip: the last 24 hours in the page's zone, users per kind
+  const H = 3600e3, curHour = Math.floor(now / H) * H;   // zones used here are whole-hour
+  const hours = Array.from({length:24}, (_,i)=> curHour - (23-i)*H);
+  if(liveHour!=null && !hours.includes(liveHour)) liveHour = null;
+  const inHour = (e, h) => e.start < h + H && e.end >= h;
+  // One count per person per hour, in the colour of what that sitting was
+  // mainly for — so a column's height is people, never activities.
+  const perHour = h => {
+    const m = new Map();
+    for(const e of eps) if(inHour(e,h) && !m.has(e.u)) m.set(e.u, e.k);
+    return m;
   };
-  const sec = (label, list) => list.length ? `<p class="lsec">${label} ${list.length}</p>` + list.map(card).join('') : '';
-  document.getElementById('livePeople').innerHTML =
-    (users.length ? '' : '<div class="empty">24시간 안에 활동한 사람이 없어요.</div>')
-    + sec('지금', sorted.filter(u=>u.state==='live'))
-    + sec('방금', sorted.filter(u=>u.state==='recent'))
-    + sec('오늘', sorted.filter(u=>u.state==='today'));
+  const stripMax = Math.max(1, ...hours.map(h => perHour(h).size));
+  document.getElementById('tlStrip').innerHTML = hours.map(h => {
+    const m = perHour(h), kinds = [...m.values()];
+    const segs = KIND_RANK.map(k => {
+      const n = kinds.filter(x=>x===k).length;
+      return n ? `<i style="height:${(n/stripMax)*58}px;background:${CAT_COLOR[k]||'var(--baseline)'}"></i>` : '';
+    }).join('');
+    const hh = hourOf(h);
+    const tip = `${hh}시 · ${m.size}명` + (m.size ? '<br>' + KIND_RANK.map(k=>{
+      const n = kinds.filter(x=>x===k).length;
+      return n ? `${KIND_META[k].e} ${KIND_META[k].t} ${n}명` : '';
+    }).filter(Boolean).join('<br>') : '');
+    return `<div class="hcol${liveHour===h?' sel':''}${hh<6||hh>=22?' night':''}" data-h="${h}" data-tip="${tip}">`
+      + (m.size ? `<span class="hn">${m.size}</span>` : '') + `<div class="hb">${segs}</div>`
+      + `<span class="hl">${hh%3===0 || h===curHour ? hh : ''}</span></div>`;
+  }).join('');
+  document.querySelectorAll('#tlStrip .hcol').forEach(c => c.addEventListener('click', () => {
+    const h = +c.dataset.h; liveHour = liveHour===h ? null : h; renderLive();
+  }));
 
-  // ---- map
+  // ---- filters
+  const shown = eps.filter(e => (liveHour==null || inHour(e, liveHour)) && (!liveUser || e.u===liveUser));
+  const f = [];
+  if(liveHour!=null) f.push(`${hourOf(liveHour)}시만`);
+  if(liveUser) f.push(`${esc(liveName(person(liveUser)))}만`);
+  document.getElementById('tlFilter').innerHTML = f.length
+    ? `${f.join(' · ')} 보는 중 <span class="clear" id="tlClear">모두 보기</span>` : '최신순';
+  const clr = document.getElementById('tlClear');
+  if(clr) clr.addEventListener('click', () => { liveHour = null; liveUser = null; renderLive(); });
+
+  // ---- timeline rows, grouped by hour
+  const label = e => {
+    if(e.app) return '앱 보는 중';
+    if(e.k==='talk'){
+      const lang = LANG_KO[e.lang] || LANG_KO[person(e.u).target] || '';
+      return `${lang ? lang+'로 ' : ''}통화${isNow(e)?' 중':''}`;
+    }
+    return KIND_META[e.k].t + (isNow(e) && e.k!=='voice' ? ' 중' : '');
+  };
+  const emojiOf = e => KIND_META[e.k].e;
+  const detail = e => {
+    const mins = Math.round((e.end - e.start)/60000);
+    const bits = [];
+    if(e.k==='talk' && e.secs) bits.push(`대화 ${fmtMin(e.secs)}`);
+    else if(!e.app) bits.push(mins >= 1 ? `${mins}분` : '잠깐');
+    // Outside a call, a wrap-up row is the app re-writing tomorrow's call on
+    // launch — it only says the app was opened, which the label already does.
+    if(e.wrapped && e.k==='talk') bits.push('정리까지');
+    return bits.join(' · ');
+  };
+  const chips = e => (e.others||[]).map(k=>`<span class="kchip" style="--cat:${CAT_COLOR[k]||'var(--baseline)'}">${KIND_META[k].e} ${KIND_META[k].t}</span>`).join('');
+  let html = '', lastKey = null;
+  for(const e of shown.slice(0, 400)){
+    const key = hourKeyOf(e.start);
+    if(key !== lastKey){
+      lastKey = key;
+      const hh = hourOf(e.start);
+      const n = new Set(shown.filter(x=>hourKeyOf(x.start)===key).map(x=>x.u)).size;
+      html += `<div class="tlhour">${hh}시 <span class="muted" style="font-weight:400">${n}명</span></div>`;
+    }
+    const u = person(e.u), g = geoOf(PH[e.u]);
+    html += `<div class="tlrow" data-u="${esc(e.u)}" style="--cat:${CAT_COLOR[e.k]||'var(--baseline)'}">
+      <span class="tt">${isNow(e)?'<span class="nowdot"></span>':''}${fmtClock(new Date(e.start).toISOString())}${
+        e.end - e.start >= 60e3 && !e.app ? `–${fmtClock(new Date(e.end).toISOString())}` : ''}</span>
+      <span class="te">${emojiOf(e)}</span>
+      <span class="tw">${esc(label(e))} <small>${detail(e)}</small>${chips(e)}</span>
+      <span class="tp"><b>${esc(liveName(u))}</b>${e.u===owner?'<span class="ownchip">본인</span>':''} · ${where(g)}</span>
+    </div>`;
+  }
+  document.getElementById('tlList').innerHTML = html
+    || '<div class="empty">이 시간엔 아무 일도 없었어요.</div>';
+
+  // ---- map: everyone located; the selected hour (or the whole day) decides who is lit
   ensureMap();
   if(!liveMap) return;
-  nightLayer.setLatLngs(nightPolygon(new Date()));
+  nightLayer.setLatLngs(nightPolygon(liveHour!=null ? new Date(liveHour + H/2) : new Date()));
   liveLayer.clearLayers();
-  const pins = spread([
-    ...placed.filter(p=>p.lat!=null).map(p=>({kind:'quiet', ...p})),
-    ...users.filter(u=>u.geo && u.geo.lat!=null).map(u=>({kind:u.state, u, lat:u.geo.lat, lon:u.geo.lon})),
-  ]);
+  const lastEp = new Map();
+  for(const e of shown) if(!lastEp.has(e.u)) lastEp.set(e.u, e);   // shown is newest-first
+  const pins = spread([...dir.keys()].filter(keep).map(id => {
+    const g = geoOf(PH[id]); if(!g) return null;
+    const e = lastEp.get(id);
+    const kind = !e ? 'quiet' : isNow(e) ? 'live' : now - e.end < RECENT_MS ? 'recent' : 'today';
+    return {id, e, kind, lat:g.lat, lon:g.lon, g};
+  }).filter(Boolean));
   const bounds = [];
+  const markers = new Map();
   for(const p of pins){
-    const st = p.kind;
-    const label = p.u && st==='live' ? `<div class="tag">${esc(p.u.doing.t)}</div>` : '';
+    const st = p.kind, u = person(p.id);
+    const tag = p.e && st==='live' ? `<div class="tag">${esc(label(p.e))}</div>` : '';
     const half = st==='quiet' ? 6 : 17;
     const icon = L.divIcon({className:'', iconSize: st==='quiet'?[12,12]:[34,34],
       iconAnchor: [half - p.dx, half - p.dy],
-      html:`<div class="lm ${st}" style="--st:${ST_COLOR[st]}">${label}<div class="face">${p.u?p.u.doing.e:''}</div></div>`});
-    const mk = L.marker([+p.lat, +p.lon], {icon, zIndexOffset: st==='live'?1000:st==='recent'?500:0});
-    const tip = p.u
-      ? `<b>${esc(liveName(p.u))}</b><br>${p.u.doing.e} ${esc(p.u.doing.t)} · ${p.u.state==='live'?'지금':ago(p.u.last_at)}`
-        + `<br>${where(p.u.geo)}${p.u.geo?.region?` · ${esc(p.u.geo.region)}`:''}`
-        + `<div class="trail">${trailOf(p.u).map(t=>`<span>${fmtClock(t.at)} ${t.e} ${esc(t.t)}${t.n>1?` ×${t.n}`:''}</span>`).join('')}</div>`
-      : `<b>${esc(liveName(p))}</b><br>${flagOf(p.country)} ${esc(p.city||'')} · 24시간 넘게 조용`
-        + `<br><span class="muted">마지막으로 앱을 연 곳 · ${ago(p.at)}</span>`;
+      html:`<div class="lm ${st}${liveUser===p.id?' sel':''}" style="--st:${ST_COLOR[st]}">${tag}<div class="face">${p.e?emojiOf(p.e):''}</div></div>`});
+    const mk = L.marker([+p.lat, +p.lon], {icon, zIndexOffset: st==='live'?1000:st==='recent'?500:st==='today'?100:0});
+    const mine = shown.filter(e=>e.u===p.id).slice(0,4);
+    const tip = `<b>${esc(liveName(u))}</b> · ${where(p.g)}`
+      + (mine.length
+          ? mine.map(e=>`<br>${fmtClock(new Date(e.start).toISOString())} ${emojiOf(e)} ${esc(label(e))} <span class="muted">${detail(e)}</span>`).join('')
+          : `<br><span class="muted">${liveHour!=null?'이 시간엔 조용':'24시간 넘게 조용'} · 앱 연 곳 ${ago(PH[p.id]?.lastAt)}</span>`);
     mk.bindTooltip(tip, {className:'lt', direction:'top', offset:[p.dx,p.dy-14]});
+    mk.on('click', () => { liveUser = liveUser===p.id ? null : p.id; renderLive(); });
     mk.addTo(liveLayer);
-    if(p.u) p.u._marker = mk;
+    markers.set(p.id, mk);
     if(st!=='quiet') bounds.push([+p.lat, +p.lon]);
   }
   if(!liveFit && bounds.length){
     liveFit = true;
-    liveMap.fitBounds(bounds, {padding:[60,60], maxZoom:5});
+    liveMap.fitBounds(bounds, {padding:[60,60], maxZoom:4});
   }
-  document.querySelectorAll('#livePeople .lp').forEach(el => el.addEventListener('click', () => {
-    const u = users.find(x=>x.id===el.dataset.live);
-    if(u && u._marker){ liveMap.flyTo(u._marker.getLatLng(), 7, {duration:.8});
-      setTimeout(()=>u._marker.openTooltip(), 850); }
-  }));
+  // A row points at its person on the map: pan there without diving in —
+  // at most country level, and never zoomed OUT from where the reader is.
+  document.querySelectorAll('#tlList .tlrow').forEach(el => {
+    const mk = markers.get(el.dataset.u);
+    if(!mk) return;
+    el.addEventListener('mouseenter', () => mk.openTooltip());
+    el.addEventListener('mouseleave', () => mk.closeTooltip());
+    el.addEventListener('click', () => {
+      liveMap.flyTo(mk.getLatLng(), Math.max(liveMap.getZoom(), 3.5), {duration:.6});
+      setTimeout(()=>mk.openTooltip(), 650);
+    });
+  });
 }
 
 function renderLiveBeat(err){
