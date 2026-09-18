@@ -241,7 +241,40 @@ tr.detail td{background:var(--page); font-size:12.5px; padding:14px}
 .att .tx .why{font-size:12px; color:var(--ink-2); margin-top:1px}
 .att .when{font-size:12px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums}
 
-/* --- heatmap ------------------------------------------------------------ */
+/* --- heatmap ------------------------------------------------------------
+   One CSS grid per row: name · days · talk · days-active · plan · ids. It was
+   an SVG beside two floating text boxes, and the text sat half a row above
+   its own squares. */
+.hm{--cs:26px; font-size:12px; min-width:max-content}
+.hm .r{display:grid; align-items:center; column-gap:3px; padding:3px 6px; border-radius:8px}
+.hm .r:not(.hd):hover{background:var(--chip)}
+.hm .hd{position:sticky; top:0; background:var(--surface); z-index:1; padding-bottom:6px;
+  color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums}
+.hm .hd .d{text-align:center}
+.hm .hd .d.today{color:var(--s1); font-weight:700}
+.hm .who{min-width:0; padding-right:12px; line-height:1.3}
+.hm .who .n{font-weight:600; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  display:flex; align-items:center; gap:6px}
+.hm .who .s{font-size:11.5px; color:var(--ink-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  margin-top:1px}
+.hm .who .s .langpair{margin:0 4px 0 0; font-size:12px}
+.hm .sd{width:7px; height:7px; border-radius:50%; flex:none}
+.hm .c{width:var(--cs); height:var(--cs); border-radius:5px; position:relative}
+.hm .c.su{outline:1.5px solid var(--ink-2); outline-offset:1.5px}
+.hm .c.used::after{content:""; position:absolute; left:50%; top:50%; width:5px; height:5px;
+  margin:-2.5px 0 0 -2.5px; border-radius:50%; background:var(--seq4)}
+.hm .num{text-align:right; font-variant-numeric:tabular-nums; color:var(--ink-2); padding-left:8px}
+.hm .num b{color:var(--ink); font-weight:600}
+.hm .pl{padding-left:14px; white-space:nowrap; font-size:11.5px; color:var(--ink-2);
+  display:flex; align-items:center; gap:6px}
+.hm .ids{padding-left:14px; min-width:0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:10.5px; color:var(--muted); line-height:1.45}
+.hm .ids span{display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; user-select:all;
+  cursor:text}
+.hm .ids span:hover{color:var(--ink-2)}
+.hm .ids i{font-style:normal; font-family:inherit; opacity:.7; margin-right:4px; user-select:none}
+
+/* the per-hour heatmap (renderHoursByUser) still draws with these */
 .hm-row{display:flex; align-items:center; gap:8px}
 .hm-name{width:186px; flex:none; text-align:right; overflow:hidden; line-height:1.3}
 .hm-name .n{font-size:12.5px; color:var(--ink); font-weight:600;
@@ -311,6 +344,7 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   .dl{grid-template-columns:1fr}
   .grid3, .tiles{grid-template-columns:minmax(0,1fr)}
   .fe{grid-template-columns:60px 8px 1fr; gap:8px}
+  .hm .who .n{font-size:12px}
   .hm-name{width:88px}
   .hm-name .n{font-size:11px}
   .hm-name .v{font-size:10px}
@@ -429,8 +463,8 @@ details.notes summary{cursor:pointer; font-size:13px; color:var(--ink-2); font-w
   <p class="sub">한 줄이 한 사람, 한 칸이 하루예요. 진할수록 그날 오래 말한 거고, 빈 칸은 조용한 날이에요.
   줄은 <b>가입한 날부터</b> 칠해져요. 첫 칸 오른쪽이 비어 있으면 첫날 이후로 돌아오지 않은 거예요.
   말은 안 했지만 앱은 쓴 날은 <b>가장 옅은 칸에 점</b>이 찍혀요 — Watch 장면이나 복습만 한 날이에요.
-  이름 아래 주황색은 <b>보이스 클론 이름</b>, 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 —
-  둘 다 클릭 한 번에 전체가 선택돼요.</p>
+  테두리 칸은 <b>가입한 날</b>이에요. 이름 아래는 쓰는 언어 → 배우는 언어와 보이스 클론 이름,
+  맨 오른쪽은 <b>유저 ID</b>와 <b>ElevenLabs 보이스 ID</b>예요 — 클릭 한 번에 전체가 선택돼요.</p>
   <div class="card scroll" id="heatmap"></div>
 </section>
 
@@ -1123,73 +1157,70 @@ function renderHeatmap(users){
   // glance instead of being the same blank square.
   const ramp = secs => secs>=600 ? 'var(--seq5)' : secs>=300 ? 'var(--seq4)'
     : secs>=60 ? 'var(--seq3)' : 'var(--seq2)';
-  //活動일 first, so a Watch-only learner sits with the regulars rather than
-  // at the bottom with the accounts that never opened the app.
+  // Active days first, so a Watch-only learner sits with the regulars rather
+  // than at the bottom with the accounts that never opened the app.
   const rows = [...users].sort((a,b)=>
     (b.activeDays-a.activeDays) || (b.talkSecs-a.talkSecs)
     || (b.signedUpAt||'').localeCompare(a.signedUpAt||''));
   if(!rows.length){ el.innerHTML='<div class="empty">아직 아무도 없어요.</div>'; return; }
-  const nameW = innerWNarrow() ? 88 : 186;
-  const gap = 3;
-  const avail = innerW(el, 200) - nameW - 8 - (innerWNarrow() ? 0 : 250);
-  const cs = Math.max(9, Math.min(34, avail/n - gap));
-  const width = n*(cs+gap);
+
+  const narrow = innerWNarrow();
+  const nameW = narrow ? 110 : 210;
+  const tail = narrow ? 0 : 60 + 44 + 118 + 190;       // talk · days · plan · ids
+  const cs = Math.max(12, Math.min(30, Math.floor((innerW(el, 300) - nameW - tail - 24) / n) - 3));
+  const cols = `${nameW}px repeat(${n}, ${cs}px)` + (narrow ? '' : ' 60px 44px 118px minmax(150px,1fr)');
+  const today = DATA.days.length - 1;
   const signupIdx = u => DATA.days.indexOf((u.signedUpAt||'').slice(0,10) || u.signedUp);
 
-  let html = `<div class="hm-row"><div class="hm-name"></div>`
-           + `<svg width="${width}" height="15">`
-           + DATA.days.map((d,i)=>
-               `<text x="${i*(cs+gap)+cs/2}" y="11" class="axis" text-anchor="middle">${fmtD(d)}</text>`).join('')
-           + `</svg></div>`;
+  let html = `<div class="hm" style="--cs:${cs}px"><div class="r hd" style="grid-template-columns:${cols}"><span></span>`
+    + DATA.days.map((d,i)=>`<span class="d${i===today?' today':''}">${i===today?'오늘':fmtD(d)}</span>`).join('')
+    + (narrow ? '' : `<span class="num">통화</span><span class="num">일</span><span class="pl">구독</span><span class="ids">ID</span>`)
+    + `</div>`;
   for(const u of rows){
     const m = byUser[u.idx] || {};
     const su = signupIdx(u);
-    let svg = `<div class="hm-row"><div class="hm-name" title="${esc(u.realEmail||u.email||u.label)}">`
-            + `<div class="n">${esc(nameOf(u))}${badge(u)}</div>`
-            + `<div class="v">${u.voiceName ? esc(u.voiceName)
-                 : '<span class="muted">클론 없음</span>'}</div>`
-            + `</div><svg width="${width}" height="${cs+4}">`;
+    const k = stateOf(u), st = SUB_KO[k];
+    html += `<div class="r" style="grid-template-columns:${cols}">`
+      + `<div class="who" title="${esc(u.realEmail||u.email||u.label)}">`
+      +   `<div class="n"><span class="sd" style="background:${st?st.color:'var(--grid)'}"></span>`
+      +     `<span style="overflow:hidden;text-overflow:ellipsis">${esc(nameOf(u))}</span>${badge(u)}</div>`
+      +   `<div class="s">${langPair(u.idx)}${u.voiceName ? esc(u.voiceName) : '<span class="muted">클론 없음</span>'}</div>`
+      + `</div>`;
     for(let i=0;i<n;i++){
       const c = m[i];
       const rowsN = c ? c[0] : 0, turnsN = c ? c[1] : 0, secs = c ? c[2] : 0;
-      const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
-      const fill = secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
-      const tip = secs
-        ? `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`
-          + ` · 통화 ${fmtMin(secs)} · 턴 ${turnsN}`
-          + `${i===su?'<br>가입한 날':''}`
-        : usedOnly
-          ? `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`
-            + `<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건`
-            + `${i===su?'<br>가입한 날':''}`
-          : `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])} · 조용`
-            + `${i===su?'<br>가입한 날':''}${i<su?'<br>가입 전':''}`;
       const before = i < su;
-      svg += `<rect x="${i*(cs+gap)}" y="2" width="${cs}" height="${cs}" rx="3"`
-          +  ` fill="${before?'transparent':fill}"`
-          +  ` data-tip="${tip.replace(/"/g,'&quot;')}"/>`;
-      if(usedOnly && !before){
-        svg += `<circle cx="${i*(cs+gap)+cs/2}" cy="${2+cs/2}" r="${Math.max(1.5, cs*0.13)}"`
-            +  ` fill="var(--seq4)" pointer-events="none"/>`;
-      }
+      const usedOnly = !secs && rowsN > 0;      // here, but didn't speak
+      const fill = before ? 'transparent' : secs ? ramp(secs) : usedOnly ? 'var(--seq1)' : 'var(--chip)';
+      const head = `<b>${esc(nameOf(u))}</b><br>${fmtDate(DATA.days[i])}`;
+      const tip = before ? `${head} · 가입 전`
+        : secs ? `${head} · 통화 ${fmtMin(secs)} · 턴 ${turnsN}${i===su?'<br>가입한 날':''}`
+        : usedOnly ? `${head}<br>말은 안 했지만 앱은 썼어요 · 기록 ${rowsN}건${i===su?'<br>가입한 날':''}`
+        : `${head} · 조용${i===su?'<br>가입한 날':''}`;
+      html += `<span class="c${i===su?' su':''}${usedOnly&&!before?' used':''}" style="background:${fill}"`
+        + ` data-tip="${tip.replace(/"/g,'&quot;')}"></span>`;
     }
-    svg += `</svg>`;
-    if(!innerWNarrow()){
-      svg += `<div class="hm-side">${u.talkSecs?fmtMin(u.talkSecs):'—'} · ${u.activeDays}일`
-          +  `<span class="id" title="클릭하면 전체가 선택돼요">${u.id}</span>`
-          +  `${u.voiceId?`<span class="id" style="color:var(--s2)" title="ElevenLabs 보이스 ID">`
-             + `${u.voiceId}</span>`:''}</div>`;
+    if(!narrow){
+      html += `<span class="num">${u.talkSecs ? `<b>${fmtMin(u.talkSecs)}</b>` : '—'}</span>`
+        + `<span class="num">${u.activeDays}일</span>`
+        + `<span class="pl">${st ? `<span class="sd" style="background:${st.color}"></span>${st.ko}` : '<span class="muted">플랜 없음</span>'}</span>`
+        + `<span class="ids"><span title="유저 ID — 클릭하면 전체 선택">${u.id}</span>`
+        + (u.voiceId ? `<span title="ElevenLabs 보이스 ID — 클릭하면 전체 선택"><i>voice</i>${u.voiceId}</span>` : '')
+        + `</span>`;
     }
-    html += svg + `</div>`;
+    html += `</div>`;
   }
-  html += `<div class="legend">조용 <span class="cell" style="background:var(--chip)"></span>`
+  html += `</div><div class="legend">`
+       +  `조용 <span class="cell" style="background:var(--chip)"></span>`
        +  `<span class="cell" style="background:var(--seq1);position:relative">`
        +  `<span style="position:absolute;left:3.5px;top:3.5px;width:4px;height:4px;`
-       +  `border-radius:50%;background:var(--seq4)"></span></span> 썼지만 말 안 함 `
+       +  `border-radius:50%;background:var(--seq4)"></span></span> 썼지만 말 안 함 · 통화 `
        +  `<span class="cell" style="background:var(--seq2)"></span>`
        +  `<span class="cell" style="background:var(--seq3)"></span>`
        +  `<span class="cell" style="background:var(--seq4)"></span>`
-       +  `<span class="cell" style="background:var(--seq5)"></span> 10분 이상</div>`;
+       +  `<span class="cell" style="background:var(--seq5)"></span> 10분 이상 · `
+       +  `<span class="cell" style="background:var(--chip);outline:1.5px solid var(--ink-2);outline-offset:1px"></span> 가입한 날 · `
+       +  `이름 앞 점은 구독 상태</div>`;
   el.innerHTML = html;
 }
 const innerWNarrow = () => innerWidth <= 700;
