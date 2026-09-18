@@ -35,10 +35,18 @@
    as wide as the window allows (capped so a 4K screen isn't all ocean) and
    most of its height. The people list sits under it. */
 .livegrid{display:flex; flex-direction:column; gap:16px}
-#liveMap{position:relative; left:50%; transform:translateX(-50%);
-  width:min(1600px, calc(100vw - 48px)); height:clamp(460px, 74vh, 980px);
-  border-radius:12px; border:1px solid var(--ring); background:#dde6ee; z-index:0}
-@media (max-width:560px){ #liveMap{width:calc(100vw - 32px); height:62vh} }
+/* The map STAYS while the timeline scrolls under it (sticky just below the
+   tab bar), so a row can always be read against where it happened. Sticky
+   can't sit on a transformed box, so the breakout is done with a margin:
+   (column − map) / 2 = 50% − map/2. Half the screen, so the list below has
+   room to be read. */
+#liveMap{--mapw:min(1600px, calc(100vw - 48px));
+  position:sticky; top:48px; z-index:4;
+  width:var(--mapw); margin-left:calc(50% - var(--mapw) / 2);
+  height:clamp(320px, 52vh, 640px);
+  border-radius:12px; border:1px solid var(--ring); background:#dde6ee;
+  box-shadow:0 10px 18px -12px rgba(0,0,0,.25)}
+@media (max-width:560px){ #liveMap{--mapw:calc(100vw - 32px); height:38vh} }
 .leaflet-container{font-family:inherit}
 .lm{position:relative; width:34px; height:34px}
 .lm .face{position:absolute; inset:0; border-radius:50%; display:grid; place-items:center;

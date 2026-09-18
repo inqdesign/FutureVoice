@@ -219,8 +219,8 @@ async function recentLedger(env: Env): Promise<unknown[]> {
 // reads the latest of each per account. distinct_id is the Supabase UUID
 // UPPERCASED (Swift uuidString), so it is lowered to join.
 //
-// Held for 30 s per isolate: the tab polls every 15 s, and a city does not
-// move between two polls. The database half of live.json is never cached.
+// Held for 60 s per isolate: the tab polls every 15 s, a city does not move
+// between two polls, and PostHog rate-limits its query API per project. The database half of live.json is never cached.
 type PhRow = { city: string | null; cc: string | null; lat: number | null; lon: number | null;
                lifecycle: string | null; lifecycleAt: string | null;
                lastEvent: string | null; lastAt: string | null };
@@ -228,7 +228,7 @@ let phCache: { at: number; rows: Record<string, PhRow>; error?: string } | null 
 
 async function posthogPresence(env: Env): Promise<{ rows: Record<string, PhRow>; error?: string }> {
   if (!env.POSTHOG_API_KEY) return { rows: {}, error: "no_key" };
-  if (phCache && Date.now() - phCache.at < 30_000) return phCache;
+  if (phCache && Date.now() - phCache.at < 60_000) return phCache;
   const project = env.POSTHOG_PROJECT_ID || "@current";
   const query = `
     select distinct_id,
