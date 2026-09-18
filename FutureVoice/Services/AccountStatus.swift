@@ -100,6 +100,20 @@ struct AccountStatus {
     /// codes run `offerCodeMonths` from here.
     var offerCodeSince: Date?
 
+    /// What the NEXT charge will be, as Apple computes it — the offer that
+    /// will price it, and the money (`20260918100000`, milliunits of
+    /// `renewalCurrency`). Nil where nothing renews: a cancelled plan, a comp,
+    /// or a subscription Apple has not told us about since the columns landed.
+    ///
+    /// This exists because an offer code does NOT price the period it is
+    /// redeemed in — Apple runs the intro trial first — so during the trial
+    /// week `currentOfferType` is 1 and no transaction on file mentions the
+    /// code at all. Read the current period for what was CHARGED, this for
+    /// what the learner is about to be charged.
+    var renewalOfferType: Int?
+    var renewalPriceMilliunits: Int?
+    var renewalCurrency: String?
+
     /// How long the launch offer codes discount (docs/launch-billing.md §7:
     /// pay-as-you-go 12 months on both `Beta50 … v2` offers). Apple's
     /// transaction says WHICH offer priced a period, not how many periods the
@@ -272,10 +286,32 @@ struct AccountStatus {
             .currency(code: code).locale(Locale(identifier: LanguageCatalog.currentNative)))
     }
 
-    /// The day the launch code's discount ends, when one is running.
+    /// The next charge as money ("₩14,500", "9,99 €"), in the learner's
+    /// language. Nil when nothing renews — a cancelled plan, a comp, or a
+    /// subscription Apple has said nothing about since the columns landed.
+    var renewalPriceLabel: String? {
+        guard !cancelAtPeriodEnd, let m = renewalPriceMilliunits, m > 0,
+              let code = renewalCurrency else { return nil }
+        return (Decimal(m) / 1000).formatted(
+            .currency(code: code).locale(Locale(identifier: LanguageCatalog.currentNative)))
+    }
+
+    /// The launch code prices the NEXT period but not this one — i.e. the
+    /// trial week of a code that was redeemed before the subscription began.
+    /// Apple runs the intro offer first, so this is the whole window in which
+    /// a discounted subscriber is shown the regular price.
+    var offerCodeStartsAtRenewal: Bool { renewalOfferType == 3 && currentOfferType != 3 }
+
+    /// The day the launch code's discount ends — whether it is already
+    /// pricing this period or begins at the next renewal.
     var offerCodeUntil: Date? {
-        guard currentOfferType == 3, let since = offerCodeSince else { return nil }
-        return Calendar.current.date(byAdding: .month, value: Self.offerCodeMonths, to: since)
+        if currentOfferType == 3, let since = offerCodeSince {
+            return Calendar.current.date(byAdding: .month, value: Self.offerCodeMonths, to: since)
+        }
+        if offerCodeStartsAtRenewal, let start = periodEnd {
+            return Calendar.current.date(byAdding: .month, value: Self.offerCodeMonths, to: start)
+        }
+        return nil
     }
 
     /// A date with its year ("2027년 9월 12일") for facts that outlive the
@@ -408,6 +444,31 @@ struct AccountStatus {
             let currency: String?
             let offer_type: Int?
         }
+        // What the NEXT charge will be, in a query of its OWN (20260918100000).
+        // Not folded into the SubRow select above on purpose: a `.select()`
+        // naming a column the database hasn't got fails the WHOLE query, so
+        // pulling these alongside plan_id would mean an app shipped ahead of
+        // the migration shows "No plan" to paying subscribers. Here the worst
+        // case is one line missing from the receipt.
+        struct RenewalRow: Decodable {
+            let renewal_offer_type: Int?
+            let renewal_price_milliunits: Int?
+            let renewal_currency: String?
+        }
+        if out.isEntitled,
+           let rows: [RenewalRow] = try? await SupabaseProvider.shared
+            .from("user_subscriptions")
+            .select("renewal_offer_type,renewal_price_milliunits,renewal_currency")
+            .eq("user_id", value: userId)
+            .limit(1)
+            .execute()
+            .value,
+           let row = rows.first {
+            out.renewalOfferType = row.renewal_offer_type
+            out.renewalPriceMilliunits = row.renewal_price_milliunits
+            out.renewalCurrency = row.renewal_currency
+        }
+
         if out.isEntitled {
             if let rows: [TxRow] = try? await SupabaseProvider.shared
                 .from("subscription_transactions")

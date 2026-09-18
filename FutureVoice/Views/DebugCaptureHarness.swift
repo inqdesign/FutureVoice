@@ -161,6 +161,33 @@ enum DebugCapture {
         out.lastChargeDate = out.periodStart
         out.currentOfferType = 3
         out.offerCodeSince = out.startedAt
+        // What Apple charges next — the code is already pricing this period,
+        // so the next charge is the same discounted figure.
+        out.renewalOfferType = 3
+        out.renewalPriceMilliunits = 7_500_000
+        out.renewalCurrency = "KRW"
+        return out
+    }
+
+    /// The same Light account in its FIRST week: a launch code redeemed
+    /// before the subscription started, so nothing has been charged yet and
+    /// the code prices the first renewal rather than this period. Its own
+    /// capture because that week is where the receipt is hardest to read —
+    /// and where a discounted subscriber was shown the regular price until
+    /// 2026-09-18.
+    static var sampleTrialAccount: AccountStatus {
+        var out = sampleLightAccount
+        out.subscriptionStatus = "trialing"
+        out.startedAt = Calendar.current.date(byAdding: .day, value: -3, to: Date())
+        out.periodStart = out.startedAt
+        out.periodEnd = Calendar.current.date(byAdding: .day, value: 4, to: Date())
+        // Nothing charged yet: the trial's own transaction is the intro
+        // offer, priced at zero, and no offer-code transaction exists.
+        out.lastChargeMilliunits = nil
+        out.lastChargeCurrency = nil
+        out.lastChargeDate = nil
+        out.currentOfferType = 1
+        out.offerCodeSince = nil
         return out
     }
 
@@ -255,6 +282,12 @@ enum DebugCapture {
         case "me":
             // The reorganized settings list, for IA review.
             return AnyView(MeTab().environmentObject(appState))
+        case "sync":
+            return AnyView(NavigationStack {
+                List { SyncSection() }
+                    .navigationTitle("Devices")
+                    .navigationBarTitleDisplayMode(.inline)
+            }.environmentObject(appState))
         case "activity-unsaved":
             // The reported bug: a call closed with "Close without saving" —
             // metered, no `Session`. The day must still be on the calendar,
@@ -352,6 +385,13 @@ enum DebugCapture {
             // once — which is what the two-capture split kept failing to do.
             return AnyView(NavigationStack {
                 PlanPageView(account: Self.sampleLightAccount, previewUsage: .sample)
+            })
+        case "plan-trial":
+            // The same page during the trial week of a launch-code
+            // subscriber: no charge yet, the first one dated and priced, and
+            // the code named above it.
+            return AnyView(NavigationStack {
+                PlanPageView(account: Self.sampleTrialAccount, previewUsage: .sample)
             })
         case "plan-guide":
             // The transparency page for a Light subscriber — the one place

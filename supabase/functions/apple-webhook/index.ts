@@ -161,6 +161,19 @@ Deno.serve(async (req) => {
       current_period_end: tx.expiresDate ? iso(tx.expiresDate) : null,
       trial_ends_at: isTrial && tx.expiresDate ? iso(tx.expiresDate) : null,
       cancel_at_period_end: renewal ? renewal.autoRenewStatus === 0 : false,
+      // What the NEXT charge will be (20260918100000). An offer code prices
+      // the renewal, never the period it was redeemed in, so this is the only
+      // place a running code is visible during the intro trial — the whole
+      // reason the app could show a discounted subscriber the regular price.
+      // Written from renewal info ONLY: a notification without it (a bare
+      // TEST, an old payload) must not blank a still-true answer.
+      ...(renewal ? {
+        renewal_offer_type:       typeof renewal.offerType === "number" ? renewal.offerType : null,
+        renewal_offer_id:         renewal.offerIdentifier ?? null,
+        renewal_price_milliunits: typeof renewal.renewalPrice === "number" ? renewal.renewalPrice : null,
+        renewal_currency:         renewal.currency ?? null,
+        renewal_product_id:       renewal.autoRenewProductId ?? null,
+      } : {}),
       updated_at: new Date().toISOString(),
     })
     if (subErr) {
