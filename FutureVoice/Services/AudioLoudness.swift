@@ -495,6 +495,85 @@ enum AudioLoudness {
     /// voice, so the clone comes back loud from ElevenLabs. Only boosts; never
     /// attenuates an already-healthy take. Returns a new WAV URL, or the
     /// original on any failure (callers can always fall back to it).
+    /// Where the SOUND starts in a file, in seconds — nil when nothing in it
+    /// clears the gate (a silent take) or it can't be read.
+    ///
+    /// Shadow's "both at once" lines the two takes up on their first word, and
+    /// it used to take both onsets from word TIMINGS: the learner's from the
+    /// recognizer's first segment, which is empty on every take the aligner
+    /// couldn't anchor, and the target's from a timeline that is a
+    /// character-count estimate whenever the line came from a call — an
+    /// estimate always starts at 0, and a render always opens on silence. A
+    /// missing onset read as 0, so the take played from the top of the file
+    /// and the learner heard their own voice arrive a beat late against the
+    /// model. Energy is the honest source: it is what "starts speaking" means,
+    /// it needs no recognizer, and it is measured on the same file that plays.
+    ///
+    /// The gate is the same peak-relative one `speechRMS` uses, so a quiet
+    /// take and a loud one are judged alike, and a run must HOLD above it
+    /// (`minVoicedSeconds`) — a lip smack or a table knock is not the start of
+    /// speaking. The reported onset is pulled back by `onsetLeadIn` so the
+    /// first consonant's attack isn't clipped.
+    static func firstVoiceOnset(at url: URL) -> TimeInterval? {
+        let minVoicedSeconds = 0.04
+        let onsetLeadIn = 0.03
+        do {
+            let file = try AVAudioFile(forReading: url)
+            let frameCount = AVAudioFrameCount(file.length)
+            guard frameCount > 0,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                frameCapacity: frameCount)
+            else { return nil }
+            try file.read(into: buffer)
+            guard let channels = buffer.floatChannelData else { return nil }
+            let channelCount = Int(buffer.format.channelCount)
+            let frames = Int(buffer.frameLength)
+            let rate = buffer.format.sampleRate
+            guard frames > 0, rate > 0 else { return nil }
+
+            // ENVELOPE, not samples. Speech (and any tone) crosses zero every
+            // few hundred microseconds, so a sample-wise "loud for 40 ms"
+            // test never sees an unbroken run and reports silence for every
+            // file — which the tests caught before this shipped. Block RMS
+            // over `blockSeconds` is the envelope, and the run is counted in
+            // blocks.
+            let blockSeconds = 0.01
+            let blockFrames = max(1, Int(blockSeconds * rate))
+            let blockCount = frames / blockFrames
+            guard blockCount > 0 else { return nil }
+
+            var levels = [Float](repeating: 0, count: blockCount)
+            for b in 0..<blockCount {
+                var sumSquares: Float = 0
+                for ch in 0..<channelCount {
+                    var r: Float = 0
+                    vDSP_rmsqv(channels[ch] + b * blockFrames, 1, &r, vDSP_Length(blockFrames))
+                    sumSquares += r * r
+                }
+                levels[b] = (sumSquares / Float(channelCount)).squareRoot()
+            }
+            guard let loudest = levels.max(), loudest > 1e-5 else { return nil }
+
+            let gate = loudest * speechGateRatio
+            let needed = max(1, Int((minVoicedSeconds / blockSeconds).rounded()))
+            var run = 0
+            for (b, level) in levels.enumerated() {
+                if level > gate {
+                    run += 1
+                    if run >= needed {
+                        let onset = Double(b - run + 1) * blockSeconds - onsetLeadIn
+                        return max(0, onset)
+                    }
+                } else {
+                    run = 0
+                }
+            }
+            return nil
+        } catch {
+            return nil
+        }
+    }
+
     static func peakNormalizedWAV(at inURL: URL, targetPeakDBFS: Float = -1) -> URL {
         do {
             let inFile = try AVAudioFile(forReading: inURL)

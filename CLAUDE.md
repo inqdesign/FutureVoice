@@ -581,6 +581,25 @@ fixing it means character units in `ElevenLabsClient.wordTimings(from:)`,
 `estimatedTimings`, `LocalAlignment.tokens` and `ShadowTranscriber.words`
 together, with Apple's word segments split across their characters.
 
+**"Both at once" lines the takes up by EAR, not by timings** (2026-09-18).
+The duet skips each file to its first word, and both leads came from word
+timings: the learner's from `ShadowTranscriber.realigned`, which is empty on
+every take the aligner couldn't anchor (~11% of takes, plus the abandoned
+audio read), and the target's from a timeline that is a character-count
+estimate on any line that came from a call — an estimate starts at 0 and a
+render always opens on silence. A missing lead read as 0, so the take played
+from the top of the file and the learner heard their own voice arrive a beat
+late ("내 목소리 앞쪽에 여백이 너무 심해"). `AudioLoudness.firstVoiceOnset`
+now reads the onset off the audio that is about to play — peak-relative gate,
+same `speechGateRatio` the level measurement uses, so a quiet take and a loud
+one are judged alike. A PHRASE selection still comes from timings, because
+its start is mid-file rather than the first sound in it. It measures an
+ENVELOPE (10 ms block RMS), not samples: speech crosses zero every few
+hundred microseconds, so a sample-wise "loud for 40 ms" run never completes
+and reports silence for every file — `AudioOnsetTests` caught exactly that
+before it shipped, which is the reason those tests build their own WAVs
+instead of mocking the reader.
+
 **The rhythm card may only grade a beat somebody MEASURED** (2026-09-16, `WordTiming.isMeasured`). The Target row had no such rule: every live-call line is saved with `timings: []` (the streaming TTS returns none), so the shadow view opens on `estimatedTimings` — character-count proportions — while the free `LocalAlignment` pass runs behind it; `startSync` kills that pass (two recognizers on one mic truncate the take) and nothing re-armed it, so a learner who pressed record first had EVERY attempt of that visit coloured against a made-up beat. Both alignments (`LocalAlignment.fill`, `ShadowTranscriber.realigned`) also share out up to half their words across gaps a recognizer never placed, indistinguishable from a measurement. Now every timing source marks its spans — ElevenLabs and Apple segments measured, the estimate and every filled gap not (old caches decode as measured; they passed the anchor gate when written) — and `analyzeRhythm` pins the normalization on measured pairs only, credits only those, needs `minMeasuredPairs` (4: the pinned two score 1.0 whatever happened, so three left one word judged) and returns nil for an estimated target, which `overallScore` already reads as "not measured". `rearmTimingRecovery` restarts the free pass once the mic is down. **The verdict is drawn ON the target line, and there is no rhythm card** (same day, two passes): `beatMark` puts a dot under each word the attempt was timed on, where the learner started — under the centre on the beat, pushed right if late, left if early, in the score's own colour scale — and nothing under a word unmeasured or skipped; the score sits in the target section's header where the word count was, with `6/10` beside it when it stands on fewer than all the words. Two things it replaced: bar timelines (Target / You) whose bars carried WIDTH, a duration the score never reads and one the two sources disagree on by construction (ElevenLabs leaves gaps, Apple's segments abut), so the rows looked different for reasons unrelated to rhythm and a grey interpolated bar still invited comparison ("Target and You look nothing alike, how is that 100"); then a per-word card with `+0.2s` labels, correct but a third of the screen (user: too much space, put it on the sentence, no seconds needed). Colouring the word itself was rejected — text colour already means "wrong word". Don't bring a second timeline or a card back. Known, deliberately untouched: the dot turns green at ±120 ms while credit starts fading at ±60 ms, so an all-green row can read 85.
 
 **The correction card never precedes the voice** (2026-08-21, two iterations). Holding the bubble's TEXT swaps until `voiceDidStart` was not enough: the card itself is a correction the learner READS, and the payload usually closes while the TTS is still loading, so it kept appearing before the voice — "it corrects me, then answers" every turn. It was removed from the live call outright, then restored the same day with its DISPLAY deferred: `requestReply` parks the suggestion on `DeferredTurnWork` while the turn is still held, and `flushDeferredTurnWork` (voice audible) is what sets `turns[idx].suggestion` — so the card appears with the voice, never ahead of it, and nothing ever waits on it (display timing only, zero latency cost). A payload landing after the flush applies directly, which is fine — the voice is already out.

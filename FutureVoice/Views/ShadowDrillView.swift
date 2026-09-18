@@ -1082,11 +1082,22 @@ struct ShadowDrillView: View {
 
         // Both takes open on silence — the model line on its own lead-in, the
         // attempt on the 350 ms the recorder deliberately keeps in front of
-        // the go beat. Skipping to each first word is what makes "together"
-        // mean together.
+        // the go beat plus however long the learner took to start. Skipping to
+        // where each one actually begins is what makes "together" mean
+        // together, and the onset comes from the AUDIO (`firstVoiceOnset`):
+        // word timings are missing on every take the aligner couldn't anchor
+        // and are a character-count estimate on any target line that came from
+        // a call, and a missing onset read as 0 — which played the take from
+        // the top of the file, the reported "my voice has a big gap in front".
+        // A phrase selection is the one case timings must decide, because its
+        // start is mid-file, not the first sound in it.
         let targetSlice = activeRange.map { Array(timings[$0]) } ?? timings
-        let targetLead = Double(targetSlice.first?.startMs ?? 0) / 1000
-        let attemptLead = Double(attemptWordTimings.first?.startMs ?? 0) / 1000
+        let targetLead = activeRange != nil
+            ? Double(targetSlice.first?.startMs ?? 0) / 1000
+            : (AudioLoudness.firstVoiceOnset(at: targetURL)
+               ?? Double(targetSlice.first?.startMs ?? 0) / 1000)
+        let attemptLead = AudioLoudness.firstVoiceOnset(at: attemptURL)
+            ?? Double(attemptWordTimings.first?.startMs ?? 0) / 1000
 
         guard player.armDuet(targetData, skipping: targetLead,
                              volume: Self.duetTargetVolume, pan: -Self.duetPan,
