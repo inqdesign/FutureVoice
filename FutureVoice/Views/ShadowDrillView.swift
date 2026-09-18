@@ -134,7 +134,13 @@ struct ShadowDrillView: View {
             .navigationTitle("Shadow")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // "Close", not "Done": nothing here gets finished by leaving —
+                // "Done" read as "mark this line complete".
                 ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                        .disabled(phase == .syncing || phase == .countdown)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     // Archive this line for repeat practice — saved lines
                     // live under Practice → Saved lines.
                     Button {
@@ -143,10 +149,6 @@ struct ShadowDrillView: View {
                         Image(systemName: appState.isLineSaved(turn.id) ? "bookmark.fill" : "bookmark")
                     }
                     .accessibilityLabel(appState.isLineSaved(turn.id) ? "Remove from saved lines" : "Save line")
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .disabled(phase == .syncing || phase == .countdown)
                 }
             }
             .safeAreaInset(edge: .bottom) { bottomBar }
