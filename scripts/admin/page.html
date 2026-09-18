@@ -31,10 +31,14 @@
   animation:beat 1.6s ease-out infinite}
 .livebeat.stale i{background:var(--muted); animation:none}
 @keyframes beat{0%{box-shadow:0 0 0 0 rgba(12,163,12,.55)}100%{box-shadow:0 0 0 9px rgba(12,163,12,0)}}
-.livegrid{display:grid; grid-template-columns:minmax(0,1.7fr) minmax(280px,1fr); gap:12px; align-items:start}
-@media (max-width:860px){ .livegrid{grid-template-columns:minmax(0,1fr)} }
-#liveMap{height:520px; border-radius:10px; border:1px solid var(--ring); background:#dde6ee; z-index:0}
-@media (max-width:560px){ #liveMap{height:380px} }
+/* The map is the point of this tab, so it breaks out of the page column:
+   as wide as the window allows (capped so a 4K screen isn't all ocean) and
+   most of its height. The people list sits under it. */
+.livegrid{display:flex; flex-direction:column; gap:16px}
+#liveMap{position:relative; left:50%; transform:translateX(-50%);
+  width:min(1600px, calc(100vw - 48px)); height:clamp(460px, 74vh, 980px);
+  border-radius:12px; border:1px solid var(--ring); background:#dde6ee; z-index:0}
+@media (max-width:560px){ #liveMap{width:calc(100vw - 32px); height:62vh} }
 .leaflet-container{font-family:inherit}
 .lm{position:relative; width:34px; height:34px}
 .lm .face{position:absolute; inset:0; border-radius:50%; display:grid; place-items:center;
@@ -56,7 +60,8 @@
   border-radius:10px; box-shadow:0 6px 24px rgba(0,0,0,.12); padding:10px 12px; font-size:12.5px;
   line-height:1.45; max-width:280px; white-space:normal}
 .leaflet-tooltip.lt::before{display:none}
-.lpeople{display:flex; flex-direction:column; gap:8px; max-height:520px; overflow:auto; padding-right:2px}
+.lpeople{display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:8px}
+.lpeople > .lsec, .lpeople > .empty{grid-column:1 / -1}
 .lp{display:grid; grid-template-columns:38px minmax(0,1fr); gap:10px; background:var(--surface);
   border:1px solid var(--ring); border-radius:10px; padding:10px 12px; cursor:pointer}
 .lp:hover{background:var(--chip)}
@@ -2221,8 +2226,11 @@ function nightPolygon(date){
 
 function ensureMap(){
   if(liveMap || typeof L === 'undefined') return;
+  // Fractional zoom: at whole steps the world is 1024 px or 2048 px wide, so a
+  // wide map either shows a band of ocean either side or crops the Americas.
   liveMap = L.map('liveMap', {worldCopyJump:true, zoomControl:true, attributionControl:true,
-                              minZoom:2, maxZoom:9}).setView([30, 40], 2);
+                              zoomSnap:0.25, zoomDelta:0.5, minZoom:1, maxZoom:9});
+  liveMap.fitBounds([[-40,-150],[68,160]]);   // the inhabited world, edge to edge
   // No tile server: OSM refuses anything that isn't a browser following its
   // policy to the letter, and CARTO stamps "API KEY REQUIRED" over its tiles
   // unpredictably. The countries are drawn from Natural Earth (world-atlas)
@@ -2368,7 +2376,7 @@ function renderLive(){
   }
   if(!liveFit && bounds.length){
     liveFit = true;
-    liveMap.fitBounds(bounds, {padding:[40,40], maxZoom:5});
+    liveMap.fitBounds(bounds, {padding:[60,60], maxZoom:5});
   }
   document.querySelectorAll('#livePeople .lp').forEach(el => el.addEventListener('click', () => {
     const u = users.find(x=>x.id===el.dataset.live);
