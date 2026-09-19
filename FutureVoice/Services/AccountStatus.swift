@@ -135,7 +135,21 @@ struct AccountStatus {
     /// hard paywall there is no free tier, so this account simply cannot
     /// talk yet. (Cloning the voice and hearing it say hello stay free;
     /// they're the entry ticket, not usage.)
-    var needsSubscription: Bool { !isEntitled && secondsBalance <= 0 && !unlimited }
+    ///
+    /// "Nothing left" is under a MINUTE, not zero (2026-09-20, user's rule).
+    /// A pool of seconds buys a greeting and a wall, which is not a call: on
+    /// a 300 s first-call account the last tail let the learner back in over
+    /// and over, each visit ending in a summary, a book and another wall. The
+    /// server closes such a pool on the call's opening tick
+    /// (`20260920180000`) — this is the same floor one step earlier, so the
+    /// tap answers with the paywall instead of a call that dies.
+    var needsSubscription: Bool {
+        !isEntitled && secondsBalance < Self.minimumCallSeconds && !unlimited
+    }
+
+    /// The shortest pool that can carry a conversation. Mirrors the server's
+    /// floor in `consume_metered_seconds`; keep the two the same.
+    static let minimumCallSeconds = 60
 
     /// Seconds in the pool with no plan behind them: a one-time balance that
     /// spends like talk time but never refills.

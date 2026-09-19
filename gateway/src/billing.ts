@@ -42,7 +42,7 @@ export class TalkBilling {
    *  preflight tick, so an empty allowance surfaces BEFORE the greeting
    *  instead of granting a free minute per fresh session. */
   async preflight(): Promise<WallCode | null> {
-    return this.send(1)
+    return this.send(1, true)
   }
 
   start(): void {
@@ -82,7 +82,13 @@ export class TalkBilling {
    *  A transport failure puts the seconds back for the next flush — the
    *  idempotency key was already consumed by the attempt counter, so a
    *  retried batch can never double-bill. */
-  private async send(seconds: number): Promise<WallCode | null> {
+  /** `preflight` says this is the tick that OPENS a call, which is the one
+   *  the minimum-call floor is judged at: a free pool with under a minute
+   *  left cannot carry a conversation, so the server closes it here and the
+   *  tap answers with the paywall instead of a call that dies in seconds
+   *  (20260920180000). Mid-call ticks are never judged that way — that would
+   *  throw away time the learner still has. */
+  private async send(seconds: number, preflight = false): Promise<WallCode | null> {
     this.tickN += 1
     try {
       const r = await fetch(`${this.env.SUPABASE_URL}/functions/v1/talk-tick`, {
@@ -97,6 +103,7 @@ export class TalkBilling {
           seconds,
           session_id: this.sessionKey,
           language: this.language,
+          preflight,
         }),
       })
       if (r.status === 402) {

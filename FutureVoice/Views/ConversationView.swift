@@ -827,7 +827,13 @@ struct ConversationView: View {
             } message: {
                 Text(explain("Everything said so far is saved. Reconnect to carry on from where you were."))
             }
-            .alert("Something went wrong", isPresented: errorBinding) {
+            // The title follows what happened. This alert is the call
+            // screen's catch-all, so everything that lands in it inherits
+            // "Something went wrong" — and a spent pool is not a fault, it is
+            // the plan working as sold. Reported 2026-09-20, in those words.
+            .alert(outOfCredits ? explain("Your talk time is used up")
+                                : explain("Something went wrong"),
+                   isPresented: errorBinding) {
                 if outOfCredits {
                     Button("See plans") { error = nil; showingPaywall = true }
                 }
@@ -3567,7 +3573,22 @@ struct ConversationView: View {
     private func handleTalkPoolSpent() {
         outOfCredits = true
         guard turns.contains(where: { $0.role == .user }), !isEnding else {
-            error = explain("Your talk time is used up. This call is saved — you can pick it up again any time.")
+            // Nothing was said, so there is nothing to wrap up — and nothing
+            // went wrong either, which is what "Something went wrong" claimed
+            // until 2026-09-20. A free pool too small to carry a call is
+            // closed on the call's very first tick (20260920150000), so this
+            // is now the ordinary way a spent account meets the wall: the
+            // plans are the honest answer, and the call screen leaves with
+            // them. A subscriber's finished day never lands here — that is
+            // `dailyCapReached`, its own sheet.
+            Telemetry.log("talk_wall_before_speaking", ["turns": String(turns.count)])
+            realtime.hangUp()
+            phase = .idle
+            phoneCallActive = false
+            meter.stop()
+            CallNowPlaying.end()
+            closeAfterPaywall = true
+            showingPaywall = true
             return
         }
         freeCallSpent = true
