@@ -665,7 +665,11 @@ has one, and the harder half was everything that assumed spaces.
   Japanese and both correction prompts carry an ASR SCRIPT GUARD (appended
   at a line end so every other language's prompt is byte-identical). The
   correction highlight is per CHARACTER — segments are cut differently on
-  either side of a fix — so it reads くさ[かっ]た.
+  either side of a fix — so it reads くさ[かっ]た. The shadow diff and the
+  character timing alignment follow the same rule (`JapaneseMorph.soundSpelling`,
+  2026-09-18): a romaji name in the target (nawana) comes back from ja-JP as
+  ナワナ, so Latin runs are cut into kana and katakana/hiragana compare
+  equal — before this the app's own name was scored as a miss on every take.
 - **Shadowing cuts its timeline into WORDS too** (`WordSplitter.timingWords`
   — punctuation rides on the word before, an opening bracket on the word
   after, so the words joined give the line back, which is what the screen

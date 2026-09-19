@@ -101,6 +101,46 @@ final class JapaneseShadowTimingTests: XCTestCase {
                                     ShadowEngine.minMeasuredPairs)
     }
 
+    /// A romaji name inside a Japanese line: the target says nawana, the
+    /// ja-JP recognizer writes ナワナ, Gemini may write なわな. All three
+    /// are the word said right — never a miss.
+    func testLatinNameMatchesItsKanaSpelling() {
+        let target = "nawanaで毎日練習してる"
+        for heard in ["ナワナで毎日練習してる", "なわなで毎日練習してる", "Nawanaで毎日練習してる", "ﾅﾜﾅで毎日練習してる"] {
+            let a = ShadowEngine.analyze(target: target, learner: heard, language: "ja")
+            XCTAssertEqual(a.score, 100, heard)
+            XCTAssertTrue(a.steps.allSatisfy { $0.op == .match }, heard)
+        }
+        // And the other way round: a katakana target, a romaji transcript.
+        XCTAssertEqual(ShadowEngine.analyze(target: "ナワナで話そう", learner: "nawanaで話そう",
+                                            language: "ja").score, 100)
+        // A genuinely different word still isn't one.
+        XCTAssertLessThan(ShadowEngine.analyze(target: target, learner: "バナナで毎日練習してる",
+                                               language: "ja").score, 100)
+        // The karaoke colours by word: each word's tokens must account for
+        // the diff exactly, or `positionAlignment` colours nothing.
+        let words = WordSplitter.timingWords(target)
+        let spans = ShadowEngine.tokenSpans(for: words, language: "ja")
+        let ops = ShadowEngine.targetOps(ShadowEngine.analyze(
+            target: target, learner: "ナワナで毎日練習してる", language: "ja").steps)
+        XCTAssertEqual(spans.last?.upperBound, ops.count)
+    }
+
+    /// The same name on the timeline: the recognizer's ナワナ anchors the
+    /// target's nawana, so the word is timed, not shared out.
+    func testLatinNameAnchorsOnKanaSegment() {
+        let words = ["nawana", "で", "毎日", "練習", "し", "てる"]
+        let heard: [(text: String, start: Double, end: Double)] = [
+            ("ナワナで", 0.0, 0.8), ("毎日", 0.9, 1.3), ("練習してる", 1.4, 2.4),
+        ]
+        let t = LocalAlignment.alignByCharacters(expected: words, heard: heard, durationMs: 2500)
+        XCTAssertEqual(t.map(\.word), words)
+        XCTAssertTrue(t[0].isMeasured)
+        XCTAssertEqual(t[0].startMs, 0)
+        XCTAssertEqual(t[2].startMs, 900)
+        XCTAssertTrue(t[2].isMeasured)
+    }
+
     /// The drill card's playback trim finds a quoted fragment by words.
     func testDrillFragmentFindsItsSpan() {
         let turn = DrillStore.matchWords(of: "うん、でも洗濯が溜まって、とても面倒くさいでした。")

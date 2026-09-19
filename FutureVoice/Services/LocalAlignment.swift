@@ -169,18 +169,18 @@ enum LocalAlignment {
         var charRange: [Range<Int>] = []
         for word in expected {
             let start = expectedChars.count
-            expectedChars.append(contentsOf: normalized(word).map(String.init))
+            expectedChars.append(contentsOf: letters(of: word))
             charRange.append(start..<expectedChars.count)
         }
         var heardChars: [String] = []
         var spans: [(start: Double, end: Double)] = []
         var opensSegment: [Bool] = []
         for segment in heard {
-            let letters = Array(normalized(segment.text))
-            guard !letters.isEmpty else { continue }
-            let share = max(0, segment.end - segment.start) / Double(letters.count)
-            for (k, letter) in letters.enumerated() {
-                heardChars.append(String(letter))
+            let sounds = letters(of: segment.text)
+            guard !sounds.isEmpty else { continue }
+            let share = max(0, segment.end - segment.start) / Double(sounds.count)
+            for (k, letter) in sounds.enumerated() {
+                heardChars.append(letter)
                 spans.append((segment.start + share * Double(k), segment.start + share * Double(k + 1)))
                 opensSegment.append(k == 0)
             }
@@ -210,6 +210,14 @@ enum LocalAlignment {
             previousEnd = e
         }
         return out
+    }
+
+    /// The letters a character alignment compares, by SOUND — nawana,
+    /// ナワナ and なわな are the same three letters, because the target and
+    /// the recognizer each pick a script for a name and rarely the same one
+    /// (`JapaneseMorph.soundSpelling`).
+    private static func letters(of text: String) -> [String] {
+        JapaneseMorph.soundSpelling(normalized(text)).map(String.init)
     }
 
     /// Edit-distance alignment: for each expected word, the index of the

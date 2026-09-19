@@ -338,6 +338,55 @@ enum JapaneseMorph {
         return m as String
     }
 
+    /// `text` with every run of Latin letters written in katakana
+    /// (nawana → ナワナ), everything else untouched. What a shadow diff
+    /// DISPLAYS for a romaji name, since it has to be cut into kana to be
+    /// compared at all.
+    static func katakana(fromLatinIn text: String) -> String {
+        mapLatinRuns(text) { run in
+            let m = NSMutableString(string: run)
+            CFStringTransform(m, nil, kCFStringTransformLatinKatakana, false)
+            return m as String
+        }
+    }
+
+    /// One spelling per SOUND, for comparing what was said — never shown.
+    /// A Latin-spelled word inside Japanese (the app's own name, "nawana")
+    /// comes back from a ja-JP transcriber as ナワナ, from Gemini as ナワナ
+    /// or なわな, and sits in the target as nawana: the same three morae in
+    /// three scripts, and a letter-by-letter comparison scored every one of
+    /// them as a word the learner never said. Latin runs and katakana both
+    /// land on hiragana (width folded first, so ﾅﾜﾅ and ｎａｗａｎａ do too);
+    /// kanji passes through — its reading depends on the words around it,
+    /// which a per-character key can't see. ー is kept: it is the long vowel
+    /// in either kana.
+    static func soundSpelling(_ text: String) -> String {
+        let folded = mapLatinRuns(text.precomposedStringWithCompatibilityMapping.lowercased(),
+                                  hiragana(fromLatin:))
+        var out = String.UnicodeScalarView()
+        for s in folded.unicodeScalars {
+            if (0x30A1...0x30F6).contains(s.value), let h = Unicode.Scalar(s.value - 0x60) {
+                out.append(h)
+            } else {
+                out.append(s)
+            }
+        }
+        return String(out)
+    }
+
+    /// Applies `transform` to each maximal run of ASCII letters in `text`.
+    private static func mapLatinRuns(_ text: String, _ transform: (String) -> String) -> String {
+        var out = ""
+        var run = ""
+        for ch in text {
+            if ch.isASCII && ch.isLetter { run.append(ch); continue }
+            if !run.isEmpty { out += transform(run); run = "" }
+            out.append(ch)
+        }
+        if !run.isEmpty { out += transform(run) }
+        return out
+    }
+
     private static func isKana(_ ch: Character) -> Bool {
         ch.unicodeScalars.allSatisfy { (0x3041...0x30FF).contains($0.value) }
     }

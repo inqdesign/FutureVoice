@@ -40,7 +40,11 @@ enum ShadowEngine {
         let targetTokens = tokenize(expandForDiff(target, language: language), style: style)
         let learnerTokens = tokenize(expandForDiff(learner, language: language), style: style)
 
-        let (matches, steps) = align(targetTokens, learnerTokens)
+        // Japanese compares by sound: the transcriber picks the script
+        // (ナワナ / なわな), so a kana token is keyed in hiragana — the
+        // steps still carry what each side wrote.
+        let key: (String) -> String = language.hasPrefix("ja") ? JapaneseMorph.soundSpelling : { $0 }
+        let (matches, steps) = align(targetTokens, learnerTokens, key: key)
         let denom = max(targetTokens.count, learnerTokens.count)
         let raw = denom > 0 ? Double(matches) / Double(denom) : 0
         // Reanchor: 90+ excellent, 75 good, <60 noticeable. A pure
@@ -446,6 +450,12 @@ enum ShadowEngine {
             }
         }
 
+        // A romaji word in a Japanese line (nawana) is six letters on one
+        // side and three kana on the other — the ja-JP recognizer writes it
+        // ナワナ. Cut into kana on both sides so the morae line up; the
+        // hiragana/katakana difference is left to `analyze`'s key.
+        if language.hasPrefix("ja") { return JapaneseMorph.katakana(fromLatinIn: out) }
+
         guard language.hasPrefix("en") else { return out }
         // Irregulars first, then generic suffixes. "'s"/"'d" are ambiguous
         // (is/has, would/had) but expand identically on both sides, so the
@@ -503,8 +513,10 @@ enum ShadowEngine {
     /// match count and a step list traceable to the original (non-normalized)
     /// tokens — we keep both inputs as-tokenized so the rendered diff matches
     /// what the user actually sees.
-    private static func align(_ a: [String], _ b: [String]) -> (Int, [DiffStep]) {
+    private static func align(_ a: [String], _ b: [String],
+                              key: (String) -> String = { $0 }) -> (Int, [DiffStep]) {
         let n = a.count, m = b.count
+        let ka = a.map(key), kb = b.map(key)
         if n == 0 && m == 0 { return (0, []) }
 
         var dp = Array(repeating: Array(repeating: 0, count: m + 1), count: n + 1)
@@ -512,7 +524,7 @@ enum ShadowEngine {
         for j in 0...m { dp[0][j] = j }
         for i in 1...max(n, 1) where i <= n {
             for j in 1...max(m, 1) where j <= m {
-                if a[i-1] == b[j-1] {
+                if ka[i-1] == kb[j-1] {
                     dp[i][j] = dp[i-1][j-1]
                 } else {
                     dp[i][j] = 1 + min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1])
@@ -524,7 +536,7 @@ enum ShadowEngine {
         var matches = 0
         var i = n, j = m
         while i > 0 || j > 0 {
-            if i > 0 && j > 0 && a[i-1] == b[j-1] {
+            if i > 0 && j > 0 && ka[i-1] == kb[j-1] {
                 steps.append(DiffStep(op: .match, target: a[i-1], learner: b[j-1]))
                 matches += 1
                 i -= 1; j -= 1
