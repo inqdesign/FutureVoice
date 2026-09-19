@@ -487,18 +487,18 @@
         }
       }
     },
-    "Keep your daily talking streak alive." : {
+    "Keep your daily streak alive." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Halte deine tägliche Sprech-Serie am Leben."
+            "value" : "Halte deine tägliche Serie am Leben."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mantén viva tu racha de hablar a diario."
+            "value" : "Mantén viva tu racha diaria."
           }
         },
         "fr" : {
@@ -510,25 +510,25 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "毎日話す連続記録を続けましょう。"
+            "value" : "毎日の連続記録を続けましょう。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "매일 말하기 연속 기록을 이어가세요."
+            "value" : "매일 연속 기록을 이어가세요."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每天说一说，让连续天数延续下去。"
+            "value" : "每天学一点，让连续天数延续下去。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "每天說一說，讓連續天數延續下去。"
+            "value" : "每天學一點，讓連續天數延續下去。"
           }
         }
       }

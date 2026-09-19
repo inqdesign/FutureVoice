@@ -301,6 +301,10 @@ struct WatchView: View {
     /// (a replay, a new take) mints a new key, but a fully cached scene never
     /// reaches the server and so never spends one.
     @State private var sceneRunKey = UUID().uuidString
+    /// This run has put a scene in `PracticeLog` — once per view, on the
+    /// first line actually heard, so watching counts toward the streak
+    /// (`PracticeStats.activeDays`) whether or not the scene is finished.
+    @State private var loggedScene = false
 
     /// Today's Watch allowance is spent. Not a paywall: they already paid,
     /// and the answer is tomorrow.
@@ -814,6 +818,10 @@ struct WatchView: View {
                 } else if try await streamAndPlay(request) == false {
                     // Streaming unavailable — classic fetch-then-play.
                     try await playAndWait(try await loadOrSynthesize(request))
+                }
+                if !loggedScene {
+                    loggedScene = true
+                    PracticeLog.shared.record(.scene)
                 }
             } catch let capped where capped.isDayCapped {
                 // Out of today's allowance. Say so where the scene was going

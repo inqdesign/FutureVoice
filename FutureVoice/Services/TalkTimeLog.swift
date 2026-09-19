@@ -69,6 +69,21 @@ enum TalkTimeLog {
         load().values.reduce(0, +)
     }
 
+    /// Every day still in the log with any metered talk, in any language, as
+    /// local start-of-day dates. Only `keepDays` deep — the streak also reads
+    /// sessions for anything older.
+    static func activeDays(calendar: Calendar = .current) -> Set<Date> {
+        let f = DateFormatter()
+        f.calendar = calendar
+        f.timeZone = calendar.timeZone
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return Set(load().compactMap { key, seconds -> Date? in
+            guard seconds > 0, let date = f.date(from: String(key.prefix(10))) else { return nil }
+            return calendar.startOfDay(for: date)
+        })
+    }
+
     /// Distinct local days with any metered talk, within the log's window.
     static func daysWithTalk() -> Int {
         Set(load().filter { $0.value > 0 }.keys.map { String($0.prefix(10)) }).count

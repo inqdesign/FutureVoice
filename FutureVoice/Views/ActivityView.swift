@@ -650,9 +650,13 @@ struct ActivityView: View {
             byDay[cal.startOfDay(for: session.endedAt ?? session.startedAt), default: []].append(session)
         }
 
+        // The streak's own definition of an active day — any language, any
+        // activity — so the lit run on this calendar IS the streak.
+        let studied = PracticeStats.activeDays(calendar: cal)
+
         var days = Set(byDay.keys)
         days.formUnion(cardStore.recordedDays().map { cal.startOfDay(for: $0) })
-        days.formUnion(loggedDays())
+        days.formUnion(studied)
 
         var seconds: [Date: Int] = [:]
         var study: [Date: Int] = [:]
@@ -664,10 +668,9 @@ struct ActivityView: View {
 
         // Shaded and counted only where practice actually happened. Being in
         // `days` is a weaker claim — a day can hold a photo, or nothing but
-        // foreground time, and neither is a rep.
-        activeDays = days.filter {
-            (seconds[$0] ?? 0) > 0 || byDay[$0] != nil || reps(on: $0) > 0
-        }
+        // foreground time, and neither is a rep. A frozen card's talk minutes
+        // still light a day the meter has since pruned.
+        activeDays = studied.union(days.filter { (seconds[$0] ?? 0) > 0 })
         minutesByDay = seconds.mapValues { $0 / 60 }
         talkSecondsByDay = seconds
         studyMinutesByDay = study.mapValues { $0 / 60 }
@@ -678,7 +681,7 @@ struct ActivityView: View {
         // "days with any session", which was a third definition of streak
         // alongside PracticeStats' and the Core's — three numbers, one word.
         currentStreak = PracticeStats.snapshot().streakDays
-        longestStreak = longestStreak(in: metDays())
+        longestStreak = longestStreak(in: studied)
         // Land with a day already open so the detail card is present from the
         // start (no first-tap height jump): today if active, else most recent.
         if selectedDay == nil {
@@ -686,29 +689,6 @@ struct ActivityView: View {
             selectedDay = days.contains(today) ? today : days.max()
         }
         loadCellPhotos()
-    }
-
-    /// How far back the rolling logs keep a day — `TalkTimeLog` and
-    /// `AppUsageLog` both prune at 45.
-    private static let logWindowDays = 45
-
-    /// Days the LOGS know about, whether or not a talk was ever saved.
-    ///
-    /// A call closed with "Close without saving" leaves no `Session` — but it
-    /// was metered, and the home ring counts it. This page built its whole
-    /// calendar out of sessions, so such a day fell out of the grid, out of
-    /// the month total, and out of reach of its own card: the summary read
-    /// "no practice" for an afternoon the ring had just reported 8 minutes of.
-    private func loggedDays() -> Set<Date> {
-        let today = cal.startOfDay(for: Date())
-        return Set((0..<Self.logWindowDays).compactMap { back -> Date? in
-            guard let day = cal.date(byAdding: .day, value: -back, to: today) else { return nil }
-            return TalkTimeLog.seconds(on: day) > 0 || reps(on: day) > 0 ? day : nil
-        })
-    }
-
-    private func reps(on day: Date) -> Int {
-        PracticeLog.shared.day(day)?.total ?? 0
     }
 
     /// Foreground time, never less than the talk time — `DayCardData.make`'s
@@ -735,18 +715,6 @@ struct ActivityView: View {
         let metered = TalkTimeLog.seconds(on: day)
         if metered > 0 { return metered }
         return (cardStore.snapshot(for: day)?.talkMinutes ?? 0) * 60
-    }
-
-    /// Days that COUNT toward a streak — over the Core's bar, in the language
-    /// being practised. `activeDays` is a different set (any session at all)
-    /// and is still what the calendar shades, because the calendar is a record
-    /// of what happened, not of what qualified.
-    private func metDays() -> Set<Date> {
-        let language = CoreClubService.activeLanguage()
-        let bar = CoreClubService.dailyBarSeconds()
-        return Set(activeDays.filter {
-            TalkTimeLog.seconds(on: $0, language: language) >= bar
-        })
     }
 
     private func longestStreak(in days: Set<Date>) -> Int {

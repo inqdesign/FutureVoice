@@ -141,17 +141,16 @@ struct StudyProgressSnapshot: Codable {
     var updatedAt: Date
     var todaySeconds: Int         // metered talk seconds today, all languages
     var goalMinutes: Int          // the daily goal (minutes)
-    var streakDays: Int           // consecutive days over the Core bar, in the active language
+    var streakDays: Int           // consecutive days studied or used, any language
     var dueCount: Int             // SRS cards due right now
     var studyingWords: Int        // notebook words being studied
     var studyingExpressions: Int  // bookmarked phrases being studied
-    /// Whether today already cleared the Core bar in the language being
-    /// practised — the streak's own rule, decided app-side by the same
-    /// predicate that computes `streakDays`. It is NOT `todaySeconds >=
-    /// goalMinutes`: the goal is the learner's ring, the bar is what makes a
-    /// day count, and the streak widget judging by the goal put a "you're
-    /// about to lose it" face on a streak that had already been extended.
-    /// The two inputs don't even match — `todaySeconds` pools every language.
+    /// Whether today already counts toward the streak — the streak's own
+    /// rule (`PracticeStats.studied`: anything studied or used today),
+    /// decided app-side by the same predicate that computes `streakDays`. It
+    /// is NOT `todaySeconds >= goalMinutes`: the goal is the learner's ring,
+    /// and the streak widget judging by the goal put a "you're about to lose
+    /// it" face on a streak that had already been extended.
     var metToday: Bool
 
     static let empty = StudyProgressSnapshot(

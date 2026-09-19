@@ -6,7 +6,7 @@ import Foundation
 enum PracticeStats {
 
     struct Snapshot {
-        var streakDays: Int                 // consecutive days over the Core bar, in the active language
+        var streakDays: Int                 // consecutive days studied or used, any language
         var totalSessions: Int
         var lastScorecard: SessionScorecard?
         var lastSessionEndedAt: Date?
@@ -308,26 +308,21 @@ enum PracticeStats {
 
     // MARK: - Helpers
 
-    /// Consecutive days over the Core's daily bar, in the language being
-    /// practised.
+    /// Consecutive days the learner studied or used the app — any language,
+    /// any activity.
     ///
-    /// This used to be "consecutive days with at least one ended session",
-    /// computed from `SessionStore`. That made a ten-second session keep a
-    /// streak alive, pooled every language together, and — once the Core
-    /// shipped its own streak — put two different numbers called "streak" in
-    /// front of the same learner, on Home and on the Core page, differing on
-    /// the bar, the language and the day boundary. Two streaks is not a
-    /// display bug; it is the app disagreeing with itself about what counts.
+    /// Until 2026-09-19 this was the Core's rule: a day counted only when the
+    /// METERED talk seconds in the active language cleared
+    /// `CoreClubService.dailyBarSeconds` (240 s of speech, which is 8–10 min
+    /// on the clock). It was unified with the Core so two numbers called
+    /// "streak" couldn't disagree, but the Core's bar is hard on purpose (it
+    /// guards a 100-seat club) and on Home it read as a punishment: a day of
+    /// reviews, shadowing and a scene went to zero, and so did a day spent in
+    /// the other language. The Core keeps its bar and its own number on its
+    /// own page (`core_my_progress`); this one asks only whether the learner
+    /// showed up, and is exactly the Activity calendar's lit run.
     ///
-    /// So there is one rule now, and it is the Core's: a day counts when the
-    /// METERED talk seconds for that language clear `dailyBarSeconds`.
-    ///
-    /// Read from `TalkTimeLog`, not from sessions, for the same reason the
-    /// ring reads it — session spans are not talk time. One knowingly
-    /// remaining difference from the server's copy: days here are LOCAL and
-    /// the server pools UTC, so around midnight the two can be a day apart
-    /// before they agree again. Local is right for a habit; the alternative
-    /// is a streak that turns over at 9am.
+    /// Days are LOCAL — a habit turns over at the learner's midnight.
     /// The streak as it stood at the end of `day` — the day card's number for
     /// any day the Activity page can select, computed by the same rule as
     /// the chip on Home.
@@ -335,18 +330,38 @@ enum PracticeStats {
         computeStreak(now: day, calendar: calendar)
     }
 
-    /// Did `day` clear the Core's daily bar in the language being practised?
-    /// The one predicate the streak is built from — anything that needs to
-    /// say "today counts" (the streak widget's face, for one) asks THIS,
-    /// never the learner's own daily goal. The goal fills a ring; the bar
-    /// decides a day.
-    static func metCoreBar(on day: Date = Date()) -> Bool {
-        TalkTimeLog.seconds(on: day, language: CoreClubService.activeLanguage())
-            >= CoreClubService.dailyBarSeconds()
+    /// Every day the learner studied or used the app, as local start-of-day
+    /// dates: metered talk in any language, a talk they spoke in (any
+    /// language), or any rep in `PracticeLog` — a card, a word, a phrase, a
+    /// shadow take, a Watch scene. Opening the app is NOT enough: foreground
+    /// time (`AppUsageLog`) is deliberately absent, or checking the streak
+    /// would keep it alive.
+    ///
+    /// The ONE definition of an active day: the streak is walked over it and
+    /// the Activity calendar lights exactly these tiles.
+    static func activeDays(calendar: Calendar = .current) -> Set<Date> {
+        var days = PracticeLog.shared.activeDays(calendar: calendar)
+        // The meter covers a call closed with "Close without saving", which
+        // leaves no Session. It keeps 45 days; sessions and the practice log
+        // keep everything, so an older streak is still counted in full.
+        days.formUnion(TalkTimeLog.activeDays(calendar: calendar))
+        for session in SessionStore.shared.loadAcrossLanguages() {
+            for turn in session.turns where turn.role == .user {
+                days.insert(calendar.startOfDay(for: turn.timestamp))
+            }
+        }
+        return days
+    }
+
+    /// Did the learner study or use the app on `day`? What the streak
+    /// widget's face asks — "today counts" means this, never the daily goal.
+    static func studied(on day: Date = Date(), calendar: Calendar = .current) -> Bool {
+        activeDays(calendar: calendar).contains(calendar.startOfDay(for: day))
     }
 
     private static func computeStreak(now: Date, calendar: Calendar) -> Int {
-        func met(_ day: Date) -> Bool { metCoreBar(on: day) }
+        let days = activeDays(calendar: calendar)
+        func met(_ day: Date) -> Bool { days.contains(day) }
 
         var streak = 0
         var cursor = calendar.startOfDay(for: now)

@@ -128,6 +128,21 @@ that every learner reads 0 each morning and the 00:05 UTC settlement sees
 nobody qualified at all. The UI shows numbers only — no grid; don't bring one
 back to "show progress", the progress is the number.
 
+**The Home streak is NOT the Core's streak** (2026-09-19, user decision). From
+2026-08 to this date they were one rule (Core bar, active language, metered
+talk only), so the two numbers couldn't disagree — and on Home that rule read
+as a punishment: a day of reviews, shadowing and a scene, or a day in the other
+language, reset it to 0. Now `PracticeStats.activeDays` is the whole
+definition: metered talk in ANY language, a talk the learner spoke in, or any
+`PracticeLog` rep (cards, words, phrases, shadow takes, and Watch scenes via
+`sceneReps`, logged on a scene's first heard line). Opening the app is not
+enough — `AppUsageLog` is deliberately left out. Home, the widget
+(`metToday` = `PracticeStats.studied()`), the day card and the Activity
+calendar all read it; the calendar's lit run IS the streak. The Core keeps
+its hard bar and its own server-computed number on its own page — don't
+re-merge them, and don't harden the Home one back toward the bar. No grace day
+yet; add one here, not in the Core.
+
 - **The badge IS the seat** (`CoreSeal`, 2026-08-18): one glyph, `seal.fill`,
   drawn only for a member seated right now. It used to have a second state —
   outlined `seal` for qualified-but-seatless, so the thirty days could never be
