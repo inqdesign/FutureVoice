@@ -16,6 +16,96 @@ Tab order: **Talk · Watch · Practice · Progress** (`RootTabView`) — do → 
 - **Progress** (`ProgressTab`) — measured CEFR estimate + per-skill pages behind swipeable chip tabs, plus the activity/effort panel (14-day rep bars).
 - **Home-screen widgets** (`FutureVoiceWidget` target) — TWO widgets in one bundle, one per `StudyWidgetSection`: a **Vocabulary** widget (notebook `studying` words + recent used, CEFR tag, taps `futurevoice://vocab`) and an **Expressions** widget (`VocabStore.expressionEntries()`, taps `futurevoice://expressions`). Both are list widgets whose window slides every 30 min. App-side `StudyWidgetRefresher` writes a per-section snapshot into the App Group on every `DrillStore`/`VocabStore` write and at scene-phase edges; the extension only reads. App-side `StudyWidgetRefresher` writes a snapshot into the App Group (`group.com.roro.futurevoice`) on every `DrillStore`/`VocabStore.studying` write and at scene-phase edges; the extension only reads. The shared contract `FutureVoice/Shared/StudyWidgetShared.swift` compiles into BOTH targets — keep it free of Models.swift/store imports. Widget tap deep-links `futurevoice://practice` (handled in `RootTabView`). The widgets speak the app language, not the phone's — see "UI text has ONE language" below.
 
+## Sync between the learner's own devices (iCloud, opt-in) — 2026-09-18
+
+A phone and a tablet must feel like ONE app: a talk on the phone is on the
+tablet's Practice shelf, its cards in the tablet's deck, the ring reads the
+same, and a review on the tablet moves the phone's deck. Everything under
+`FutureVoice/Services/Sync/`. Decided the same day it was built, and the
+reasons are the design:
+
+- **CloudKit, the learner's OWN iCloud** — not Supabase. Audio is a
+  gigabyte per learner and it's their storage, not ours; nothing they said to
+  their future self lands on our servers. iPhone people own Apple devices;
+  Android gets its own transport later on the SAME merge rules.
+- **Opt-in, default OFF**, Me → Devices (`SyncSection`). It spends their
+  iCloud and a sync bug can damage data, so single-device learners are
+  untouched. `SyncStore.isEnabled` is keyed per APP ACCOUNT (a family iPad
+  can hold two). Never sync an anonymous session. **Turning it off deletes
+  nothing anywhere**; "Delete from iCloud" is a separate confirmed button.
+- **Audio goes too** (user: "a few GB of iCloud is fine"). Items first, audio
+  after, so a second device is useful within a minute. Blob uploads are
+  Wi-Fi only unless the Me toggle says otherwise.
+- **The second device asks** (`SyncContinuePromptView`, `RootView` after the
+  auth gate and before setup): a signed-in, un-set-up install whose account
+  already has a zone is offered "Continue where you left off?" once per
+  account per install. Yes = enable + first pull, then `setupComplete`
+  from the pulled persona; no = the toggle waits in Me.
+- **`BackupService` stays for dev↔release moves only.** It overwrites whole
+  files; alternating two devices through it loses whatever overlapped.
+
+**How it works — read this before touching any store's write path.**
+
+- **One record per ITEM, one merge rule per KIND** (`SyncKindRegistry`).
+  Never a whole file: two devices rewriting `sessions.json` would overwrite
+  each other. Talks union by id (newer edit wins, deletion wins outright and
+  cascades to cards + turn audio); cards take the HIGHER progress per field
+  (`mergeCards`: box, timesSeen, usedInTalkAt) then `DrillStore.keeper`
+  collapses duplicate sentences; word/expression records climb only
+  (used > known, count = max); notebook membership, snoozes, hand-removals
+  are last-writer-wins; dismissed expressions are a permanent union;
+  per-day counters take the MAX per day, never the sum; persona scalars LWW
+  on `updatedAt`, its notes union on `dedupeKey`; `enrolledLanguages` is a
+  union. `SyncMerge` holds the four shapes (lww / tombstoneWins /
+  combineOrNewerDelete / union) — add a kind by picking one, not by writing
+  a fifth.
+- **Change detection is a DIFF, not instrumentation.** Stores rewrite whole
+  files; the engine fingerprints each item (`SyncCanonical` — sorted keys,
+  ISO dates; the stores' own encoders are NOT stable across launches) and
+  compares against `SyncIndex` (`Documents/sync/<userId>/`, excluded from
+  backups). A key in the index but not in the file is a deletion → a
+  TOMBSTONE record (`deletedAt`), kept forever; a missing record is never
+  a deletion. Write funnels only call `SyncEngine.noteChanged(.kind)` to
+  debounce a push (3 s); the foreground pass diffs everything anyway, so a
+  forgotten hook self-heals.
+- **Loop guard:** a pull updates the index to the MERGED result BEFORE
+  writing the file, so the next diff sees nothing to push; `needsPush` is
+  the one flag that forces a push when the merge produced something the
+  server lacks. Tested: `testPullDoesNotPingPong`.
+- **Reads and writes go by PATH** (`Documents/lang/<code>/…`), never through
+  the singletons — those are pinned to the active language, and a pull for
+  another language still has to land. After a write the handler pokes the
+  store (`SessionStore.invalidateCache`, `VocabStore.languageScopeDidChange`,
+  `PracticeLog.reloadFromDisk`) and `AppState.adoptSyncedChanges` re-reads
+  the published copies. `Turn.audioURL` (an absolute sandbox path) is
+  stripped from the payload; every reader falls back to `TurnAudioStore`.
+- **CloudKit facts baked in** (`CloudKitTransport`, the only file that sees
+  `CKRecord`): one custom zone per account (`nawana-<supabaseUserId>`);
+  `recordName` hashes the key because a lemma isn't ASCII; two record types
+  (`Item` / `Blob`) so a change fetch can list blobs with `desiredKeys`
+  minus the asset — otherwise the second device's first pull downloads the
+  whole gigabyte before showing a single talk; payloads over 900 KB ride in
+  an asset; `systemFields` (the change tag) is carried in the index and
+  re-saved with `.ifServerRecordUnchanged` — a stale tag is `.conflict`, never
+  resolved inline: the next pull merges the server's copy. `zoneMissing`
+  (deleted from another device or Settings) switches sync OFF locally and
+  keeps every file; `quotaExceeded` pauses only the blobs. Dev and release
+  use DIFFERENT containers (`$(ICLOUD_CONTAINER)` per config, mirrored into
+  Info.plist as `FVICloudContainer`) for the same reason the bundle ids
+  differ. Before a release the `Item`/`Blob` schema must be deployed to
+  Production in CloudKit Dashboard — Development is JIT, Production is not.
+- **`SyncSchema.version`**: bump it on any payload change an older build
+  could not read harmlessly. A record from a newer build is applied if it
+  decodes and FROZEN in the index either way (never pushed back, never
+  tombstoned) — the day an old phone quietly deletes what a new one wrote is
+  the day sync is uninstalled.
+- **Never synced:** every cache (PhraseAudio, DrillEnrichment, topics, news,
+  translations, openers), the daily call (two devices must not ring at once),
+  consent, `voice_sample.wav`, and `BackupService.excludedDefaults`.
+- Tests: `SyncTests` runs two engines over `InMemorySyncTransport` as two
+  devices (`SyncFiles.documentsOverride`) — convergence, deletion cascade,
+  conflict → next pass, no ping-pong, blobs as assets.
+
 ## Find people (shared persona pool)
 
 Watch's People row is your OWN people. The tab header's `person.2` opens the
@@ -417,7 +507,17 @@ old rule (used once → +2 boxes, minimum 3) is gone: a spoken line is not
 "probably known", it is known. Don't re-add a partial credit. **The call's
 chip row leads with the known-but-unconfirmed items** (`TalkGoalPicker.pick`,
 `claimedKnown`, drawn as an empty checked circle): a claim is what the call is
-there to check, so it goes in front of the notebook.
+there to check, so it goes in front of the notebook. **Only a claim made on a NOTEBOOK item
+counts** (2026-09-21, user decision, `Record.fromStudying`): "I know it" on a
+word browsed in a level list, or "Got it" on a core-list top-up dealt for the
+first time, was never studied and is not worth a chip — the user: "just saying
+I know it in the word list means nothing". `markKnown` / `setKnownExpression`
+stamp the flag when the item is in `studying` / `studyingExpressions` at that
+moment; `unconfirmedKnownWords/Expressions` require it, so the chip row and the
+wrap-up's known-word carryovers agree. Verdicts from before the flag read as
+not-from-the-notebook. Same day: `addExpression` ("Save to expressions")
+wrote a `.known` row, filing "study this later" as "I know this" — it is a
+bookmark now.
 
 **"You used what you practiced" may only list what was PRACTICED**
 (2026-09-16, from a real wrap-up that read "nawana · app · english · setup ·
@@ -909,6 +1009,38 @@ screen and stone deaf.
   hint under the pill can say "paused" rather than leaving a quiet screen
   unexplained.
 
+## The accent is a remix, and the remix must stay the speaker (2026-09-18)
+
+`VoiceAccentSheet` remixes the clone upstream (`elevenlabs-voice-remix` →
+`/v1/text-to-voice/{id}/remix`) and saves the picked take as a NEW voice; the
+clone it came from is then deleted like any outgoing voice. Three rules,
+each from a way the voice stopped sounding like the learner:
+
+- **`prompt_strength` is sent, and it is low** (`VoiceAccentCatalog.promptStrength`).
+  It is the upstream knob for how far a remix may leave the reference audio
+  (0 keeps the recording, 1 keeps the prompt); the first version sent nothing
+  and let upstream choose, while the prompt text asked for "this exact same
+  voice" — a request, against a parameter. Retune it by ear with
+  `scripts/voice-remix-probe.sh` (same prompt and sample text as the app, one
+  file per strength), never by feel, and probe an UN-remixed clone or the
+  probe measures drift on drift. The value rides into the ledger row's
+  metadata so a complaint can be read against the strength it was made with.
+- **Takes always come from the un-accented clone.** A second pick used to
+  remix the live voice, i.e. the previous remix, and the learners who tried
+  hardest to find themselves (three and four saves in a row in the ledger)
+  drifted furthest. With an accent live, `choose` first rebuilds the clone
+  from the phone's saved recording (`regenerateVoiceClone`, the same path as
+  "Remove accent"), then remixes that. Leaving without applying leaves the
+  learner on the un-accented voice — `rebuiltWithoutApply` makes the sheet
+  tell its presenter so on ANY exit, because onboarding's greeting audio still
+  belongs to the old voice.
+- **The recording is the only way back, and it lives on the phone.**
+  `VoiceSampleStore` (Documents, so it rides in the backup) is what "Remove
+  accent" and the rebuild above read. The server copy in `voice-originals`
+  is NOT a fallback for this: it is kept for 24 h to listen to a clone that
+  came out wrong, and the consent screen says exactly that. A remixed voice's
+  `voice_clones` row has no `original_path` of its own.
+
 ## The voice is heard BEFORE the sign-up (2026-08-18)
 
 Onboarding used to ask for an account between "use this voice" and the clone —
@@ -949,7 +1081,7 @@ had never heard. What the server needs is a **session**, not an account.
 - **Prompt templates** → `ConversationEngine.swift` (conversation + summary), `ShadowEngine.swift`, `WeeklyReportEngine.swift`, `TopicEngine.swift`, `DrillEnrichmentEngine.swift`. The shared two-language preamble every coaching prompt splices in lives in `CoachingLanguage.swift` — see "Two languages" below.
 - **HTTP** → `GeminiClient.swift` and `ElevenLabsClient.swift` only. Both route through Supabase Edge Functions (`supabase/functions/`) so the app never holds raw provider keys. `ClaudeClient.swift` is a dead transport (no call sites) — don't wire new features to it.
 - **Persistence** → JSON-on-disk stores in `Services/` (`SessionStore`, `DrillStore`, `ProfileStore`, `PersonaStore`, …), all following the same pattern. Supabase tables exist for auth/voice-clone/subscriptions (`supabase/migrations/`).
-- **Billing** → minutes-NATIVE since 2026-08-11 (**pool SHAPE and tier NAMES in this paragraph are superseded by the two bullets below** — daily allowances became monthly pools on 2026-08-20, and Plus's talk pool was removed entirely on 2026-08-21; kept because the metering, the 402s and the idle rule are all still exactly as described) (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isLightPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals.
+- **Billing** → minutes-NATIVE since 2026-08-11 (**pool SHAPE and tier NAMES in this paragraph are superseded by the two bullets below** — daily allowances became monthly pools on 2026-08-20, and Plus's talk pool was removed entirely on 2026-08-21; kept because the metering, the 402s and the idle rule are all still exactly as described) (`20260811160000_minutes_native`, `docs/launch-billing.md`): the unit is **seconds of synthesized talk** — "credit" survives only in table/RPC/field NAMES. `user_credits.balance` = a FREE user's one-time seconds pool (signup grant 3960 s); subscribers have no balance — an entitled `user_subscriptions` row buys `subscription_plans.daily_seconds` per day (Daily `daily_*` 300 s, Unlimited `unlimited_*` 3600 s, resets midnight UTC), enforced by `consume_metered_seconds`. Talk = call time (`talk-tick`) and is the ONLY thing that spends `daily_seconds`. **Idle seconds are not charged since 2026-08-18**: `TalkMeter` polls `isBillable` once a second and only accumulates seconds where the fluent self is speaking, a reply is generating, or the learner's voice was heard within `voiceGraceSeconds` (6 s, wide enough to cover the longest end-of-turn wait) — a screen left open used to bill silence, minutes at a time. The predicate lives in `ConversationView.isBillableMoment` because only the call screen knows what is happening; a meter with none set bills every second, which is the old behaviour. **Watch left the talk meter on 2026-08-14** (`20260814100000_watch_scenes_by_count`): scenes are metered by COUNT against `subscription_plans.daily_scenes` (Daily 2/day, Unlimited 20/day fair-use), claimed once per scene by `begin_scene_play(user, scene_key)` — the client sends ONE key for every line of a scene, so a long scene costs one count and a scene in progress is never cut off. Sharing the pool meant buying "5 min of talk" and getting three on any day with Watch use; a count also costs ~half what the seconds did, since scene audio is on `fidelityModelId` (~2x/char). Everything else is free behind daily caps. Three 402s: `insufficient_credits` → paywall, `daily_cap_reached` (talk) and `scene_cap_reached` (Watch) → NEVER a paywall. **Since 2026-08-18 those two cap alerts split by TIER**: a **Daily** subscriber is offered Unlimited ("keep going today"), an **Unlimited** one is told to come back tomorrow — there is nothing left to sell them, so for that account the answer really is tomorrow. The 402 body carries no tier, so the branch is `AccountStatus.isLightPlan`, resolved client-side (`canUpgradePlan` in `ConversationView` / `WatchView`); both live in their OWN alert, never the error one, because a finished day is not a failure. Keep plan SIZES out of that copy — the client doesn't know Unlimited's numbers and a hardcoded "20 scenes" goes stale silently. **Enrolling extra practice languages is NOT gated** (decided 2026-08-17, after a gate was built and reverted): every pool — `consume_metered_seconds` `(user_id, day, action)`, `record_free_usage` `(user_id, day, purpose)` — is keyed per ACCOUNT with no language in it, so a second language adds zero cost; someone splitting 5 minutes across three languages is spending their own time, and the day's cap is what converts them. Don't put a plan check on `AddLanguageSheet`. **Hard paywall since 2026-08-11** (`20260811180000_hard_paywall_trial`): new signups get a credit row at ZERO — no free pool — so the first talk hits the paywall; the voice clone and the ≤120-char onboarding greeting stay free as the entry ticket. A subscription in `trialing` is metered at the DAILY allowance (300 s/day) whatever plan it trials, so a 7-day Unlimited trial can't burn 60 min/day for free. Existing beta balances are untouched. Don't price anything new in credits, and don't grant on webhook renewals. **The FIRST CALL is free since 2026-09-18** (`20260918100000_first_call_is_free`): the signup grant is 300 s — one conversation, never refilled — because the launch week measured the wall in the wrong place. Of 37 signups, 37 cloned their voice and 36 reached the Talk tab, but only 23 ever started a call; 13 of the 14 who stopped had no subscription row and left within two minutes, having never heard the fluent self answer them. The trial rows said it from the other side: median talk of the people who turned auto-renew off was ~2 min against ~25 min for those who left it on. So the paywall now arrives AFTER that call's summary (`ConversationView.firstCallPitchShown`, asked at most once per install and skipped for an entitled account), and `OnboardingPaywallView` steps aside on its own while the grant is unspent — it already declines to pitch anyone `BillingGate` doesn't block. This is not the old free pool coming back: 300 s buys one call at the measured 3.5-minute mean, and every other free surface is unchanged. **When the pool runs out MID-CALL, the call wraps ITSELF up** (2026-09-18, `handleTalkPoolSpent`): the 300 s are SPOKEN seconds — silence is free (see the idle rule), so on the clock the free call runs 10–18 min (one caller: 23:39→23:57, 288 s billed) — and on its first day the wall raised the error alert and waited for End; a 42-turn first caller never pressed it, so no summary, no book, no pitch (the pitch hangs off the summary sheet's Done), and they left for Watch and never subscribed. Now the gateway HOLDS the wall until the playing line's `audio_end` (`CallSession.wall`, 20 s cap) and the client holds it again until the player drains (`RealtimeTalkClient.heldWall`, 15 s cap) — "sent" is not "heard", and `error` is the client's teardown, which stops the player — then `endSession()` runs by itself with the board's banner saying why, and the summary sheet's Done pitches the plans EVEN IF the pitch was made once (`freeCallSpent`): this time it is the answer to "what now". A wall with no learner turn behind it keeps the old alert; there is nothing to wrap up.
 - **Allowances are MONTHLY POOLS, and the tiers are Light / Plus** (2026-08-20, `20260820180000_monthly_pools_light_and_plus`). Like a mobile data plan: **Light 150 min talk + 60 Watch scenes per billing period, Plus 120 scenes and no talk ceiling** (Plus's scene pool was 600 until `20260823140000_plus_scene_count` — 20 a day, $114/mo of upstream cost against $17 net; its `monthly_seconds` is descriptive since `20260821120000`), and **no daily limit of any kind** — spend the month in one call if you want. `daily_seconds`/`daily_scenes` are DESCRIPTIVE only now (the "5 minutes a day" figure the cards print); `monthly_seconds`/`monthly_scenes` are enforced, counted from `billing_period_start()` — the BILLING period, not the calendar month, because that's the month they paid for. Trial is pro-rated 7/30 so a week's sample can't spend a month. **Four designs shipped and were replaced in one day getting here** (daily-only → a bank of unused days → a rolling 7-day window → this); the bank double-spent idle days by +40% because nothing debited them, and the window was correct but took three migrations and still couldn't be explained in a sentence. **Do not re-derive a daily cap, a bank, or a rolling window.** The old objection to a monthly pool — fill rate, since this tier's margin came from unspent allowance — was retired by the pricing principle, not out-argued. What survives from it: a month-long balance must not become a meter, so the figures live one tap away in Me and the home shows an arc with no digits.
 - **Plus has NO talk pool at all** (2026-08-21, `20260821120000_plus_talk_unlimited`). Watch keeps its count on every tier; talking is uncapped on Plus and only on Plus. **The two sides differ for one reason and it is not a compromise: a scene plays itself on a TAP, so an idle afternoon can farm a month of them — and each is billed to us on `fidelityModelId` at ~2x per character — whereas talking costs the learner EFFORT, and nobody speaks for six hours.** Effort is a limiter no ceiling improves on, so the 1,800-minute pool was doing no work while charging us the thing it was meant to protect: a subscriber rationing the one activity the product exists for. `subscription_plans.talk_unlimited` is the switch (a COLUMN, so restoring the ceiling is one `UPDATE`, not a migration); `consume_metered_seconds` gained an entitled-and-uncapped path, because nulling `monthly_seconds` means "no plan" and would have dropped Plus into `charge_credits` against a balance it doesn't have. **The effort argument holds only while the meter charges for SPEECH** — `TalkMeter.isBillable` + `ConversationView.someoneIsTalkingHere()` are what make that true; weaken them and this becomes an open tab. A TRIAL is never uncapped. Usage is still recorded in full, deliberately: no account has ever run without a talk ceiling, so the number can be re-derived from behaviour instead of estimated. **`monthly_seconds` on Plus is now descriptive only** — nothing enforces it, and nothing user-facing prints it.
 - **Plus never counts anything DOWN** (2026-08-21). A remainder is a monthly receipt for time NOT used; it reads as money wasted and is the likeliest thing to end the subscription. So: no avatar ring on Home (`ConversationHome.headerControl`, and the accessibility label follows it — never announce a gauge that isn't drawn), and Me reports what was SPENT (`AccountStatus.talkTimeLabel` → "55 min talked this month"). Light keeps the fraction, because 150 minutes is a number that account actually meets, and how they spend it — all today or across the month — is their business.
