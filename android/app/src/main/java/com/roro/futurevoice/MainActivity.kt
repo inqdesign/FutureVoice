@@ -33,6 +33,14 @@ class MainActivity : ComponentActivity() {
         Supa.client.handleDeeplinks(intent)
         DailyCallInbox.deliver(intent)
         DeepLinkInbox.deliver(intent)
+        // Screenshot harness: only the `capture` build type answers; every
+        // other build gets null and starts normally.
+        val capture = com.roro.futurevoice.capture.CaptureRouter
+            .content(this, intent.getStringExtra("capture"), intent.getStringExtra("lang"))
+        if (capture != null) {
+            setContent { FutureVoiceTheme { Surface(Modifier.fillMaxSize()) { capture() } } }
+            return
+        }
         setContent {
             FutureVoiceTheme {
                 Surface(Modifier.fillMaxSize()) { RootScreen() }

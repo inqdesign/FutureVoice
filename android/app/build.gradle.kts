@@ -64,6 +64,17 @@ android {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        // Screenshot harness (`-capture <mode>`, the same names as iOS's
+        // DebugCaptureHarness). A SEPARATE app id, so it installs beside the
+        // dev app with its own empty sandbox: the harness seeds sample data
+        // into the real stores, and doing that inside the signed-in dev app
+        // would overwrite a real account's talks — and could publish the
+        // sample persona to the public pool. Never uploaded anywhere.
+        create("capture") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".capture"
+            matchingFallbacks += "debug"
+        }
     }
 
     compileOptions {
