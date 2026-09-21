@@ -27,6 +27,11 @@ struct VoiceAccentSheet: View {
     @State private var confirmingRemove = false
     @State private var playingId: String?
     @State private var error: String?
+    /// The live voice was rebuilt from the recording on the way to a new
+    /// set of takes (see `choose`) and nothing has been applied since — so
+    /// leaving now leaves the learner on the un-accented clone, and the
+    /// presenter has to be told the voice changed.
+    @State private var rebuiltWithoutApply = false
 
     private var options: [VoiceAccent] {
         VoiceAccentCatalog.options(for: appState.targetLanguage)
@@ -62,6 +67,14 @@ struct VoiceAccentSheet: View {
                 // way back is the one thing on this screen that can't be
                 // undone by tapping something else.
                 if canRemoveAccent { removeAccentSection }
+            }
+            // Any exit — Cancel, a swipe, the parent going away — after a
+            // rebuild that nothing was applied on top of: the live voice is
+            // the un-accented clone now, and the presenter's greeting still
+            // speaks with the old one. `apply` clears the flag before it
+            // dismisses, so an applied pick reports exactly once.
+            .onDisappear {
+                if rebuiltWithoutApply { onApplied?() }
             }
             .onAppear {
                 // Show what's already live. `accent` doubles as "whose takes
@@ -212,8 +225,19 @@ struct VoiceAccentSheet: View {
 
     /// Pick an accent → generate fresh takes for it. Re-tapping the same
     /// accent regenerates: "none of these sound like me" needs a way forward.
+    ///
+    /// The takes are ALWAYS remixed from the un-accented clone. Applying an
+    /// accent replaces the live voice and deletes the clone it came from, so
+    /// a second pick used to remix the remix — and the learners who tried
+    /// hardest to find a take that sounded like them (three and four saves in
+    /// a row, in the ledger) drifted furthest from their own voice with every
+    /// try. While an accent is live the recording is rebuilt into a fresh
+    /// clone first (the same rebuild "Remove accent" does), and the takes
+    /// come from that. Leaving without applying then leaves the learner on
+    /// that un-accented voice, which is the honest state: the only other
+    /// option is remixing a copy of a copy.
     private func choose(_ option: VoiceAccent) {
-        guard let voiceId = appState.voiceCloneId else { return }
+        guard appState.voiceCloneId != nil else { return }
         player.stop()
         playingId = nil
         accent = option
@@ -224,10 +248,16 @@ struct VoiceAccentSheet: View {
         Task {
             defer { generating = false }
             do {
+                if appState.voiceAccentId != nil, let sample = VoiceSampleStore.shared.url {
+                    try await appState.regenerateVoiceClone(fromSampleAt: sample)
+                    rebuiltWithoutApply = true
+                }
+                guard let voiceId = appState.voiceCloneId else { return }
                 let takes = try await ElevenLabsClient.shared.remixVoicePreviews(
                     voiceId: voiceId,
                     voiceDescription: option.prompt,
-                    text: VoiceAccentCatalog.sampleText(for: appState.targetLanguage))
+                    text: VoiceAccentCatalog.sampleText(for: appState.targetLanguage),
+                    promptStrength: VoiceAccentCatalog.promptStrength)
                 // The user may have tapped another accent while this ran.
                 guard accent == option else { return }
                 previews = takes
@@ -295,6 +325,7 @@ struct VoiceAccentSheet: View {
                     name: appState.voiceDisplayName,
                     voiceDescription: accent.prompt)
                 await appState.adoptRemixedVoice(newId, accentId: accent.id)
+                rebuiltWithoutApply = false
                 HapticEngine.success()
                 onApplied?()
                 dismiss()

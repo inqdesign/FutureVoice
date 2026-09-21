@@ -140,19 +140,24 @@ final class ElevenLabsClient {
     /// Generates accent-remix previews of an existing clone. Same person,
     /// instructed accent — see `VoiceAccentCatalog` for the descriptions.
     /// `text` is what the previews speak (upstream wants 100–1000 chars).
+    /// `promptStrength` (0…1) is how far the remix may leave the reference
+    /// audio; nil lets upstream pick, which is what the first version did
+    /// and what pulled the voice away from the speaker.
     func remixVoicePreviews(voiceId: String, voiceDescription: String,
-                            text: String) async throws -> [RemixPreview] {
+                            text: String, promptStrength: Double? = nil) async throws -> [RemixPreview] {
         let url = functionsBaseURL.appendingPathComponent("elevenlabs-voice-remix")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(try await accessToken())", forHTTPHeaderField: "Authorization")
         request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Idempotency-Key")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: [
+        var body: [String: Any] = [
             "voice_id": voiceId,
             "voice_description": voiceDescription,
             "text": text,
-        ])
+        ]
+        if let promptStrength { body["prompt_strength"] = promptStrength }
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         // Preview generation runs tens of seconds upstream and returns a few
         // MB of base64 audio — the roomier upload session, not the 60s one.
         let (data, response) = try await uploadSession.dataWithRetry(for: request)
