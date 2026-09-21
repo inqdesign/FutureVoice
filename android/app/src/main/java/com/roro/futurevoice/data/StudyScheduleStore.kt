@@ -97,6 +97,11 @@ class StudyScheduleStore private constructor(context: Context) {
         write(language, entries - k)
     }
 
+    /** Wipe every entry (iOS's DEBUG `removeAll`; the capture harness's fresh schedule). */
+    suspend fun removeAll(language: String) = mutex.withLock {
+        if (read(language).isNotEmpty()) write(language, emptyMap())
+    }
+
     /**
      * A whole-map snapshot. The deck asks its schedule questions dozens of
      * times per deal (every source, every candidate — see the `add` funnel in

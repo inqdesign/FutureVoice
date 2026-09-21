@@ -155,6 +155,11 @@ object CaptureRouter {
                 return {}
             }
         }
+        // `--es seed all` runs every sample seed (CaptureSeed) before the
+        // screen is built — a way to inspect the seeded stores on their own.
+        if (context is android.app.Activity && context.intent.getStringExtra("seed") == "all") {
+            kotlinx.coroutines.runBlocking { CaptureSeed.seedAll(context) }
+        }
         val screen = wired[m]
         return if (screen != null) ({ screen(context) }) else ({ NotWired(m) })
     }
