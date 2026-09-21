@@ -774,6 +774,20 @@ enum DebugCapture {
                 kind: name == "day-spent-scenes" ? .scenes : .talk,
                 canUpgrade: name != "day-spent-unlimited")
                 .environmentObject(appState))
+        case "day-spent-trial", "day-spent-trial-plus":
+            // The same sheet as a TRIAL account meets it: the pool is the
+            // Light pool pro-rated 7/30 (35 min) whatever tier is trialed, and
+            // the date is the trial's end (`periodEnd`). A Plus trial gets no
+            // upgrade half — `canUpgradePlan` is `isLightPlan`.
+            let trialEnd = Calendar.current.date(byAdding: .day, value: 4, to: Date()) ?? Date()
+            var account = Self.sampleTrialAccount
+            account.periodEnd = trialEnd
+            return AnyView(DaySpentCaptureHost(
+                kind: .talk,
+                canUpgrade: name == "day-spent-trial",
+                allowance: 35,
+                renewsOn: account.renewalLabel)
+                .environmentObject(appState))
         case "credits-out":
             // The in-call recovery row for a 402 — what the user sees when
             // the fluent self can't reply because credits ran out.
@@ -1467,14 +1481,16 @@ private struct BookCaptureHost: View {
 private struct DaySpentCaptureHost: View {
     let kind: DailyAllowanceSheet.Kind
     let canUpgrade: Bool
+    var allowance: Int? = nil
+    var renewsOn: String = "Sep 14"
     @State private var showing = false
 
     var body: some View {
         ConversationHome()
             .sheet(isPresented: $showing) {
                 DailyAllowanceSheet(kind: kind, canUpgrade: canUpgrade,
-                                    allowance: kind == .talk ? 150 : 60,
-                                    renewsOn: "Sep 14",
+                                    allowance: allowance ?? (kind == .talk ? 150 : 60),
+                                    renewsOn: renewsOn,
                                     onReview: {}, onUpgrade: {})
             }
             .onAppear {

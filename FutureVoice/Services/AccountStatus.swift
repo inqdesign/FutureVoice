@@ -71,6 +71,12 @@ struct AccountStatus {
     /// their pool comes back on the day their plan ends is the app promising
     /// something it has been told will not happen.
     var cancelAtPeriodEnd: Bool = false
+    /// When the free trial turns into a paid plan, as the store reported it
+    /// (`trial_ends_at`, written by every webhook and `apple-claim`). Nil
+    /// outside a trial. `TrialReminder` times its notice from this, so a trial
+    /// that didn't start on our paywall — an offer code, the App Store's own
+    /// page, a reinstall — still gets it.
+    var trialEndsAt: Date?
     /// Invite minutes, in seconds. Spent BEFORE the monthly pool since
     /// `20260821100000`, so for a subscriber this is time on top of the plan
     /// rather than the "kept for after you cancel" balance it used to be.
@@ -314,7 +320,11 @@ struct AccountStatus {
     /// trial week of a code that was redeemed before the subscription began.
     /// Apple runs the intro offer first, so this is the whole window in which
     /// a discounted subscriber is shown the regular price.
-    var offerCodeStartsAtRenewal: Bool { renewalOfferType == 3 && currentOfferType != 3 }
+    /// No renewal, no discount to announce: a trial cancelled after the code
+    /// was redeemed ends on its date, and the code never prices anything.
+    var offerCodeStartsAtRenewal: Bool {
+        !cancelAtPeriodEnd && renewalOfferType == 3 && currentOfferType != 3
+    }
 
     /// The day the launch code's discount ends — whether it is already
     /// pricing this period or begins at the next renewal.
@@ -433,10 +443,11 @@ struct AccountStatus {
             let cancel_at_period_end: Bool?
             let source: String?
             let started_at: String?
+            let trial_ends_at: String?
         }
         if let rows: [SubRow] = try? await SupabaseProvider.shared
             .from("user_subscriptions")
-            .select("plan_id,status,cancel_at_period_end,source,started_at")
+            .select("plan_id,status,cancel_at_period_end,source,started_at,trial_ends_at")
             .eq("user_id", value: userId)
             .limit(1)
             .execute()
@@ -447,6 +458,7 @@ struct AccountStatus {
             out.cancelAtPeriodEnd = row.cancel_at_period_end ?? false
             out.source = row.source
             out.startedAt = row.started_at.flatMap(Self.timestamp(from:))
+            out.trialEndsAt = row.trial_ends_at.flatMap(Self.timestamp(from:))
         }
 
         // The receipt, as the store wrote it: the latest charge, and whether

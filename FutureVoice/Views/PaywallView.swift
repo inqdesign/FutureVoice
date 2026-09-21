@@ -455,7 +455,9 @@ struct PaywallView: View {
 
             if isSubscriber {
                 Label(account.isTrialing
-                      ? explain("You're on the \(currentPlanLabel) — it converts unless you cancel.")
+                      ? (account.cancelAtPeriodEnd
+                         ? explain("You're on the \(currentPlanLabel) — it ends on \(account.renewalLabel).")
+                         : explain("You're on the \(currentPlanLabel) — it converts unless you cancel."))
                       : explain("You're subscribed to \(currentPlanLabel)."),
                       systemImage: "checkmark.seal.fill")
                     .font(.footnote)

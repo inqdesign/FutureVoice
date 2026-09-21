@@ -65,7 +65,7 @@ struct PlanPageView: View {
                     // different promises.
                     row(icon: refillIcon,
                         title: refillTitle,
-                        subtitle: account.isTrialing
+                        subtitle: account.isTrialing && !account.cancelAtPeriodEnd
                             ? explain("Cancel any time before then in the App Store")
                             : nil)
                 }
@@ -215,16 +215,22 @@ struct PlanPageView: View {
     }
 
     private var refillIcon: String {
-        if account.isTrialing { return "calendar.badge.exclamationmark" }
-        return account.cancelAtPeriodEnd ? "calendar.badge.minus" : "arrow.clockwise"
+        if account.cancelAtPeriodEnd { return "calendar.badge.minus" }
+        return account.isTrialing ? "calendar.badge.exclamationmark" : "arrow.clockwise"
     }
 
+    /// Auto-renew is asked FIRST: a trial whose renewal was switched off
+    /// ends on its date, and telling that learner it "becomes paid" is the
+    /// opposite promise — the cancel they just made reads as not having
+    /// worked.
     private var refillTitle: String {
+        if account.cancelAtPeriodEnd {
+            return account.isTrialing
+                ? explain("Your trial ends on \(account.renewalLabel)")
+                : explain("Your plan ends on \(account.renewalLabel)")
+        }
         if account.isTrialing {
             return explain("Your trial becomes paid on \(account.renewalLabel)")
-        }
-        if account.cancelAtPeriodEnd {
-            return explain("Your plan ends on \(account.renewalLabel)")
         }
         return explain("Refills on \(account.renewalLabel)")
     }
