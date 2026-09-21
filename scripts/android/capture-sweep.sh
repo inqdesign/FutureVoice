@@ -19,6 +19,9 @@ if [ $# -gt 0 ]; then MODES=("$@"); else
   MODES=($(awk '/val iosModes/,/^    \)/' "$ROUTER" | grep -oE '"[a-z0-9-]+"' | tr -d '"'))
 fi
 : > "$OUT/result.tsv"
+# Warm-up: the first cold start after an install or a night-mode switch runs
+# long enough to be photographed on the splash. Spend it on a throwaway shot.
+adb shell am start -n $ACT --es capture paywall --es lang "$LANG_" >/dev/null 2>&1; sleep 20
 for m in "${MODES[@]}"; do
   adb shell am force-stop $PKG
   adb logcat -c
