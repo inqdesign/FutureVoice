@@ -19,6 +19,10 @@ export type WallCode = "insufficient_credits" | "daily_cap_reached"
 
 export class TalkBilling {
   private billable = 0
+  /** Learner speech already reported, against the session's running total —
+   *  each tick carries the difference. A record beside the bill, never part
+   *  of it: `seconds` is what is charged. */
+  private speechSent = 0
   private tickN = 0
   private timer: number | null = null
   private flushing = false
@@ -36,7 +40,9 @@ export class TalkBilling {
               private sessionKey: string,
               private language: string | null,
               private isBillable: () => boolean,
-              private onWall: (code: WallCode) => void) {}
+              private onWall: (code: WallCode) => void,
+              /** The session's running learner-speech seconds (`speechSeconds`). */
+              private speech: () => number = () => 0) {}
 
   /** Charge 1 s before the opener speaks — same trick as the classic path's
    *  preflight tick, so an empty allowance surfaces BEFORE the greeting
@@ -70,7 +76,9 @@ export class TalkBilling {
     if (seconds < 1) return
     this.flushing = true
     this.billable -= seconds
-    const wall = await this.send(seconds)
+    const spoke = Math.max(0, Math.floor(this.speech() - this.speechSent))
+    this.speechSent += spoke
+    const wall = await this.send(seconds, false, spoke)
     this.flushing = false
     if (wall) {
       this.walled = true
@@ -88,7 +96,8 @@ export class TalkBilling {
    *  tap answers with the paywall instead of a call that dies in seconds
    *  (20260920180000). Mid-call ticks are never judged that way — that would
    *  throw away time the learner still has. */
-  private async send(seconds: number, preflight = false): Promise<WallCode | null> {
+  private async send(seconds: number, preflight = false,
+                     spoke: number | null = null): Promise<WallCode | null> {
     this.tickN += 1
     try {
       const r = await fetch(`${this.env.SUPABASE_URL}/functions/v1/talk-tick`, {
@@ -104,6 +113,7 @@ export class TalkBilling {
           session_id: this.sessionKey,
           language: this.language,
           preflight,
+          ...(spoke !== null ? { learner_seconds: Math.min(spoke, 600) } : {}),
         }),
       })
       if (r.status === 402) {
@@ -115,11 +125,13 @@ export class TalkBilling {
       if (!r.ok) {
         console.log(`billing: talk-tick ${r.status} — re-queueing ${seconds}s`)
         this.billable += seconds
+        if (spoke) this.speechSent -= spoke
       }
       return null
     } catch (e) {
       console.log(`billing: talk-tick failed (${String(e)}) — re-queueing ${seconds}s`)
       this.billable += seconds
+      if (spoke) this.speechSent -= spoke
       return null
     }
   }

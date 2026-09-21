@@ -35,13 +35,6 @@ struct ConversationView: View {
     @State private var showTopicPicker = false
     @State private var dueDrillCount = 0
     @State private var phoneCallActive = false
-    /// When the current call seat opened — drives the elapsed clock in the
-    /// title. Set once per call; hidden (not frozen) once the call ends.
-    @State private var callStartedAt: Date?
-    /// Talk time banked across pauses. A pause STOPS the clock and a resume
-    /// continues it (the first cut reset to zero on every pause, reported
-    /// 2026-09-03) — on resume the virtual start date is backdated by this.
-    @State private var callElapsedAtPause: TimeInterval = 0
     @State private var silenceTask: Task<Void, Never>?
     /// True only while `endSession` is wrapping up (summary generation in
     /// flight). Distinct from `phase == .thinking`, which also fires per-turn
@@ -940,10 +933,6 @@ struct ConversationView: View {
                 case .speaking:            phase = .speaking;  realtimeWasLive = true
                 case .idle, .connecting, .failed: phase = .idle
                 }
-                // First learner speech starts the clock (realtime path).
-                if case .hearing = state, callStartedAt == nil {
-                    callStartedAt = Date()
-                }
                 // The gateway meters the call server-side and hangs up with a
                 // wall code when the allowance is spent — the same two 402s
                 // the classic meter's tick returns, so they land on the same
@@ -975,22 +964,6 @@ struct ConversationView: View {
                         }
                         realtimeWasLive = false
                     }
-                }
-            }
-            .onChange(of: phoneCallActive) { _, active in
-                // The elapsed clock arms on the learner's FIRST speech, not
-                // here — a call opened and cancelled without a word shows no
-                // timer at all (asked for 2026-09-02: "누르고 그냥 취소"가
-                // 통화로 세어지는 게 이상하다).
-                if !active {
-                    // Pause: bank what ran so far and stop the clock.
-                    if let start = callStartedAt {
-                        callElapsedAtPause += Date().timeIntervalSince(start)
-                    }
-                    callStartedAt = nil
-                } else if callElapsedAtPause > 0 {
-                    // Resume: continue from the banked time, not from zero.
-                    callStartedAt = Date().addingTimeInterval(-callElapsedAtPause)
                 }
             }
             .onChange(of: scenePhase) { _, newPhase in
@@ -1028,12 +1001,14 @@ struct ConversationView: View {
                              level: appState.proficiency,
                              surface: .talk,
                              minutesLeft: meter.minutesRemaining.flatMap { $0 <= 10 ? $0 : nil },
-                             // Elapsed, phone-style — every tier. Ticks while
-                             // the call runs, freezes while it's paused, and
-                             // goes away once the talk is wrapped up.
-                             callStartedAt: phoneCallActive ? callStartedAt : nil,
-                             pausedElapsed: !phoneCallActive && callElapsedAtPause > 0
-                                 && !didSaveCurrentSession ? callElapsedAtPause : nil)
+                             // Talk time, phone-style — every tier. The meter's
+                             // own count, so silence doesn't move it; shown from
+                             // the learner's first line (a call opened and left
+                             // without a word has no clock, asked 2026-09-02)
+                             // and gone once the talk is wrapped up.
+                             callClock: learnerSpokeThisCall
+                                 && (phoneCallActive || !didSaveCurrentSession)
+                                 ? meter.clock : nil)
                 .environmentObject(appState)
         }
         ToolbarItem(placement: .topBarLeading) {
@@ -2602,9 +2577,6 @@ struct ConversationView: View {
         userTurn.transcriptPending = userTurn.audioURL != nil
         turns.append(userTurn)
         learnerSpokeThisCall = true
-        // First learner speech starts the clock (classic path — armed at the
-        // turn commit; the realtime path arms earlier, on `.hearing`).
-        if callStartedAt == nil { callStartedAt = Date() }
         didSaveCurrentSession = false
         creditGoalChips(turnId: userTurn.id)
 
@@ -3778,10 +3750,6 @@ struct ConversationView: View {
         sessionStartedAt = Date()
         turns = []
         learnerSpokeThisCall = false
-        // A new session's clock starts empty — the banked time belongs to
-        // the call that just ended, not this one.
-        callElapsedAtPause = 0
-        callStartedAt = nil
         didSaveCurrentSession = false
         phase = .idle
         if !topic.isEmpty {
@@ -3846,10 +3814,10 @@ struct ConversationView: View {
     }
 
     /// How long this call ran, in seconds — the same clock the header shows.
-    /// Still readable here: only `startNewSession` clears it, and the summary
-    /// sheet sits between that and this.
+    /// Still readable here: only the meter's next `start` (a new session)
+    /// clears it, and the summary sheet sits between that and this.
     private var callElapsed: TimeInterval {
-        callElapsedAtPause + (callStartedAt.map { Date().timeIntervalSince($0) } ?? 0)
+        TimeInterval(meter.clock.seconds)
     }
 
     private static func mp3DurationMs(_ data: Data) -> Int {

@@ -466,8 +466,14 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
     /// the call runs on and the watchdogs take over, because a call that
     /// never starts is worse than one whose first line is deaf.
     private func waitForLiveMic() async {
+        // A car gets 3 s, not 1.2. Its first build was torn down at 1.2 s with
+        // no buffer yet, and the rebuild's re-activation then blocked for
+        // 105 s before failing ("Session activation failed", CarPlay
+        // Simulator, 2026-09-19) — the same cold-unit lesson the tap
+        // watchdog's 3 s first check already encodes.
+        let polls = builtOutput == AVAudioSession.Port.carAudio.rawValue ? 30 : 12
         for attempt in 1...2 {
-            for _ in 0..<12 {
+            for _ in 0..<polls {
                 if Self.buffersSinceBuild > 0 {
                     if attempt > 1 { Self.step("pre-flight: mic alive after rebuild") }
                     return
@@ -700,7 +706,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         }
         socket?.cancel(with: .goingAway, reason: nil)
         socket = nil
-        stopAudio()
+        stopAudio(endingCall: true)
         if case .failed = state {} else { state = .idle }
         partial = ""
         level = 0
@@ -794,7 +800,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         // an earphone-free route and pinned the speaker — with the earphones
         // still in the learner's ears (observed 2026-09-01). `availableInputs`
         // lists the paired device regardless of the route's momentary state.
-        var bluetoothMic = session.availableInputs?.first { $0.portType == .bluetoothHFP }
+        // CarPlay outranks the earphone — see `AudioSessionRouting
+        // .isCarPlayConnected`. With the car up, the HFP branch below is
+        // skipped entirely and the input is put on the car's mic.
+        let carPlay = AudioSessionRouting.isCarPlayConnected(session)
+        if carPlay { AudioSessionRouting.preferCarMic(session) }
+        var bluetoothMic = carPlay
+            ? nil : session.availableInputs?.first { $0.portType == .bluetoothHFP }
         if let mic = bluetoothMic {
             try? session.setPreferredInput(mic)
             if session.currentRoute.inputs.first?.portType != .bluetoothHFP {
@@ -1135,8 +1147,11 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
                 guard !Task.isCancelled, let self, !self.isTornDown else { return }
                 guard self.engineRunning, !self.isRebuildingAudio else { continue }
                 let session = AVAudioSession.sharedInstance()
-                let btAvailable = session.availableInputs?
-                    .contains { $0.portType == .bluetoothHFP } ?? false
+                // With CarPlay up an earphone is not WANTED, so its presence
+                // is no reason to rebuild — and a call built on HFP when the
+                // car connects is a reason to move onto the car.
+                let btAvailable = !AudioSessionRouting.isCarPlayConnected(session)
+                    && (session.availableInputs?.contains { $0.portType == .bluetoothHFP } ?? false)
                 let builtOnBT = self.builtOutput == AVAudioSession.Port.bluetoothHFP.rawValue
                 guard btAvailable != builtOnBT else {
                     self.pollRebuildStrikes = 0
@@ -1356,7 +1371,7 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         player.play()
     }
 
-    private func stopAudio() {
+    private func stopAudio(endingCall: Bool = false) {
         guard engineRunning else { return }
         engineRunning = false
         engine.inputNode.removeTap(onBus: 0)
@@ -1366,6 +1381,13 @@ final class RealtimeTalkClient: NSObject, ObservableObject {
         mic.set(converter: nil, format: nil, socket: nil)
         converter = nil
         pendingBuffers = 0
+        // Not for a REBUILD on CarPlay. Deactivating makes the car tear its
+        // audio channel down, and re-activating moments later (every rebuild
+        // does) blocked the main thread for 105 s before failing. The cycle
+        // exists to let an earphone's route re-form, which is not a car's
+        // problem. Hanging up still releases it, or the car's music stays
+        // ducked under a call that is over.
+        guard endingCall || builtOutput != AVAudioSession.Port.carAudio.rawValue else { return }
         try? AVAudioSession.sharedInstance()
             .setActive(false, options: .notifyOthersOnDeactivation)
     }
@@ -2010,9 +2032,41 @@ extension RealtimeTalkClient {
 
     nonisolated static func step(_ message: String) {
         #if DEBUG
-        print("[realtime \(stamp())] \(message)")
+        emit("[realtime \(stamp())] \(message)")
         #endif
     }
+
+    #if DEBUG
+    /// DEBUG builds also append every line to `Caches/realtime-debug.log`,
+    /// because the console dies with the cable — and unplugging the cable
+    /// IS the test when the route under study is CarPlay (2026-09-19). Pull
+    /// it with `xcrun devicectl device copy from --domain-type
+    /// appDataContainer --domain-identifier com.roro.futurevoice.dev
+    /// --source Library/Caches/realtime-debug.log --destination …`.
+    /// Capped: over 4 MB it starts over.
+    nonisolated private static let debugLogQueue = DispatchQueue(label: "realtime.debuglog")
+    nonisolated private static let debugLogURL: URL? = FileManager.default
+        .urls(for: .cachesDirectory, in: .userDomainMask).first?
+        .appendingPathComponent("realtime-debug.log")
+
+    nonisolated private static func emit(_ line: String) {
+        print(line)
+        guard let url = debugLogURL else { return }
+        let day = DateFormatter.localizedString(from: Date(), dateStyle: .short, timeStyle: .none)
+        let data = Data("\(day) \(line)\n".utf8)
+        debugLogQueue.async {
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int) ?? 0
+            if size > 4_000_000 { try? FileManager.default.removeItem(at: url) }
+            if let handle = try? FileHandle(forWritingTo: url) {
+                handle.seekToEndOfFile()
+                handle.write(data)
+                try? handle.close()
+            } else {
+                try? data.write(to: url)
+            }
+        }
+    }
+    #endif
 
     nonisolated static func trace(_ message: @autoclosure () -> String) {
         #if DEBUG
@@ -2021,7 +2075,7 @@ extension RealtimeTalkClient {
         let due = now - lastTraceAt > 1.0
         if due { lastTraceAt = now }
         traceLock.unlock()
-        if due { print("[realtime \(stamp())] \(message())") }
+        if due { emit("[realtime \(stamp())] \(message())") }
         #endif
     }
     nonisolated(unsafe) static var sawFirstBuffer = false

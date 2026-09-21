@@ -93,6 +93,10 @@ enum AudioSessionRouting {
     /// listed to prefer).
     @discardableResult
     static func engageWornMic(_ session: AVAudioSession = .sharedInstance()) -> Bool {
+        guard !isCarPlayConnected(session) else {
+            preferCarMic(session)
+            return false
+        }
         guard let mic = session.availableInputs?.first(where: { $0.portType == .bluetoothHFP }) else {
             return false
         }
@@ -115,6 +119,31 @@ enum AudioSessionRouting {
     /// know whether there was an earphone to use instead.
     static func hasWornMicAvailable(_ session: AVAudioSession = .sharedInstance()) -> Bool {
         session.availableInputs?.contains { $0.portType == .bluetoothHFP } ?? false
+    }
+
+    /// CarPlay is up — the car owns the call, earphones or not (2026-09-19,
+    /// user decision). The one exception to "the worn mic wins": iOS itself
+    /// puts a phone call on CarPlay, and it keeps the OUTPUT there even when
+    /// the input is pinned to AirPods. Pinning it anyway split the route
+    /// (AirPods mic, car speakers); the route poll then read "HFP available,
+    /// not built on HFP" as an earphone waiting to be engaged, rebuilt, and
+    /// the rebuilt tap never fired — three restarts and the call was dead
+    /// (CarPlay Simulator + AirPods, reproduced 2026-09-19).
+    ///
+    /// Either side counts: the car shows up as an OUTPUT the moment CarPlay
+    /// connects, and as an input once a record category is set.
+    static func isCarPlayConnected(_ session: AVAudioSession = .sharedInstance()) -> Bool {
+        session.currentRoute.outputs.contains { $0.portType == .carAudio }
+            || (session.availableInputs?.contains { $0.portType == .carAudio } ?? false)
+    }
+
+    /// Put the input on the car's mic. A preferred input outlives the call
+    /// that set it, so a previous call's AirPods pin would otherwise still be
+    /// standing when the car connects. Call after `setActive`.
+    static func preferCarMic(_ session: AVAudioSession = .sharedInstance()) {
+        if let car = session.availableInputs?.first(where: { $0.portType == .carAudio }) {
+            try? session.setPreferredInput(car)
+        }
     }
 
     /// Output ports that mean "the user is listening through something other

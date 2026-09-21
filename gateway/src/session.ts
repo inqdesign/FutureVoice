@@ -381,7 +381,18 @@ export class CallSession implements DurableObject {
     return (text.match(/\p{L}/gu)?.length ?? 0) <= 3
   }
 
+  /** A question mark outranks the last word. The transcriber writes it from
+   *  the rising pitch of a finished question, and a question is the one
+   *  sentence that is over the moment it is asked — yet "Where are you
+   *  from?", "What are you thinking about?", "그래서?" and 好きだから？ all
+   *  end on a listed word or suffix, and each held the learner's question
+   *  for the full 4 s before the fluent self answered (2026-09-19, found
+   *  on hand-written cases while evaluating a turn-end classifier). A
+   *  PERIOD does not get the same pass: "그냥 재밌어서." is often an
+   *  answer and just as often the first half of one, and a cut-off costs
+   *  more than a wait. */
   private static endsHanging(text: string, language: string): boolean {
+    if (/[?？][!！]*$/u.test(text.trim().replace(/["'”’」』)\]]+$/u, ""))) return false
     const lang = language.toLowerCase().split("-")[0]
     const words = text.trim().toLowerCase().split(/\s+/).filter(Boolean)
     const last = words.at(-1)?.replace(/[^\p{L}\p{N}']+/gu, "")
@@ -439,9 +450,11 @@ export class CallSession implements DurableObject {
 
   /** No terminal punctuation on the final — see `unfinishedMs`. A closing
    *  quote or bracket after the mark is still an ending; an ellipsis is a
-   *  trail-off and is not. */
+   *  trail-off and is not — written as "…" OR as three periods, which the
+   *  last-character test alone read as a full stop and closed in 0.8 s. */
   private static endsUnfinished(text: string): boolean {
     const t = text.trim().replace(/["'”’」』)\]]+$/u, "")
+    if (/(\.\.|…)$/u.test(t)) return true
     return !/[.?!。？！]$/u.test(t)
   }
 
@@ -548,6 +561,9 @@ export class CallSession implements DurableObject {
             || Date.now() - this.lastSpokeAt < 2000
             || Date.now() - this.lastInterimAt < TalkBilling.graceMs),
         (code) => this.wall(code),
+        // Rides on each tick as `learner_seconds` so the ledger can say how
+        // much of a billed minute was the learner's own voice.
+        () => this.speechSeconds,
       )
       // Preflight — an empty allowance must surface BEFORE the greeting
       // speaks, not a free minute later (same rule as the classic path). It
