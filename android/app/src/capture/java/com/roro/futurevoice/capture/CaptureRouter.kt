@@ -136,9 +136,16 @@ object CaptureRouter {
     )
 
     /** Wired so far. Grows mode by mode; the gallery reports the rest. */
-    private val wired: Map<String, @Composable (Context) -> Unit> = mapOf(
-        "paywall" to { _ -> com.roro.futurevoice.ui.PaywallScreen(onDismiss = {}) },
+    /** Each area owns its own file, so areas can be wired independently. */
+    private val areas = listOf(
+        CaptureTalk.wired, CaptureWatch.wired, CapturePractice.wired, CaptureProgress.wired,
+        CaptureMe.wired, CaptureOnboarding.wired, CaptureWidgets.wired,
     )
+    private val wired: Map<String, @Composable (Context) -> Unit> = areas.fold(emptyMap()) { a, b -> a + b }
+    private val notPorted: Map<String, String> =
+        listOf(CaptureTalk.notPorted, CaptureWatch.notPorted, CapturePractice.notPorted,
+            CaptureProgress.notPorted, CaptureMe.notPorted, CaptureOnboarding.notPorted,
+            CaptureWidgets.notPorted).fold(emptyMap()) { a, b -> a + b }
 
     /**
      * `--es lang ko` picks the app language for the shot. The language is read
@@ -161,7 +168,27 @@ object CaptureRouter {
             kotlinx.coroutines.runBlocking { CaptureSeed.seedAll(context) }
         }
         val screen = wired[m]
-        return if (screen != null) ({ screen(context) }) else ({ NotWired(m) })
+        val reason = notPorted[m]
+        return when {
+            screen != null -> ({ screen(context) })
+            reason != null -> ({ NotPorted(m, reason) })
+            else -> ({ NotWired(m) })
+        }
+    }
+
+    /** Orange, not red: the harness is fine, the APP lacks this — and the
+     *  reason names the master-plan item that will add it. */
+    @Composable
+    private fun NotPorted(mode: String, reason: String) {
+        Column(
+            Modifier.fillMaxSize().background(Color(0xFFE65100)).padding(32.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text("NOT PORTED", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text(mode, color = Color.White, fontSize = 22.sp)
+            Text(reason, color = Color.White, fontSize = 14.sp)
+        }
     }
 
     @Composable
