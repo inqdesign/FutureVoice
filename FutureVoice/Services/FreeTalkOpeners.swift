@@ -116,7 +116,12 @@ final class FreeTalkOpeners {
         "en": "Hi. I'm the future you — the one who speaks English fluently. I can't wait for all the talks ahead of us. Don't give up, and let's get you here, together. So — what are you up to these days?",
         "de": "Hallo. Ich bin das zukünftige Du — das, das fließend Deutsch spricht. Ich freue mich auf all die Gespräche, die vor uns liegen. Gib nicht auf, und lass uns zusammen dafür sorgen, dass du hierher kommst. Also — was machst du gerade so?",
         "ko": "안녕. 나는 유창하게 말하는 미래의 너야. 앞으로 너와 함께할 많은 이야기들이 기대된다. 포기하지 말고, 지금의 네가 내가 될 수 있게 같이 해보자. 그래서 말인데, 요즘 어떻게 지내?",
-        "ja": "こんにちは。流暢に話す、未来のきみだよ。これから交わす話が楽しみでならない。あきらめないで、今のきみがここまで来られるように、一緒にやっていこう。それで、最近はどんな感じ？",
+        // Rewritten 2026-09-18 ("it doesn't breathe right"): the first cut put
+        // a comma between a modifier and its noun (流暢に話す、未来のきみ) —
+        // the synthesizer pauses there, mid-phrase — and opened in written
+        // Japanese (楽しみでならない). Commas now sit only where a speaker
+        // breathes; A/B by ear with scripts/tts-language-probe.sh.
+        "ja": "やあ、未来のきみだよ。日本語、もうすらすら話せるようになったんだ。これからいっぱい話せるの、すごく楽しみ。今のきみがここまで来られるように、あきらめないで一緒にがんばろう。で、最近どうしてる？",
         "es": "Hola. Soy tu yo del futuro, el que habla español con fluidez. Tengo muchas ganas de todas las charlas que nos esperan. No te rindas, y vamos a llevarte hasta aquí, juntos. Bueno — ¿qué tal te va últimamente?",
         "fr": "Salut. Je suis le toi du futur, celui qui parle français couramment. J'ai hâte de toutes les conversations qui nous attendent. N'abandonne pas, et on va t'amener jusqu'ici, ensemble. Alors — tu fais quoi de tes journées en ce moment ?",
         "it": "Ciao. Sono il te del futuro, quello che parla italiano fluentemente. Non vedo l'ora di tutte le chiacchierate che ci aspettano. Non mollare, e arriviamoci insieme. Allora — cosa fai di bello in questi giorni?",
